@@ -1438,8 +1438,15 @@ let unspellable_binder cm =
   let written = Foreign_template.match_template (custom_match_text cm) in
   fun i j p -> List.mem (Foreign_template.CCbr_var_ty (i, j)) written && Ml_type_util.has_no_cpp_spelling p.cp_type
 
+(* [Topaque] in [ty] settled into [Tany], inside a carrier abstraction's body
+   too: {!Minicpp.map_cpp_type} stops at a [Ttyctor], whose body is still
+   written down where the carrier is minted an alias template. *)
+let settle_opaque ty =
+  let in_body = rewrite_cpp_type (function Topaque -> Some Tany | _ -> None) in
+  map_cpp_type (function Topaque -> Tany | Ttyctor body -> Ttyctor (in_body body) | t -> t) ty
+
 let materialise (d : cpp_decl) : settled =
-  let ft = Ml_type_util.materialise_opaque in
+  let ft = settle_opaque in
   let spelled cm =
     let unspellable = unspellable_binder cm in
     fun i (params, ty, body) ->

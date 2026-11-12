@@ -2,5 +2,16 @@
 ; `dune build @unit_tests/runtest`; `make test` runs them first.
 (tests
  (names minicpp_traversal foreign_template_test scheme_test instantiation_test callable_abi_test template_application_test call_tyargs_test pipeline_manifest ml_fingerprint_test unit_program_test target_plan_test core_phase_test elaborated_call_test instance_methods_test head_relaxation_test recursive_groups_test cpp_ast_test move_check_test reuse_plan_test reuse_cursor_test continue_moves_test frame_storage_test lower_control_test core_copy_test normalize_test subprocess_test core_binder_test)
+ (modules :standard \ cpp_ir_manifest)
  (flags :standard -rectypes)
  (libraries rocq-crane.plugin))
+
+; The constructor manifest of MiniCpp, checked against src/cpp_ir.  It reads
+; the sources, so it links no library.
+(test
+ (name cpp_ir_manifest)
+ (modules cpp_ir_manifest)
+ (deps
+  ../src/minicpp.mli
+  (glob_files ../src/cpp_ir/*.ml)
+  (glob_files ../src/cpp_ir/*.mli)))
