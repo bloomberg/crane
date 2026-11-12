@@ -7,16 +7,18 @@ open Names
 open Miniml
 open Minicpp
 
+module Ir = Cpp_ir.Resolved
+
 type concept_type =
   | Member of {member : GlobRef.t; enum : bool; arguments : concept_type list}
-  | Parameter of cpp_type
-  | Foreign of {custom : GlobRef.t; pieces : foreign_piece list; arguments : concept_type list}
+  | Parameter of Ir.Type.t
+  | Foreign of {custom : GlobRef.t; pieces : Cpp_ir.Foreign.piece list; arguments : concept_type list}
   | Global of GlobRef.t * concept_type list
-  | Namespaced of GlobRef.t * GlobRef.t * cpp_expr list * concept_type list
+  | Namespaced of GlobRef.t * GlobRef.t * Ir.Expr.t list * concept_type list
   | Shared_pointer of concept_type
-  | Variant of variant_storage * concept_type list
+  | Variant of Cpp_ir.Type.Variant_storage.t * concept_type list
   | Function of concept_type list * concept_type
-  | Plain of cpp_type
+  | Plain of Ir.Type.t
 
 type requirement =
   | Inductive_member of {member : GlobRef.t; enum : bool; arity : int}
@@ -41,8 +43,19 @@ and item =
   | Nested of ModPath.t * constraint_
 
 type t =
-  | Alias of {base : ModPath.t; refinements : (Id.t list * cpp_type) list}
+  | Alias of {base : ModPath.t; refinements : (Id.t list * Ir.Type.t) list}
   | Constraint of constraint_
+
+(* A type translation writes for a concept, in CppIR: a concept is generated
+   after its module type is settled, so every type it writes has a C++
+   spelling. *)
+let ir_type = Legacy_minicpp_to_cpp_ir.type_exn
+
+let ir_expr e =
+  match Legacy_minicpp_to_cpp_ir.expr e with
+  | Ok e -> e
+  | Error f ->
+    CErrors.anomaly Pp.(str "Crane: a value in a module type's concept: " ++ str (Legacy_minicpp_to_cpp_ir.describe f))
 
 (* Whether [mp] is [base] or a module path inside it. *)
 let rec is_under base mp =
@@ -72,7 +85,7 @@ let rec concept_type signature ty =
   match ty with
   | Tglob (r, tys, _) when (not (Table.is_custom r)) && is_member_ref signature r ->
     Member {member = r; enum = Cpp_names.is_enum_cached r; arguments = args tys}
-  | Tglob (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter ty
+  | Tglob (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
   | Tglob (r, tys, _) -> (
     match Table.find_custom_opt r with
     | Some text ->
@@ -83,15 +96,15 @@ let rec concept_type signature ty =
         List.fold_left (fun n -> function Fp_type i | Fp_element (i, _) -> max n (i + 1) | _ -> n) 0 pieces
       in
       let supplied = args tys in
-      let erased = List.init (max 0 (arity - List.length supplied)) (fun _ -> Plain Tany) in
-      Foreign {custom = r; pieces; arguments = supplied @ erased}
+      let erased = List.init (max 0 (arity - List.length supplied)) (fun _ -> Plain Any) in
+      Foreign {custom = r; pieces = List.map Legacy_minicpp_to_cpp_ir.foreign_piece pieces; arguments = supplied @ erased}
     | None -> Global (r, args tys) )
   | Tshared_ptr ty -> Shared_pointer (concept_type signature ty)
-  | Tvariant (storage, tys) -> Variant (storage, args tys)
-  | Tnamespace (r, Tglob (r', tys, e)) when not (is_member_ref signature r) -> Namespaced (r, r', e, args tys)
+  | Tvariant (storage, tys) -> Variant ((match storage with Inline_variant -> Inline | Shared_variant -> Shared), args tys)
+  | Tnamespace (r, Tglob (r', tys, e)) when not (is_member_ref signature r) -> Namespaced (r, r', List.map ir_expr e, args tys)
   | Tnamespace (r, ty') when is_member_ref signature r -> concept_type signature ty'
   | Tfun (dom, cod) -> Function (args dom, concept_type signature cod)
-  | ty -> Plain ty
+  | ty -> Plain (ir_type ty)
 
 (* The domains and codomain of an ML arrow type. *)
 let rec arrows = function
@@ -167,7 +180,7 @@ let rec base_concept = function
    innermost first. *)
 let refinements mt =
   let rec go acc = function
-    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, Cpp_erasure.instantiate_type (convert typ)) :: acc) inner
+    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, ir_type (Cpp_erasure.instantiate_type (convert typ))) :: acc) inner
     | MTwith (inner, ML_With_module _) -> go acc inner
     | _ -> acc
   in
@@ -198,16 +211,11 @@ let rec type_refs note = function
     List.iter (type_refs note) dom;
     type_refs note cod
 
-and cpp_type_refs note ty =
-  ignore
-    (exists_cpp_type
-       (function
-         | Tglob (r, _, _) | Tforeign {fr_custom = r; _} | Tnamespace (r, _) ->
-           note r;
-           false
-         | _ -> false )
-       ty
-      : bool )
+and cpp_type_refs note (ty : Ir.Type.t) =
+  ( match ty with
+  | Entity_application (r, _, _) | Foreign {custom = r; _} | In_namespace (r, _) -> note r
+  | _ -> () );
+  Cpp_ir.Children.type_children (cpp_type_refs note) ty
 
 let requirement_refs note = function
   | Inductive_member _ | Type_member _ | Submodule _ -> ()
