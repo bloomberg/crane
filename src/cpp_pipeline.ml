@@ -57,7 +57,7 @@ let on_decl = Pipeline_trace.pass
 
 (** The passes below that discharge an {!obligation}, named once so that
     the list of obligations refers to the pass rather than to its name. *)
-let constraints = on_decl "constraints" Minicpp.settle_constraints
+let constraints = on_decl "constraints" Cpp_constraints.settle
 
 let casts = Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
 let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
@@ -75,53 +75,44 @@ let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
 
-(** A pass before the seam: over CppIR, or over the MiniCpp a lowered
-    declaration converts back to ({!Cpp_ir_to_legacy_minicpp}). *)
-type stage =
-  | Ir of Cpp_ir.Lowered.Decl.t Pipeline_trace.pass
-  | Legacy of cpp_decl Pipeline_trace.pass
-
-let stage_name = function Ir p -> p.name | Legacy p -> p.name
-
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
-let lowered_passes : stage list =
+let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_legacy_minicpp}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)
-    Ir
-      (on_decl "control" (fun d ->
-           if Probe.checking () then Control_to_legacy_minicpp.check_lowered (Cpp_ir_to_legacy_minicpp.decl d);
-           d ));
+    on_decl "control" (fun d ->
+        if Probe.checking () then Control_to_legacy_minicpp.check_lowered (Cpp_ir_to_legacy_minicpp.decl d);
+        d );
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
        fixpoint applied in place binds its parameters to in order
        ({!Ownership_ir.evaluated_first}). *)
-    Ir (on_decl "local_closures" Cpp_local_closures.transform_decl);
+    on_decl "local_closures" Cpp_local_closures.transform_decl;
     (* A function's constants are declared once at its top, now that nothing
        moves code between functions -- and before the passes that rewrite what
        an initialiser holds: [depth] splits a deep one into bindings, which in
        a static's initialiser run once. *)
-    Ir (on_decl "constants" Cpp_constants.decl);
+    on_decl "constants" Cpp_constants.decl;
     (* The temporaries Normalize named for loopification and loopification did
        not need go back where they are read. *)
-    Ir (on_decl "temporaries" Cpp_temporaries.decl);
+    on_decl "temporaries" Cpp_temporaries.decl;
     (* An argument a mapping would splice, and so evaluate, more than once is
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
-    Ir (on_decl "shared_args" Cpp_shared_args.transform_decl);
+    on_decl "shared_args" Cpp_shared_args.transform_decl;
     (* Small local simplifications, before ownership reads the uses. *)
-    Ir (on_decl "simplify" Cpp_simplify.transform_decl);
+    on_decl "simplify" Cpp_simplify.transform_decl;
     (* An initialiser nested deeper than a compiler will parse becomes a run of
        bindings; everything shallower is left as it stands. *)
-    Ir (on_decl "depth" Cpp_depth.flatten);
+    on_decl "depth" Cpp_depth.flatten;
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
-    Ir (on_decl "return_moves" Return_moves.drop_return_moves);
+    on_decl "return_moves" Return_moves.drop_return_moves;
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
-    Legacy constraints ]
+    constraints ]
 
 (** Writing a type down is what decides its representation, so the [Topaque]
     slots are settled before anything reads the declaration as final.
@@ -166,7 +157,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
 let instantiation_passes = [foreign; qualifiers; pointer_slots; scrutinees; captures; initialisers]
 
 let pass_names =
-  List.map stage_name lowered_passes @ [seam] @ Pipeline_trace.names settled_passes
+  Pipeline_trace.names lowered_passes @ [seam] @ Pipeline_trace.names settled_passes
   @ Pipeline_trace.names instantiation_passes
 
 (** {2 What the printer is not owed}
@@ -229,7 +220,9 @@ let owes (decl : Cpp_erasure.settled) (o : obligation) =
   | Unresolved_type -> mentions (function Tunresolved -> true | _ -> false) d
   | Opaque_type -> mentions (function Topaque -> true | _ -> false) d
   | Unspellable_binder -> Cpp_erasure.writes_unspellable_binder decl
-  | Unsettled_callable -> compare (constraints.run d) d <> 0
+  | Unsettled_callable ->
+    let ir = Legacy_minicpp_to_cpp_ir.lower d in
+    compare (constraints.run ir) ir <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
   | Implicit_boxed_read -> rewrites boxed_reads
@@ -272,14 +265,6 @@ let check_settled obligations (decl : Cpp_erasure.settled) =
         | Some r -> str " in " ++ Table.safe_pr_global r
         | None -> mt () )
 
-(** A declaration on its way through the passes before the seam, in the
-    representation the last pass left it in. *)
-type staged =
-  | In_ir of Cpp_ir.Lowered.Decl.t
-  | In_minicpp of cpp_decl
-
-let to_minicpp = function In_ir d -> Cpp_ir_to_legacy_minicpp.decl d | In_minicpp d -> d
-
 (** [lower d] is [d] in CppIR.  Under [CRANE_CHECK_IR] it fails unless
     converting it back gives [d] again: a pass left on MiniCpp then reads
     exactly what it read before the declaration was lowered. *)
@@ -292,28 +277,17 @@ let lower d =
         ++ match decl_globref d with Some r -> str " in " ++ Table.safe_pr_global r | None -> mt () );
   ir
 
-let to_ir = function In_ir d -> d | In_minicpp d -> lower d
-
-(** [run_stages ~tracing note stages decl] lowers [decl] and runs [stages]
-    over it, converting only where a stage over the other representation
-    follows, and hands back the MiniCpp the seam takes.  [note] is told what
-    each stage did, in MiniCpp, which a stage over CppIR converts to only
-    when [tracing]. *)
-let run_stages ~tracing note stages decl =
-  let step d = function
-    | Ir p ->
-      let before = to_ir d in
-      let after = p.run before in
-      if tracing then
-        note p.name (Cpp_ir_to_legacy_minicpp.decl before) (Cpp_ir_to_legacy_minicpp.decl after);
-      In_ir after
-    | Legacy p ->
-      let before = to_minicpp d in
-      let after = p.run before in
-      note p.name before after;
-      In_minicpp after
+(** [run_lowered ~tracing note decl] lowers [decl], runs {!lowered_passes}
+    over it and hands back the MiniCpp the seam takes.  [note] is told what
+    each pass did, in MiniCpp, which it is converted to only when
+    [tracing]. *)
+let run_lowered ~tracing note decl =
+  let step d (p : _ Pipeline_trace.pass) =
+    let after = p.run d in
+    if tracing then note p.name (Cpp_ir_to_legacy_minicpp.decl d) (Cpp_ir_to_legacy_minicpp.decl after);
+    after
   in
-  to_minicpp (List.fold_left step (In_ir (lower decl)) stages)
+  Cpp_ir_to_legacy_minicpp.decl (List.fold_left step (lower decl) lowered_passes)
 
 let finish decl =
   let trace = traced decl in
@@ -336,7 +310,7 @@ let finish decl =
         d' )
       d passes
   in
-  let decl = run_stages ~tracing:(trace <> None) note lowered_passes decl in
+  let decl = run_lowered ~tracing:(trace <> None) note decl in
   let settled = Cpp_erasure.materialise decl in
   note seam decl (settled :> cpp_decl);
   let inj (d : Cpp_erasure.settled) = (d :> cpp_decl) in

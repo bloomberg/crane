@@ -1807,7 +1807,7 @@ let pp_type ctx t = pp_cpp_type ctx false [] t
     A callable parameter ([Invocable]) is written [typename]; what it must
     accept goes in the [requires] clause ({!pp_requires_of_tparams}).  One
     whose constraint was never settled from its body
-    ({!Minicpp.settle_constraints}) is printed unconstrained -- a constraint
+    ({!Cpp_constraints.settle}) is printed unconstrained -- a constraint
     guessed from its declared type could name the wrong operands.  Under
     [CRANE_CHECK_IR] none gets here: the seam checks that the constraints were
     settled ({!Cpp_pipeline.finish}). *)
@@ -1875,7 +1875,7 @@ let pp_requires_of_tparams ctx tparams =
       (fun ((tt : I.Resolved.phase I.Template.Parameter_kind.t), id) ->
         match tt with
         (* What a callable must accept was settled from the body before
-           printing: see {!Minicpp.settle_constraints}. *)
+           printing: see {!Cpp_constraints.settle}. *)
         | Invocable (invs, cod) ->
           writes_standard "type_traits";
           let operand (cat : I.Template.Value_category.t) ty =

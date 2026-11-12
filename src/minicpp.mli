@@ -846,11 +846,11 @@ and template_type =
           signature it appears in, and a plain [typename] cannot be applied. *)
   | TTfun of (cpp_type list * cpp_type)
       (* A callable parameter as its declaration types it, before the body
-         that calls it is finished: what {!settle_constraints} starts from. *)
+         that calls it is finished: what {!Cpp_constraints.settle} starts from. *)
   | TTinvocable of invocation list * cpp_type
       (* A callable parameter as the finished body calls it: one entry per
          distinct way it is invoked, and the type each result must convert
-         to.  {!settle_constraints} derives it from the body; it, not
+         to.  {!Cpp_constraints.settle} derives it from the body; it, not
          [TTfun], is what the printer states as a constraint. *)
       (** Function type parameter for higher-order templates *)
   | TTconcept of GlobRef.t * cpp_type list
@@ -1631,19 +1631,6 @@ val expr_contains_capturing_lambda : cpp_expr -> bool
 (** Statement counterpart of {!expr_contains_capturing_lambda}. *)
 val stmt_contains_capturing_lambda : cpp_stmt -> bool
 
-(** [erased_into_storage_ids body] names the value parameters [body] only ever
-    hands to a representation-tolerant helper from [crane_fn.h] -- erased into
-    storage by [crane_erase_fn], or applied through [crane_call_erased] -- and
-    never applies directly.  A signature has nothing to claim about such a
-    callback: the helper adapts whatever it is given. *)
-val erased_into_storage_ids : cpp_stmt list -> Id.Set.t
-
-(** [erased_into_storage_tparam ~params body id] holds when the template
-    parameter [id] types a value parameter that [body] only erases into storage
-    (see {!erased_into_storage_ids}), so no constraint may be placed on it. *)
-val erased_into_storage_tparam :
-  params:(Id.t * cpp_type) list -> cpp_stmt list -> Id.t -> bool
-
 (** Whether a [TTfun] constraint states nothing the caller can be held to, and
     so is dropped rather than printed: a rank-2 callback's result is not the
     [std::any] the constraint would demand.  Read by the printer, which drops
@@ -1841,17 +1828,6 @@ val declared_by_reference : cpp_type -> bool
     method [Type::make] answers with [Type] -- which is the reference a user
     has to hang a directive on, the method itself having no Rocq name. *)
 val decl_globref : cpp_decl -> GlobRef.t option
-
-(** The parameters and statements of a declaration, for the traversals that
-    need to see what its body does with its parameters.  A declaration with no
-    body gives empty lists. *)
-val decl_body : cpp_decl -> (Id.t * cpp_type) list * cpp_stmt list
-
-(** Demote to a plain [typename] every callable template parameter in [decl]
-    whose constraint claims nothing: one the body only erases into storage,
-    and one whose constraint is vacuous.  The printer writes every [TTfun] it
-    is given. *)
-val settle_constraints : cpp_decl -> cpp_decl
 
 (** [dfun_path ?inner outer] is the qualified name [outer::inner...]. *)
 val dfun_path :
