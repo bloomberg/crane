@@ -277,7 +277,6 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
   visit ~decl ~ty;
   !found
 
-let of_decl d = collect (fun ~decl ~ty:_ -> decl d)
 
 let of_type t = collect (fun ~decl:_ ~ty -> ty t)
 
@@ -287,7 +286,6 @@ let globals visit =
   ignore (collect ~global:(fun r -> found := r :: !found) visit);
   !found
 
-let globals_of_decl d = globals (fun ~decl ~ty:_ -> decl d)
 
 let globals_of_type t = globals (fun ~decl:_ ~ty -> ty t)
 
@@ -303,9 +301,245 @@ let promoted visit =
     (collect ~promoted:(fun id -> if not (List.exists (Names.Id.equal id) !found) then found := id :: !found) visit);
   List.rev !found
 
-let promoted_of_decl d = promoted (fun ~decl ~ty:_ -> decl d)
 
 let promoted_of_type t = promoted (fun ~decl:_ ~ty -> ty t)
+
+module Legacy = struct
+  let of_decl d = collect (fun ~decl ~ty:_ -> decl d)
+  let globals_of_decl d = globals (fun ~decl ~ty:_ -> decl d)
+  let promoted_of_decl d = promoted (fun ~decl ~ty:_ -> decl d)
+end
+
+(* [collect] of a finished declaration, read off CppIR: the same rules, where
+   nothing is left that only a lowered declaration may hold.  [visit] is
+   handed the declaration visitor. *)
+module Ir = struct
+  open Cpp_ir
+
+  type ty = Resolved.Type.t
+  type expr = Resolved.Expr.t
+  type stmt = Resolved.Stmt.t
+
+  let at_type_variable : ty -> bool = function Variable _ | Apply (Variable _, _) -> true | _ -> false
+
+  let rec pointee_slot : ty -> Pointer_slot.t = function
+    | Entity_application (r, _, _) when Table.is_shared_variant r -> Shared
+    | Entity_application (Names.GlobRef.IndRef (kn, _), _, _)
+      when Table.shared_variant () && Common.under_mp_bound (Names.MutInd.modpath kn) ->
+      At_instantiation
+    | In_namespace (_, t) | Const t -> pointee_slot t
+    | _ -> Pointer
+
+  let collect ?(global = ignore) ?(promoted = ignore) visit =
+    let found = ref [] in
+    let need h = if not (List.mem h !found) then found := h :: !found in
+    let std h = need (Table.Standard h) in
+    let rt h = need (Table.Runtime h) in
+    let obj () = rt Crane_rt.obj_header in
+    let variant () = need (Cpp_state.sn ()).variant_header in
+    let erase_fn () = need Table.erase_fn_header in
+    let string_literal : expr -> unit = function Literal (String _) -> std "string" | _ -> () in
+    let rec ty (t : ty) =
+      ( match t with
+      | Rebind _ | Erased _ | Any -> obj ()
+      | External (name, _) -> Option.iter need (of_external name)
+      | Function _ -> rt Crane_rt.fn_header
+      | Variant (Inline, _) -> variant ()
+      | Variant (Shared, _) -> rt Crane_rt.shared_variant_header
+      | Shared_pointer t -> (
+        match pointee_slot t with
+        | Shared -> rt Crane_rt.shared_variant_header
+        | At_instantiation ->
+          rt Crane_rt.shared_variant_header;
+          std "memory"
+        | Pointer -> std "memory" )
+      | Decay _ -> std "type_traits"
+      | In_namespace (r, _) -> global r
+      | Promoted_member id ->
+        promoted id;
+        Option.iter global (Table.promoted_type_var_field id)
+      | _ -> () );
+      match t with
+      | In_namespace ((Names.GlobRef.IndRef _ as r), Entity_application (r', tys, _)) when Common.globref_equal r r' ->
+        List.iter ty tys
+      | Entity_application (r, tys, _) -> (
+        match Table.inline_custom_text r with
+        | Some "" -> List.iter ty tys
+        | Some _ -> CErrors.anomaly Pp.(str "a mapped type reached demands uninstantiated: " ++ Names.GlobRef.print r)
+        | None ->
+          global r;
+          List.iter ty tys )
+      | Foreign fr -> foreign Foreign.Constant fr
+      | Type_constructor _ -> ()
+      | Type_of e -> expr e
+      | _ -> Children.type_children ty t
+    and foreign (use : Foreign.use) (fr : Resolved.phase Foreign.t) =
+      (match use with Block_value _ | Statements -> ty (Option.default Type.Auto fr.yields) | Constant | Call -> ());
+      List.iter
+        (fun (p : Foreign.piece) ->
+          match p with
+          | Type_argument i | Element (i, _) -> ty (Option.default Type.Any (List.nth_opt fr.types i))
+          | Value i ->
+            Option.iter
+              (fun e ->
+                expr e;
+                string_literal e )
+              (List.nth_opt fr.values i)
+          | Yields -> Option.iter ty fr.yields
+          | Text _ | Result | Statement_end -> () )
+        fr.pieces
+    and visitor = {Children.expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = (fun t -> ty t)}
+    and expr (e : expr) =
+      ( match e with
+      | Move _ | In_place | In_place_index _ | Declval _ -> std "utility"
+      | Lambda {capture = Written (By_copy {moved = _ :: _; _}); _} -> std "utility"
+      | Allocate (Heap, _) -> std "memory"
+      | Allocate (Arena_scoped, _) ->
+        if Table.non_atomic_rc () then std "memory"
+        else if not (String.equal (Table.std_lib ()) "BDE") then need Table.arena_header
+      | Converting_construct (t, _) when at_type_variable t -> obj ()
+      | Conditional (_, Call (_, Allocate (Heap, _), _), Literal Null_pointer) -> std "memory"
+      | Convertible_to _ -> std "concepts"
+      | Abort _ -> std "stdexcept"
+      | Variant_get _ | Holds_alternative _ | Variant_get_if _ -> variant ()
+      | Runtime h -> (
+        match h with
+        | Crane_rt.Raw | Crane_rt.Deep_box -> erase_fn ()
+        | Crane_rt.Unbox_field -> rt Crane_rt.field_header
+        | Crane_rt.Apply2 -> rt Crane_rt.fn_header
+        | Crane_rt.Constant _ | Crane_rt.Immortal -> rt Crane_rt.shared_block_header
+        | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step | Crane_rt.Share_child -> () )
+      | Unbox (To _, _) | Any_cast _ -> obj ()
+      | Unbox (Or_keep _, _) -> std "type_traits"
+      | Tolerant_any_cast _ ->
+        obj ();
+        erase_fn ()
+      | Erase_callable _ | Tolerant_call _ | Convert _ | Container_cast _ -> erase_fn ()
+      | Erased_call _ ->
+        obj ();
+        std "functional";
+        rt Crane_rt.fn_header
+      | Function_value _ -> rt Crane_rt.fn_header
+      | Aggregate {struct_ = r; _} | Enum_value (r, _) -> global r
+      | Concept_application (concept, subject, _) ->
+        global concept;
+        global subject
+      | _ -> () );
+      match e with
+      | Foreign (use, fr) -> foreign use fr
+      | Entity (r, _, Some {inline = Some _; _}) | Call (_, Entity (r, _, Some {inline = Some _; _}), _) ->
+        uninstantiated_mapping r
+      | Entity (r, tys, _) ->
+        global r;
+        List.iter ty tys
+      | Call (_, f, args) ->
+        expr f;
+        List.iter expr args
+      | Project (e, _, _) -> expr e
+      | _ -> Children.expr visitor e
+    and stmt (s : stmt) =
+      ( match s with
+      | Throw _ -> std "stdexcept"
+      | Switch {enum = r; _} ->
+        std "utility";
+        global r
+      | Assert (Checked _) -> std "cassert"
+      | If_constexpr {test = Convertible (t, _); _} ->
+        erase_fn ();
+        if at_type_variable t then obj ()
+      | Foreign_text text when String.equal text acquire_fence -> std "atomic"
+      | Foreign_text text when Common.contains_substring text "std::vector" -> std "vector"
+      | Match (scrut, _, _) ->
+        variant ();
+        if scrut.owned then std "utility"
+      | _ -> () );
+      match s with
+      | Return (Some (Abort _)) -> std "stdexcept"
+      | Return
+          (Some
+            (Move
+              ((Local _ | Call _ | Access_call _ | Method_call _ | Projection _ | Aggregate _ | Local_aggregate _) as
+               returned))) ->
+        expr returned
+      | Custom_match m ->
+        let nth l i = List.nth_opt l i in
+        let pieces : Stmt.Custom_match.piece list = match m.pieces with Instantiated pieces -> pieces in
+        List.iter
+          (fun (p : Stmt.Custom_match.piece) ->
+            match p with
+            | Scrutinee _ ->
+              expr m.scrutinee;
+              string_literal m.scrutinee
+            | Matched_type -> ty m.return_type
+            | Type_argument i -> ty (Option.default Type.Any (nth m.type_args i))
+            | Branch i -> Option.iter (fun (b : _ Stmt.Custom_match.branch) -> List.iter stmt b.body) (nth m.branches i)
+            | Binder_type (i, j) ->
+              Option.iter
+                (fun (b : _ Stmt.Custom_match.branch) ->
+                  Option.iter (fun (p : _ Stmt.Custom_match.param) -> ty p.type_) (nth b.params j) )
+                (nth m.branches i)
+            | Text _ | Binder _ -> () )
+          pieces
+      | Match (scrut, branches, default) ->
+        expr scrut.expr;
+        List.iter
+          (fun (br : _ Stmt.Match.branch) ->
+            ty br.ctor_type;
+            List.iter expr br.extra_conditions;
+            List.iter stmt br.body )
+          branches;
+        Option.iter (List.iter stmt) default
+      | _ -> Children.stmt visitor s
+    in
+    let tparams (tps : Resolved.phase Template.parameters) =
+      List.iter
+        (fun ((k : _ Template.Parameter_kind.t), _) ->
+          match k with
+          | Invocable _ -> std "type_traits"
+          | Concept (r, _) -> global r
+          | _ -> () )
+        tps;
+      Children.template_parameters visitor tps
+    in
+    let rec field ((f, _, _) : _ Field.member) =
+      match f with
+      | Method m -> tparams m.type_params
+      | Nested_struct (_, fs) -> List.iter field fs
+      | _ -> ()
+    in
+    let rec decl : Resolved.Decl.t -> unit = function
+      | Template (tps, c, inner) ->
+        tparams tps;
+        Option.iter expr c;
+        decl inner
+      | Namespace (_, ds) -> List.iter decl ds
+      | Variable {type_ = t; init = Abort _; _} ->
+        ty t;
+        std "stdexcept"
+      | d ->
+        ( match d with
+        | Struct {fields; _} | Merged_struct_members {fields; _} -> List.iter field fields
+        | _ -> () );
+        Children.decl visitor d
+    in
+    visit decl;
+    !found
+end
+
+let of_decl d = Ir.collect (fun decl -> decl d)
+
+let globals_of_decl d =
+  let found = ref [] in
+  ignore (Ir.collect ~global:(fun r -> found := r :: !found) (fun decl -> decl d));
+  !found
+
+let promoted_of_decl d =
+  let found = ref [] in
+  ignore
+    (Ir.collect
+       ~promoted:(fun id -> if not (List.exists (Names.Id.equal id) !found) then found := id :: !found)
+       (fun decl -> decl d));
+  List.rev !found
 
 let of_modtype_concept (c : Modtype_concept.t) =
   let found = ref [] in

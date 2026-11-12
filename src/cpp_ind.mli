@@ -346,6 +346,14 @@ val finished_placed : Unit_program.id * Minicpp.cpp_decl -> Cpp_erasure.settled
     its {!helper_id}). *)
 val finished_helper : Minicpp.cpp_decl -> Cpp_erasure.settled
 
+(** [entity_placed (id, d)] is the function entity of {!finished_placed}:
+    its declaration and definition, in MiniCpp and in CppIR. *)
+val entity_placed : Unit_program.id * Minicpp.cpp_decl -> Function_entity.t
+
+(** [helper_entity d] is {!entity_placed} of the lifted helper [d] under
+    its {!helper_id}. *)
+val helper_entity : Minicpp.cpp_decl -> Function_entity.t
+
 (** [finished_concept r d] is [d], the concept of the class [r]. *)
 val finished_concept : Names.GlobRef.t -> Minicpp.cpp_decl -> Cpp_erasure.settled
 

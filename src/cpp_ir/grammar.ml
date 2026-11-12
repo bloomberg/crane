@@ -360,7 +360,7 @@ and Expr : sig
     | Move : 'p t -> 'p t
     | Forward : 'p Type.t * 'p t -> 'p t
     | Lambda : 'p Lambda.t -> 'p t
-    | Suspend : 'p Type.t * 'p t -> lowered t
+    | Suspend : lowered Type.t * lowered t -> lowered t
         (** a coinductive value with its constructor suspended in a thunk,
             written by resolution as its type's [lazy_] factory applied to
             the thunk *)
@@ -567,7 +567,7 @@ and Stmt : sig
     | Continue : 'p t
     | Break : 'p t
     | Match : 'p Match.scrutinee * 'p Match.branch list * 'p t list option -> 'p t
-    | Foreign_block : 'p Foreign_block.t -> lowered t
+    | Foreign_block : lowered Foreign_block.t -> lowered t
         (** instantiated by resolution into the declaration of its result,
             initialised by the mapping's statements *)
 end =
@@ -658,7 +658,7 @@ and Parameter_kind : sig
     | Typename : 'p t
     | Typename_default : 'p Type.t -> 'p t
     | Template : int -> 'p t  (** a template template parameter of this arity *)
-    | Callable_declared : 'p Type.t list * 'p Type.t -> lowered t
+    | Callable_declared : lowered Type.t list * lowered Type.t -> lowered t
         (** a callable parameter as its declaration types it, before the
             body that settles its constraint is final *)
     | Invocable : 'p Invocation.t list * 'p Type.t -> 'p t

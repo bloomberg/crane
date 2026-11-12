@@ -23,7 +23,7 @@ rules=(
   # CppIR is one node of the dependency graph (src/cpp_ir/ is a namespace), so
   # none of its files may reach a module that names it: not MiniCpp, not the
   # program, not the conversion into it.
-  "cpp_ir/grammar cpp_ir/representation_obligation cpp_ir/type cpp_ir/expr cpp_ir/stmt cpp_ir/decl cpp_ir/field cpp_ir/template cpp_ir/inductive cpp_ir/foreign cpp_ir/function cpp_ir/struct cpp_ir/type_alias cpp_ir/member_definition cpp_ir/binary_operator cpp_ir/unary_operator cpp_ir/resolved cpp_ir/lowered : $TRANSLATION $PRINTER $FINISHING Table Common Minicpp Unit_program"
+  "cpp_ir/grammar cpp_ir/representation_obligation cpp_ir/type cpp_ir/expr cpp_ir/stmt cpp_ir/decl cpp_ir/field cpp_ir/template cpp_ir/inductive cpp_ir/foreign cpp_ir/function cpp_ir/struct cpp_ir/type_alias cpp_ir/member_definition cpp_ir/binary_operator cpp_ir/unary_operator cpp_ir/resolved cpp_ir/lowered cpp_ir/children cpp_ir/globrefs : $TRANSLATION $PRINTER $FINISHING Table Common Minicpp Unit_program"
   # The printer reads Cpp_erasure's settled declarations; nothing else of the
   # finishing passes.
   "cpp_print : $TRANSLATION ${FINISHING/ Cpp_erasure/}"

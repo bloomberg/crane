@@ -215,9 +215,9 @@ let outside_every_struct mp = not (Scope_plan.nested mp)
     helper defines a function and {!spec_is_hoistable} says it may be. *)
 let hoisted_helpers : bool GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
 
-(** The lifted helper [d], placed under [id] ({!Cpp_ind.finished_placed}),
+(** The lifted helper [d], placed under [id] ({!Cpp_ind.entity_placed}),
     as the function entity it finished as. *)
-let helper_entity (id, d) = Function_entity.of_finished (Cpp_ind.finished_placed (id, d))
+let helper_entity (id, d) = Cpp_ind.entity_placed (id, d)
 
 (* The function the lifted helper [d], finalized as [e], defines, if it
    defines one: only a function's declaration can be hoisted. *)
@@ -411,7 +411,7 @@ let dbg_lifted =
         | None -> "<not-a-lifted-helper>"
       in
       let split =
-        let e = Function_entity.of_finished (Cpp_ind.finished_helper d) in
+        let e = Cpp_ind.helper_entity d in
         if Function_entity.defines_function e then
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
@@ -1755,21 +1755,19 @@ let customs_written_ahead () =
     Struct fields carry no initialiser, so a struct counts whole (its
     methods). *)
 let plan_function_reads () =
-  let rec function_globals = function
-    | Dasgn _ -> []
-    | Dtemplate (_, _, d) -> function_globals d
-    | Dnspace (_, ds) -> List.concat_map function_globals ds
+  let rec function_globals : Cpp_ir.Resolved.Decl.t -> _ = function
+    | Variable _ -> []
+    | Template (_, _, d) -> function_globals d
+    | Namespace (_, ds) -> List.concat_map function_globals ds
     | d ->
       let globals = ref [] in
-      Minicpp.iter_globrefs (fun r -> globals := r :: !globals) d;
+      Cpp_ir.Globrefs.iter (fun r -> globals := r :: !globals) d;
       !globals
   in
   Cpp_state.plan_function_reads
     (List.fold_left
-       (fun reads (d : Cpp_erasure.settled) ->
-         List.fold_right Ref.Can.Set.add (function_globals (d :> cpp_decl)) reads)
-       Ref.Can.Set.empty
-       (Unit_program.installed_declarations ()))
+       (fun reads d -> List.fold_right Ref.Can.Set.add (function_globals d) reads)
+       Ref.Can.Set.empty (Unit_program.installed_ir ()))
 
 let generate_ahead s =
   generating_ahead @@ fun () ->

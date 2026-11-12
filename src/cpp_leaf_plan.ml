@@ -1069,7 +1069,7 @@ let constrained_named ~names ~defined =
 let needs_of ~templates (settled : Cpp_erasure.settled) =
   let names, defines =
     constrained_named
-      ~names:(fun () -> Cpp_demands.globals_of_decl (settled :> cpp_decl))
+      ~names:(fun () -> Cpp_demands.Legacy.globals_of_decl (settled :> cpp_decl))
       ~defined:(fun () -> List.map defined_ref (structs_defined settled))
   in
   {Cpp_ast.Needs.templates; names; defines}
