@@ -114,6 +114,12 @@ include Loopify_frame
 (** {2 Main transformation dispatch} *)
 
 (** Why a loop with no ControlIR is not lowered. *)
+(* [body] with the temporaries of its own statements put back
+   ({!Cpp_temporaries.own_stmts}), read as CppIR: Loopify's input is still
+   generated MiniCpp. *)
+let own_stmts body =
+  List.map Cpp_ir_to_legacy_minicpp.stmt (Cpp_temporaries.own_stmts (List.map Legacy_minicpp_to_cpp_ir.lower_stmt body))
+
 let no_control_ir = "the loop has no ControlIR"
 
 (** [check], narrowed to the calls the tail loop of [loop] jumps at, as its
@@ -664,7 +670,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   (* Tail modulo cons reads constructor cells around calls, which
      {!Normalize} took out into temporaries; it reads the body with them put
      back.  Everything else reads the normalized body. *)
-  let restored = Cpp_temporaries.own_stmts body in
+  let restored = own_stmts body in
   (* The loop, where the plan lowers the function tail modulo cons: every
      call that is not a tail call is the one call of one of its chains
      ({!Recursion_plan.Modulo_cons}), so the transform, which rewrites calls
@@ -775,7 +781,7 @@ let modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check (f :
   end
   else
     let loop =
-      transform_tmc ~jumped ?cursor ~varying ~parts ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
+      transform_tmc ~jumped ?cursor ~varying ~parts ~shapes tparams check params f.df_ret (own_stmts body)
     in
     if classify (survivors f) loop = No_recursion then Some loop else None
 
@@ -1060,25 +1066,3 @@ let record_unlowered_method mf =
   | Tail_loop -> ignore (report_outcome ~name ~check ~strategy:Lp_tail mf.mf_body)
   | Modulo_cons _ | Frame_stack -> ignore (report_outcome ~name ~check ~strategy:Lp_frame mf.mf_body)
 
-(** Check the pointer fields of each constructor struct of [ds] against
-    those planned before rendering ({!Loopify_analysis.agree_ptr_fields}). *)
-let check_pointer_fields ds =
-  let rec fields (fld, _, _) =
-    match fld with
-    | Fnested_struct (id, sub_fields) ->
-      let var_fields = List.filter_map (fun (f, _, _) -> match f with Fvar (_, ty) -> Some ty | _ -> None) sub_fields in
-      let ptr_fields =
-        List.filter_map Fun.id
-          (List.mapi
-             (fun i ty ->
-               match ty with
-               | Tshared_ptr (Tglob (r, _, _)) when Common.globref_equal r ds.ds_ref -> Some (Recursive i)
-               | Tshared_ptr _ -> Some (Boxed i)
-               | _ -> None )
-             var_fields )
-      in
-      if ptr_fields <> [] then agree_ptr_fields ds.ds_ref (Id.to_string id) ptr_fields;
-      List.iter fields sub_fields
-    | _ -> ()
-  in
-  List.iter fields ds.ds_fields

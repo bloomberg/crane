@@ -791,34 +791,45 @@ let lower_group decls =
         lower_locals ~unlowered d )
     decls
 
+(** {1 The control check, over the finished declaration} *)
+
+module Ir = Cpp_ir.Lowered
+
+(* A visit of the children of a node: [expr] for expressions, [stmt] for
+   statements, types skipped. *)
+let visit ~expr ~stmt : Ir.phase Cpp_ir.Children.visitor = {expr; stmt; type_ = ignore}
+
 (* Whether [stmts], closures' bodies included, make a call of one of the
    occurrences [taken]. *)
-let keeps_call taken stmts =
+let keeps_call taken (stmts : Ir.Stmt.t list) =
   let exception Found in
-  let rec fe e =
+  let rec v = lazy (visit ~expr:(fun e -> expr e) ~stmt:(fun s -> stmt s))
+  and expr (e : Ir.Expr.t) =
     ( match e with
-    | CPPfun_call ({cs_occurrence = Some o; _}, _, _) when List.exists (Miniml.Occurrence.equal o) taken ->
-      raise_notrace Found
+    | Call ({occurrence = Some o; _}, _, _) when List.exists (Miniml.Occurrence.equal o) taken -> raise_notrace Found
     | _ -> () );
-    map_expr fe fs Fun.id e
-  and fs s = map_stmt fe fs Fun.id s in
-  match List.iter (fun s -> ignore (fs s)) stmts with () -> false | exception Found -> true
+    Cpp_ir.Children.expr (Lazy.force v) e
+  and stmt s = Cpp_ir.Children.stmt (Lazy.force v) s in
+  match List.iter stmt stmts with () -> false | exception Found -> true
 
 (* Whether [stmts], outside every lambda, make a call of one of the
    occurrences [calls] as a whole statement or the value they return or
    bind: one a loop's transform takes where it is one of the loop's turns. *)
-let makes_statement_call calls stmts =
-  let rec bare = function CPPany_cast (_, e) | CPPmove e -> bare e | e -> e in
+let makes_statement_call calls (stmts : Ir.Stmt.t list) =
+  let rec bare : Ir.Expr.t -> Ir.Expr.t = function Any_cast (_, e) | Move e -> bare e | e -> e in
   let made e =
     match bare e with
-    | CPPfun_call ({cs_occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
+    | Call ({occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
     | _ -> false
   in
-  let rec stmt s =
+  let rec stmt (s : Ir.Stmt.t) =
     ( match s with
-    | Sasgn (_, _, e) | Sreturn (Some e) | Sexpr e -> made e
+    | Bind_variable (_, _, e) | Return (Some e) | Expression e -> made e
     | _ -> false )
-    || fold_stmt_children ~on_expr:(fun found _ -> found) ~on_stmts:(fun found ss -> found || List.exists stmt ss) false s
+    ||
+    let found = ref false in
+    Cpp_ir.Children.stmt (visit ~expr:ignore ~stmt:(fun s -> if not !found then found := stmt s)) s;
+    !found
   in
   List.exists stmt stmts
 
@@ -828,7 +839,34 @@ let loop_calls : Control_ir.Loop.t -> Miniml.Occurrence.t list = function
   | Function r -> Loopify.definition_calls r
   | Member (o, m) -> Recursion_plan.member_calls (o, m)
 
-let check_lowered decl =
+(* The pointer fields of each constructor struct of [s], checked against
+   those planned before rendering ({!Loopify_analysis.agree_ptr_fields}). *)
+let check_pointer_fields (s : Ir.phase Cpp_ir.Struct.t) =
+  let rec fields ((f, _, _) : Ir.phase Cpp_ir.Field.member) =
+    match f with
+    | Nested_struct (id, sub_fields) ->
+      let data =
+        List.filter_map
+          (fun ((f, _, _) : Ir.phase Cpp_ir.Field.member) -> match f with Data (_, ty) -> Some ty | _ -> None)
+          sub_fields
+      in
+      let pointers =
+        List.filter_map Fun.id
+          (List.mapi
+             (fun i (ty : Ir.Type.t) : Loopify_analysis.ptr_field option ->
+               match ty with
+               | Shared_pointer (Entity_application (r, _, _)) when Common.globref_equal r s.ref_ -> Some (Recursive i)
+               | Shared_pointer _ -> Some (Boxed i)
+               | _ -> None )
+             data )
+      in
+      if pointers <> [] then Loopify_analysis.agree_ptr_fields s.ref_ (Id.to_string id) pointers;
+      List.iter fields sub_fields
+    | _ -> ()
+  in
+  List.iter fields s.fields
+
+let check_lowered (decl : Ir.Decl.t) =
   let violation (l : Control_ir.Loop.t) what =
     Probe.violation "control lowering"
       Pp.(
@@ -858,61 +896,62 @@ let check_lowered decl =
     | None -> if committed then violation l "the plan commits to a loop control lowering never decided on"
   in
   let lowered = function Some Loop_verdicts.Lowered -> true | Some (Declined _ | Unlowered _ | Kept) | None -> false in
-  let function_ (f : dfun) =
-    match (f.df_shape, f.df_path.dp_inner) with
-    | Ddef (_, body), [] -> (
-      let r = fst f.df_path.dp_outer in
-      match (f.df_loop, Option.bind (Lifted.of_ref r) Lifted.fixpoint) with
+  let function_ (f : Ir.phase Cpp_ir.Function.t) =
+    match (f.shape, f.path.inner) with
+    | Definition (_, body), [] -> (
+      let r = fst f.path.outer in
+      match (f.loop, Option.bind (Lifted.of_ref r) Lifted.fixpoint) with
       | Some l, _ -> emitted l ~recorded:lowered body
       | None, Some (o, m) -> unlowered (Member (o, m)) ~committed:(Option.has_some (lifted_loop r))
       | None, None -> unlowered (Function r) ~committed:(Option.has_some (planned_loop r)) )
-    | (Ddef _ | Ddecl _), _ -> ()
+    | (Definition _ | Declaration _), _ -> ()
   in
-  let method_ (m : method_field) =
-    match (m.mf_loop, m.mf_globref) with
-    | Some l, _ -> emitted l ~recorded:lowered m.mf_body
+  let method_ (m : Ir.phase Cpp_ir.Field.Method.t) =
+    match (m.loop, m.globref) with
+    | Some l, _ -> emitted l ~recorded:lowered m.body
     | None, Some r -> unlowered (Function r) ~committed:(Option.has_some (method_loop r))
     | None, None -> ()
   in
   (* A local fixpoint lowered with the machine it is in is one control
      lowering kept for that machine. *)
-  let fixpoint (l : cpp_lambda) =
-    match l.cl_fixpoint with
-    | Some {lf_member = o, m; lf_encoding = Lowered; _} ->
-      emitted (Member (o, m)) l.cl_body ~recorded:(function
+  let fixpoint (l : Ir.phase Cpp_ir.Expr.Lambda.t) =
+    match l.fixpoint with
+    | Some {member = o, m; encoding = Lowered; _} ->
+      emitted (Member (o, m)) l.body ~recorded:(function
         | Some (Loop_verdicts.Lowered | Kept) -> true
         | Some (Declined _ | Unlowered _) | None -> false )
-    | Some {lf_member = (o, m) as member; lf_encoding = Self_passing [_]; _} ->
+    | Some {member = (o, m) as member; encoding = Self_passing [_]; _} ->
       let committed =
         match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
         | Some (Tail_loop | Modulo_cons _ | Frame_stack) -> true
         | Some (No_loop | Suspended _) | None -> false
       in
       unlowered (Member (o, m)) ~committed
-    | Some {lf_encoding = Self_passing _ | Knot; _} | None -> ()
+    | Some {encoding = Self_passing _ | Knot; _} | None -> ()
   in
   let rec fields fs =
     List.iter
-      (fun (f, _, _) ->
+      (fun ((f, _, _) : Ir.phase Cpp_ir.Field.member) ->
         match f with
-        | Fmethod m | Fmember_decl (OLmethod m) -> method_ m
-        | Fnested_struct (_, fs) -> fields fs
+        | Method m | Out_of_line_declaration (Method m) -> method_ m
+        | Nested_struct (_, fs) -> fields fs
         | _ -> () )
       fs
   in
-  let rec decls = function
-    | Dtemplate (_, _, d) -> decls d
-    | Dnspace (_, ds) -> List.iter decls ds
-    | Dfun f -> function_ f
-    | Dstruct ds | Dfields ds ->
-      Loopify.check_pointer_fields ds;
-      fields ds.ds_fields
-    | Dmember_def {dm_field = OLmethod m; _} -> method_ m
+  let rec decls : Ir.Decl.t -> unit = function
+    | Template (_, _, d) -> decls d
+    | Namespace (_, ds) -> List.iter decls ds
+    | Function f -> function_ f
+    | Struct s | Merged_struct_members s ->
+      check_pointer_fields s;
+      fields s.fields
+    | Member_definition {member = Method m; _} -> method_ m
     | _ -> ()
   in
   decls decl;
-  let rec fe e =
-    (match e with CPPlambda l -> fixpoint l | _ -> ());
-    map_expr fe fs Fun.id e
-  and fs s = map_stmt fe fs Fun.id s in
-  ignore (map_decl fe fs Fun.id decl)
+  let rec v = lazy (visit ~expr:(fun e -> expr e) ~stmt:(fun s -> Cpp_ir.Children.stmt (Lazy.force v) s))
+  and expr (e : Ir.Expr.t) =
+    (match e with Lambda l -> fixpoint l | _ -> ());
+    Cpp_ir.Children.expr (Lazy.force v) e
+  in
+  Cpp_ir.Children.decl (Lazy.force v) decl

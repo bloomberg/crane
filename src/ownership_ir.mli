@@ -59,6 +59,9 @@ val worth_moving : Miniml.ml_type -> bool
     frame fields it declares itself. *)
 val worth_moving_cpp : Minicpp.cpp_type -> bool
 
+(** {!worth_moving_cpp}, asked of a CppIR type. *)
+val worth_moving_ir : 'p Cpp_ir.Type.t -> bool
+
 (** What both ask of the global type [r] applied to [args], [worth] judging
     an argument: an inductive unless an enum or coinductive, a mapped type
     unless a scalar or trivially copyable one with no argument worth moving.

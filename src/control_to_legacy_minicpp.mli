@@ -182,5 +182,6 @@ val lower_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list
     not make the loop; and no loop emitted still making a call of an
     occurrence one of its turns alone is made of
     ({!Lower_control.taken_continues}).  It checks the constructor structs'
-    pointer fields too ({!Loopify.check_pointer_fields}). *)
-val check_lowered : Minicpp.cpp_decl -> unit
+    pointer fields against those planned before rendering, which the
+    recursion plan's tail-modulo-cons chains were read with. *)
+val check_lowered : Cpp_ir.Lowered.Decl.t -> unit

@@ -227,12 +227,6 @@ val worthwhile_move_type : cpp_type -> bool
     {!Cpp_simplify}, which asks the same question of a local as loopify asks
     of a frame field. *)
 
-(** [check_pointer_fields ds] checks, under [CRANE_CHECK_IR], the fields
-    each constructor struct of the struct [ds] stores behind the pointer
-    against those planned before rendering, which the recursion plan's
-    tail-modulo-cons chains were read with. *)
-val check_pointer_fields : dstruct -> unit
-
 (** {2 Diagnostics}
 
     The pass records an outcome per recursive function, so that a bail-out,

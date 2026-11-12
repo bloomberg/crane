@@ -162,11 +162,9 @@ let restorer ~lambdas =
 
 (** [own_stmts body] is [body] with the temporaries of its own statements put
     back, those of any lambda in it left: the view a transform of [body]
-    alone reads, each lambda being transformed on its own.  Asked of MiniCpp
-    by Loopify, which reads a function body before it is finished. *)
-let own_stmts body =
-  let restore = restorer ~lambdas:false in
-  List.map Cpp_ir_to_legacy_minicpp.stmt (restore.stmts (List.map Legacy_minicpp_to_cpp_ir.lower_stmt body))
+    alone reads, each lambda being transformed on its own.  Asked by Loopify,
+    which reads a function body before it is finished. *)
+let own_stmts body = (restorer ~lambdas:false).stmts body
 
 (** [decl d] is [d] with its temporaries put back. *)
 let decl (d : Cpp_ir.Lowered.Decl.t) = Cpp_ir.Map.decl (restorer ~lambdas:true) d
