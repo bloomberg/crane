@@ -378,10 +378,6 @@ val box_for_any_slot : Ml_type_util.box_kind -> ml_ast -> cpp_expr -> cpp_expr
     field stored as an erased [std::any]. *)
 val ml_body_returns_erased_field : ml_ast -> bool
 
-(** True when the head of an application chain is (or was) wrapped in
-    [MLmagic]. *)
-val ml_head_has_magic : ml_ast -> bool
-
 (** Build a [Tvar i -> concrete_type] substitution mapping for extra type
     variables introduced beyond an inductive's own [num_ind_vars]. *)
 val make_subst_extra_tvars :

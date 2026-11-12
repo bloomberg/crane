@@ -474,11 +474,6 @@ let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 let rec walk w ?(position = no_position) lex e =
   let go ?(position = no_position) lex e = walk w ~position lex e in
   match e with
-  (* A spine is read whole, as translation reads it.  A coercion of the
-     callee is seen through at every argument -- [not] applied to the
-     proposition it erases, in a type written [{P} + {~P}]. *)
-  | MLapp ((MLapp (MLglob _, _) | MLmagic _ | MLcase (_, _, [|_|], _)), _) as e ->
-    go ~position lex (Mlutil.read_spine e)
   | MLapp (MLglob use, args) ->
     walk_use w lex use;
     let at = argument_positions ~position (record w ~position lex use args) in

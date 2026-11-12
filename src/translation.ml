@@ -6764,7 +6764,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                    | Some t -> is_boxed_source (cpp_of_ml env t)
                    | None -> false )
             | MLglob {callee = r; _} -> glob_declared_cod_erases r
-            | MLapp (MLmagic (_, _), _) -> true
             | MLrel (i, _) -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
@@ -9357,8 +9356,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let try_app_body (b_inner : Miniml.ml_ast) db_offset =
               let target_rel = 1 + db_offset in
               match b_inner with
-              | Miniml.MLapp (Miniml.MLglob {callee = func_ref; _}, app_args)
-              | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob {callee = func_ref; _}), app_args) ->
+              | Miniml.MLapp (Miniml.MLglob {callee = func_ref; _}, app_args) ->
                 let rec find_pos args i =
                   match args with
                   | [] -> None
@@ -9918,7 +9916,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       match body' with
       | MLrel (i, _) when i <= n -> true
       | MLapp (MLrel (i, _), _) when i <= n -> true
-      | MLapp (MLmagic (_, MLrel (i, _)), _) when i <= n -> true
       | _ -> false
     in
     if is_simple then

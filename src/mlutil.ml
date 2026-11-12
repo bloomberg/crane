@@ -1585,21 +1585,6 @@ let rec ast_size e =
 
 and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
 
-let rec read_spine = function
-  | MLapp (MLapp ((MLglob _ as g), inner), outer) -> read_spine (MLapp (g, inner @ outer))
-  | MLapp (MLmagic (_, f), args) -> read_spine (MLapp (f, args))
-  | MLapp (MLcase (ty, scrut, [|(ids, rty, pat, body)|], occ), outer) ->
-    let outer = List.map (ast_lift (List.length ids)) outer in
-    let body =
-      match body with
-      | MLapp (f, inner) -> MLapp (f, inner @ outer)
-      | _ -> MLapp (body, outer)
-    in
-    MLcase (ty, scrut, [|(ids, rty, pat, body)|], occ)
-  | e -> e
-
-let rec read_spines e = ast_map read_spines (read_spine e)
-
 (* [canonical_app f args], [f] canonical: the application, its head read
    through.  A global applied twice is applied once to both argument lists; a
    coercion at the head is dropped; a single-branch match at the head takes
