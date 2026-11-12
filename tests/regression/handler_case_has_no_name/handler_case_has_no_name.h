@@ -182,9 +182,8 @@ struct Interp {
   template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1,
             typename T3>
   static typename _tcI0::template M<T3>
-  interp(std::type_identity_t<
-             crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
-             h0,
+  interp(const std::type_identity_t<
+             crane::fn<typename _tcI0::template M<crane::obj>(T1)>> &h0,
          const std::shared_ptr<ITree<T3>> &x0_);
 };
 enum class AE { A0 };
@@ -210,12 +209,12 @@ typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
 }
 
 template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
-typename _tcI0::template M<T3> Interp::interp(
-    std::type_identity_t<crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
-        h0,
-    const std::shared_ptr<ITree<T3>> &x0_) {
+typename _tcI0::template M<T3>
+Interp::interp(const std::type_identity_t<
+                   crane::fn<typename _tcI0::template M<crane::obj>(T1)>> &h0,
+               const std::shared_ptr<ITree<T3>> &x0_) {
   return _tcI0::template iter<T3, std::shared_ptr<ITree<T3>>>(
-      [=, h0 = std::move(h0)](const std::shared_ptr<ITree<T3>> &t) ->
+      [=](const std::shared_ptr<ITree<T3>> &t) ->
       typename _tcI0::template M<Sum<std::shared_ptr<ITree<T3>>, T3>> {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {

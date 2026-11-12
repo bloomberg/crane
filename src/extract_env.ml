@@ -1415,7 +1415,8 @@ let normalize_passes : Core_phase.normalizing Pipeline_trace.pass list =
   Pipeline_trace.
     [ pass "eta_expand" (rewriting Normalize.eta_expand);
       pass "let_lambdas" (rewriting Normalize.let_lambdas);
-      pass "normalize" Normalize.structure ]
+      pass "normalize" Normalize.structure;
+      pass "spines" (rewriting Core_normalize.structure) ]
 
 let normalize_pass_names = Pipeline_trace.names normalize_passes
 

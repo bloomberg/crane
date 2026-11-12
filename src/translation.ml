@@ -1610,8 +1610,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     mk_call
       (CPPscope (CPPvar inst, Common.id_of_global Term method_ref, targs))
       (List.map (gen_expr env) value_args)
-  | MLapp (MLmagic (_, t), args) ->
-    gen_expr ?expected_ty ~slot env (MLapp (t, args))
+  (* Every application translation is handed is canonical
+     ({!Core_normalize}): no head here is a global already applied, a
+     coercion, or a one-branch match. *)
+  | MLapp (f, _) as e when Probe.checking () && not (Core_normalize.canonical_head f) ->
+    Probe.violation "non-canonical application" (Pp.str "an application head Core_normalize reads through");
+    gen_expr ?expected_ty ~slot env (Core_normalize.spine e)
   | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
     (* Applying an absurd head — the eliminator of a branch that the indices
        rule out.  The application is itself unreachable, so emit the throw
@@ -1660,13 +1664,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        ...). *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
-  | MLapp (MLapp ((MLglob _ as g), inner_args), outer_args) ->
-    (* Flatten nested MLapp when inner callee is a global reference. This arises
-       from Rocq partial applications like: div_conq_split x f1 f2 l which
-       extracts as MLapp(MLapp(MLglob(dcs), [x,f1,f2]), [l]). Flattening to
-       MLapp(MLglob(dcs), [x,f1,f2,l]) lets eta_fun see the complete argument
-       list and generate a direct call. *)
-    gen_expr ?expected_ty ~slot env (MLapp (g, inner_args @ outer_args))
   | MLapp (MLglob ({callee = r; _} as use), [arg]) when Table.is_numeral_converter r ->
     (* Fold Number.uint/signed_int digit chain into a direct integer literal.
        Tries unsigned (of_num_uint) then signed (of_num_int).
@@ -1683,25 +1680,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         render_numeral info n
       | None -> eta_fun env (MLglob use) [arg] )
     | None -> eta_fun env (MLglob use) [arg] )
-  | MLapp (MLcase (typ, scrut, pv, occ), outer_args) when Array.length pv = 1 ->
-    (* Flatten outer args into a single-branch case body.  A case with one
-       branch is a destructuring and nothing else, whatever it scrutinises --
-       a record, a pair, any one-constructor inductive -- so applying its
-       result is applying the branch body.
-       When a typeclass method is partially applied, Rocq extracts it as
-       MLcase(instance, [(binds, MLapp(MLrel field, inner_args))]). If this
-       MLcase is the callee of an outer MLapp, the inner call only has some
-       args while the outer provides the rest — generating a curried C++ call
-       like make(a)(b) instead of make(a, b).  Push the outer args into the
-       branch body so gen_expr sees the complete argument list. *)
-    let (ids, rty, pat, body) = pv.(0) in
-    let n_bindings = List.length ids in
-    let lifted_outer = List.map (ast_lift n_bindings) outer_args in
-    let new_body = match body with
-      | MLapp (f, inner_args) -> MLapp (f, inner_args @ lifted_outer)
-      | _ -> MLapp (body, lifted_outer)
-    in
-    gen_expr ~slot env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|], occ))
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries -- see
      {!static_projection_instance}. *)
@@ -1969,7 +1947,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           Some
             ( fresh @ args,
-              MLapp (ast_lift k a, List.init k (fun i -> fresh_rel (k - i))) )
+              Core_normalize.apply (ast_lift k a) (List.init k (fun i -> fresh_rel (k - i))) )
       in
       match Option.bind expected_ty fun_ty_of with
       | Some (n, cod) when n > 0 && fun_ty_of cod <> None ->

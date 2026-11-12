@@ -1411,7 +1411,7 @@ struct Coq_Pos {
   static Positive of_succ_nat(uint64_t n);
   using t = Positive;
   static Positive pred(const Positive &x);
-  static Positive pow(Positive x, const Positive &x0_);
+  static Positive pow(const Positive &x, const Positive &x0_);
   static Positive square(const Positive &p);
   static uint64_t size_nat(const Positive &p);
   static Positive size(const Positive &p);

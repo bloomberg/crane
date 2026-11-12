@@ -1761,8 +1761,8 @@ template <Int I, OrderedType X> struct Raw {
     using L = Coq_Raw<X>;
 
     template <typename T1, typename T2, typename F0>
-    static T2 fold_(F0 &&f, tree<T1> s, const T2 &x0_) {
-      return L::template fold<T1, T2>(f, elements<T1>(std::move(s)), x0_);
+    static T2 fold_(F0 &&f, const tree<T1> &s, const T2 &x0_) {
+      return L::template fold<T1, T2>(f, elements<T1>(s), x0_);
     }
 
     template <typename T1>

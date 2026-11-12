@@ -150,10 +150,8 @@ struct UnitVoidEdge {
   static uint64_t double_match_unit(std::monostate u1, std::monostate u2);
 
   template <typename F0> static void apply_and_discard(F0 &&f, uint64_t x0_) {
-    {
-      apply_unit_fn(f, x0_);
-      return;
-    }
+    apply_unit_fn(f, x0_);
+    return;
   }
 
   static inline const std::monostate test_apply_discard = []() {

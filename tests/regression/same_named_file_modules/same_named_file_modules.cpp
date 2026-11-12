@@ -703,12 +703,9 @@ Positive Coq_Pos::pred(const Positive &x) {
   }
 }
 
-Positive Coq_Pos::pow(Positive x, const Positive &x0_) {
-  return iter<Positive>(
-      [=, x = std::move(x)](Positive _x0) -> Positive {
-        return mul(std::move(x), _x0);
-      },
-      Positive::xh(), x0_);
+Positive Coq_Pos::pow(const Positive &x, const Positive &x0_) {
+  return iter<Positive>([=](Positive _x0) -> Positive { return mul(x, _x0); },
+                        Positive::xh(), x0_);
 }
 
 Positive Coq_Pos::square(const Positive &p) {

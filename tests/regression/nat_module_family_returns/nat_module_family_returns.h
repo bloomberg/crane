@@ -1437,7 +1437,7 @@ struct Nat {
 
   template <typename T1, typename T2, typename F0, typename F2>
   static T1
-  OddT_EvenT_rect(F0 &&hQP, T2 hQ0, F2 &&hPQ, uint64_t n0,
+  OddT_EvenT_rect(F0 &&hQP, const T2 &hQ0, F2 &&hPQ, uint64_t n0,
                   const Sig<uint64_t> &h) { // Precondition: n == (2 * m + 1)
     if (n0 <= 0) {
       const auto &[x0] = h;
@@ -1450,15 +1450,13 @@ struct Nat {
     } else {
       uint64_t n = n0 - 1;
       if (n <= 0) {
-        return hQP(UINT64_C(0), EvenT_0, std::move(hQ0));
+        return hQP(UINT64_C(0), EvenT_0, hQ0);
       } else {
         uint64_t n1 = n - 1;
         EvenT hES = OddT_S_EvenT((n1 + 1), h);
         OddT hO = EvenT_S_OddT(n1, hES);
-        return hQP(
-            (n1 + 1), std::move(hES),
-            hPQ(n1, hO,
-                OddT_EvenT_rect<T1, T2>(hQP, std::move(hQ0), hPQ, n1, hO)));
+        return hQP((n1 + 1), std::move(hES),
+                   hPQ(n1, hO, OddT_EvenT_rect<T1, T2>(hQP, hQ0, hPQ, n1, hO)));
       }
     }
   }

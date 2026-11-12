@@ -602,6 +602,16 @@ val read_spine : ml_ast -> ml_ast
 (** [e] with every application in it read whole ({!read_spine}). *)
 val read_spines : ml_ast -> ml_ast
 
+(** [canonical_app f args], [f] and [args] canonical: the canonical form of
+    [MLapp (f, args)], the application {!read_spine} reads it as, written
+    out.  No head of a canonical application is a global already applied, a
+    coercion, or a match with one branch.  See {!Core_normalize}. *)
+val canonical_app : ml_ast -> ml_ast list -> ml_ast
+
+(** [canonical e] is [e] with every application canonical
+    ({!canonical_app}). *)
+val canonical : ml_ast -> ml_ast
+
 (** [permut_rels k k' c] exchanges two adjacent runs of binders: [Rel 1 ...
     Rel k] become [Rel (k'+1) ... Rel (k'+k)], and [Rel (k+1) ... Rel (k+k')]
     become [Rel 1 ... Rel k']. *)
@@ -632,7 +642,9 @@ val normalize : ml_ast -> ml_ast
 (** [apply_eta_args f args] is [f] applied to [args], with the application
     placed where [f] produces its value rather than wrapped around [f] -- for
     callers that build an application after simplification has already run,
-    such as eta-expansion to a declaration's arity. *)
+    such as eta-expansion to a declaration's arity.  The result is
+    canonical ({!canonical}), as every term built after
+    {!Core_normalize.structure} must be. *)
 val apply_eta_args : ml_ast -> ml_ast list -> ml_ast
 
 (** Optimize fixpoint expressions. *)
