@@ -16,10 +16,13 @@
     skipped: an oracle run under CRANE_CHECK_IR may read what it likes.  A
     module with no typed tree in [DIR] (Rocq's, the standard library) is a
     leaf.  Used by scripts/check-module-deps.sh for the printer's indirect
-    reads of Table. *)
+    reads of Table and of the plan modules ([Cpp_state], [Module_plan],
+    [Scope_plan]) whose reads it allows by name. *)
 
+(** The prefix dune gives every module of the plugin library. *)
 let library_prefix = "Crane_plugin__"
 
+(** [s] without {!library_prefix}. *)
 let strip s =
   let n = String.length library_prefix in
   if String.length s >= n && String.sub s 0 n = library_prefix then String.sub s n (String.length s - n) else s
@@ -40,9 +43,13 @@ let rec canonical (m, pre) =
 
 type node = string * string (* module, value (dotted inside a submodule) *)
 
+(* Each value's references to other top-level values, and each module's
+   top-level values. *)
 let edges : (node, node list) Hashtbl.t = Hashtbl.create 4096
 let defined : (string, node list) Hashtbl.t = Hashtbl.create 256
 
+(* Add the values one typed tree defines, and their references, to
+   [edges] and [defined]. *)
 let analyse cmt_file =
   let cmt = Cmt_format.read_cmt cmt_file in
   let m = strip cmt.Cmt_format.cmt_modname in
@@ -144,6 +151,7 @@ let analyse cmt_file =
     walk str
   | _ -> ()
 
+(* Read every typed tree in [dir]; exit unless [root] is among them. *)
 let load dir root =
   let cmts = List.filter (fun f -> Filename.check_suffix f ".cmt") (Array.to_list (Sys.readdir dir)) in
   List.iter

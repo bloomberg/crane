@@ -13,9 +13,15 @@
 (** Pretty-printing of C++ types, expressions, statements, fields, and
     declarations.
 
-    This module contains the core pretty-printing functions that convert CppIR
-    nodes into Pp.t values representing C++ source code, and the Meyers
-    singleton helper. *)
+    The last stage of the pipeline: it reads CppIR at the resolved phase
+    ({!Cpp_ir.Resolved}), after the passes that settle a declaration
+    ({!Cpp_pipeline.finish}) have run, and turns each node into the [Pp.t]
+    of its C++ source.  It runs no compiler pass of its own; what it still
+    decides is spelling, the headers a construct needs, and, under
+    [CRANE_CHECK_IR], checks that what it writes agrees with what planning
+    decided.  Also here: the Meyers singleton accessor, the synthesised
+    templates standing for type constructors, and the printing of the
+    module-level declarations {!Cpp_ast} leaves unprinted. *)
 
 open Pp
 open Names
@@ -224,7 +230,7 @@ let ctor_alias_tvar = Minicpp.ctor_alias_tvar
       };
 
     and the use site writes [C_h<T1>::template c], which is the dependent
-    alias the [Tqualified] branch of the type printer already knows how to
+    alias the [Member] arm of the type printer already knows how to
     spell.  Its body has the captured names replaced by the holder's own, so
     two declarations that differ only in what they call their parameters
     share one holder. *)
@@ -241,7 +247,7 @@ type ctor_alias = Cpp_state.ctor_alias = {
 }
 
 (** Under [CRANE_CHECK_IR], the templates the file being written spells
-    where nothing collects them: what {!check_ctor_alias_plan} compares with
+    where nothing collects them: what {!Cpp_leaf_plan.check_ctor_alias_plan} compares with
     the plan. *)
 let ctor_aliases_spelled : ctor_alias list ref = ref []
 
@@ -582,10 +588,10 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
          declaration has no namespace-scope alias to be, so it is
          synthesised as a member of a holder, spelled [H<T1>::template c].
          That is a dependent qualified name, and applying it yields a type,
-         which needs the [typename] the {!Member} arm above would have
+         which needs the [typename] the [Member] arm above would have
          given it.  Whether a holder was needed is decided by which names
          the body actually {e writes}, which is not a property of the type's
-         shape, so the head says how it was written ({!tyctor_head}). *)
+         shape, so the head says how it was written ([tyctor_head]). *)
       let head_pp, dependent_member =
         match head with
         | Type_constructor t -> tyctor_head t
@@ -808,8 +814,8 @@ and pp_cpp_expr ctx env args (t : expr) =
            known here: the argument module may define this value as a static
            data member or -- when it is itself inside a template, as a Meyers
            singleton -- as a nullary accessor.  The generated concept accepts
-           both spellings (see [pp_spec_as_requirement] in [cpp.ml]), so the
-           use site must accept both too. *)
+           both spellings (see [Cpp_concepts.pp_requirement]), so the use
+           site must accept both too. *)
         let n = string_of_ppcmds full_name in
         str ("[]{ if constexpr (requires { " ^ n ^ "(); }) return " ^ n
              ^ "(); else return " ^ n ^ "; }()")
@@ -1076,8 +1082,9 @@ and pp_cpp_expr ctx env args (t : expr) =
     ++ str (escape_cpp_string msg)
     ++ str "\"); })()"
   | Enum_value (ind, ctor) ->
-    (* Generate EnumType::Constructor for enum class values. Use str_global for
-       proper module qualification, with collision-aware capitalization. *)
+    (* [EnumType::Constructor] for an enum class value, the enum named as
+       resolution qualifies it where it is written
+       ({!Cpp_names.enumerator_qualifier}). *)
     Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.enumerator_qualifier ctx Enumerator_value ind)
     ++ Id.print ctor
   | Literal Null_pointer -> str "nullptr"
@@ -1104,7 +1111,8 @@ and pp_cpp_expr ctx env args (t : expr) =
     writes_standard "utility";
     str "std::declval<" ++ pp_cpp_type ctx false [] ty ++ str ">()"
   | Type_name ty -> pp_cpp_type ctx false [] ty
-  (* Low-level constructs for reuse optimization *)
+  (* A helper of Crane's runtime, named after the header declaring it is
+     noted as needed. *)
   | Runtime h ->
     (match h with
      | Crane_rt.Raw | Crane_rt.Deep_box -> writes Table.erase_fn_header
@@ -1196,7 +1204,7 @@ and pp_cpp_expr ctx env args (t : expr) =
       (shape, (Entity (GlobRef.ConstRef _, [], (None | Some {inline = None; _})) as g)) ->
     (* A global never changes, so neither does its adapter: made once.  A
        method is never a global here: it is named through a lambda
-       ({!Minicpp.method_value}), never as itself. *)
+       ({!Cpp_ir.Expr.Method_value}), never as itself. *)
     writes Table.erase_fn_header;
     str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr ctx env args g
     ++ ( match shape with
@@ -1313,9 +1321,9 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     ++ str (escape_cpp_string msg)
     ++ str "\");"
   | Switch {scrutinee = scrut; enum = ind; branches; default} ->
-    (* Generate switch statement for enum class matching. Use pp_global_name to
-       get the unqualified base name, capitalize to match enum class
-       definition. *)
+    (* A switch over an enum class, each case label qualified with the enum
+       as resolution names it at a case label
+       ({!Cpp_names.enumerator_qualifier}). *)
     let type_name = Cpp_name.pp (Cpp_names.enumerator_qualifier ctx Case_label ind) in
     let ends_with_return (stmts : stmt list) =
       match List.rev stmts with
@@ -1374,7 +1382,8 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
       writes_standard "cassert";
       fnl () ++ str "assert(" ++ str expr_str ++ str ");"
     | Stated _ -> mt () )
-  (* Reuse optimization constructs *)
+  (* A compile-time branch on whether one type converts to another
+     ({!Crane_rt.convertible}). *)
   | If_constexpr {test = Convertible (t1, t2); then_ = then_stmts; else_ = else_stmts} ->
     writes Table.erase_fn_header;
     str "if constexpr (" ++ str Crane_rt.convertible ++ str "<"
@@ -1474,7 +1483,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     ++ str ";"
   | Custom_match ({return_type = typ; scrutinee = t; type_args = tyargs; branches = cases; pieces = Instantiated pieces; _} as cmatch) ->
     (* Scrutinee caching (auto _cs = expr;) is handled during translation
-       in gen_custom_cpp_case, which prepends a declaration before this node
+       in [Translation.gen_custom_cpp_case], which prepends a declaration before this node
        when the template uses %scrut more than once with a non-trivial
        scrutinee.  The printer writes the pieces. *)
     Common.writes_custom cmatch.inductive;
@@ -1592,7 +1601,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     in
     (* The scrutinee object under the variant accessor: pointer
        [Access_call (Arrow, obj, "v", [])] ([obj->v()]) or value
-       [Call (Access (Dot, obj, "v"), [])] ([obj.v()]). *)
+       [Call (_, Access (Dot, obj, "v"), [])] ([obj.v()]). *)
     let first_scrut = scrut.expr in
     let is_value_type = scrut.access = Dot in
     let scrut_obj_opt =
@@ -1792,12 +1801,16 @@ and pp_foreign ?result ctx env vl (fr : foreign) =
     context; the common-case shorthand for {!pp_cpp_type}. *)
 let pp_type ctx t = pp_cpp_type ctx false [] t
 
-(* A callable parameter whose constraint was never settled from its body
-   ({!Minicpp.settle_constraints}) is printed unconstrained -- a constraint
-   guessed from its declared type could name the wrong operands.  Under
-   [CRANE_CHECK_IR] none gets here: the seam checks that the constraints were
-   settled ({!Cpp_pipeline.finish}). *)
-(** Print a template parameter type keyword (typename or concept constraint). *)
+(** Print a template parameter's kind keyword: [typename], a template
+    template parameter's head, or a concept constraint.
+
+    A callable parameter ([Invocable]) is written [typename]; what it must
+    accept goes in the [requires] clause ({!pp_requires_of_tparams}).  One
+    whose constraint was never settled from its body
+    ({!Minicpp.settle_constraints}) is printed unconstrained -- a constraint
+    guessed from its declared type could name the wrong operands.  Under
+    [CRANE_CHECK_IR] none gets here: the seam checks that the constraints were
+    settled ({!Cpp_pipeline.finish}). *)
 let pp_template_type ctx : I.Resolved.phase I.Template.Parameter_kind.t -> _ = function
   | Typename -> str "typename"
   | Typename_default _ -> str "typename"
@@ -1844,10 +1857,14 @@ let pp_template_param_redecl ctx (tt, id) = pp_template_type ctx tt ++ spc () ++
     when no constrained parameters are present.  In BDE mode, uses
     [bsl::is_invocable_r_v] instead.
 
-    @param tparams  list of [(template_type, id)] pairs from the surrounding
+    A multi-parameter concept constraint, which cannot be written in the
+    parameter list, is written here as [C<id, args...>].
+
+    @param tparams  list of [(kind, id)] pairs from the surrounding
                     template parameter declaration
     @return [Some pp] where [pp] is the full [requires ...] clause, or [None]
-            if no [TTfun] constraints are present *)
+            if no [Invocable] or multi-parameter [Concept] parameter is
+            present *)
 let pp_requires_of_tparams ctx tparams =
   let invocable_r =
     if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
@@ -2313,7 +2330,8 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) ctx env fields =
 
     @param env      name environment (passed through for sub-expression use)
     @param id       global reference identifying the data member (used for the
-                    function name and to register in [template_static_accessors])
+                    function name; under [CRANE_CHECK_IR], checked to be one of
+                    the planned accessors)
     @param ty       C++ type of the data member; [const] modifier is stripped
                     before use inside the function body
     @param expr_pp  already pretty-printed initializer expression *)
@@ -2373,6 +2391,9 @@ let struct_definition_name ctx id = Cpp_name.pp (Cpp_names.definition_name ctx S
 (** The name the scoped enum of [r] is defined under. *)
 let enum_definition_name ctx r = Cpp_name.pp (Cpp_names.definition_name ctx Enum_definition r)
 
+(** The forward declaration of a struct or a scoped enum defined later: a
+    struct's template head repeats the definition's constraint
+    ({!struct_template_head}), without defaults. *)
 let pp_forward_declaration ctx env : Cpp_ast.defined -> _ = function
   | Defined_struct {struct_; name; tparams; constraint_} ->
     let name = match name with As_defined -> struct_definition_name ctx struct_ | As_inductive_wrapper -> str (nspace_wrapper_name ctx struct_) in
@@ -2843,6 +2864,8 @@ and pp_leaf_decl ctx env (d : decl) =
     outside every tree. *)
 let read_cpp_decl ctx env d = pp_cpp_decl ctx env d
 
+(** The name [resolution] gives [key], checked at the position [ctx]
+    ({!Cpp_names.checked}); an unresolved name is an anomaly. *)
 let resolved ctx key (resolution : Cpp_ast.resolution) =
   match resolution with Resolved n -> checked ctx key n | Unresolved -> unresolved key
 
@@ -2850,6 +2873,7 @@ let resolved_module ctx (m : Cpp_ast.module_ref) = resolved ctx (Module m.path) 
 let resolved_class_concept ctx (c : Cpp_ast.global_ref) = resolved ctx (Class_concept c.global) c.name
 let resolved_type_name ctx (g : Cpp_ast.global_ref) = resolved ctx (Global (Type, g.global)) g.name
 let resolved_concept ctx (c : Cpp_ast.concept_ref) = resolved ctx (Modtype_concept c.module_type) c.name
+(* The name a module declaration declares, as resolved. *)
 let pp_declared_module ctx (m : Cpp_ast.declared_module) = Cpp_name.pp (resolved ctx (Module_declared m.declares) m.name)
 
 let name_in ctx names frame key = name_from ctx names frame key
@@ -2876,6 +2900,8 @@ let pp_application ctx {Cpp_ast.functor_; args} =
   in
   head ++ str "<" ++ prlist_with_sep (fun () -> str ", ") arg args ++ str ">"
 
+(** [using Name = Target;] for a module alias, a qualified target inside a
+    class template taking [typename]. *)
 let pp_module_alias ctx name (target : Cpp_ast.module_expr) =
   let target =
     match target with
@@ -2900,6 +2926,8 @@ let pp_template_head ctx template =
     template;
   Cpp_ast.pp_template_head template
 
+(** A functor alias: an alias template applying [functor_] to its own
+    module parameters [params]. *)
 let pp_functor_alias ctx name functor_ params =
   pp_template_head ctx (List.map fst params)
   ++ str "using " ++ pp_declared_module ctx name ++ str " = "
@@ -2945,6 +2973,8 @@ let pp_synthesised ctx (s : Cpp_ast.synthesised) =
     ++ str "> struct " ++ str s.name ++ str " { template <typename " ++ str ctor_alias_tvar ++ str "> using c = " ++ str body
     ++ str "; };"
 
+(** Print a declaration {!Cpp_ast} left unprinted, in the context of the
+    names and type-constructor plan recorded for it. *)
 let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let ctx =
     { ctx with

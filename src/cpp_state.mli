@@ -1,26 +1,38 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** This module holds the mutable, per-extraction rendering state and registries
-   shared across the C++ pretty-printers. It owns the current render context
-   ([render_ctx]), the method and name-resolution
-   registries, the [std::]-namespace name configuration ([std_names]),
-   eponymous-record tracking, and the wrapper/collision/global-scope tables.
-   Much of the surface is intentionally mutable global state (refs and
-   hashtables) that is reset between extraction units via [reset_cpp_state]. *)
+(** The mutable, per-extraction state and registries shared by the C++
+   printing modules ({!Cpp}, {!Cpp_print}, {!Cpp_ind}, {!Cpp_names},
+   {!Cpp_leaf_plan}), which print the finished CppIR program.  It defines the
+   position type every writer is handed ({!render_ctx}), and owns the method
+   and name-resolution registries, the [std::]-namespace name configuration
+   ({!std_names}), eponymous-record tracking, and the wrapper, nested-struct
+   and concept-placement tables.  Much of the surface is mutable global state
+   (refs and hashtables) that {!reset_cpp_state} empties between extractions;
+   it lives here so the other [cpp_*] modules can share it without depending
+   on each other. *)
 
 (** {2 Owned cells}
 
     A cell made by one of these is emptied by {!reset_cpp_state}, enrolled where
     it is defined.  [census] reports the size to {!Table.census}. *)
 
+(** [owned_table name] is a fresh hash table emptied on reset, reported to
+    the census under [name] unless [~census:false]. *)
 val owned_table : ?census:bool -> string -> ('a, 'b) Hashtbl.t
+
+(** [owned_list name] is a fresh list ref emptied on reset; [census] as for
+    {!owned_table}. *)
 val owned_list : ?census:bool -> string -> 'a list ref
+
+(** [owned_ref init] is a ref restored to [init] on reset; it holds one
+    value, so it is not censused. *)
 val owned_ref : 'a -> 'a ref
 
 (** {2 Method registry} *)
 
-(** Per-run and global method registries plus their accessors. *)
+(** The unit's method registry, built once per extraction pass by scanning
+    the [ml_structure]; read through {!get_method_registry}. *)
 val method_registry : Method_registry.t option ref
 
 (** Pre-built registry from the full [ml_structure], used in separate extraction
@@ -40,14 +52,15 @@ val get_method_registry : unit -> Method_registry.t
 
 (** {2 Name resolution} *)
 
-(** Name-resolution cache and its accessor. *)
+(** The name-resolution cache, populated once per extraction pass; read
+    through {!get_name_cache}. *)
 val name_cache : Name_resolution.t option ref
 
 (** Return the contents of [name_cache].
     @raise CErrors.Anomaly if the cache has not been initialized. *)
 val get_name_cache : unit -> Name_resolution.t
 
-(** Pretty-printers for type variables and parameter lists. *)
+(** Print a type variable by its name. *)
 val pp_tvar : Names.variable -> Pp.t
 
 (** Print type variables as a boxed tuple, followed by a space when the list is
@@ -72,7 +85,8 @@ val c_library_globals : Names.Id.Set.t
 
 (** {2 Output modules} *)
 
-(** Set of module paths that are valid extraction outputs. *)
+(** The module paths that produce output files in separate extraction.
+    Empty means every module does. *)
 val valid_output_modules : (Names.ModPath.t, unit) Hashtbl.t
 
 (** Replace the contents of [valid_output_modules] with the given module paths;
@@ -100,7 +114,8 @@ val clear_global_unmerged : unit -> unit
 
 (** {2 Preamble} *)
 
-(** Pretty-printers for includes, comments, and file preambles. *)
+(** [#include "m.h"] for the module, followed by a newline; nothing if
+    {!valid_output_modules} is non-empty and does not contain it. *)
 val pp_open : Names.ModPath.t -> Pp.t
 
 (** The text as C++ line comments, one per line. *)
@@ -144,13 +159,13 @@ type holder_argument = Captured_variable of int * Names.Id.t option | Captured_i
 
 (** A template synthesised for a type constructor with no template name of
     its own, where it is spelled as a template template argument
-    ({!Cpp_leaf_plan.ctor_alias_at}). *)
+    ([Cpp_leaf_plan.ctor_alias_at]). *)
 type ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : holder_parameter list option;
       (** A holder's parameters, in order, where it is one; none where it is
           a plain alias. *)
-  ca_declared : declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
+  ca_declared : declared_in;  (** Where it is declared ([Cpp_leaf_plan.ctor_alias_declared]). *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
@@ -162,15 +177,15 @@ type ctor_alias = {
 }
 
 (** How a type constructor written as a template template argument is
-    written, decided where it is planned: the constructor
-    ({!Cpp_print.tyctor_constructor}), the names of the type variables it
-    names by index, and the template synthesised for it with the arguments
-    a holder is applied to, if it has no template name of its own
-    ({!Cpp_leaf_plan.ctor_alias_at}). *)
+    written, decided where it is planned ([Cpp_leaf_plan.ctor_alias_at]). *)
 and tyctor_use = {
   tu_constructor : Cpp_ir.Resolved.Type.t;
-  tu_vars : Names.Id.t list;
+      (** The constructor: the type with its arguments stripped
+          ([Cpp_print.tyctor_constructor]). *)
+  tu_vars : Names.Id.t list;  (** The names of the type variables it names by index. *)
   tu_alias : (ctor_alias * holder_argument list) option;
+      (** The template synthesised for it, with the arguments a holder is
+          applied to, if it has no template name of its own. *)
 }
 
 (** What the names written at a position are read off. *)
@@ -210,12 +225,12 @@ and tyctor_plan =
           for the constructor. *)
 
 (** How planning decides, at a position, how a type constructor naming the
-    given variables is written ({!Cpp_leaf_plan.ctor_alias_at}), and the
-    uses it has decided, in the order first spelled: the printer decides
-    none. *)
+    given variables is written, and the uses it has decided, in the order
+    first spelled: the printer decides none. *)
 and tyctor_decision = {
   decide : render_ctx -> Names.Id.t list -> Cpp_ir.Resolved.Type.t -> (ctor_alias * holder_argument list) option;
-  noted : tyctor_use list ref;
+      (** The decision ([Cpp_leaf_plan.ctor_alias_at]). *)
+  noted : tyctor_use list ref;  (** The uses decided so far, in the order first spelled. *)
 }
 
 (** The out-of-line definition being written: the scope it is a member
@@ -224,8 +239,10 @@ and tyctor_decision = {
     declares at file scope ({!header_file_scope}), which such a variable
     written in it means instead of a member of that struct. *)
 and out_of_line = {
-  ol_scope : Scope_plan.scope;
+  ol_scope : Scope_plan.scope;  (** The scope it is a member of. *)
   ol_file_scope_aliases : Names.Id.Set.t;
+      (** The promoted type variables whose alias its file declares at file
+          scope. *)
 }
 
 (** Where in the output something is written or planned: a value, handed
@@ -235,18 +252,24 @@ and out_of_line = {
 and render_ctx = {
   rc_file : Common.file;  (** The file being written. *)
   rc_in_struct : bool;
+      (** Inside a struct body; affects how nested type references are
+          qualified and whether a held-back concept may be named. *)
   rc_concepts_hoisted : bool;
+      (** The type class concepts of the current module are already
+          written. *)
   rc_scope : out_of_line option;
       (** The out-of-line definition being written, if one is. *)
   rc_in_template : bool;
+      (** Inside a template struct (a functor); affects [typename]
+          insertion and how a module-level value is written. *)
   rc_module : Names.ModPath.t option;
       (** The module whose element is being written, if one is: the one
           whose struct a synthesised template it writes may be declared in
-          ({!Cpp_leaf_plan.ctor_alias_home}). *)
+          ([Cpp_leaf_plan.ctor_alias_home]). *)
   rc_frame : Cpp_resolution.frame;
       (** The scopes printing the declaration being written has entered
           inside the one it is written in, innermost first
-          ({!Cpp_names.enter}). *)
+          ({!Cpp_names.enter_from}). *)
   rc_names : naming;  (** What the names written here are read off ({!naming}). *)
   rc_visibility : Common.visibility option;
       (** The scopes whose names are visible where the declaration being
@@ -260,7 +283,7 @@ and render_ctx = {
   rc_aliases : ctor_alias list ref option;
       (** Where the synthesised templates spelled from here are collected,
           in the order first spelled, by what asked which ones its text
-          spells ({!Cpp_leaf_plan.ctor_aliases_found}); none where nothing
+          spells ([Cpp_leaf_plan.ctor_aliases_found]); none where nothing
           collects them.  Every position derived from this one collects into
           the same list, a template's body written where it is declared
           included. *)
@@ -277,8 +300,8 @@ val file_start : Common.file -> render_ctx
     declaration declares, and the promoted type variables among them, by
     the name their one alias is declared under ({!Table.promoted_type_var_field}). *)
 type file_scope = {
-  fs_types : Names.GlobRef.Set.t;
-  fs_aliases : Names.Id.Set.t;
+  fs_types : Names.GlobRef.Set.t;  (** The types it declares at file scope. *)
+  fs_aliases : Names.Id.Set.t;  (** The promoted type variables among them, by alias name. *)
 }
 
 (** What the header declares at file scope, planned with its layout
@@ -305,9 +328,10 @@ type held_concept =
 (** Equality on {!held_concept}. *)
 val held_concept_equal : held_concept -> held_concept -> bool
 
-(** The functor bodies whose module types are file-scope concepts over the
-    functor's parameters as well as [M]: the body's path, the functor's
-    label, and its parameters. *)
+(** The modules whose module types are file-scope concepts over a
+    functor's parameters ({!Module_plan.concept_scope}): a functor's body,
+    an application of the functor, or an alias of the application, each by
+    its path, with the functor and its argument modules. *)
 val functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list ref
 
 (** Whether a concept is one the current frame is holding back. *)
@@ -317,7 +341,11 @@ val is_held_back_in : held_concept list -> held_concept -> bool
     be declared inside a struct, so a module nested in one declares its
     concepts at file scope.  Otherwise a concept goes ahead of the module's
     struct, whose body may constrain a functor with it, unless it names one
-    of the struct's members, when it follows the struct. *)
+    of the struct's members, when it follows the struct.
+    {ul {- [Ahead_of_struct]: ahead of the module's struct.}
+        {- [After_struct]: after the struct, because it names a member.}
+        {- [At_file_scope]: at file scope, because the module is nested in
+           a struct.}} *)
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
 (** The concepts of a module's classes and module types, planned ahead of
@@ -328,6 +356,8 @@ type concept_plan = {
       (** The class concepts, then the module-type concepts, in declaration
           order. *)
   held_back : held_concept list;
+      (** The concepts declared after the struct, which its body may not
+          name. *)
 }
 
 (** [plan_module_concepts mp plan] plans [plan] for the module [mp]. *)
@@ -363,7 +393,9 @@ val element_position : Names.ModPath.t -> render_ctx -> render_ctx
 (** {2 What function bodies read} *)
 
 (** [plan_function_reads s]: [s] is every global a function body of the
-    unit names, from the finished program, before either file is rendered. *)
+    unit names, from the unit's installed declarations
+    ({!Unit_program.installed_finished}), before either file is rendered.
+    The program-wide set from {!note_program_reads} is added to it. *)
 val plan_function_reads : Ref.Can.Set.t -> unit
 
 (** [note_program_reads s], before any unit of a separate extraction is
@@ -376,12 +408,14 @@ val note_program_reads : Ref.Can.Set.t -> unit
 (** Whether a function body of the unit names [r] (as planned by
     {!plan_function_reads}; nothing does before it is planned).  A header's
     [static inline] variable such a body reads is written [[[gnu::used]]]:
-    see {!Cpp_print}'s [Dasgn]. *)
+    see the CppIR [Variable] case of {!Cpp_print}'s declaration printer. *)
 val read_by_a_function : Names.GlobRef.t -> bool
 
 (** {2 Template static accessors} *)
 
-(** Tracking for template static accessor labels and their kernel names. *)
+(** The definitions written as function accessors (Meyers singletons)
+    instead of static inline variables, by module path and label, to avoid
+    template static initialisation order problems. *)
 val template_static_accessors : (Names.ModPath.t * Names.Label.t) list ref
 
 (** Canonical kernel names of template static accessors, which is what a
@@ -404,7 +438,9 @@ val register_template_static_accessor_ref : Names.GlobRef.t -> unit
 
 (** {2 Eponymous records} *)
 
-(** In-flight state used while emitting an eponymous record. *)
+(** The eponymous type of the module being rendered: an inductive [m] in a
+    module [M], whose functions taking an [m] become methods of it.  Reset
+    by {!with_module_frame} and {!reset_cpp_state}. *)
 val eponymous_type_ref : Names.GlobRef.t option ref
 
 (** Set during module rendering when the eponymous inductive should be promoted
@@ -440,49 +476,55 @@ val setting : 'a ref -> 'a -> (unit -> 'b) -> 'b
 
 (** {2 std:: names} *)
 
-(** Configurable names for the [std::] symbols emitted by the extractor. *)
+(** Configurable names for the [std::] symbols emitted by the extractor.
+    Each is the [std::] or [bsl::] spelling of the field's name unless noted;
+    [Crane NonAtomicRc], [Crane FastVariant], [Crane SharedVariant] and
+    [CRANE_COUNT_RC] substitute runtime names ({!init_std_names}). *)
 type std_names = {
-  shared_ptr : string;
-  make_shared : string;
+  shared_ptr : string;  (** the smart pointer for recursive fields *)
+  make_shared : string;  (** its factory *)
   move : string;
   forward : string;
   logic_error : string;
-  ns : string;
+  ns : string;  (** the bare namespace, ["std"] or ["bsl"] *)
   string : string;  (** the string class a spliced literal is constructed as *)
-  same_as : string;
+  same_as : string;  (** unqualified in the BDE flavor *)
   declval : string;
-  convertible_to : string;
+  convertible_to : string;  (** unqualified in the BDE flavor *)
   holds_alternative : string;
   get_if : string;
   get : string;
   variant : string;  (** the tagged union inductives store alternatives in *)
   variant_header : Table.header;  (** the header declaring {!variant} *)
-  enable_from_this : string;
+  enable_from_this : string;  (** the base a type that hands out pointers to itself derives from *)
 }
 
-(** The plain [std::] flavor of {!std_names} (with the ["s"]
-    string-literal suffix). *)
+(** The plain [std::] flavor of {!std_names}. *)
 val default_std_names : std_names
 
 (** The names in effect for the current extraction pass; initialized by
     [init_std_names] and read through [sn]. *)
 val std_names : std_names ref
 
-(** Build a name set for a namespace prefix. ["bsl::"] yields the BDE flavor
-    (with the ["_s"] suffix); any other prefix yields
-    [default_std_names]. *)
+(** Build a name set for a namespace prefix. ["bsl::"] yields the BDE flavor;
+    any other prefix yields [default_std_names]. *)
 val mk_std_names : string -> std_names
 
 (** Set [std_names] from the current [Table] settings: the BDE flavor when
-    [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, if
-    [Table.non_atomic_rc ()], override the smart pointer with [crane::rc] /
-    [crane::make_rc] / [crane::enable_rc_from_this]. *)
+    [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
+    [Table.fast_variant ()] or [Table.shared_variant ()], the [crane::]
+    variant accessors (and, for the former, [crane::variant]); then, under
+    [Table.count_rc ()], the counting pointer, or else under
+    [Table.non_atomic_rc ()], [crane::rc] / [crane::make_rc] /
+    [crane::enable_rc_from_this]. *)
 val init_std_names : unit -> unit
 
 (** Shorthand for [!std_names]. *)
 val sn : unit -> std_names
 
-(** Whether an ML type denotes a typeclass instance. *)
+(** Whether an ML type denotes a typeclass instance: its final return type
+    is a registered type class.  The first argument, the term's body, is
+    ignored. *)
 val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
 
 (** {2 Wrapper and scope tables} *)
@@ -517,7 +559,7 @@ val rendered_promotions : Names.GlobRef.t list ref
     [CRANE_CHECK_IR]: the planned ones must be exactly the rendered ones. *)
 val rendered_promotion : Names.GlobRef.t -> unit
 
-(** The same owner. *)
+(** Equality on {!nested_struct_owner}. *)
 val nested_struct_owner_equal : nested_struct_owner -> nested_struct_owner -> bool
 
 (** The nested structs the printer printed, under [CRANE_CHECK_IR]. *)
@@ -567,7 +609,7 @@ val is_registered_method : Names.GlobRef.t -> (Names.GlobRef.t * int) option
 val lookup_method_arity : Names.GlobRef.t -> int
 
 (** Return the 0-based positions, in a registered method's type-variable list,
-    of the inductive's own template parameters — those deducible from the
+    of the inductive's own template parameters: those deducible from the
     receiver and thus omitted from explicit template arguments. *)
 val lookup_method_ind_tvar_positions : Names.GlobRef.t -> int list
 
@@ -582,9 +624,10 @@ val method_receiver_cpp_type :
     ({!Method_registry.method_returns_any}). *)
 val method_returns_any : Names.GlobRef.t -> bool
 
-(** {2 Eponymous record registry} *)
+(** {2 Current structure} *)
 
-(** Declarations of the structure currently being emitted. *)
+(** Declarations of the structure currently being emitted, scanned for
+    methods defined by sibling modules of the same Rocq module. *)
 val current_structure_decls :
   (Names.Label.t * Miniml.ml_structure_elem) list ref
 
@@ -595,7 +638,9 @@ val reset_cpp_state : unit -> unit
 
 (** {2 Projections} *)
 
-(** Queries about eponymous-record and suppressed projections, and dfix filtering. *)
+(** Whether the reference is a projection of the eponymous record
+    ({!eponymous_record}), redundant once its fields are merged into the
+    module struct. *)
 val is_eponymous_record_projection : Names.GlobRef.t -> bool
 
 (** [true] for a projection that is not a higher-order projection, and so should

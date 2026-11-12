@@ -10,16 +10,24 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Top-level C++ extraction orchestrator.
+(** Top-level C++ extraction driver.
 
-    This module handles module type → concept conversion, structure element
-    processing, the wrapper module dual-pass, and the main pp_struct/pp_hstruct
-    entry points. Lower-level rendering is delegated to:
-    - {!Cpp_state} — mutable state and utilities
-    - {!Cpp_names} — name resolution and qualification
-    - {!Cpp_print} — type/expr/stmt/field/declaration pretty-printing
-    - {!Cpp_concepts} — module-type concept printing
-    - {!Cpp_ind} — inductive type rendering and decl-level dispatch *)
+    Ahead of both files: the structure analysis ({!prepare_structure}), the
+    plans rendering reads (the [plan_*] functions), and the walk that
+    generates every declaration and finishes it into CppIR in the unit's
+    program ({!generate_ahead}).  Per file: module types as concepts, the
+    structure elements of each module, the wrapper modules' header and
+    implementation views ({!pp_wrapper_module_dual}), and the assembly of
+    the CppAST translation unit that is scheduled, resolved and printed
+    ({!do_struct_with_decl_tracking}, entry points {!pp_struct} and
+    {!pp_hstruct}).  Lower-level work is delegated to:
+    {ul
+    {- {!Cpp_state}: per-unit render state and plans;}
+    {- {!Cpp_names}: name resolution and qualification;}
+    {- {!Cpp_leaf_plan} and {!Cpp_print}: what a CppIR leaf asks of
+       resolution and scheduling, and its printing;}
+    {- {!Cpp_concepts}: module-type concepts as text;}
+    {- {!Cpp_ind}: which C++ declarations a MiniML declaration becomes.}} *)
 
 open Pp
 open Util
@@ -291,7 +299,7 @@ let module_members_name_only_inductives sel =
 (** The modules whose structs the header declares ahead of the file rather
     than at the module's own place in the emitted order, by the module path
     of their body: planned before either file is rendered
-    ({!plan_hoisted_structs}).
+    ({!plan_file_layout}).
 
     Its own place is the safe answer and stays the default, because a member
     initialised inside the struct body runs there, and everything that body
@@ -380,6 +388,8 @@ type file_layout = {
     declarations of the wrapper module [wrapped]. *)
 and wrapper_home = {wrapper : string; wrapper_ref : GlobRef.t; wrapped : ModPath.t; home : ml_decl}
 
+(** The unit's file layout, set by {!plan_file_layout} and read by the
+    header's render. *)
 let file_layout : file_layout ref =
   State.cell State.Unit
     { erased_aliases = [];
@@ -553,8 +563,11 @@ type 'a rendering = {
           the assertion goes with it. *)
 }
 
+(** A structure element written as a CppAST tree. *)
 type written = Cpp_ast.t rendering
 
+(** [written text] is [text] alone, declaring no concept and holding back
+    no assertion. *)
 let written text : written = {text; concepts = []; asserts = []}
 
 (** [element_of mp w] is [w], an element of the body of the module [mp],
@@ -598,8 +611,10 @@ let homed_at ~is_header d =
                       concept declarations, [using] aliases).  When [false],
                       emit implementation-mode output (out-of-line function
                       bodies, skipping header-only constructs).
-    @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
-                      nodes; typically [impl_decls] or [header_decls].
+    @param f          Callback giving what an individual {!Miniml.ml_decl}
+                      is written as in this file ({!Cpp_ind.element}):
+                      {!Cpp_ind.impl_decls} or {!Cpp_ind.header_decls}.
+    @param ctx        The position the element is written at.
     @param module_    The module whose body the element is an element of.
     @return The element written ({!written}): its text, empty if it
             produces no output in the current pass, and its concepts. *)
@@ -608,8 +623,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
     (* {b Placement of lifted lambda helpers.}  A helper lifted out of a local
        [let g := fun ... in] that mentions the enclosing struct (its parameter
        types, or a sibling definition it calls) cannot be emitted before that
-       struct, and emitting it after leaves the call site — which sits in a
-       static data member initializer, {i not} a complete-class context —
+       struct, and emitting it after leaves the call site -- which sits in a
+       static data member initializer, {i not} a complete-class context --
        referring to an undeclared name.  Emit it as a static member template
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
@@ -645,7 +660,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
        already go.
 
        Only at file scope: inside a struct the concept has already been
-       hoisted or held back by {!pp_structure_elements}, which knows which of
+       hoisted or held back by the enclosing module's case below, following
+       its concept plan ({!Cpp_state.concept_plan}), which knows which of
        those two it is and this does not. *)
     let concepts, body =
       if
@@ -720,8 +736,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
     (* A submodule becomes a nested struct, which shadows any global-scope type
        of the same name for unqualified lookups from inside the parent -- a
        [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
-       would.  Record it so {!Cpp_names.global_scope_qualifier_for} spells the
-       global one [::Nat]. *)
+       would.  Record it so the global one is spelled [::Nat]
+       ({!Cpp_names.global_scopes_for}). *)
     if ctx.rc_in_struct then printed_nested_struct name (NSmodule mp);
     let mod_pp =
       match m.ml_mod_expr with
@@ -1039,9 +1055,9 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                  no declarations.  The struct may be needed as a template
                  argument in functor instantiations, e.g.
                  [using M_ = M<Empty>;] where [Empty] was defined as an
-                 empty Rocq module satisfying some module type.  Previously
-                 this returned [mt ()] which suppressed the struct
-                 entirely, causing undeclared-identifier errors. *)
+                 empty Rocq module satisfying some module type; leaving
+                 the struct out makes that argument an undeclared
+                 identifier. *)
               (Cpp_ast.module_ (Struct {head = {(module_struct mp) with template}; layout = One_line}) body, [])
             else
               let struct_def =
@@ -1116,7 +1132,7 @@ and pp_module_body ~is_header f ctx mp sel =
   current_structure_decls := sel;
   (* A synthesised alias whose body names this module's own types, as its
      members spell them, is declared inside the struct, in front of the
-     first member that writes it (see {!Cpp_print.ctor_alias_home}): at
+     first member that writes it (see [Cpp_leaf_plan.ctor_alias_home]): at
      namespace scope those names mean nothing. *)
   let written =
     let ctx = element_position mp ctx in
@@ -1256,7 +1272,7 @@ let pp_wrapper_module_dual ~is_header ctx mp func_sels =
   (* A lifted helper is emitted after the struct it was lifted out of, and its
      callers are inside that struct, so by the time the definition appears the
      name has already been used.  A wrapper struct's own members do not have
-     this problem -- {!gen_dfuns_dual} declares them all before defining any --
+     this problem -- {!Gen_decls.gen_dfuns_dual} declares them all before defining any --
      and this is the same repair for the one kind of function that path never
      reaches, because it is not a member.  Only functions: a lifted struct is
      already forward-declared where structs are, and a declaration of anything
@@ -1338,8 +1354,9 @@ let module_plan_of_analysis
       (* Not everything a wrapper module declares ends up inside the wrapper
          struct.  A type alias is emitted at global C++ scope as
          [using T = ...;], and a type class instance is lifted out to namespace
-         scope by [process_sel] below, for the reason recorded there.  Either
-         way {!Cpp_names.struct_qualifier_for} must not write [Wrapper::] in
+         scope by {!pp_wrapper_module_dual}, for the reason recorded at
+         [Wrapper_instance] ({!wrapper_element}).  Either way the struct qualifiers
+         ({!Cpp_names.struct_scopes_for}) must not write [Wrapper::] in
          front of the name in the .cpp file.  Which module a declaration is
          emitted in is layout, so it is settled here rather than while
          emitting it. *)
@@ -1358,19 +1375,20 @@ let module_plan_of_analysis
          ({!plan_concept_prerequisites}). *)
       concept_prerequisites = [] }
 
-(** Decide everything about the structure that does not depend on which file is
-    being written, record what rendering reads of it here, and return its
-    {!Module_plan} -- the layout -- for the target plan to hold.
-
-    {!Structure_analysis} describes itself as running before rendering, and the
-    tables it fills are read by both the header and the implementation; it was
-    nonetheless invoked from inside the renderer, so the same conclusions were
-    reached four times per unit and the last one silently won.  Reaching them
-    once, here, is what lets the layout be planned before anything renders. *)
+(** The methods registered for the inductives of [s], created outside every
+    module body. *)
 let method_registry_of s =
   Translation_state.generating_outside_modules (fun () ->
       Method_registry.create ~ret_is_erased:Translation.return_type_is_erased s )
 
+(** Decide everything about the structure that does not depend on which file is
+    being written, record what rendering reads of it here, and return its
+    {!Module_plan} -- the layout -- for the target plan to hold.
+
+    {!Structure_analysis} runs here, once per unit and before either file is
+    rendered: the tables it fills are read by both the header and the
+    implementation, so they must hold one answer, decided before anything
+    renders, which is what lets the layout be planned ahead. *)
 let prepare_structure s =
   let analysis =
     Common.detect_sibling_module_inductive_collisions s;
@@ -1633,9 +1651,10 @@ let convert_eponymous_record_fields ~module_ frame =
     (fun (r, fields, packet) -> ignore (Cpp_ind.record_field_types ~module_ r packet.ip_vars fields))
     (merged_eponymous_record frame)
 
-(** Generate every declaration the renders write before either file is
-    rendered (docs/Pipeline-Disentangling-Plan.md, Milestones 1, 8 and 9):
-    each declaration as {!Cpp_ind.generate} generates it, each of a wrapper
+(** [generating_ahead f] runs [f], the walk that generates every
+    declaration the renders write before either file is rendered, so that
+    generation is decided once for the whole unit and rendering only reads
+    it: each declaration as {!Cpp_ind.generate} generates it, each of a wrapper
     module's own as {!pp_wrapper_module_dual} does, in the module the render
     generates it in, an inductive, an alias and a concept in the scope the
     header writes their module in.  What is generated is recorded for both
@@ -1674,6 +1693,7 @@ let finish_ahead (aheads : Cpp_ind.ahead list) =
     @ List.concat_map Cpp_demands.of_modtype_concept (Cpp_ind.generated_concepts ())
     @ List.concat_map Cpp_demands.of_type (Cpp_ind.generated_record_field_types ()))
 
+(** Generate and finish the one declaration [d], an element of [module_]. *)
 let generate_decl_ahead ~module_ d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead ~module_ d]
 
 (** What the modules of the structure [s] name around their declarations,
@@ -1831,8 +1851,8 @@ let generate_ahead s =
   finish_ahead aheads;
   (* A body is a function of its declaration, not of the bodies generated or
      finished before it: under [CRANE_CHECK_IR] everything is finished and
-     generated again in the reverse order and must come out the same (the
-     plan's Milestone 4). *)
+     generated again in the reverse order and must come out the same, so no
+     body can depend on what happened to be generated before it. *)
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
     Unit_program.refinish (finishing (List.rev aheads));
@@ -2070,7 +2090,7 @@ let plan_file_layout s =
   Cpp_state.header_file_scope := Some {fs_types = !types; fs_aliases = aliases}
 
 (** Plan the synthesised templates each file writes
-    ({!Cpp_print.plan_ctor_aliases}), read off what was generated ahead of
+    ({!Cpp_leaf_plan.plan_ctor_aliases}), read off what was generated ahead of
     the files where the file writes it, in the scope it writes it in
     ({!walk_as_rendered}): each element's declarations, its helpers and the
     member definitions it gives up; a wrapper module's functions -- in the
@@ -2464,7 +2484,7 @@ let plan_visibility s =
     following [mp] through [s] label by label, not by the walk over the
     structure that plans visibilities: a file module, and a child a name
     collision flattens into its parent's wrapper, declare nothing; any other
-    body declares the members of its struct ({!member_names_of_sel}) and
+    body declares the members of its struct ({!Common.member_names_of_sel}) and
     binds the parameters of the functor it is the body of, outermost first.
     [None] where no body is written under [mp]. *)
 let declared_at s mp =
@@ -3236,8 +3256,8 @@ let do_struct_with_decl_tracking ~is_header f s =
      after their definitions -- as a tendency and not as a guarantee: the use
      spells the alias, not the types inside it, so nothing here forces the
      margin to be positive.  On Vellvm it is about eleven thousand lines, and
-     on this corpus the two placements coincide exactly, nothing in it being
-     deferred.
+     on the test suite the two placements coincide exactly, nothing in it
+     being deferred.
 
      So the alias is emitted in front of the first chunk, in the order the
      file is written, that carries a declaration writing it -- which needs no
@@ -3323,7 +3343,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_ind.start_render ~file;
   init_std_names ();
   (* [ppl] writes each module's elements in the visibility planned for it
-     ({!element_position}); what follows only assembles what was written
+     ({!Cpp_state.element_position}); what follows only assembles what was written
      there. *)
   let wrapper_parts, deferred_definitions, p, moved =
     let analysis = get_structure_analysis () in
@@ -3472,9 +3492,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                  by it and be emitted first.  It goes where the concepts of a
                  nested module's typeclasses already go, which is the top of
                  the file, written as an element of the module it is one of,
-                 a class's generated as a module's are ({!walk_as_rendered}).
-                 Being unwritable inside the struct used to be answered by
-                 dropping it. *)
+                 a class's generated as a module's are ({!walk_as_rendered}). *)
               let class_concept (l, r, fields) =
                 let d = generated_concept ~module_:mp r fields in
                 let concept = class_concept_element (element_position mp {top with rc_in_struct = true}) ~module_:mp r d in
@@ -3611,8 +3629,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   let file = print () in
   (* Printing a scheduled unit is a function of it: printed again, with
      nothing reset in between, it gives the same document and decides
-     nothing -- no table grows, no name is decided (the plan's Milestone
-     9). *)
+     nothing -- no table grows, no name is decided.  [CRANE_RENDER_TWICE]
+     checks it: every decision must have been made before printing. *)
   if Sys.getenv_opt "CRANE_RENDER_TWICE" <> None then begin
     let state () = (Table.census (), List.length (Common.names_decided_while_emitting ())) in
     let before = state () in

@@ -30,8 +30,9 @@
     in. *)
 type generated = (Common.env * Minicpp.cpp_decl) list
 
-(** Declarations finished for the printer ({!Cpp_pipeline.finish} of what
-    one MiniML declaration became). *)
+(** Declarations finished for the printer: what one MiniML declaration
+    became, as the unit's program finished it ({!Unit_program.finish}), in
+    CppIR. *)
 type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
 
 (** Print the declarations an entry point answered with, at the position
@@ -50,7 +51,7 @@ val instance_decls :
 val plan_instance_methods :
   Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> (Names.Id.t * Callable_abi.t) list
 
-(** [generated_once ~module_ ?on_reuse ?planned node gen] is [gen ()] ahead
+(** [generated_once ~module_ ?on_reuse ?on_peek ?planned node gen] is [gen ()] ahead
     of the files ({!generating_ahead}), recorded by the physical MiniML node
     [node] and the module [module_] it is generated in -- the module whose
     element it is, as for everything below that takes one -- and handed to

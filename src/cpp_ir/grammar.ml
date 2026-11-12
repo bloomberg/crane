@@ -226,15 +226,23 @@ and Local_fixpoint : sig
   (** How the lambda of a local fixpoint is encoded. *)
   type encoding =
     | Self_passing of Id.t list
-    | Knot
+        (** It calls its group's members through these parameters, one per
+            member, in the group's order: the knot its encoding ties. *)
+    | Knot  (** It ties that knot for the fixpoint's callers, who call it. *)
     | Lowered
+        (** Its control is lowered (a loop, or a machine with a stack of its
+            own) and it calls itself through nothing. *)
 
   (** The local fixpoint whose body a lambda is. *)
   type t = {
-    binder : Id.t;
+    binder : Id.t;  (** the binder it binds in its definition *)
     name : Id.t;  (** the name it is called by in C++ *)
     member : Miniml.Occurrence.t * int;
+        (** the Core fixpoint it lowers, by the fixpoint's occurrence, and
+            the index of its function among the fixpoint's *)
     captured : (Id.t * Core_binder.t) list;
+        (** the Core binder each local of the enclosing scope its Core
+            fixpoint reads stands for, by the local's name *)
     encoding : encoding;
   }
 end =
@@ -245,12 +253,17 @@ and Lambda : sig
   type 'p t = {
     params : ('p Type.t * Id.t option) list;
     type_params : Id.t list;
+        (** template parameters of a polymorphic function object,
+            [[]<typename X>(...)]; empty for an ordinary lambda *)
     return_type : 'p Type.t option;
     body : 'p Stmt.t list;
     capture : 'p Capture.t;
     moved : Id.t list;  (** what a stored lambda takes by move *)
     binders : (Id.t * Core_binder.t) list;
+        (** the Core binder each parameter stands for, by the parameter's
+            name, where the lambda is the body of a Core function *)
     fixpoint : Local_fixpoint.t option;
+        (** the local fixpoint whose body this lambda is *)
   }
 end =
   Lambda
@@ -432,7 +445,12 @@ and Match : sig
     expr : 'p Expr.t;
     access : Access.t;
     owned : bool;
+        (** the scrutinee is owned (a last use or an explicit move), so its
+            payload's fields may be moved out *)
     flat : bool;
+        (** a flat single-constructor inductive with no variant wrapper:
+            bound directly, with neither [std::get] nor
+            [std::holds_alternative] *)
   }
 
   (** One structured binding of a branch. *)
@@ -440,6 +458,8 @@ and Match : sig
     name : Id.t;
     type_ : 'p Type.t;
     used : bool;
+        (** whether the branch body reads the binding; one it does not is
+            written [[[maybe_unused]]] *)
     binder : Core_binder.t option;
   }
 
@@ -716,6 +736,7 @@ and Receiver : sig
         is_const : bool;
         ref_qualifier : ref_qualifier;
         returns_field : bool;
+            (** the method returns one field of its receiver as it is *)
       }
 end =
   Receiver
@@ -732,12 +753,21 @@ and Method : sig
     receiver : Receiver.t;
     is_inline : bool;
     no_pure : bool;
+        (** never [constexpr]: a method with a monadic return type performs
+            effects even where its erased C++ type looks pure *)
     constexpr : 'p Constexpr.t;
     is_noexcept : bool;
     is_conversion : bool;
+        (** a conversion function, written [operator R()] with no return
+            type of its own *)
     binders : (Id.t * Core_binder.t) list;
+        (** the Core binder each parameter stands for, by the parameter's
+            name, where translation bound it for one *)
     receiver_binder : Core_binder.t option;
+        (** the Core binder the receiver stands for, where there is one *)
     loop : Control_ir.Loop.t option;
+        (** the ControlIR loop the body already is, where it was lowered
+            from there; no later pass lowers its control *)
   }
 end =
   Method
@@ -813,6 +843,7 @@ and Struct : sig
     type_params : 'p Template.parameters;
     constraint_ : 'p Expr.t option;
     needs_shared_from_this : bool;
+        (** inherit [enable_shared_from_this], as a method returns [this] *)
   }
 end =
   Struct
@@ -869,10 +900,15 @@ and Function : sig
     path : 'p path;
     return_type : 'p Type.t;
     no_pure : bool;
+        (** never [constexpr]: monadic functions and axiom stubs are not *)
     constexpr : 'p Constexpr.t;
     shape : 'p shape;
     binders : (Id.t * Core_binder.t) list;
+        (** the Core binder each parameter stands for, by the parameter's
+            name, where translation bound it for one *)
     loop : Control_ir.Loop.t option;
+        (** the ControlIR loop the body already is, where it was lowered
+            from there; no later pass lowers its control *)
   }
 end =
   Function

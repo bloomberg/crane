@@ -16,11 +16,19 @@
     {ul
     {- {!ind_header_decls}: what an inductive block becomes;}
     {- {!generate}: what a MiniML declaration becomes, whichever file is
-       being written; {!impl_decls} and {!header_decls} pick what the [.cpp]
-       and the [.h] write of it.}}
+       being written;}
+    {- generating once ({!ahead_once}): everything is generated ahead of
+       both files ({!generate_ahead}), finished in the unit's program
+       ({!Unit_program}), and taken from there by each file's pass;}
+    {- {!impl_decls} and {!header_decls}, which pick what the [.cpp] and the
+       [.h] write of a declaration, and the [_ahead] readers, which read the
+       same without taking it;}
+    {- the header's plan of a module's body: its scope ({!header_scope}),
+       its concepts ({!plan_concepts}), and the position and name resolution
+       of a declaration as written ({!spelling_position}, {!resolver_at}).}}
 
-    Every entry point answers with declarations rather than with rendered
-    text; {!pp_decls} is where they are printed. *)
+    Every entry point answers with finished CppIR declarations rather than
+    with rendered text; {!pp_decls} is where they are printed. *)
 
 open Util
 open Names
@@ -750,7 +758,8 @@ let generating_ahead f = in_mode Generating f
 let regenerating f = in_mode Regenerating f
 let peeking f = in_mode Peeking f
 
-(* [compare] rather than [=]: a NaN literal is equal to itself. *)
+(* [compare] rather than [=]: [compare] takes a NaN literal to be equal to
+   itself, [=] does not. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
   compare a.gf_entity b.gf_entity = 0
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
@@ -1220,6 +1229,8 @@ let instances_generated : (ModPath.t * (generated * cpp_decl list)) list Node_ta
 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset instances_generated)
 
+(* Whether two generations are the same declarations, each in the same name
+   environment, compared as {!same_generation} compares. *)
 let same_generated (a : generated) (b : generated) =
   List.equal
     (fun ((ids, avoid), d) ((ids', avoid'), d') ->

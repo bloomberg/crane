@@ -44,7 +44,7 @@ val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_ir.Resolved.Decl.t -> b
 (** Whether a function declaration writes a qualifier into a struct or a
     template parameter, in its name, result or parameters, asked of the
     declaration rather than of its rendering: each name is the one
-    {!Cpp_print.pp_cpp_type} writes, from the same heads, at the position
+    {!Cpp_print.pp_cpp_type_at} writes, from the same heads, at the position
     given, of the names [names] as {!Cpp_print.print_unprinted} reads them.
     [None] for anything but a function declaration, and where only the
     rendering can tell -- an expression's type, a type constructor named as

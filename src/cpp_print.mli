@@ -3,8 +3,10 @@
 
 (** Rendering CppIR as C++ source text.
 
-    The declaration printer's input is a finished declaration in CppIR
-    ({!Cpp_ir.Resolved}): it runs no compiler pass.  The registries below
+    The last stage of the pipeline, after the passes that settle a
+    declaration ({!Cpp_pipeline.finish}).  The declaration printer's input
+    is a finished declaration in CppIR ({!Cpp_ir.Resolved}): it runs no
+    compiler pass.  The registries below
     are the printer's remaining state: forward declarations and synthesised
     aliases it mints while rendering and the assembly drains. *)
 
@@ -13,11 +15,13 @@ open Names
 (** The types the printer reads: CppIR at the phase resolution leaves. *)
 type ty = Cpp_ir.Resolved.Type.t
 
+(** The declarations the printer reads: CppIR at the phase resolution leaves. *)
 type decl = Cpp_ir.Resolved.Decl.t
 
 (** {2 Rendering} *)
 
-(** {!pp_cpp_type} at the position given. *)
+(** [pp_cpp_type_at ctx par vl t] renders the CppIR type [t] at the
+    position [ctx]; [par] and [vl] as for {!pp_cpp_type}. *)
 val pp_cpp_type_at : Cpp_state.render_ctx -> bool -> Id.t list -> ty -> Pp.t
 
 (** The name of a module a declaration of the tree names, as
@@ -87,7 +91,8 @@ val pp_type : Cpp_state.render_ctx -> ty -> Pp.t
     be named, for a diagnostic of a type that names nothing; [par] asks for
     parentheses where precedence needs them, [vl] names the type variables
     by index.  [~lead:false] drops the leading [typename] of a dependent name
-    about to be embedded in a longer one. *)
+    about to be embedded in a longer one.  An opaque type is written as the
+    erased type. *)
 val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> Minicpp.cpp_type -> Pp.t
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)
@@ -99,7 +104,7 @@ val cut2 : unit -> Pp.t
 (** {2 The printer's spelling, as planning asks it}
 
     Planning's questions about what a declaration writes
-    ({!Cpp_leaf_plan.declaration_names_into_a_struct}) are asked of the same
+    ({!Cpp_leaf_plan.resolved_names_into_a_struct}) are asked of the same
     heads and names the printer writes, not of a rendering. *)
 
 (** A type's name as the type printer writes it: the qualifiers in front of
@@ -189,15 +194,24 @@ val tyctor_written : Cpp_state.render_ctx -> Id.t list -> ty -> (ctor_alias * Cp
     spelled in the file. *)
 val note_ctor_alias_spelled : Cpp_state.render_ctx -> ctor_alias -> unit
 
-(** What a synthesised template's body is decided from.  [tyctor_constructor t]
-    is the constructor a type constructor position writes; [cut_at_argument_list s]
-    is [s] up to its first template argument list; [identifier_tokens s] the
-    identifiers [s] writes, as whole tokens; [foreign_text fr] the text an
-    instantiated mapping was instantiated from. *)
+(** What a synthesised template's body is decided from. *)
+
+(** [tyctor_constructor t] is the constructor a type constructor position
+    writes: the head of [t] when [t] is applied, [t] otherwise. *)
 val tyctor_constructor : ty -> ty
+
+(** [cut_at_argument_list s] is [s] up to its first template argument list. *)
 val cut_at_argument_list : string -> string
+
+(** [identifier_tokens s] is the identifiers [s] writes, as whole tokens. *)
 val identifier_tokens : string -> string list
+
+(** [foreign_text fr] is the text the instantiated mapping [fr] was
+    instantiated from, each hole the placeholder it was written as. *)
 val foreign_text : Cpp_ir.Resolved.phase Cpp_ir.Foreign.t -> string
+
+(** The type variable a synthesised alias template abstracts over
+    ({!Minicpp.ctor_alias_tvar}). *)
 val ctor_alias_tvar : string
 
 (** Under [CRANE_CHECK_IR], start recording the templates the file about

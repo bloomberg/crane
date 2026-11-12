@@ -37,7 +37,9 @@ type t =
       (** a type argument an inline mapping's template names and its
           application does not supply *)
   | Unlowered_method_call
+      (** a call of a method written as a call of a function *)
   | Unlowered_projection
+      (** a record projection written as a call of a function *)
   | Unlowered_conditional
       (** a lambda invoked at once that only chooses between two values,
           not written as the conditional it computes *)

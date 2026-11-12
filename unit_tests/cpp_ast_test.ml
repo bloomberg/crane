@@ -5,7 +5,14 @@
    a template in front of the innermost chunk first writing it, or, homed,
    of the innermost member of a module first writing it; a constrained
    forward declaration in front of the chunk first naming its struct,
-   unless that chunk defines it. *)
+   unless that chunk defines it.
+
+   Also covered: how a declaration not yet printed is spelled from the
+   groups and structs around it, how joined declarations and a unit's
+   sections are separated, filling wrapper structs with their module's
+   body, resolving the names a declaration writes at the frame it is
+   written in, and the positions entering a scope produces
+   ({!Cpp_names.enter_from}). *)
 
 open Crane_plugin
 open Names
