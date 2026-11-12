@@ -1594,6 +1594,28 @@ let rec read_spine = function
 
 let rec read_spines e = ast_map read_spines (read_spine e)
 
+(* [canonical_app f args], [f] canonical: the application, its head read
+   through.  A global applied twice is applied once to both argument lists; a
+   coercion at the head is dropped; a single-branch match at the head takes
+   the arguments into its branch, past the branch's binders. *)
+let rec canonical_app f args =
+  match f with
+  | MLapp ((MLglob _ as g), inner) -> MLapp (g, inner @ args)
+  | MLmagic (_, f) -> canonical_app f args
+  | MLcase (ty, scrut, [|(ids, rty, pat, body)|], occ) ->
+    let args = List.map (ast_lift (List.length ids)) args in
+    let body =
+      match body with
+      | MLapp (f, inner) -> MLapp (f, inner @ args)
+      | _ -> canonical_app body args
+    in
+    MLcase (ty, scrut, [|(ids, rty, pat, body)|], occ)
+  | _ -> MLapp (f, args)
+
+let rec canonical = function
+  | MLapp (f, args) -> canonical_app (canonical f) (List.map canonical args)
+  | e -> ast_map canonical e
+
 (** {2 [permut_rels k k' c] translates [Rel 1 ... Rel k] to
     [Rel (k'+1) ... Rel (k'+k)] and [Rel (k+1) ... Rel (k+k')] to
     [Rel 1 ... Rel k']} *)

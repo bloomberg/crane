@@ -763,9 +763,8 @@ struct Interp {
   template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1,
             typename T3>
   static typename _tcI0::template M<T3>
-  interp(std::type_identity_t<
-             crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
-             h0,
+  interp(const std::type_identity_t<
+             crane::fn<typename _tcI0::template M<crane::obj>(T1)>> &h0,
          const Itree<T1, T3> &x0_);
 };
 
@@ -1185,12 +1184,12 @@ Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
 }
 
 template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
-typename _tcI0::template M<T3> Interp::interp(
-    std::type_identity_t<crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
-        h0,
-    const Itree<T1, T3> &x0_) {
+typename _tcI0::template M<T3>
+Interp::interp(const std::type_identity_t<
+                   crane::fn<typename _tcI0::template M<crane::obj>(T1)>> &h0,
+               const Itree<T1, T3> &x0_) {
   return _tcI0::template iter<T3, Itree<T1, T3>>(
-      [=, h0 = std::move(h0)](const Itree<T1, T3> &t) ->
+      [=](const Itree<T1, T3> &t) ->
       typename _tcI0::template M<Sum<Itree<T1, T3>, T3>> {
         auto &&_sv = t.observe();
         if (std::holds_alternative<
