@@ -82,7 +82,7 @@ let ind_template_kinds kn ind =
           Some
             ( r,
               snd
-                (Plan_templates.template_kinds r
+                (Plan_templates.template_kinds
                    (Common.ind_struct_tparams kn ind p)
                    (List.concat (Array.to_list p.ip_types)) ) ) )
       (List.mapi (fun i p -> (i, p)) (Array.to_list ind.ind_packets))
@@ -130,7 +130,8 @@ type header_generation = {
   promoted_sft : bool option;
 }
 
-let header_decls decls = {decls; member_defs = []; promoted_sft = None}
+(** A header generation of [decls] alone. *)
+let declarations_only decls = {decls; member_defs = []; promoted_sft = None}
 
 (** How the header writes a module's body: inside a struct or not, and with
     the module's class concepts already declared ahead of its struct or not,
@@ -197,13 +198,13 @@ let ind_header_decls scope kn ind =
   | Core.Inductive.Kind.Type_class fields ->
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
-    header_decls
+    declarations_only
       ( if scope.in_struct || scope.concepts_hoisted then []
         else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
   | Core.Inductive.Kind.Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
-    header_decls
+    declarations_only
       ( match !eponymous_record with
       | Some (epon_ref, _, _) when globref_equal ind_ref epon_ref ->
         [] (* Skip - merged into module struct *)
@@ -511,8 +512,11 @@ let ind_header_decls scope kn ind =
               promoted_sft := Some ds.ds_needs_shared_from_this;
               (empty_env (), Dfields ds) :: pp (i + 1)
             | _ ->
-              (* Non-Dstruct promoted inductive (shouldn't happen normally) *)
-              (empty_env (), decl) :: pp (i + 1)
+              (* Only an enum generates something else, and an enum is never
+                 promoted ({!Module_frame.promoted}). *)
+              CErrors.anomaly
+                Pp.(str "Crane: the promoted inductive " ++ GlobRef.print names.(i)
+                    ++ str " generated no struct.")
           else
             (* DESIGN: Contextual wrapping for inductive definitions - If inside
                a struct/module: generate the inductive directly (no namespace
@@ -954,7 +958,7 @@ let generate scope ~module_ d =
     else
       Header_only
         (fun () ->
-          header_decls
+          declarations_only
             [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))] )
   | Dtype (r, l, t) ->
     ( match t with
@@ -967,10 +971,10 @@ let generate scope ~module_ d =
          for -- an event family -- is erased at every use, so nothing looks
          for it. *)
       Nothing
-    | t -> Header_only (fun () -> header_decls [(empty_env (), gen_type_alias r l (Some t))]) )
+    | t -> Header_only (fun () -> declarations_only [(empty_env (), gen_type_alias r l (Some t))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
     group [{fd_ref = r; fd_body = a; fd_type = t}]
-  | Dterm (r, a, t) when is_typeclass_instance a t -> Instance (r, a, t)
+  | Dterm (r, a, t) when is_typeclass_instance t -> Instance (r, a, t)
   | Dterm (r, a, t) ->
     (* The helpers lifted out of the body are the element's to place: those
        no earlier element of the header places ({!plan_header_claim}). *)
@@ -1108,13 +1112,17 @@ let functions_finishing elements =
         match g.gf_entity with Declared _ -> Some (job f) | Defined _ -> None )
       funs
 
+type finished_fun =
+  | Finished_definition of Gen_decls.definition_file * Function_entity.t
+  | Finished_declaration of Minicpp.cpp_decl
+
 let finalized ~fallback (funs : Gen_decls.generated_fun list) =
   List.map
     (fun (g : Gen_decls.generated_fun) ->
       match g.gf_entity with
-      | Declared _ -> (g, None)
-      | Defined (d, _) ->
-        (g, Some (entity_of ~what:"a function" (function_id ~fallback g) d)) )
+      | Declared d -> (g, Finished_declaration d)
+      | Defined (d, file) ->
+        (g, Finished_definition (file, entity_of ~what:"a function" (function_id ~fallback g) d)) )
     funs
 
 let finished_declared ~fallback g d = finished_of ~what:"a declaration" (function_id ~fallback g) d
@@ -1130,28 +1138,25 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
      argument list -- [fmap<T1, T2>(f, fs)] -- rules out finding the callee
      by argument-dependent lookup at instantiation.  So the group is declared
      before its first definition. *)
-  let in_header (g : Gen_decls.generated_fun) =
-    match g.gf_entity with Defined (_, Header) -> true | _ -> false
-  in
+  let in_header = function Finished_definition (Header, _) -> true | _ -> false in
   let forward =
     is_header
     && (not scope.in_struct)
-    && List.length (List.filter (fun (g, _) -> in_header g) paired) > 1
+    && List.length (List.filter (fun (_, f) -> in_header f) paired) > 1
   in
   let declarations =
     if not forward then []
     else
       List.filter_map
-        (fun ((g : Gen_decls.generated_fun), entity) ->
-          match entity with
-          | Some e when in_header g ->
-            Some (g.gf_env, Function_entity.declaration e)
-          | _ -> None )
+        (fun ((g : Gen_decls.generated_fun), f) ->
+          match f with
+          | Finished_definition (Header, e) -> Some (g.gf_env, Function_entity.declaration e)
+          | Finished_definition (Implementation, _) | Finished_declaration _ -> None )
         paired
   in
   declarations
   @ List.concat_map
-    (fun ((g : Gen_decls.generated_fun), entity) ->
+    (fun ((g : Gen_decls.generated_fun), f) ->
       let with_env d = (g.gf_env, d) in
       let lifted =
         if is_header && lifted_inline then
@@ -1159,8 +1164,8 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
         else []
       in
       let views =
-        match (g.gf_entity, entity) with
-        | Defined (_, file), Some e ->
+        match f with
+        | Finished_definition (file, e) ->
           ( match (file, is_header) with
           | Header, true ->
             [ with_env
@@ -1171,9 +1176,8 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
             [with_env (Function_entity.definition_after_declaration e)]
           | Implementation, true -> [with_env (Function_entity.declaration e)]
           | Header, false -> [] )
-        | Declared d, _ ->
+        | Finished_declaration d ->
           if is_header then [with_env (finished_declared ~fallback g d)] else []
-        | Defined _, None -> assert false
       in
       lifted @ views )
     paired

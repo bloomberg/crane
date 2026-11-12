@@ -45,7 +45,7 @@ let classify_inductive (kn : MutInd.t) (i : int) (ind : Miniml.ml_ind) : cpp_ind
 (** Creates a name resolution cache from an ML structure. Pre-computes type
     classifications for every inductive at top level or in a module structure,
     without side effects. *)
-let create ~structure_analysis:_ s =
+let create s =
   let ind_kinds = Ref.User.Tbl.create 64 in
   (* Pre-classify all inductive types using side-effect-free queries only. We do
      NOT call pp_global_name or pp_global here: those have side effects on

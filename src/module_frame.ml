@@ -128,7 +128,9 @@ let concept_collision mp sel =
 
 (* Only a module outside every struct, with no submodule and no other
    inductive, is promoted: promoting one with nested types would put those
-   types out of reach from outside it.  The promoted variables the payloads
+   types out of reach from outside it.  An enum is never promoted: its
+   declaration is an [enum class], not members a struct can take over.  The
+   promoted variables the payloads
    name are parameters too ({!Table.ind_promoted_params}): the head spelled
    for the module is the one the inductive's struct is generated with. *)
 let promoted mp sel eponymous_type =
@@ -142,7 +144,7 @@ let promoted mp sel eponymous_type =
         | SEdecl (Dind (kn, ind)) ->
           List.fold_left
             (fun found (r, p) ->
-              if globref_equal r epon then
+              if globref_equal r epon && not (Table.is_enum_inductive r) then
                 Some (Table.ind_promoted_params kn @ fst (Table.ind_param_vars ind p))
               else found )
             None (inductive_refs kn ind)

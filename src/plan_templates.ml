@@ -109,9 +109,8 @@ let with_applied_tvars ?ml_ty cty temps =
     has to be fixed before the types are converted.  [applied], when given,
     is the rendered C++ body of a type alias, read instead of [tys] for the
     arities and for which parameters are phantom.  Returns the parameter list
-    and its {!Tparam_kinds.t}; records nothing ({!hkt_templates} records).
-    [r] is not read. *)
-let template_kinds ?applied r vars tys =
+    and its {!Tparam_kinds.t}; records nothing ({!hkt_templates} records). *)
+let template_kinds ?applied vars tys =
   (* Read from the rendered type where there is one: the ML body still applies
      a variable that erasure removed, and the parameter list has to agree with
      what the users of this name can see.  See
@@ -241,7 +240,7 @@ let template_kinds ?applied r vars tys =
     [r] pass a bare template name where one is declared
     ({!Table.is_hkt_ind_param}). *)
 let hkt_templates ?applied r vars tys =
-  let temps, kinds = template_kinds ?applied r vars tys in
+  let temps, kinds = template_kinds ?applied vars tys in
   Tparam_kinds.record r kinds;
   temps
 

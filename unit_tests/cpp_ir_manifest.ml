@@ -429,10 +429,8 @@ let grammar_modules file =
           let t = String.concat " " (String.split_on_char '\n' text) in
           (* Its result type is at [lowered]: [C : lowered t], or
              [C : a -> lowered t]. *)
-          let rec has i =
-            i + 10 <= String.length t
-            && (String.sub t i 10 = "-> lowered" || String.sub t i 9 = ": lowered" || has (i + 1))
-          in
+          let at i p = i + String.length p <= String.length t && String.sub t i (String.length p) = p in
+          let rec has i = i < String.length t && (at i "-> lowered" || at i ": lowered" || has (i + 1)) in
           has 0
         in
         modules := (m, List.map (fun (c, text) -> (c, lowered (c, text))) ctors) :: !modules)

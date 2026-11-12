@@ -254,7 +254,7 @@ let refinish jobs =
     jobs
 
 let check_against_plan ~declares =
-  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+  if Probe.checking () then
     let emitted = Owner_set.union (owners !program) (entities_owners !taken) in
     let planned = function
       | Source e -> declares (Entity_id.to_ref e)
@@ -271,7 +271,7 @@ let check_against_plan ~declares =
           ++ prlist_with_sep (fun () -> str ", ") pp_owner (Owner_set.elements unplanned))
 
 let check_against_ahead () =
-  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+  if Probe.checking () then
     let declarations es = List.fold_left (fun s (e : entity) -> Id_set.union s (Id_set.of_list e.declarations)) Id_set.empty es in
     let taken_owners = entities_owners !taken and ahead_owners = entities_owners !program.entities in
     let taken_declarations = declarations !taken and ahead_declarations = declarations !program.entities in

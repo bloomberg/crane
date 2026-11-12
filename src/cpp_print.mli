@@ -75,7 +75,7 @@ type member_mode
     [ctx].  [struct_name] is the enclosing struct's name, for constructors
     and destructors. *)
 val pp_cpp_field :
-  ?struct_name:Pp.t ->
+  struct_name:Pp.t ->
   ?mode:member_mode ->
   Cpp_state.render_ctx ->
   Common.env ->

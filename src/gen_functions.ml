@@ -58,7 +58,7 @@ let type_alias_rhs r vars ot =
 let type_alias_kinds r vars t =
   let vars = rename_tvars Cpp_state.keywords vars in
   let rhs, _ = type_alias_rhs r vars (Some t) in
-  snd (template_kinds ?applied:rhs r vars [t])
+  snd (template_kinds ?applied:rhs vars [t])
 
 (** Build the [using] declaration for a type alias; see {!type_alias_rhs}. *)
 let gen_type_alias r vars ot =

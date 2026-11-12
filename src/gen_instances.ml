@@ -1074,9 +1074,9 @@ let plan_instance_methods ~finish name body ty =
       (methods (finish decl))
   | None, _, _, _ -> []
 
-(** Check if a term is a type class instance: its type's result is a type
-    class.  The body is not read. *)
-let is_typeclass_instance (_body : ml_ast) (ty : ml_type) : bool =
+(** Check if a term of type [ty] is a type class instance: the result of
+    [ty] is a type class. *)
+let is_typeclass_instance (ty : ml_type) : bool =
   match ml_return_type ty with
   | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
   | _ -> false

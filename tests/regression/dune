@@ -14254,3 +14254,14 @@
   (alias runtest)
   (deps numeral_converter_kind.t.exe)
   (action (run ./numeral_converter_kind.t.exe))))
+
+(subdir eponymous_enum_module
+ (rule
+  (targets eponymous_enum_module.t.exe)
+  (deps EponymousEnumModule.vo eponymous_enum_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eponymous_enum_module.t.exe eponymous_enum_module.t.cpp eponymous_enum_module.cpp)))
+ (rule
+  (alias runtest)
+  (deps eponymous_enum_module.t.exe)
+  (action (run ./eponymous_enum_module.t.exe))))

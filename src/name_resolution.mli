@@ -16,7 +16,7 @@
     {2 Usage}
 
     {[
-      let nrc = Name_resolution.create ~structure_analysis:analysis s in
+      let nrc = Name_resolution.create s in
       match Name_resolution.get_ind_kind nrc r with
       | Some kind -> (* the scan classified [r] *)
       | None -> (* not scanned: classify from the tables *)
@@ -37,13 +37,8 @@ type t
 (** Create the cache for a structure. Called once per extraction pass, after
     {!Structure_analysis.analyze}.  Inductives inside functor bodies are not
     scanned.
-    @param structure_analysis the result of {!Structure_analysis.analyze};
-      currently unused
     @return a freshly built name resolution cache *)
-val create :
-  structure_analysis:Structure_analysis.t ->
-  Miniml.ml_structure ->
-  t
+val create : Miniml.ml_structure -> t
 
 (** Check if a type is an eponymous record.  Reads
     {!Module_plan.is_eponymous_record}, not the cache.
