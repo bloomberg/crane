@@ -836,35 +836,6 @@ let render_numeral info (n : Z.t) : cpp_expr =
   | _ -> () );
   CPPnumeral (info.Table.num_ind, {nl_value = n; nl_text = Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt})
 
-(** Try to fold a binary positive chain [xI(xO(...xH...))] into an [int64].
-    Returns [Some n] where [n > 0] if the entire chain can be folded, or
-    [None] if any node is not a recognized positive constructor.
-    Constructor indices (1-based): xI=[positive_xI_idx], xO=[positive_xO_idx],
-    xH=[positive_xH_idx]. *)
-let rec try_fold_positive expr : Z.t option =
-  match strip_magic expr with
-  | MLcons (_, r, args) -> (
-    match (Numeral_literal.registered_constructor "num.pos.type" r, args) with
-    | Some idx, [] when idx = positive_xH_idx -> Some Z.one
-    | Some idx, [inner] when idx = positive_xI_idx ->
-      Option.map (fun n -> Z.succ (Z.shift_left n 1)) (try_fold_positive inner)
-    | Some idx, [inner] when idx = positive_xO_idx ->
-      Option.map (fun n -> Z.shift_left n 1) (try_fold_positive inner)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a constructor [r] wrapping a positive chain -- [Zpos], [Zneg],
-    [Npos] -- into a rendered numeral string; [inner] is its positive
-    argument.  Negative only for [Zneg].  Returns [None] if [inner] cannot
-    be folded.  The value is kept at arbitrary precision: an [int64] wraps
-    silently from 2^63 on. *)
-let try_fold_z_binary info r inner : cpp_expr option =
-  Option.map
-    (fun pos_val ->
-      let z_val = if Numeral_literal.registered_constructor "num.Z.type" r = Some z_neg_idx then Z.neg pos_val else pos_val in
-      render_numeral info z_val)
-    (try_fold_positive inner)
-
 (** Whether [r] is a type family over a value -- [sem : idx -> Type] --
     whose applications ML writes without their argument, so that a generic
     declaration erases them where an instantiation can name them. *)
@@ -1155,20 +1126,6 @@ let save_erased_env () : binder_env = (!tctx).cpp_binder_types
 
 (** Restore binder-type state saved by {!save_erased_env}. *)
 let restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
-
-(** Try to fold a Peano numeral chain of [info]'s inductive -- its successor
-    constructor down to its zero constructor -- into an integer. *)
-let rec try_fold_numeral info expr =
-  let index = function
-    | GlobRef.ConstructRef (ind, cidx) when GlobRef.CanOrd.equal (GlobRef.IndRef ind) info.Table.num_ind ->
-      Some cidx
-    | _ -> None
-  in
-  match strip_magic expr with
-  | MLcons (_ty, cr, []) when index cr = Some info.Table.num_zero_ctor -> Some 0
-  | MLcons (_ty, cr, [inner]) when index cr = Some info.Table.num_succ_ctor ->
-    Option.map (fun n -> n + 1) (try_fold_numeral info inner)
-  | _ -> None
 
 (** [promoted_tys_of_arity n] is the concrete types the enclosing scope's
     promoted type variables stand for, when there are exactly [n] of them and

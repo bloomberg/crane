@@ -86,13 +86,58 @@ let converter_literal r arg =
     | Some n -> Some (info, n)
     | None -> Option.map (fun n -> (info, n)) (num_int arg) )
 
-let fold = function
-  | MLapp (MLglob {callee = r; _}, [arg]) as e -> (
-    match converter_literal r arg with
-    | Some (info, n) -> MLnumeral (info.Table.num_ind, n)
-    | None -> e )
-  | e -> e
+(* A binary [positive] chain [xI (xO (... xH))]. *)
+let rec positive expr =
+  match strip_magic expr with
+  | MLcons (_, r, args) -> (
+    match (registered_constructor "num.pos.type" r, args) with
+    | Some idx, [] when idx = positive_xH_idx -> Some Z.one
+    | Some idx, [inner] when idx = positive_xI_idx -> Option.map (fun n -> Z.succ (Z.shift_left n 1)) (positive inner)
+    | Some idx, [inner] when idx = positive_xO_idx -> Option.map (fun n -> Z.shift_left n 1) (positive inner)
+    | _ -> None )
+  | _ -> None
 
-let folds = function
+(* A Peano chain of [info]'s inductive: its successor constructor down to
+   its zero constructor. *)
+let rec peano info expr =
+  let index = function
+    | GlobRef.ConstructRef (ind, cidx) when GlobRef.CanOrd.equal (GlobRef.IndRef ind) info.Table.num_ind ->
+      Some cidx
+    | _ -> None
+  in
+  match strip_magic expr with
+  | MLcons (_, cr, []) when index cr = Some info.Table.num_zero_ctor -> Some Z.zero
+  | MLcons (_, cr, [inner]) when index cr = Some info.Table.num_succ_ctor -> Option.map Z.succ (peano info inner)
+  | _ -> None
+
+let constructor_literal = function
+  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), args) as e -> (
+    match Table.get_numeral_info (GlobRef.IndRef (kn, i)) with
+    | None -> None
+    | Some info -> (
+      match peano info e with
+      | Some n -> Some (info, n)
+      | None -> (
+        match args with
+        | [inner] ->
+          Option.map
+            (fun p -> (info, if registered_constructor "num.Z.type" r = Some z_neg_idx then Z.neg p else p))
+            (positive inner)
+        | _ -> None ) ) )
+  | _ -> None
+
+let literal = function
+  | MLapp (MLglob {callee = r; _}, [arg]) -> converter_literal r arg
+  | MLcons _ as e -> constructor_literal e
+  | _ -> None
+
+let fold e =
+  match literal e with
+  | Some (info, n) -> MLnumeral (info.Table.num_ind, n)
+  | None -> e
+
+let folds e = Option.has_some (literal e)
+
+let converter_folds = function
   | MLapp (MLglob {callee = r; _}, [arg]) -> Option.has_some (converter_literal r arg)
   | _ -> false

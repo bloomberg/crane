@@ -138,7 +138,7 @@ module Visit : VISIT = struct
      generated code calls. *)
   let add_decl_deps d =
     decl_iter_references
-      ~prune:Numeral_literal.folds
+      ~prune:Numeral_literal.converter_folds
       add_ref add_ref add_ref d
 
   let add_spec_deps = spec_iter_references add_ref add_ref add_ref

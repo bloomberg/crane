@@ -2,9 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Numeral literals: a registered numeral converter applied to a digit
-    chain, decided here once, and written into Core as the literal
-    ([Miniml.MLnumeral]) it computes, so that no later pass reads the
-    chain. *)
+    chain, and a constructor term of a numeral inductive that spells a
+    number, decided here once and written into Core as the literal
+    ([Miniml.MLnumeral]), so that no later pass reads the chain. *)
 
 (** [registered_constructor name r]: [r]'s 1-based constructor index, where
     [r] is a constructor of the inductive Rocq registers as [name]
@@ -21,12 +21,25 @@ val registered_constructor : string -> Names.GlobRef.t -> int option
     converter and its digit inductives out, decide that it folds. *)
 val converter_literal : Names.GlobRef.t -> Miniml.ml_ast -> (Table.numeral_info * Z.t) option
 
-(** [fold e]: [e], where it is the application of a numeral converter to a
-    digit chain ({!converter_literal}), as the literal it computes, at the
-    converter's numeral inductive; otherwise [e] itself.  Reads [e]'s head
-    node only. *)
+(** [constructor_literal e]: the numeral mapping and the value of the
+    constructor term [e] of a numeral inductive, where it is a literal: a
+    chain of the inductive's successor constructor down to its zero
+    constructor ([S (S O)]), or one of its constructors around a binary
+    [positive] chain ([Zpos (xO xH)], [Zneg (xI xH)], [Npos xH]), negative
+    for [Zneg]. *)
+val constructor_literal : Miniml.ml_ast -> (Table.numeral_info * Z.t) option
+
+(** [fold e]: [e], where it is a numeral literal -- a numeral converter
+    applied to a digit chain ({!converter_literal}) or a constructor term
+    ({!constructor_literal}) -- as the literal, at its numeral inductive;
+    otherwise [e] itself.  Reads [e]'s head node and the chain under it
+    only. *)
 val fold : Miniml.ml_ast -> Miniml.ml_ast
 
-(** Whether [e]'s head node is an application {!fold} writes as a
-    literal. *)
+(** Whether {!fold} writes [e] as a literal. *)
 val folds : Miniml.ml_ast -> bool
+
+(** Whether [e] is a numeral converter applied to a digit chain, which
+    {!fold} writes as a literal: the converter and the chain's inductives
+    are named nowhere once it has. *)
+val converter_folds : Miniml.ml_ast -> bool

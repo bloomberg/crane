@@ -10,8 +10,9 @@
     - a match with one branch, which is a destructuring and nothing else:
       [(let (x, y) := p in g x) a] is [let (x, y) := p in g x a];
 
-    and no application is a numeral converter applied to a digit chain:
-    that is the literal it computes ({!Numeral_literal.fold}).
+    and no term is a numeral converter applied to a digit chain, or a
+    constructor term of a numeral inductive spelling a number: each is the
+    literal it computes ({!Numeral_literal.fold}).
 
     The contract is total.  {!structure} makes every definition body
     canonical before {!Normalize.structure} reads it, which keeps it so --
@@ -31,7 +32,8 @@
     built after {!structure} has run is built with this. *)
 val apply : Miniml.ml_ast -> Miniml.ml_ast list -> Miniml.ml_ast
 
-(** [spine e] is [e] with every application canonical. *)
+(** [spine e] is [e] with every application canonical and every numeral
+    literal written as one. *)
 val spine : Miniml.ml_ast -> Miniml.ml_ast
 
 (** Whether [f] may stand at the head of an application of a canonical
@@ -39,7 +41,7 @@ val spine : Miniml.ml_ast -> Miniml.ml_ast
 val canonical_head : Miniml.ml_ast -> bool
 
 (** Whether the node [e] is canonical: not an application with a head
-    {!canonical_head} rejects, nor one {!apply} writes as a literal. *)
+    {!canonical_head} rejects, nor a term {!spine} writes as a literal. *)
 val canonical_application : Miniml.ml_ast -> bool
 
 (** Whether every application in a term is canonical. *)

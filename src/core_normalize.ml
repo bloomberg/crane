@@ -7,6 +7,7 @@ let apply f args = Numeral_literal.fold (Mlutil.canonical_app f args)
 
 let rec spine = function
   | MLapp (f, args) -> apply (spine f) (List.map spine args)
+  | MLcons _ as e when Numeral_literal.folds e -> Numeral_literal.fold e
   | e -> Mlutil.ast_map spine e
 
 let canonical_head = function
@@ -16,6 +17,7 @@ let canonical_head = function
 
 let canonical_application = function
   | MLapp (f, _) as e -> canonical_head f && not (Numeral_literal.folds e)
+  | MLcons _ as e -> not (Numeral_literal.folds e)
   | _ -> true
 
 let rec is_canonical e =

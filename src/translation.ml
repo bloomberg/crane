@@ -796,22 +796,6 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
           sc )
     | _ -> ty
   in
-  (* Try to fold binary positive chains inside Z/N constructors to avoid
-     unsigned-int overflow.  Zpos(xI(xO(...xH...))) and Zneg(...) chains
-     are folded into INT64_C(n) / INT64_C(-n) literals when the parent
-     inductive has a numeral format registered via Crane Extract Numeral. *)
-  let folded =
-    match (r, ts) with
-    | GlobRef.ConstructRef ((kn, i), _), [inner] ->
-      let ind_ref = GlobRef.IndRef (kn, i) in
-      ( match Table.get_numeral_info ind_ref with
-      | Some info -> try_fold_z_binary info r inner
-      | None -> None )
-    | _ -> None
-  in
-  match folded with
-  | Some e -> e
-  | None ->
   (* Some custom-extracted inductives (e.g. [sum1], registered as
      [Crane Extract Inductive sum1 => "" ["%a0" "%a0"]]) are pure type-level
      erasure markers: their constructor template forwards the argument
@@ -1610,10 +1594,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       (List.map (gen_expr env) value_args)
   (* Every application translation is handed is canonical
      ({!Core_normalize}): no head here is a global already applied, a
-     coercion, or a one-branch match, and no numeral converter is applied
-     to a digit chain. *)
-  | MLapp _ as e when Probe.checking () && not (Core_normalize.canonical_application e) ->
-    Probe.violation "non-canonical application" (Pp.str "an application head Core_normalize reads through");
+     coercion, or a one-branch match, and no numeral literal is spelled
+     as a converter's application or as a constructor term. *)
+  | (MLapp _ | MLcons _) as e when Probe.checking () && not (Core_normalize.canonical_application e) ->
+    Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
     gen_expr ?expected_ty ~slot env (Core_normalize.spine e)
   | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
     (* Applying an absurd head — the eliminator of a branch that the indices
@@ -2800,35 +2784,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | Some into -> coerce ~from ~into cglob
         | None -> cglob )
       | _ -> curry_to_expected env ?expected_ty use cglob )
-  | MLcons (_ty, r, _ts)
-    when match r with
-         | GlobRef.ConstructRef ((kn, i), _) ->
-           Table.is_numeral_inductive (GlobRef.IndRef (kn, i))
-         | _ -> false ->
-    (* Try to fold Peano numeral chain into an integer literal *)
-    let ind_ref =
-      match r with
-      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
-      | _ -> CErrors.anomaly (Pp.str "try_fold_numeral: expected ConstructRef")
-    in
-    ( match Table.get_numeral_info ind_ref with
-    | Some info ->
-      ( match try_fold_numeral info ml_e with
-      | Some n ->
-        render_numeral info (Z.of_int n)
-      | None ->
-        (* Peano folding failed.  Try binary positive folding for
-           Z constructors: Zpos(xI(xO(...xH...))) / Zneg(...) chains
-           can overflow unsigned int, so fold into INT64_C(n) literals. *)
-        let z_folded =
-          match _ts with
-          | [inner] -> try_fold_z_binary info r inner
-          | _ -> None
-        in
-        ( match z_folded with
-        | Some e -> e
-        | None -> gen_expr_custom_cons ?expected_ty ~slot env _ty r _ts ) )
-    | None -> gen_expr_custom_cons ?expected_ty ~slot env _ty r _ts )
   | MLcons (ty, r, ts) when is_custom r ->
     gen_expr_custom_cons ?expected_ty ~slot env ty r ts
   | MLcons (ty, r, ts)
