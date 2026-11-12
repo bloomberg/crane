@@ -2733,22 +2733,6 @@ let map_dstruct ?fl fe fs ft s =
     ds_fields = List.map (map_field ?fl fe fs ft) s.ds_fields;
     ds_constraint = Option.map fe s.ds_constraint }
 
-let rec strip_template_defaults = function
-  | Dtemplate (temps, cstr, inner) ->
-    let plain = function TTtypename_default _, id -> (TTtypename, id) | p -> p in
-    Dtemplate (List.map plain temps, cstr, strip_template_defaults inner)
-  | d -> d
-
-let rec split_definition = function
-  | Dfun ({df_shape = Ddef (params, _); _} as f) ->
-    let decl_params = List.map (fun (id, ty) -> (Some id, ty)) params in
-    Some (Dfun {f with df_shape = Ddecl decl_params}, Dfun f)
-  | Dtemplate (temps, cstr, inner) ->
-    Option.map
-      (fun (decl, def) -> (Dtemplate (temps, cstr, decl), Dtemplate (temps, cstr, def)))
-      (split_definition inner)
-  | _ -> None
-
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration.  Nested
     declarations ({!Dtemplate}, {!Dnspace}) recurse. *)

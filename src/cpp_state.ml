@@ -484,7 +484,7 @@ type ctor_alias = {
   ca_body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
-  ca_type : Minicpp.cpp_type;  (** That type. *)
+  ca_type : Cpp_ir.Resolved.Type.t;  (** That type. *)
   ca_vars : Id.t list;  (** The names of the variables it names by index. *)
   ca_uses : tyctor_use list;  (** How its body writes the type constructors in it. *)
 }
@@ -495,7 +495,7 @@ type ctor_alias = {
     with the arguments a holder is applied to, if it has no template name
     of its own ({!Cpp_leaf_plan.ctor_alias_at}). *)
 and tyctor_use = {
-  tu_constructor : Minicpp.cpp_type;
+  tu_constructor : Cpp_ir.Resolved.Type.t;
   tu_vars : Id.t list;
   tu_alias : (ctor_alias * holder_argument list) option;
 }
@@ -528,7 +528,7 @@ and tyctor_plan = Unplanned | Deciding of tyctor_decision | Planned of tyctor_us
    given variables is written, and the uses it has decided, in the order
    first spelled. *)
 and tyctor_decision = {
-  decide : render_ctx -> Id.t list -> Minicpp.cpp_type -> (ctor_alias * holder_argument list) option;
+  decide : render_ctx -> Id.t list -> Cpp_ir.Resolved.Type.t -> (ctor_alias * holder_argument list) option;
   noted : tyctor_use list ref;
 }
 

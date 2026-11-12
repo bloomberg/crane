@@ -37,7 +37,7 @@ open Cpp_names
 type generated = (Common.env * Minicpp.cpp_decl) list
 
 (** Declarations finished for the printer. *)
-type rendered = (Common.env * Finished_decl.t) list
+type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
 
 
 (** Print the declarations an entry point answered with. *)
@@ -1030,9 +1030,9 @@ let function_id ~fallback g = declaration (source (function_ref ~fallback g)) 0
     [from]. *)
 let numbered ?(from = 0) owner ds = List.mapi (fun i _ -> declaration owner (from + i)) ds
 
-(** [declaration_of ~what id d] is the declaration [id] of the unit's
+(** [finished_of ~what id d] is the declaration [id] of the unit's
     program ({!Unit_program.find_declaration}), finished from [d]. *)
-let declaration_of ~what id d =
+let finished_of ~what id d =
   match (get_phase (), Unit_program.find_declaration id) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
@@ -1042,22 +1042,15 @@ let declaration_of ~what id d =
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
             ++ str " was finished differently ahead of the files and in one of them.");
-    f
+    f.finished
   | Emit, None ->
     CErrors.anomaly
       Pp.(str "Crane: " ++ str what ++ str " was rendered that was not finished ahead of \
                                          the files.")
 
-(** [finished_of ~what id d] is {!declaration_of}, in both IRs. *)
-let finished_of ~what id d =
-  let {Unit_program.finished; ir; _} = declaration_of ~what id d in
-  {Finished_decl.settled = finished; ir}
-
 (** The function entity of the declaration [id] of the unit's program,
     finished from [d]. *)
-let entity_of ~what id d =
-  let {Unit_program.finished; ir; _} = declaration_of ~what id d in
-  Function_entity.of_finished finished ir
+let entity_of ~what id d = Function_entity.of_finished (finished_of ~what id d)
 
 let finished_placed (id, d) = finished_of ~what:"a lifted declaration" id d
 
@@ -1355,9 +1348,9 @@ let resolve_tree ~file t =
 
 let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file) ~resolve_head:(head_resolver_at ~file)
 
-let names_into_a_struct_as_written ~file spelling {Finished_decl.settled; ir} =
-  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled; ir})) in
-  at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names settled)
+let names_into_a_struct_as_written ~file spelling decl =
+  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); decl})) in
+  at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names decl)
 
 let write_unprinted ~file spelling u =
   at_spelling ~file spelling (fun ctx ->
@@ -1433,7 +1426,7 @@ let record_methods ~module_ r vars candidates =
 
 (** The C++ types of each eponymous record's fields, converted ahead of the
     files, by the record. *)
-let record_field_types_generated : (ModPath.t * cpp_type list) list Ref.User.Tbl.t =
+let record_field_types_generated : (ModPath.t * Cpp_ir.Resolved.Type.t list) list Ref.User.Tbl.t =
   Ref.User.Tbl.create 8
 
 let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_types_generated)
@@ -1441,9 +1434,10 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
 (** [record_field_types r vars fields] is the C++ type of each of the fields
     [fields] of the eponymous record [r], of variables [vars], as the header
     writes them in the struct [r] is merged into: converted and instantiated
-    ({!Cpp_erasure.instantiate_type}) ahead of the files, and taken from
-    there by the header ({!ahead_once}) -- so what plans from them reads the
-    types the header writes. *)
+    ({!Cpp_erasure.instantiate_type}) ahead of the files, in CppIR
+    ({!Legacy_minicpp_to_cpp_ir.type_}), and taken from there by the header
+    ({!ahead_once}) -- so what plans from them reads the types the header
+    writes. *)
 let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
   ahead_once ~module_
     ~what:(fun () -> Pp.(str "the field types of the record " ++ GlobRef.print r))
@@ -1452,7 +1446,9 @@ let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
     ~same:(fun tys tys' -> compare tys tys' = 0)
     (fun () ->
       List.map
-        (fun (_, ty) -> Cpp_erasure.instantiate_type (Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty))
+        (fun (_, ty) ->
+          Legacy_minicpp_to_cpp_ir.type_exn
+            (Cpp_erasure.instantiate_type (Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty)) )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)

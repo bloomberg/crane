@@ -498,3 +498,18 @@ let convert (d : Cpp_erasure.settled) =
   match decl (d :> cpp_decl) with
   | d -> Ok d
   | exception Unconvertible f -> Error f
+
+let type_ t =
+  match ty t with
+  | t -> Ok t
+  | exception Unconvertible f -> Error f
+
+let expr e =
+  match expr e with
+  | e -> Ok e
+  | exception Unconvertible f -> Error f
+
+let type_exn t =
+  match type_ t with
+  | Ok t -> t
+  | Error f -> CErrors.anomaly Pp.(str "Crane: a type written outside every finished declaration: " ++ str (describe f))

@@ -1892,18 +1892,6 @@ val map_field :
   cpp_field * cpp_visibility * section_tag ->
   cpp_field * cpp_visibility * section_tag
 
-(** [strip_template_defaults d] is [d] with no default on any parameter of
-    its template heads: the spelling of a declaration that an earlier one has
-    already given its defaults, since C++ allows a default once per
-    parameter. *)
-val strip_template_defaults : cpp_decl -> cpp_decl
-
-(** [split_definition d] is [d], a function definition, as the declaration
-    and the definition a file writes: the same head, with and without the
-    body, through any template head.  [None] when [d] defines no
-    function. *)
-val split_definition : cpp_decl -> (cpp_decl * cpp_decl) option
-
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration, including every
     position a type is {e written down} in the generated header.  Nested

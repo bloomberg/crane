@@ -80,6 +80,25 @@ let rec is_any_shaped = function
          with Not_found -> false )
   | t -> Ml_type_util.is_cpp_dummy_type t
 
+let rec is_any_shaped_ir (t : Cpp_ir.Resolved.Type.t) =
+  match t with
+  | Any | Erased _ -> true
+  | Const inner | Reference (_, inner) | In_namespace (_, inner) -> is_any_shaped_ir inner
+  | Named (id, []) -> Id.Set.mem id !any_type_aliases
+  | Entity_application (g, _, _)
+    when Table.is_erased_type_const g
+         && ( match alias_name g with
+            | Some id -> not (Id.Set.mem id !member_aliases)
+            | None -> false ) ->
+    true
+  | Entity_application (GlobRef.ConstRef c, _, _) ->
+    is_axiom_type_ref (GlobRef.ConstRef c)
+    || ( try
+           let t = Table.find_type (GlobRef.ConstRef c) in
+           t = Miniml.Tunknown || t = Miniml.Taxiom
+         with Not_found -> false )
+  | _ -> false
+
 (** [erased_list_shape ty] is the shape a value of list type [ty] physically
     has once it has been through a [std::any]: its elements were boxed one at a
     time, so the container holds [std::any] however concrete [ty]'s element
@@ -1483,19 +1502,3 @@ let writes_unspellable_binder (d : settled) =
   in
   match ignore (map_decl fe fs Fun.id d) with () -> false | exception Found -> true
 
-type view =
-  | Template of (template_type * Id.t) list * cpp_constraint option * settled
-  | Namespace of nspace_wrapper option * settled list
-  | Decl of cpp_decl
-
-(* The seam is hereditary -- {!materialise} rewrites a declaration together
-   with everything nested inside it -- so a settled declaration's children are
-   settled. *)
-let view (d : settled) =
-  match d with
-  | Dtemplate (temps, cstr, inner) -> Template (temps, cstr, inner)
-  | Dnspace (r, decls) -> Namespace (r, decls)
-  | d -> Decl d
-
-let split_definition (d : settled) = Minicpp.split_definition d
-let strip_template_defaults (d : settled) = Minicpp.strip_template_defaults d

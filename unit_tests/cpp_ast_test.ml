@@ -156,9 +156,8 @@ let () =
   check "an empty chunk is no chunk" (Cpp_ast.is_empty (top Cpp_ast.empty));
   check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")));
   let unprinted ?templates () =
-    let settled = Cpp_erasure.materialise (Minicpp.Dstatic_assert (Minicpp.CPPbool true, None)) in
-    let ir = Result.get_ok (Legacy_minicpp_to_cpp_ir.convert settled) in
-    Cpp_ast.unprinted ~needs:(needs ?templates ()) (Common.empty_env ()) {Finished_decl.settled; ir}
+    let decl : Cpp_ir.Resolved.Decl.t = Static_assert (Literal (Bool true), None) in
+    Cpp_ast.unprinted ~needs:(needs ?templates ()) (Common.empty_env ()) decl
   in
   let spelled ?(templates = []) sections =
     let write spelling (_ : Cpp_ast.unprinted) = Pp.str (spelling_text spelling) in
@@ -212,7 +211,7 @@ let () =
        [top (leaf ~names:["S"] "e")])
     "fwdE(F.M.N)e";
   let synthesised declared_in =
-    Cpp_ast.synthesised_template ~tyctors:[] {name = "S"; holder = None; declared_in; body = Minicpp.Tany; vars = []; planned = ""}
+    Cpp_ast.synthesised_template ~tyctors:[] {name = "S"; holder = None; declared_in; body = Cpp_ir.Type.Any; vars = []; planned = ""}
   in
   check_text "a synthesised template is spelled as declared in its home, wherever it is placed"
     (spelled ~templates:[{(template "S") with declaration = synthesised (In_struct_of inner)}]

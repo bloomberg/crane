@@ -43,17 +43,17 @@ type defined =
   | Defined_struct of {
       struct_ : GlobRef.t;
       name : defined_name;
-      tparams : (Minicpp.template_type * Id.t) list;
-      constraint_ : Minicpp.cpp_constraint option;
+      tparams : Cpp_ir.Resolved.phase Cpp_ir.Template.parameters;
+      constraint_ : Cpp_ir.Resolved.Expr.t option;
     }
   | Defined_enum of GlobRef.t
 
 and defined_name = As_defined | As_inductive_wrapper
 
 type declaration =
-  | Declaration of {env : Common.env; settled : Cpp_erasure.settled; ir : Cpp_ir.Resolved.Decl.t}
-  | Absorbed of {env : Common.env; settled : Cpp_erasure.settled; ir : Cpp_ir.Resolved.Decl.t}
-  | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
+  | Declaration of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
+  | Absorbed of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
+  | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Cpp_ir.Resolved.Type.t) list}
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
   | Assertion of assertion
@@ -67,7 +67,7 @@ and synthesised = {
   name : string;
   holder : holder_parameter list option;
   declared_in : declared_in;
-  body : Minicpp.cpp_type;
+  body : Cpp_ir.Resolved.Type.t;
   vars : Id.t list;
   planned : string;
 }
@@ -78,13 +78,13 @@ and application = {functor_ : module_ref; args : module_ref list}
 
 and assertion = {concept : asserted; subject : subject}
 and asserted = Of_module_type of concept_ref | Of_class of global_ref
-and subject = Module of module_ref | Instance of {instance : global_ref; args : Minicpp.cpp_type list}
+and subject = Module of module_ref | Instance of {instance : global_ref; args : Cpp_ir.Resolved.Type.t list}
 
 and global_alias =
   | Alias_of_type of {
       target : global_ref;
       definition : definition;
-      tparams : (Minicpp.template_type * Id.t) list;
+      tparams : Cpp_ir.Resolved.phase Cpp_ir.Template.parameters;
     }
   | Alias_of_module of module_ref
 
@@ -179,8 +179,8 @@ let decl ~needs text = Decl {text; needs}
 let leaf ?(needs = Needs.none) ?tyctors declaration =
   Unprinted {declaration; needs; names = Cpp_resolution.unresolved; tyctors}
 
-let unprinted ~needs ?tyctors env {Finished_decl.settled; ir} = leaf ~needs ?tyctors (Declaration {env; settled; ir})
-let absorbed ?tyctors env {Finished_decl.settled; ir} = leaf ?tyctors (Absorbed {env; settled; ir})
+let unprinted ~needs ?tyctors env decl = leaf ~needs ?tyctors (Declaration {env; decl})
+let absorbed ?tyctors env decl = leaf ?tyctors (Absorbed {env; decl})
 let fields ~needs ?tyctors ~record ~vars fields = leaf ~needs ?tyctors (Fields {record; vars; fields})
 let modtype_concept ~path ~params concept = leaf (Modtype_concept {path; params; concept})
 let global_alias a = leaf (Global_alias a)

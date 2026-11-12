@@ -13,23 +13,22 @@
 (** A finished declaration with its two views. *)
 type t
 
-(** [of_finished d ir] splits [d], already finished, and [ir], its CppIR,
-    where they define a function.  Under [CRANE_CHECK_IR], [ir] splits as
-    [d] does. *)
-val of_finished : Cpp_erasure.settled -> Cpp_ir.Resolved.Decl.t -> t
+(** [of_finished d] splits [d], already finished, where it defines a
+    function. *)
+val of_finished : Cpp_ir.Resolved.Decl.t -> t
 
 (** The declaration of the function the entity defines; anything else is its
     own declaration. *)
-val declaration : t -> Finished_decl.t
+val declaration : t -> Cpp_ir.Resolved.Decl.t
 
 (** What is written where the entity is defined, when nothing declared it
     before. *)
-val definition : t -> Finished_decl.t
+val definition : t -> Cpp_ir.Resolved.Decl.t
 
 (** The definition written after the {!declaration} in the same file: the
     declaration gave the template defaults, which C++ allows once per
     parameter. *)
-val definition_after_declaration : t -> Finished_decl.t
+val definition_after_declaration : t -> Cpp_ir.Resolved.Decl.t
 
 
 (** Whether the entity is a function, with a declaration distinct from its

@@ -26,3 +26,18 @@ val describe : failure -> string
 
 (** [convert d] is [d] in CppIR, or why it is not expressible there. *)
 val convert : Cpp_erasure.settled -> (Cpp_ir.Resolved.Decl.t, failure) result
+
+(** The types and values written outside every finished declaration -- a
+    merged record's field types, a module type's concept, a synthesised
+    template's body -- convert one at a time: [type_ t] is [t] in CppIR,
+    or why it is not expressible there, and likewise [expr e]. *)
+val type_ : Minicpp.cpp_type -> (Cpp_ir.Resolved.Type.t, failure) result
+
+val expr : Minicpp.cpp_expr -> (Cpp_ir.Resolved.Expr.t, failure) result
+
+(** [type_ t], where [t] has to convert.
+    @raise Anomaly if it does not. *)
+val type_exn : Minicpp.cpp_type -> Cpp_ir.Resolved.Type.t
+
+(** A piece of a mapping's instantiated text. *)
+val foreign_piece : Minicpp.foreign_piece -> Cpp_ir.Foreign.piece

@@ -32,6 +32,9 @@ val any_type_aliases : Id.Set.t ref
     because it is an axiom type. *)
 val is_any_shaped : cpp_type -> bool
 
+(** {!is_any_shaped} of a type in CppIR. *)
+val is_any_shaped_ir : Cpp_ir.Resolved.Type.t -> bool
+
 (** [erased_list_shape ty] is the shape a value of list type [ty] physically
     has once it has been through a [std::any]: its elements were boxed one at a
     time, so the container holds [std::any] however concrete [ty]'s element
@@ -92,27 +95,6 @@ val unbox_tolerant : cpp_type -> cpp_expr -> cpp_expr
     rather than re-checked. *)
 type settled = private Minicpp.cpp_decl
 
-(** A settled declaration taken apart one level.  The seam is hereditary --
-    {!materialise} rewrites a declaration together with everything nested
-    inside it -- so the children a view hands out are settled too, and they are
-    the only settled values it hands out: there is no way to call an unrelated
-    declaration settled. *)
-type view =
-  | Template of
-      (Minicpp.template_type * Names.Id.t) list
-      * Minicpp.cpp_constraint option
-      * settled
-  | Namespace of Minicpp.nspace_wrapper option * settled list
-  | Decl of Minicpp.cpp_decl  (** Any other declaration: none nested inside. *)
-
-val view : settled -> view
-
-(** {!Minicpp.split_definition} of a settled definition.  Dropping a body
-    removes types and adds none, so both halves are settled. *)
-val split_definition : settled -> (settled * settled) option
-
-(** {!Minicpp.strip_template_defaults} of a settled declaration. *)
-val strip_template_defaults : settled -> settled
 
 (** [resolve_casts decl] rewrites every {!Minicpp.CPPany_cast} in [decl] to say
     which caster the printer should emit: dropped where the cast is the

@@ -25,7 +25,7 @@ val acquire_fence : string
 val of_decl : Cpp_ir.Resolved.Decl.t -> Table.header list
 
 (** The headers the type [t] needs where it is written. *)
-val of_type : Minicpp.cpp_type -> Table.header list
+val of_type : Cpp_ir.Resolved.Type.t -> Table.header list
 
 (** The headers the concept of a module type needs for what it writes. *)
 val of_modtype_concept : Modtype_concept.t -> Table.header list
@@ -36,24 +36,24 @@ val of_modtype_concept : Modtype_concept.t -> Table.header list
 val globals_of_decl : Cpp_ir.Resolved.Decl.t -> Names.GlobRef.t list
 
 (** The globals the type [t] writes the names of where it is written. *)
-val globals_of_type : Minicpp.cpp_type -> Names.GlobRef.t list
+val globals_of_type : Cpp_ir.Resolved.Type.t -> Names.GlobRef.t list
 
 (** [tyctors_of_decl f d] calls [f ~vl ~owner t] at each type constructor
-    [Ttyctor t] the finished declaration [d] writes, in the order written,
+    [Type_constructor t] the finished declaration [d] writes, in the order written,
     with the names of the template parameters its type variables are read
     as there ([vl]), and the struct whose members are written around it, if
     any ([owner]). *)
 val tyctors_of_decl :
-  (vl:Names.Id.t list -> owner:Names.GlobRef.t option -> Minicpp.cpp_type -> unit) ->
-  Minicpp.cpp_decl ->
+  (vl:Names.Id.t list -> owner:Names.GlobRef.t option -> Cpp_ir.Resolved.Type.t -> unit) ->
+  Cpp_ir.Resolved.Decl.t ->
   unit
 
 (** [tyctors_of_type f ~vl t] is {!tyctors_of_decl} of the type [t], written
     where its type variables are read as [vl]. *)
 val tyctors_of_type :
-  (vl:Names.Id.t list -> owner:Names.GlobRef.t option -> Minicpp.cpp_type -> unit) ->
+  (vl:Names.Id.t list -> owner:Names.GlobRef.t option -> Cpp_ir.Resolved.Type.t -> unit) ->
   vl:Names.Id.t list ->
-  Minicpp.cpp_type ->
+  Cpp_ir.Resolved.Type.t ->
   unit
 
 (** The promoted type variables -- a class's [Type]-valued fields -- the
@@ -61,15 +61,4 @@ val tyctors_of_type :
 val promoted_of_decl : Cpp_ir.Resolved.Decl.t -> Names.Id.t list
 
 (** The promoted type variables the type [t] writes, in order. *)
-val promoted_of_type : Minicpp.cpp_type -> Names.Id.t list
-
-(** {!of_decl}, {!globals_of_decl} and {!promoted_of_decl} read off a
-    finished declaration's MiniCpp twin: what they are checked against under
-    [CRANE_CHECK_IR] ({!Unit_program.finish}) while the finished program
-    still carries both, and what the leaf plan reads off the MiniCpp
-    declarations its leaves still hold. *)
-module Legacy : sig
-  val of_decl : Minicpp.cpp_decl -> Table.header list
-  val globals_of_decl : Minicpp.cpp_decl -> Names.GlobRef.t list
-  val promoted_of_decl : Minicpp.cpp_decl -> Names.Id.t list
-end
+val promoted_of_type : Cpp_ir.Resolved.Type.t -> Names.Id.t list

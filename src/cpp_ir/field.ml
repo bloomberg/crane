@@ -12,3 +12,8 @@ module Deferred_struct = Grammar.Deferred_struct
 module Out_of_line = Grammar.Out_of_line
 module Visibility = Grammar.Visibility
 module Section = Grammar.Section
+
+(** The member as a field, to be written where a field is written. *)
+let of_out_of_line : 'p Out_of_line.t -> 'p t = function
+  | Method m -> Method m
+  | Destructor body -> Destructor body
