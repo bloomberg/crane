@@ -297,10 +297,10 @@ let rec tail_constructions = function
     List.concat_map (fun (_, _, _, b) -> tail_constructions b) (Array.to_list brs)
   | _ -> []
 
-(** [find_reuse_candidates typ pv]: match branches whose body builds an [MLcons]
+(** [find_reuse_candidates pv]: match branches whose body builds an [MLcons]
     of the same inductive type as the matched constructor, as
     [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)]. *)
-let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
+let find_reuse_candidates (pv : ml_branch array) =
   let ctor_ind = function
     | Names.GlobRef.ConstructRef (ind, _) -> Some ind
     | _ -> None
@@ -361,7 +361,7 @@ let is_reuse_scrutinee k body =
       ( match scrut with
       | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
         if j > d && j - d = k && recyclable typ
-           && find_reuse_candidates typ branches <> []
+           && find_reuse_candidates branches <> []
         then found := true
       | _ -> () );
       scan d scrut;

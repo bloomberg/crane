@@ -328,21 +328,50 @@ type site =
   | Type_term
 
 (** A global application of the program: the occurrence of the use naming
-    its callee, the roles of the arguments it writes, and its instantiation
-    as planned where the walk met it ({!instantiate}), if that succeeded. *)
+    its callee, the roles of the arguments it writes, its instantiation as
+    planned where the walk met it ({!instantiate}), if that succeeded, and
+    whether it builds a closed instance ({!builds_closed_instance}). *)
 type entry = {
   occurrence : Occurrence.t;
   roles : Elaborated_call.role list;
   planned : Elaborated_call.instantiated option;
   site : site;
+  closed_instance : bool;
 }
 
 type t = {
   calls : entry list Ref.User.Map.t;  (** By callee, each newest first. *)
   named : GlobRef.Set_env.t;  (** Every global the bodies name, applied or not. *)
+  dictionary_calls : (Occurrence.t * (GlobRef.t * GlobRef.t)) list;
+      (** Each application of a singleton class's dictionary, by the
+          occurrence of the variable at its head: the class and its one
+          method ({!singleton_dictionary_head}). *)
 }
 
-let empty = {calls = Ref.User.Map.empty; named = GlobRef.Set_env.empty}
+let empty = {calls = Ref.User.Map.empty; named = GlobRef.Set_env.empty; dictionary_calls = []}
+
+(* Whether the call [use args], standing in [lex], builds a typeclass
+   instance -- its Rocq type says so ({!Table.builds_instance}): a singleton
+   class's method is a function, so its instance's ML type is an arrow, not
+   the class -- from no value of [lex]: its only free variables are instance
+   parameters, which C++ takes as template arguments ({!binder_is_instance}).
+   Such a call is the same value every time it is evaluated. *)
+let builds_closed_instance ~lex use args =
+  (not (Table.is_custom use.callee))
+  && args <> []
+  && Table.builds_instance use.callee
+  && Escape.IntSet.for_all (binder_is_instance lex) (Escape.free_rels 0 (MLapp (MLglob use, args)))
+
+(* The class and its one method, where the variable [i] of [lex] is the
+   dictionary of a singleton class: an instance parameter -- a declaration's
+   dictionary, or a binder named as an instance -- at the class's type. *)
+let singleton_dictionary_head lex i =
+  match Lexenv.binder lex i with
+  | Some {eb_id; eb_type; eb_role} when eb_role = Lexenv.Dictionary || Common.is_tc_instance_id eb_id -> (
+    match resolve_tmeta eb_type with
+    | Tglob (c, _, _) -> Option.map (fun m -> (c, m)) (Table.singleton_class_method c)
+    | _ -> None )
+  | _ -> None
 
 (* What the walk has found so far: the walk's own, never seen outside
    {!structure}. *)
@@ -388,7 +417,13 @@ let record w ~position lex use args =
       | exception e when CErrors.noncritical e -> None
     in
     let others = Option.default [] (Ref.User.Map.find_opt use.callee !(w.b).calls) in
-    let entry = {occurrence = Global_use.occurrence use; roles; planned; site = w.site} in
+    let entry =
+      { occurrence = Global_use.occurrence use;
+        roles;
+        planned;
+        site = w.site;
+        closed_instance = builds_closed_instance ~lex use args }
+    in
     w.b := {!(w.b) with calls = Ref.User.Map.add use.callee (entry :: others) !(w.b).calls};
     planned
   (* A callee with no type is never translated as a call: the traversal
@@ -474,17 +509,18 @@ let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 let rec walk w ?(position = no_position) lex e =
   let go ?(position = no_position) lex e = walk w ~position lex e in
   match e with
-  (* A spine is read whole, as translation reads it.  A coercion of the
-     callee is seen through at every argument -- [not] applied to the
-     proposition it erases, in a type written [{P} + {~P}]. *)
-  | MLapp ((MLapp (MLglob _, _) | MLmagic _ | MLcase (_, _, [|_|], _)), _) as e ->
-    go ~position lex (Mlutil.read_spine e)
   | MLapp (MLglob use, args) ->
     walk_use w lex use;
     let at = argument_positions ~position (record w ~position lex use args) in
     List.iteri (fun i a -> go ~position:(at i) lex a) args
   (* A local callee's arguments are generated at the call's position. *)
   | MLapp (f, args) ->
+    ( match f with
+    | MLrel (i, occ) ->
+      Option.iter
+        (fun head -> w.b := {!(w.b) with dictionary_calls = (occ, head) :: !(w.b).dictionary_calls})
+        (singleton_dictionary_head lex i)
+    | _ -> () );
     go lex f;
     List.iter (go ~position lex) args
   | MLlam _ as e ->
@@ -875,6 +911,57 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
              | `Ambiguous _ -> " has no single instantiation planned for it."
              | `Unwalked -> " is translated where Core elaboration did not reach it." ) );
       live () )
+
+(* [lookup what ~equal ~live planned] -- in emission, the answer the
+   installed walk planned ([planned], [None] where it planned none or its
+   entries disagree), checked under [CRANE_CHECK_IR] against [live ()], the
+   answer the traversal's own environment gives, which is taken where the
+   walk planned none; in planning, [live ()]. *)
+let lookup what ~equal ~live planned =
+  match Common.get_phase () with
+  | Common.Plan -> live ()
+  | Common.Emit -> (
+    match planned with
+    | Some p ->
+      Probe.hit "elab-fact" (fun () -> String.map (function ' ' -> '_' | c -> c) what ^ " planned");
+      if Probe.checking () && not (equal p (live ())) then
+        Probe.violation what (Pp.str "the answer translation's environment gives differs from Core's");
+      p
+    | None ->
+      Probe.hit "elab-fact" (fun () -> String.map (function ' ' -> '_' | c -> c) what ^ " live");
+      live () )
+
+(* The one value the answers all give, if they agree on one. *)
+let agreed equal = function
+  | [] -> None
+  | a :: rest -> if List.for_all (equal a) rest then Some a else None
+
+let same_head (c, m) (c', m') = GlobRef.CanOrd.equal c c' && GlobRef.CanOrd.equal m m'
+
+
+let closed_instance_call ~lex use args =
+  let planned =
+    match Ref.User.Map.find_opt use.callee !installed.calls with
+    | None -> None
+    | Some entries ->
+      let occurrence = Global_use.occurrence use and n = List.length args in
+      agreed Bool.equal
+        (List.filter_map
+           (fun e ->
+             if Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n then
+               Some e.closed_instance
+             else None )
+           entries )
+  in
+  lookup "closed instance calls" ~equal:Bool.equal ~live:(fun () -> builds_closed_instance ~lex use args) planned
+
+let singleton_dictionary_call ~live occ =
+  let planned =
+    match List.filter_map (fun (o, h) -> if Occurrence.equal o occ then Some h else None) !installed.dictionary_calls with
+    | [] -> Some None
+    | heads -> Option.map Option.make (agreed same_head heads)
+  in
+  lookup "singleton dictionary calls" ~equal:(Option.equal same_head) ~live planned
 
 let report () =
   let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) !installed.calls 0 in

@@ -559,15 +559,16 @@ let is_shared_constant_term e =
 let names_no_value e =
   Escape.IntSet.for_all (binder_is_instance (current_lexenv ())) (Escape.free_rels 0 e)
 
-(* Whether [e], the call [f args], is closed ({!names_no_value}) and builds a
-   typeclass instance, which its Rocq type says ({!Table.builds_instance}): a
-   singleton class's method is a function, so its instance's ML type is an
-   arrow, not the class. *)
-let is_closed_instance_call env f args e =
-  (not (Table.is_custom f))
-  && args <> []
-  && Table.builds_instance f
-  && names_no_value e
+(* The instance parameter, the class and its one method, where the variable
+   [i], read at [occ] at the head of an application, is a singleton class's
+   dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
+   {!singleton_dictionary} is the traversal's own reading, checked against
+   it. *)
+let singleton_call env i occ =
+  let live () = Option.map (fun (_, c, m) -> (c, m)) (singleton_dictionary env (MLrel (i, occ))) in
+  match Core_elaborate.singleton_dictionary_call ~live occ with
+  | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
+  | None -> None
 
 (* The name a hoisted constant is declared under (see {!Cpp_constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
@@ -801,10 +802,10 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
      inductive has a numeral format registered via Crane Extract Numeral. *)
   let folded =
     match (r, ts) with
-    | GlobRef.ConstructRef ((kn, i), cidx), [inner] ->
+    | GlobRef.ConstructRef ((kn, i), _), [inner] ->
       let ind_ref = GlobRef.IndRef (kn, i) in
       ( match Table.get_numeral_info ind_ref with
-      | Some info -> try_fold_z_binary info cidx inner
+      | Some info -> try_fold_z_binary info r inner
       | None -> None )
     | _ -> None
   in
@@ -1594,8 +1595,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      projection: the method, called on the instance -- a template parameter,
      so a static member -- at the method's own type variables, which here are
      the projection's, numbered past the class's parameters. *)
-  | MLapp (head, args) when singleton_dictionary env head <> None ->
-    let inst, class_ref, method_ref = Option.get (singleton_dictionary env head) in
+  | MLapp (MLrel (i, occ), args) when singleton_call env i occ <> None ->
+    let inst, class_ref, method_ref = Option.get (singleton_call env i occ) in
     let ipv = List.length (Table.get_ind_ip_vars class_ref) in
     let n_own = Ml_type_util.method_tvar_count class_ref (Table.find_type method_ref) in
     let tvars = get_current_type_vars () in
@@ -1661,22 +1662,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        ...). *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
-  | MLapp (MLglob ({callee = r; _} as use), [arg]) when Table.is_numeral_converter r ->
-    (* Fold Number.uint/signed_int digit chain into a direct integer literal.
-       Tries unsigned (of_num_uint) then signed (of_num_int).
-       Falls through to eta_fun on failure. *)
-    let ind_ref = Option.get (Table.numeral_ind_of_converter r) in
-    ( match Table.get_numeral_info ind_ref with
-    | Some info ->
-      let folded = match try_fold_num_uint arg with
-        | Some _ as r -> r
-        | None -> try_fold_num_int arg
-      in
-      ( match folded with
-      | Some n ->
-        render_numeral info n
-      | None -> eta_fun env (MLglob use) [arg] )
-    | None -> eta_fun env (MLglob use) [arg] )
+  (* A numeral converter applied to a digit chain is the literal it
+     computes ({!numeral_converter_literal}). *)
+  | MLapp (MLglob {callee = r; _}, [arg]) when numeral_converter_literal r arg <> None ->
+    let info, n = Option.get (numeral_converter_literal r arg) in
+    render_numeral info n
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries -- see
      {!static_projection_instance}. *)
@@ -1701,9 +1691,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      same value every time it is evaluated, and evaluating it composes fresh
      closures.  It is built once and kept, as a closed constructor term is
      (see {!Cpp_constants}).  An instance is a pure value, so building it
-     once cannot drop an effect; only where it comes out as a call. *)
-  | MLapp (MLglob {callee = f; _}, args) as e
-    when (not slot.building_constant) && is_closed_instance_call env f args e -> (
+     once cannot drop an effect; only where it comes out as a call.  Core
+     decides which calls those are ({!Core_elaborate.closed_instance_call}). *)
+  | MLapp (MLglob ({callee = f; _} as use), args) as e
+    when (not slot.building_constant)
+         && Core_elaborate.closed_instance_call ~lex:(current_lexenv ()) use args -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
     | CPPfun_call _ ->
@@ -2030,7 +2022,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        positions become the lambda's own template parameter, so the parameter
        reads [const E<_X> &] and the body says [_X] where it would otherwise
        guess.  The callee recovers the result with [std::invoke_result_t]; see
-       {!Gen_decls.relax_tt_applied_return}. *)
+       {!Plan_templates.relax_tt_applied_return}. *)
     let rank2_carrier =
       (* Only where the slot deduces the callback's type.  A slot that spells
          its own signature -- a [std::function<Nat(std::any)>] field, say --
@@ -2833,9 +2825,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            Z constructors: Zpos(xI(xO(...xH...))) / Zneg(...) chains
            can overflow unsigned int, so fold into INT64_C(n) literals. *)
         let z_folded =
-          match (_ts, r) with
-          | [inner], GlobRef.ConstructRef (_, cidx) ->
-            try_fold_z_binary info cidx inner
+          match _ts with
+          | [inner] -> try_fold_z_binary info r inner
           | _ -> None
         in
         ( match z_folded with
@@ -6761,7 +6752,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                    | Some t -> is_boxed_source (cpp_of_ml env t)
                    | None -> false )
             | MLglob {callee = r; _} -> glob_declared_cod_erases r
-            | MLapp (MLmagic (_, _), _) -> true
             | MLrel (i, _) -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
@@ -8074,7 +8064,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
         (* Pick the first candidate whose matched constructor has a recursive
            field (skips nullary-reconstruction arms like Nil->Nil that have no
            cell to recycle). *)
-        List.find_map try_cand (Escape.find_reuse_candidates typ pv)
+        List.find_map try_cand (Escape.find_reuse_candidates pv)
       else None
     in
     ( match reuse_stmts_opt with
@@ -9354,8 +9344,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let try_app_body (b_inner : Miniml.ml_ast) db_offset =
               let target_rel = 1 + db_offset in
               match b_inner with
-              | Miniml.MLapp (Miniml.MLglob {callee = func_ref; _}, app_args)
-              | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob {callee = func_ref; _}), app_args) ->
+              | Miniml.MLapp (Miniml.MLglob {callee = func_ref; _}, app_args) ->
                 let rec find_pos args i =
                   match args with
                   | [] -> None
@@ -9915,7 +9904,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       match body' with
       | MLrel (i, _) when i <= n -> true
       | MLapp (MLrel (i, _), _) when i <= n -> true
-      | MLapp (MLmagic (_, MLrel (i, _)), _) when i <= n -> true
       | _ -> false
     in
     if is_simple then
@@ -10176,16 +10164,13 @@ let () = plan_representation := Representation_plan.region
 
 (** Whether [expr] is a numeral-converter application (e.g.
     [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a
-    literal via [Table.get_numeral_info].  When true, the whole subtree is
+    literal ({!numeral_converter_literal}).  When true, the whole subtree is
     replaced by a raw integer literal at translation time, so the converter and
     its digit-chain argument (and everything they transitively reference) are
     never emitted.  Dependency collection uses this to avoid pulling in the
     vestigial [of_num_uint]/[of_uint]/[Uint] machinery. *)
 let is_foldable_numeral_converter_app = function
-  | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_numeral_converter r ->
-    ( match try_fold_num_uint arg with
-    | Some _ -> true
-    | None -> Option.has_some (try_fold_num_int arg) )
+  | MLapp (MLglob {callee = r; _}, [arg]) -> Option.has_some (numeral_converter_literal r arg)
   | _ -> false
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local

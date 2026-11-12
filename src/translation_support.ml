@@ -3208,20 +3208,6 @@ let rec ml_body_returns_erased_field = function
     | None -> false )
   | _ -> false
 
-(** Check if the head of an ML application has an [MLmagic] wrapper.
-
-    The [simpl] optimization in {!Mlutil} transforms
-    [MLmagic (_, MLapp(f, args))] into [MLapp(MLmagic (_, f), args)], pushing magic
-    inside application heads.  A top-level [MLmagic] check therefore misses
-    these cases.  This function follows application heads recursively.
-
-    Used in {!Gen_functions.gen_spec} to detect when a function call's result needs a C++
-    cast to match the expected return type. *)
-let rec ml_head_has_magic = function
-  | Miniml.MLmagic (_, _) -> true
-  | MLapp (f, _) -> ml_head_has_magic f
-  | _ -> false
-
 (** Wrap [expr] when [storage_ty] and [api_ty] differ due to pointer
     wrapping.  Converts from API form to storage form (e.g. bare value →
     [shared_ptr]).  No-op when the types match or neither involves smart

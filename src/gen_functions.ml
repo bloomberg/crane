@@ -1898,17 +1898,13 @@ let gen_spec__inner n b ty =
       with_cpp_return_type (Some ty) @@ fun () ->
       (* Strip MLmagic wrapper and track whether a type coercion from std::any
          is needed.  MLmagic wraps expressions when the extraction detects a
-         type mismatch (e.g. Obj = std::any vs nat = unsigned int). *)
+         type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
+         is canonical ({!Core_normalize}), so no application in it has a
+         coercion at its head. *)
       let has_magic, inner_body =
         match b with
         | MLmagic (_, inner) -> (true, inner)
         | _ -> (false, b)
-      in
-      (* The optimization pass (simpl) transforms MLmagic(MLapp(f, args)) into
-         MLapp(MLmagic(f), args), pushing the magic inside the application head.
-         Detect this so we still insert std::any_cast for the result. *)
-      let has_magic =
-        has_magic || ml_head_has_magic b
       in
       (* A constant typed by a name -- an instance of a single-method class is
          typed by the class -- may be initialised with a partially applied

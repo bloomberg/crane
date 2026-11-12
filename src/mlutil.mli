@@ -592,20 +592,12 @@ val ast_pop : ml_ast -> ml_ast
 (** The number of nodes of a term, each counted once. *)
 val ast_size : ml_ast -> int
 
-(** The application [e] is, read whole as translation reads it: a global
-    applied in stages is called once with every argument, a coercion of the
-    head is seen through -- what is called is what it coerces -- and
-    applying a one-branch match applies its branch.  Any other term is
-    itself. *)
-val read_spine : ml_ast -> ml_ast
-
-(** [e] with every application in it read whole ({!read_spine}). *)
-val read_spines : ml_ast -> ml_ast
-
 (** [canonical_app f args], [f] and [args] canonical: the canonical form of
-    [MLapp (f, args)], the application {!read_spine} reads it as, written
-    out.  No head of a canonical application is a global already applied, a
-    coercion, or a match with one branch.  See {!Core_normalize}. *)
+    [MLapp (f, args)], read whole: a global applied in stages is applied once
+    to every argument, a coercion of the head is dropped, and applying a
+    one-branch match applies its branch.  No head of a canonical application
+    is a global already applied, a coercion, or a match with one branch.
+    See {!Core_normalize}. *)
 val canonical_app : ml_ast -> ml_ast list -> ml_ast
 
 (** [canonical e] is [e] with every application canonical

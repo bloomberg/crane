@@ -1070,7 +1070,7 @@ let splice_calls def sites body =
   let at use = List.exists (Occurrence.equal (Global_use.occurrence use)) !left in
   let exception Unspliced of string in
   let rec go e =
-    match Mlutil.read_spine e with
+    match e with
     | MLapp (MLglob use, args) when at use -> (
       if solves_variables use then raise_notrace (Unspliced "instantiated");
       match Core_copy.call ~ty:def.fd_type use def.fd_body args with
@@ -1113,7 +1113,7 @@ let yields_alike a b =
    a call of it ({!inlined_calls}), and the number of its uses of [g] there
    in all. *)
 let flow_calls ~defs def g =
-  match flow_of def.fd_ref {def with fd_body = Mlutil.read_spines def.fd_body} with
+  match flow_of def.fd_ref def with
   | None -> ([], 0)
   | Some body ->
     let of_g (use : global_use) = Common.globref_equal use.callee g in
@@ -1158,7 +1158,7 @@ let adopt_calls def sites body =
     | e -> Mlutil.ast_map_lift own depth e
   in
   let rec reroute depth e =
-    match Mlutil.read_spine e with
+    match e with
     | MLapp (MLglob use, args) when at use ->
       instance use;
       if List.length args <> arity then raise_notrace (Unspliced "arguments");
@@ -1185,7 +1185,7 @@ let recurses fd =
     | MLglob use when Names.GlobRef.UserOrd.equal use.callee fd.fd_ref -> Some arity
     | _ -> None
   in
-  let _, body = Core_elaborate.declaration_scope fd.fd_type (Mlutil.read_spines fd.fd_body) in
+  let _, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
   classify ~effects:(definition_effects fd) ~callee body <> No_recursion
 
 (* The partners of [fd], a function of the group [members], in the order
@@ -1202,10 +1202,9 @@ let recurses fd =
    turn of [fd]'s machine takes.  [None] where some partner is not spliced
    so, or where one's body would need instantiating there
    ({!splice_partners}).  A function that does not recurse once spliced
-   into makes no loop a copy would serve: it is left as it is.  [originals]
-   are the definitions as written, [defs] the same read with their
-   applications whole. *)
-let splice_member ~inlines ~originals ~defs ~members fd =
+   into makes no loop a copy would serve: it is left as it is.  [defs]
+   are the program's definitions. *)
+let splice_member ~inlines ~defs ~members fd =
   let self = fd.fd_ref in
   let own_vars = Mlutil.type_maxvar fd.fd_type in
   let own_monad = Ml_type_util.codomain_monad fd.fd_type in
@@ -1217,7 +1216,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
   in
   let rec go opaque inlined entered body =
     let current = {fd with fd_body = body} in
-    let flow = flow_of self {current with fd_body = Mlutil.read_spines body} in
+    let flow = flow_of self current in
     let next pending =
       Option.bind flow (next_inlining ~opaque ~effects:(definition_effects current) ~defs ~pending self)
     in
@@ -1227,7 +1226,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
     | None -> (
       match next spliced with
       | Some {partner; continued = []; invoked = _ :: _ as invoked} when entered = None -> (
-        let def = Ref.User.Map.find partner originals in
+        let def = Ref.User.Map.find partner defs in
         if not (enterable def) then finished
         else
           match adopt_calls def invoked body with
@@ -1235,7 +1234,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
           | Error _ -> finished )
       | Some _ | None -> finished )
     | Some {partner; continued; invoked} -> (
-      let def = Ref.User.Map.find partner originals in
+      let def = Ref.User.Map.find partner defs in
       if Mlutil.type_maxvar def.fd_type <> own_vars then unspliced "variables" self
       else if not (Option.equal Names.GlobRef.UserOrd.equal (Ml_type_util.codomain_monad def.fd_type) own_monad) then
         unspliced "monad" self
@@ -1265,16 +1264,15 @@ let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core_pha
     (fun _ -> ())
     (fun _ -> ())
     struc;
-  let originals = !originals in
-  let defs = Ref.User.Map.map (fun fd -> {fd with fd_body = Mlutil.read_spines fd.fd_body}) originals in
+  let defs = !originals in
   let splicings =
     Ref.User.Map.filter_map
       (fun r fd ->
         match Recursive_groups.group groups r with
         | Some members when loopified r && (not (Table.is_custom r)) && not (Splices.decided splices r) ->
-          Some (splice_member ~inlines ~originals ~defs ~members fd)
+          Some (splice_member ~inlines ~defs ~members fd)
         | Some _ | None -> None )
-      originals
+      defs
   in
   (* A group is spliced whole or not at all: a member declines where a
      partner's body cannot stand in its own, and a partner spliced instead
@@ -1321,11 +1319,8 @@ let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core_pha
 let analyze groups program =
   let struc = Core_phase.structure program in
   let effects = Core_effects.analyze struc in
-  (* Every body is read with its applications whole, as translation reads
-     them ({!Mlutil.read_spine}): [(magic f) x] and [(f x) y] are calls of
-     [f] the C++ makes with every argument. *)
   let defs = ref Ref.User.Map.empty in
-  let add fd = defs := Ref.User.Map.add fd.fd_ref {fd with fd_body = Mlutil.read_spines fd.fd_body} !defs in
+  let add fd = defs := Ref.User.Map.add fd.fd_ref fd !defs in
   Modutil.struct_iter
     (fun d -> List.iter add (Mlutil.term_defs d))
     (fun _ -> ())

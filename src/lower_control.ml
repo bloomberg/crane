@@ -205,7 +205,7 @@ let lower ~methods plan program =
     (fun _ -> ())
     struc;
   let generated (fd : ml_fix_def) =
-    Ml_type_util.declared_parameters (Mlutil.type_simpl fd.fd_type) (Mlutil.read_spines fd.fd_body)
+    Ml_type_util.declared_parameters (Mlutil.type_simpl fd.fd_type) fd.fd_body
   in
   (* The body of a function lowered tail modulo cons is read with
      Normalize's temporaries put back, as the plan reads its chains. *)
@@ -249,7 +249,7 @@ let lower ~methods plan program =
     (fun d ->
       List.iter
         (fun (fd : ml_fix_def) ->
-          let body = Mlutil.read_spines fd.fd_body in
+          let body = fd.fd_body in
           let builds = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) modulo_cons in
           let frames = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) frame_functions in
           if builds || frames || List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) functions then begin

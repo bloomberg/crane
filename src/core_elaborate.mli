@@ -135,6 +135,27 @@ val instantiation :
   Miniml.ml_ast list ->
   Elaborated_call.instantiated
 
+(** [closed_instance_call ~lex use args] -- whether the call [use args]
+    builds a typeclass instance from nothing but instance parameters, so
+    that it is the same value every time it is evaluated: as the walk
+    decided it where it met the application naming its callee by [use],
+    from the call and the binders of its own environment.  Where the walk
+    made no single decision there, and in planning, it is decided from the
+    call and [lex]; under [CRANE_CHECK_IR] a planned decision is checked
+    against that one. *)
+val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
+
+(** [singleton_dictionary_call ~live occ] -- the class and its one method
+    where the variable read at the occurrence [occ], at the head of an
+    application, is a singleton class's dictionary: as the walk decided it
+    for that occurrence, from the binder its environment has for it.  In
+    planning it is [live ()], translation's own reading; under
+    [CRANE_CHECK_IR] a planned decision is checked against that one. *)
+val singleton_dictionary_call :
+  live:(unit -> (Names.GlobRef.t * Names.GlobRef.t) option) ->
+  Miniml.Occurrence.t ->
+  (Names.GlobRef.t * Names.GlobRef.t) option
+
 (** How many calls the unit elaborated ahead, and how many emission found
     there or elaborated itself. *)
 val report : unit -> string

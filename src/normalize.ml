@@ -58,11 +58,9 @@ let temporaries () =
 let full_result = function Some (Tarr _) -> None | ty -> ty
 
 (* The type a call at binder depth [depth] to one of [group]'s functions
-   yields, if it is one and is applied fully, its application read whole as
-   translation reads it ({!Mlutil.read_spine}): [(magic go) m ys] is a call
-   of [go]. *)
+   yields, if it is one and is applied fully. *)
 let group_call group ~depth e =
-  match Mlutil.read_spine e with
+  match e with
   | MLapp ((MLglob {callee = r; _} as f), args) when List.exists (GlobRef.UserOrd.equal r) group.globals ->
     full_result (Translation_types.ml_app_result_type f args)
   | MLapp (MLrel (k, _), args) -> (
@@ -109,7 +107,7 @@ let held group ~reading e ty =
   let boxed_only =
     Mlutil.type_maxvar ty > group.own_tvars
     &&
-    match Mlutil.read_spine e with
+    match e with
     | MLapp (MLglob {callee = r; _}, _) ->
       Option.cata Ml_type_util.result_is_index_only_tvar false (Translation_state.find_type_opt r)
     | _ -> false

@@ -4206,7 +4206,22 @@ let extract_numeral r fmt =
     let module_name =
       String.capitalize_ascii (Names.Id.to_string ind_label) in
     let converter_names = ["of_num_uint"; "of_num_int"] in
+    (* Only a converter that returns the type itself computes a literal of
+       it: [Nat.of_num_int] returns an [option nat], which no folded literal
+       is. *)
+    let returns_the_type c =
+      let rec conclusion t =
+        match Constr.kind t with
+        | Constr.Prod (_, _, b) | Constr.LetIn (_, _, _, b) -> conclusion b
+        | _ -> t
+      in
+      let ty, _ = Typeops.type_of_global_in_context (Global.env ()) c in
+      match Constr.kind (conclusion ty) with
+      | Constr.Ind (ind, _) -> GlobRef.CanOrd.equal (GlobRef.IndRef ind) g
+      | _ -> false
+    in
     let converters =
+      List.filter returns_the_type @@
       List.filter_map (fun name ->
         (* Try <Module>.of_num_uint (e.g. Nat.of_num_uint) *)
         let qstr = module_name ^ "." ^ name in

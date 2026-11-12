@@ -14232,3 +14232,14 @@
   (alias runtest)
   (deps inductive_letin_params.t.exe)
   (action (run ./inductive_letin_params.t.exe))))
+
+(subdir numeral_converter_kind
+ (rule
+  (targets numeral_converter_kind.t.exe)
+  (deps NumeralConverterKind.vo numeral_converter_kind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} numeral_converter_kind.t.exe numeral_converter_kind.t.cpp numeral_converter_kind.cpp)))
+ (rule
+  (alias runtest)
+  (deps numeral_converter_kind.t.exe)
+  (action (run ./numeral_converter_kind.t.exe))))
