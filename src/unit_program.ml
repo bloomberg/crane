@@ -82,6 +82,7 @@ let job id d : job = (id, d)
 type declaration = {
   id : id;
   finished : Cpp_erasure.settled;
+  ir : Cpp_ir.Resolved.Decl.t;
 }
 
 type t = {
@@ -107,7 +108,7 @@ let declarations t = t.declarations
 
 let helpers t =
   List.filter_map
-    (fun {id; finished} -> match id.owner with Generated h -> Some (h, finished) | Source _ -> None)
+    (fun {id; finished; _} -> match id.owner with Generated h -> Some (h, finished) | Source _ -> None)
     t.declarations
 
 let demands t = t.demands
@@ -171,17 +172,30 @@ let record_ahead e =
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_source d d' = d == d' || compare d d' = 0
 
-(* Under [CRANE_CHECK_IR], the finished declaration [f] is expressible in
-   CppIR: it converts, holding no form only a lowered declaration may.  Each
-   conversion is a probe hit, so that a sweep counts them.  Checked when the
-   obligations [Cpp_pipeline.finish] checks are. *)
-let check_converts id f =
+(* The finished declaration [f], [id] of the program, in CppIR.  Every
+   finished declaration converts, holding no form only a lowered declaration
+   may; each conversion is a probe hit, so that a sweep counts them. *)
+let converted id f =
   match Legacy_minicpp_to_cpp_ir.convert f with
-  | Ok _ -> Probe.hit "cpp_ir" (fun () -> "converted")
+  | Ok ir ->
+    Probe.hit "cpp_ir" (fun () -> "converted");
+    ir
   | Error e ->
-    let why = Legacy_minicpp_to_cpp_ir.describe e in
-    Probe.hit "cpp_ir" (fun () -> "unconverted " ^ why);
-    Probe.violation "CppIR" Pp.(str why ++ str " in " ++ pp_id id)
+    CErrors.anomaly Pp.(str "Crane: " ++ str (Legacy_minicpp_to_cpp_ir.describe e) ++ str " in " ++ pp_id id ++ str ".")
+
+(* Under [CRANE_CHECK_IR], what {!Cpp_demands} reads off the declaration
+   [ir], [id] of the program, is what it reads off its MiniCpp twin [f]: the
+   same headers, globals and promoted variables, each counted as often.  The
+   order is not compared: every reader of the three sorts them. *)
+let check_demands id f ir =
+  let same what compare a b =
+    if not (List.equal (fun x y -> compare x y = 0) (List.sort compare a) (List.sort compare b)) then
+      Probe.violation "CppIR demands" Pp.(str what ++ str " read off CppIR differ in " ++ pp_id id)
+  in
+  let f = (f : Cpp_erasure.settled :> Minicpp.cpp_decl) in
+  same "the headers" compare (Cpp_demands.Legacy.of_decl f) (Cpp_demands.of_decl ir);
+  same "the globals" Names.GlobRef.UserOrd.compare (Cpp_demands.Legacy.globals_of_decl f) (Cpp_demands.globals_of_decl ir);
+  same "the promoted variables" Names.Id.compare (Cpp_demands.Legacy.promoted_of_decl f) (Cpp_demands.promoted_of_decl ir)
 
 let finish jobs =
   let declarations = ref [] and demands = ref [] and globals = ref [] and promoted = ref [] in
@@ -194,11 +208,12 @@ let finish jobs =
           Probe.violation "unit program" Pp.(str "two declarations finished as " ++ pp_id id)
       | None ->
         let f = Cpp_pipeline.finish d in
-        if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_converts id f;
-        demands := List.rev_append (Cpp_demands.of_decl (f :> Minicpp.cpp_decl)) !demands;
-        globals := List.rev_append (Cpp_demands.globals_of_decl (f :> Minicpp.cpp_decl)) !globals;
-        promoted := List.rev_append (Cpp_demands.promoted_of_decl (f :> Minicpp.cpp_decl)) !promoted;
-        declarations := {id; finished = f} :: !declarations;
+        let ir = converted id f in
+        if Probe.checking () then check_demands id f ir;
+        demands := List.rev_append (Cpp_demands.of_decl ir) !demands;
+        globals := List.rev_append (Cpp_demands.globals_of_decl ir) !globals;
+        promoted := List.rev_append (Cpp_demands.promoted_of_decl ir) !promoted;
+        declarations := {id; finished = f; ir} :: !declarations;
         sources := Id_map.add id d !sources;
         by_id := Id_map.add id f !by_id )
     jobs;

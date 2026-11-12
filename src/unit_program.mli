@@ -110,6 +110,7 @@ val job : id -> Minicpp.cpp_decl -> job
 type declaration = {
   id : id;
   finished : Cpp_erasure.settled;
+  ir : Cpp_ir.Resolved.Decl.t;  (** [finished], in CppIR *)
 }
 
 (** A unit's program. *)
@@ -153,9 +154,12 @@ val record_lifted_ahead : Minicpp.cpp_decl list -> unit
 
 (** [finish jobs] is the unit's program with [jobs] finished, each once, in
     order: a job whose {!id} an earlier one finished already is that
-    declaration.  Under [CRANE_CHECK_IR], two different declarations under
-    one id are a violation, and so is a finished declaration that does not
-    convert to CppIR ({!Legacy_minicpp_to_cpp_ir}). *)
+    declaration.  Every finished declaration is converted to CppIR
+    ({!Legacy_minicpp_to_cpp_ir}), and what {!Cpp_demands} reads is read off
+    the conversion; one that does not convert is an anomaly.  Under
+    [CRANE_CHECK_IR], two different declarations under one id are a
+    violation, and so is a conversion {!Cpp_demands} reads otherwise than
+    the MiniCpp declaration ({!Cpp_demands.Legacy}). *)
 val finish : job list -> t
 
 (** Under [CRANE_CHECK_IR], fail unless [t] finished exactly the
