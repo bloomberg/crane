@@ -201,14 +201,15 @@ val installed_promoted : unit -> Names.Id.t list
     Nothing is generated while planning. *)
 val record : entity -> entity
 
-(** Under [CRANE_CHECK_IR], fail unless every entity generated ahead of the
-    files or taken by them is one the unit [declares], and every helper was
-    lifted out of an entity the unit declares or generated, or out of none:
-    emission generates what was planned, and the helpers its bodies lift. *)
+(** When checking ({!Probe.checking}), an anomaly unless every entity
+    generated ahead of the files or taken by them is one the unit
+    [declares], and every helper was lifted out of an entity the unit
+    declares or generated, or out of none: emission generates what was
+    planned, and the helpers its bodies lift. *)
 val check_against_plan : declares:(Names.GlobRef.t -> bool) -> unit
 
-(** Under [CRANE_CHECK_IR], fail unless the entities the two files took,
-    with the helpers they claimed and the declarations they name, are
-    exactly those generated ahead of them: the walk ahead generates what the
-    renders write, and nothing else. *)
+(** When checking ({!Probe.checking}), an anomaly unless the entities the
+    two files took, with the helpers they claimed and the declarations they
+    name, are exactly those generated ahead of them: the walk ahead
+    generates what the renders write, and nothing else. *)
 val check_against_ahead : unit -> unit
