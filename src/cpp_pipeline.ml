@@ -162,64 +162,13 @@ let pass_names =
 
 (** {2 What the printer is not owed}
 
-    A declaration leaves translation owing the printer decisions C++ cannot be
-    handed undecided: a type with no spelling, a callable parameter whose
-    constraint the body has not settled, a cast whose caster is not chosen, a
-    type variable nothing declares, a type argument a mapping's template names
-    and its application leaves out, a call of a method or a projection
-    written as a call of a function, a lambda invoked only to choose between
-    two values, a member read of a moved object, a definition not yet known
-    to be [constexpr] or not, a mapping's text not yet instantiated.  Each is
+    A declaration leaves translation owing the printer decisions C++ cannot
+    be handed undecided ({!Cpp_ir.Representation_obligation}).  Each is
     discharged by one pass above, and {!Cpp_erasure.settled} claims that by
-    the end none is outstanding.  The
-    list is closed: a new kind of debt the printer must not see is a new
-    constructor here, with the pass that pays it. *)
-type obligation =
-  | Unresolved_type
-      (** {!Minicpp.Tunresolved}: no pass determined the type, so no pass
-          below can discharge it; whatever wrote it owes it. *)
-  | Opaque_type  (** {!Minicpp.Topaque}, settled by the seam. *)
-  | Unspellable_binder
-      (** a binder's type a custom match writes and C++ cannot spell,
-          settled by the seam *)
-  | Unsettled_callable  (** a {!Minicpp.TTfun} parameter *)
-  | Unresolved_cast  (** an [any_cast] whose caster is still to choose *)
-  | Free_type_variable  (** a type variable no enclosing head declares *)
-  | Implicit_boxed_read
-      (** a boxed value read where the context needs a concrete type, with
-          no {!Minicpp.CPPunbox} saying so *)
-  | Missing_template_argument
-      (** a type argument an inline mapping's template names and its
-          application does not supply *)
-  | Unlowered_method_call
-  | Unlowered_projection
-  | Unlowered_conditional
-      (** a lambda invoked at once that only chooses between two values,
-          not written as the {!Minicpp.CPPcond} it computes *)
-  | Move_under_access  (** a member read of a moved object *)
-  | Undecided_constexpr
-      (** a definition whose {!Minicpp.constexpr_eligibility} is not
-          decided *)
-  | Uninstantiated_mapping
-      (** an inline mapping whose text places its arguments, applied but not
-          instantiated *)
-  | Unlowered_qualifier
-      (** a named type qualifying a member in value position, or a
-          suspension, not yet spelled as a value *)
-  | Unslotted_pointer
-      (** a pointer whose slot -- a shared value's own handle, or the choice
-          a functor's instantiation makes -- is not written down *)
-  | Unnamed_scrutinee  (** a match reading a scrutinee no local holds *)
-  | Undecided_capture  (** a lambda whose capture is not written down *)
-  | Capture_outside_a_block
-      (** a variable initialised by an expression holding a lambda that
-          captures, not invoked in place *)
+    the end none is outstanding. *)
+type obligation = Cpp_ir.Representation_obligation.t
 
-let obligations =
-  [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
-    Implicit_boxed_read; Missing_template_argument; Unlowered_method_call; Unlowered_projection;
-    Unlowered_conditional; Move_under_access; Undecided_constexpr; Uninstantiated_mapping; Unlowered_qualifier;
-    Unslotted_pointer; Unnamed_scrutinee; Undecided_capture; Capture_outside_a_block ]
+let obligations = Cpp_ir.Representation_obligation.all
 
 (** Whether [o] is checked before the instantiation passes rather than on
     the declaration the printer is handed.  A choice is recognised by the
@@ -227,9 +176,9 @@ let obligations =
     naming a match's computed scrutinee puts a declaration in front of the
     match -- so on the final declaration a second run of {!conditionals}
     finds nothing to do whether or not the first paid what it owed. *)
-let checked_before_instantiation = function Unlowered_conditional -> true | _ -> false
+let checked_before_instantiation : obligation -> bool = function Unlowered_conditional -> true | _ -> false
 
-let describe = function
+let describe : obligation -> string = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
   | Opaque_type -> "an unsettled representation (Topaque), owed by " ^ seam
   | Unspellable_binder -> "a custom match binder's unspellable type, owed by " ^ seam
@@ -253,7 +202,9 @@ let describe = function
 (** Whether [decl] writes down a type [p] holds of. *)
 let mentions p (decl : cpp_decl) =
   let exception Found in
-  let ft t = map_cpp_type (fun t -> if p t then raise_notrace Found else t) t in
+  (* {!rewrite_cpp_type} rather than {!map_cpp_type}: it reaches a carrier
+     abstraction's body too. *)
+  let ft t = rewrite_cpp_type (fun t -> if p t then raise_notrace Found else None) t in
   let rec fe e = map_expr fe fs ft e
   and fs s = map_stmt fe fs ft s in
   match ignore (map_decl fe fs ft decl) with () -> false | exception Found -> true
@@ -262,7 +213,7 @@ let mentions p (decl : cpp_decl) =
     leaves nothing for a second run to do, so a declaration that has paid one
     is a fixed point of the pass that pays it -- a check that cannot drift
     from what the pass decides. *)
-let owes (decl : Cpp_erasure.settled) o =
+let owes (decl : Cpp_erasure.settled) (o : obligation) =
   let d = (decl :> cpp_decl) in
   let rewrites (p : Cpp_erasure.settled Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
   match o with

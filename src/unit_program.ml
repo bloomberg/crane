@@ -171,6 +171,18 @@ let record_ahead e =
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_source d d' = d == d' || compare d d' = 0
 
+(* Under [CRANE_CHECK_IR], the finished declaration [f] is expressible in
+   CppIR: it converts, holding no form only a lowered declaration may.  Each
+   conversion is a probe hit, so that a sweep counts them.  Checked when the
+   obligations [Cpp_pipeline.finish] checks are. *)
+let check_converts id f =
+  match Legacy_minicpp_to_cpp_ir.convert f with
+  | Ok _ -> Probe.hit "cpp_ir" (fun () -> "converted")
+  | Error e ->
+    let why = Legacy_minicpp_to_cpp_ir.describe e in
+    Probe.hit "cpp_ir" (fun () -> "unconverted " ^ why);
+    Probe.violation "CppIR" Pp.(str why ++ str " in " ++ pp_id id)
+
 let finish jobs =
   let declarations = ref [] and demands = ref [] and globals = ref [] and promoted = ref [] in
   let sources = ref Id_map.empty and by_id = ref Id_map.empty in
@@ -182,6 +194,7 @@ let finish jobs =
           Probe.violation "unit program" Pp.(str "two declarations finished as " ++ pp_id id)
       | None ->
         let f = Cpp_pipeline.finish d in
+        if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_converts id f;
         demands := List.rev_append (Cpp_demands.of_decl (f :> Minicpp.cpp_decl)) !demands;
         globals := List.rev_append (Cpp_demands.globals_of_decl (f :> Minicpp.cpp_decl)) !globals;
         promoted := List.rev_append (Cpp_demands.promoted_of_decl (f :> Minicpp.cpp_decl)) !promoted;

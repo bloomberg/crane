@@ -1,0 +1,28 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** The one-way conversion of finished MiniCpp declarations into
+    {!Cpp_ir.Resolved}.
+
+    A finished declaration has crossed every resolution pass, so what it
+    converts to is resolved: a form that exists only in a lowered program --
+    a type with no C++ spelling, an unsettled callable parameter, an
+    undecided capture or [constexpr], an uninstantiated mapping block or
+    match -- has no constructor to convert to, and fails the conversion.
+
+    Nothing reads the result yet: {!Unit_program.finish} converts every
+    declaration it finishes under [CRANE_CHECK_IR], as a check that the
+    finished declarations are expressible in CppIR. *)
+
+(** Why a declaration did not convert. *)
+type failure =
+  | Lowered_only of string
+      (** It holds the named form, which only a lowered declaration may. *)
+  | Dead of string
+      (** It holds the named MiniCpp form, which nothing produces and so
+          CppIR has no constructor for. *)
+
+val describe : failure -> string
+
+(** [convert d] is [d] in CppIR, or why it is not expressible there. *)
+val convert : Cpp_erasure.settled -> (Cpp_ir.Resolved.Decl.t, failure) result
