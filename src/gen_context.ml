@@ -73,16 +73,21 @@ let begin_body ~owner ?(function_ = false) () =
     [?outer] are the binders around the method -- an instance's own
     parameters, its dictionaries among them -- pushed beneath [params].
     [?cpp] gives C++ types for [params] already decided by the caller, passed
-    on to {!Translation.push_binders}. *)
+    on to {!Translation.push_binders} and recorded as the head's declared
+    ones ([declared_outer] in {!Translation_state}). *)
 let with_method_env_types ?(cpp = []) ?(outer = []) env params f =
   let saved_env_types = (!tctx).env_types in
   let saved_erased = save_erased_env () in
+  let saved_declared = (!tctx).declared_outer in
   reset_env_types ();
   push_parameters env outer;
   push_binders ~cpp env params;
+  tctx :=
+    { !tctx with
+      declared_outer = (if cpp = [] then None else Some (Lexenv.depth (!tctx).env_types, cpp)) };
   Fun.protect
     ~finally:(fun () ->
-      tctx := { !tctx with env_types = saved_env_types };
+      tctx := { !tctx with env_types = saved_env_types; declared_outer = saved_declared };
       restore_erased_env saved_erased )
     f
 

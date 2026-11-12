@@ -56,8 +56,12 @@
     in the scope [outer] binds, planned: keyed by its site
     ({!Core_binder.site}, the match and branch) and its field's index there.
     Reads types in the type-variable scope current when it is called, which
-    is the region's; its outer binders at the ML types [outer] gives them,
-    converted.  A binder's recorded C++ type is never read. *)
+    is the region's; its outer binders at the types the head of the
+    declaration being generated declares them at, where it declares them
+    directly in [outer] ([declared_outer] in {!Translation_state}), the rest
+    at the ML types [outer] gives them, converted.  Each read is planned at
+    the C++ type of its binder too.  A binder's recorded C++ type is never
+    read. *)
 val region :
   outer:Lexenv.t ->
   Miniml.ml_ast ->

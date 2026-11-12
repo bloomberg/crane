@@ -4878,8 +4878,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          carrier application the coercion recorded for it. *)
       | Mcoerce (from, _) -> (
         match t with
-        | MLrel (i, _) -> (
-          match binder_cpp_type i with
+        | MLrel (i, occ) -> (
+          (* Read below only for whether it is a box, so the plan and
+             lowering need agree on no more than whether the binder is
+             decided at a type that is not one. *)
+          let decided = function Some ty -> not (prints_as_any ty) | None -> false in
+          match planned_binder_type ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ with
           | Some ty when not (prints_as_any ty) -> Some ty
           | _ -> Some (cpp_of_ml env from) )
         | _ -> Some (cpp_of_ml env from) )
@@ -4890,7 +4894,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          the binder was assigned and there is no box to open. *)
       | Mboxed -> (
         match t with
-        | MLrel (i, _) -> ( match binder_cpp_type i with
+        | MLrel (i, occ) -> (
+          match planned_binder_type ~use:"boxed from" ~agree:( = ) i occ with
           | Some ty -> Some ty
           | None -> Some Tany )
         | _ -> Some Tany )
@@ -4932,7 +4937,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              Say so rather than assert [Tany]: {!coerce} recovers from a box
              and must not invent one. *)
           let rec binder_is_opaque = function
-            | MLrel (i, _) -> binder_cpp_type i = Some Topaque
+            | MLrel (i, occ) ->
+              planned_binder_type ~use:"opaque binder"
+                ~agree:(fun p l -> (p = Some Topaque) = (l = Some Topaque))
+                i occ
+              = Some Topaque
             | MLmagic (_, t') -> binder_is_opaque t'
             | _ -> false
           in
@@ -6972,33 +6981,38 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
       let rel_idx_f = match f with
-        | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> Some i
+        | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> Some (i, occ)
         | _ -> None
       in
       match rel_idx_f with
-      | Some i ->
-        ( try
-            let ty = get_env_type i in
+      | Some (i, occ) ->
+        ( match get_env_type_opt i with
+          | None -> List.length args
+          | Some ty ->
             let n = count_ml_value_arrows ty in
             (* The declaration is what says how the arrows are taken.  A
                parameter the class declares as [A -> m B], whose [m] this
                instance fixes at something itself arrow-shaped, has one domain
                in C++ and two arrows in ML; flattened, the call hands both at
-               once to a callable that takes one.  Where the binding site
-               recorded a declared type, that is the answer -- but only where
-               it takes {e fewer}, since a declaration with more domains is
-               the under-application the ML count already handles and a
-               re-derived type is not a declaration. *)
-            let n =
-              match binder_cpp_type i with
-              | Some (Tfun (dom, _)) when List.length dom < n ->
-                List.length dom
+               once to a callable that takes one.  Where the region's plan
+               gives the binder a function type -- a method's parameter at
+               the type its head declares it -- that is the answer, but only
+               where it takes {e fewer}, since a declaration with more
+               domains is the under-application the ML count already
+               handles and a re-derived type is not a declaration. *)
+            let declared = function
+              | Some (Tfun (dom, _)) when List.length dom < n -> List.length dom
               | _ -> n
+            in
+            let n =
+              declared
+                (planned_binder_type ~use:"call arity"
+                   ~agree:(fun p l -> Int.equal (declared p) (declared l))
+                   i occ )
             in
             if n < List.length args && codomain_site ty = Through_tvar then
               List.length args
-            else n
-          with _ -> List.length args )
+            else n )
       | None -> List.length args
     in
     let n_args = List.length args in
