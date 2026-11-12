@@ -1974,7 +1974,7 @@ let pp_owner_template ctx = function
     @param struct_name  the enclosing struct's pretty-printed name, forwarded
                         to constructor and destructor printers that need it
     @param env          name environment for sub-expression pretty-printing *)
-let rec pp_cpp_field ?(struct_name : Pp.t option) ?(mode = Mm_inline) ctx env (f : field) =
+let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : field) =
   match f with
   | Data (id, ty) ->
     (* Strip d_ prefix for doc comment lookup (C++ fields are d_fst, Rocq
@@ -2093,9 +2093,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) ?(mode = Mm_inline) ctx env (f
   | Constructor
       { type_params = fc_tparams; params = fc_params; inits = fc_inits; body = fc_body; explicit = fc_explicit;
         noexcept = fc_noexcept } ->
-    let sname =
-      match struct_name with Some s -> s | None -> str "UNKNOWN_STRUCT"
-    in
+    let sname = struct_name in
     let template_s =
       match fc_tparams with
       | [] -> mt ()
@@ -2129,11 +2127,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) ?(mode = Mm_inline) ctx env (f
          ++ pp_list_stmt (pp_cpp_stmt ctx env []) fc_body
          ++ str "}" )
   | Destructor body ->
-    let sname =
-      match struct_name with
-      | Some s -> s
-      | None -> str "UNKNOWN_STRUCT"
-    in
+    let sname = struct_name in
     ( match mode with
     | Mm_declared -> (str "~" ++ sname ++ str "();")
     | Mm_inline ->
@@ -2200,20 +2194,12 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) ?(mode = Mm_inline) ctx env (f
       ++ pp_type ctx ty
       ++ str ";" )
   | Out_of_line_declaration m ->
-    pp_cpp_field ctx ?struct_name ~mode:Mm_declared env (I.Field.of_out_of_line m)
+    pp_cpp_field ctx ~struct_name ~mode:Mm_declared env (I.Field.of_out_of_line m)
   | Deleted_default_constructor ->
-    let sname =
-      match struct_name with
-      | Some s -> s
-      | None -> str "UNKNOWN_STRUCT"
-    in
+    let sname = struct_name in
     (sname ++ str "() = delete;")
   | Defaulted_special_members ->
-    let sname =
-      match struct_name with
-      | Some s -> s
-      | None -> str "UNKNOWN_STRUCT"
-    in
+    let sname = struct_name in
     (* A user-declared destructor suppresses the implicit move ctor/assign and
        deprecates the implicit copies; declaring the moves would then delete the
        implicit copies.  Re-default all four so the value keeps cheap move
@@ -2236,7 +2222,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) ?(mode = Mm_inline) ctx env (f
     @param struct_name  forwarded to {!pp_cpp_field} for constructor/destructor
     @param env          name environment for sub-expression pretty-printing
     @param fields       list of [(field, visibility, section_tag)] triples *)
-and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) ctx env fields =
+and pp_cpp_fields_with_vis ~(struct_name : Pp.t) ctx env fields =
   (* Group consecutive fields by (visibility, section_tag) *)
   let rec group_fields current_vis current_tag acc result = function
     | [] ->
@@ -2293,7 +2279,7 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) ctx env fields =
         | Some s -> str ("  " ^ s) ++ fnl ()
         | None -> mt ()
       in
-      vis_pp ++ tag_pp ++ pp_list_stmt (pp_cpp_field ctx ?struct_name env) flds
+      vis_pp ++ tag_pp ++ pp_list_stmt (pp_cpp_field ctx ~struct_name env) flds
     | (vis, tag, flds) :: rest ->
       let vis_pp =
         if needs_labels && vis <> prev_vis then
@@ -2313,7 +2299,7 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) ctx env fields =
       in
       vis_pp
       ++ tag_pp
-      ++ pp_list_stmt (pp_cpp_field ctx ?struct_name env) flds
+      ++ pp_list_stmt (pp_cpp_field ctx ~struct_name env) flds
       ++ fnl ()
       ++ pp_groups vis rest
   in
