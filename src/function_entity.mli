@@ -20,25 +20,17 @@ val of_finished : Cpp_erasure.settled -> Cpp_ir.Resolved.Decl.t -> t
 
 (** The declaration of the function the entity defines; anything else is its
     own declaration. *)
-val declaration : t -> Cpp_erasure.settled
+val declaration : t -> Finished_decl.t
 
 (** What is written where the entity is defined, when nothing declared it
     before. *)
-val definition : t -> Cpp_erasure.settled
+val definition : t -> Finished_decl.t
 
 (** The definition written after the {!declaration} in the same file: the
     declaration gave the template defaults, which C++ allows once per
     parameter. *)
-val definition_after_declaration : t -> Cpp_erasure.settled
+val definition_after_declaration : t -> Finished_decl.t
 
-(** {!declaration} in CppIR. *)
-val declaration_ir : t -> Cpp_ir.Resolved.Decl.t
-
-(** {!definition} in CppIR. *)
-val definition_ir : t -> Cpp_ir.Resolved.Decl.t
-
-(** {!definition_after_declaration} in CppIR. *)
-val definition_after_declaration_ir : t -> Cpp_ir.Resolved.Decl.t
 
 (** Whether the entity is a function, with a declaration distinct from its
     definition. *)

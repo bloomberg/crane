@@ -190,7 +190,7 @@ let names_into_a_struct (doc : Pp.t) : bool = List.exists Cpp_leaf_plan.writes_i
     qualifying into a struct would drag the whole block below that struct --
     past the uses it exists to precede -- so what it costs is the position, for
     every other helper in the block. *)
-let spec_is_hoistable ~module_ (spec : Cpp_erasure.settled) : bool =
+let spec_is_hoistable ~module_ (spec : Finished_decl.t) : bool =
   let hoistable = Cpp_ind.names_into_a_struct_as_written ~file:Intf (Element_of module_) spec = Some false in
   (* Printed as absorbed: a helper not hoisted has no planned templates for
      its declaration to need. *)
@@ -417,7 +417,7 @@ let dbg_lifted =
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable ~module_ spec)
             (Pp.string_of_ppcmds
-               (Cpp_leaf_plan.read_decl (Cpp_ind.spelling_position ~file:Intf (Element_of module_)) (empty_env ()) spec) )
+               (Cpp_leaf_plan.read_decl (Cpp_ind.spelling_position ~file:Intf (Element_of module_)) (empty_env ()) spec.settled) )
         else "splits=no"
       in
       Feedback.msg_notice
@@ -535,8 +535,8 @@ let file_local_inductives (analysis : Structure_analysis.t) =
 
 (** Whether a finished declaration is an erasure landing pad: [using X =
     std::any;], which names nothing. *)
-let is_erased_alias (_, d) =
-  match (d : Cpp_erasure.settled :> cpp_decl) with
+let is_erased_alias (_, (d : Finished_decl.t)) =
+  match (d.settled :> cpp_decl) with
   | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
   | _ -> false
 
@@ -579,9 +579,9 @@ let unenclosed_element enclosure ?fields body =
     declarations, one of those [homed] names, whose members are, and an
     assertion held back, which is nothing here: it is written after the
     struct holding it back ({!Cpp_leaf_plan.held_back_assertions}). *)
-let element_decl ~module_ ~homed ctx env d =
-  if Cpp_leaf_plan.is_held_back_assertion ctx d then Cpp_ast.empty
-  else if Cpp_leaf_plan.absorbs ~homed d then Cpp_leaf_plan.write_absorbing ctx ~homed env d
+let element_decl ~module_ ~homed ctx env (d : Finished_decl.t) =
+  if Cpp_leaf_plan.is_held_back_assertion ctx d.settled then Cpp_ast.empty
+  else if Cpp_leaf_plan.absorbs ~homed d.settled then Cpp_leaf_plan.write_absorbing ctx ~homed env d
   else Cpp_leaf_plan.unprinted ctx ~module_ env d
 
 (** The wrapper structs the header writes around a wrapper module's
@@ -708,7 +708,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
     in
     { text = (if Cpp_ast.is_empty body then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); body]));
       concepts;
-      asserts = List.concat_map (fun (_, d) -> Cpp_leaf_plan.held_back_assertions ctx d) rendered }
+      asserts = List.concat_map (fun (_, (d : Finished_decl.t)) -> Cpp_leaf_plan.held_back_assertions ctx d.settled) rendered }
   | l, SEmodule m ->
     let mp = MPdot (module_, l) in
     (* Its struct, or the alias standing for it, is declared under the
@@ -1945,8 +1945,8 @@ let plan_file_layout s =
        && outside_every_struct mp && not (Scope_plan.templated mp))
     && module_members_name_only_inductives sel
     && Option.cata
-         (List.for_all (fun (d : Cpp_erasure.settled) ->
-              Cpp_leaf_plan.is_static_member_declaration (d :> cpp_decl)
+         (List.for_all (fun (d : Finished_decl.t) ->
+              Cpp_leaf_plan.is_static_member_declaration (d.settled :> cpp_decl)
               && Cpp_ind.names_into_a_struct_as_written ~file:Intf (Member_of mp) d = Some false ) )
          false
          (struct_members ~wrapper mp sel)
@@ -1965,13 +1965,13 @@ let plan_file_layout s =
   let types = ref GlobRef.Set.empty in
   let home mp d (rendered : Cpp_ind.rendered) =
     List.iter
-      (fun (_, d') ->
+      (fun (_, (d' : Finished_decl.t)) ->
         List.iter
           (fun (wrapper_ref, name) ->
             match Hashtbl.find_opt unmerged_wrappers name with
             | Some wrapped -> homes := (position mp, position wrapped, {wrapper = name; wrapper_ref; wrapped; home = d}) :: !homes
             | None -> () )
-          (Cpp_leaf_plan.unmerged_wrappers_written d') )
+          (Cpp_leaf_plan.unmerged_wrappers_written d'.settled) )
       rendered
   in
   let add band mp group = band := (position mp, group) :: !band in
@@ -1980,11 +1980,11 @@ let plan_file_layout s =
   (* The header writes every wrapper module's functions before any module's
      types ({!do_struct_with_decl_tracking}), and so defines the structs
      lifted out of them first. *)
-  let defines ~lifted at mp env d =
+  let defines ~lifted at mp env (d : Finished_decl.t) =
     let pass = if lifted then 0 else 1 in
     forward :=
-      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d)) :: !forward;
-    types := List.fold_right GlobRef.Set.add (Cpp_leaf_plan.file_scope_types d) !types
+      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d.settled)) :: !forward;
+    types := List.fold_right GlobRef.Set.add (Cpp_leaf_plan.file_scope_types d.settled) !types
   in
   let element_at mp = Cpp_ind.spelling_position ~file:Intf (Element_of mp) in
   let wrapper_lifted ~module_ se =
@@ -2084,7 +2084,7 @@ let plan_file_layout s =
 let plan_ctor_aliases s =
   let written_in file =
     let found = ref [] in
-    let written at ds = List.iter (fun d -> found := Cpp_leaf_plan.ctor_aliases_written at d :: !found) ds in
+    let written at ds = List.iter (fun (d : Finished_decl.t) -> found := Cpp_leaf_plan.ctor_aliases_written at d.settled :: !found) ds in
     let helpers at ~module_ hs =
       written at
         (List.concat_map

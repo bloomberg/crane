@@ -7,10 +7,8 @@
 open Cpp_ir
 
 type t = {
-  declaration : Cpp_erasure.settled;
-  definition : Cpp_erasure.settled;
-  declaration_ir : Resolved.Decl.t;
-  definition_ir : Resolved.Decl.t;
+  declaration : Finished_decl.t;
+  definition : Finished_decl.t;
   defines_function : bool;
 }
 
@@ -52,14 +50,18 @@ let of_finished d ir =
   if Probe.checking () then check_split d ir;
   match (Cpp_erasure.split_definition d, split_definition ir) with
   | Some (declaration, definition), Some (declaration_ir, definition_ir) ->
-    {declaration; definition; declaration_ir; definition_ir; defines_function = true}
-  | None, None -> {declaration = d; definition = d; declaration_ir = ir; definition_ir = ir; defines_function = false}
+    { declaration = {settled = declaration; ir = declaration_ir};
+      definition = {settled = definition; ir = definition_ir};
+      defines_function = true }
+  | None, None ->
+    let d = {Finished_decl.settled = d; ir} in
+    {declaration = d; definition = d; defines_function = false}
   | Some _, None | None, Some _ -> CErrors.anomaly (Pp.str "Crane: a definition splits in one IR only.")
 
 let declaration e = e.declaration
 let definition e = e.definition
-let definition_after_declaration e = Cpp_erasure.strip_template_defaults e.definition
-let declaration_ir e = e.declaration_ir
-let definition_ir e = e.definition_ir
-let definition_after_declaration_ir e = strip_template_defaults e.definition_ir
+
+let definition_after_declaration {definition = {settled; ir}; _} =
+  {Finished_decl.settled = Cpp_erasure.strip_template_defaults settled; ir = strip_template_defaults ir}
+
 let defines_function e = e.defines_function

@@ -1207,16 +1207,16 @@ let read_decl ctx env settled = read_cpp_decl (writing ctx settled) env settled
    wrapper is built around one inductive's declaration, at namespace scope
    and never inside a template or another wrapper ({!Cpp_ind}), so the
    wrappers [d] writes are [d] alone. *)
-let absorbing ctx ~homed ?tyctors env (d : Cpp_erasure.settled) =
-  note_file_scope_type ctx (d :> cpp_decl);
-  match Cpp_erasure.view d with
+let absorbing ctx ~homed ?tyctors env (d : Finished_decl.t) =
+  note_file_scope_type ctx (d.settled :> cpp_decl);
+  match Finished_decl.view d with
   | Namespace (Some w, members) when not w.nw_merges -> (
     match home_of ~homed w.nw_ref with
     | Some module_ ->
       let written = Cpp_ast.concat Pp.fnl (List.map (Cpp_ast.absorbed ?tyctors env) members) in
       Cpp_ast.wrapper_struct ~name:(nspace_wrapper_name ctx w.nw_ref) ~module_ ~fields:Cpp_ast.(seq [written; text (Pp.fnl ())])
     | None -> CErrors.anomaly Pp.(str "Crane: a wrapper absorbing a wrapper module is not that module's home.") )
-  | Namespace _ | Template _ | Decl _ ->
+  | Namespace _ | Template _ | Decl ->
     CErrors.anomaly Pp.(str "Crane: a declaration absorbing a wrapper module is not the wrapper struct holding it.")
 
 let printed_decl ctx env settled = (read_decl ctx env settled, printed_needs ctx settled)
@@ -1229,12 +1229,13 @@ let write_decl ctx env settled =
 
 (** [settled], which {!absorbs}, written where it is made ({!absorbing}),
     behind what placing the declarations it needs reads. *)
-let write_absorbing ctx ~homed env (settled : Cpp_erasure.settled) =
+let write_absorbing ctx ~homed env (d : Finished_decl.t) =
+  let settled = d.settled in
   let tyctors =
     if not (alias_plan_made ()) then None
     else planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration (settled :> cpp_decl))
   in
-  let tree = absorbing (writing ctx settled) ~homed ?tyctors env settled in
+  let tree = absorbing (writing ctx settled) ~homed ?tyctors env d in
   let needs = printed_needs ctx settled in
   ( if Probe.checking () then
       let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed settled in
@@ -1251,11 +1252,11 @@ let write_absorbing ctx ~homed env (settled : Cpp_erasure.settled) =
 let planned_needs ~file ~module_ settled =
   needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ settled)) settled
 
-let unprinted ctx ~module_ env (settled : Cpp_erasure.settled) =
+let unprinted ctx ~module_ env (d : Finished_decl.t) =
   let file = ctx.rc_file in
-  Cpp_ast.unprinted ~needs:(planned_needs ~file ~module_ settled)
-    ?tyctors:(planned_tyctors ~file ~module_ (Written_declaration (settled :> cpp_decl)))
-    env settled
+  Cpp_ast.unprinted ~needs:(planned_needs ~file ~module_ d.settled)
+    ?tyctors:(planned_tyctors ~file ~module_ (Written_declaration (d.settled :> cpp_decl)))
+    env d
 
 let unprinted_fields ctx ~module_ ~vl r fields =
   Cpp_ast.fields

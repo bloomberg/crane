@@ -101,7 +101,7 @@ val ctor_alias_render_ctx : Cpp_state.render_ctx -> Cpp_ast.declared_in -> Cpp_s
     {!write_decl} writes it at the position [ctx], each wrapper struct
     holding a wrapper module's declarations a {!Cpp_ast.Wrapper_struct}. *)
 val write_absorbing :
-  Cpp_state.render_ctx -> homed:(Names.GlobRef.t * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+  Cpp_state.render_ctx -> homed:(Names.GlobRef.t * ModPath.t) list -> Common.env -> Finished_decl.t -> Cpp_ast.t
 
 (** What placing the declarations [decl], written in the module [module_] in
     the file [file], needs reads ({!Cpp_ast.Needs}), as planned. *)
@@ -111,7 +111,7 @@ val planned_needs : file:Common.file -> module_:Names.ModPath.t -> Cpp_erasure.s
     [ctx] in the module [module_], to be printed where the tree puts it
     ({!Cpp_ast.print}), with what placing the declarations it needs reads,
     as planned. *)
-val unprinted : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+val unprinted : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Finished_decl.t -> Cpp_ast.t
 
 (** [unprinted_fields ctx ~module_ ~vl r fields] is the fields [fields] of
     the eponymous record [r], each by its name and type, their type
