@@ -189,9 +189,9 @@ val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Minicpp.cpp_dec
     without recording them. *)
 val type_alias_kinds : GlobRef.t -> Id.t list -> ml_type -> Tparam_kinds.t
 
-(** Check if a term is a type class instance (constructs a type class record).
-*)
-val is_typeclass_instance : ml_ast -> ml_type -> bool
+(** Check if a term of the given type is a type class instance (constructs a
+    type class record): the type's result is a type class. *)
+val is_typeclass_instance : ml_type -> bool
 
 (** How many top-level bodies each phase of the current unit has
     generated -- none while planning, then the implementation and header

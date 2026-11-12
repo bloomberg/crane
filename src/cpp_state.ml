@@ -440,18 +440,11 @@ let pp_header_comment = function
 (** Add a newline after pp if it's non-empty. *)
 let then_nl pp = if Pp.ismt pp then mt () else pp ++ fnl ()
 
-(** Generate preamble for implementation files.
+(** Generate the preamble of an implementation or a header file.
     @param comment optional header comment to emit at the top of the file
     @param used_modules list of module paths whose headers must be #included
     @return pretty-printed preamble consisting of the comment and #include lines *)
 let preamble _ comment used_modules _usf =
-  pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
-
-(** Generate preamble for signature/header files.
-    @param comment optional header comment to emit at the top of the file
-    @param used_modules list of module paths whose headers must be #included
-    @return pretty-printed preamble consisting of the comment and #include lines *)
-let sig_preamble _ comment used_modules _usf =
   pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
 (** {2 Render context} *)
@@ -866,8 +859,9 @@ let default_std_names =
     enable_from_this = "std::enable_shared_from_this";
   }
 
-(** The standard library names in effect, initialized by {!init_std_names}. *)
-let std_names : std_names ref = ref default_std_names
+(** The standard library names in effect, initialized by {!init_std_names}
+    and restored to {!default_std_names} between extractions. *)
+let std_names : std_names ref = owned_ref default_std_names
 
 let mk_std_names prefix =
   match prefix with
@@ -934,19 +928,6 @@ let init_std_names () =
 (** Short accessor for current standard library names. *)
 let sn () = !std_names
 
-(** Whether a term is a typeclass instance: its final return type is a
-    [Tglob] referencing a typeclass.
-    @param _body the function body (unused; retained for API symmetry)
-    @param ty the Miniml type of the term being tested
-    @return [true] if the ultimate return type of [ty] is a registered typeclass *)
-let is_typeclass_instance _body ty =
-  let rec return_type = function
-    | Miniml.Tarr (_, rest) -> return_type rest
-    | t -> t
-  in
-  match return_type ty with
-  | Miniml.Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
-  | _ -> false
 
 
 

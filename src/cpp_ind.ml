@@ -973,7 +973,7 @@ let generate scope ~module_ d =
     | t -> Header_only (fun () -> header_decls [(empty_env (), gen_type_alias r l (Some t))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
     group [{fd_ref = r; fd_body = a; fd_type = t}]
-  | Dterm (r, a, t) when is_typeclass_instance a t -> Instance (r, a, t)
+  | Dterm (r, a, t) when is_typeclass_instance t -> Instance (r, a, t)
   | Dterm (r, a, t) ->
     (* The helpers lifted out of the body are the element's to place: those
        no earlier element of the header places ({!plan_header_claim}). *)

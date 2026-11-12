@@ -1205,7 +1205,7 @@ let wrapper_element ~module_ se =
          || is_suppressed_projection r || is_registered_method r <> None ->
     Wrapper_nothing
   | SEdecl (Dterm (_, _, Tglob (ty, _, _))) when is_monad ty -> Wrapper_nothing
-  | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t -> Wrapper_instance (r, a, t)
+  | SEdecl (Dterm (r, a, t)) when is_typeclass_instance t -> Wrapper_instance (r, a, t)
   | SEdecl (Dterm (r, a, t)) ->
     Wrapper_functions (r, fun () -> generated_once ~module_ se (fun () -> [gen_decl_for_pp_dual r a t]))
   | SEdecl (Dfix fds) -> (
@@ -1367,7 +1367,7 @@ let module_plan_of_analysis
               (fun (_l, se) ->
                 match se with
                 | SEdecl (Dtype (r, _, _)) -> Some r
-                | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t -> Some r
+                | SEdecl (Dterm (r, _, t)) when is_typeclass_instance t -> Some r
                 | _ -> None )
               mi.sels )
           wrapped;
@@ -1617,7 +1617,7 @@ let plan_callables ?(reversed = false) s =
   let plan_decl ~wrapper = function
     | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
       if not wrapper then plan ~fixpoint:true r a t
-    | Dterm (r, a, t) when not (is_typeclass_instance a t) -> plan ~fixpoint:false r a t
+    | Dterm (r, a, t) when not (is_typeclass_instance t) -> plan ~fixpoint:false r a t
     | Dterm (r, a, t) -> instance_plans := (r, Cpp_ind.plan_instance_methods r a t) :: !instance_plans
     | Dfix fds ->
       List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) (order fds)
@@ -2394,9 +2394,9 @@ let plan_promoted_inductives s =
 
 let plan_accessors s =
   Translation_state.generating_outside_modules @@ fun () ->
-  let accessor ~in_struct ~in_template r b ty =
+  let accessor ~in_struct ~in_template r ty =
     if is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None
-       || is_typeclass_instance b ty
+       || is_typeclass_instance ty
     then false
     else
       match ty with
@@ -2414,7 +2414,7 @@ let plan_accessors s =
     List.concat_map
       (fun (_, se) ->
         match se with
-        | SEdecl (Dterm (r, b, ty)) when accessor ~in_struct ~in_template r b ty -> [r]
+        | SEdecl (Dterm (r, _, ty)) when accessor ~in_struct ~in_template r ty -> [r]
         | SEmodule {ml_mod_expr = MEstruct (mp, sel); _} ->
           elems ~in_struct:true ~in_template:(Scope_plan.templated mp) sel
         | SEmodule {ml_mod_expr; _} -> module_expr ml_mod_expr
@@ -2757,7 +2757,7 @@ let plan_nested_structs s =
         (* An instance is a struct where its module is one, unless it was
            lifted out to namespace scope. *)
         | SEdecl (Dterm (r, a, t))
-          when in_struct && is_typeclass_instance a t && instance_has_struct a t
+          when in_struct && is_typeclass_instance t && instance_has_struct a t
                && not (Module_plan.is_namespace_scope_ref r) ->
           [(Common.pp_global_name Type r, NSref r)]
         | SEdecl _ | SEmodtype _ -> []
@@ -2807,7 +2807,7 @@ let plan_instance_promoted_types s =
   Translation_state.generating_outside_modules @@ fun () ->
   List.concat_map
     (function
-      | Dterm (r, a, t) when is_typeclass_instance a t -> (
+      | Dterm (r, a, t) when is_typeclass_instance t -> (
         match Gen_decls.instance_promoted_types r a t with
         | [] -> []
         | bindings -> [(r, bindings)] )
@@ -2824,7 +2824,7 @@ let plan_unmerged_wrappers () : (string * ModPath.t) list =
            || is_registered_method r <> None ->
       false
     | SEdecl (Dterm (_, _, Tglob (ty, _, _))) when is_monad ty -> false
-    | SEdecl (Dterm (_, a, t)) when is_typeclass_instance a t -> false
+    | SEdecl (Dterm (_, _, t)) when is_typeclass_instance t -> false
     | SEdecl (Dterm _) -> true
     | SEdecl (Dfix fds) -> filter_dfix fds <> []
     | _ -> false
@@ -3671,7 +3671,7 @@ let cpp_descr =
     pp_struct;
     pp_hstruct;
     sig_suffix = Some ".h";
-    sig_preamble;
+    sig_preamble = preamble;
     (* A declaration printed on its own is written at the start of an
        implementation, where its module is the only one visible. *)
     pp_decl =

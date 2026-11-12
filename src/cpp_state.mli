@@ -128,14 +128,10 @@ val pp_header_comment : string option -> Pp.t
 (** Append a newline to the document unless it is empty. *)
 val then_nl : Pp.t -> Pp.t
 
-(** Build the preamble of an implementation file: the optional header comment
-    followed by one [pp_open] line per used module. The first and last
-    arguments are ignored. *)
+(** Build the preamble of an implementation or a header file: the optional
+    header comment followed by one [pp_open] line per used module. The first
+    and last arguments are ignored. *)
 val preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
-
-(** Build the preamble of a header/signature file; currently identical to
-    [preamble]. *)
-val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 
 (** {2 Render context} *)
 
@@ -521,11 +517,6 @@ val init_std_names : unit -> unit
 
 (** Shorthand for [!std_names]. *)
 val sn : unit -> std_names
-
-(** Whether an ML type denotes a typeclass instance: its final return type
-    is a registered type class.  The first argument, the term's body, is
-    ignored. *)
-val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
 
 (** {2 Wrapper and scope tables} *)
 
