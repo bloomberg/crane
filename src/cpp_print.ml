@@ -2546,7 +2546,7 @@ and pp_wrapper_nspace ctx env (w : I.Decl.Namespace.wrapper) (members : decl lis
     let inherit_clause =
       if sft then
         let type_args = pp_list (fun (_, id) -> Id.print id) temps in
-        str " : public std::enable_shared_from_this<"
+        str " : public " ++ str (sn ()).enable_from_this ++ str "<"
         ++ struct_name
         ++ str "<"
         ++ type_args
