@@ -5,56 +5,60 @@
     stand for.  See [cpp_local_closures.mli]. *)
 
 open Names
-open Minicpp
 module IdSet = Id.Set
+module V = Cpp_ir.Variables
+
+type ty = Cpp_ir.Lowered.Type.t
+type expr = Cpp_ir.Lowered.Expr.t
+type stmt = Cpp_ir.Lowered.Stmt.t
+type lambda = Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t
 
 (** {1 Shared pieces} *)
 
+(* A rewrite of the children of a node: [expr] for expressions, [stmt] for
+   statements. *)
+let children ~expr ~stmt : Cpp_ir.Lowered.phase Cpp_ir.Map.t = Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id ()
+
+(* Visits of the expressions and statements below a node. *)
+let visit ~expr ~stmt : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr; stmt; type_ = (fun _ -> ())}
+
 (* Whether [stmts] can return, other than from a lambda nested in them. *)
-let rec has_return stmts =
-  let found = ref false in
-  let rec fe e =
-    match e with
-    | CPPlambda _ -> ()
-    | _ ->
-      iter_expr_children ~on_expr:fe
-        ~on_stmts:(fun b -> if has_return b then found := true)
-        e
-  and fs s =
-    match s with
-    | Sreturn _ -> found := true
-    | _ -> iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) s
-  in
-  List.iter fs stmts;
-  !found
+let has_return (stmts : stmt list) =
+  let exception Found in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = ignore}
+  and expr (e : expr) = match e with Lambda _ -> () | _ -> Cpp_ir.Children.expr v e
+  and stmt (s : stmt) = match s with Return _ -> raise_notrace Found | _ -> Cpp_ir.Children.stmt v s in
+  match List.iter stmt stmts with () -> false | exception Found -> true
 
 (* Whether [stmts] read [x] free. *)
-let mentions x stmts = List.exists (Id.equal x) (free_vars_body stmts)
+let mentions x stmts = V.mem x (V.free_in_body stmts)
 
 (* A lambda's parameters, an unnamed one named [_argI] -- its argument is
    still evaluated, then never read -- when it has no template parameters. *)
-let named_params (l : cpp_lambda) =
-  if l.cl_tparams <> [] then None
+let named_params (l : lambda) =
+  if l.type_params <> [] then None
   else
     Some
       (List.mapi
          (fun i (ty, x) ->
-           match x with
-           | Some x -> (x, ty)
-           | None -> (Id.of_string (Printf.sprintf "_arg%d" i), ty))
-         (lambda_params l.cl_params))
+           match x with Some x -> (x, ty) | None -> (Id.of_string (Printf.sprintf "_arg%d" i), ty) )
+         l.params )
 
 (* What [stmts] declare at their own level: the names a splice puts into the
    scope around it.  A name declared deeper -- in a branch, a block, a
    nested lambda -- stays where it was. *)
-let declared_here stmts =
+let declared_here (stmts : stmt list) =
   List.concat_map
     (function
-      | Sasgn (id, Declare _, _) | Sdecl (id, _, _) | Sdecl_init (id, _) -> [id]
-      | Sbind (ids, _) -> ids
-      | Sblock_custom (_, _, id, _, _, _, _) -> [id]
-      | _ -> [])
+      | (Bind_variable (id, Declare _, _) | Declare (id, _, _) | Declare_value_initialized (id, _) : stmt) -> [id]
+      | Structured_binding (ids, _) -> ids
+      | Foreign_block b -> [b.result]
+      | _ -> [] )
     stmts
+
+(* [stmts] with every identifier renamed by [f] ({!Minicpp.rename_ids}). *)
+let rename_ids f stmts =
+  List.map Legacy_minicpp_to_cpp_ir.lower_stmt (Minicpp.rename_ids f (List.map Cpp_ir_to_legacy_minicpp.stmt stmts))
 
 (** A lambda opened up for splicing into the body around it: its parameters
     bound to the arguments and its locals given names nothing else in the
@@ -62,87 +66,79 @@ let declared_here stmts =
     expansions of one lambda, or one and the code around it, cannot
     collide. *)
 type expansion = {
-  bindings : cpp_stmt list;  (** the parameters, bound to the arguments *)
-  body : cpp_stmt list;  (** the lambda's statements *)
+  bindings : stmt list;  (** the parameters, bound to the arguments *)
+  body : stmt list;  (** the lambda's statements *)
 }
 
 (* [l] applied to [args], opened up; [None] if its parameters are templated
    or do not match [args] in number. *)
-let expand fresh (l : cpp_lambda) args =
+let expand fresh (l : lambda) args =
   match named_params l with
   | Some params when List.length params = List.length args ->
     incr fresh;
     let prefix = Printf.sprintf "_lc%d" !fresh in
     let renamed =
-      List.map
-        (fun x -> (x, Generated_name.prefixed prefix x))
-        (List.map fst params @ declared_here l.cl_body)
+      List.map (fun x -> (x, Generated_name.prefixed prefix x)) (List.map fst params @ declared_here l.body)
     in
     let f x = match List.assoc_opt x renamed with Some y -> y | None -> x in
     (* An unnamed parameter's argument is evaluated for what it does, and a
        pure one does nothing. *)
-    let unnamed = List.map (fun (_, x) -> x = None) (lambda_params l.cl_params) in
+    let unnamed = List.map (fun (_, x) -> x = None) l.params in
     let bindings =
       List.concat
         (List.map2
-           (fun ((p, ty), unnamed) a ->
-             if unnamed && pure_expr a then [] else [Sasgn (f p, Declare (ty, None), a)])
-           (List.combine params unnamed)
-           args)
+           (fun ((p, ty), unnamed) a : stmt list ->
+             if unnamed && V.pure a then [] else [Bind_variable (f p, Declare (ty, None), a)] )
+           (List.combine params unnamed) args )
     in
-    Some {bindings; body = rename_ids f l.cl_body}
+    Some {bindings; body = rename_ids f l.body}
   | _ -> None
 
 (* An expansion read as straight-line code that ends by returning [e]: the
    code before, and [e]. *)
 let straight_line ex =
   match List.rev ex.body with
-  | Sreturn (Some e) :: rev_stmts when not (has_return (List.rev rev_stmts)) ->
+  | (Return (Some e) : stmt) :: rev_stmts when not (has_return (List.rev rev_stmts)) ->
     Some (ex.bindings @ List.rev rev_stmts, e)
   | _ -> None
 
 (* The number of statement and expression nodes, compared against
    {!budget}. *)
-let rec size_stmts l =
-  List.fold_left
-    (fun n s ->
-      fold_stmt_children
-        ~on_expr:(fun n e -> n + size_expr e)
-        ~on_stmts:(fun n b -> n + size_stmts b)
-        (n + 1) s )
-    0 l
+let size_stmts (l : stmt list) =
+  let n = ref 0 in
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = ignore}
+  and expr e =
+    incr n;
+    Cpp_ir.Children.expr v e
+  and stmt s =
+    incr n;
+    Cpp_ir.Children.stmt v s
+  in
+  List.iter stmt l;
+  !n
 
-and size_expr e =
-  fold_expr_children
-    ~on_expr:(fun n e -> n + size_expr e)
-    ~on_stmts:(fun n b -> n + size_stmts b)
-    1 e
-
-(* Whether [e] holds a lambda. *)
-let rec contains_lambda e =
+(* Whether [e] holds a lambda, other than in a statement. *)
+let rec contains_lambda (e : expr) =
   match e with
-  | CPPlambda _ -> true
+  | Lambda _ -> true
   | _ ->
-    fold_expr_children
-      ~on_expr:(fun acc e -> acc || contains_lambda e)
-      ~on_stmts:(fun acc _ -> acc)
-      false e
+    let found = ref false in
+    Cpp_ir.Children.expr (visit ~expr:(fun c -> found := !found || contains_lambda c) ~stmt:ignore) e;
+    !found
 
-(* How many times [e] reads the variable [x]. *)
-let rec occurrences x e =
-  let here = match e with CPPvar y when Id.equal x y -> 1 | _ -> 0 in
-  fold_expr_children
-    ~on_expr:(fun n e -> n + occurrences x e)
-    ~on_stmts:(fun n _ -> n)
-    here e
+(* How many times [e] reads the variable [x], other than in a statement. *)
+let rec occurrences x (e : expr) =
+  let n = ref (match e with Local y when Id.equal x y -> 1 | _ -> 0) in
+  Cpp_ir.Children.expr (visit ~expr:(fun c -> n := !n + occurrences x c) ~stmt:ignore) e;
+  !n
 
 (* [e] with each variable [sub] names replaced by its expression. *)
 let substitute sub e =
-  let rec re e =
+  let rec re (e : expr) : expr =
     match e with
-    | CPPvar x -> ( match List.assoc_opt x sub with Some a -> a | None -> e )
-    | _ -> map_expr re rs Fun.id e
-  and rs s = map_stmt re rs Fun.id s in
+    | Local x -> ( match List.assoc_opt x sub with Some a -> a | None -> e )
+    | _ -> Cpp_ir.Map.expr (children ~expr:re ~stmt:rs) e
+  and rs s = Cpp_ir.Map.stmt (children ~expr:re ~stmt:rs) s in
   re e
 
 (** A lambda body larger than this is not duplicated at its calls. *)
@@ -150,23 +146,28 @@ let budget = 60
 
 (** {1 Rules} *)
 
+(* The name a type variable is written under. *)
+let spelled : Cpp_ir.Type.Type_variable.t -> Id.t = function
+  | Index (_, Some n) | Named n -> n
+  | Index (i, None) -> Id.of_string ("T" ^ string_of_int i)
+
 (* Two types that spell the same C++ type: a type variable is the name it
    prints as, however it is indexed; a global is itself under any of its
-   kernel names; and the expressions a [Tglob] carries are not printed. *)
-let rec same_type a b =
+   kernel names; and the expressions an entity application carries are not
+   printed. *)
+let rec same_type (a : ty) (b : ty) =
   let all = List.equal same_type in
   match (a, b) with
-  | Tvar x, Tvar y -> Id.equal (tvar_spelled x) (tvar_spelled y)
-  | Tglob (r, ts, _), Tglob (r', ts', _) -> GlobRef.CanOrd.equal r r' && all ts ts'
-  | Tnamespace (r, t), Tnamespace (r', t') -> GlobRef.CanOrd.equal r r' && same_type t t'
-  | Tid_external (s, ts), Tid_external (s', ts') -> String.equal s s' && all ts ts'
-  | Tid (i, ts), Tid (i', ts') -> Id.equal i i' && all ts ts'
-  | Tqualified (t, i), Tqualified (t', i') -> same_type t t' && Id.equal i i'
-  | (Tconst t, Tconst t') | (Tshared_ptr t, Tshared_ptr t') | (Tptr t, Tptr t') ->
-    same_type t t'
-  | Tref (k, t), Tref (k', t') -> k = k' && same_type t t'
-  | Tfun (d, c), Tfun (d', c') -> all d d' && same_type c c'
-  | Tvariant (k, ts), Tvariant (k', ts') -> k = k' && all ts ts'
+  | Variable x, Variable y -> Id.equal (spelled x) (spelled y)
+  | Entity_application (r, ts, _), Entity_application (r', ts', _) -> GlobRef.CanOrd.equal r r' && all ts ts'
+  | In_namespace (r, t), In_namespace (r', t') -> GlobRef.CanOrd.equal r r' && same_type t t'
+  | External (s, ts), External (s', ts') -> String.equal s s' && all ts ts'
+  | Named (i, ts), Named (i', ts') -> Id.equal i i' && all ts ts'
+  | Member (t, i), Member (t', i') -> same_type t t' && Id.equal i i'
+  | (Const t, Const t') | (Shared_pointer t, Shared_pointer t') | (Pointer t, Pointer t') -> same_type t t'
+  | Reference (k, t), Reference (k', t') -> k = k' && same_type t t'
+  | Function (d, c), Function (d', c') -> all d d' && same_type c c'
+  | Variant (k, ts), Variant (k', ts') -> k = k' && all ts ts'
   | _ -> a = b
 
 (** R1.  A body ending [auto f = [..](params) { body }; return f(args);] --
@@ -176,20 +177,16 @@ let rec same_type a b =
     result did; a local the lambda returned through a by-reference capture is
     now the function's own, and leaves by an implicit move rather than a copy.
     The lambda must return what the function does. *)
-let inline_tail_call fresh ret_ty stmts =
+let inline_tail_call fresh ret_ty (stmts : stmt list) =
   match List.rev stmts with
-  | Sreturn (Some (CPPfun_call (_, CPPvar f', args))) :: Sasgn (f, Declare (Tauto, _), CPPlambda l)
-    :: rev_before
+  | Return (Some (Call (_, Local f', args))) :: Bind_variable (f, Declare (Auto, _), Lambda l) :: rev_before
     when Id.equal f f'
-         && (match (l.cl_ret, ret_ty) with
-             | Some a, Some b -> same_type a b
-             | None, _ -> true
-             | _ -> false)
-         && (not (mentions f l.cl_body))
+         && (match (l.return_type, ret_ty) with Some a, Some b -> same_type a b | None, _ -> true | _ -> false)
+         && (not (mentions f l.body))
          (* Called once: not again inside its own arguments. *)
-         && not (List.exists (fun a -> mentions f [Sexpr a]) (call_args args)) -> (
-    match expand fresh l (call_args args) with
-    | Some ex -> List.rev rev_before @ [Sblock (ex.bindings @ ex.body)]
+         && not (List.exists (fun a -> mentions f [Expression a]) args) -> (
+    match expand fresh l args with
+    | Some ex -> List.rev rev_before @ [Block (ex.bindings @ ex.body)]
     | None -> stmts )
   | _ -> stmts
 
@@ -197,12 +194,12 @@ let inline_tail_call fresh ret_ty stmts =
     is written, for its initialiser -- becomes [stmts; T x = e;] when
     [stmts] cannot leave early. *)
 let inline_iife_initializers fresh stmts =
-  let rec go = function
+  let rec go : stmt list -> stmt list = function
     | [] -> []
-    | (Sasgn (x, (Declare (t, _) as tgt), CPPfun_call (_, CPPlambda l, args)) as s) :: rest
-      when to_reversed args = [] && (t <> Tauto || l.cl_ret = None) -> (
+    | (Bind_variable (x, (Declare (t, _) as tgt), Call (_, Lambda l, [])) as s) :: rest
+      when t <> Auto || l.return_type = None -> (
       match Option.bind (expand fresh l []) straight_line with
-      | Some (body, e) -> go (body @ (Sasgn (x, tgt, e) :: rest))
+      | Some (body, e) -> go (body @ (Bind_variable (x, tgt, e) :: rest))
       | None -> s :: go rest )
     | s :: rest -> s :: go rest
   in
@@ -218,11 +215,11 @@ let inline_iife_initializers fresh stmts =
     dropped.  Only straight-line bodies, under {!budget}, expanded at every
     call or at none. *)
 let specialize_local_records fresh stmts =
-  let rec go = function
+  let rec go : stmt list -> stmt list = function
     | [] -> []
-    | (Sasgn (p, Declare _, CPPstruct (record, _, fields)) as decl) :: rest -> (
-      let lambdas = List.map (function CPPlambda l -> Some l | _ -> None) fields in
-      (* [CPPstruct] holds the record's non-erased fields, in declaration
+    | (Bind_variable (p, Declare _, Aggregate {struct_ = record; values = fields; _}) as decl) :: rest -> (
+      let lambdas = List.map (function (Lambda l : expr) -> Some l | _ -> None) fields in
+      (* An aggregate holds the record's non-erased fields, in declaration
          order, so a projection reaches the one at its position among
          those. *)
       let live_fields =
@@ -240,53 +237,47 @@ let specialize_local_records fresh stmts =
           in
           find (live_fields, lambdas)
       in
-      let call_target e =
+      let call_target (e : expr) =
         match e with
-        | CPPfun_call (_, CPPget' ((CPPvar p' | CPPmove (CPPvar p')), fld, _), args)
-          when Id.equal p p' ->
-          Option.map (fun l -> (l, call_args args)) (field_lambda fld)
+        | Call (_, Project ((Local p' | Move (Local p')), fld, _), args) when Id.equal p p' ->
+          Option.map (fun l -> (l, args)) (field_lambda fld)
         | _ -> None
       in
       (* Every use of [p] in [rest] is the receiver of such a call. *)
       let only_calls =
         let ok = ref true in
-        let rec fe e =
+        let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr = (fun e -> fe e); stmt = (fun s -> fs s); type_ = ignore}
+        and fe (e : expr) =
           match call_target e with
           | Some (_, args) -> List.iter fe args
           | None ->
-            (match e with CPPvar x when Id.equal x p -> ok := false | _ -> ());
-            iter_expr_children ~on_expr:fe ~on_stmts:(List.iter fs) e
-        and fs s = iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) s in
+            (match e with Local x when Id.equal x p -> ok := false | _ -> ());
+            Cpp_ir.Children.expr v e
+        and fs s = Cpp_ir.Children.stmt v s in
         List.iter fs rest;
         !ok
       in
       let lambdas_ok =
         List.for_all
-          (function
-            | Some l -> size_stmts l.cl_body <= budget && named_params l <> None
-            | None -> false)
+          (function Some (l : lambda) -> size_stmts l.body <= budget && named_params l <> None | None -> false)
           lambdas
       in
       let captured =
         List.fold_left
-          (fun acc -> function
-            | Some l -> IdSet.union acc (IdSet.of_list (free_vars_body l.cl_body))
-            | None -> acc)
+          (fun acc -> function Some (l : lambda) -> IdSet.union acc (IdSet.of_list (V.free_in_body l.body)) | None -> acc)
           IdSet.empty lambdas
       in
-      if only_calls && lambdas_ok && IdSet.is_empty (IdSet.inter captured (assigned_vars rest))
-      then
+      if only_calls && lambdas_ok && IdSet.is_empty (IdSet.inter captured (V.assigned rest)) then
         (* A call as an expression, where the lambda is one [return e] and
            every argument may stand in for its parameter: a pure one may be
            duplicated or dropped, any other must replace a parameter read
            exactly once.  A lambda inside [e] could capture what an argument
            names, so it declines. *)
-        let as_expr (l : cpp_lambda) args =
-          match (named_params l, l.cl_body) with
-          | Some params, [Sreturn (Some e)]
-            when List.length params = List.length args && not (contains_lambda e) ->
+        let as_expr (l : lambda) args =
+          match (named_params l, l.body) with
+          | Some params, [Return (Some e)] when List.length params = List.length args && not (contains_lambda e) ->
             let reads x = occurrences x e in
-            if List.for_all2 (fun (x, _) a -> pure_expr a || reads x = 1) params args then
+            if List.for_all2 (fun (x, _) a -> V.pure a || reads x = 1) params args then
               Some (substitute (List.combine (List.map fst params) args) e)
             else None
           | _ -> None
@@ -305,12 +296,10 @@ let specialize_local_records fresh stmts =
         let rec in_expr e =
           match call_target e with
           | Some (l, args) -> (
-            match as_expr l (List.map in_expr args) with
-            | Some e' -> e'
-            | None -> raise_notrace Decline )
-          | None -> map_expr in_expr in_stmt Fun.id e
-        and in_stmt s = map_stmt in_expr in_stmt Fun.id s in
-        let statement s =
+            match as_expr l (List.map in_expr args) with Some e' -> e' | None -> raise_notrace Decline )
+          | None -> Cpp_ir.Map.expr (children ~expr:in_expr ~stmt:in_stmt) e
+        and in_stmt s = Cpp_ir.Map.stmt (children ~expr:in_expr ~stmt:in_stmt) s in
+        let statement (s : stmt) =
           let whole e finish =
             match call_target e with
             | Some (l, args) when as_expr l args = None -> (
@@ -318,8 +307,8 @@ let specialize_local_records fresh stmts =
             | _ -> [in_stmt s]
           in
           match s with
-          | Sexpr e -> whole e (fun r -> if pure_expr r then [] else [Sexpr r])
-          | Sasgn (v, tgt, e) -> whole e (fun r -> [Sasgn (v, tgt, r)])
+          | Expression e -> whole e (fun r -> if V.pure r then [] else [Expression r])
+          | Bind_variable (v, tgt, e) -> whole e (fun r -> [Bind_variable (v, tgt, r)])
           | _ -> [in_stmt s]
         in
         let rw stmts =
@@ -327,9 +316,7 @@ let specialize_local_records fresh stmts =
           | stmts' when not (mentions p stmts') -> Some stmts'
           | _ | (exception Decline) -> None
         in
-        match rw rest with
-        | Some rest' -> go rest'
-        | None -> decl :: go rest
+        match rw rest with Some rest' -> go rest' | None -> decl :: go rest
       else decl :: go rest )
     | s :: rest -> s :: go rest
   in
@@ -341,26 +328,23 @@ let specialize_local_records fresh stmts =
    counter numbers every expansion in it. *)
 let body ret_ty stmts =
   let fresh = ref 0 in
-  stmts
-  |> inline_iife_initializers fresh
-  |> specialize_local_records fresh
-  |> inline_tail_call fresh ret_ty
+  stmts |> inline_iife_initializers fresh |> specialize_local_records fresh |> inline_tail_call fresh ret_ty
 
-let rec field (f, vis, tag) =
-  let f =
+let rec field ((f, vis, tag) : Cpp_ir.Lowered.phase Cpp_ir.Field.member) : _ Cpp_ir.Field.member =
+  let f : _ Cpp_ir.Field.t =
     match f with
-    | Fmethod m -> Fmethod {m with mf_body = body (Some m.mf_ret_type) m.mf_body}
-    | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
+    | Method m -> Method {m with body = body (Some m.return_type) m.body}
+    | Nested_struct (id, fs) -> Nested_struct (id, List.map field fs)
     | f -> f
   in
   (f, vis, tag)
 
-let rec transform_decl d =
+let rec transform_decl (d : Cpp_ir.Lowered.Decl.t) : Cpp_ir.Lowered.Decl.t =
   match d with
-  | Dfun ({df_shape = Ddef (ps, stmts); _} as f) ->
-    Dfun {f with df_shape = Ddef (ps, body (Some f.df_ret) stmts)}
-  | Dtemplate (tps, c, inner) -> Dtemplate (tps, c, transform_decl inner)
-  | Dnspace (r, ds) -> Dnspace (r, List.map transform_decl ds)
-  | Dstruct s -> Dstruct {s with ds_fields = List.map field s.ds_fields}
-  | Dfields s -> Dfields {s with ds_fields = List.map field s.ds_fields}
+  | Function ({shape = Definition (ps, stmts); _} as f) ->
+    Function {f with shape = Definition (ps, body (Some f.return_type) stmts)}
+  | Template (tps, c, inner) -> Template (tps, c, transform_decl inner)
+  | Namespace (r, ds) -> Namespace (r, List.map transform_decl ds)
+  | Struct s -> Struct {s with fields = List.map field s.fields}
+  | Merged_struct_members s -> Merged_struct_members {s with fields = List.map field s.fields}
   | d -> d
