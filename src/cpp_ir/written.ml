@@ -40,6 +40,7 @@ let inline_spells_arg (t : Foreign.template) =
     let tokens = Foreign_template.term_template t.text in
     fun i -> List.mem (Foreign_template.CCarg i) tokens
 
+(** [vars] without the variables in [bound]. *)
 let without bound vars = List.filter (fun v -> not (List.exists (Id.equal v) bound)) vars
 
 (* What the [decltype]s in the types [visit] hands its argument read; a
@@ -137,10 +138,10 @@ and body : type p. p Stmt.t list -> Id.t list =
   in
   go [] stmts
 
-(** [reads_as_printed body] is whether the text [body] is printed as reads
-    the variable given: a mapping's unspliced argument or branch does not
-    reach the text, and foreign text, a checked precondition and a
-    [decltype] in a type do. *)
+(** [reads_as_printed b id] is whether the text the statements [b] are
+    printed as reads the variable [id]: a mapping's unspliced argument or
+    branch does not reach the text, and foreign text, a checked precondition
+    and a [decltype] in a type do. *)
 let reads_as_printed b =
   let read = body b in
   fun id -> List.exists (Id.equal id) read

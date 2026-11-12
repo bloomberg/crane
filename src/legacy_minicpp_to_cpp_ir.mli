@@ -11,8 +11,8 @@
     match -- has no constructor to convert to, and fails the conversion.
 
     {!Unit_program.finish} converts every declaration it finishes, and a
-    declaration that does not convert is an anomaly; the program holds
-    both. *)
+    declaration that does not convert is an anomaly; the program keeps only
+    the conversion, so everything after the finish seam reads CppIR. *)
 
 (** Why a declaration did not convert. *)
 type failure =
@@ -22,6 +22,7 @@ type failure =
       (** It holds the named MiniCpp form, which nothing produces and so
           CppIR has no constructor for. *)
 
+(** [describe f] is the message an anomaly reports for [f]. *)
 val describe : failure -> string
 
 (** [convert d] is [d] in CppIR, or why it is not expressible there. *)
@@ -33,11 +34,13 @@ val convert : Cpp_erasure.settled -> (Cpp_ir.Resolved.Decl.t, failure) result
     or why it is not expressible there, and likewise [expr e]. *)
 val type_ : Minicpp.cpp_type -> (Cpp_ir.Resolved.Type.t, failure) result
 
+(** [expr e] is [e] in CppIR, or why it is not expressible there. *)
 val expr : Minicpp.cpp_expr -> (Cpp_ir.Resolved.Expr.t, failure) result
 
 (** [type_ t], where [t] has to convert.
     @raise Anomaly if it does not. *)
 val type_exn : Minicpp.cpp_type -> Cpp_ir.Resolved.Type.t
 
-(** A piece of a mapping's instantiated text. *)
+(** [foreign_piece p] is the piece [p] of a mapping's instantiated text in
+    CppIR; every piece converts. *)
 val foreign_piece : Minicpp.foreign_piece -> Cpp_ir.Foreign.piece

@@ -10,11 +10,12 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Mutable state and utility functions for C++ code generation.
+(** Mutable state and utility functions for C++ printing.
 
-    This module holds all global mutable state (render context, hashtables,
-    refs) used across the C++ pretty-printer, along with small utility functions
-    that depend on that state. Centralising state here avoids circular
+    This module holds the global mutable state (hashtables, refs) shared by
+    the modules that print the finished CppIR program, the position type
+    ({!render_ctx}) they hand each other, and small utility functions that
+    depend on that state. Centralising state here avoids circular
     dependencies between the other cpp_* modules. *)
 
 open Pp
@@ -26,9 +27,8 @@ open Common
 
     Every mutable cell this module owns is created by one of the constructors
     below, which enrol it in {!reset_cpp_state} and in {!Table.census} at the
-    point it is defined.  Those two used to be hand-written lists naming the
-    same set of cells from two hundred lines away, and they had already drifted
-    apart; a cell that exists but is in neither list is now unrepresentable. *)
+    point it is defined, so no cell can exist that the reset or the census
+    misses. *)
 
 let on_reset f = State.on_reset State.Extraction f
 
@@ -59,10 +59,8 @@ let owned_ref init =
   on_reset (fun () -> r := init);
   r
 
-(** The method registry is created once per extraction pass by scanning the full
-    ml_structure. It replaces the old global_method_registry and
-    methods_returning_any hashtables. Queries go through get_method_registry().
-*)
+(** The method registry, created once per extraction pass by scanning the
+    full ml_structure.  Queries go through {!get_method_registry}. *)
 let method_registry : Method_registry.t option ref = owned_ref None
 
 (** In separate extraction, a pre-built method registry from the full
@@ -78,8 +76,8 @@ let get_method_registry () =
   | Some r -> r
   | None -> CErrors.anomaly (Pp.str "method_registry not initialized.")
 
-(** Pre-computed name resolution cache — populated once per extraction pass.
-    Queries go through get_name_cache(). *)
+(** Pre-computed name resolution cache, populated once per extraction pass.
+    Queries go through {!get_name_cache}. *)
 let name_cache : Name_resolution.t option ref = owned_ref None
 
 (** Get the name cache, raising an anomaly if not initialized. *)
@@ -399,6 +397,8 @@ let set_valid_output_modules mps =
 
 let clear_valid_output_modules () = Hashtbl.clear valid_output_modules
 
+(** The wrapper struct names that stay unmerged across the passes of a
+    separate extraction ({!mark_global_unmerged}). *)
 let global_unmerged_wrappers : (string, unit) Hashtbl.t =
   owned_table "global_unmerged_wrappers"
 
@@ -454,7 +454,7 @@ let preamble _ comment used_modules _usf =
 let sig_preamble _ comment used_modules _usf =
   pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
-(** {2 The pretty-printer for C++ syntax} *)
+(** {2 Render context} *)
 
 (** Where a synthesised template is declared: inside the struct of a
     module, as its members are written, or at namespace scope, beneath the
@@ -595,6 +595,9 @@ let file_start rc_file =
     rc_tyctors = Unplanned;
   }
 
+(** What a file declares at file scope: the types, by the entity each
+    declaration declares, and the promoted type variables among them, by
+    the name of their alias. *)
 type file_scope = {
   fs_types : GlobRef.Set.t;
   fs_aliases : Id.Set.t;
@@ -641,15 +644,19 @@ let held_concept_equal a b =
 let is_held_back_in held_back c =
   List.exists (held_concept_equal c) held_back
 
-(** Whether the struct being rendered holds concept [c] back, so that a
-    constraint written inside it cannot name [c] yet. *)
+(** Where the header declares one of a module's concepts: ahead of its
+    struct, after it (when it names a member), or at file scope (when the
+    module is nested in a struct, where no concept can be declared). *)
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
+(** The concepts of a module, planned ahead of the files: where each is
+    declared, and which its struct's body treats as not declared yet. *)
 type concept_plan = {
   placements : (held_concept * concept_placement) list;
   held_back : held_concept list;
 }
 
+(* The concept plan of each module of the unit, by module path. *)
 let concept_plans : concept_plan Names.MPmap.t ref = State.cell State.Unit Names.MPmap.empty
 
 let plan_module_concepts mp plan = concept_plans := Names.MPmap.add mp plan !concept_plans
@@ -682,8 +689,8 @@ let element_position mp c =
     CErrors.anomaly (Pp.str "Crane: a module's element is written inside a scope a declaration entered.");
   {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
 
-(** The globals the unit's function bodies name, planned from the finished
-    program before either file is rendered ({!Cpp.plan_function_reads}):
+(** The globals the unit's function bodies name, planned from the unit's
+    installed declarations before either file is rendered ({!Cpp.plan_function_reads}):
     [None] until planned.  Compared by the definition a name reaches, so a
     read through a module alias counts. *)
 let function_reads : Ref.Can.Set.t option ref = owned_ref None
@@ -739,8 +746,8 @@ let register_template_static_accessor_ref r =
 
 
 (** Track eponymous type info for method generation. When a module M contains an
-    inductive type m (lowercase of M), functions taking shared_ptr<m> as first
-    arg become methods on m. *)
+    inductive type m (lowercase of M), functions taking an m as an argument
+    become methods on m. *)
 let eponymous_type_ref : GlobRef.t option ref = owned_ref None
 
 (** Set during module rendering when the eponymous inductive should be promoted
@@ -767,9 +774,8 @@ let eponymous_record :
 (** {2 Scoped render state}
 
     The position is a value handed to what writes there ({!render_ctx}).
-    The state below could not join it -- it is read in a dozen modules
-    under the names it already has -- so it stays in its own refs and is
-    bracketed instead. *)
+    The state below is read in a dozen modules under its own names, so it
+    stays in refs, and a scope brackets it instead. *)
 
 (** A mutable cell a scope saves and restores, with its contents' type hidden
     so that cells of different types can be listed together. *)
@@ -778,10 +784,8 @@ type saver = Saver : 'a ref -> saver
 (** [with_saved cells f] runs [f] and puts every cell in [cells] back the way
     it found it, however [f] leaves -- returning or raising.
 
-    The point is to name the cells a scope owns in one place.  Five of the
-    six restores this replaced were written out at the end of a branch some
-    hundreds of lines below the save, and none of them survived an
-    exception. *)
+    The point is to name the cells a scope owns in one place, and to restore
+    them on an exception as well as on return. *)
 let with_saved cells f =
   let restores =
     List.map
@@ -821,18 +825,15 @@ let setting cell v f =
       cell := v;
       f () )
 
-(* NOTE: The global method registry has moved to Method_registry. Lookups go
-   through get_method_registry(). *)
-
-(** Resolved standard library names — computed once per extraction pass from
-    Table.std_lib() and queried everywhere instead of 20+ scattered checks. *)
+(** Resolved standard library names, computed once per extraction pass from
+    [Table.std_lib ()] and the runtime flags ({!init_std_names}). *)
 type std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
   forward : string; (* "std::forward" or "bsl::forward" *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
-  ns : string; (* "std" or "bsl" — general prefix *)
+  ns : string; (* "std" or "bsl": general prefix *)
   string : string; (* "std::string" or "bsl::string" *)
   same_as : string; (* "std::same_as" or "same_as" *)
   declval : string; (* "std::declval" or "bsl::declval" *)
@@ -865,7 +866,7 @@ let default_std_names =
     enable_from_this = "std::enable_shared_from_this";
   }
 
-(** Global reference to standard library names, initialized by init_std_names. *)
+(** The standard library names in effect, initialized by {!init_std_names}. *)
 let std_names : std_names ref = ref default_std_names
 
 let mk_std_names prefix =
@@ -933,9 +934,8 @@ let init_std_names () =
 (** Short accessor for current standard library names. *)
 let sn () = !std_names
 
-(** Inline check: is a term a typeclass instance? Replaces
-    is_typeclass_instance. A term is a typeclass instance if its return type is
-    a Tglob referencing a typeclass.
+(** Whether a term is a typeclass instance: its final return type is a
+    [Tglob] referencing a typeclass.
     @param _body the function body (unused; retained for API symmetry)
     @param ty the Miniml type of the term being tested
     @return [true] if the ultimate return type of [ty] is a registered typeclass *)
@@ -951,8 +951,8 @@ let is_typeclass_instance _body ty =
 
 
 
-(** The type names a wrapper struct's module contributes to C++ {i global}
-    scope rather than to the struct.
+(** Declarations a wrapper struct's module puts at namespace scope rather
+    than in the struct.
 
     A module forced into a wrapper struct by a name collision does not take
     all of its declarations with it.  A type alias stays outside as
@@ -960,17 +960,14 @@ let is_typeclass_instance _body ty =
     lifted out deliberately, because an instance is named from wherever its
     class is used and a concept's template argument is a type, not a member of
     whatever module happened to declare it.  Either way the wrapper struct
-    does not declare the name, and {!Cpp_names.struct_qualifier_for} must not
-    write [Wrapper::] in front of it in the [.cpp].
+    does not declare the name, and {!wrapper_qualify} must not write
+    [Wrapper::] in front of it.
 
     Asking where the name was {i emitted} is the only question that answers
-    this; where it was {i declared} in Rocq says the opposite, and says it
-    confidently.
-
-    {b Lifecycle:} populated from {!Structure_analysis}'s module layout before
-    any rendering begins -- which is what makes it safe to read from a [.cpp]
-    body printed long before the [.h] declares the name.  Queried in
-    [cpp_names.ml] for name qualification; cleared by [reset_cpp_state]. *)
+    this; where it was {i declared} in Rocq says the opposite.  The answer is
+    planned before any rendering begins ({!Module_plan.is_namespace_scope_ref}),
+    which is what makes it safe to read from a [.cpp] body printed before the
+    [.h] declares the name. *)
 
 (** The wrapper structs that hold declarations of their module's and so
     cannot be merged with the eponymous inductive's struct, by struct name,
@@ -1166,22 +1163,22 @@ let method_receiver_cpp_type (func_ref : GlobRef.t)
     if List.length ind_tys <> Table.get_ind_nb_tparams epon_ref then None
     else Some (Minicpp.Tglob (epon_ref, ind_tys, []))
 
-(** Check if a method is registered as returning std::any or bsl::any. *)
+(** Whether a registered method's return type is erased to [std::any] (or
+    [bsl::any]). *)
 let method_returns_any (func_ref : GlobRef.t) : bool =
   Method_registry.method_returns_any (get_method_registry ()) func_ref
 
-(** Global registry of eponymous records. When a module M contains a record with
+(** Eponymous records across modules. When a module M contains a record with
     the same name (e.g., module CHT with record CHT), the record fields are
     merged directly into the module struct. This avoids C++ name conflicts where
     both the module and record would have the same name.
 
-    This registry is global (not per-module) because type references from OTHER
-    modules need to know how to render the type name. Without this registry, a
-    reference to CHT from another module would incorrectly generate "CHT::cHT"
-    instead of just "CHT".
-
-    See also: Cpp_names.inductive_type_name which uses this registry for type name
-    rendering. *)
+    {!eponymous_record} only covers the module being rendered; type
+    references from other modules need to know how to render the type name
+    too, or a reference to CHT from another module would generate
+    "CHT::cHT" instead of just "CHT".  That unit-wide answer is planned in
+    {!Module_plan.is_eponymous_record}, which {!Cpp_names.inductive_type_name}
+    reads. *)
 
 (** Track current structure's declarations for finding methods from sibling
     modules. When processing a module like List inside tree.v, we need to also
@@ -1216,8 +1213,8 @@ let is_eponymous_record_projection r =
     else
       false
 
-(** Check if a projection should be suppressed (not rendered as higher-order).
-*)
+(** Whether a projection is suppressed: it is not a higher-order projection,
+    so it is not rendered as a standalone function. *)
 let is_suppressed_projection r =
   Table.is_projection r && not (Table.is_higher_order_projection r)
 

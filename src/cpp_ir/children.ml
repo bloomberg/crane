@@ -8,8 +8,9 @@
 
     Every child counts, written or not: a call's signature, a mapped
     global's [%result] type, a structured binding's field types.  A visitor
-    that wants only what is written handles those nodes itself.  A type's
-    children are not types' business here ({!type_children}). *)
+    that wants only what is written handles those nodes itself.  The types
+    inside a type are not visited by these functions; {!type_children}
+    lists them. *)
 
 open Grammar
 
@@ -43,6 +44,8 @@ let template_parameters : type p. p visitor -> p Template.parameters -> unit =
       | Typename | Template _ -> () )
     ps
 
+(** The children of a mapping instantiated at one use: its type arguments,
+    value arguments and result type. *)
 let foreign v (f : 'p Foreign.t) =
   each v.type_ f.types;
   each v.expr f.values;
@@ -208,12 +211,15 @@ let stmt : type p. p visitor -> p Stmt.t -> unit =
     each v.expr b.values;
     each v.type_ b.type_args
 
+(** The children of a member function: its template parameters, return
+    type, parameter types and body. *)
 let method_ v (m : 'p Method.t) =
   template_parameters v m.type_params;
   v.type_ m.return_type;
   fields v m.params;
   each v.stmt m.body
 
+(** The children of a member that can be defined outside its struct. *)
 let out_of_line v : 'p Out_of_line.t -> unit = function
   | Method m -> method_ v m
   | Destructor ss -> each v.stmt ss
@@ -240,6 +246,8 @@ let rec member v ((f, _, _) : 'p Field.member) =
   | Out_of_line_declaration m -> out_of_line v m
   | Deleted_default_constructor | Defaulted_special_members -> ()
 
+(** The children of a struct: its template parameters, its members down to
+    their children, and its constraint. *)
 let struct_ v (s : 'p Struct.t) =
   template_parameters v s.type_params;
   each (member v) s.fields;

@@ -10,17 +10,24 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** {1 C++ Pretty-Printer}
+(** {1 C++ extraction driver}
 
-    Final stage of the extraction pipeline:
-    {v MiniCpp AST  --[cpp.ml]-->  C++ source code v}
-
-    Converts {!Minicpp} AST nodes into C++ syntax using the {!Pp}
-    pretty-printing combinators. Lower-level rendering is delegated to:
-    - {!Cpp_state} — mutable state and utilities
-    - {!Cpp_names} — name resolution and qualification
-    - {!Cpp_print} — type/expr/stmt/field/declaration pretty-printing
-    - {!Cpp_ind} — inductive type rendering and decl-level dispatch *)
+    Final stage of the extraction pipeline, from a MiniML structure to the
+    text of a header and an implementation file.  Before either file is
+    rendered it analyses the structure ({!prepare_structure}), plans what
+    rendering reads (the [plan_*] values: names, scopes, callable heads,
+    file layout, synthesised templates), generates every declaration the
+    files write and finishes it into CppIR in the unit's program
+    ({!generate_ahead}, {!Unit_program}).  Each file's render then assembles
+    the finished declarations into a CppAST tree ({!Cpp_ast}), schedules,
+    resolves and prints it.  Lower-level work is delegated to:
+    {ul
+    {- {!Cpp_state}: per-unit render state and plans;}
+    {- {!Cpp_names}: name resolution and qualification;}
+    {- {!Cpp_ind}: which C++ declarations a MiniML declaration becomes;}
+    {- {!Cpp_leaf_plan} and {!Cpp_print}: what a CppIR leaf asks of
+       resolution and scheduling, and its printing;}
+    {- {!Cpp_concepts}: module-type concepts as text.}} *)
 
 (** Language descriptor for C++. Provides the preamble, file suffix,
     pretty-printers, and other hooks that {!Extract_env} needs to drive a full
@@ -50,7 +57,8 @@ val registered_methods :
 (** The callable plan of each function the renders will generate, in the
     order of the unit's modules and declarations, or the reverse if
     [reversed]; planned once the plan {!prepare_structure} returns is
-    installed, and before anything is rendered.  A function no render generates -- a method, a projection, an
+    installed, and before anything is rendered.  A function no render
+    generates -- a method, a projection, an
     inline custom -- has none.  With them, the plans of each instance's
     struct's methods, by name. *)
 val plan_callables :
@@ -64,8 +72,9 @@ val plan_callables :
 val generate_ahead : Miniml.ml_structure -> unit
 
 (** Generate what one declaration, an element of the module [module_], is
-    written as, before it is rendered: the walk {!generate_ahead} would
-    make for a structure holding only it. *)
+    written as, before it is rendered, and finish it into the unit's
+    program: the walk {!generate_ahead} would make for a structure holding
+    only it. *)
 val generate_decl_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
 
 (** The files the names of the unit [s] are written through, read off what
@@ -76,8 +85,10 @@ val files_named_ahead : Miniml.ml_structure -> Names.ModPath.t list
     generated: whose imports its files include. *)
 val customs_written_ahead : unit -> Ref.User.Set.t
 
-(** Plan, from what {!generate_ahead} generated, which globals the unit's
-    function bodies read ({!Cpp_state.read_by_a_function}). *)
+(** Plan, from what {!generate_ahead} finished, which globals the unit's
+    function bodies read ({!Cpp_state.read_by_a_function}): every installed
+    declaration's but a variable's, whose initialiser is not a function
+    body. *)
 val plan_function_reads : unit -> unit
 
 (** Plan, before either file is rendered and from what {!generate_ahead}
@@ -90,7 +101,7 @@ val plan_function_reads : unit -> unit
 val plan_file_layout : Miniml.ml_structure -> unit
 
 (** Plan the synthesised templates each file writes, before either is
-    rendered ({!Cpp_print.plan_ctor_aliases}). *)
+    rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
 val plan_ctor_aliases : Miniml.ml_structure -> unit
 
 (** The C++ name of each global the unit declares, a functor's body
@@ -172,7 +183,8 @@ val plan_unmerged_wrappers : unit -> (string * Names.ModPath.t) list
     spelled qualified by its wrapper depends on them. *)
 val plan_concept_prerequisites : Module_plan.t -> Miniml.ml_structure -> Module_plan.t
 
-(** The fields each such constructor struct stores behind the smart pointer
+(** The fields each constructor struct of an inductive the unit generates
+    stores behind the smart pointer
     ({!Gen_decls.constructor_pointer_fields}): the inductive, the
     constructor's struct name, and each field's index with whether it holds
     the inductive itself.  A flat inductive has no constructor struct. *)

@@ -1,15 +1,20 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The headers what a unit writes needs, planned before rendering as a
-    fact of the finished program: read off what is generated ahead of its files -- its
-    finished declarations, the concepts of its module types, the types of
-    its eponymous records' fields -- where the printer writes it, rather
-    than raised by the pass that built each construct or by the printer as
-    it spells it.  The driver demands them all before either file is
-    rendered ({!Cpp.finish_ahead}); the printer demands nothing, and under
+(** The headers needed by what a unit writes, planned before rendering as
+    a fact of the finished program.  They are read off the CppIR generated
+    ahead of the unit's files (its finished declarations, the concepts of
+    its module types, the types of its eponymous records' fields) at the
+    places the printer writes it, rather than raised by the pass that built
+    each construct or by the printer as it spells it.  The driver demands
+    them all before either file is rendered ([Cpp.finish_ahead], via
+    {!Unit_program.demands}); the printer demands nothing, and under
     [CRANE_CHECK_IR] what it writes is checked against them
     ({!Table.written_needs_header}).
+
+    The same walk also reports the globals, type constructors and promoted
+    type variables a declaration writes, for the leaf plan and the
+    unit program.
 
     Only what is written counts.  The annotations a node carries for later
     passes -- a call's signature, a projection's field type, a structured

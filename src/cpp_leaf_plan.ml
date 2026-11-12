@@ -110,8 +110,8 @@ module Ir = struct
     Globrefs.iter (fun r -> globals := r :: !globals) d;
     !globals @ globals_written_beside d @ declared_globals d
 
-  (** The frames printing [d] enters names at: {!Cpp_print.pp_cpp_decl}'s
-      scopes, read without printing. *)
+  (** The frames printing [d] enters names at: the scopes the declaration
+      printer ({!Cpp_print.read_cpp_decl}) enters, read without printing. *)
   let declaration_frames (d : decl) =
     let entered frame l = List.rev_append l frame in
     let template_body tps = if tps = [] then [] else [Cpp_resolution.In_template] in
@@ -270,8 +270,9 @@ let rec map_type f (t : ty) : ty =
   | Carrier_parameter | Erased _ ->
     t
 
-(* {!Minicpp.rebind_applied_head}: [h], an instantiated carrier standing
-   for a family written applied, read at [args]. *)
+(* The CppIR counterpart of {!Minicpp.rebind_applied_head}: [h], an
+   instantiated carrier standing for a family written applied, read at
+   [args]. *)
 and rebind_applied_head (h : ty) (args : ty list) : ty =
   match args with
   | [a] when not (prints_as_any a) -> (
@@ -339,7 +340,7 @@ let head_names_into_a_struct h =
 
 (** Whether the type [t] writes a qualifier into a struct or a template
     parameter, asked of the type rather than of its rendering: each name is
-    the one {!pp_cpp_type} writes, from the same heads, at the position
+    the one {!Cpp_print.pp_cpp_type_at} writes, from the same heads, at the position
     [ctx].  [None] where only the rendering can tell -- an
     expression's type, and a type constructor named as a template argument,
     which may be written through a synthesised alias ({!Cpp_leaf_plan.ctor_alias_at}). *)
@@ -386,7 +387,7 @@ let is_static_member_declaration (d : Cpp_ir.Resolved.Decl.t) =
     parameter, a type a parameter defaults to or a callable one is invoked
     with.  [None] for anything else, a declaration under a [requires]
     clause, or where only its rendering can tell.  Each name is asked at
-    the frame the printer writes it at ({!pp_cpp_decl}). *)
+    the frame the printer writes it at ({!Cpp_print.read_cpp_decl}). *)
 let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
   let any_type ctx ts =
     List.fold_left
@@ -433,7 +434,7 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
    is then not that shape.  Any other shape is not a template name applied
    to anything, and is written through a synthesised template, which can
    abbreviate any type: the printer writes a template name only for the
-   shapes answered here ({!Cpp_print.pp_cpp_type}'s [template_name]). *)
+   shapes answered here ({!Cpp_print.pp_cpp_type_at}'s [template_name]). *)
 let rec applied_to_sentinel_alone (t : ty) =
   match t with
   | Named (_, args) | External (_, args) | Entity_application (_, args, _) | Variant (_, args) -> args = [Carrier_parameter]
@@ -495,7 +496,8 @@ type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of
 module Written = Hashtbl.Make (struct
   type t = ModPath.t * written
 
-  (* [compare] rather than [=]: a NaN literal is equal to itself. *)
+  (* [compare] rather than [=]: [compare] takes a NaN literal to be equal to
+     itself, [=] does not. *)
   let equal (mp, w) (mp', w') =
     ModPath.equal mp mp'
     &&
@@ -748,8 +750,8 @@ let defined_ref : Cpp_ast.defined -> _ = function Defined_struct {struct_ = r; _
     its definition, which still follows in its own place. *)
 type forward_declaration = {fwd_ref : GlobRef.t; fwd_tree : Cpp_ast.t; fwd_constrained : bool}
 
-(* Whether [tparams] make the [requires] clause {!pp_requires_of_tparams}
-   prints. *)
+(* Whether [tparams] make the [requires] clause the printer's
+   [pp_requires_of_tparams] prints. *)
 let makes_requires_clause ctx (tparams : Cpp_ir.Resolved.phase Cpp_ir.Template.parameters) =
   List.exists
     (fun ((k : Cpp_ir.Resolved.phase Cpp_ir.Template.Parameter_kind.t), _) ->
@@ -792,7 +794,7 @@ let forward_declarations ctx ~module_ env (d : Cpp_ir.Resolved.Decl.t) =
    its own head instead, the same for each type constructor that head
    writes.  A dependent member is written through its qualifier; any other
    head as its template name, which writes no type constructor
-   ({!Cpp_print.pp_cpp_type}'s [template_name]). *)
+   ({!Cpp_print.pp_cpp_type_at}'s [template_name]). *)
 let rec tyctor_spelled ctx vl x =
   let c = tyctor_constructor x in
   match tyctor_written ctx vl c with
@@ -1200,7 +1202,8 @@ let ctor_aliases_found ctx visit =
           (Pp.str "a declaration decides other type constructors than rendering them does") );
   (!found, !noted)
 
-(* What planning reads off [d] written at [ctx]. *)
+(* What planning reads off [d] written at [ctx]: the synthesised templates
+   it writes and how it writes its type constructors. *)
 let ctor_aliases_written ctx (d : Cpp_ir.Resolved.Decl.t) =
   let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f d) in
   {read_written = (module_written ctx, Written_declaration d); read_aliases = aliases; read_uses = uses}

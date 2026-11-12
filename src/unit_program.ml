@@ -95,8 +95,12 @@ type t = {
       (** Each finished declaration by its id: how a file's render finds
           it. *)
   demands : Table.header list;
+      (** The headers the finished declarations need, sorted, each once. *)
   globals : Names.GlobRef.t list;
+      (** The globals the finished declarations write the names of. *)
   promoted : Names.Id.t list;
+      (** The promoted type variables the finished declarations write, in
+          the order finished. *)
 }
 
 let empty =
@@ -128,8 +132,9 @@ let owners t =
     (Owner_set.of_list (List.map (fun h -> Generated h.helper_id) t.lifted))
     (entities_owners t.entities)
 
-(* The declarations a generation of [entities] and [lifted] gives to
-   finish. *)
+(* The declarations the generations recorded in [t] give to finish: each
+   entity's own, and the declaration of every helper an entity claimed or
+   [t] recorded as lifted. *)
 let generated_declarations t =
   let of_entity s (e : entity) =
     List.fold_left (fun s h -> Id_set.add (helper_declaration h) s) (Id_set.union s (Id_set.of_list e.declarations)) e.helpers

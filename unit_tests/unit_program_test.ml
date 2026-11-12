@@ -2,7 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (* Entity identities, and the check that emission generates what the plan
-   accounts for. *)
+   accounts for: {!Unit_program.helper} recognises a lifted helper and keys
+   it by its {!Lifted.t}; {!Unit_program.record} refuses to run while
+   planning; {!Unit_program.check_against_plan} refuses an entity, or a
+   helper lifted out of one, the unit does not declare; and
+   {!Unit_program.record_lifted_ahead} accepts one helper handed on twice
+   but refuses two generations lifting the same helper. *)
 
 open Crane_plugin
 open Minicpp

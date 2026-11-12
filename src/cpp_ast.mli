@@ -2,11 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** CppAST: the C++ a file writes, as a tree, between rendering and
-    printing.  {!Cpp_ind} builds it from the finished declarations, the
-    driver ({!Extract_env}) assembles it into a {!translation_unit},
-    {!schedule} places the declarations that are due only once the file is
-    assembled, {!resolve} resolves the names each declaration is written
-    with, and {!print} writes the file.
+    printing.  {!Cpp_leaf_plan} builds its leaves from the finished CppIR
+    declarations ({!Cpp_ir.Resolved.Decl.t}), the driver ({!Cpp}) assembles
+    them into a {!translation_unit}, {!schedule} places the declarations
+    that are due only once the file is assembled, {!resolve} resolves the
+    names each declaration is written with (with the resolvers
+    {!Cpp_ind.resolve} supplies), and {!print} writes the file.
 
     A file is assembled out of chunks the driver moves around -- a module's
     struct to the top, a concept ahead of everything, a member definition to
@@ -118,7 +119,7 @@ type template_param =
 
 (** What a template parameter names. *)
 and parameter =
-  | Type_variable of Id.t
+  | Type_variable of Id.t  (** A type variable, written by its name. *)
   | Module_parameter of module_ref  (** A functor's parameter. *)
 
 (** How {!resolve} names what a declaration names where it is written, at
@@ -243,7 +244,7 @@ and definition = Cpp_resolution.definition = Enum_definition | Struct_definition
     needs reads -- planned, so known before it is printed -- and the names it
     is printed with, resolved before it is printed ({!resolve_tree}). *)
 type unprinted = {
-  declaration : declaration;
+  declaration : declaration;  (** What it declares. *)
   needs : Needs.t;  (** What placing the declarations it needs reads. *)
   names : Cpp_resolution.table;
       (** The names it is printed with, once {!resolve_tree} has resolved
@@ -532,6 +533,8 @@ type forward = {struct_ : GlobRef.t; forward_declaration : t}
     erased aliases -- and one after the last. *)
 type translation_unit = {
   forward_declarations : t list;
+      (** The forward declarations written ahead of every section, in the
+          header only. *)
   erased_aliases : t list;
       (** Erasure landing pads ([using X = std::any;]) and the imports of
           promoted aliases, ahead of the concepts that spell them. *)

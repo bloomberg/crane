@@ -13,6 +13,8 @@ type failure =
   | Lowered_only of string
   | Dead of string
 
+(* Raised at the first form with no CppIR counterpart; it aborts the whole
+   conversion, which the exported functions turn into an [Error]. *)
 exception Unconvertible of failure
 
 let lowered_only form = raise_notrace (Unconvertible (Lowered_only form))
@@ -168,6 +170,10 @@ let local_fixpoint (f : local_fixpoint) : E.Local_fixpoint.t =
     captured = f.lf_captured;
     encoding = local_fixpoint_encoding f.lf_encoding }
 
+(* The conversion is structural: each MiniCpp constructor maps to its CppIR
+   counterpart.  A form only a lowered program may hold raises
+   [Lowered_only]; a MiniCpp form no pass produces any more raises
+   [Dead]. *)
 let rec ty : cpp_type -> phase T.t = function
   | Tvar v -> Variable (tvar v)
   | Tinstance (x, r) -> Instance (x, r)
@@ -494,6 +500,8 @@ let rec decl : cpp_decl -> phase D.t = function
         member = out_of_line m.dm_field }
   | Denum e -> Enum {ref_ = e.de_ref; ctors = e.de_ctors; rocq_names = e.de_ctor_rocq_names; type_params = tparams e.de_tparams}
 
+(* The exported conversions catch [Unconvertible]; [expr] below shadows the
+   structural [expr] above. *)
 let convert (d : Cpp_erasure.settled) =
   match decl (d :> cpp_decl) with
   | d -> Ok d
