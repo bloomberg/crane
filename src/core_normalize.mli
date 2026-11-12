@@ -9,6 +9,8 @@
     - a coercion: [(magic f) a] is [f a];
     - a match with one branch, which is a destructuring and nothing else:
       [(let (x, y) := p in g x) a] is [let (x, y) := p in g x a];
+    - an erased value or a throw, the eliminator of a branch the indices
+      rule out: applied, it is itself, never evaluating its arguments;
 
     and no term is a numeral converter applied to a digit chain, or a
     constructor term of a numeral inductive spelling a number: each is the

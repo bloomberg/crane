@@ -11,7 +11,7 @@ let rec spine = function
   | e -> Mlutil.ast_map spine e
 
 let canonical_head = function
-  | MLapp (MLglob _, _) | MLmagic _ -> false
+  | MLapp (MLglob _, _) | MLmagic _ | MLexn _ | MLdummy _ -> false
   | MLcase (_, _, [|_|], _) -> false
   | _ -> true
 

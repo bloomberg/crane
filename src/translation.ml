@@ -1599,12 +1599,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   | (MLapp _ | MLcons _) as e when Probe.checking () && not (Core_normalize.canonical_application e) ->
     Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
     gen_expr ?expected_ty ~slot env (Core_normalize.spine e)
-  | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
-    (* Applying an absurd head — the eliminator of a branch that the indices
-       rule out.  The application is itself unreachable, so emit the throw
-       alone: calling it would apply the throwing thunk's [std::any] result
-       as though it were a function. *)
-    gen_expr ?expected_ty env absurd
   | MLapp (MLglob ({callee = r; _} as use), a1 :: l) when is_effect Core_effects.Return use ->
     let ret_tys = Mlutil.written_type_args use in
     if not (is_sequential_effect Core_effects.Return use) then begin

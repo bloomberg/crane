@@ -1589,11 +1589,14 @@ and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
 (* [canonical_app f args], [f] canonical: the application, its head read
    through.  A global applied twice is applied once to both argument lists; a
    coercion at the head is dropped; a single-branch match at the head takes
-   the arguments into its branch, past the branch's binders. *)
+   the arguments into its branch, past the branch's binders; an absurd head
+   -- an erased value, or the throw standing for a branch the indices rule
+   out -- is the whole application, which never evaluates its arguments. *)
 let rec canonical_app f args =
   match f with
   | MLapp ((MLglob _ as g), inner) -> MLapp (g, inner @ args)
   | MLmagic (_, f) -> canonical_app f args
+  | MLexn _ | MLdummy _ -> f
   | MLcase (ty, scrut, [|(ids, rty, pat, body)|], occ) ->
     let args = List.map (ast_lift (List.length ids)) args in
     let body =
