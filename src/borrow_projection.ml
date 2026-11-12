@@ -92,19 +92,31 @@ let lend ~coinductive ((f, vis, tag) as field) =
   | Fmethod m when coinductive && is_projection m -> List.map (fun f -> (f, vis, tag)) (split m)
   | _ -> [field]
 
+(* Whether the method [m] of a finished declaration returns one field of
+   its receiver, not yet split, and the field has a value a reference can
+   name: {!lends_field} of a method in CppIR. *)
+let lends_field_ir (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) =
+  ( match m.receiver with
+  | Instance {returns_field = true; is_const = true; ref_qualifier = Any; _} -> true
+  | _ -> false )
+  &&
+  match m.return_type with
+  | Reference _ | Void -> false
+  | _ -> true
+
 (* A coinductive struct whose method still lends a field unsplit was
    generated without {!lend}. *)
-let rec check_decl d =
+let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
   match d with
-  | Dtemplate (_, _, inner) -> check_decl inner
-  | Dnspace (_, ds) -> List.iter check_decl ds
-  | (Dstruct s | Dfields s) when Table.is_coinductive s.ds_ref ->
+  | Template (_, _, inner) -> check_decl inner
+  | Namespace (_, ds) -> List.iter check_decl ds
+  | (Struct s | Merged_struct_members s) when Table.is_coinductive s.ref_ ->
     List.iter
-      (fun (f, _, _) ->
+      (fun ((f, _, _) : _ Cpp_ir.Field.member) ->
         match f with
-        | Fmethod m when lends_field m ->
+        | Method m when lends_field_ir m ->
           Probe.violation "borrowed projection"
-            Pp.(str "the projection " ++ Id.print m.mf_name ++ str " reached the printer unsplit")
+            Pp.(str "the projection " ++ Id.print m.name ++ str " reached the printer unsplit")
         | _ -> () )
-      s.ds_fields
+      s.fields
   | _ -> ()

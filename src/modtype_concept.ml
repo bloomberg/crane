@@ -89,15 +89,17 @@ let rec concept_type signature ty =
   | Tglob (r, tys, _) -> (
     match Table.find_custom_opt r with
     | Some text ->
-      let pieces = Cpp_erasure.type_pieces r text tys in
+      let pieces = Cpp_erasure.type_pieces r text (List.map Legacy_minicpp_to_cpp_ir.lower_type tys) in
       (* A type argument the text names and the use does not supply is
          erased, as the seam writes one ({!Cpp_erasure.supply_template_args}). *)
       let arity =
-        List.fold_left (fun n -> function Fp_type i | Fp_element (i, _) -> max n (i + 1) | _ -> n) 0 pieces
+        List.fold_left
+          (fun n -> function Cpp_ir.Foreign.Type_argument i | Element (i, _) -> max n (i + 1) | _ -> n)
+          0 pieces
       in
       let supplied = args tys in
       let erased = List.init (max 0 (arity - List.length supplied)) (fun _ -> Plain Any) in
-      Foreign {custom = r; pieces = List.map Legacy_minicpp_to_cpp_ir.foreign_piece pieces; arguments = supplied @ erased}
+      Foreign {custom = r; pieces; arguments = supplied @ erased}
     | None -> Global (r, args tys) )
   | Tshared_ptr ty -> Shared_pointer (concept_type signature ty)
   | Tvariant (storage, tys) -> Variant ((match storage with Inline_variant -> Inline | Shared_variant -> Shared), args tys)
@@ -180,7 +182,7 @@ let rec base_concept = function
    innermost first. *)
 let refinements mt =
   let rec go acc = function
-    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, ir_type (Cpp_erasure.instantiate_type (convert typ))) :: acc) inner
+    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, Legacy_minicpp_to_cpp_ir.instantiated_type_exn Cpp_erasure.instantiate_type (convert typ)) :: acc) inner
     | MTwith (inner, ML_With_module _) -> go acc inner
     | _ -> acc
   in

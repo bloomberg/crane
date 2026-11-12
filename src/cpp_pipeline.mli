@@ -25,7 +25,7 @@
     unspellable type, an unsettled constraint, an unresolved cast, an
     undeclared type variable, a mapping's unsupplied type argument, or a
     method or projection called as a function. *)
-val finish : Minicpp.cpp_decl -> Cpp_erasure.settled
+val finish : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
 
 (** The names of the passes {!finish} runs, in order, the {!Cpp_erasure} seam

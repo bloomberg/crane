@@ -1450,7 +1450,7 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
     [fields] of the eponymous record [r], of variables [vars], as the header
     writes them in the struct [r] is merged into: converted and instantiated
     ({!Cpp_erasure.instantiate_type}) ahead of the files, in CppIR
-    ({!Legacy_minicpp_to_cpp_ir.type_}), and taken from there by the header
+    ({!Legacy_minicpp_to_cpp_ir.instantiated_type_exn}), and taken from there by the header
     ({!ahead_once}) -- so what plans from them reads the types the header
     writes. *)
 let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
@@ -1462,8 +1462,8 @@ let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
     (fun () ->
       List.map
         (fun (_, ty) ->
-          Legacy_minicpp_to_cpp_ir.type_exn
-            (Cpp_erasure.instantiate_type (Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty)) )
+          Legacy_minicpp_to_cpp_ir.instantiated_type_exn Cpp_erasure.instantiate_type
+            (Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty) )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)

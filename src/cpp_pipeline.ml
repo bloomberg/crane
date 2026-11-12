@@ -1,9 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** The passes a MiniCpp declaration goes through between translation and the
+(** The passes a declaration goes through between translation and the
     printer.  See [cpp_pipeline.mli]. *)
-
-open Minicpp
 
 (** {2 Tracing}
 
@@ -22,12 +20,12 @@ let traced decl =
   | Some pattern ->
     (* An unnamed declaration -- an assignment, an alias, a group -- is named
        by what it declares. *)
-    let rec names = function
+    let rec names : Minicpp.cpp_decl -> _ = function
       | Dnspace (None, ds) -> List.concat_map names ds
       | Dtemplate (_, _, d) -> names d
       | Dfields {ds_ref = r; _} | Denum {de_ref = r; _} | Dasgn {da_ref = r; _} -> [r]
       | Dusing {du_name = r; _} -> [r]
-      | d -> Option.List.cons (decl_globref d) []
+      | d -> Option.List.cons (Minicpp.decl_globref d) []
     in
     let name =
       match names decl with
@@ -44,13 +42,33 @@ let traced decl =
     if pattern = "1" || contains name pattern then Some name else None
 
 (** How many expressions, statements and types [d] holds. *)
-let node_count (d : cpp_decl) =
+let node_count (d : Cpp_ir.Lowered.Decl.t) =
   let n = ref 0 in
-  let ft t = map_cpp_type (fun t -> incr n; t) t in
-  let rec fe e = incr n; map_expr fe fs ft e
-  and fs s = incr n; map_stmt fe fs ft s in
-  ignore (map_decl fe fs ft d);
+  let rec fe e =
+    incr n;
+    Cpp_ir.Map.expr (rw ()) e
+  and fs s =
+    incr n;
+    Cpp_ir.Map.stmt (rw ()) s
+  and ft t =
+    Cpp_ir.Types.map
+      (fun t ->
+        incr n;
+        t )
+      t
+  and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
+  ignore (Cpp_ir.Map.decl (rw ()) d);
   !n
+
+(** The global a declaration is about, if it has one, as an error names
+    it. *)
+let rec decl_globref : Cpp_ir.Lowered.Decl.t -> Names.GlobRef.t option = function
+  | Template (_, _, inner) -> decl_globref inner
+  | Function f -> Some (fst f.path.outer)
+  | Struct s -> Some s.ref_
+  | Member_definition m -> Some m.owner
+  | Namespace (w, _) -> Option.map (fun (w : Cpp_ir.Decl.Namespace.wrapper) -> w.ref_) w
+  | _ -> None
 
 (** A pass over a declaration on its way to the seam. *)
 let on_decl = Pipeline_trace.pass
@@ -114,8 +132,8 @@ let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
        body that decides it in hand; the printer writes what it is given. *)
     constraints ]
 
-(** Writing a type down is what decides its representation, so the [Topaque]
-    slots are settled before anything reads the declaration as final.
+(** Writing a type down is what decides its representation, so the unknown
+    representations are settled before anything reads the declaration as final.
     Crossing this seam is what gives {!Cpp_erasure.settled}, the printer's
     input type. *)
 let seam = "materialise"
@@ -148,7 +166,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
 (** With the declaration resolved, each mapping's text is instantiated on
     the way to the printer: what is left to it is to write the pieces.  The
     checks of what a declaration moves and borrows read the instantiated
-    pieces, a pair projection's included ({!Minicpp.foreign_pair_projection}).
+    pieces, a pair projection's included.
     A type qualifying a member in value position is spelled as the value it
     names.  A pointer is written in the slot its pointee is held in.  Each
     match's computed scrutinee is declared, named, in front of it.  With
@@ -199,30 +217,30 @@ let describe : obligation -> string = function
   | Undecided_capture -> "an undecided lambda capture, owed by " ^ captures.name
   | Capture_outside_a_block -> "a capturing lambda in an initialiser, owed by " ^ initialisers.name
 
-(** Whether [decl] writes down a type [p] holds of. *)
-let mentions p (decl : cpp_decl) =
+(** Whether [decl] writes down a type [p] holds of, a carrier abstraction's
+    body included. *)
+let mentions p (decl : Cpp_erasure.settled) =
   let exception Found in
-  (* {!rewrite_cpp_type} rather than {!map_cpp_type}: it reaches a carrier
-     abstraction's body too. *)
-  let ft t = rewrite_cpp_type (fun t -> if p t then raise_notrace Found else None) t in
-  let rec fe e = map_expr fe fs ft e
-  and fs s = map_stmt fe fs ft s in
-  match ignore (map_decl fe fs ft decl) with () -> false | exception Found -> true
+  let ft t = if Cpp_ir.Children.exists_type p t then raise_notrace Found else t in
+  let rec fe e = Cpp_ir.Map.expr (rw ()) e
+  and fs s = Cpp_ir.Map.stmt (rw ()) s
+  and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
+  match ignore (Cpp_ir.Map.decl (rw ()) (decl :> Cpp_ir.Lowered.Decl.t)) with
+  | () -> false
+  | exception Found -> true
 
 (** Whether [decl] still owes [o].  Every pass that discharges an obligation
     leaves nothing for a second run to do, so a declaration that has paid one
     is a fixed point of the pass that pays it -- a check that cannot drift
     from what the pass decides. *)
 let owes (decl : Cpp_erasure.settled) (o : obligation) =
-  let d = (decl :> cpp_decl) in
+  let d = (decl :> Cpp_ir.Lowered.Decl.t) in
   let rewrites (p : Cpp_erasure.settled Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
   match o with
-  | Unresolved_type -> mentions (function Tunresolved -> true | _ -> false) d
-  | Opaque_type -> mentions (function Topaque -> true | _ -> false) d
+  | Unresolved_type -> mentions (function Obligation Unresolved_type -> true | _ -> false) decl
+  | Opaque_type -> mentions (function Obligation Opaque_type -> true | _ -> false) decl
   | Unspellable_binder -> Cpp_erasure.writes_unspellable_binder decl
-  | Unsettled_callable ->
-    let ir = Legacy_minicpp_to_cpp_ir.lower d in
-    compare (constraints.run ir) ir <> 0
+  | Unsettled_callable -> compare (constraints.run d) d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
   | Implicit_boxed_read -> rewrites boxed_reads
@@ -261,47 +279,47 @@ let check_settled obligations (decl : Cpp_erasure.settled) =
         str "Crane: a declaration reached the printer owing "
         ++ prlist_with_sep (fun () -> str "; ") (fun o -> str (describe o)) owed
         ++
-        match decl_globref (decl :> cpp_decl) with
+        match decl_globref (decl :> Cpp_ir.Lowered.Decl.t) with
         | Some r -> str " in " ++ Table.safe_pr_global r
         | None -> mt () )
 
 (** [lower d] is [d] in CppIR.  Under [CRANE_CHECK_IR] it fails unless
-    converting it back gives [d] again: a pass left on MiniCpp then reads
-    exactly what it read before the declaration was lowered. *)
+    converting it back gives [d] again. *)
 let lower d =
   let ir = Legacy_minicpp_to_cpp_ir.lower d in
   if Probe.checking () && compare (Cpp_ir_to_legacy_minicpp.decl ir) d <> 0 then
     CErrors.anomaly
       Pp.(
         str "Crane: a declaration does not convert back from CppIR to the MiniCpp it was lowered from"
-        ++ match decl_globref d with Some r -> str " in " ++ Table.safe_pr_global r | None -> mt () );
+        ++ match Minicpp.decl_globref d with Some r -> str " in " ++ Table.safe_pr_global r | None -> mt () );
   ir
 
-(** [run_lowered ~tracing note decl] lowers [decl], runs {!lowered_passes}
-    over it and hands back the MiniCpp the seam takes.  [note] is told what
-    each pass did, in MiniCpp, which it is converted to only when
-    [tracing]. *)
-let run_lowered ~tracing note decl =
-  let step d (p : _ Pipeline_trace.pass) =
-    let after = p.run d in
-    if tracing then note p.name (Cpp_ir_to_legacy_minicpp.decl d) (Cpp_ir_to_legacy_minicpp.decl after);
-    after
-  in
-  Cpp_ir_to_legacy_minicpp.decl (List.fold_left step (lower decl) lowered_passes)
+(** [resolved d] is [d], which owes the printer nothing, at the phase that
+    says so. *)
+let resolved (d : Cpp_erasure.settled) =
+  match Cpp_ir.Resolve.decl (d :> Cpp_ir.Lowered.Decl.t) with
+  | d -> d
+  | exception Cpp_ir.Resolve.Owed form ->
+    CErrors.anomaly
+      Pp.(
+        str "Crane: a declaration reached the printer holding " ++ str form
+        ++ str ", which only a lowered declaration may hold"
+        ++
+        match decl_globref (d :> Cpp_ir.Lowered.Decl.t) with
+        | Some r -> str " in " ++ Table.safe_pr_global r
+        | None -> mt () )
 
 let finish decl =
   let trace = traced decl in
   let steps = ref [] in
-  let note name (before : cpp_decl) (after : cpp_decl) =
+  let note name before after =
     if trace <> None then
       steps :=
         ( if compare before after = 0 then name ^ " unchanged"
-          else
-            Printf.sprintf "%s %d -> %d" name (node_count before)
-              (node_count after) )
+          else Printf.sprintf "%s %d -> %d" name (node_count before) (node_count after) )
         :: !steps
   in
-  let run : type a. (a -> cpp_decl) -> a Pipeline_trace.pass list -> a -> a =
+  let run : type a. (a -> Cpp_ir.Lowered.Decl.t) -> a Pipeline_trace.pass list -> a -> a =
    fun inj passes d ->
     List.fold_left
       (fun d (p : _ Pipeline_trace.pass) ->
@@ -310,25 +328,23 @@ let finish decl =
         d' )
       d passes
   in
-  let decl = run_lowered ~tracing:(trace <> None) note decl in
+  let decl = run Fun.id lowered_passes (lower decl) in
   let settled = Cpp_erasure.materialise decl in
-  note seam decl (settled :> cpp_decl);
-  let inj (d : Cpp_erasure.settled) = (d :> cpp_decl) in
+  let inj (d : Cpp_erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
+  note seam decl (inj settled);
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
   let decl = run inj settled_passes settled in
   let early, late = List.partition checked_before_instantiation obligations in
   if checking then check_settled early decl;
   let decl = run inj instantiation_passes decl in
   if checking then begin
-    Borrow_projection.check_decl (decl :> cpp_decl);
-    Move_check.check_decl (decl :> cpp_decl);
+    Borrow_projection.check_decl (inj decl);
+    Move_check.check_decl (Cpp_ir_to_legacy_minicpp.decl (inj decl));
     check_settled late decl
   end;
   Option.iter
     (fun name ->
       Feedback.msg_notice
-        Pp.(
-          str ("Crane: passes on " ^ name ^ ": ")
-          ++ prlist_with_sep (fun () -> str ", ") str (List.rev !steps) ) )
+        Pp.(str ("Crane: passes on " ^ name ^ ": ") ++ prlist_with_sep (fun () -> str ", ") str (List.rev !steps)) )
     trace;
-  decl
+  resolved decl

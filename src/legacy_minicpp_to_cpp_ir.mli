@@ -33,8 +33,14 @@ val lower : Minicpp.cpp_decl -> Cpp_ir.Lowered.Decl.t
 (** [lower_stmt s] is [s] in CppIR, as {!lower} converts a declaration. *)
 val lower_stmt : Minicpp.cpp_stmt -> Cpp_ir.Lowered.Stmt.t
 
+(** [lower_type t] is [t] in CppIR, as {!lower} converts a declaration. *)
+val lower_type : Minicpp.cpp_type -> Cpp_ir.Lowered.Type.t
+
+(** [inline_template t] is the classified replacement text [t] in CppIR. *)
+val inline_template : Minicpp.inline_template -> Cpp_ir.Foreign.template
+
 (** [convert d] is [d] in CppIR, or why it is not expressible there. *)
-val convert : Cpp_erasure.settled -> (Cpp_ir.Resolved.Decl.t, failure) result
+val convert : Minicpp.cpp_decl -> (Cpp_ir.Resolved.Decl.t, failure) result
 
 (** The types and values written outside every finished declaration -- a
     merged record's field types, a module type's concept, a synthesised
@@ -48,6 +54,14 @@ val expr : Minicpp.cpp_expr -> (Cpp_ir.Resolved.Expr.t, failure) result
 (** [type_ t], where [t] has to convert.
     @raise Anomaly if it does not. *)
 val type_exn : Minicpp.cpp_type -> Cpp_ir.Resolved.Type.t
+
+(** [instantiated_type_exn instantiate t] is [t] in CppIR, as [instantiate]
+    rewrites it, at the phase that owes resolution nothing: a type written
+    outside every finished declaration, whose mappings are instantiated where
+    it is converted.
+    @raise Anomaly if the rewritten type still owes resolution a decision. *)
+val instantiated_type_exn :
+  (Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t) -> Minicpp.cpp_type -> Cpp_ir.Resolved.Type.t
 
 (** [foreign_piece p] is the piece [p] of a mapping's instantiated text in
     CppIR; every piece converts. *)

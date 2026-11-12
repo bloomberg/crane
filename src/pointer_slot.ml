@@ -14,7 +14,7 @@ let rec of_pointee = function
   | Tnamespace (_, t) | Tconst t -> of_pointee t
   | _ -> Pointer
 
-let rec of_ir_pointee : Cpp_ir.Resolved.Type.t -> t = function
+let rec of_ir_pointee : type p. p Cpp_ir.Type.t -> t = function
   | Entity_application (r, _, _) when Table.is_shared_variant r -> Shared
   | Entity_application (GlobRef.IndRef (kn, _), _, _)
     when Table.shared_variant () && Common.under_mp_bound (MutInd.modpath kn) ->

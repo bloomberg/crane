@@ -30,4 +30,4 @@ val lend :
 
 (** [check_decl d] -- a {!Probe.violation} for each projection of a
     coinductive [d] declares unsplit. *)
-val check_decl : Minicpp.cpp_decl -> unit
+val check_decl : Cpp_ir.Lowered.Decl.t -> unit

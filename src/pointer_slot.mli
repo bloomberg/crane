@@ -23,4 +23,4 @@ type t =
 val of_pointee : Minicpp.cpp_type -> t
 
 (** {!of_pointee} of a pointee in CppIR. *)
-val of_ir_pointee : Cpp_ir.Resolved.Type.t -> t
+val of_ir_pointee : 'p Cpp_ir.Type.t -> t
