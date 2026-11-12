@@ -264,9 +264,9 @@ let install t = program := t
 
 let installed_globals () = !program.globals
 
-let installed_declarations () = List.map (fun d -> d.finished) !program.declarations
-
 let installed_ir () = List.map (fun d -> d.ir) !program.declarations
+
+let installed_finished () = List.map (fun d -> {Finished_decl.settled = d.finished; ir = d.ir}) !program.declarations
 
 let installed_promoted () = !program.promoted
 

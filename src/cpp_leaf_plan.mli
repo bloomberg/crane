@@ -30,13 +30,13 @@ type ctor_aliases_read = {
 (** [read_decl ctx env decl] is a settled declaration printed at the
     position [ctx], its names resolved there first, its type constructors
     written as planned, or, before anything is planned, as decided. *)
-val read_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Pp.t
+val read_decl : Cpp_state.render_ctx -> Common.env -> Finished_decl.t -> Pp.t
 
 (** The types the declaration, written at namespace scope, introduces
     there, by the entity each declares: its own, through a template head and
     an anonymous namespace, and a struct's -- but not those of what a wrapper
     struct holds, which are its members. *)
-val file_scope_types : Cpp_erasure.settled -> Names.GlobRef.t list
+val file_scope_types : Finished_decl.t -> Names.GlobRef.t list
 
 (** The head of every global type in a type. *)
 val type_heads : cpp_type -> GlobRef.t list
@@ -48,7 +48,7 @@ val globals_written_beside : cpp_decl -> GlobRef.t list
 
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)
-val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
+val is_held_back_assertion : Cpp_state.render_ctx -> Finished_decl.t -> bool
 
 (** Whether a function declaration writes a qualifier into a struct or a
     template parameter, in its name, result or parameters, asked of the
@@ -82,15 +82,15 @@ val stand_ins : Cpp_ast.t -> Cpp_ast.t list
     a sole struct merged into them, in the order it writes them, each by the
     wrapper and its name spelled to be compared with a wrapper module's
     ({!Cpp_names.wrapper_spelling}). *)
-val unmerged_wrappers_written : Cpp_erasure.settled -> (Names.GlobRef.t * string) list
+val unmerged_wrappers_written : Finished_decl.t -> (Names.GlobRef.t * string) list
 
 (** Whether the declaration writes a wrapper struct holding a wrapper
     module's declarations: that of a wrapper the list gives a module. *)
-val absorbs : homed:(Names.GlobRef.t * Names.ModPath.t) list -> Cpp_erasure.settled -> bool
+val absorbs : homed:(Names.GlobRef.t * Names.ModPath.t) list -> Finished_decl.t -> bool
 
 (** [write_decl ctx env decl] is {!read_decl}, with what placing the
     declarations it needs reads ({!Cpp_ast.Needs}). *)
-val write_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+val write_decl : Cpp_state.render_ctx -> Common.env -> Finished_decl.t -> Cpp_ast.t
 
 (** The position a synthesised template declared where the second argument
     says is written at, in the file the first is written in
@@ -105,7 +105,7 @@ val write_absorbing :
 
 (** What placing the declarations [decl], written in the module [module_] in
     the file [file], needs reads ({!Cpp_ast.Needs}), as planned. *)
-val planned_needs : file:Common.file -> module_:Names.ModPath.t -> Cpp_erasure.settled -> Cpp_ast.Needs.t
+val planned_needs : file:Common.file -> module_:Names.ModPath.t -> Finished_decl.t -> Cpp_ast.Needs.t
 
 (** [unprinted ctx ~module_ env decl] is [decl], written at the position
     [ctx] in the module [module_], to be printed where the tree puts it
@@ -140,7 +140,7 @@ val type_globals : Minicpp.cpp_type -> GlobRef.t list
     those it holds, those written beside them -- a template template
     argument's head, the primitive integer type, the custom a custom match
     or a block custom is written from -- and those it declares. *)
-val declaration_globals : Cpp_erasure.settled -> GlobRef.t list
+val declaration_globals : Finished_decl.t -> GlobRef.t list
 
 (** What printing a declaration not yet printed names through the type and
     expression printers, at the frames inside it it names them at, for

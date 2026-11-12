@@ -188,12 +188,12 @@ val refinish : job list -> unit
 (** {!globals} of the installed program. *)
 val installed_globals : unit -> Names.GlobRef.t list
 
-(** The declarations of the installed program, in the order they were
-    finished. *)
-val installed_declarations : unit -> Cpp_erasure.settled list
-
-(** {!installed_declarations} in CppIR. *)
+(** The declarations of the installed program in CppIR, in the order they
+    were finished. *)
 val installed_ir : unit -> Cpp_ir.Resolved.Decl.t list
+
+(** {!installed_ir}, each with its MiniCpp. *)
+val installed_finished : unit -> Finished_decl.t list
 
 (** The promoted type variables the installed program's declarations write
     ({!Cpp_demands.promoted_of_decl}), in the order they were finished. *)

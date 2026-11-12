@@ -41,8 +41,7 @@ type rendered = (Common.env * Finished_decl.t) list
 
 
 (** Print the declarations an entry point answered with. *)
-let pp_decls ctx (ds : rendered) =
-  Cpp_ast.concat Pp.fnl (List.map (fun (env, (d : Finished_decl.t)) -> Cpp_leaf_plan.write_decl ctx env d.settled) ds)
+let pp_decls ctx (ds : rendered) = Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_leaf_plan.write_decl ctx env d) ds)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
