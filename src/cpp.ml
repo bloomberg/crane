@@ -1755,21 +1755,19 @@ let customs_written_ahead () =
     Struct fields carry no initialiser, so a struct counts whole (its
     methods). *)
 let plan_function_reads () =
-  let rec function_globals = function
-    | Dasgn _ -> []
-    | Dtemplate (_, _, d) -> function_globals d
-    | Dnspace (_, ds) -> List.concat_map function_globals ds
+  let rec function_globals : Cpp_ir.Resolved.Decl.t -> _ = function
+    | Variable _ -> []
+    | Template (_, _, d) -> function_globals d
+    | Namespace (_, ds) -> List.concat_map function_globals ds
     | d ->
       let globals = ref [] in
-      Minicpp.iter_globrefs (fun r -> globals := r :: !globals) d;
+      Cpp_ir.Globrefs.iter (fun r -> globals := r :: !globals) d;
       !globals
   in
   Cpp_state.plan_function_reads
     (List.fold_left
-       (fun reads (d : Cpp_erasure.settled) ->
-         List.fold_right Ref.Can.Set.add (function_globals (d :> cpp_decl)) reads)
-       Ref.Can.Set.empty
-       (Unit_program.installed_declarations ()))
+       (fun reads d -> List.fold_right Ref.Can.Set.add (function_globals d) reads)
+       Ref.Can.Set.empty (Unit_program.installed_ir ()))
 
 let generate_ahead s =
   generating_ahead @@ fun () ->

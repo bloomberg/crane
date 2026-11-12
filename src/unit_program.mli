@@ -192,6 +192,9 @@ val installed_globals : unit -> Names.GlobRef.t list
     finished. *)
 val installed_declarations : unit -> Cpp_erasure.settled list
 
+(** {!installed_declarations} in CppIR. *)
+val installed_ir : unit -> Cpp_ir.Resolved.Decl.t list
+
 (** The promoted type variables the installed program's declarations write
     ({!Cpp_demands.promoted_of_decl}), in the order they were finished. *)
 val installed_promoted : unit -> Names.Id.t list

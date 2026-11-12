@@ -197,6 +197,25 @@ let check_demands id f ir =
   same "the globals" Names.GlobRef.UserOrd.compare (Cpp_demands.Legacy.globals_of_decl f) (Cpp_demands.globals_of_decl ir);
   same "the promoted variables" Names.Id.compare (Cpp_demands.Legacy.promoted_of_decl f) (Cpp_demands.promoted_of_decl ir)
 
+(* Under [CRANE_CHECK_IR], the globals the declaration [ir], [id] of the
+   program, names ({!Cpp_ir.Globrefs}) are those its MiniCpp twin [f] names,
+   each as often, and it declares the same global.  The order is not
+   compared: the MiniCpp traversal meets a node's children in the order
+   OCaml evaluates a constructor's arguments, and what reads them collects
+   a set. *)
+let check_globrefs id f ir =
+  let f = (f : Cpp_erasure.settled :> Minicpp.cpp_decl) in
+  let named iter d =
+    let found = ref [] in
+    iter (fun r -> found := r :: !found) d;
+    List.sort Names.GlobRef.UserOrd.compare !found
+  in
+  if
+    not
+      (List.equal Names.GlobRef.UserOrd.equal (named Minicpp.iter_globrefs f) (named Cpp_ir.Globrefs.iter ir)
+      && Option.equal Names.GlobRef.UserOrd.equal (Minicpp.decl_globref f) (Cpp_ir.Globrefs.declared ir))
+  then Probe.violation "CppIR globals" Pp.(str "the globals read off CppIR differ in " ++ pp_id id)
+
 let finish jobs =
   let declarations = ref [] and demands = ref [] and globals = ref [] and promoted = ref [] in
   let sources = ref Id_map.empty and by_id = ref Id_map.empty in
@@ -209,7 +228,10 @@ let finish jobs =
       | None ->
         let f = Cpp_pipeline.finish d in
         let ir = converted id f in
-        if Probe.checking () then check_demands id f ir;
+        if Probe.checking () then begin
+          check_demands id f ir;
+          check_globrefs id f ir
+        end;
         demands := List.rev_append (Cpp_demands.of_decl ir) !demands;
         globals := List.rev_append (Cpp_demands.globals_of_decl ir) !globals;
         promoted := List.rev_append (Cpp_demands.promoted_of_decl ir) !promoted;
@@ -243,6 +265,8 @@ let install t = program := t
 let installed_globals () = !program.globals
 
 let installed_declarations () = List.map (fun d -> d.finished) !program.declarations
+
+let installed_ir () = List.map (fun d -> d.ir) !program.declarations
 
 let installed_promoted () = !program.promoted
 
