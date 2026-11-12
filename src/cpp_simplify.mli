@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A short, ordered list of small local simplifications on MiniCpp, each
+(** A short, ordered list of small local simplifications on CppIR, each
     independent and each removing something:
 
     {ul
@@ -21,4 +21,4 @@
 
 (** [transform_decl d]: [d] with every simplification above applied
     throughout its statements and expressions. *)
-val transform_decl : Minicpp.cpp_decl -> Minicpp.cpp_decl
+val transform_decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t

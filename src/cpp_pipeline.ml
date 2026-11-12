@@ -110,9 +110,9 @@ let minicpp_passes : stage list =
     (* An argument a mapping would splice, and so evaluate, more than once is
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
-    Legacy (on_decl "shared_args" Cpp_shared_args.transform_decl);
+    Ir (Pipeline_trace.pass "shared_args" Cpp_shared_args.transform_decl);
     (* Small local simplifications, before ownership reads the uses. *)
-    Legacy (on_decl "simplify" Cpp_simplify.transform_decl);
+    Ir (Pipeline_trace.pass "simplify" Cpp_simplify.transform_decl);
     (* An initialiser nested deeper than a compiler will parse becomes a run of
        bindings; everything shallower is left as it stands. *)
     Ir (Pipeline_trace.pass "depth" Cpp_depth.flatten);
