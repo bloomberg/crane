@@ -105,13 +105,14 @@ type translation_ctx = {
   move_plan : Ownership_ir.t;
   (* Whether each pattern binder of the region being generated holds a box,
      as {!Representation_plan} plans it from the region's Core body: by Core
-     site and field.  Set beside {!move_plan} ({!with_region}), and
-     only under [CRANE_CHECK_IR], where translation checks it against the
-     binder's recorded C++ type. *)
+     site and field.  Set beside {!move_plan} ({!with_region}) in a body;
+     under [CRANE_CHECK_IR] translation checks it against the binder's
+     recorded C++ type. *)
   representation : (Core_binder.site * int * planned_repr) list;
   (* Whether the binder each variable read of the region reads holds a box,
      as {!Representation_plan} plans it: by the read's occurrence.  Set
-     beside {!representation}, under the same condition. *)
+     beside {!representation}; the only answer lowering reads
+     ({!Translation_types.read_is_boxed}). *)
   planned_reads : (Occurrence.t * planned_read) list;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)

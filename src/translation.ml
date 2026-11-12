@@ -1477,10 +1477,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   match ml_e with
   | MLrel (i, occ) ->
     check_binder_scopes env i;
-    (* Unplanned, the read is a violation under [CRANE_CHECK_IR]. *)
-    if Option.has_some (!tctx).body_owner && Probe.checking () && not (Representation_plan.has_read occ) then
-      Representation_plan.check_read ~occ ~live:(binder_is_boxed i);
-    let boxed_read = Representation_plan.read ~occ (fun () -> binder_is_boxed i) in
+    let boxed_read = read_is_boxed i occ in
     let x = try get_db_name i env with Failure _ -> db_fallback_id i in
     let var_expr = CPPvar x in
     (* Move on a last use of a variable the region owns, as its plan says
@@ -2936,7 +2933,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let is_erased_rel =
         match ml_arg with
         | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
-          Representation_plan.read ~occ (fun () -> binder_is_boxed j)
+          read_is_boxed j occ
         | _ -> false
       in
       if not is_erased_rel then expr
@@ -3987,7 +3984,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               let is_erased_rel =
                 match e with
                 | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
-                  Representation_plan.read ~occ (fun () -> binder_is_boxed j)
+                  read_is_boxed j occ
                 | _ -> false
               in
               ( match ft with
@@ -4299,7 +4296,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let is_erased_rel =
               match e with
               | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
-                Representation_plan.read ~occ (fun () -> binder_is_boxed j)
+                read_is_boxed j occ
               | _ -> false
             in
             ( match ft with
@@ -4982,7 +4979,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | Some ty when not (prints_as_any ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
         let rec is_cpp_erased_var_rec = function
-          | MLrel (i, occ) -> Representation_plan.read ~occ (fun () -> binder_is_boxed i)
+          | MLrel (i, occ) -> read_is_boxed i occ
           | MLmagic (_, t') -> is_cpp_erased_var_rec t'
           | _ -> false
         in
@@ -5647,13 +5644,13 @@ and gen_call_args ~slot ?expected_ty env id plan =
       | _ -> expr
     in
     (* A bare local variable known to be boxed as [std::any]
-       ([binder_is_boxed]) — e.g. a leaf pulled out of an erased-pair
+       ({!read_is_boxed}) — e.g. a leaf pulled out of an erased-pair
        destructure — passed directly to a plain global function whose
        parameter type is concrete.  Mirrors the equivalent check for
        non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
     let ml_arg_is_erased_rel =
       match ml_arg with
-      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) -> Representation_plan.read ~occ (fun () -> binder_is_boxed j)
+      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) -> read_is_boxed j occ
       | _ -> false
     in
     match param_ml_ty with
@@ -6929,14 +6926,14 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     in
     let callee_cpp_erased =
       match f with
-      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> Representation_plan.read ~occ (fun () -> binder_is_boxed i)
+      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> read_is_boxed i occ
       | _ -> false
     in
     (* A pattern binder whose definition-site field type is a type variable
        still has a concrete C++ type when the scrutinee instantiates that
        variable concretely — [populate_erased_field_env] recorded it in
-       [cpp_binder_types] at that concrete type, which is what makes
-       [binder_is_boxed] answer no for it.
+       [cpp_binder_types] at that concrete type, and the plan does not box
+       it ({!read_is_boxed}).
        Its erased ML type must not be taken at face value here, or a perfectly
        concrete [std::function<uint64_t(uint64_t)>] field gets wrapped in an
        [any_cast] that does not compile. *)
@@ -6999,7 +6996,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        | None -> false)
     in
     (* [has_unresolved_boxed_arg]: set when an argument is statically known to
-       be boxed as [std::any] ([binder_is_boxed]) but the callee's parameter
+       be boxed as [std::any] ({!read_is_boxed}) but the callee's parameter
        type at this position can't be resolved to a concrete C++ type (it is
        itself abstract/erased, e.g. a value-dependent type scheme like
        [S.sem a]).  This happens when the callee is a genuinely-concrete
@@ -7037,7 +7034,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | MLmagic (_, _) ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
-        | MLrel (j, occ) when Representation_plan.read ~occ (fun () -> binder_is_boxed j) ->
+        | MLrel (j, occ) when read_is_boxed j occ ->
           let inner = gen_expr ~slot:arg_slot env x in
           let expected = param_expected_cpp_ty env callee_param_tys i in
           ( match expected with
@@ -8140,7 +8137,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
       let body_is_erased =
         match body with
         | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ)) ->
-          not (Representation_plan.read ~occ (fun () -> binder_is_boxed i)) && is_env_var_erased env tvars i
+          not (read_is_boxed i occ) && is_env_var_erased env tvars i
         | _ -> false
       in
       if body_is_erased then (fun e -> k (Cpp_erasure.unbox ret e))
@@ -8158,7 +8155,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
 and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   (* Save the ML type for temps computation after fix_a_fired is known. *)
   let ml_typ = typ in
-  let cs = custom_match_scrutinee env typ t pv ~var_boxed:binder_is_boxed ~var_type:get_env_type_opt in
+  let cs = custom_match_scrutinee env typ t pv ~var_boxed:read_is_boxed ~var_type:get_env_type_opt in
   let scrut_is_mlmagic = cs.cs_mlmagic in
   let scrut_is_cpp_erased = cs.cs_cpp_erased in
   let scrut_is_magic = cs.cs_magic in

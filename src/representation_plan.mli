@@ -6,9 +6,9 @@
     plan decides which from the Core body of a region before translation
     lowers it.
 
-    Transitional.  Lowering decides a binder's representation itself, by the
-    C++ type it records for each binder ({!Translation_types.binder_is_boxed});
-    the plan reaches an answer for every pattern binder of a region from the
+    Lowering also records a C++ type for each binder, and reads whether it
+    is a box off that ({!Translation_types.binder_is_boxed}) only to hold
+    the plan to it under [CRANE_CHECK_IR].  The plan reaches an answer for every pattern binder of a region from the
     region's Core body alone -- the ML types its binders are bound at, the
     type each match is annotated with, the constructors' declared fields, the
     scope's type variables -- by the same decisions lowering makes
@@ -21,11 +21,10 @@
     second declaration of a branch's fields, a record projection's.  An enum
     branch binds none.
 
-    Lowering takes whether a variable read holds a box from the plan
-    ({!read}); its own answer is the fallback for a read the plan has none
-    for, and the oracle the plan is held to under [CRANE_CHECK_IR].  Pattern
-    binders' declarations, and every C++ type lowering spells a binder at,
-    are still its own.
+    Lowering takes whether a variable read holds a box from the plan alone
+    ({!Translation_types.read_is_boxed}); a read the plan has no answer for
+    is an anomaly.  Pattern binders' declarations, and every C++ type
+    lowering spells a binder at, are still its own.
 
     A lambda's binders are planned where lowering generates it: one a custom
     constructor stores into an erased field, rewritten as lowering rewrites
@@ -49,7 +48,7 @@
     Every variable read of the region is planned too, whatever bound the
     binder it reads -- a pattern, a let, a lambda's parameter, a local
     fixpoint, the region's outer scope -- and checked against lowering's
-    answer where it is read ({!check_read}).  A let bound to a component read
+    answer where it is read ({!Translation_types.read_is_boxed}).  A let bound to a component read
     out of a pair recovered from a box is bound at a dummy type, as lowering
     binds it ({!Translation_types.stmts_yield_boxed}). *)
 
@@ -73,18 +72,3 @@ val region :
     pinned down -- the reuse arm's second declaration of a branch's fields, a
     record projection in an expression -- and checked against that answer. *)
 val check : ?as_bound:bool -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit
-
-(** [check_read ~occ ~live] -- a [CRANE_CHECK_IR] violation unless the
-    region's plan ({!Translation_state.translation_ctx.planned_reads}) boxes
-    the binder the variable read at [occ] reads exactly when lowering does
-    ([live]).  A read the plan has no answer for is a violation too. *)
-val check_read : occ:Miniml.Occurrence.t -> live:bool -> unit
-
-(** [read ~occ live] -- whether the variable read at [occ] holds a box: the
-    region's plan ({!region}), where it has an answer, otherwise [live ()],
-    lowering's own ({!Translation_types.binder_is_boxed}).  Under
-    [CRANE_CHECK_IR] the plan's answer is held to [live ()] ({!check_read}). *)
-val read : occ:Miniml.Occurrence.t -> (unit -> bool) -> bool
-
-(** Whether the region's plan has an answer for the read at [occ]. *)
-val has_read : Miniml.Occurrence.t -> bool

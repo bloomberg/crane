@@ -2451,6 +2451,50 @@ let binder_is_boxed i =
   | Some Topaque | None -> false
   | Some t -> resolves_to_any_type t
 
+(* How a binder kind is named in probe output. *)
+let binder_kind_name = function
+  | Kouter -> "outer"
+  | Kparameter -> "parameter"
+  | Klet -> "let"
+  | Kfix -> "fix"
+  | Kpattern -> "pattern"
+
+(** [read_is_boxed i occ] -- whether the variable read at [occ], of the
+    binder at de Bruijn index [i], holds a box: the answer the region's
+    representation plan ({!Representation_plan.region}) gives for [occ],
+    which plans every read of every region.  A read it has no answer for is
+    an anomaly.  Under [CRANE_CHECK_IR] the answer is held to
+    {!binder_is_boxed}, the one read off the binder's recorded C++ type. *)
+let read_is_boxed i occ =
+  let live () = binder_is_boxed i in
+  let describe live planned =
+    Pp.(
+      str "a read"
+      ++ (match (!tctx).body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+      ++ str ": lowering "
+      ++ str (if live then "boxes" else "does not box")
+      ++ str " its binder, the plan " ++ str planned)
+  in
+  match List.assq_opt occ (!tctx).planned_reads with
+  | Some {rd_boxed; rd_kind} ->
+    ( if Probe.checking () then
+        let live = live () in
+        let agrees = rd_boxed = live in
+        Probe.hit "repr-read" (fun () ->
+            (if agrees then "agree " else "disagree ")
+            ^ binder_kind_name rd_kind
+            ^ if live then " live-boxed" else " live-value");
+        if not agrees then
+          Probe.violation "variable read representation"
+            (describe live ((if rd_boxed then "boxes" else "does not") ^ " (" ^ binder_kind_name rd_kind ^ ")")) );
+    rd_boxed
+  | None ->
+    CErrors.anomaly
+      Pp.(
+        str "a read of " ++ int i
+        ++ (match (!tctx).body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+        ++ str " is in no representation plan of the region it is lowered in")
+
 (** Record the C++ type of each of the [ids] most recently pushed binders,
     without pushing them again.  [?cpp] overrides the conversion for binders
     whose declared C++ type the caller has already computed; a declaration is
@@ -2874,12 +2918,12 @@ let dict_carrier_type_args env tvars id args =
     runtime helper so the canonical [std::function<std::any(std::any...)>]
     representation is stored (matching the [any_cast] on the application side)
     rather than a raw closure.  An [MLrel] already erased to [std::any]
-    ([binder_is_boxed]) is excluded: it is not callable, so wrapping it
+    ({!read_is_boxed}) is excluded: it is not callable, so wrapping it
     would miscompile. *)
 let ml_expr_is_function_value e =
   match strip_magic e with
-  | MLrel (i, _) ->
-    (not (binder_is_boxed i))
+  | MLrel (i, occ) ->
+    (not (read_is_boxed i occ))
     && ( match get_env_type_opt i with
        | Some t -> count_ml_value_arrows t >= 1
        | None -> false )
@@ -3789,8 +3833,9 @@ let unbox_into into e =
 
 (** What a custom match over [t], annotated [typ], with branches [pv], knows
     about whether its scrutinee is boxed, as {!Translation.gen_custom_cpp_case}
-    decides it: [var_boxed] says whether a variable's binder holds a box,
-    [var_type] gives its ML type.  Reads no binder itself. *)
+    decides it: [var_boxed i occ] says whether the variable read at [occ],
+    of the binder at de Bruijn index [i], holds a box, [var_type] gives a
+    binder's ML type.  Reads no binder itself. *)
 type custom_scrutinee = {
   cs_mlmagic : bool;  (** a coercion that boxes *)
   cs_cpp_erased : bool;  (** a variable whose binder holds a box *)
@@ -3818,13 +3863,13 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
      by an outer [fix_a_fired] pair match (detected via its binder). *)
   let scrut_is_mlmagic = match t with MLmagic (m, _) -> magic_is_boxed env m | _ -> false in
   let scrut_is_cpp_erased = match t with
-    | MLrel (i, _) -> var_boxed i
+    | MLrel (i, occ) -> var_boxed i occ
     | _ -> false
   in
   let scrut_is_magic = match t with
     | MLmagic (m, _) -> magic_is_boxed env m
-    | MLrel (i, _) ->
-      var_boxed i
+    | MLrel (i, occ) ->
+      var_boxed i occ
       || (match var_type i with
           (* An ML type that erases on its own may still have been written
              down concretely here -- a typeclass carrier resolved by the
