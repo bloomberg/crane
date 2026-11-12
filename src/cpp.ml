@@ -2338,7 +2338,8 @@ let plan_referenced_names s =
 
 (* The inductive the module [mp], of elements [sel], is promoted to where it
    is rendered outside every struct: its eponymous inductive, neither a record
-   nor a class, where it declares no other inductive and no submodule --
+   nor a class nor an enum, where it declares no other inductive and no
+   submodule --
    the last eponymous packet, as {!pp_structure_elem} reads them, with its
    block. *)
 let promoted_inductive mp sel =
@@ -2353,8 +2354,10 @@ let promoted_inductive mp sel =
       List.fold_left
         (fun found i ->
           let r = GlobRef.IndRef (kn, i) in
-          if String.equal (String.lowercase_ascii (Common.pp_global_name Type r)) module_name then
-            Some (r, ind)
+          if
+            String.equal (String.lowercase_ascii (Common.pp_global_name Type r)) module_name
+            && not (Table.is_enum_inductive r)
+          then Some (r, ind)
           else found )
         None
         (List.init (Array.length ind.ind_packets) Fun.id)

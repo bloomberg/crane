@@ -511,8 +511,11 @@ let ind_header_decls scope kn ind =
               promoted_sft := Some ds.ds_needs_shared_from_this;
               (empty_env (), Dfields ds) :: pp (i + 1)
             | _ ->
-              (* Non-Dstruct promoted inductive (shouldn't happen normally) *)
-              (empty_env (), decl) :: pp (i + 1)
+              (* Only an enum generates something else, and an enum is never
+                 promoted ({!Module_frame.promoted}). *)
+              CErrors.anomaly
+                Pp.(str "Crane: the promoted inductive " ++ GlobRef.print names.(i)
+                    ++ str " generated no struct.")
           else
             (* DESIGN: Contextual wrapping for inductive definitions - If inside
                a struct/module: generate the inductive directly (no namespace
