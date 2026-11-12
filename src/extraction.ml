@@ -853,7 +853,7 @@ and extract_type_app env sg db (r, s) args =
             let db = iterate (fun l -> 0 :: l) p db in
             let ty = type_of env sg c in
             let ty = extract_type_scheme env sg db ty p in
-            extract_term env sg Mlenv.empty ty c [] :: a
+            Core_normalize.spine (extract_term env sg Mlenv.empty ty c []) :: a
           with _ -> a ) )
       (List.combine s args)
       []

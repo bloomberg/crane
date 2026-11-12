@@ -2821,7 +2821,7 @@ let eta_bound_lambda t a =
       let applied =
         match ast_lift d body with
         | MLapp (f, xs) -> MLapp (f, xs @ args)
-        | lifted -> MLapp (lifted, args)
+        | lifted -> Core_normalize.apply lifted args
       in
       named_lams binders (named_lams (List.rev new_binders) applied)
   | _ -> a

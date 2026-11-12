@@ -50,7 +50,7 @@ let layers ty body =
       let applied =
         match Mlutil.ast_lift 1 body with
         | MLapp (f, args) -> MLapp (f, args @ [arg])
-        | f -> MLapp (f, [arg])
+        | f -> Core_normalize.apply f [arg]
       in
       let body = MLlam (Id (Id.of_string "x"), arg_ty, applied) in
       strip_outer_layers ty body tc_acc lam_acc
@@ -233,7 +233,10 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
   (* The method is generated more than once -- declared, then defined --
      and each generation gives the body's open annotations identities of its
      own. *)
-  let field_body = strip_magic field_body in
+  (* A field body is substituted into ([record_body]) and applied to
+     invented parameters ([layers]) after {!Core_normalize.structure} ran:
+     canonical again only once its spines are read again. *)
+  let field_body = Core_normalize.spine (strip_magic field_body) in
   let field_body = if freshen then Mlutil.freshen_metas field_body else field_body in
   (* Substitute type class parameter with instance's type arg in the
      field type. This gives us the concrete return type (e.g., bool for
@@ -436,7 +439,7 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
           List.fold_left
             (fun acc (i, ty) ->
               MLlam (Id (Id.of_string ("a" ^ string_of_int i)), ty, acc) )
-            (MLapp (inner, args))
+            (Core_normalize.apply inner args)
             (List.rev (List.mapi (fun i t -> (i, t)) missing_tys))
       in
       expand field_body
@@ -527,7 +530,7 @@ let eta_call m inner_body =
     in
     let params = List.mapi (fun i t -> (Id.of_string ("a" ^ string_of_int i), t)) arg_types in
     (* The body's de Bruijn indices lifted over the new parameters. *)
-    Some (params, MLapp (Mlutil.ast_lift nparams inner_body, ml_rels))
+    Some (params, Core_normalize.apply (Mlutil.ast_lift nparams inner_body) ml_rels)
 
 let methods name body ty =
   let {inner_ty; inner_body; lam_params; _} = layers ty body in

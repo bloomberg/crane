@@ -625,7 +625,9 @@ val normalize : ml_ast -> ml_ast
 (** [apply_eta_args f args] is [f] applied to [args], with the application
     placed where [f] produces its value rather than wrapped around [f] -- for
     callers that build an application after simplification has already run,
-    such as eta-expansion to a declaration's arity. *)
+    such as eta-expansion to a declaration's arity.  The result is
+    canonical ({!canonical}), as every term built after
+    {!Core_normalize.structure} must be. *)
 val apply_eta_args : ml_ast -> ml_ast list -> ml_ast
 
 (** Optimize fixpoint expressions. *)

@@ -32,16 +32,17 @@ let () =
   check "the class arguments are substituted into the declared type"
     (reduced.subst_ty = Tarr (nat, Tarr (nat, nat)));
   check "the declared arity is the field's" (reduced.declared_arity = 2);
+  (* Expanded canonically ({!Core_normalize}): the global is applied once. *)
   check "a body eta-reduced below the declared arity is expanded back to it"
     ( reduced.body
     = MLlam
         ( Id (Id.of_string "x"),
           nat,
-          MLlam (Id (Id.of_string "a0"), nat, MLapp (MLapp (add, [fresh_rel 2]), [fresh_rel 1])) ) );
+          MLlam (Id (Id.of_string "a0"), nat, MLapp (add, [fresh_rel 2; fresh_rel 1])) ) );
   let params, inner = Instance_methods.params reduced in
   check "the accessor takes each binder up to the arity as a parameter"
     (List.length params = 2 && List.for_all (fun p -> not p.Instance_methods.erased) params);
-  check "the body past the parameters is the call" (inner = MLapp (MLapp (add, [fresh_rel 2]), [fresh_rel 1]));
+  check "the body past the parameters is the call" (inner = MLapp (add, [fresh_rel 2; fresh_rel 1]));
   check "a body taking its parameters is not eta-called" (Instance_methods.eta_call reduced inner <> None);
   let point_free = prepare op_ty add in
   check "a body naming a function point-free is left as written" (point_free.body = add);

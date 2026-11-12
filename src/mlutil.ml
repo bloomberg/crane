@@ -2648,7 +2648,7 @@ let apply_eta_args f args =
       | MLrel (i, o) when List.exists (Occurrence.equal o) reads -> fresh_rel i
       | e -> ast_map own e
     in
-    own (simpl_app (optims ()) args f)
+    own (canonical (simpl_app (optims ()) args f))
 
 (** {1 Special treatment of fixpoint for pretty-printing purpose} *)
 

@@ -10,14 +10,18 @@
     - a match with one branch, which is a destructuring and nothing else:
       [(let (x, y) := p in g x) a] is [let (x, y) := p in g x a].
 
-    {!structure} makes every definition body canonical, so an analysis of
-    the structure -- which parameters a call owns ({!Escape}) -- reads the
-    same call the printer emits: a global applied in stages had its first
-    stage taken for a partial application that captures its arguments. *)
+    The contract is total.  {!structure} makes every definition body
+    canonical, extraction makes the terms a type carries canonical where it
+    builds them ({!Extraction.extract_type_app}), and every application built
+    later is built with {!apply} or {!Mlutil.apply_eta_args}.  So translation
+    reads each call as it is written, and an analysis of the structure --
+    which parameters a call owns ({!Escape}) -- reads the same call the
+    printer emits: a global applied in stages had its first stage taken for
+    a partial application that captures its arguments. *)
 
 (** [apply f args], [f] and [args] canonical: the canonical form of
-    [MLapp (f, args)] ({!Mlutil.canonical_app}), for an application built
-    after {!structure} has run. *)
+    [MLapp (f, args)] ({!Mlutil.canonical_app}).  Every application built
+    after {!structure} has run is built with this. *)
 val apply : Miniml.ml_ast -> Miniml.ml_ast list -> Miniml.ml_ast
 
 (** [spine e] is [e] with every application canonical
