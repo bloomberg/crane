@@ -10,9 +10,9 @@
     undecided capture or [constexpr], an uninstantiated mapping block or
     match -- has no constructor to convert to, and fails the conversion.
 
-    Nothing reads the result yet: {!Unit_program.finish} converts every
-    declaration it finishes under [CRANE_CHECK_IR], as a check that the
-    finished declarations are expressible in CppIR. *)
+    {!Unit_program.finish} converts every declaration it finishes, and a
+    declaration that does not convert is an anomaly; the program holds
+    both. *)
 
 (** Why a declaration did not convert. *)
 type failure =

@@ -51,8 +51,8 @@ type defined =
 and defined_name = As_defined | As_inductive_wrapper
 
 type declaration =
-  | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
-  | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
+  | Declaration of {env : Common.env; settled : Cpp_erasure.settled; ir : Cpp_ir.Resolved.Decl.t}
+  | Absorbed of {env : Common.env; settled : Cpp_erasure.settled; ir : Cpp_ir.Resolved.Decl.t}
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
@@ -179,8 +179,8 @@ let decl ~needs text = Decl {text; needs}
 let leaf ?(needs = Needs.none) ?tyctors declaration =
   Unprinted {declaration; needs; names = Cpp_resolution.unresolved; tyctors}
 
-let unprinted ~needs ?tyctors env settled = leaf ~needs ?tyctors (Declaration {env; settled})
-let absorbed ?tyctors env settled = leaf ?tyctors (Absorbed {env; settled})
+let unprinted ~needs ?tyctors env {Finished_decl.settled; ir} = leaf ~needs ?tyctors (Declaration {env; settled; ir})
+let absorbed ?tyctors env {Finished_decl.settled; ir} = leaf ?tyctors (Absorbed {env; settled; ir})
 let fields ~needs ?tyctors ~record ~vars fields = leaf ~needs ?tyctors (Fields {record; vars; fields})
 let modtype_concept ~path ~params concept = leaf (Modtype_concept {path; params; concept})
 let global_alias a = leaf (Global_alias a)

@@ -37,7 +37,7 @@ open Cpp_names
 type generated = (Common.env * Minicpp.cpp_decl) list
 
 (** Declarations finished for the printer. *)
-type rendered = (Common.env * Cpp_erasure.settled) list
+type rendered = (Common.env * Finished_decl.t) list
 
 
 (** Print the declarations an entry point answered with. *)
@@ -1048,8 +1048,10 @@ let declaration_of ~what id d =
       Pp.(str "Crane: " ++ str what ++ str " was rendered that was not finished ahead of \
                                          the files.")
 
-(** [finished_of ~what id d] is the MiniCpp of {!declaration_of}. *)
-let finished_of ~what id d = (declaration_of ~what id d).finished
+(** [finished_of ~what id d] is {!declaration_of}, in both IRs. *)
+let finished_of ~what id d =
+  let {Unit_program.finished; ir; _} = declaration_of ~what id d in
+  {Finished_decl.settled = finished; ir}
 
 (** The function entity of the declaration [id] of the unit's program,
     finished from [d]. *)
@@ -1353,8 +1355,8 @@ let resolve_tree ~file t =
 
 let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file) ~resolve_head:(head_resolver_at ~file)
 
-let names_into_a_struct_as_written ~file spelling settled =
-  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled})) in
+let names_into_a_struct_as_written ~file spelling {Finished_decl.settled; ir} =
+  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled; ir})) in
   at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names settled)
 
 let write_unprinted ~file spelling u =
