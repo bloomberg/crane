@@ -202,6 +202,14 @@ val singleton_dictionary_call :
     but a construction. *)
 val shared_constant : Miniml.ml_ast -> bool
 
+(** [match_kind ty branches occ] -- how the match annotated [ty] with
+    [branches] at the occurrence [occ] is lowered ({!Match_kind.classify}):
+    as the walk decided it for that occurrence.  Where the walk made no
+    single decision there, or is not installed yet, decided from [ty] and
+    [branches]; under [CRANE_CHECK_IR] a planned decision is checked against
+    that one. *)
+val match_kind : Miniml.ml_type -> Miniml.ml_branch array -> Miniml.Occurrence.t -> Match_kind.t
+
 (** How many calls the unit elaborated ahead, and how many emission found
     there or elaborated itself. *)
 val report : unit -> string

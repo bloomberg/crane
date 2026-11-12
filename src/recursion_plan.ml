@@ -444,8 +444,7 @@ let rec arguments = function MLmagic (_, e) -> arguments e | MLapp (_, args) -> 
    side as statements, each branch assigning the binder -- a custom match,
    or a record's -- rather than in a lambda invoked in place, as it does
    any other. *)
-let match_bound_in_place ty branches =
-  Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
+let match_bound_in_place ty branches = Match_kind.bound_in_place (Match_kind.classify ty branches)
 
 (* The points the body of [origin], standing in [lex], resumes at once a
    recursive call returns: a let whose right-hand side is the call, or ends

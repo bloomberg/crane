@@ -236,7 +236,7 @@ let region ~outer body =
        dependent parameter's field retyped as erased; in an expression, not
        ([pr_bound_boxed]).  The body is planned at the statement form's. *)
     | MLcase (ty, scrut, ([|(ids, _, _, body)|] as branches), occ)
-      when (not (Table.is_custom_match branches)) && Table.record_fields_of_type ty <> [] ->
+      when Match_kind.is_record (Match_kind.classify ty branches) ->
       walk scope scrut;
       let bound = List.map (fun (_, t) -> at_binding t) ids in
       let retyped = List.map (fun (_, t) -> at_binding t) (retype_dependent_params ty ids) in
@@ -252,7 +252,7 @@ let region ~outer body =
       walk scope scrut;
       let var_type = Lexenv.type_opt scope.lex in
       let fields =
-        if Table.is_custom_match branches then
+        if Match_kind.classify ty branches = Match_kind.Custom then
           let cs =
             custom_match_scrutinee (Common.empty_env ()) ty scrut branches
               ~var_boxed:(fun i _ -> boxed (planned scope i)) ~var_type

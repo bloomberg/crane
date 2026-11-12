@@ -357,13 +357,17 @@ type t = {
       (** Each construction, by its constructor and then its occurrence:
           whether it is a closed term of a shared variant
           ({!is_shared_constant_term}). *)
+  matches : (Occurrence.t * Match_kind.t) list Int.Map.t;
+      (** Each match, by its number of branches and then its occurrence:
+          how it is lowered ({!Match_kind.classify}). *)
 }
 
 let empty =
   { calls = Ref.User.Map.empty;
     named = GlobRef.Set_env.empty;
     dictionary_calls = [];
-    constructions = GlobRef.Map_env.empty }
+    constructions = GlobRef.Map_env.empty;
+    matches = Int.Map.empty }
 
 (* Whether [e] is a closed constructor term of a shared variant with fields:
    built from constructors, literals and erased arguments only, so its value
@@ -615,7 +619,14 @@ let rec walk w ?(position = no_position) lex e =
     walk_type w lex ty;
     List.iter (go ~position:{expected = None; stated = position.stated} lex) args
   | MLtuple args -> List.iter (go lex) args
-  | MLcase (ty, scrut, branches, _) ->
+  | MLcase (ty, scrut, branches, occ) ->
+    let kind = Match_kind.classify ty branches in
+    w.b :=
+      { !(w.b) with
+        matches =
+          Int.Map.update (Array.length branches)
+            (fun l -> Some ((occ, kind) :: Option.default [] l))
+            !(w.b).matches };
     walk_type w lex ty;
     go lex scrut;
     (* A branch's result type is written under its binders: a custom match
@@ -1078,6 +1089,14 @@ let shared_constant = function
     in
     lookup "shared constants" ~equal:Bool.equal ~live:(fun () -> is_shared_constant_term e) planned
   | _ -> false
+
+let match_kind ty branches occ =
+  let planned =
+    match Int.Map.find_opt (Array.length branches) !installed.matches with
+    | None -> None
+    | Some l -> agreed ( = ) (List.filter_map (fun (o, k) -> if Occurrence.equal o occ then Some k else None) l)
+  in
+  lookup "match kinds" ~equal:( = ) ~live:(fun () -> Match_kind.classify ty branches) planned
 
 let report () =
   let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) !installed.calls 0 in

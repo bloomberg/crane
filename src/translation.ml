@@ -4362,7 +4362,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       nstempmod record_arg_exprs
     in
     cons_result
-  | MLcase (typ, t, pv, case_occ) when is_custom_match pv ->
+  | MLcase (typ, t, pv, case_occ) when Core_elaborate.match_kind typ pv case_occ = Match_kind.Custom ->
     let iife_ret =
       let branch_rty =
         match Array.to_list pv with
@@ -4384,10 +4384,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     mk_iife (Some iife_ret) stmts
   | MLcase (typ, t, pv, case_occ)
-    when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
+    when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
     let ids, r, pat, body = pv.(0) in
     let n = List.length ids in
-    let is_typeclass = Table.is_typeclass_type typ in
+    let is_typeclass, record_body =
+      match Core_elaborate.match_kind typ pv case_occ with
+      | Match_kind.Record {typeclass; body} -> (typeclass, body)
+      | Custom | Variant -> CErrors.anomaly (Pp.str "gen_expr: a record projection Core did not classify as one")
+    in
     (* Build lists that correctly account for erased fields.
        record_fields_of_type includes None entries for erased fields; ids only
        contains non-erased bindings. So MLrel i refers to the i-th non-erased
@@ -4436,21 +4440,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | MLmagic (_, b) -> b
       | b -> b
     in
-    ( match body' with
-    | MLrel (i, _) when i <= n ->
+    ( match (record_body, body') with
+    | Projection {field; application = Read}, _ ->
       let fld =
-        try Some (List.nth non_erased_fields (n - i)) with _ -> None
+        try Some (List.nth non_erased_fields field) with _ -> None
       in
       ( match fld with
       | Some fld ->
         let access = make_field_access (gen_expr env t) fld in
-        let access = wrap_record_field_to_api (n - i) access in
+        let access = wrap_record_field_to_api field access in
         if is_typeclass then
           (* For typeclasses, non-function value fields (like m_id : carrier)
              are generated as nullary static methods, so we need () to call
              them *)
           let fld_ty =
-            try List.nth non_erased_field_types (n - i)
+            try List.nth non_erased_field_types field
             with _ -> Miniml.Tunknown
           in
           let is_value_field =
@@ -4487,9 +4491,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           access
       | _ ->
         CErrors.anomaly (Pp.str "record field index out of bounds") )
-    | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _))), args) when i <= n ->
+    | Projection {field; application = Call | Coerced_call}, MLapp (_, args) ->
       let fld =
-        try Some (List.nth non_erased_fields (n - i)) with _ -> None
+        try Some (List.nth non_erased_fields field) with _ -> None
       in
       let branch_binders =
         List.rev_map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids
@@ -4509,7 +4513,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            A class's method is a function declared at the field's own arity. *)
         let declared =
           try
-            let ty = List.nth non_erased_field_types (n - i) in
+            let ty = List.nth non_erased_field_types field in
             Some (if is_typeclass then ty else expand_ml_fun_alias ty)
           with _ -> None
         in
@@ -4733,7 +4737,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           ~fun_ty:(if is_typeclass then None else fld_ty_opt)
           ~n_args:n_value_args ~want:expected_ty call
       | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
-    | _ ->
+    | Destructure, _ | Projection _, _ ->
       (* Destructure record fields into local variables, then evaluate the body
          in an IIFE. push_vars' may rename variables to avoid shadowing
          identifiers already in scope — e.g. when a record has a field
@@ -9795,7 +9799,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       else
         [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
     end
-  | MLcase (typ, t, pv, case_occ) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv case_occ
+  | MLcase (typ, t, pv, case_occ) when Core_elaborate.match_kind typ pv case_occ = Match_kind.Custom ->
+    gen_custom_cpp_case env k typ t pv case_occ
   | MLcons (_, r, [], _) when Table.is_tt_constructor r
       && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
@@ -9817,16 +9822,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLmagic (_, MLexn msg) ->
     (* Handle MLexn wrapped in MLmagic *)
     [Sthrow msg]
-  | MLcase (typ, t, pv, case_occ)
-    when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
+  | MLcase (typ, t, pv, case_occ) when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
     let ids, _r, _pat, body = pv.(0) in
     let n = List.length ids in
-    let body' = match body with MLmagic (_, b) -> b | b -> b in
-    let is_simple =
-      match body' with
-      | MLrel (i, _) when i <= n -> true
-      | MLapp (MLrel (i, _), _) when i <= n -> true
-      | _ -> false
+    let is_typeclass, is_simple =
+      match Core_elaborate.match_kind typ pv case_occ with
+      | Match_kind.Record {typeclass; body = Projection {application = Read | Call; _}} -> (typeclass, true)
+      | Record {typeclass; body = Projection {application = Coerced_call; _} | Destructure} -> (typeclass, false)
+      | Custom | Variant -> CErrors.anomaly (Pp.str "gen_stmts: a record projection Core did not classify as one")
     in
     if is_simple then
       (* Simple body: gen_expr handles these as direct field access (no IIFE),
@@ -9848,7 +9851,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Complex body: emit field extraction assignments as flat statements
          instead of wrapping in an IIFE. This produces clean code for all
          continuations (return, assignment, etc.). *)
-      let is_typeclass = Table.is_typeclass_type typ in
       let all_fields = record_fields_of_type typ in
       let non_erased_fields = List.filter_map Fun.id all_fields in
       let make_field_access base_expr fld =

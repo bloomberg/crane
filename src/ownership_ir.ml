@@ -399,15 +399,16 @@ let rec spelled_in_place = function
    a record's fields are read one at a time, and any other custom match
    evaluates its scrutinee once. *)
 let scrutinee_consumed ty scrut branches =
-  if Table.is_custom_match branches then
+  match Match_kind.classify ty branches with
+  | Custom ->
     let uses =
       List.length
         (List.filter (( = ) Foreign_template.CCscrut)
            (Foreign_template.match_template (Table.find_custom_match branches)) )
     in
     uses <= 1 || not (spelled_in_place scrut)
-  else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then true
-  else
+  | Record _ -> true
+  | Variant ->
     Array.for_all
       (fun (_, _, pat, _) ->
         match pat with
@@ -442,8 +443,7 @@ let call_of a =
 (* Whether the branches of a match on a value of type [ty] are where the
    value of the match is bound, rather than in a closure run in its place
    (as {!Recursion_plan} reads a right-hand side ending in its branches). *)
-let bound_in_place ty branches =
-  Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
+let bound_in_place ty branches = Match_kind.bound_in_place (Match_kind.classify ty branches)
 
 (* The calls [a] ends in: the call it is, or those the branches of a match
    bound in place end in, through lets and casts. *)
@@ -972,17 +972,18 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
              arms ->
       (* Rebuilding in the scrutinee's storage moves every field out of it. *)
       Levels.union (Levels.remove (d - i) owned) (fields (fun _ _ -> true))
-    | _ ->
-      if Table.is_custom_match branches then
+    | _ -> (
+      match Match_kind.classify ty branches with
+      | Custom ->
         if Binding.pair_by_value ~owned:(owned_var owned d) scrut branches then
           Levels.union owned (fields (fun _ (_, ty) -> worth_moving ty))
         else owned
-      else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then
+      | Record _ -> (
         match List.find_map (function Fields f when f.case == case -> Some f.by_value | _ -> None) arms with
         | Some by_value ->
           Levels.union owned (fields (fun i (_, ty) -> List.nth_opt by_value i = Some true && worth_moving ty))
-        | None -> owned
-      else
+        | None -> owned )
+      | Variant -> (
         match (pat, ind) with
         | (Pusual r | Pcons (r, _)), Some ind
           when (not (Table.is_enum_inductive ind)) && not (Table.is_shared_variant ind) ->
@@ -999,7 +1000,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
             let stored = Ml_type_util.Ctor_fields.of_ctor r in
             Levels.union owned (fields (fun i _ -> not (Ml_type_util.Ctor_fields.behind_pointer stored i)))
           else owned
-        | _ -> owned
+        | _ -> owned ) )
   in
   own owned 0 t;
   (!out, !read_types, !captured, !copied_reads, !saved_owned, !entry_owned)
