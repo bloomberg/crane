@@ -2022,7 +2022,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        positions become the lambda's own template parameter, so the parameter
        reads [const E<_X> &] and the body says [_X] where it would otherwise
        guess.  The callee recovers the result with [std::invoke_result_t]; see
-       {!Gen_decls.relax_tt_applied_return}. *)
+       {!Plan_templates.relax_tt_applied_return}. *)
     let rank2_carrier =
       (* Only where the slot deduces the callback's type.  A slot that spells
          its own signature -- a [std::function<Nat(std::any)>] field, say --
@@ -8064,7 +8064,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
         (* Pick the first candidate whose matched constructor has a recursive
            field (skips nullary-reconstruction arms like Nil->Nil that have no
            cell to recycle). *)
-        List.find_map try_cand (Escape.find_reuse_candidates typ pv)
+        List.find_map try_cand (Escape.find_reuse_candidates pv)
       else None
     in
     ( match reuse_stmts_opt with

@@ -2039,7 +2039,7 @@ let erased_into_storage_tparam ~params body =
     its own choosing, and the [std::any] standing in for that type is not what
     comes back -- a handler for [forall X, E X -> M X] returns [M nat] where the
     constraint would demand [M std::any].  The result is recovered where it is
-    used, by {!Gen_decls.relax_tt_applied_return} or by the deduction the call
+    used, by {!Plan_templates.relax_tt_applied_return} or by the deduction the call
     itself performs.
 
     Read by the printer, which drops such a clause, and by the relaxations,

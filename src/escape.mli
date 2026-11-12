@@ -159,14 +159,13 @@ val is_shared_ptr_type : ml_type -> bool
     one of them is reached on any path through [body]. *)
 val tail_constructions : ml_ast -> ml_ast list
 
-(** [find_reuse_candidates typ pv] returns the match branches whose body builds
+(** [find_reuse_candidates pv] returns the match branches whose body builds
     an [MLcons] of the same inductive type as the matched constructor, as
     [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)] tuples.
-    The caller gates reuse on ownership and a runtime [use_count()==1] check. *)
+    The constructors say the type; the caller gates reuse on ownership and a
+    runtime [use_count()==1] check. *)
 val find_reuse_candidates :
-     ml_type
-  -> ml_branch array
-  -> (int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
+  ml_branch array -> (int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
 
 (** [is_reuse_scrutinee k body]: whether [body] matches on parameter [k]
     (de Bruijn, 1 = innermost) with at least one reuse candidate arm, on a

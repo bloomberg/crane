@@ -663,7 +663,7 @@ let names_only_scoped_tvars ty =
 let spell_in_scope ty =
   if names_only_scoped_tvars ty && not (prints_as_any ty) then Some ty else None
 
-(** The variable {!Gen_decls.relax_tt_applied_return} takes out of [id]'s
+(** The variable {!Plan_templates.relax_tt_applied_return} takes out of [id]'s
     template head, if any: the higher-kinded head of an applied codomain that
     only a callback's result otherwise names -- [case_]'s [M] in [M X], which
     the declaration spells [std::invoke_result_t<F0 &, ...>] instead.  Read off
@@ -693,7 +693,7 @@ let relaxed_tt_return_var id =
 (** The Rocq type-variable positions a call may still write, given that the
     declaration reorders some of them out of reach.
 
-    {!Gen_decls.relax_applied_return} handles a variable named only by the
+    {!Plan_templates.relax_applied_return} handles a variable named only by the
     return type -- C++ deduces nothing from a return type -- by giving it the
     producing callback's result as its default and moving it {e last}, since a
     default may only name parameters declared before it.  That pass records
@@ -721,9 +721,9 @@ let writable_tvar_count id =
   (* Only a codomain that {e applies} a variable is relaxed.  [list B] names
      [B] as a plain leading parameter that the call still has to write, and
      dropping it would leave nothing to deduce it from; [T V] is the
-     higher-kinded shape {!Gen_decls.relax_applied_return} rewrites. *)
+     higher-kinded shape {!Plan_templates.relax_applied_return} rewrites. *)
   (* And only a higher-kinded head: a family's application is written plain,
-     which the declaration does not relax ({!Gen_decls.relax_applied_return}). *)
+     which the declaration does not relax ({!Plan_templates.relax_applied_return}). *)
   let applied_cod =
     match cod with
     | Miniml.Tapp (h, _) ->
