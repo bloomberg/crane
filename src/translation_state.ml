@@ -175,6 +175,12 @@ type translation_ctx = {
 
       Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
   cpp_binder_types : (cpp_type * binder_origin) IntMap.t;
+  (* The C++ types a declaration's head declares its innermost parameters
+     at, innermost first, beside the depth of the binder stack they were
+     pushed at: what a region generated directly in that scope plans those
+     binders at ({!Representation_plan.region}).  [None] where the head
+     declares none beyond the conversion of their ML types. *)
+  declared_outer : (int * cpp_type option list) option;
 }
 
 (** A pattern binder's representation as {!Representation_plan} plans it:
@@ -188,10 +194,12 @@ and planned_repr = {
 }
 
 (** A variable read's binder as {!Representation_plan} plans it: whether it
-    holds a box, and what bound it. *)
+    holds a box, what bound it, and the C++ type it is planned at, where it
+    is planned at one. *)
 and planned_read = {
   rd_boxed : bool;
   rd_kind : binder_kind;
+  rd_type : cpp_type option;
 }
 
 and binder_kind =
@@ -245,6 +253,7 @@ let tctx =
         method_self_ns = Ref.User.Set.empty;
         local_inductives = None;
         cpp_binder_types = IntMap.empty;
+        declared_outer = None;
     }
 
 (** [with_field get set v f] runs [f] with one context field set to [v], and
@@ -664,7 +673,8 @@ let parameter_type env i =
   | Some _ | None -> None
 
 (** Reset the environment type stack to empty.
-    Also clears {!cpp_binder_types}. *)
+    Also clears {!cpp_binder_types} and the head's declared types
+    ([declared_outer]). *)
 let reset_env_types () =
   tctx := { !tctx with env_types = Lexenv.empty };
-  tctx := { !tctx with cpp_binder_types = IntMap.empty }
+  tctx := { !tctx with cpp_binder_types = IntMap.empty; declared_outer = None }

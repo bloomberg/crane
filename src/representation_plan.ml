@@ -463,11 +463,27 @@ let region ~outer body =
     (* A read: whatever its binder is planned. *)
     | MLrel (i, occ) ->
       let rd_kind = Option.default Kouter (List.nth_opt scope.kinds (i - 1)) in
-      reads := (occ, {rd_boxed = boxed (planned scope i); rd_kind}) :: !reads
+      reads := (occ, {rd_boxed = boxed (planned scope i); rd_kind; rd_type = Option.map fst (planned scope i)}) :: !reads
     | e -> Mlutil.ast_iter (walk scope) e
   in
   let depth = Lexenv.depth outer in
-  let outer_planned = List.init depth (fun i -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding) in
+  (* The outer binders a declaration's head declares, at the types it
+     declares them, as {!Translation_types.assign_binder_types} records a
+     declared type; the rest at the conversion of their ML types. *)
+  let declared =
+    match (!tctx).declared_outer with
+    | Some (d, tys) when Int.equal d depth -> tys
+    | _ -> []
+  in
+  let outer_planned =
+    List.init depth (fun i ->
+        match List.nth_opt declared i with
+        | Some (Some t) -> (
+          match strip_param_wrappers t with
+          | t when t <> Topaque && not (is_cpp_dummy_type t) -> Some (t, Binding)
+          | _ -> None )
+        | _ -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding )
+  in
   let scope = {lex = outer; planned = outer_planned; kinds = List.init depth (fun _ -> Kouter)} in
   (* A lambda the region returns is written against the region's return
      type. *)
