@@ -15,7 +15,7 @@ open Minicpp
 (** What a file writes that places the templates it writes: a declaration,
     or the fields of the eponymous record merged into a module's struct,
     which no declaration holds. *)
-type written = Written_declaration of cpp_decl | Written_fields of GlobRef.t
+type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of GlobRef.t
 
 (** The synthesised templates something a file writes writes, in the order
     written, read in the scope being written: what it is, in the module it
@@ -38,7 +38,7 @@ val read_decl : Cpp_state.render_ctx -> Common.env -> Finished_decl.t -> Pp.t
     struct holds, which are its members. *)
 val file_scope_types : Finished_decl.t -> Names.GlobRef.t list
 
-(** The head of every global type in a type. *)
+(** The head of every global type in a MiniCpp type. *)
 val type_heads : cpp_type -> GlobRef.t list
 
 (** The globals a declaration's printing writes beside those it holds: a
@@ -58,7 +58,7 @@ val is_held_back_assertion : Cpp_state.render_ctx -> Finished_decl.t -> bool
     [None] for anything but a function declaration, and where only the
     rendering can tell -- an expression's type, a type constructor named as
     a template argument. *)
-val resolved_names_into_a_struct : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_erasure.settled -> bool option
+val resolved_names_into_a_struct : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_ir.Resolved.Decl.t -> bool option
 
 (** Whether one thing a rendering writes ({!Cpp_name.written}) is a
     qualifier naming into a struct or a template parameter rather than a
@@ -69,7 +69,7 @@ val writes_into_a_struct : Cpp_name.written -> bool
 
 (** Whether a declaration, written as a member of a struct body, is a static
     function declaration ending at its semicolon. *)
-val is_static_member_declaration : cpp_decl -> bool
+val is_static_member_declaration : Cpp_ir.Resolved.Decl.t -> bool
 
 (** [stand_ins t] is, for each type the declarations of [t] declare, a
     member alias of it ({!Cpp_ast.global_alias}): what a struct holds in
@@ -123,7 +123,7 @@ val unprinted : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env ->
     again and compared. *)
 val unprinted_fields :
   Cpp_state.render_ctx ->
-  module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
+  module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * Cpp_ir.Resolved.Type.t) list -> Cpp_ast.t
 
 (** [global_names frames globals] asks for [globals] by name at each of
     [frames]: each whose name is decided -- printing decides none -- as a
@@ -134,7 +134,7 @@ val global_names :
 
 (** The globals writing the type names, for {!global_names}: those whose
     names it writes and the customs it is written from. *)
-val type_globals : Minicpp.cpp_type -> GlobRef.t list
+val type_globals : Cpp_ir.Resolved.Type.t -> GlobRef.t list
 
 (** The globals printing the declaration [d] names, for {!global_names}:
     those it holds, those written beside them -- a template template
@@ -152,13 +152,13 @@ val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolut
 (** What the finished declaration written at the position given, in the
     file it is in, writes; the render of the declaration there reads it back
     from the plan. *)
-val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_erasure.settled -> ctor_aliases_read
+val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_ir.Resolved.Decl.t -> ctor_aliases_read
 
 (** What the fields of the record [r], of types [types], written at the
     position given, write, their type variables read as [vl]; the render of
     the fields there reads it back from the plan. *)
 val ctor_aliases_of_fields :
-  Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> cpp_type list -> ctor_aliases_read
+  Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> Cpp_ir.Resolved.Type.t list -> ctor_aliases_read
 
 (** {!Cpp_print.print_unprinted}; under [CRANE_CHECK_IR] a declaration, a
     record's fields or a synthesised template must need, and write their
@@ -179,7 +179,7 @@ val print_unprinted :
 
 (** The structs and scoped enums [d] defines at namespace scope, in the
     order it defines them, and what each declares. *)
-val structs_defined : Cpp_erasure.settled -> Cpp_ast.defined list
+val structs_defined : Cpp_ir.Resolved.Decl.t -> Cpp_ast.defined list
 
 (** The struct or enum a definition declares. *)
 val defined_ref : Cpp_ast.defined -> Names.GlobRef.t
@@ -187,7 +187,7 @@ val defined_ref : Cpp_ast.defined -> Names.GlobRef.t
 (** The assertions a declaration holds back, in the order it writes them:
     those that a class's concept holds of an instance where the concept is
     declared after the struct being written, and so is the assertion. *)
-val held_back_assertions : Cpp_state.render_ctx -> Cpp_erasure.settled -> Cpp_ast.assertion list
+val held_back_assertions : Cpp_state.render_ctx -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.assertion list
 
 (** {2 Forward declarations} *)
 
@@ -208,7 +208,7 @@ type forward_declaration = {
     it defines them, written as an element of [module_] and printed as the
     definition prints its head. *)
 val forward_declarations :
-  Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> forward_declaration list
+  Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_ir.Resolved.Decl.t -> forward_declaration list
 
 (** [plan_ctor_aliases written] plans the templates each file writes,
     [written file] being what is read off what [file] writes, in the order

@@ -73,15 +73,23 @@ let pp_member_type ~enum name r args =
 
 let type_names frame ty = global_names [frame] (type_globals ty)
 
+(* A type of a module type's concept, which no finished declaration holds,
+   in CppIR. *)
+let concept_cpp_type t = Legacy_minicpp_to_cpp_ir.type_exn t
+
+(* The type [Namespaced (r, r', e, _)] names: [r'] written in the namespace
+   [r]. *)
+let namespaced r r' e = concept_cpp_type (Tnamespace (r, Tglob (r', [], e)))
+
 let rec concept_type_names frame : Modtype_concept.concept_type -> _ = function
   | Member {member; arguments; _} -> (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names frame arguments
-  | Global (r, args) -> type_names frame (Tglob (r, [], [])) @ concept_types_names frame args
-  | Namespaced (r, r', e, args) -> type_names frame (Tnamespace (r, Tglob (r', [], e))) @ concept_types_names frame args
+  | Global (r, args) -> type_names frame (Entity_application (r, [], [])) @ concept_types_names frame args
+  | Namespaced (r, r', e, args) -> type_names frame (namespaced r r' e) @ concept_types_names frame args
   | Foreign {custom; arguments; _} -> (frame, Cpp_resolution.Custom_text custom) :: concept_types_names frame arguments
   | Variant (_, args) -> concept_types_names frame args
   | Shared_pointer ty -> concept_type_names frame ty
   | Function (dom, cod) -> concept_types_names frame (cod :: dom)
-  | Parameter ty | Plain ty -> type_names frame ty
+  | Parameter ty | Plain ty -> type_names frame (concept_cpp_type ty)
 
 and concept_types_names frame tys = List.concat_map (concept_type_names frame) tys
 
@@ -111,7 +119,7 @@ let modules frame = List.map (fun p -> (frame, Cpp_resolution.Module p))
 let concept_body_names : Modtype_concept.t -> _ = function
   | Alias {base; refinements} ->
     (([], Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base))
-    @ List.concat_map (fun (_, ty) -> type_names [] ty) refinements
+    @ List.concat_map (fun (_, ty) -> type_names [] (concept_cpp_type ty)) refinements
   | Constraint c -> constraint_names [] c
 
 let modtype_concept_names ~path ~params (c : Modtype_concept.t) =
@@ -125,19 +133,20 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
   match t with
   | Member {member; enum; arguments} ->
     pp_member_type ~enum (name_in ctx names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
-  | Parameter ty -> str "typename " ++ pp_type ctx ty
+  | Parameter ty -> str "typename " ++ pp_type ctx (concept_cpp_type ty)
   | Foreign {custom; pieces; arguments} ->
     Common.writes_custom custom;
-    pp_type_pieces custom pieces (fun i -> Option.map pp_concept_type (List.nth_opt arguments i))
-  | Global (r, []) -> pp_type ctx (Tglob (r, [], []))
+    pp_type_pieces custom (List.map Legacy_minicpp_to_cpp_ir.foreign_piece pieces) (fun i ->
+        Option.map pp_concept_type (List.nth_opt arguments i) )
+  | Global (r, []) -> pp_type ctx (Entity_application (r, [], []))
   | Global (r, args) ->
-    pp_type ctx (Tglob (r, [], []))
+    pp_type ctx (Entity_application (r, [], []))
     ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
     ++ str ">"
-  | Namespaced (r, r', e, []) -> pp_type ctx (Tnamespace (r, Tglob (r', [], e)))
+  | Namespaced (r, r', e, []) -> pp_type ctx (namespaced r r' e)
   | Namespaced (r, r', e, args) ->
-    pp_type ctx (Tnamespace (r, Tglob (r', [], e)))
+    pp_type ctx (namespaced r r' e)
     ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
     ++ str ">"
@@ -159,7 +168,7 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
     ++ str "("
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type dom
     ++ str ")>"
-  | Plain ty -> pp_type ctx ty
+  | Plain ty -> pp_type ctx (concept_cpp_type ty)
 
 (** One line of a module-type concept's [requires] clause
     ({!Modtype_concept.requirement}).  A nullary value may be a static data
@@ -171,7 +180,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
   let pp_concept_type = pp_concept_type ctx names frame in
   function
   | Inductive_member {member; enum; arity} ->
-    let placeholders = List.init arity (fun _ -> pp_type ctx Tany) in
+    let placeholders = List.init arity (fun _ -> pp_type ctx Any) in
     pp_member_type ~enum (name (Short (Type, member))) member placeholders ++ str ";" ++ fnl ()
   | Type_member {member; arity} ->
     let name = Cpp_name.pp (name (Unmapped (Type, member))) in
@@ -284,7 +293,7 @@ let pp_refinements ctx refinements =
         ++ str ("<typename " ^ self_scope)
         ++ str path
         ++ str ", "
-        ++ pp_type ctx cpp
+        ++ pp_type ctx (concept_cpp_type cpp)
         ++ str ">" )
       refinements
   in

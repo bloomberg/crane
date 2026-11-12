@@ -34,16 +34,8 @@ let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
    a structured binding's field types -- are not written, and neither is
    what a printing rule drops (the type of an abort that is returned, a move
    out of a returned variable). *)
-let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:_ _ -> ()) ?(vl = []) visit =
+let collect ?(global = ignore) ?(promoted = ignore) visit =
   let found = ref [] in
-  (* The names of the template parameters the type variables written are
-     read as, and the struct whose members are being written. *)
-  let names = ref vl and owner = ref None in
-  let scoped cell v k =
-    let saved = !cell in
-    cell := v;
-    Fun.protect ~finally:(fun () -> cell := saved) k
-  in
   let need h = if not (List.mem h !found) then found := h :: !found in
   let std h = need (Table.Standard h) in
   let rt h = need (Table.Runtime h) in
@@ -102,9 +94,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       foreign Foreign_constant fr;
       Some t
     (* Only its head is written. *)
-    | Ttyctor _ ->
-      tyctor ~vl:!names ~owner:!owner t;
-      Some t
+    | Ttyctor _ -> Some t
     | Texpr_type e ->
       expr e;
       Some t
@@ -261,37 +251,21 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | Dasgn {da_type = t; da_init = CPPabort _; _} ->
       ty t;
       std "stdexcept"
-    | d -> (
-      let members () =
-        ( match d with
-        | Dstruct {ds_fields; _} | Dfields {ds_fields; _} -> List.iter field ds_fields
-        | _ -> () );
-        ignore (map_decl (fun e -> expr e; e) (fun s -> stmt s; s) (fun t -> ty t; t) d)
-      in
-      match d with
-      | Dusing u -> scoped names (List.map snd u.du_tparams) members
-      | Dstruct {ds_ref = r; _} | Dfields {ds_ref = r; _} | Dmember_def {dm_owner = r; _} ->
-        scoped owner (Some r) members
-      | _ -> members () )
+    | d ->
+      ( match d with
+      | Dstruct {ds_fields; _} | Dfields {ds_fields; _} -> List.iter field ds_fields
+      | _ -> () );
+      ignore (map_decl (fun e -> expr e; e) (fun s -> stmt s; s) (fun t -> ty t; t) d)
   in
   visit ~decl ~ty;
   !found
 
-
-let of_type t = collect (fun ~decl:_ ~ty -> ty t)
 
 (* The globals [visit] writes the names of, as [collect] meets them. *)
 let globals visit =
   let found = ref [] in
   ignore (collect ~global:(fun r -> found := r :: !found) visit);
   !found
-
-
-let globals_of_type t = globals (fun ~decl:_ ~ty -> ty t)
-
-let tyctors_of_decl tyctor d = ignore (collect ~tyctor (fun ~decl ~ty:_ -> decl d))
-
-let tyctors_of_type tyctor ~vl t = ignore (collect ~tyctor ~vl (fun ~decl:_ ~ty -> ty t))
 
 (* The promoted type variables [visit] writes, each once, in the order
    written. *)
@@ -300,9 +274,6 @@ let promoted visit =
   ignore
     (collect ~promoted:(fun id -> if not (List.exists (Names.Id.equal id) !found) then found := id :: !found) visit);
   List.rev !found
-
-
-let promoted_of_type t = promoted (fun ~decl:_ ~ty -> ty t)
 
 module Legacy = struct
   let of_decl d = collect (fun ~decl ~ty:_ -> decl d)
@@ -322,16 +293,16 @@ module Ir = struct
 
   let at_type_variable : ty -> bool = function Variable _ | Apply (Variable _, _) -> true | _ -> false
 
-  let rec pointee_slot : ty -> Pointer_slot.t = function
-    | Entity_application (r, _, _) when Table.is_shared_variant r -> Shared
-    | Entity_application (Names.GlobRef.IndRef (kn, _), _, _)
-      when Table.shared_variant () && Common.under_mp_bound (Names.MutInd.modpath kn) ->
-      At_instantiation
-    | In_namespace (_, t) | Const t -> pointee_slot t
-    | _ -> Pointer
-
-  let collect ?(global = ignore) ?(promoted = ignore) visit =
+  let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:_ _ -> ()) ?(vl = []) visit =
     let found = ref [] in
+    (* The names of the template parameters the type variables written are
+       read as, and the struct whose members are being written. *)
+    let names = ref vl and owner = ref None in
+    let scoped cell v k =
+      let saved = !cell in
+      cell := v;
+      Fun.protect ~finally:(fun () -> cell := saved) k
+    in
     let need h = if not (List.mem h !found) then found := h :: !found in
     let std h = need (Table.Standard h) in
     let rt h = need (Table.Runtime h) in
@@ -347,7 +318,7 @@ module Ir = struct
       | Variant (Inline, _) -> variant ()
       | Variant (Shared, _) -> rt Crane_rt.shared_variant_header
       | Shared_pointer t -> (
-        match pointee_slot t with
+        match Pointer_slot.of_ir_pointee t with
         | Shared -> rt Crane_rt.shared_variant_header
         | At_instantiation ->
           rt Crane_rt.shared_variant_header;
@@ -370,8 +341,13 @@ module Ir = struct
           global r;
           List.iter ty tys )
       | Foreign fr -> foreign Foreign.Constant fr
-      | Type_constructor _ -> ()
+      (* Only its head is written. *)
+      | Type_constructor _ -> tyctor ~vl:!names ~owner:!owner t
       | Type_of e -> expr e
+      (* In the order written. *)
+      | Function (dom, cod) ->
+        ty cod;
+        List.iter ty dom
       | _ -> Children.type_children ty t
     and foreign (use : Foreign.use) (fr : Resolved.phase Foreign.t) =
       (match use with Block_value _ | Statements -> ty (Option.default Type.Auto fr.yields) | Constant | Call -> ());
@@ -516,30 +492,52 @@ module Ir = struct
       | Variable {type_ = t; init = Abort _; _} ->
         ty t;
         std "stdexcept"
-      | d ->
-        ( match d with
-        | Struct {fields; _} | Merged_struct_members {fields; _} -> List.iter field fields
-        | _ -> () );
-        Children.decl visitor d
+      | d -> (
+        let members () =
+          ( match d with
+          | Struct {fields; _} | Merged_struct_members {fields; _} -> List.iter field fields
+          | _ -> () );
+          Children.decl visitor d
+        in
+        match d with
+        | Type_alias a -> scoped names (List.map snd a.type_params) members
+        | Struct {ref_ = r; _} | Merged_struct_members {ref_ = r; _} | Member_definition {owner = r; _} ->
+          scoped owner (Some r) members
+        | _ -> members () )
     in
-    visit decl;
+    visit ~decl ~ty;
     !found
 end
 
-let of_decl d = Ir.collect (fun decl -> decl d)
+let of_decl d = Ir.collect (fun ~decl ~ty:_ -> decl d)
 
-let globals_of_decl d =
+let of_type t = Ir.collect (fun ~decl:_ ~ty -> ty t)
+
+(* The globals [visit] writes the names of, as {!Ir.collect} meets them. *)
+let ir_globals visit =
   let found = ref [] in
-  ignore (Ir.collect ~global:(fun r -> found := r :: !found) (fun decl -> decl d));
+  ignore (Ir.collect ~global:(fun r -> found := r :: !found) visit);
   !found
 
-let promoted_of_decl d =
+let globals_of_decl d = ir_globals (fun ~decl ~ty:_ -> decl d)
+
+let globals_of_type t = ir_globals (fun ~decl:_ ~ty -> ty t)
+
+let tyctors_of_decl tyctor d = ignore (Ir.collect ~tyctor (fun ~decl ~ty:_ -> decl d))
+
+let tyctors_of_type tyctor ~vl t = ignore (Ir.collect ~tyctor ~vl (fun ~decl:_ ~ty -> ty t))
+
+(* The promoted type variables [visit] writes, each once, in the order
+   written. *)
+let ir_promoted visit =
   let found = ref [] in
   ignore
-    (Ir.collect
-       ~promoted:(fun id -> if not (List.exists (Names.Id.equal id) !found) then found := id :: !found)
-       (fun decl -> decl d));
+    (Ir.collect ~promoted:(fun id -> if not (List.exists (Names.Id.equal id) !found) then found := id :: !found) visit);
   List.rev !found
+
+let promoted_of_decl d = ir_promoted (fun ~decl ~ty:_ -> decl d)
+
+let promoted_of_type t = ir_promoted (fun ~decl:_ ~ty -> ty t)
 
 let of_modtype_concept (c : Modtype_concept.t) =
   let found = ref [] in
@@ -547,16 +545,16 @@ let of_modtype_concept (c : Modtype_concept.t) =
   let concepts () = need [Table.Standard "concepts"] in
   let rec cty : Modtype_concept.concept_type -> unit = function
     | Member {arguments; _} -> List.iter cty arguments
-    | Parameter t | Plain t -> need (of_type t)
+    | Parameter t | Plain t -> need (of_type (Legacy_minicpp_to_cpp_ir.type_exn t))
     | Foreign {pieces; arguments; _} ->
       List.iter
         (function Fp_type i | Fp_element (i, _) -> Option.iter cty (List.nth_opt arguments i) | _ -> ())
         pieces
     | Global (r, args) ->
-      need (of_type (Tglob (r, [], [])));
+      need (of_type (Entity_application (r, [], [])));
       List.iter cty args
     | Namespaced (r, r', e, args) ->
-      need (of_type (Tnamespace (r, Tglob (r', [], e))));
+      need (of_type (Legacy_minicpp_to_cpp_ir.type_exn (Tnamespace (r, Tglob (r', [], e)))));
       List.iter cty args
     | Shared_pointer t -> cty t
     | Variant (_, ts) -> List.iter cty ts
@@ -567,7 +565,7 @@ let of_modtype_concept (c : Modtype_concept.t) =
   in
   let requirement : Modtype_concept.requirement -> unit = function
     (* Its arguments are written as erased placeholders. *)
-    | Inductive_member {arity; _} -> if arity > 0 then need (of_type Tany)
+    | Inductive_member {arity; _} -> if arity > 0 then need (of_type Any)
     | Type_member _ | Submodule _ -> ()
     | Instance_member {arguments; _} ->
       concepts ();
@@ -590,6 +588,6 @@ let of_modtype_concept (c : Modtype_concept.t) =
   ( match c with
   | Alias {refinements; _} ->
     if refinements <> [] then concepts ();
-    List.iter (fun (_, t) -> need (of_type t)) refinements
+    List.iter (fun (_, t) -> need (of_type (Legacy_minicpp_to_cpp_ir.type_exn t))) refinements
   | Constraint c -> constraint_ c );
   !found

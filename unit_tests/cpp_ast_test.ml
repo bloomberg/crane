@@ -212,7 +212,7 @@ let () =
        [top (leaf ~names:["S"] "e")])
     "fwdE(F.M.N)e";
   let synthesised declared_in =
-    Cpp_ast.synthesised_template ~tyctors:[] {name = "S"; holder = None; declared_in; body = Minicpp.Tany; vars = []; planned = ""}
+    Cpp_ast.synthesised_template ~tyctors:[] {name = "S"; holder = None; declared_in; body = Cpp_ir.Type.Any; vars = []; planned = ""}
   in
   check_text "a synthesised template is spelled as declared in its home, wherever it is placed"
     (spelled ~templates:[{(template "S") with declaration = synthesised (In_struct_of inner)}]

@@ -1,20 +1,24 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Rendering MiniCpp as C++ source text.
+(** Rendering CppIR as C++ source text.
 
-    The declaration printer's input is a settled declaration (see
-    {!Cpp_erasure.settled}): it runs no compiler pass.  The registries below
+    The declaration printer's input is a finished declaration in CppIR
+    ({!Cpp_ir.Resolved}): it runs no compiler pass.  The registries below
     are the printer's remaining state: forward declarations and synthesised
     aliases it mints while rendering and the assembly drains. *)
 
 open Names
-open Minicpp
+
+(** The types the printer reads: CppIR at the phase resolution leaves. *)
+type ty = Cpp_ir.Resolved.Type.t
+
+type decl = Cpp_ir.Resolved.Decl.t
 
 (** {2 Rendering} *)
 
 (** {!pp_cpp_type} at the position given. *)
-val pp_cpp_type_at : Cpp_state.render_ctx -> bool -> Id.t list -> cpp_type -> Pp.t
+val pp_cpp_type_at : Cpp_state.render_ctx -> bool -> Id.t list -> ty -> Pp.t
 
 (** The name of a module a declaration of the tree names, as
     {!Cpp_ast.resolve} resolved it where the declaration is written; under
@@ -56,7 +60,7 @@ val print_unprinted :
 
 (** [read_cpp_decl ctx env decl] renders [decl] at the position [ctx]: for
     a declaration whose text is read, not written. *)
-val read_cpp_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Pp.t
+val read_cpp_decl : Cpp_state.render_ctx -> Common.env -> decl -> Pp.t
 
 
 (** How a member is written: in the struct with or without its body, or out
@@ -67,18 +71,24 @@ type member_mode
     [ctx].  [struct_name] is the enclosing struct's name, for constructors
     and destructors. *)
 val pp_cpp_field :
-  ?struct_name:Pp.t -> ?mode:member_mode -> Cpp_state.render_ctx -> Common.env -> cpp_field -> Pp.t
+  ?struct_name:Pp.t ->
+  ?mode:member_mode ->
+  Cpp_state.render_ctx ->
+  Common.env ->
+  Cpp_ir.Resolved.phase Cpp_ir.Field.t ->
+  Pp.t
 
 (** [pp_type ctx t] renders the type [t], naming no variable by index, at
     the position [ctx]. *)
-val pp_type : Cpp_state.render_ctx -> cpp_type -> Pp.t
+val pp_type : Cpp_state.render_ctx -> ty -> Pp.t
 
-(** [pp_cpp_type par vl t] renders a type at the start of the header, where
-    nothing may be named, for a diagnostic of a type that names nothing; [par] asks for
+(** [pp_cpp_type par vl t] renders a MiniCpp type no finished declaration
+    holds, converted to CppIR, at the start of the header, where nothing may
+    be named, for a diagnostic of a type that names nothing; [par] asks for
     parentheses where precedence needs them, [vl] names the type variables
     by index.  [~lead:false] drops the leading [typename] of a dependent name
     about to be embedded in a longer one. *)
-val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> cpp_type -> Pp.t
+val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> Minicpp.cpp_type -> Pp.t
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t
@@ -116,7 +126,7 @@ val inductive_head : Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> writte
 (** The qualifiers a member of the struct being defined out of line is
     written with when named outside that struct's body, or [None] where it
     is written bare. *)
-val member_scopes : Cpp_state.render_ctx -> cpp_type -> Cpp_name.scope list option
+val member_scopes : Cpp_state.render_ctx -> ty -> Cpp_name.scope list option
 
 (** The spelling of an external type's name. *)
 val external_type_name : string -> string
@@ -127,7 +137,7 @@ val uint63_type : unit -> GlobRef.t option
 
 (** The type a declaration introduces, by the entity it declares, for an
     alias and a wrapper struct. *)
-val decl_type_ref : cpp_decl -> GlobRef.t option
+val decl_type_ref : decl -> GlobRef.t option
 
 (** {2 Custom type templates} *)
 
@@ -136,7 +146,7 @@ val decl_type_ref : cpp_decl -> GlobRef.t option
     in [pieces], hole [i] filled with [arg i] -- in a module type's concept,
     each argument written as the concept qualifies it.  Every hole is
     supplied, an erased argument included ({!Modtype_concept.concept_type}). *)
-val pp_type_pieces : GlobRef.t -> foreign_piece list -> (int -> Pp.t option) -> Pp.t
+val pp_type_pieces : GlobRef.t -> Cpp_ir.Foreign.piece list -> (int -> Pp.t option) -> Pp.t
 
 (** {2 Wrapper structs} *)
 
@@ -147,7 +157,7 @@ val nspace_wrapper_name : Cpp_state.render_ctx -> GlobRef.t -> string
 (** Under [CRANE_CHECK_IR], the type name the declaration given introduces
     at file scope where written at the position given, noted as written in
     the file. *)
-val note_file_scope_type : Cpp_state.render_ctx -> cpp_decl -> unit
+val note_file_scope_type : Cpp_state.render_ctx -> decl -> unit
 
 (** {2 Synthesised aliases} *)
 
@@ -161,7 +171,7 @@ type ctor_alias = Cpp_state.ctor_alias = {
   ca_declared : Cpp_ast.declared_in;  (** Where it is declared. *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared. *)
-  ca_type : cpp_type;  (** That type. *)
+  ca_type : ty;  (** That type. *)
   ca_vars : Id.t list;  (** The names of the variables it names by index. *)
   ca_uses : Cpp_state.tyctor_use list;  (** How its body writes the type constructors in it. *)
 }
@@ -172,7 +182,7 @@ val ctor_alias_name : ctor_alias -> string
 (** How the type constructor given, naming the variables given by index, is
     written at the position given: as the plan of the leaf being printed
     says, or as planning, deciding it there, decides and notes. *)
-val tyctor_written : Cpp_state.render_ctx -> Id.t list -> cpp_type -> (ctor_alias * Cpp_state.holder_argument list) option
+val tyctor_written : Cpp_state.render_ctx -> Id.t list -> ty -> (ctor_alias * Cpp_state.holder_argument list) option
 
 (** The template given, spelled at the position given: collected where the
     position collects them, and otherwise, under [CRANE_CHECK_IR], noted as
@@ -184,10 +194,10 @@ val note_ctor_alias_spelled : Cpp_state.render_ctx -> ctor_alias -> unit
     is [s] up to its first template argument list; [identifier_tokens s] the
     identifiers [s] writes, as whole tokens; [foreign_text fr] the text an
     instantiated mapping was instantiated from. *)
-val tyctor_constructor : cpp_type -> cpp_type
+val tyctor_constructor : ty -> ty
 val cut_at_argument_list : string -> string
 val identifier_tokens : string -> string list
-val foreign_text : foreign -> string
+val foreign_text : Cpp_ir.Resolved.phase Cpp_ir.Foreign.t -> string
 val ctor_alias_tvar : string
 
 (** Under [CRANE_CHECK_IR], start recording the templates the file about

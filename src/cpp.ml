@@ -708,7 +708,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
     in
     { text = (if Cpp_ast.is_empty body then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); body]));
       concepts;
-      asserts = List.concat_map (fun (_, (d : Finished_decl.t)) -> Cpp_leaf_plan.held_back_assertions ctx d.settled) rendered }
+      asserts = List.concat_map (fun (_, (d : Finished_decl.t)) -> Cpp_leaf_plan.held_back_assertions ctx d.ir) rendered }
   | l, SEmodule m ->
     let mp = MPdot (module_, l) in
     (* Its struct, or the alias standing for it, is declared under the
@@ -1946,7 +1946,7 @@ let plan_file_layout s =
     && module_members_name_only_inductives sel
     && Option.cata
          (List.for_all (fun (d : Finished_decl.t) ->
-              Cpp_leaf_plan.is_static_member_declaration (d.settled :> cpp_decl)
+              Cpp_leaf_plan.is_static_member_declaration d.ir
               && Cpp_ind.names_into_a_struct_as_written ~file:Intf (Member_of mp) d = Some false ) )
          false
          (struct_members ~wrapper mp sel)
@@ -1983,7 +1983,7 @@ let plan_file_layout s =
   let defines ~lifted at mp env (d : Finished_decl.t) =
     let pass = if lifted then 0 else 1 in
     forward :=
-      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d.settled)) :: !forward;
+      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d.ir)) :: !forward;
     types := List.fold_right GlobRef.Set.add (Cpp_leaf_plan.file_scope_types d) !types
   in
   let element_at mp = Cpp_ind.spelling_position ~file:Intf (Element_of mp) in
@@ -2084,7 +2084,7 @@ let plan_file_layout s =
 let plan_ctor_aliases s =
   let written_in file =
     let found = ref [] in
-    let written at ds = List.iter (fun (d : Finished_decl.t) -> found := Cpp_leaf_plan.ctor_aliases_written at d.settled :: !found) ds in
+    let written at ds = List.iter (fun (d : Finished_decl.t) -> found := Cpp_leaf_plan.ctor_aliases_written at d.ir :: !found) ds in
     let helpers at ~module_ hs =
       written at
         (List.concat_map

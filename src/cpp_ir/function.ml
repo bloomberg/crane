@@ -4,3 +4,6 @@
 (** Function declarations and definitions ({!Grammar.Function}). *)
 
 include Grammar.Function
+
+(** The entries of a qualified name, outermost first. *)
+let path_entries (p : 'p path) = p.outer :: p.inner

@@ -38,3 +38,6 @@ val expr : Minicpp.cpp_expr -> (Cpp_ir.Resolved.Expr.t, failure) result
 (** [type_ t], where [t] has to convert.
     @raise Anomaly if it does not. *)
 val type_exn : Minicpp.cpp_type -> Cpp_ir.Resolved.Type.t
+
+(** A piece of a mapping's instantiated text. *)
+val foreign_piece : Minicpp.foreign_piece -> Cpp_ir.Foreign.piece

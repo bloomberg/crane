@@ -131,8 +131,8 @@ type defined =
   | Defined_struct of {
       struct_ : GlobRef.t;
       name : defined_name;
-      tparams : (Minicpp.template_type * Id.t) list;
-      constraint_ : Minicpp.cpp_constraint option;
+      tparams : Cpp_ir.Resolved.phase Cpp_ir.Template.parameters;
+      constraint_ : Cpp_ir.Resolved.Expr.t option;
     }
       (** The struct [struct_], over the definition's template head and
           constraint, which its forward declaration repeats. *)
@@ -152,7 +152,7 @@ type declaration =
       (** A member of the struct a declaration writes around a wrapper
           module's declarations, printed in [env].  What it needs is placed
           with that declaration, which is what was planned. *)
-  | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
+  | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Cpp_ir.Resolved.Type.t) list}
       (** The fields of the eponymous record [record] merged into its
           module's struct, each by its name and type, the type variables
           they name named [vars]: no declaration holds them. *)
@@ -194,7 +194,7 @@ and synthesised = {
   name : string;  (** The name it is declared under. *)
   holder : holder_parameter list option;  (** A holder's parameters, where it is one. *)
   declared_in : declared_in;  (** Where it is declared. *)
-  body : Minicpp.cpp_type;  (** The type it abbreviates, its own parameter the sentinel. *)
+  body : Cpp_ir.Resolved.Type.t;  (** The type it abbreviates, its own parameter the sentinel. *)
   vars : Id.t list;  (** The names of the type variables [body] names by index. *)
   planned : string;  (** [body] as the plan wrote it, which its name digests. *)
 }
@@ -220,7 +220,7 @@ and asserted =
 (** What an {!assertion} asserts it of. *)
 and subject =
   | Module of module_ref  (** The struct the module is written as. *)
-  | Instance of {instance : global_ref; args : Minicpp.cpp_type list}
+  | Instance of {instance : global_ref; args : Cpp_ir.Resolved.Type.t list}
       (** The instance, as a type, with the class's further arguments. *)
 
 (** What a {!Global_alias} stands in for. *)
@@ -228,7 +228,7 @@ and global_alias =
   | Alias_of_type of {
       target : global_ref;
       definition : definition;
-      tparams : (Minicpp.template_type * Id.t) list;
+      tparams : Cpp_ir.Resolved.phase Cpp_ir.Template.parameters;
     }
       (** The type [target] declares, as [definition] declares it, over
           [tparams], which the alias repeats:
@@ -374,7 +374,7 @@ val fields :
   ?tyctors:Cpp_state.tyctor_use list ->
   record:GlobRef.t ->
   vars:Id.t list ->
-  (string * Minicpp.cpp_type) list ->
+  (string * Cpp_ir.Resolved.Type.t) list ->
   t
 
 (** [modtype_concept ~path ~params c] is {!Modtype_concept}, printed where

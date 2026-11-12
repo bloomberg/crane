@@ -1357,7 +1357,7 @@ let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file) ~res
 
 let names_into_a_struct_as_written ~file spelling {Finished_decl.settled; ir} =
   let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled; ir})) in
-  at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names settled)
+  at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names ir)
 
 let write_unprinted ~file spelling u =
   at_spelling ~file spelling (fun ctx ->
@@ -1396,39 +1396,6 @@ let concept ~module_ r fields =
 let modtype_concepts_generated : (ModPath.t * Modtype_concept.t) list MPmap.t ref =
   State.cell State.Unit MPmap.empty
 
-(* Under [CRANE_CHECK_IR]: every type and value the concept [c] writes
-   converts to CppIR ({!Legacy_minicpp_to_cpp_ir.type_}). *)
-let check_concept_converts (c : Modtype_concept.t) =
-  let ty t = ignore (Legacy_minicpp_to_cpp_ir.type_exn t) in
-  let rec cty : Modtype_concept.concept_type -> unit = function
-    | Member {arguments; _} | Foreign {arguments; _} | Global (_, arguments) | Variant (_, arguments) ->
-      List.iter cty arguments
-    | Namespaced (_, _, es, arguments) ->
-      List.iter
-        (fun e ->
-          match Legacy_minicpp_to_cpp_ir.expr e with
-          | Ok _ -> ()
-          | Error f ->
-            CErrors.anomaly Pp.(str "Crane: a concept's value does not convert: " ++ str (Legacy_minicpp_to_cpp_ir.describe f)) )
-        es;
-      List.iter cty arguments
-    | Parameter t | Plain t -> ty t
-    | Shared_pointer t -> cty t
-    | Function (dom, cod) -> List.iter cty (cod :: dom)
-  in
-  let requirement : Modtype_concept.requirement -> unit = function
-    | Instance_member {arguments; _} -> List.iter cty arguments
-    | Nullary_member {result; _} -> cty result
-    | Function_member {parameters; result; _} -> List.iter cty (result :: parameters)
-    | Inductive_member _ | Type_member _ | Submodule _ -> ()
-  in
-  let rec constraint_ : Modtype_concept.constraint_ -> unit = function
-    | Named _ -> ()
-    | Requirements {items; _} ->
-      List.iter (function Modtype_concept.Requirement r -> requirement r | Nested (_, c) -> constraint_ c) items
-  in
-  match c with Alias {refinements; _} -> List.iter (fun (_, t) -> ty t) refinements | Constraint c -> constraint_ c
-
 (** [modtype_concept path ~params mt] is the concept of the module type
     [mt] at [path], over the functor parameters [params]: generated ahead of
     the files and taken from there by the header ({!ahead_once}). *)
@@ -1438,10 +1405,7 @@ let modtype_concept ~module_ path ~params mt =
     ~recorded:(fun () -> Option.default [] (MPmap.find_opt path !modtype_concepts_generated))
     ~record:(fun l -> modtype_concepts_generated := MPmap.add path l !modtype_concepts_generated)
     ~same:(fun c c' -> compare c c' = 0)
-    (fun () ->
-      let c = Modtype_concept.generate ~params mt in
-      if Probe.checking () then check_concept_converts c;
-      c )
+    (fun () -> Modtype_concept.generate ~params mt)
 
 (** The methods of each eponymous record, generated ahead of the files with
     the helpers lifted out of them, by the record. *)
@@ -1469,7 +1433,7 @@ let record_methods ~module_ r vars candidates =
 
 (** The C++ types of each eponymous record's fields, converted ahead of the
     files, by the record. *)
-let record_field_types_generated : (ModPath.t * cpp_type list) list Ref.User.Tbl.t =
+let record_field_types_generated : (ModPath.t * Cpp_ir.Resolved.Type.t list) list Ref.User.Tbl.t =
   Ref.User.Tbl.create 8
 
 let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_types_generated)
@@ -1477,9 +1441,10 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
 (** [record_field_types r vars fields] is the C++ type of each of the fields
     [fields] of the eponymous record [r], of variables [vars], as the header
     writes them in the struct [r] is merged into: converted and instantiated
-    ({!Cpp_erasure.instantiate_type}) ahead of the files, and taken from
-    there by the header ({!ahead_once}) -- so what plans from them reads the
-    types the header writes. *)
+    ({!Cpp_erasure.instantiate_type}) ahead of the files, in CppIR
+    ({!Legacy_minicpp_to_cpp_ir.type_}), and taken from there by the header
+    ({!ahead_once}) -- so what plans from them reads the types the header
+    writes. *)
 let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
   ahead_once ~module_
     ~what:(fun () -> Pp.(str "the field types of the record " ++ GlobRef.print r))
@@ -1487,13 +1452,11 @@ let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
     ~record:(Ref.User.Tbl.replace record_field_types_generated r)
     ~same:(fun tys tys' -> compare tys tys' = 0)
     (fun () ->
-      let tys =
-        List.map
-          (fun (_, ty) -> Cpp_erasure.instantiate_type (Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty))
-          fields
-      in
-      if Probe.checking () then List.iter (fun t -> ignore (Legacy_minicpp_to_cpp_ir.type_exn t)) tys;
-      tys )
+      List.map
+        (fun (_, ty) ->
+          Legacy_minicpp_to_cpp_ir.type_exn
+            (Cpp_erasure.instantiate_type (Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty)) )
+        fields )
 
 (** Every module type's concept generated ahead of the files. *)
 let generated_concepts () =

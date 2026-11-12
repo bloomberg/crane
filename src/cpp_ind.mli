@@ -286,11 +286,11 @@ val record_methods :
 
 (** [record_field_types r vars fields] is the C++ type of each of the
     fields [fields] of the eponymous record [r], of variables [vars], which
-    the header writes in the struct [r] is merged into: converted ahead of
-    the files, and taken from there by the header, which converts them again
-    under [CRANE_CHECK_IR] to compare. *)
+    the header writes in the struct [r] is merged into, in CppIR: converted
+    ahead of the files, and taken from there by the header, which converts
+    them again under [CRANE_CHECK_IR] to compare. *)
 val record_field_types :
-  module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Miniml.record_field list -> Minicpp.cpp_type list
+  module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Miniml.record_field list -> Cpp_ir.Resolved.Type.t list
 
 (** Every module type's concept generated ahead of the files
     ({!modtype_concept}). *)
@@ -298,7 +298,7 @@ val generated_concepts : unit -> Modtype_concept.t list
 
 (** The types of every eponymous record's fields converted ahead of the
     files ({!record_field_types}). *)
-val generated_record_field_types : unit -> Minicpp.cpp_type list
+val generated_record_field_types : unit -> Cpp_ir.Resolved.Type.t list
 
 (** [record_methods_finishing r vars fields] is what finishing [fields],
     the methods of the eponymous record [r] of variables [vars], takes: the
