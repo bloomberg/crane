@@ -1428,7 +1428,7 @@ let prepare_structure s =
     (fun _ -> ())
     (fun _ -> ())
     s;
-    name_cache := Some (Name_resolution.create ~structure_analysis:analysis s);
+    name_cache := Some (Name_resolution.create s);
     analysis
   in
   structure_analysis := Some analysis;
