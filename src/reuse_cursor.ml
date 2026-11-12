@@ -58,7 +58,7 @@ let reads env e =
     | MLcons (_, _, args) | MLtuple args -> List.fold_left (go depth) acc args
     | MLmagic (_, e) -> go depth acc e
     | MLparray (elements, default) -> Array.fold_left (go depth) (go depth acc default) elements
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> acc
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> acc
   in
   go 0 [] e
 
@@ -145,7 +145,7 @@ let own_value ty value =
     | MLletin (_, _, a, b, _) -> closure_free a && closure_free b
     | MLcase (_, s, branches, _) -> closure_free s && Array.for_all (fun (_, _, _, b) -> closure_free b) branches
     | MLparray (elements, default) -> Array.for_all closure_free elements && closure_free default
-    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> true
+    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
   in
   let rec head = function MLmagic (_, e) -> head e | e -> e in
   (* A custom computes a value of its own unless its text binds the result
@@ -164,7 +164,7 @@ let own_value ty value =
     | MLapp (MLglob {callee; _}, _) -> computes callee
     | MLapp (MLrel _, _) -> true
     | MLcons (_, r, _) -> computes r
-    | MLtuple _ | MLuint _ | MLfloat _ | MLstring _ -> true
+    | MLtuple _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
     | _ -> false
   in
   fresh && (not (Ml_type_util.is_prod_ml_type ty)) && closure_free value

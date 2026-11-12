@@ -130,7 +130,7 @@ let closure_reads d t =
       Array.fold_left
         (fun acc (ids, _, _, body) -> go (d' + List.length ids) acc body)
         (go d' acc scrut) branches
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> acc
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> acc
   in
   go d [] t
 
@@ -337,7 +337,7 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
         let parents' = bind_parts parents d ~n scrut in
         Levels.union acc (leave parents' d (free parents' (d + n) body)) )
       (free parents d scrut) branches
-  | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> Levels.empty
+  | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> Levels.empty
 
 and frees ?parts ?outside parents d ts =
   List.fold_left (fun acc t -> Levels.union acc (free ?parts ?outside parents d t)) Levels.empty ts
@@ -680,7 +680,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       walk
         ~consumed:(scrutinee_consumed ty scrut branches)
         ~pinned parents d after_scrut scrut
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> live
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> live
   (* What follows a resume at the binder [a] binds at [occurrence], [d]
      deep, reads each binder the frame holds itself in a field of its own, a
      part of no other. *)
@@ -924,7 +924,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
           own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body;
           handles := enclosing )
         branches
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> ()
   (* [f], which plans what follows a binding of [a] at [occurrence], [d]
      deep: where the machine resumes there, a binder an enclosing frame of
      the turn holds is the handler's own, for the frame saved here to take;

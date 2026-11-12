@@ -2262,7 +2262,7 @@ let plan_referenced_names s =
       ty a;
       ty b
     | MLrel _ | MLapp _ | MLtuple _ | MLexn _ | MLdummy _ | MLaxiom _ | MLmagic _ | MLuint _
-    | MLfloat _ | MLstring _ | MLparray _ ->
+    | MLfloat _ | MLstring _ | MLparray _ | MLnumeral _ ->
       ()
   in
   let inductive kn ind =

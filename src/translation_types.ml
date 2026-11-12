@@ -836,16 +836,6 @@ let render_numeral info (n : Z.t) : cpp_expr =
   | _ -> () );
   CPPnumeral (info.Table.num_ind, {nl_value = n; nl_text = Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt})
 
-(** [registered_constructor name r]: [r]'s 1-based constructor index, where
-    [r] is a constructor of the inductive Rocq registers as [name]
-    ([num.pos.type], [num.uint.type], ...).  Digit chains and binary
-    numerals are read by constructor index, which only means anything once
-    the inductive is known. *)
-let registered_constructor name = function
-  | GlobRef.ConstructRef (ind, idx) when Rocqlib.has_ref name && Rocqlib.check_ref name (GlobRef.IndRef ind) ->
-    Some idx
-  | _ -> None
-
 (** Try to fold a binary positive chain [xI(xO(...xH...))] into an [int64].
     Returns [Some n] where [n > 0] if the entire chain can be folded, or
     [None] if any node is not a recognized positive constructor.
@@ -854,7 +844,7 @@ let registered_constructor name = function
 let rec try_fold_positive expr : Z.t option =
   match strip_magic expr with
   | MLcons (_, r, args) -> (
-    match (registered_constructor "num.pos.type" r, args) with
+    match (Numeral_literal.registered_constructor "num.pos.type" r, args) with
     | Some idx, [] when idx = positive_xH_idx -> Some Z.one
     | Some idx, [inner] when idx = positive_xI_idx ->
       Option.map (fun n -> Z.succ (Z.shift_left n 1)) (try_fold_positive inner)
@@ -871,7 +861,7 @@ let rec try_fold_positive expr : Z.t option =
 let try_fold_z_binary info r inner : cpp_expr option =
   Option.map
     (fun pos_val ->
-      let z_val = if registered_constructor "num.Z.type" r = Some z_neg_idx then Z.neg pos_val else pos_val in
+      let z_val = if Numeral_literal.registered_constructor "num.Z.type" r = Some z_neg_idx then Z.neg pos_val else pos_val in
       render_numeral info z_val)
     (try_fold_positive inner)
 
@@ -1414,69 +1404,6 @@ let boxed_shape_of = function
   | Tglob (g, (_ :: _ as args), ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
   | t -> t
 
-(** Fold a Decimal.uint digit chain into an arbitrary-precision integer.
-    Constructor indices (1-based): Nil=[uint_nil_idx], D0..[decimal_d9_idx].
-    Digits are processed outside-in (most significant first).
-    Uses [Z.t] from zarith to avoid overflow on large literals. *)
-let rec try_fold_decimal_uint expr acc =
-  match strip_magic expr with
-  | MLcons (_, r, args) -> (
-    match (registered_constructor "num.uint.type" r, args) with
-    | Some idx, [] when idx = uint_nil_idx -> Some acc
-    | Some cidx, [inner] when cidx >= decimal_d0_idx && cidx <= decimal_d9_idx ->
-      let digit = Z.of_int (cidx - decimal_d0_idx) in
-      try_fold_decimal_uint inner Z.(acc * of_int 10 + digit)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Decimal.signed_int (Pos | Neg) wrapping a Decimal.uint chain.
-    Constructor indices (1-based): Pos=[signed_pos_idx], Neg=[signed_neg_idx]. *)
-let try_fold_signed_decimal_int expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.int.type" r with
-    | Some idx when idx = signed_pos_idx -> try_fold_decimal_uint inner Z.zero
-    | Some idx when idx = signed_neg_idx -> Option.map Z.neg (try_fold_decimal_uint inner Z.zero)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Hexadecimal.uint digit chain into an arbitrary-precision integer.
-    Constructor indices (1-based): Nil=[uint_nil_idx], D0..[hex_df_idx].
-    Uses [Z.t] from zarith to avoid overflow on large literals. *)
-let rec try_fold_hex_uint expr acc =
-  match strip_magic expr with
-  | MLcons (_, r, args) -> (
-    match (registered_constructor "num.hexadecimal_uint.type" r, args) with
-    | Some idx, [] when idx = uint_nil_idx -> Some acc
-    | Some cidx, [inner] when cidx >= hex_d0_idx && cidx <= hex_df_idx ->
-      let digit = Z.of_int (cidx - hex_d0_idx) in
-      try_fold_hex_uint inner Z.(acc * of_int 16 + digit)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Hexadecimal.signed_int (Pos | Neg) wrapping a Hexadecimal.uint chain.
-    Constructor indices (1-based): Pos=[signed_pos_idx], Neg=[signed_neg_idx]. *)
-let try_fold_signed_hex_int expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.hexadecimal_int.type" r with
-    | Some idx when idx = signed_pos_idx -> try_fold_hex_uint inner Z.zero
-    | Some idx when idx = signed_neg_idx -> Option.map Z.neg (try_fold_hex_uint inner Z.zero)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Number.signed_int (IntDecimal | IntHexadecimal) into an
-    arbitrary-precision integer.
-    Constructors: IntDecimal(idx=1), IntHexadecimal(idx=2). *)
-let try_fold_num_int expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.num_int.type" r with
-    | Some 1 -> try_fold_signed_decimal_int inner
-    | Some 2 -> try_fold_signed_hex_int inner
-    | _ -> None )
-  | _ -> None
-
 (** Whether [e] reads a component straight out of a pair recovered from a
     [std::any].  Such a component is itself a box, so it needs no further
     recovery here -- the site that consumes it does its own. *)
@@ -1492,34 +1419,6 @@ let is_erased_pair_component = function
     separated at. *)
 let type_term_arg : (env -> ml_ast -> cpp_expr) ref =
   ref (fun _ _ -> CErrors.anomaly (Pp.str "Translation.type_term_arg: unset"))
-
-(** Fold a Number.uint (UIntDecimal | UIntHexadecimal) into an
-    arbitrary-precision integer.
-    Constructor indices (1-based): UIntDecimal=[num_uint_decimal_idx],
-    UIntHexadecimal=[num_uint_hex_idx]. *)
-let try_fold_num_uint expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.num_uint.type" r with
-    | Some idx when idx = num_uint_decimal_idx -> try_fold_decimal_uint inner Z.zero
-    | Some idx when idx = num_uint_hex_idx -> try_fold_hex_uint inner Z.zero
-    | _ -> None )
-  | _ -> None
-
-(** [numeral_converter_literal r arg]: the numeral mapping and the value of
-    the converter [r] (a registered one, see {!Table.extract_numeral})
-    applied to the digit chain [arg], a [Number.uint] or a [Number.int],
-    where it is one.  The one place both translation, which renders the
-    application as the literal, and dependency collection, which then
-    leaves the converter and its digit inductives out, decide that it
-    folds. *)
-let numeral_converter_literal r arg =
-  match Option.bind (Table.numeral_ind_of_converter r) Table.get_numeral_info with
-  | None -> None
-  | Some info -> (
-    match try_fold_num_uint arg with
-    | Some n -> Some (info, n)
-    | None -> Option.map (fun n -> (info, n)) (try_fold_num_int arg) )
 
 let rec convert_ml_type_to_cpp_type
     env

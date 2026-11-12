@@ -65,7 +65,7 @@ let nb_occur_match =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLuint _
+     |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> 0
   in
@@ -94,7 +94,7 @@ let rec occurs k = function
    |MLexn _
    |MLdummy _
    |MLaxiom _
-   |MLuint _
+   |MLuint _ | MLnumeral _
    |MLfloat _
    |MLstring _ -> false
 
@@ -230,7 +230,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLuint _
+     |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> false
   in
@@ -474,7 +474,7 @@ let free_rels depth t =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLuint _
+     |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> ()
   in
@@ -512,7 +512,7 @@ let single_use_nargs k t =
     | MLparray (elts, def) ->
       Array.iter (search k) elts;
       search k def
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _
     | MLstring _ ->
       ()
   in

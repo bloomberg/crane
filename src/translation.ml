@@ -541,7 +541,7 @@ let check_fixpoint_escape name ~closures generated_escapes =
 let is_shared_constant_term e =
   let rec closed = function
     | MLcons (_, _, ts) -> List.for_all closed ts
-    | MLuint _ | MLfloat _ | MLstring _ | MLdummy _ -> true
+    | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
     | MLmagic (_, a) -> closed a
     | _ -> false
   in
@@ -1610,8 +1610,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       (List.map (gen_expr env) value_args)
   (* Every application translation is handed is canonical
      ({!Core_normalize}): no head here is a global already applied, a
-     coercion, or a one-branch match. *)
-  | MLapp (f, _) as e when Probe.checking () && not (Core_normalize.canonical_head f) ->
+     coercion, or a one-branch match, and no numeral converter is applied
+     to a digit chain. *)
+  | MLapp _ as e when Probe.checking () && not (Core_normalize.canonical_application e) ->
     Probe.violation "non-canonical application" (Pp.str "an application head Core_normalize reads through");
     gen_expr ?expected_ty ~slot env (Core_normalize.spine e)
   | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
@@ -1662,11 +1663,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        ...). *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
-  (* A numeral converter applied to a digit chain is the literal it
-     computes ({!numeral_converter_literal}). *)
-  | MLapp (MLglob {callee = r; _}, [arg]) when numeral_converter_literal r arg <> None ->
-    let info, n = Option.get (numeral_converter_literal r arg) in
-    render_numeral info n
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_elaborate.static_projection_call}). *)
@@ -4898,6 +4894,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLstring s -> CPPstring s
   | MLuint x -> CPPuint x
+  | MLnumeral (ind, n) -> (
+    match Table.get_numeral_info ind with
+    | Some info -> render_numeral info n
+    | None -> CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
   | MLfloat f -> CPPfloat f
   | MLparray (elems, def) ->
     let elems = Array.map (gen_expr env) elems in
@@ -10163,16 +10163,6 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
 let () = type_term_arg := fun env a -> gen_expr env a
 let () = plan_representation := Representation_plan.region
 
-(** Whether [expr] is a numeral-converter application (e.g.
-    [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a
-    literal ({!numeral_converter_literal}).  When true, the whole subtree is
-    replaced by a raw integer literal at translation time, so the converter and
-    its digit-chain argument (and everything they transitively reference) are
-    never emitted.  Dependency collection uses this to avoid pulling in the
-    vestigial [of_num_uint]/[of_uint]/[Uint] machinery. *)
-let is_foldable_numeral_converter_app = function
-  | MLapp (MLglob {callee = r; _}, [arg]) -> Option.has_some (numeral_converter_literal r arg)
-  | _ -> false
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
     inductives added to {!Translation_state.method_self_ns}, and puts the

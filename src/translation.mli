@@ -88,12 +88,6 @@ val restore_erased_env : binder_env -> unit
 
 (** {2 Expression Generation} *)
 
-(** Whether the expression is a numeral-converter application (e.g.
-    [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a
-    literal at translation time.  Such subtrees never reach code generation, so
-    dependency collection can prune them to avoid emitting the vestigial
-    [of_num_uint]/[Uint] machinery. *)
-val is_foldable_numeral_converter_app : Miniml.ml_ast -> bool
 
 (** What the position a subterm occupies tells the generator about how to
     build it.  Internal to the generator, which carries these properties down

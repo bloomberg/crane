@@ -8,7 +8,10 @@
     - a global already applied: [(f a) b] is [f a b];
     - a coercion: [(magic f) a] is [f a];
     - a match with one branch, which is a destructuring and nothing else:
-      [(let (x, y) := p in g x) a] is [let (x, y) := p in g x a].
+      [(let (x, y) := p in g x) a] is [let (x, y) := p in g x a];
+
+    and no application is a numeral converter applied to a digit chain:
+    that is the literal it computes ({!Numeral_literal.fold}).
 
     The contract is total.  {!structure} makes every definition body
     canonical before {!Normalize.structure} reads it, which keeps it so --
@@ -23,17 +26,21 @@
     a partial application that captures its arguments. *)
 
 (** [apply f args], [f] and [args] canonical: the canonical form of
-    [MLapp (f, args)] ({!Mlutil.canonical_app}).  Every application built
-    after {!structure} has run is built with this. *)
+    [MLapp (f, args)] ({!Mlutil.canonical_app}), a literal where it is a
+    numeral converter's application to a digit chain.  Every application
+    built after {!structure} has run is built with this. *)
 val apply : Miniml.ml_ast -> Miniml.ml_ast list -> Miniml.ml_ast
 
-(** [spine e] is [e] with every application canonical
-    ({!Mlutil.canonical}). *)
+(** [spine e] is [e] with every application canonical. *)
 val spine : Miniml.ml_ast -> Miniml.ml_ast
 
 (** Whether [f] may stand at the head of an application of a canonical
     term. *)
 val canonical_head : Miniml.ml_ast -> bool
+
+(** Whether the node [e] is canonical: not an application with a head
+    {!canonical_head} rejects, nor one {!apply} writes as a literal. *)
+val canonical_application : Miniml.ml_ast -> bool
 
 (** Whether every application in a term is canonical. *)
 val is_canonical : Miniml.ml_ast -> bool

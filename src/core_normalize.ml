@@ -3,17 +3,23 @@
 
 open Miniml
 
-let apply = Mlutil.canonical_app
+let apply f args = Numeral_literal.fold (Mlutil.canonical_app f args)
 
-let spine = Mlutil.canonical
+let rec spine = function
+  | MLapp (f, args) -> apply (spine f) (List.map spine args)
+  | e -> Mlutil.ast_map spine e
 
 let canonical_head = function
   | MLapp (MLglob _, _) | MLmagic _ -> false
   | MLcase (_, _, [|_|], _) -> false
   | _ -> true
 
+let canonical_application = function
+  | MLapp (f, _) as e -> canonical_head f && not (Numeral_literal.folds e)
+  | _ -> true
+
 let rec is_canonical e =
-  (match e with MLapp (f, _) -> canonical_head f | _ -> true)
+  canonical_application e
   &&
   let canonical = ref true in
   Mlutil.ast_iter (fun c -> if !canonical && not (is_canonical c) then canonical := false) e;

@@ -576,7 +576,7 @@ let rec walk w ?(position = no_position) lex e =
   | MLglob use ->
     walk_use w lex use;
     ignore (record w ~position lex use [])
-  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> ()
 
 and walk_use w lex use =
   name w.b use.callee;

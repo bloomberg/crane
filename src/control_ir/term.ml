@@ -277,7 +277,7 @@ let rebuilt ~pointer_fields ~in_place (l : loop) i =
       | Miniml.MLcons (_, _, args) | Miniml.MLtuple args -> List.exists (go depth) args
       | Miniml.MLmagic (_, e) -> go depth e
       | Miniml.MLparray (elements, default) -> Array.exists (go depth) elements || go depth default
-      | Miniml.MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> false
+      | Miniml.MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false
     in
     go 0 e
   in
