@@ -92,7 +92,7 @@ type t = {
       (** Every helper the generations lifted, newest first. *)
   declarations : declaration list;
       (** The finished declarations, in the order they were finished. *)
-  by_id : Cpp_erasure.settled Id_map.t;
+  by_id : declaration Id_map.t;
       (** Each finished declaration by its id: how a file's render finds
           it. *)
   demands : Table.header list;
@@ -215,7 +215,7 @@ let finish jobs =
         promoted := List.rev_append (Cpp_demands.promoted_of_decl ir) !promoted;
         declarations := {id; finished = f; ir} :: !declarations;
         sources := Id_map.add id d !sources;
-        by_id := Id_map.add id f !by_id )
+        by_id := Id_map.add id {id; finished = f; ir} !by_id )
     jobs;
   { !program with
     declarations = List.rev !declarations;
@@ -248,7 +248,9 @@ let installed_promoted () = !program.promoted
 
 let finishes_as d f = compare f (Cpp_pipeline.finish d) = 0
 
-let find id = Id_map.find_opt id !program.by_id
+let find_declaration id = Id_map.find_opt id !program.by_id
+
+let find id = Option.map (fun d -> d.finished) (find_declaration id)
 
 let refinish jobs =
   List.iter

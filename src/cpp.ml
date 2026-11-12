@@ -215,9 +215,9 @@ let outside_every_struct mp = not (Scope_plan.nested mp)
     helper defines a function and {!spec_is_hoistable} says it may be. *)
 let hoisted_helpers : bool GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
 
-(** The lifted helper [d], placed under [id] ({!Cpp_ind.finished_placed}),
+(** The lifted helper [d], placed under [id] ({!Cpp_ind.entity_placed}),
     as the function entity it finished as. *)
-let helper_entity (id, d) = Function_entity.of_finished (Cpp_ind.finished_placed (id, d))
+let helper_entity (id, d) = Cpp_ind.entity_placed (id, d)
 
 (* The function the lifted helper [d], finalized as [e], defines, if it
    defines one: only a function's declaration can be hoisted. *)
@@ -411,7 +411,7 @@ let dbg_lifted =
         | None -> "<not-a-lifted-helper>"
       in
       let split =
-        let e = Function_entity.of_finished (Cpp_ind.finished_helper d) in
+        let e = Cpp_ind.helper_entity d in
         if Function_entity.defines_function e then
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"

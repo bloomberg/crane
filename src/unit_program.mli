@@ -175,6 +175,9 @@ val install : t -> unit
 (** The declaration [id] of the installed program, if it is there. *)
 val find : id -> Cpp_erasure.settled option
 
+(** {!find}, with the declaration's CppIR. *)
+val find_declaration : id -> declaration option
+
 (** [finishes_as d f] is whether finishing [d] again gives [f]. *)
 val finishes_as : Minicpp.cpp_decl -> Cpp_erasure.settled -> bool
 
