@@ -535,24 +535,6 @@ let check_fixpoint_escape name ~closures generated_escapes =
              ( if closures then " escapes in Core but nowhere in its generated code"
                else " escapes in its generated code but nowhere in Core" ) )
 
-(* Whether [e] is a closed constructor term of a shared variant with fields:
-   built from constructors, literals and erased arguments only, so its value
-   is the same every time it is evaluated. *)
-let is_shared_constant_term e =
-  let rec closed = function
-    | MLcons (_, _, ts) -> List.for_all closed ts
-    | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
-    | MLmagic (_, a) -> closed a
-    | _ -> false
-  in
-  match e with
-  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), (_ :: _ as ts)) ->
-    Table.is_shared_variant (GlobRef.IndRef (kn, i))
-    && (not (Table.is_custom r))
-    && List.exists (function MLdummy _ -> false | _ -> true) ts
-    && List.for_all closed ts
-  | _ -> false
-
 (* The instance parameter, the class and its one method, where the variable
    [i], read at [occ] at the head of an application, is a singleton class's
    dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
@@ -574,7 +556,7 @@ let constant_name e =
     | _ -> None
   in
   let rec pos = function
-    | MLcons (_, r, args) -> (
+    | MLcons (_, r, args, _) -> (
       match (ind_name r, args) with
       | Some ("positive", 1), [p] -> Option.map (fun v -> Z.(add (mul v (of_int 2)) one)) (pos p)
       | Some ("positive", 2), [p] -> Option.map (fun v -> Z.mul v (Z.of_int 2)) (pos p)
@@ -584,7 +566,7 @@ let constant_name e =
     | _ -> None
   in
   let rec nat = function
-    | MLcons (_, r, args) -> (
+    | MLcons (_, r, args, _) -> (
       match (ind_name r, args) with
       | Some ("nat", 1), [] -> Some Z.zero
       | Some ("nat", 2), [n] -> Option.map Z.succ (nat n)
@@ -598,7 +580,7 @@ let constant_name e =
   in
   let name =
     match e with
-    | MLcons (_, r, args) -> (
+    | MLcons (_, r, args, _) -> (
       match (ind_name r, args) with
       | Some ("positive", _), _ -> Option.bind (pos e) (named "pos_")
       | Some ("N", 2), [p] -> Option.bind (pos p) (named "n_")
@@ -2772,9 +2754,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | Some into -> coerce ~from ~into cglob
         | None -> cglob )
       | _ -> curry_to_expected env ?expected_ty use cglob )
-  | MLcons (ty, r, ts) when is_custom r ->
+  | MLcons (ty, r, ts, _) when is_custom r ->
     gen_expr_custom_cons ?expected_ty ~slot env ty r ts
-  | MLcons (ty, r, ts)
+  | MLcons (ty, r, ts, _)
     when ts = []
          &&
          match r with
@@ -2797,9 +2779,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      allocation per node.  The outermost closed term is the constant; the
      runtime makes every block it holds immortal too.  Only where the term
      comes out as its factory call: a conversion into another slot type is
-     left as it is. *)
-  | MLcons (_, _, ts) as e
-    when (not slot.building_constant) && is_shared_constant_term e
+     left as it is.  Core decides which terms those are
+     ({!Core_elaborate.shared_constant}). *)
+  | MLcons (_, _, ts, _) as e
+    when (not slot.building_constant) && Core_elaborate.shared_constant e
          && not (takes_reuse_token e) -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
@@ -2807,7 +2790,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       when Table.is_shared_variant n && ts <> [] ->
       mk_call (CPPrt (Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
-  | MLcons (ty, r, ts) as construction ->
+  | MLcons (ty, r, ts, _) as construction ->
     let slot = into_erased_return slot in
     (* The annotation carries this producer's own instantiation, and a stored
        closure whose arrows extraction never unified leaves it erased -- a
@@ -2936,8 +2919,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                           ts
                       in
                       ( match first_elem with
-                      | Some (MLmagic (_, MLcons (elem_ty, _, _))) -> elem_ty
-                      | Some (MLcons (elem_ty, _, _)) -> elem_ty
+                      | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                      | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                       | _ -> t )
                     | _ -> t )
                   tys_filt
@@ -2946,7 +2929,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               let resolved_ty = Miniml.Tglob (n, tys_resolved, schema_opt) in
               let rec update_nested_ty ast =
                 match ast with
-                | MLcons (arg_typ, arg_c, arg_ts) ->
+                | MLcons (arg_typ, arg_c, arg_ts, arg_occ) ->
                   ( match arg_typ with
                   | Miniml.Tglob (arg_ref, arg_tys, _)
                     when GlobRef.CanOrd.equal arg_ref n
@@ -2956,9 +2939,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                                 | Miniml.Tunknown -> true
                                 | _ -> false )
                               arg_tys ->
-                    MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts)
+                    MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts, arg_occ)
                   | _ ->
-                    MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts) )
+                    MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts, arg_occ) )
                 | MLmagic (m, inner) -> MLmagic (m, update_nested_ty inner)
                 | other -> other
               in
@@ -3108,8 +3091,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                         ts_updated
                     in
                     ( match first_elem with
-                    | Some (MLmagic (_, MLcons (elem_ty, _, _))) -> elem_ty
-                    | Some (MLcons (elem_ty, _, _)) -> elem_ty
+                    | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                    | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                     | _ -> t )
                   | _ -> t )
                 tys
@@ -3540,7 +3523,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    deque<any>, matching what any_cast<deque<any>> expects when
                    consuming through the erased field. *)
                 let rec is_custom_list_cons = function
-                  | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _) ->
+                  | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _, _) ->
                     let ind = GlobRef.IndRef (kn, 0) in
                     Ml_type_util.is_custom_list_global ind
                   | MLmagic (_, inner) -> is_custom_list_cons inner
@@ -3964,7 +3947,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
                      | _ -> false)
                      || ( match strip_magic e with
-                        | MLcons (_, GlobRef.ConstructRef ((kn, i), _), _) ->
+                        | MLcons (_, GlobRef.ConstructRef ((kn, i), _), _, _) ->
                           globref_equal g (GlobRef.IndRef (kn, i))
                         | _ -> false ) ->
                 (* The recursive spine: every cell of a list is the same C++
@@ -4379,7 +4362,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       nstempmod record_arg_exprs
     in
     cons_result
-  | MLcase (typ, t, pv, case_occ) when is_custom_match pv ->
+  | MLcase (typ, t, pv, case_occ) when Core_elaborate.match_kind typ pv case_occ = Match_kind.Custom ->
     let iife_ret =
       let branch_rty =
         match Array.to_list pv with
@@ -4401,10 +4384,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     mk_iife (Some iife_ret) stmts
   | MLcase (typ, t, pv, case_occ)
-    when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
+    when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
     let ids, r, pat, body = pv.(0) in
     let n = List.length ids in
-    let is_typeclass = Table.is_typeclass_type typ in
+    let is_typeclass, record_body =
+      match Core_elaborate.match_kind typ pv case_occ with
+      | Match_kind.Record {typeclass; body} -> (typeclass, body)
+      | Custom | Variant -> CErrors.anomaly (Pp.str "gen_expr: a record projection Core did not classify as one")
+    in
     (* Build lists that correctly account for erased fields.
        record_fields_of_type includes None entries for erased fields; ids only
        contains non-erased bindings. So MLrel i refers to the i-th non-erased
@@ -4453,21 +4440,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | MLmagic (_, b) -> b
       | b -> b
     in
-    ( match body' with
-    | MLrel (i, _) when i <= n ->
+    ( match (record_body, body') with
+    | Projection {field; application = Read}, _ ->
       let fld =
-        try Some (List.nth non_erased_fields (n - i)) with _ -> None
+        try Some (List.nth non_erased_fields field) with _ -> None
       in
       ( match fld with
       | Some fld ->
         let access = make_field_access (gen_expr env t) fld in
-        let access = wrap_record_field_to_api (n - i) access in
+        let access = wrap_record_field_to_api field access in
         if is_typeclass then
           (* For typeclasses, non-function value fields (like m_id : carrier)
              are generated as nullary static methods, so we need () to call
              them *)
           let fld_ty =
-            try List.nth non_erased_field_types (n - i)
+            try List.nth non_erased_field_types field
             with _ -> Miniml.Tunknown
           in
           let is_value_field =
@@ -4504,9 +4491,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           access
       | _ ->
         CErrors.anomaly (Pp.str "record field index out of bounds") )
-    | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _))), args) when i <= n ->
+    | Projection {field; application = Call | Coerced_call}, MLapp (_, args) ->
       let fld =
-        try Some (List.nth non_erased_fields (n - i)) with _ -> None
+        try Some (List.nth non_erased_fields field) with _ -> None
       in
       let branch_binders =
         List.rev_map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids
@@ -4526,7 +4513,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            A class's method is a function declared at the field's own arity. *)
         let declared =
           try
-            let ty = List.nth non_erased_field_types (n - i) in
+            let ty = List.nth non_erased_field_types field in
             Some (if is_typeclass then ty else expand_ml_fun_alias ty)
           with _ -> None
         in
@@ -4750,7 +4737,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           ~fun_ty:(if is_typeclass then None else fld_ty_opt)
           ~n_args:n_value_args ~want:expected_ty call
       | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
-    | _ ->
+    | Destructure, _ | Projection _, _ ->
       (* Destructure record fields into local variables, then evaluate the body
          in an IIFE. push_vars' may rename variables to avoid shadowing
          identifiers already in scope — e.g. when a record has a field
@@ -9248,7 +9235,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 | _ -> None
               in
               match b_inner with
-              | Miniml.MLcons (ctor_ty, _, ts) ->
+              | Miniml.MLcons (ctor_ty, _, ts, _) ->
                 let result = ref None in
                 List.iteri (fun i (ti : Miniml.ml_ast) ->
                   match ti with
@@ -9812,8 +9799,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       else
         [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
     end
-  | MLcase (typ, t, pv, case_occ) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv case_occ
-  | MLcons (_, r, []) when Table.is_tt_constructor r
+  | MLcase (typ, t, pv, case_occ) when Core_elaborate.match_kind typ pv case_occ = Match_kind.Custom ->
+    gen_custom_cpp_case env k typ t pv case_occ
+  | MLcons (_, r, [], _) when Table.is_tt_constructor r
       && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
     if (!tctx).itree_mode = Reified then [k (mk_itree_ret Tvoid [])]
@@ -9834,16 +9822,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLmagic (_, MLexn msg) ->
     (* Handle MLexn wrapped in MLmagic *)
     [Sthrow msg]
-  | MLcase (typ, t, pv, case_occ)
-    when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
+  | MLcase (typ, t, pv, case_occ) when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
     let ids, _r, _pat, body = pv.(0) in
     let n = List.length ids in
-    let body' = match body with MLmagic (_, b) -> b | b -> b in
-    let is_simple =
-      match body' with
-      | MLrel (i, _) when i <= n -> true
-      | MLapp (MLrel (i, _), _) when i <= n -> true
-      | _ -> false
+    let is_typeclass, is_simple =
+      match Core_elaborate.match_kind typ pv case_occ with
+      | Match_kind.Record {typeclass; body = Projection {application = Read | Call; _}} -> (typeclass, true)
+      | Record {typeclass; body = Projection {application = Coerced_call; _} | Destructure} -> (typeclass, false)
+      | Custom | Variant -> CErrors.anomaly (Pp.str "gen_stmts: a record projection Core did not classify as one")
     in
     if is_simple then
       (* Simple body: gen_expr handles these as direct field access (no IIFE),
@@ -9865,7 +9851,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Complex body: emit field extraction assignments as flat statements
          instead of wrapping in an IIFE. This produces clean code for all
          continuations (return, assignment, etc.). *)
-      let is_typeclass = Table.is_typeclass_type typ in
       let all_fields = record_fields_of_type typ in
       let non_erased_fields = List.filter_map Fun.id all_fields in
       let make_field_access base_expr fld =

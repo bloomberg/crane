@@ -913,7 +913,7 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
   | MLletin (id, ty, a, b, occ) ->
     MLletin (id, f ty, map_types_in_ast f a, map_types_in_ast f b, occ)
   | MLglob use -> MLglob (Global_use.map_types f use)
-  | MLcons (ty, r, args) -> MLcons (f ty, r, List.map (map_types_in_ast f) args)
+  | MLcons (ty, r, args, occ) -> MLcons (f ty, r, List.map (map_types_in_ast f) args, occ)
   | MLcase (ty, e, brs, occ) ->
     MLcase
       ( f ty,

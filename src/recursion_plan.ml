@@ -162,7 +162,7 @@ let classify ~effects ~callee body =
     let walk ~tail e = walk ~depth ~tail e in
     match e with
     | f when callee ~depth f = Some 0 -> if tail then tail_call := true else nontail_call := true
-    | MLcons (_, c, [a]) when identity c -> walk ~tail a
+    | MLcons (_, c, [a], _) when identity c -> walk ~tail a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk ~tail a
     | MLapp (f, args) when Option.has_some (callee ~depth f) ->
       List.iter (walk ~tail:false) args;
@@ -209,7 +209,7 @@ let classify ~effects ~callee body =
           let n, b = split_params 0 f in
           walk_under (Array.length ids + n) ~tail:false b )
         bodies
-    | MLcons (_, _, l) | MLtuple l -> List.iter (walk ~tail:false) l
+    | MLcons (_, _, l, _) | MLtuple l -> List.iter (walk ~tail:false) l
     | MLparray (a, d) ->
       Array.iter (walk ~tail:false) a;
       walk ~tail:false d
@@ -296,7 +296,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
     in
     let self_call ~depth e = full_call ~depth e = Some self in
     let rec chain = function
-      | MLcons (_, constructor, args) -> (
+      | MLcons (_, constructor, args, _) -> (
         let args = List.mapi (fun hole a -> (hole, a)) args in
         match List.filter (fun (_, a) -> self_call ~depth a) args with
         | [(hole, _)] -> Some {around = []; innermost = {constructor; hole}}
@@ -317,7 +317,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
       general_if (calls ~depth a > 0);
       walk_under 1 b
     | MLmagic (_, a) -> general_if ((not (self_call ~depth a)) && calls ~depth a > 0)
-    | MLcons (_, c, [a]) when identity c -> walk_under 0 a
+    | MLcons (_, c, [a], _) when identity c -> walk_under 0 a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk_under 0 a
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
@@ -380,7 +380,7 @@ let suspends_within ~self lex e =
   try
     iter_scoped
       (fun lex -> function
-        | MLcons (Tglob (n, _, _), c, args)
+        | MLcons (Tglob (n, _, _), c, args, _)
           when (not (Table.is_custom c))
                && Translation_support.suspends_constructor ~self:(Some self)
                     ~binder_type:(Lexenv.type_opt lex) n args ->
@@ -444,8 +444,7 @@ let rec arguments = function MLmagic (_, e) -> arguments e | MLapp (_, args) -> 
    side as statements, each branch assigning the binder -- a custom match,
    or a record's -- rather than in a lambda invoked in place, as it does
    any other. *)
-let match_bound_in_place ty branches =
-  Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
+let match_bound_in_place ty branches = Match_kind.bound_in_place (Match_kind.classify ty branches)
 
 (* The points the body of [origin], standing in [lex], resumes at once a
    recursive call returns: a let whose right-hand side is the call, or ends
@@ -938,9 +937,9 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
           :: !found;
       List.iter operand args
     | MLmagic (_, a) -> go pos a
-    | MLcons (_, c, [a]) when identity c -> go pos a
+    | MLcons (_, c, [a], _) when identity c -> go pos a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> go pos a
-    | MLcons (Tglob (n, _, _), c, args)
+    | MLcons (Tglob (n, _, _), c, args, _)
       when (not (Table.is_custom c))
            && Translation_support.suspends_constructor ~self:(Some self) ~binder_type:(fun _ -> None) n
                 args ->
@@ -983,7 +982,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
     | MLapp (f, args) ->
       operand f;
       List.iter operand args
-    | MLcons (_, _, args) | MLtuple args -> List.iter operand args
+    | MLcons (_, _, args, _) | MLtuple args -> List.iter operand args
     | MLparray (a, d) ->
       Array.iter operand a;
       operand d

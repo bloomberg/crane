@@ -16,7 +16,7 @@ let registered_constructor name = function
    [acc]. *)
 let rec decimal_uint expr acc =
   match strip_magic expr with
-  | MLcons (_, r, args) -> (
+  | MLcons (_, r, args, _) -> (
     match (registered_constructor "num.uint.type" r, args) with
     | Some idx, [] when idx = uint_nil_idx -> Some acc
     | Some cidx, [inner] when cidx >= decimal_d0_idx && cidx <= decimal_d9_idx ->
@@ -28,7 +28,7 @@ let rec decimal_uint expr acc =
 (* A [Decimal.signed_int]: [Pos] or [Neg] of a [Decimal.uint] chain. *)
 let signed_decimal_int expr =
   match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
+  | MLcons (_, r, [inner], _) -> (
     match registered_constructor "num.int.type" r with
     | Some idx when idx = signed_pos_idx -> decimal_uint inner Z.zero
     | Some idx when idx = signed_neg_idx -> Option.map Z.neg (decimal_uint inner Z.zero)
@@ -38,7 +38,7 @@ let signed_decimal_int expr =
 (* A [Hexadecimal.uint] digit chain onto [acc]. *)
 let rec hex_uint expr acc =
   match strip_magic expr with
-  | MLcons (_, r, args) -> (
+  | MLcons (_, r, args, _) -> (
     match (registered_constructor "num.hexadecimal_uint.type" r, args) with
     | Some idx, [] when idx = uint_nil_idx -> Some acc
     | Some cidx, [inner] when cidx >= hex_d0_idx && cidx <= hex_df_idx ->
@@ -51,7 +51,7 @@ let rec hex_uint expr acc =
    chain. *)
 let signed_hex_int expr =
   match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
+  | MLcons (_, r, [inner], _) -> (
     match registered_constructor "num.hexadecimal_int.type" r with
     | Some idx when idx = signed_pos_idx -> hex_uint inner Z.zero
     | Some idx when idx = signed_neg_idx -> Option.map Z.neg (hex_uint inner Z.zero)
@@ -61,7 +61,7 @@ let signed_hex_int expr =
 (* A [Number.int]: [IntDecimal] or [IntHexadecimal]. *)
 let num_int expr =
   match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
+  | MLcons (_, r, [inner], _) -> (
     match registered_constructor "num.num_int.type" r with
     | Some 1 -> signed_decimal_int inner
     | Some 2 -> signed_hex_int inner
@@ -71,7 +71,7 @@ let num_int expr =
 (* A [Number.uint]: [UIntDecimal] or [UIntHexadecimal]. *)
 let num_uint expr =
   match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
+  | MLcons (_, r, [inner], _) -> (
     match registered_constructor "num.num_uint.type" r with
     | Some idx when idx = num_uint_decimal_idx -> decimal_uint inner Z.zero
     | Some idx when idx = num_uint_hex_idx -> hex_uint inner Z.zero
@@ -89,7 +89,7 @@ let converter_literal r arg =
 (* A binary [positive] chain [xI (xO (... xH))]. *)
 let rec positive expr =
   match strip_magic expr with
-  | MLcons (_, r, args) -> (
+  | MLcons (_, r, args, _) -> (
     match (registered_constructor "num.pos.type" r, args) with
     | Some idx, [] when idx = positive_xH_idx -> Some Z.one
     | Some idx, [inner] when idx = positive_xI_idx -> Option.map (fun n -> Z.succ (Z.shift_left n 1)) (positive inner)
@@ -106,15 +106,15 @@ let rec peano info expr =
     | _ -> None
   in
   match strip_magic expr with
-  | MLcons (_, cr, []) when index cr = Some info.Table.num_zero_ctor -> Some Z.zero
-  | MLcons (_, cr, [inner]) when index cr = Some info.Table.num_succ_ctor -> Option.map Z.succ (peano info inner)
+  | MLcons (_, cr, [], _) when index cr = Some info.Table.num_zero_ctor -> Some Z.zero
+  | MLcons (_, cr, [inner], _) when index cr = Some info.Table.num_succ_ctor -> Option.map Z.succ (peano info inner)
   | _ -> None
 
 (* Whether [r] is the global Rocq registers as [name]. *)
 let registered name r = Rocqlib.has_ref name && Rocqlib.check_ref name r
 
 let constructor_literal = function
-  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), args) as e -> (
+  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), args, _) as e -> (
     let ind = GlobRef.IndRef (kn, i) in
     match Table.get_numeral_info ind with
     | None -> None

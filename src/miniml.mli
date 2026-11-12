@@ -267,7 +267,11 @@ and ml_ast =
           program, kept by a pass rebuilding it as [MLfix]'s is: two lets
           bound to one name in one definition are still two. *)
   | MLglob of global_use
-  | MLcons of ml_type * GlobRef.t * ml_ast list
+  | MLcons of ml_type * GlobRef.t * ml_ast list * Occurrence.t
+      (** The constructed type, the constructor, its arguments, and the
+          occurrence telling this construction apart from every other one in
+          the program, kept by a pass rebuilding it as [MLcase]'s is: two
+          constructions of one value in one definition are still two. *)
   | MLtuple of ml_ast list
   | MLcase of ml_type * ml_ast * ml_branch array * Occurrence.t
       (** The matched head's type, the scrutinee, the branches, and the

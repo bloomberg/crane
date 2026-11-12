@@ -203,8 +203,8 @@ let check_instantiations p =
     p.structure
 
 (** [f r what o] for every occurrence [o] the body of the definition [r]
-    holds, [what] saying whose: a read's, a let's, a match's, a fixpoint's
-    or a global use's. *)
+    holds, [what] saying whose: a read's, a let's, a match's, a
+    construction's, a fixpoint's or a global use's. *)
 let iter_occurrences f p =
   Modutil.struct_iter
     (function
@@ -216,6 +216,7 @@ let iter_occurrences f p =
               | MLrel (_, o) -> f fd.fd_ref "read" o
               | MLletin (_, _, _, _, o) -> f fd.fd_ref "let" o
               | MLcase (_, _, _, o) -> f fd.fd_ref "match" o
+              | MLcons (_, _, _, o) -> f fd.fd_ref "construction" o
               | MLfix (_, _, _, _, o) -> f fd.fd_ref "local fixpoint" o
               | MLglob use -> f fd.fd_ref "use" (Global_use.occurrence use)
               | _ -> () );

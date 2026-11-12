@@ -54,7 +54,7 @@ let flags o turn = List.find_map (fun (o', f) -> if Occurrence.equal o o' then S
 
 let () =
   let acc = fresh_rel 3 and x = fresh_rel 2 and xs = fresh_rel 1 in
-  let consed a = MLcons (lst, cons, [x; a]) in
+  let consed a = MLcons (lst, cons, [x; a], Occurrence.fresh ()) in
   let o = Occurrence.fresh () in
   check "rev: the accumulator rebuilt around itself is moved, the list walked on is not"
     (flags o (continue_ o [xs; consed acc]) = Some [k; p]);
@@ -77,7 +77,7 @@ let () =
           [ { binders = [(id "y", nat); (id "ys", lst)];
               result_type = lst;
               pattern = Pcons (cons, [Prel 2; Prel 1]);
-              body = continue_ o [fresh_rel 3; MLcons (lst, cons, [fresh_rel 2; fresh_rel 5])] } ] }
+              body = continue_ o [fresh_rel 3; MLcons (lst, cons, [fresh_rel 2; fresh_rel 5], Occurrence.fresh ())] } ] }
   in
   check "an accumulator read beside a part of itself is not moved" (flags o on_acc = Some [k; k]);
   (* let next := cons x acc in f xs next: [next] is [MLrel 1], [xs] [MLrel 2]. *)

@@ -17,7 +17,7 @@ let rec iter_annotations f = function
     iter_annotations f a;
     iter_annotations f b
   | MLglob _ -> ()
-  | MLcons (ty, _, args) ->
+  | MLcons (ty, _, args, _) ->
     f ty;
     List.iter (iter_annotations f) args
   | MLcase (ty, e, brs, _) ->
@@ -83,7 +83,7 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     already.  A match answers with its first branch that does. *)
 let rec tail_result_type = function
   | MLlam (_, _, b) | MLletin (_, _, _, b, _) | MLmagic (_, b) -> tail_result_type b
-  | MLcons (ty, _, _) -> Some ty
+  | MLcons (ty, _, _, _) -> Some ty
   | MLapp (f, args) -> Translation_types.ml_app_result_type f args
   | MLcase (_, _, brs, _) ->
     Array.fold_left

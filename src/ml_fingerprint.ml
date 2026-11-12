@@ -92,7 +92,7 @@ and ml_ast w = function
   | MLletin (x, ty, a, b, _) ->
     tag w "MLletin"; ml_ident w x; ml_type w ty; ml_ast w a; ml_ast w b
   | MLglob u -> tag w "MLglob"; global_use w u
-  | MLcons (ty, r, args) ->
+  | MLcons (ty, r, args, _) ->
     tag w "MLcons"; ml_type w ty; globref w r; list w (ml_ast w) args
   | MLtuple args -> tag w "MLtuple"; list w (ml_ast w) args
   | MLcase (ty, a, brs, _) -> tag w "MLcase"; ml_type w ty; ml_ast w a; array w (branch w) brs

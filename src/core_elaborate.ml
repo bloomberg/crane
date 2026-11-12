@@ -353,9 +353,43 @@ type t = {
       (** Each application of a singleton class's dictionary, by the
           occurrence of the variable at its head: the class and its one
           method ({!singleton_dictionary_head}). *)
+  constructions : (Occurrence.t * bool) list GlobRef.Map_env.t;
+      (** Each construction, by its constructor and then its occurrence:
+          whether it is a closed term of a shared variant
+          ({!is_shared_constant_term}). *)
+  matches : (Occurrence.t * Match_kind.t) list Int.Map.t;
+      (** Each match, by its number of branches and then its occurrence:
+          how it is lowered ({!Match_kind.classify}). *)
 }
 
-let empty = {calls = Ref.User.Map.empty; named = GlobRef.Set_env.empty; dictionary_calls = []}
+let empty =
+  { calls = Ref.User.Map.empty;
+    named = GlobRef.Set_env.empty;
+    dictionary_calls = [];
+    constructions = GlobRef.Map_env.empty;
+    matches = Int.Map.empty }
+
+(* Whether [e] is a closed constructor term of a shared variant with fields:
+   built from constructors, literals and erased arguments only, so its value
+   is the same every time it is evaluated. *)
+let is_shared_constant_term e =
+  let rec closed = function
+    | MLcons (_, _, ts, _) -> List.for_all closed ts
+    | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
+    | MLmagic (_, a) -> closed a
+    | _ -> false
+  in
+  match e with
+  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), (_ :: _ as ts), _) ->
+    Table.is_shared_variant (GlobRef.IndRef (kn, i))
+    && (not (Table.is_custom r))
+    && List.exists (function MLdummy _ -> false | _ -> true) ts
+    && List.for_all closed ts
+  | _ -> false
+
+(* [m] with [fact] recorded for the occurrence [occ] in the bucket [key]. *)
+let add_keyed key occ fact m =
+  GlobRef.Map_env.update key (fun l -> Some ((occ, fact) :: Option.default [] l)) m
 
 (* Whether the call [use args], standing in [lex], builds a typeclass
    instance -- its Rocq type says so ({!Table.builds_instance}): a singleton
@@ -580,11 +614,19 @@ let rec walk w ?(position = no_position) lex e =
     walk_type w lex ty;
     go ~position:{position with expected = Some ty} lex a;
     go ~position (push Lexenv.Value [(x, ty)] lex) body
-  | MLcons (ty, _, args) ->
+  | MLcons (ty, r, args, occ) ->
+    w.b := {!(w.b) with constructions = add_keyed r occ (is_shared_constant_term e) !(w.b).constructions};
     walk_type w lex ty;
     List.iter (go ~position:{expected = None; stated = position.stated} lex) args
   | MLtuple args -> List.iter (go lex) args
-  | MLcase (ty, scrut, branches, _) ->
+  | MLcase (ty, scrut, branches, occ) ->
+    let kind = Match_kind.classify ty branches in
+    w.b :=
+      { !(w.b) with
+        matches =
+          Int.Map.update (Array.length branches)
+            (fun l -> Some ((occ, kind) :: Option.default [] l))
+            !(w.b).matches };
     walk_type w lex ty;
     go lex scrut;
     (* A branch's result type is written under its binders: a custom match
@@ -1036,6 +1078,25 @@ let singleton_dictionary_call ~live occ =
     | heads -> Option.map Option.make (agreed same_head heads)
   in
   lookup "singleton dictionary calls" ~equal:(Option.equal same_head) ~live planned
+
+let shared_constant = function
+  | MLcons (_, r, _, occ) as e ->
+    let planned =
+      match GlobRef.Map_env.find_opt r !installed.constructions with
+      | None -> None
+      | Some l ->
+        agreed Bool.equal (List.filter_map (fun (o, f) -> if Occurrence.equal o occ then Some f else None) l)
+    in
+    lookup "shared constants" ~equal:Bool.equal ~live:(fun () -> is_shared_constant_term e) planned
+  | _ -> false
+
+let match_kind ty branches occ =
+  let planned =
+    match Int.Map.find_opt (Array.length branches) !installed.matches with
+    | None -> None
+    | Some l -> agreed ( = ) (List.filter_map (fun (o, k) -> if Occurrence.equal o occ then Some k else None) l)
+  in
+  lookup "match kinds" ~equal:( = ) ~live:(fun () -> Match_kind.classify ty branches) planned
 
 let report () =
   let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) !installed.calls 0 in

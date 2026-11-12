@@ -138,7 +138,7 @@ let rec reaches_call group ~depth e =
   | MLcase (_, scrut, branches, _) ->
     reaches_call group ~depth scrut || branch_reaches_call group ~depth branches
   | MLapp (f, args) -> List.exists (reaches_call group ~depth) (f :: args)
-  | MLcons (_, _, args) | MLtuple args -> List.exists (reaches_call group ~depth) args
+  | MLcons (_, _, args, _) | MLtuple args -> List.exists (reaches_call group ~depth) args
   | MLmagic (_, e) -> reaches_call group ~depth e
   | _ -> false
 
@@ -247,13 +247,13 @@ let rec scope ~group ~depth ?expected e =
           (Option.default (Mlutil.new_meta ())
              (Ml_type_util.ml_codomain_after (List.length value_args) (snd ids.(i))))
       | _ -> e' )
-    | MLcons (ty, (GlobRef.ConstructRef (ind, _) as r), args)
+    | MLcons (ty, (GlobRef.ConstructRef (ind, _) as r), args, occ)
       when Table.is_coinductive (GlobRef.IndRef ind) ->
       (* A coinductive constructor suspends its arguments. *)
-      MLcons (ty, r, List.map (inner 0) args)
-    | MLcons (ty, r, args) when not (Table.is_custom r) ->
-      MLcons (ty, r, List.map (strict ~reading:Stored ~tail:false) args)
-    | MLcons (ty, r, args) ->
+      MLcons (ty, r, List.map (inner 0) args, occ)
+    | MLcons (ty, r, args, occ) when not (Table.is_custom r) ->
+      MLcons (ty, r, List.map (strict ~reading:Stored ~tail:false) args, occ)
+    | MLcons (ty, r, args, occ) ->
       (* A constructor mapped to custom code is what its replacement text
          makes of its arguments.  One that is just an argument ([%a0])
          stands for it, tail position included; any other ([%a0 + 1]) is an
@@ -265,7 +265,8 @@ let rec scope ~group ~depth ?expected e =
           List.mapi
             (fun i a ->
               if through = Some i then strict ~reading ~tail a else strict ~reading:Stored ~tail:false a )
-            args )
+            args,
+          occ )
     | MLtuple args -> MLtuple (List.map (strict ~tail:false) args)
     | MLcase (ty, scrut, branches, occ) ->
       let scrut = strict ~tail:false scrut in

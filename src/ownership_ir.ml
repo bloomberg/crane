@@ -121,7 +121,7 @@ let closure_reads d t =
     | MLrel (i, o) -> if d' - i < d then (d' - i, o) :: acc else acc
     | MLmagic (_, t) -> go d' acc t
     | MLapp (f, args) -> List.fold_left (go d') acc (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> List.fold_left (go d') acc args
+    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go d') acc args
     | MLparray (elems, default) -> List.fold_left (go d') acc (default :: Array.to_list elems)
     | MLlam (_, _, b) -> go (d' + 1) acc b
     | MLletin (_, _, a, b, _) -> go (d' + 1) (go d' acc a) b
@@ -322,7 +322,7 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
   | MLapp (MLglob {callee = r; _}, [arg]) when parts && projected d r (strip arg) <> None ->
     Levels.singleton (fst (Option.get (projected d r (strip arg))))
   | MLapp (f, args) -> frees parents d (f :: args)
-  | MLcons (_, _, args) | MLtuple args -> frees parents d args
+  | MLcons (_, _, args, _) | MLtuple args -> frees parents d args
   | MLparray (elems, default) -> frees parents d (default :: Array.to_list elems)
   | MLlam (_, _, body) -> whole (closure_under parents d ~n:1 body)
   | MLletin (_, _, a, b, _) -> Levels.union (free parents d a) (under parents d ~n:1 b)
@@ -399,15 +399,16 @@ let rec spelled_in_place = function
    a record's fields are read one at a time, and any other custom match
    evaluates its scrutinee once. *)
 let scrutinee_consumed ty scrut branches =
-  if Table.is_custom_match branches then
+  match Match_kind.classify ty branches with
+  | Custom ->
     let uses =
       List.length
         (List.filter (( = ) Foreign_template.CCscrut)
            (Foreign_template.match_template (Table.find_custom_match branches)) )
     in
     uses <= 1 || not (spelled_in_place scrut)
-  else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then true
-  else
+  | Record _ -> true
+  | Variant ->
     Array.for_all
       (fun (_, _, pat, _) ->
         match pat with
@@ -442,8 +443,7 @@ let call_of a =
 (* Whether the branches of a match on a value of type [ty] are where the
    value of the match is bound, rather than in a closure run in its place
    (as {!Recursion_plan} reads a right-hand side ending in its branches). *)
-let bound_in_place ty branches =
-  Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
+let bound_in_place ty branches = Match_kind.bound_in_place (Match_kind.classify ty branches)
 
 (* The calls [a] ends in: the call it is, or those the branches of a match
    bound in place end in, through lets and casts. *)
@@ -641,7 +641,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
         enters call Levels.empty args ~pinned parents d live
       | _ -> () );
       unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> unsequenced ~pinned parents d live args
+    | MLcons (_, _, args, _) | MLtuple args -> unsequenced ~pinned parents d live args
     | MLparray (elems, default) ->
       unsequenced ~pinned parents d live (default :: Array.to_list elems)
     (* A closure reads what it closes over where it is made; its own body
@@ -890,7 +890,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
         List.iter (own (Levels.diff owned !resumed) d) args
       end
       else all (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> all args
+    | MLcons (_, _, args, _) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
     | MLlam _ | MLfix _ ->
@@ -972,17 +972,18 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
              arms ->
       (* Rebuilding in the scrutinee's storage moves every field out of it. *)
       Levels.union (Levels.remove (d - i) owned) (fields (fun _ _ -> true))
-    | _ ->
-      if Table.is_custom_match branches then
+    | _ -> (
+      match Match_kind.classify ty branches with
+      | Custom ->
         if Binding.pair_by_value ~owned:(owned_var owned d) scrut branches then
           Levels.union owned (fields (fun _ (_, ty) -> worth_moving ty))
         else owned
-      else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then
+      | Record _ -> (
         match List.find_map (function Fields f when f.case == case -> Some f.by_value | _ -> None) arms with
         | Some by_value ->
           Levels.union owned (fields (fun i (_, ty) -> List.nth_opt by_value i = Some true && worth_moving ty))
-        | None -> owned
-      else
+        | None -> owned )
+      | Variant -> (
         match (pat, ind) with
         | (Pusual r | Pcons (r, _)), Some ind
           when (not (Table.is_enum_inductive ind)) && not (Table.is_shared_variant ind) ->
@@ -999,7 +1000,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
             let stored = Ml_type_util.Ctor_fields.of_ctor r in
             Levels.union owned (fields (fun i _ -> not (Ml_type_util.Ctor_fields.behind_pointer stored i)))
           else owned
-        | _ -> owned
+        | _ -> owned ) )
   in
   own owned 0 t;
   (!out, !read_types, !captured, !copied_reads, !saved_owned, !entry_owned)
@@ -1066,7 +1067,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
       | Some brs when branch < Array.length brs ->
         let _, _, _, body = brs.(branch) in
         List.filter
-          (function MLcons (_, r, _) -> Common.globref_equal r constructor | _ -> false)
+          (function MLcons (_, r, _, _) -> Common.globref_equal r constructor | _ -> false)
           (Escape.tail_constructions body)
       | _ -> []
     in
@@ -1331,7 +1332,7 @@ let moved_reads p ts =
     | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc
     | MLmagic (_, t) -> go acc t
     | MLapp (f, args) -> List.fold_left go acc (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> List.fold_left go acc args
+    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left go acc args
     (* What a closure among them takes by move, the closure made around
        them takes by move first, to hand it on. *)
     | (MLlam _ | MLfix _) as closure -> moved_captures p closure @ acc

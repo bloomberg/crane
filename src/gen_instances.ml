@@ -52,7 +52,7 @@ let instance_promoted_types name body ty =
   match (inner_ty : ml_type) with
   | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref -> (
     match Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
-    | MLcons (cons_ty, _, _) ->
+    | MLcons (cons_ty, _, _, _) ->
       let type_args = Instance_methods.record_type_args cons_ty type_args in
       let promoted_vars = class_promoted_vars class_ref in
       let promoted_concrete = class_promoted_concrete class_ref type_args in
@@ -195,7 +195,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
        MLmagic due to Tvar/Tglob mismatches during extraction unification. *)
     let inner_body = Instance_methods.record_body name class_ref inner_ty lam_params inner_body in
     ( match inner_body with
-    | MLcons (cons_ty, _ctor_ref, method_bodies) ->
+    | MLcons (cons_ty, _ctor_ref, method_bodies, _) ->
       (* For promoted dependent records, the definition type Tglob(Magma,[],[])
          has no type_args, but the MLcons type Tglob(Magma,[nat],[]) carries the
          concrete types extracted from the erased constructor args.  The

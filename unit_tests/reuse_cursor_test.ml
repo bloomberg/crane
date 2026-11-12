@@ -40,7 +40,7 @@ let on_list ?(result = lst) scrutinee body =
     { scrutinee_type = lst;
       scrutinee;
       branches =
-        [ {binders = []; result_type = result; pattern = Pusual nil; body = Return (MLcons (lst, nil, []))};
+        [ {binders = []; result_type = result; pattern = Pusual nil; body = Return (MLcons (lst, nil, [], Occurrence.fresh ()))};
           { binders = [(id "x", nat); (id "xs", lst)];
             result_type = result;
             pattern = Pcons (cons, [Prel 2; Prel 1]);

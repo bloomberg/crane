@@ -985,7 +985,7 @@ let rec eq_ml_ast t1 t2 =
   | MLletin (na1, ty1, c1, t1, _), MLletin (na2, ty2, c2, t2, _) ->
     eq_ml_ident na1 na2 && eq_ml_ast c1 c2 && eq_ml_ast t1 t2
   | MLglob {callee = gr1; _}, MLglob {callee = gr2; _} -> GlobRef.CanOrd.equal gr1 gr2
-  | MLcons (t1, gr1, c1), MLcons (t2, gr2, c2) ->
+  | MLcons (t1, gr1, c1, _), MLcons (t2, gr2, c2, _) ->
     eq_ml_type t1 t2
     && GlobRef.CanOrd.equal gr1 gr2
     && List.equal eq_ml_ast c1 c2
@@ -1065,7 +1065,7 @@ let ast_iter_rel_applied f =
     | MLapp (a, l) ->
       iter n a;
       List.iter (iter n) l
-    | MLcons (_, _, l) | MLtuple l -> List.iter (iter n) l
+    | MLcons (_, _, l, _) | MLtuple l -> List.iter (iter n) l
     | MLmagic (_, a) -> iter n a
     | MLparray (t, def) ->
       Array.iter (iter n) t;
@@ -1095,7 +1095,7 @@ let ast_map f = function
   | MLcase (typ, a, v, occ) -> MLcase (typ, f a, Array.map (ast_map_branch f) v, occ)
   | MLfix (i, ids, v, is_cofix, occ) -> MLfix (i, ids, Array.map f v, is_cofix, occ)
   | MLapp (a, l) -> MLapp (f a, List.map f l)
-  | MLcons (typ, c, l) -> MLcons (typ, c, List.map f l)
+  | MLcons (typ, c, l, occ) -> MLcons (typ, c, List.map f l, occ)
   | MLtuple l -> MLtuple (List.map f l)
   | MLmagic (m, a) -> MLmagic (m, f a)
   | MLparray (t, def) -> MLparray (Array.map f t, f def)
@@ -1125,7 +1125,7 @@ let rec ast_map_types f = function
   | MLletin (i, t, a, b, occ) ->
     MLletin (i, f t, ast_map_types f a, ast_map_types f b, occ)
   | MLglob use -> MLglob (Global_use.map_types f use)
-  | MLcons (t, c, l) -> MLcons (f t, c, List.map (ast_map_types f) l)
+  | MLcons (t, c, l, occ) -> MLcons (f t, c, List.map (ast_map_types f) l, occ)
   | MLtuple l -> MLtuple (List.map (ast_map_types f) l)
   | MLcase (t, a, v, occ) ->
     let branch (binds, bty, pat, body) =
@@ -1360,8 +1360,8 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
         (binds, bty, pat, go env expected body)
       in
       MLcase (ty, go env None scrut, Array.map branch branches, occ)
-    | MLcons (ty, c, args) ->
-      MLcons (better ~have:ty ~from:expected, c, List.map (go env None) args)
+    | MLcons (ty, c, args, occ) ->
+      MLcons (better ~have:ty ~from:expected, c, List.map (go env None) args, occ)
     | MLapp ((MLglob use as f), args) when callee_doms use args <> [] ->
       (* A lambda passed as an argument is the case with no second witness:
          its binder's type occurs nowhere in the enclosing declaration -- it
@@ -1394,7 +1394,7 @@ let ast_map_lift f n = function
     let k = Array.length ids in
     MLfix (i, ids, Array.map (f (k + n)) v, is_cofix, occ)
   | MLapp (a, l) -> MLapp (f n a, List.map (f n) l)
-  | MLcons (typ, c, l) -> MLcons (typ, c, List.map (f n) l)
+  | MLcons (typ, c, l, occ) -> MLcons (typ, c, List.map (f n) l, occ)
   | MLtuple l -> MLtuple (List.map (f n) l)
   | MLmagic (m, a) -> MLmagic (m, f n a)
   | MLparray (t, def) -> MLparray (Array.map (f n) t, f n def)
@@ -1423,7 +1423,7 @@ let ast_iter f = function
   | MLapp (a, l) ->
     f a;
     List.iter f l
-  | MLcons (_, _, l) | MLtuple l -> List.iter f l
+  | MLcons (_, _, l, _) | MLtuple l -> List.iter f l
   | MLmagic (_, a) -> f a
   | MLparray (t, def) ->
     Array.iter f t;
@@ -1474,7 +1474,7 @@ let nb_occur_match =
       Array.fold_left (fun r a -> r + nb k a) 0 v
     | MLlam (_, _, a) -> nb (k + 1) a
     | MLapp (a, l) -> List.fold_left (fun r a -> r + nb k a) (nb k a) l
-    | MLcons (_, _, l) | MLtuple l -> List.fold_left (fun r a -> r + nb k a) 0 l
+    | MLcons (_, _, l, _) | MLtuple l -> List.fold_left (fun r a -> r + nb k a) 0 l
     | MLmagic (_, a) -> nb k a
     | MLparray (t, def) ->
       Array.fold_left (fun r a -> r + nb k a) 0 t + nb k def
@@ -1522,9 +1522,9 @@ let dump_unused_vars a =
       let b' = ren env b
       and l' = List.Smart.map (ren env) l in
       if b' == b && l' == l then a else MLapp (b', l')
-    | MLcons (t, r, l) ->
+    | MLcons (t, r, l, occ) ->
       let l' = List.Smart.map (ren env) l in
-      if l' == l then a else MLcons (t, r, l')
+      if l' == l then a else MLcons (t, r, l', occ)
     | MLtuple l ->
       let l' = List.Smart.map (ren env) l in
       if l' == l then a else MLtuple l'
@@ -1579,7 +1579,7 @@ let rec ast_size e =
   | MLapp (f, a) -> ast_size f + ast_sizes a
   | MLlam (_, _, b) | MLmagic (_, b) -> ast_size b
   | MLletin (_, _, a, b, _) -> ast_size a + ast_size b
-  | MLcons (_, _, a) | MLtuple a -> ast_sizes a
+  | MLcons (_, _, a, _) | MLtuple a -> ast_sizes a
   | MLcase (_, s, brs, _) -> Array.fold_left (fun n (_, _, _, b) -> n + ast_size b) (ast_size s) brs
   | MLfix (_, _, bs, _, _) -> Array.fold_left (fun n b -> n + ast_size b) 0 bs
   | _ -> 0
@@ -1970,13 +1970,13 @@ let branch_as_fun typ (l, p, c) =
   let nargs = List.length l in
   let cons =
     match p with
-    | Pusual r -> MLcons (typ, r, eta_args nargs)
+    | Pusual r -> MLcons (typ, r, eta_args nargs, Occurrence.fresh ())
     | Pcons (r, pl) ->
       let pat2rel = function
         | Prel i -> fresh_rel i
         | _ -> raise Impossible
       in
-      MLcons (typ, r, List.map pat2rel pl)
+      MLcons (typ, r, List.map pat2rel pl, Occurrence.fresh ())
     | _ -> raise Impossible
   in
   let rec genrec n = function
@@ -2142,7 +2142,7 @@ let permut_case_fun br acc =
    [i] is the branch we consider, we should lift what comes from [br] by
    [lift] *)
 
-let rec iota_red i lift br ((typ, r, a) as cons) =
+let rec iota_red i lift br ((typ, r, a, occ) as cons) =
   if i >= Array.length br then raise Impossible;
   let ids, ret, p, c = br.(i) in
   match p with
@@ -2155,7 +2155,7 @@ let rec iota_red i lift br ((typ, r, a) as cons) =
   | Prel 1 when Int.equal (List.length ids) 1 ->
     let c = MLlam (fst (List.hd ids), snd (List.hd ids), c) in
     let c = ast_lift lift c in
-    MLapp (c, [MLcons (typ, r, a)])
+    MLapp (c, [MLcons (typ, r, a, occ)])
   | Pwild when List.is_empty ids -> ast_lift lift c
   | _ -> raise Impossible (* TODO: handle some more cases *)
 
@@ -2163,7 +2163,7 @@ let rec iota_red i lift br ((typ, r, a) as cons) =
 *)
 let iota_gen br hd =
   let rec iota k = function
-    | MLcons (typ, r, a) -> iota_red 0 k br (typ, r, a)
+    | MLcons (typ, r, a, occ) -> iota_red 0 k br (typ, r, a, occ)
     | MLcase (typ, e, br', occ) ->
       let new_br =
         Array.map
@@ -2714,7 +2714,7 @@ let ml_size_branch size pv =
 let rec ml_size = function
   | MLapp (t, l) -> List.length l + ml_size t + ml_size_list l
   | MLlam (_, _, t) -> 1 + ml_size t
-  | MLcons (_, _, l) | MLtuple l -> ml_size_list l
+  | MLcons (_, _, l, _) | MLtuple l -> ml_size_list l
   | MLcase (_, t, pv, _) -> 1 + ml_size t + ml_size_branch ml_size pv
   | MLfix (_, _, f, _, _) -> ml_size_array f
   | MLletin (_, _, _, t, _) -> ml_size t
@@ -2771,7 +2771,7 @@ let rec non_stricts add cand = function
   | MLapp (t, l) ->
     let cand = non_stricts false cand t in
     List.fold_left (non_stricts false) cand l
-  | MLcons (_, _, l) -> List.fold_left (non_stricts false) cand l
+  | MLcons (_, _, l, _) -> List.fold_left (non_stricts false) cand l
   | MLletin (_, _, t1, t2, _) ->
     let cand = non_stricts false cand t1 in
     pop 1 (non_stricts add (lift 1 cand) t2)
@@ -2883,7 +2883,7 @@ let remap_tvars f =
       MLletin (id, remap_type ty, remap_ast def, remap_ast body, occ)
     | MLapp (f', args) -> MLapp (remap_ast f', List.map remap_ast args)
     | MLglob use -> MLglob (Global_use.map_types remap_type use)
-    | MLcons (ty, r, args) -> MLcons (remap_type ty, r, List.map remap_ast args)
+    | MLcons (ty, r, args, occ) -> MLcons (remap_type ty, r, List.map remap_ast args, occ)
     | MLtuple args -> MLtuple (List.map remap_ast args)
     | MLcase (ty, scrut, branches, occ) ->
       MLcase

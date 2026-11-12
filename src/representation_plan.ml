@@ -236,7 +236,7 @@ let region ~outer body =
        dependent parameter's field retyped as erased; in an expression, not
        ([pr_bound_boxed]).  The body is planned at the statement form's. *)
     | MLcase (ty, scrut, ([|(ids, _, _, body)|] as branches), occ)
-      when (not (Table.is_custom_match branches)) && Table.record_fields_of_type ty <> [] ->
+      when Match_kind.is_record (Match_kind.classify ty branches) ->
       walk scope scrut;
       let bound = List.map (fun (_, t) -> at_binding t) ids in
       let retyped = List.map (fun (_, t) -> at_binding t) (retype_dependent_params ty ids) in
@@ -252,7 +252,7 @@ let region ~outer body =
       walk scope scrut;
       let var_type = Lexenv.type_opt scope.lex in
       let fields =
-        if Table.is_custom_match branches then
+        if Match_kind.classify ty branches = Match_kind.Custom then
           let cs =
             custom_match_scrutinee (Common.empty_env ()) ty scrut branches
               ~var_boxed:(fun i _ -> boxed (planned scope i)) ~var_type
@@ -291,7 +291,7 @@ let region ~outer body =
        parameter reads it boxed.  Decided at the constructor's own drafted
        instantiation, which is lowering's wherever the destination states no
        more than the annotation. *)
-    | MLcons (ty, r, args) when Table.is_custom r ->
+    | MLcons (ty, r, args, _) when Table.is_custom r ->
       let env = Common.empty_env () in
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
@@ -322,7 +322,7 @@ let region ~outer body =
     (* A record's field is written against the field's type at the record's
        arguments only where that type returns a function
        ({!Translation.gen_expr}'s record [expected_for_field]). *)
-    | MLcons (ty, r, args) when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
+    | MLcons (ty, r, args, _) when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
         | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
@@ -354,7 +354,7 @@ let region ~outer body =
           | (MLlam _ as lam), None -> walk_field_lambda ~slot:None scope None lam
           | _ -> walk scope e )
         args
-    | MLcons (_, r, args) when List.exists is_lambda args ->
+    | MLcons (_, r, args, _) when List.exists is_lambda args ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
         | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft

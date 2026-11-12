@@ -57,7 +57,7 @@ let body_of defs use =
    dropped. *)
 let rec is_value = function
   | MLrel _ | MLglob _ | MLlam _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
-  | MLcons (_, _, a) | MLtuple a -> List.for_all is_value a
+  | MLcons (_, _, a, _) | MLtuple a -> List.for_all is_value a
   | MLmagic (_, a) -> is_value a
   | _ -> false
 
