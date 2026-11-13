@@ -865,27 +865,6 @@ type cpp_schema = int * cpp_type
     copyable without deep-clone machinery. *)
 let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
 
-(** A plain static member function: no template parameters, no [this], and
-    none of the qualifiers a real method carries.  Factory functions are the
-    only producer -- they are methods with every flag off, so they are
-    spelled as methods rather than as a second, near-identical field kind. *)
-let static_fun ~name ~ret ~params ~body =
-  { mf_name = name;
-    mf_globref = None;
-    mf_tparams = [];
-    mf_ret_type = ret;
-    mf_params = params;
-    mf_body = body;
-    mf_receiver = Static;
-    mf_is_inline = false;
-    mf_no_pure = false;
-    mf_constexpr = Undecided;
-    mf_is_noexcept = false;
-    mf_is_conversion = false;
-    mf_binders = [];
-    mf_receiver_binder = None;
-    mf_loop = None }
-
 (** Rvalue reference type [T&&]. *)
 let rval_ref ty = Tref (Forwarding, ty)
 

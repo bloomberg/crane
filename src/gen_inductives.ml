@@ -1186,8 +1186,10 @@ module Sec = F.Section
 let lower_type = Legacy_minicpp_to_cpp_ir.lower_type
 let lower_expr = Legacy_minicpp_to_cpp_ir.lower_expr
 
-(** {!Minicpp.static_fun} in CppIR: a static member function with every
-    flag off, as a factory is. *)
+(** A plain static member function: no template parameters, no [this], and
+    none of the qualifiers a real method carries.  Factories are the only
+    producer -- they are methods with every flag off, so they are spelled as
+    methods rather than as a second, near-identical field kind. *)
 let static_method ~name ~ret ~params ~body : Cpp_ir.Lowered.phase F.Method.t =
   { name;
     globref = None;
