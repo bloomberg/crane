@@ -12,10 +12,9 @@
     optimizations on a language-agnostic functional AST.  MiniCpp (this file)
     captures C++-specific idioms: [shared_ptr] memory management,
     [std::variant], templates, concepts, namespaces, structs with visibility,
-    move semantics, enum classes, and constructors.  Every inductive is
-    pre-classified ({!cpp_ind_kind}) during {!Translation}; names, by
-    contrast, are still resolved by the printer, which knows the enclosing
-    module structure that a name is spelled relative to.
+    move semantics, enum classes, and constructors.  Names are still
+    resolved by the printer, which knows the enclosing module structure that
+    a name is spelled relative to.
 
     See [minicpp.ml] for a detailed explanation of why both representations are
     needed and cannot be merged. *)
@@ -33,21 +32,6 @@ open Names
     {!of_reversed}.  Reading is unrestricted -- a [revd] pattern-matches and
     iterates as the list it is. *)
 type 'a revd = private {rev : 'a list}
-
-(** {2 Inductive classification}
-
-    Determined once during translation. *)
-
-(** Classification of an inductive type for C++ code generation. *)
-type cpp_ind_kind =
-  | IK_Standard  (** Sum type rendered as std::variant *)
-  | IK_Enum  (** Simple enumeration rendered as enum class *)
-  | IK_Record of GlobRef.t option list
-      (** Product type rendered as struct, with field references *)
-  | IK_Eponymous of GlobRef.t option list
-      (** Record merged into its module struct to avoid naming conflicts *)
-  | IK_TypeClass of GlobRef.t option list
-      (** Type class rendered as C++ concept *)
 
 (** {2 Visibility modifiers} *)
 

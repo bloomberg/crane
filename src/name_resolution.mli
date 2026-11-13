@@ -8,7 +8,7 @@
     {!create} scans the [ml_structure] once, after
     {!Structure_analysis.analyze} and before rendering, and records for every
     inductive declared at top level or in a module structure its
-    classification ({!Minicpp.cpp_ind_kind}: standard, enum, record,
+    classification ({!Cpp_ir.Inductive.Kind}: sum, enum, record,
     eponymous record or type class).  The printer reads the classification
     through {!Cpp_names}, falling back to the live tables for an inductive
     the scan did not see.  Nothing here qualifies or renames a name.
@@ -29,7 +29,6 @@
     pre-computed. *)
 
 open Names
-open Minicpp
 
 (** The cache: an inductive kind per scanned inductive. *)
 type t
@@ -58,4 +57,4 @@ val is_global_scope_enum : t -> GlobRef.t -> bool
     @param t the name resolution cache
     @param r the inductive reference to look up
     @return [Some kind] if the classification has been registered, [None] otherwise *)
-val get_ind_kind : t -> GlobRef.t -> cpp_ind_kind option
+val get_ind_kind : t -> GlobRef.t -> Cpp_ir.Inductive.Kind.t option

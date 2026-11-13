@@ -50,18 +50,6 @@ open Names
     so with {!of_reversed}. *)
 type 'a revd = {rev : 'a list}
 
-(** {2 Inductive classification}
-
-    Determined once during translation. *)
-
-(** Classification of an inductive type for C++ code generation. *)
-type cpp_ind_kind =
-  | IK_Standard (* std::variant sum type *)
-  | IK_Enum (* enum class *)
-  | IK_Record of GlobRef.t option list (* struct with named fields *)
-  | IK_Eponymous of GlobRef.t option list (* record merged into module *)
-  | IK_TypeClass of GlobRef.t option list (* C++ concept *)
-
 (** Visibility for struct members. *)
 type cpp_visibility =
   | VPublic

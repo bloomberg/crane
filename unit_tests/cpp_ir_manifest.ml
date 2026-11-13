@@ -42,14 +42,7 @@ let dead why = Dead why
 let no_producer = dead "no constructing site"
 
 let manifest : (string * classification) list =
-  [ (* How an inductive is written: name resolution's classification, not
-       part of a declaration (nothing in a finished declaration holds it). *)
-    ("IK_Standard", rename "Inductive.Kind.Sum");
-    ("IK_Enum", rename "Inductive.Kind.Enum");
-    ("IK_Record", rename "Inductive.Kind.Record");
-    ("IK_Eponymous", rename "Inductive.Kind.Eponymous_record");
-    ("IK_TypeClass", rename "Inductive.Kind.Type_class");
-    ("VPublic", rename "Field.Visibility.Public");
+  [ ("VPublic", rename "Field.Visibility.Public");
     ("VPrivate", rename "Field.Visibility.Private");
     ("STypes", rename "Field.Section.Types");
     ("SData", rename "Field.Section.Data");
