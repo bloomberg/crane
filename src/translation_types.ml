@@ -2399,30 +2399,31 @@ let read_is_boxed i occ =
     ({!binder_cpp_type}) through [agree], which says whether the two give
     the decision [use] names the same answer.  A read the plan has no answer
     for is an anomaly. *)
+(* A C++ type, written compactly for a probe or a violation report. *)
+let rec type_shape = function
+  | Tfun (dom, cod) -> "fn(" ^ String.concat "," (List.map type_shape dom) ^ ")->" ^ type_shape cod
+  | Tany -> "any"
+  | Topaque -> "opaque"
+  | Tconst t -> "const " ^ type_shape t
+  | Tref (_, t) -> "ref " ^ type_shape t
+  | Tglob (g, args, _) -> Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
+  | Tvar (Tv_index (i, Some id)) -> "T" ^ string_of_int i ^ ":" ^ Id.to_string id
+  | Tvar (Tv_index (i, None)) -> "T" ^ string_of_int i
+  | Tvar (Tv_named id) -> "N:" ^ Id.to_string id
+  | Tshared_ptr t -> "sp " ^ type_shape t
+  | Tvariant _ -> "variant"
+  | Tqualified (t, id) -> type_shape t ^ "::" ^ Id.to_string id
+  | Tid (id, args) -> "id:" ^ Id.to_string id ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
+  | Tid_external (n, _) -> "ext:" ^ n
+  | Tpromoted id -> "prom:" ^ Id.to_string id
+  | Tinstance (id, _) -> "inst:" ^ Id.to_string id
+  | Terased _ -> "erased"
+  | Tapply (h, args) -> "app(" ^ type_shape h ^ ")<" ^ String.concat "," (List.map type_shape args) ^ ">"
+  | Tnamespace (_, t) -> "ns " ^ type_shape t
+  | _ -> "other"
+
 let planned_binder_type ~use ~agree i occ =
-  let rec shape = function
-    | Tfun (dom, cod) -> "fn(" ^ String.concat "," (List.map shape dom) ^ ")->" ^ shape cod
-    | Tany -> "any"
-    | Topaque -> "opaque"
-    | Tconst t -> "const " ^ shape t
-    | Tref (_, t) -> "ref " ^ shape t
-    | Tglob (g, args, _) -> Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map shape args) ^ ">"
-    | Tvar (Tv_index (i, Some id)) -> "T" ^ string_of_int i ^ ":" ^ Id.to_string id
-    | Tvar (Tv_index (i, None)) -> "T" ^ string_of_int i
-    | Tvar (Tv_named id) -> "N:" ^ Id.to_string id
-    | Tshared_ptr t -> "sp " ^ shape t
-    | Tvariant _ -> "variant"
-    | Tqualified (t, id) -> shape t ^ "::" ^ Id.to_string id
-    | Tid (id, args) -> "id:" ^ Id.to_string id ^ "<" ^ String.concat "," (List.map shape args) ^ ">"
-    | Tid_external (n, _) -> "ext:" ^ n
-    | Tpromoted id -> "prom:" ^ Id.to_string id
-    | Tinstance (id, _) -> "inst:" ^ Id.to_string id
-    | Terased _ -> "erased"
-    | Tapply (h, args) -> "app(" ^ shape h ^ ")<" ^ String.concat "," (List.map shape args) ^ ">"
-    | Tnamespace (_, t) -> "ns " ^ shape t
-    | _ -> "other"
-  in
-  let show = function Some t -> shape t | None -> "none" in
+  let show = function Some t -> type_shape t | None -> "none" in
   match List.assq_opt occ (!tctx).planned_reads with
   | Some {rd_type; rd_kind; _} ->
     ( if Probe.checking () then
@@ -2446,6 +2447,31 @@ let planned_binder_type ~use ~agree i occ =
         str "a read of " ++ int i
         ++ (match (!tctx).body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
         ++ str " is in no representation plan of the region it is lowered in")
+
+(** [planned_position occ ~live] -- the C++ type the position of the
+    coercion at [occ] is generated against, as the region's position plan
+    ({!Position_plan.region}) gives it, under [CRANE_CHECK_IR] held to
+    [live], the type lowering threaded there.  A constructor's field is not
+    planned ({!Translation_state.Stored}): its type is [live]. *)
+let planned_position occ ~live =
+  let show = function Some t -> type_shape t | None -> "none" in
+  let owner () = match (!tctx).body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
+  match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
+  | Some (_, At planned) ->
+    if Probe.checking () then begin
+      let agrees = planned = live in
+      Probe.hit "magic-pos" (fun () -> if agrees then "agree" else "disagree plan " ^ show planned ^ " live " ^ show live ^ owner ());
+      if not agrees then
+        Probe.violation "coercion position"
+          Pp.(str ("a coercion" ^ owner () ^ " is lowered against " ^ show live ^ ", the plan's position is " ^ show planned))
+    end;
+    planned
+  | Some (_, Stored) ->
+    Probe.hit "magic-pos" (fun () -> "stored");
+    live
+  | None ->
+    Probe.violation "coercion position" Pp.(str ("a coercion" ^ owner () ^ " is in no position plan of the region it is lowered in"));
+    live
 
 (** Record the C++ type of each of the [ids] most recently pushed binders,
     without pushing them again.  [?cpp] overrides the conversion for binders

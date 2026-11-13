@@ -1015,6 +1015,12 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
              | `Unwalked -> " is translated where Core elaboration did not reach it." ) );
       live () )
 
+let planned_instantiation use args =
+  let n = List.length args in
+  match (roles !installed use n, planned !installed use n) with
+  | Some roles, `Planned p -> Some (Elaborated_call.at_call p (of_roles use args roles))
+  | _ -> None
+
 (* [lookup what ~equal ~live planned] -- the answer the installed walk
    planned ([planned], [None] where it planned none or its entries
    disagree), checked under [CRANE_CHECK_IR] against [live ()], the answer

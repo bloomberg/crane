@@ -140,6 +140,13 @@ val instantiation :
   Miniml.ml_ast list ->
   Elaborated_call.instantiated
 
+(** [planned_instantiation use args] -- the instantiation the installed walk
+    planned for the call [use args], at its argument nodes, where it planned
+    one with the roles it gave the call; none otherwise.  Unlike
+    {!instantiation} it neither counts nor checks the lookup: it is for a
+    planner reading the walk, not for lowering. *)
+val planned_instantiation : Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.instantiated option
+
 (** [closed_instance_call ~lex use args] -- whether the call [use args]
     builds a typeclass instance from nothing but instance parameters, so
     that it is the same value every time it is evaluated: as the walk
