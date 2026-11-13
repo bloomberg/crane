@@ -1234,11 +1234,6 @@ val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
     the carrier's argument goes. *)
 val ctor_alias_tvar : string
 
-(** [abstract_cpp_type ~over ty] is [ty] with every occurrence of [over]
-    replaced by the {!ctor_alias_tvar} sentinel -- the type constructor whose
-    application to [over] is [ty] -- or [None] where [over] does not occur, so
-    that there is no such constructor to name. *)
-val abstract_cpp_type : over:cpp_type -> cpp_type -> cpp_type option
 
 (** What a branch throws when the scrutinee's indices rule it out; shared by
     the coercion seam and the sweep over a finished body, which recognise such

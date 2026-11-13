@@ -613,7 +613,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     let from_expected targs =
       let names, m = Lazy.force result_tvar_map in
       (* A type-level lambda extraction could only write as its head
-         ({!under_applied_ind}) is filled the same way. *)
+         ({!under_applied_ind_ir}) is filled the same way. *)
       List.map
         (fun (v, t) ->
           let i = Scheme.Var.ordinal v in

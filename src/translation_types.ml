@@ -2682,7 +2682,7 @@ let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
     The callee returns [Tapp (p, [Tvar v])] -- the carrier at position [p]
     applied to the variable at position [v] -- so abstracting the expected
     result over whatever [v] was instantiated to inverts that application.
-    {!Minicpp.abstract_cpp_type} writes the sentinel the printer mints an
+    {!abstract_cpp_type_ir} writes the sentinel the printer mints an
     alias template for, and only position [p] is written: the rest deduce
     through the alias, which is transparent.
 

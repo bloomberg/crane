@@ -1448,15 +1448,6 @@ let written_arity g =
     its head ([fun T => list (box T)] as a bare [list]), or an alias carrier
     ([texp]) passed as its name.  At a plain position that is no type at
     all. *)
-let under_applied_ind t =
-  match t with
-  | Tglob (g, args, _) | Tnamespace (_, Tglob (g, args, _)) -> (
-    match written_arity g with
-    | Some n -> List.length args < n
-    | None -> false )
-  | _ -> false
-
-(** {!under_applied_ind} over a CppIR type. *)
 let under_applied_ind_ir (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Entity_application (g, args, _) | In_namespace (_, Entity_application (g, args, _)) -> (
@@ -1465,7 +1456,8 @@ let under_applied_ind_ir (t : Cpp_ir.Lowered.Type.t) =
     | None -> false )
   | _ -> false
 
-(** {!saturate_at_any} over a CppIR type. *)
+(** [t], a type {!under_applied_ind_ir} says is short of arguments, applied
+    at [std::any] for each one missing: a family at an erased index. *)
 let saturate_at_any_ir (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   let pad g args =
     match written_arity g with
@@ -1475,19 +1467,6 @@ let saturate_at_any_ir (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   match t with
   | Entity_application (g, args, es) -> Entity_application (g, pad g args, es)
   | In_namespace (ns, Entity_application (g, args, es)) -> In_namespace (ns, Entity_application (g, pad g args, es))
-  | t -> t
-
-(** [t], a type {!under_applied_ind} says is short of arguments, applied at
-    [std::any] for each one missing: a family at an erased index. *)
-let saturate_at_any t =
-  let pad g args =
-    match written_arity g with
-    | Some n -> args @ List.init (n - List.length args) (fun _ -> Tany)
-    | None -> args
-  in
-  match t with
-  | Tglob (g, args, es) -> Tglob (g, pad g args, es)
-  | Tnamespace (ns, Tglob (g, args, es)) -> Tnamespace (ns, Tglob (g, pad g args, es))
   | t -> t
 
 (** Collect all Tvar indices from an ML AST, using collect_tvars on embedded
@@ -3570,9 +3549,11 @@ let boxed slot = match slot.repr with Boxed _ -> true | Native -> false
     the slot already carries is kept, being the outer and earlier one. *)
 let into_box kind slot = if boxed slot then slot else { slot with repr = Boxed kind }
 
-(** {!Minicpp.abstract_cpp_type} over a CppIR type: [ty] with every
-    occurrence of [over] -- a type variable compared by its index -- replaced
-    by the carrier parameter, or [None] where [over] does not occur. *)
+(** [abstract_cpp_type_ir ~over ty] is [ty] with every occurrence of [over]
+    -- a type variable compared by its index -- replaced by the carrier
+    parameter (printed as the {!Minicpp.ctor_alias_tvar} sentinel): the type
+    constructor whose application to [over] is [ty], or [None] where [over]
+    does not occur, so that there is no such constructor to name. *)
 let abstract_cpp_type_ir ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Type.t) =
   let fired = ref false in
   (* Never descending into a [decltype]: comparing two expressions raises on
@@ -3609,7 +3590,7 @@ let apply_hkt_tyctors_ir g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered
 
      Putting the binder back is what the position wants, and the printer
      already mints an alias template for a body carrying the sentinel
-     ({!Minicpp.abstract_cpp_type}).  The argument the position varies in is
+     ({!abstract_cpp_type_ir}).  The argument the position varies in is
      the leading one -- the class applies its carrier to the traversed type,
      and this idiom writes that type first.
 
