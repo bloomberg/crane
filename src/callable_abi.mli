@@ -339,3 +339,15 @@ val dropped_positions : Names.GlobRef.t -> int list
     receiver are declared at ({!receiver}); [None] where [r] is not a
     planned method. *)
 val method_params : Names.GlobRef.t -> Minicpp.cpp_type list option
+
+(** The callee's ML type the plan was made against: the ML-shaped signature
+    beside the declared one ({!signature}), before the head's relaxations,
+    in the callee's own variables, which a call's C++ head is rebuilt from
+    at the call's instantiation.  [None] for a global with no recorded
+    type. *)
+val ml_type : t -> Miniml.ml_type option
+
+(** [planned_ml_type r] -- {!ml_type} of the unit's plan of [r], installed,
+    foreign or a projection's, without planning one; [None] where none is
+    planned. *)
+val planned_ml_type : Names.GlobRef.t -> Miniml.ml_type option option

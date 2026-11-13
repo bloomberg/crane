@@ -112,11 +112,11 @@ let curry_value_to_expected env ?expected_ty ?(callee_site = Declared) ?(exact =
 let instantiated_type use =
   Option.map
     (Mlutil.instantiate_written ~reader:"instantiated_type" use)
-    (find_type_opt use.callee)
+    (callee_ml_type use.callee)
 
 (** {!curry_value_to_expected} for the global [use] names. *)
 let curry_to_expected env ?expected_ty use cglob =
-  let decl_ty = find_type_opt use.callee in
+  let decl_ty = callee_ml_type use.callee in
   let ml_ty = instantiated_type use in
   let callee_site =
     let live = Option.map (cpp_of_ml env) decl_ty in
@@ -851,7 +851,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     -- an instance function passed as a dictionary -- and the callable's
     result is what the codomain meets. *)
 let callee_result_bindings env id ~explicit expected =
-  match (expected, find_type_opt id) with
+  match (expected, callee_ml_type id) with
   | Some exp, Some ml_ty ->
     let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
     let names =
@@ -1341,7 +1341,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
           | Miniml.Tarr (a, b) -> Miniml.Tarr (subst a, subst b)
           | t -> t
         in
-        let t = cpp_of_ml env (subst (ml_codomain (find_type id))) in
+        let t = cpp_of_ml env (subst (ml_codomain (callee_ml_type_exn id))) in
         spell_in_scope t
     in
     match expected_result with
@@ -1819,7 +1819,7 @@ let lower_call ~caller ~slot ?expected_ty env use args =
     uninstantiated scheme back out of the front-end table, answering
     [List<T1>] where [List<uint64_t>] was meant. *)
 let glob_yields env x instantiate =
-  match find_type_opt x with
+  match callee_ml_type x with
   | None -> None
   | Some ml_ty -> (
     let is_result_block =

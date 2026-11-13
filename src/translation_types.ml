@@ -1687,7 +1687,7 @@ let rec convert_ml_type_to_cpp_type
     and is emitted as a data member by {!Gen_decls.gen_spec}.  Asking the
     converter is what keeps the two in step. *)
 let glob_is_nullary_function x =
-  match find_type_opt x with
+  match callee_ml_type x with
   | None -> false
   | Some ml_ty ->
     thunk_reason x <> None
@@ -1967,7 +1967,7 @@ let iife_closure_return env typ pv stmts =
     call site.  So the question can only be asked of the whole type: the
     codomain alone converts to the type variable and reveals nothing. *)
 let glob_declared_cod_erases r =
-  match find_type_opt r with
+  match callee_ml_type r with
   | Some ty -> (
     match convert_ml_type_to_cpp_type (empty_env ()) [] (type_simpl ty) with
     | Tfun (_, cod) -> prints_as_any cod
@@ -2618,7 +2618,7 @@ let rec normalize_erased_types = function
     declaration emitter counts the same run and leaves those parameters
     undefaulted. *)
 let leading_phantom_count id =
-  match find_type_opt id with
+  match callee_ml_type id with
   | None -> 0
   | Some ml_ty ->
     let cty =
@@ -3595,7 +3595,7 @@ let value_cpp_type ~agree env e =
   match strip_magic e with
   | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
   | MLglob ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
-    Option.map (cpp_of_ml env) (find_type_opt r)
+    Option.map (cpp_of_ml env) (callee_ml_type r)
   | _ -> None
 
 (** Whether a coercion is one the Rocq indices rule out, rather than one C++
@@ -3690,7 +3690,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
       | Some ml_ty -> ml_codomain_erases_to_any n_value_args ml_ty
       | None -> false )
   | MLglob {callee = r; _} ->
-    ( match find_type_opt r with
+    ( match callee_ml_type r with
       | Some ml_ty -> prints_as_any (cpp_of_ml env ml_ty)
       | None -> false )
   | MLmagic (_, inner, _) -> ml_expr_is_erased env inner
@@ -3892,7 +3892,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
   let scrut_callee_ret_erased =
     match flatten_app t with
     | MLapp (MLglob ({callee = r; _} as use), args) ->
-      ( match find_type_opt r with
+      ( match callee_ml_type r with
       | Some fty ->
         let fty = Mlutil.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
         ( match strip_tarr_n (count_real_ml_args args) fty with

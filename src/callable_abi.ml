@@ -71,8 +71,14 @@ type t = {
       (** every variable of the callee's scheme, with why the convention
           omits it, if it does *)
   relaxations : Head_relaxation.t list;
+  ml_type : Miniml.ml_type option;
+      (** the callee's ML type the plan was made against: the signature a
+          call's head is rebuilt from, before relaxation *)
   phase : Common.phase;  (** when the plan was decided, for diagnostics *)
 }
+
+(* The ML type recorded for [r], if any. *)
+let recorded_ml_type r = try Some (Table.find_type r) with Not_found -> None
 
 let callee abi = abi.callee
 let relaxations abi = abi.relaxations
@@ -159,6 +165,7 @@ let of_head ?omitted ?(phantom_prefix = 0) ?(relaxed = fun _ -> false) ?(deduced
     signature;
     variables = scheme_variables ?omitted scheme;
     relaxations;
+    ml_type = recorded_ml_type callee;
     phase = Common.get_phase () }
 
 let passing abi = abi.passing
@@ -403,6 +410,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
       signature = None;
       variables = scheme_variables ?omitted scheme;
       relaxations = [];
+      ml_type = recorded_ml_type callee;
       phase = Common.get_phase () }
 
 (* The unit's foreign plans, without dictionaries, by callee. *)
@@ -480,3 +488,13 @@ let method_params r =
   match lookup r with
   | Some {receiver = Some {params; _}; _} -> Some params
   | _ -> None
+
+let ml_type abi = abi.ml_type
+
+let planned_ml_type r =
+  match lookup r with
+  | Some abi -> Some abi.ml_type
+  | None -> (
+    match GlobRef.Map_env.find_opt r !foreign_plans with
+    | Some abi -> Some abi.ml_type
+    | None -> Option.map (fun abi -> abi.ml_type) (GlobRef.Map_env.find_opt r !projection_plans) )

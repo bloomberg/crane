@@ -1234,7 +1234,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        this position expects. *)
     let callee_ty =
       match f with
-      | MLglob {callee = r; _} -> find_type_opt r
+      | MLglob {callee = r; _} -> callee_ml_type r
       | MLrel (i, _) -> get_env_type_opt i
       | _ -> None
     in
@@ -1941,7 +1941,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | MLglob ({callee = r; _} as use) ->
         let tys_inner = Mlutil.written_type_args use in
         let ml_ty =
-          match find_type_opt r with
+          match callee_ml_type r with
           | Some ty -> ty
           | None -> Tunknown
         in
@@ -2186,7 +2186,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         ~arity:(List.length filtered_args) f )
   | MLglob ({callee = x; _} as use) when is_inline_custom x ->
     let tys = Mlutil.written_type_args use in
-    let ml_ty = find_type x in
+    let ml_ty = callee_ml_type_exn x in
     let ty = cpp_of_ml env ml_ty in
     ( match ty with
     | Tfun (dom, cod) ->
@@ -2275,7 +2275,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           Option.map
             (fun ty ->
               materialise_opaque (cpp_of_ml env (expand_ml_fun_alias ty)))
-            (find_type_opt x)
+            (callee_ml_type x)
         with
       (* A declaration whose result erased -- because its Rocq type hides
          the quantifier behind a type alias, or because a type index alone
@@ -3494,7 +3494,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           else
             (* The class's [ip_types] entry has already erased the method's own
                [forall A]; the projection constant has not. *)
-            try Some (strip_erased_method_prefix (Table.find_type fld))
+            try Some (strip_erased_method_prefix (callee_ml_type_exn fld))
             with Not_found -> declared
         in
         (* The field's own parameter types drive erasure of function-valued
@@ -4543,7 +4543,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             let live = cpp_of_ml env t in
             check_installed_arity id live;
             Minicpp.subst_cpp_tvars subst live)
-          (find_type_opt id)
+          (callee_ml_type id)
     in
     (* Each argument read at its parameter as the call writes it
        ({!regroup_crossing}): [pf : pair<fn<R(A, B)>, nat>] passed to
@@ -4691,7 +4691,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
            the declaration however this call site instantiates it, so it
            counts here just as it does in {!gen_expr}'s [MLapp] case. *)
         let cod_is_erased =
-          match find_type_opt id with
+          match callee_ml_type id with
           | Some ml_ty ->
             ml_erases_to_box env (instantiated_codomain ml_ty)
             || ( match result_cpp_via_receiver env ml_ty primary_ml_args with
@@ -4703,7 +4703,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         (* The codomain as this call site instantiates it: that is the type
            the excess args are applied to. *)
         let cod_inst =
-          match find_type_opt id with
+          match callee_ml_type id with
           | Some ml_ty -> Some (instantiated_codomain ml_ty)
           | None -> None
         in
@@ -4721,7 +4721,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           match
             Option.map
               (fun t -> Minicpp.subst_cpp_tvars subst (cpp_of_ml env t))
-              (find_type_opt id)
+              (callee_ml_type id)
           with
           | Some (Tfun (_, c)) -> Some c
           | _ -> None
@@ -5061,7 +5061,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 (fun t ->
                   collapse_erased_heads
                     (Minicpp.subst_cpp_tvars subst (cpp_of_ml env t)) )
-                (find_type_opt id)
+                (callee_ml_type id)
             with
             | Some (Tfun (doms, dcod)) -> (doms, Some dcod)
             | _ -> ([], None)
