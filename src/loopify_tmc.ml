@@ -42,14 +42,14 @@ type tmc_cell_alloc = {
           ({!Ml_type_util.ctor_struct_name_of_ref}), e.g. ["Cons"] *)
   tca_rec_field_idx : int;
       (** Index of the recursive argument (the hole) among the constructor
-          args, which a cell keeps the last first ({!is_ctor_factory_call}) *)
+          args, in declared order *)
   tca_non_rec_args : (int * expr) list;
       (** [(index, expr)] for non-recursive arguments, indexed the same way *)
   tca_n_args : int;
       (** Total number of constructor arguments *)
   tca_ptr_fields : ptr_field list;
       (** The fields stored as [shared_ptr] in the struct, indexed like the
-          arguments.  Used by {!build_cell_call} to wrap value-type args in
+          arguments and the struct's fields.  Used by {!build_cell_call} to wrap value-type args in
           [make_shared] for direct struct construction. *)
 }
 
@@ -136,11 +136,7 @@ let is_ctor_factory_call = function
        the recursion writes into -- so it is recorded in [ctor_ptr_fields];
        one that has none is no cell. *)
     if not (Hashtbl.mem ctor_ptr_fields (Common.ctor_owner_key c, struct_name)) then None
-    else
-      (* The call holds its arguments in source order; a cell keeps them
-         reversed, the last first, the space everything downstream indexes
-         them in; see [uptr_idxs] in [make_cell]. *)
-      Some (c, factory, ty, struct_name, List.rev args)
+    else Some (c, factory, ty, struct_name, args)
   | _ -> None
 
 (** The cell the call of [factory] on [args] builds by the constructor [c],
@@ -149,19 +145,8 @@ let is_ctor_factory_call = function
 let make_cell ~constructor ~factory ~cell_ty ~ctor_name args idx =
   let n_args = List.length args in
   let uptr_idxs =
-    (* [ctor_ptr_fields] records shared_ptr field positions in STRUCT-field
-       order, but [idx]/[tca_non_rec_args] here index into [args] from
-       [is_ctor_factory_call], which are kept REVERSED.  Map the struct-order positions into the same reversed
-       arg-space ([n_args - 1 - j]) so [build_cell_call]'s lookup of an
-       argument's field aligns — otherwise a non-pointer field (e.g. a
-       [cons] element) is spuriously [make_shared]-wrapped. *)
     match Hashtbl.find_opt ctor_ptr_fields (Common.ctor_owner_key constructor, ctor_name) with
-    | Some fields ->
-      List.map
-        (function
-          | Recursive j -> Recursive (n_args - 1 - j)
-          | Boxed j -> Boxed (n_args - 1 - j))
-        fields
+    | Some fields -> fields
     | None -> [Recursive idx]
   in
   { tca_factory = factory;
@@ -237,8 +222,7 @@ let planned_result shapes ret_ty =
     has: the factory calls it nests, each building its cell's constructor,
     holding the next in the cell's hole, the innermost a recursive call,
     made of the shape's call where it says.  A hole is counted among the
-    constructor's declared arguments; a cell keeps them reversed
-    ({!is_ctor_factory_call}). *)
+    constructor's declared arguments. *)
 let branch_along shapes check expr =
   let rec follow expr call = function
     | [] -> None
@@ -246,9 +230,8 @@ let branch_along shapes check expr =
       let expr = match expr with Move e -> e | e -> e in
       match is_ctor_factory_call expr with
       | Some (c, factory, cell_ty, ctor_name, args) when Common.globref_equal c constructor ->
-        let idx = List.length args - 1 - hole in
-        let held = if idx < 0 then None else List.nth_opt args idx in
-        let this = make_cell ~constructor:c ~factory ~cell_ty ~ctor_name args idx in
+        let held = if hole < 0 then None else List.nth_opt args hole in
+        let this = make_cell ~constructor:c ~factory ~cell_ty ~ctor_name args hole in
         Option.bind held (fun held ->
             match inner with
             | [] ->
@@ -298,9 +281,8 @@ let branch_along shapes check expr =
 (* [std::get<typename Type::Ctor>(ptr->v_mut()).<field> = val] -- the
     statement that patches the recursive field of a TMC cell.
 
-    The field index accounts for the reversed order a cell's arguments are
-    kept in ({!is_ctor_factory_call}): argument index [rec_field_idx] maps to
-    struct field index [n_args - 1 - rec_field_idx].  The actual field name is
+    The field index is the hole's argument index [rec_field_idx].  The
+    actual field name is
     resolved via {!Common.lookup_ctor_field_name}, which returns the
     descriptive Rocq binder name (e.g. [d_tl]) when one was registered
     during inductive definition, or falls back to the positional name
@@ -315,7 +297,7 @@ let cell_struct cell : ty = Member (cell.tca_type, Id.of_string cell.tca_ctor_na
 (** The recursive field of [cell], reached from [ptr] through [access], as
     [(object, field)]. *)
 let cell_rec_field ?(access : Cpp_ir.Expr.Access.t = Arrow) cell ptr =
-  let field_idx = cell.tca_n_args - 1 - cell.tca_rec_field_idx in
+  let field_idx = cell.tca_rec_field_idx in
   let v_mut = Access_call (access, ptr, id_v_mut, []) in
   ( Variant_get (cell_struct cell, Some v_mut),
     Common.lookup_ctor_field_name ~owner:cell.tca_constructor cell.tca_ctor_name field_idx )
@@ -423,7 +405,7 @@ let build_cell_call ?token ?(rec_arg = Literal Null_pointer) ?(allocate = true) 
     let struct_init =
       Type_name (cell_struct cell)
     in
-    let cell_expr = Call (call_opaque, struct_init, List.rev args) in
+    let cell_expr = Call (call_opaque, struct_init, args) in
     if not allocate then cell_expr
     else (match token with
      | Some tok ->
@@ -433,7 +415,7 @@ let build_cell_call ?token ?(rec_arg = Literal Null_pointer) ?(allocate = true) 
                     [tok; cell_expr])
      | None -> Call (shared_cell_sig, mk_shared_cell, [cell_expr]))
   | None ->
-    Call (call_opaque, cell.tca_factory, List.rev args)
+    Call (call_opaque, cell.tca_factory, args)
 
 (** Borrowing fix-up for the TMC loop: the scrutinee is reached through a
     pointer shadow.  See the ownership discussion in {!transform_tmc} -- under
@@ -548,11 +530,11 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
       (fun k cell ->
         { cell with
           tca_non_rec_args =
-            List.map
-              (fun (i, e) ->
-                (* A cell keeps its arguments reversed: [i] counts from the last declared. *)
-                if List.mem (k, cell.tca_n_args - 1 - i) cells_read_first then (i, bind e) else (i, e) )
-              cell.tca_non_rec_args } )
+            (* The last declared first, the order their temporaries are
+               numbered and declared in. *)
+            List.rev_map
+              (fun (i, e) -> if List.mem (k, i) cells_read_first then (i, bind e) else (i, e))
+              (List.rev cell.tca_non_rec_args) } )
       cells
   in
   let shadows = ref shadow_params in

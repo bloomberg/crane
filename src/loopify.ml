@@ -73,12 +73,10 @@
 
     {2 Decltype Rewriting}
 
-    Frame struct fields with unknown types fall back to [decltype(expr)].  If
-    [expr] references lambda-scoped variables that are not in scope at the
-    struct definition level, the C++ will fail to compile.  The function
-    {!rewrite_field_access_for_decltype} rewrites both plain variable
-    references and field accesses to [std::declval<T&>()] forms, making the
-    [decltype] expression valid at struct scope.
+    A frame saves locals.  A frame struct field whose local's type is unknown
+    falls back to [std::decay_t<decltype(x)>]; the local is not in scope where
+    the struct is defined, so {!Loopify_frame.decltype_of_saved_local} reads it
+    as [std::declval<T&>()] where the type environment knows [T].
 
     {2 Adopted Bodies}
 
@@ -360,7 +358,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
      plan finds of the member ({!planned_self_checker}), dropping the
      self-forward argument so the remaining args, the last first, align
      positionally with the non-self loop params, kept the last first too
-     ([lparams] here is the lambda's parameters reversed).  After transformation the self-parameter
+     ([lparams] here is the lambda's parameters, in source order).  After transformation the self-parameter
      is unreferenced; the {!Cpp_print} lambda printer emits unreferenced
      params without a name, so there is no [-Wunused-parameter].  Only single
      (non-mutual) fixpoints are handled; a mutual group's lambda (one
@@ -380,9 +378,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
       | (Modulo_cons _ | Frame_stack) when tail_only -> None
       | (Tail_loop | Modulo_cons _ | Frame_stack) as strategy ->
         (* Loop params = all params except the self-param, the first as
-           written and so the last of [lparams]; still the last first. *)
+           written; the last first. *)
         let loop_lparams =
-          match List.rev lparams with _ :: rest -> List.rev rest | [] -> []
+          match lparams with _ :: rest -> List.rev rest | [] -> []
         in
         let params =
           List.filter_map
@@ -451,21 +449,21 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
               moved = moved;
               _ } as l) )
       :: rest
-      when Option.has_some (fixpoint_self fixpoint (List.rev lparams)) ->
+      when Option.has_some (fixpoint_self fixpoint lparams) ->
       (* The loop is made where the impl was, or just after it where the
          wrapper was, nothing reading in between: it takes by move what the
          impl took that it still captures. *)
       let keep_moves l =
         Lambda {l with moved = List.filter (fun x -> List.mem x (free_vars_expr (Lambda l))) moved}
       in
-      ( match try_loopify_ycomb ~fixpoint ~binders:(lambda_binders l) (List.rev lparams) ret_ty_opt lbody with
+      ( match try_loopify_ycomb ~fixpoint ~binders:(lambda_binders l) lparams ret_ty_opt lbody with
       | Some (lparams', lbody') -> (
         (* The loop no longer recurses, so the self-parameter and the wrapper
            that supplied it are scaffolding: the wrapper [go] becomes the loop
            itself, an ordinary lambda.  Only when the next statement is that
            wrapper ({!wraps}) and nothing after it names [go_impl].  The local
            fixpoints in the loop are lowered too, as in any other body. *)
-        let self = fixpoint_self fixpoint (List.rev lparams) in
+        let self = fixpoint_self fixpoint lparams in
         let lbody' = process_stmts lbody' in
         match rest with
         | Bind_variable (wid, (Declare (Auto, _) as wtgt), Lambda w) :: rest'
@@ -474,9 +472,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             ( wid,
               wtgt,
               keep_moves
-                { params =
-                    List.rev
-                      (List.filter (fun (_, x) -> x <> self) lparams');
+                { params = List.filter (fun (_, x) -> x <> self) lparams';
                   type_params = [];
                   fixpoint = Option.map (fun (f : local_fixpoint) -> {f with encoding = Lowered}) fixpoint;
                   binders = binders;
@@ -488,7 +484,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         | _ ->
           Bind_variable
             (id, tgt, keep_moves
-              { params = List.rev lparams';
+              { params = lparams';
               type_params = [];
               fixpoint = fixpoint;
               binders = binders;
@@ -965,10 +961,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
             let args_normal = args in
             match List.nth_opt args_normal this_position with
             | Some recv ->
-              let args' =
-                List.rev (replace_at this_position (Local id_self_store) args_normal)
-              in
-              Some (recv, Call (cs, Entity (r, targs, x), List.rev args'))
+              Some (recv, Call (cs, Entity (r, targs, x), replace_at this_position (Local id_self_store) args_normal))
             | None -> None )
           | _ -> None
         in

@@ -235,25 +235,8 @@ val worthwhile_move_type : ty -> bool
     is measurable.  Each outcome is validated against the postcondition that
     no self-call survives the transform.  [Set Crane Loopify Diagnostics]
     prints them as they are produced; [Set Crane Loopify Strict] turns a
-    decline into an error. *)
-
-(** What the pass did with one recursive function. *)
-type loopify_outcome =
-  | Lp_tail  (** Rewritten to a flat [while] loop. *)
-  | Lp_tmc  (** Rewritten by the tail-modulo-cons transform. *)
-  | Lp_frame  (** Rewritten to an explicit frame stack. *)
-  | Lp_deferred of string
-      (** Intentionally not rewritten because the shape already runs in O(1)
-          stack (e.g. a [lazy_]-wrapped cofixpoint). Not a failure. *)
-  | Lp_declined of string  (** Left as C++ recursion, for the given reason. *)
-
-(** Render an outcome for the diagnostic report. *)
-val string_of_outcome : loopify_outcome -> string
-
-(** Outcomes recorded so far, in the order the functions were first
-    processed, each name collapsed to the last outcome recorded of it, the
-    one describing the emitted C++. *)
-val get_outcomes : unit -> (string * loopify_outcome) list
+    decline into an error.  What it did with each is a
+    {!Loopify_analysis.loopify_outcome}. *)
 
 (** Print the collapsed outcomes ([Crane Loopify Diagnostics]) and raise on any
     decline ([Crane Loopify Strict]). Call once per unit, after transforming.

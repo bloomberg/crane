@@ -389,7 +389,11 @@ type call_site = {
       (** Arguments to the recursive call, parallel to the parameters of the
           loop the checker that found it serves ({!filter_by_mask}): the
           last first where the checker reverses the call's source-order
-          arguments, as those of a function's or a local fixpoint's loop do *)
+          arguments, as those of a function's or a local fixpoint's loop do
+          ({!calls_checker}, {!planned_self_checker},
+          {!Control_to_cpp_ir.jump}); in source order for a method's loop,
+          which takes the receiver and then the parameters as written
+          ({!method_checker}) *)
   cs_is_tail : bool;  (** Whether this call appears in tail position *)
   cs_entry : int;
       (** Which entry point of the frame machine this call targets, as an index
@@ -559,15 +563,14 @@ let wraps (fixpoint : local_fixpoint option) (w : lambda) =
 
 (** The self-reference parameter of the lambda a single local fixpoint's
     body is, as its encoding recorded it ({!Cpp_ir.Expr.Local_fixpoint}): the
-    one self-parameter of [fixpoint], where it is the last of [lparams], the
-    lambda's parameters the last first (the reverse of the source order a
-    lambda keeps them in), so the first parameter as written.  A mutual group's lambda takes one per
+    one self-parameter of [fixpoint], where it is the first of [params], the
+    lambda's parameters in source order.  A mutual group's lambda takes one per
     member, which the callers here cannot linearise.  Its name is no
     evidence: the encoding spells it [_self_f], and Crane spells other
     locals of its own in that space too ([_self_val]). *)
-let fixpoint_self (fixpoint : local_fixpoint option) lparams =
-  match (fixpoint, List.rev lparams) with
-  | Some {encoding = Self_passing [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
+let fixpoint_self (fixpoint : local_fixpoint option) params =
+  match (fixpoint, params) with
+  | Some {encoding = Self_passing [self]; _}, (_, Some first) :: _ when Id.equal self first -> Some self
   | _ -> None
 
 (** A checker matching the calls of the function [member] of a local
