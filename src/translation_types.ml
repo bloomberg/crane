@@ -2396,13 +2396,13 @@ let planned_binder_type ~use ~agree i occ =
 (** [planned_position occ ~live] -- the C++ type the position of the
     coercion at [occ] is generated against, as the region's position plan
     ({!Position_plan.region}) gives it, under [CRANE_CHECK_IR] held to
-    [live], the type lowering threaded there.  A custom constructor's field
-    is not planned ({!Translation_state.Stored}): its type is [live]. *)
+    [live], the type lowering threaded there.  A coercion the plan of the
+    region it is lowered in does not reach is an anomaly. *)
 let planned_position occ ~live =
   let show = function Some t -> type_shape t | None -> "none" in
   let owner () = match (!tctx).body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
   match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
-  | Some (_, At planned) ->
+  | Some (_, planned) ->
     if Probe.checking () then begin
       let agrees = planned = live in
       Probe.hit "magic-pos" (fun () -> if agrees then "agree" else "disagree plan " ^ show planned ^ " live " ^ show live ^ owner ());
@@ -2411,12 +2411,8 @@ let planned_position occ ~live =
           Pp.(str ("a coercion" ^ owner () ^ " is lowered against " ^ show live ^ ", the plan's position is " ^ show planned))
     end;
     planned
-  | Some (_, Stored) ->
-    Probe.hit "magic-pos" (fun () -> "stored");
-    live
   | None ->
-    Probe.violation "coercion position" Pp.(str ("a coercion" ^ owner () ^ " is in no position plan of the region it is lowered in"));
-    live
+    CErrors.anomaly Pp.(str ("a coercion" ^ owner () ^ " is in no position plan of the region it is lowered in"))
 
 (** [t] with every type variable named by the default spelling of its
     index ({!Minicpp.tvar_spelling}) written by the index alone: the two
@@ -2906,14 +2902,14 @@ let dict_carrier_type_args env tvars id args =
     representation is stored (matching the [any_cast] on the application side)
     rather than a raw closure.  An [MLrel] already erased to [std::any]
     ({!read_is_boxed}) is excluded: it is not callable, so wrapping it
-    would miscompile. *)
-let ml_expr_is_function_value e =
+    would miscompile.  [var i occ] says whether the read of the variable [i]
+    at [occ] holds a box, and the variable's ML type: by default as lowering
+    has them in scope. *)
+let ml_expr_is_function_value ?(var = fun i occ -> (read_is_boxed i occ, get_env_type_opt i)) e =
   match strip_magic e with
   | MLrel (i, occ) ->
-    (not (read_is_boxed i occ))
-    && ( match get_env_type_opt i with
-       | Some t -> count_ml_value_arrows t >= 1
-       | None -> false )
+    let boxed, ty = var i occ in
+    (not boxed) && ( match ty with Some t -> count_ml_value_arrows t >= 1 | None -> false )
   (* A partial application of a global whose codomain mentions a
      value-dependent erased type (e.g. [mk_action n : domty n -> bool]) is
      wrapped in [MLmagic] by the kernel's typing coercion even at the
@@ -3347,12 +3343,12 @@ let ctor_draft_temps env ~promoted_active ~return (ty : ml_type) =
     parameter of the inductive ([field_tys], dummies dropped) whose template
     argument ([temps]) prints as [std::any], and the constructor's template
     does not forward the argument as it is. *)
-let stores_erased_fn env r ~field_tys ~temps i e =
+let stores_erased_fn ?var env r ~field_tys ~temps i e =
   match List.nth_opt field_tys i with
   | Some (Miniml.Tvar (_, j)) -> (
     match List.nth_opt temps (j - 1) with
     | _ when ctor_arg_is_passthrough r i -> false
-    | Some t when prints_as_any (unfold_cpp_typedef env t) -> ml_expr_is_function_value e
+    | Some t when prints_as_any (unfold_cpp_typedef env t) -> ml_expr_is_function_value ?var e
     | _ -> false )
   | _ -> false
 

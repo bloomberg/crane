@@ -11,11 +11,11 @@
     the decisions lowering makes for each position
     ({!Translation_calls.plan_call}, {!Translation_calls.argument_position},
     {!Translation_constructors.regular_field},
-    {!Translation_constructors.record_field}), carrying the slot each value
+    {!Translation_constructors.record_field},
+    {!Translation_constructors.custom_field}), carrying the slot each value
     is built into as lowering threads it.  A lambda's body is planned as a
-    region of its own, where its return type is known.  A coercion a custom
-    constructor stores in a field is marked {!Translation_state.Stored}: the
-    field's type is decided where the constructor is lowered. *)
+    region of its own, where its return type is known.  A position that
+    states no type is planned at none. *)
 
 (** [region ~outer ~reads body] -- the planned position type of each
     coercion in [body], a region generated in the binders [outer] under the
@@ -24,4 +24,4 @@ val region :
   outer:Lexenv.t ->
   reads:(Miniml.Occurrence.t * Translation_state.planned_read) list ->
   Miniml.ml_ast ->
-  (Miniml.Occurrence.t * Translation_state.planned_position) list
+  (Miniml.Occurrence.t * Minicpp.cpp_type option) list

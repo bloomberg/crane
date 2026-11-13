@@ -118,7 +118,7 @@ type translation_ctx = {
      generated against, as {!Position_plan} plans it: by the coercion's
      occurrence, a region nested in another first.  Set beside
      {!planned_reads}. *)
-  planned_positions : (Occurrence.t * planned_position) list;
+  planned_positions : (Occurrence.t * cpp_type option) list;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
@@ -206,15 +206,6 @@ and planned_read = {
   rd_kind : binder_kind;
   rd_type : cpp_type option;
 }
-
-(** The type of the position a coercion fills, as {!Position_plan} plans
-    it. *)
-and planned_position =
-  | At of cpp_type option
-      (** Generated against this type, none where the position states none. *)
-  | Stored
-      (** A custom constructor's field, whose type lowering still decides
-          from the constructor it is building. *)
 
 and binder_kind =
   | Kouter  (** bound outside the region *)
@@ -469,7 +460,7 @@ let plan_representation :
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
 let plan_positions :
-    (outer:Lexenv.t -> reads:(Occurrence.t * planned_read) list -> ml_ast -> (Occurrence.t * planned_position) list)
+    (outer:Lexenv.t -> reads:(Occurrence.t * planned_read) list -> ml_ast -> (Occurrence.t * cpp_type option) list)
     ref =
   ref (fun ~outer:_ ~reads:_ _ -> [])
 

@@ -51,17 +51,10 @@ let region ~outer ~reads body =
   let rec expr ~pos ~ret ?(slot = empty_slot) lex e =
     match e with
     | MLmagic (m, t, occ) ->
-      found := (occ, At pos) :: !found;
+      found := (occ, pos) :: !found;
       let env = named_env lex in
       expr ~pos:(match t with MLlam _ -> pos | _ -> None) ~ret ~slot:(coerced_slot env ~pos slot m) lex t
-    | MLcons (_, r, ts, _) when Table.is_custom r ->
-      List.iter
-        (function
-          | MLmagic (_, t, occ) ->
-            found := (occ, Stored) :: !found;
-            expr ~pos:None ~ret lex t
-          | a -> expr ~pos:None ~ret lex a )
-        ts
+    | MLcons (ty, r, ts, _) when Table.is_custom r -> with_cpp_return_type ret (fun () -> custom ~pos ~slot lex ty r ts)
     | MLcons (_, _, [], _) -> ()
     | MLcons (ty, r, ts, _) -> with_cpp_return_type ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)
     (* Only the returned value is generated, at no position. *)
@@ -123,6 +116,20 @@ let region ~outer ~reads body =
           let p, s = Translation_constructors.record_field env ~is_boxed ty r ~slot i e in
           stored ~pos:p ~ret ~slot:s lex e )
         ts
+  (* A custom constructor, each argument where its mapping stores it
+     ({!Translation_constructors.custom_field}). *)
+  and custom ~pos ~slot lex ty r ts =
+    let env = named_env lex in
+    let var i occ = (is_boxed i occ, Lexenv.type_opt lex i) in
+    let slot = Translation_constructors.into_erased_return slot in
+    let ty = Translation_constructors.custom_refined_annotation env ~expected_ty:pos ~slot ty r ts in
+    with_in_constructor_expr true @@ fun () ->
+    let c = Translation_constructors.custom env ~expected_ty:pos ~slot ty r in
+    List.iteri
+      (fun i e ->
+        let a = Translation_constructors.custom_field ~var env c ~slot r i e in
+        with_cpp_return_type a.ca_ret (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
+      ts
   and branch ~ret ?slot lex (ids, _, _, body) = stmts ~ret ?slot (push (List.rev ids) lex) body
   (* [stmts ~ret ~slot lex e]: [e] generated as statements whose tail is
      the result, under the return type [ret], into [slot]. *)
