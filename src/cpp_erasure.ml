@@ -411,23 +411,6 @@ let with_boxed_params r params =
   { r with
     boxed = List.fold_left (fun acc (id, ty) -> if is_any_shaped ty then Id.Set.add id acc else acc) r.boxed params }
 
-(* A type a value can be cast to: not a variable, not unknown, not a constant
-   whose definition may itself be [std::any]. *)
-let rec is_concrete : ty -> bool = function
-  | Variable _ | Obligation _ | Any | Auto -> false
-  | Const inner -> is_concrete inner
-  | Entity_application (GlobRef.ConstRef _, _, _) -> false
-  | _ -> true
-
-(* A call that hands back a box: a method registered as returning
-   [std::any], or an erased call. *)
-let returns_box : expr -> bool = function
-  | Access_call (Arrow, Entity (n, _, _), _, _) -> Cpp_state.method_returns_any n
-  | Call (_, Entity (n, _, _), _) when Cpp_names.lookup_method_this_pos n <> None -> Cpp_state.method_returns_any n
-  | Call (_, Project (_, n, _), _) -> Cpp_state.method_returns_any n
-  | Erased_call _ -> true
-  | _ -> false
-
 let rec is_boxed_binder r : expr -> bool = function
   | Local id -> Id.Set.mem id r.boxed && not (Id.Map.mem id r.stored)
   | Move e -> is_boxed_binder r e
@@ -436,7 +419,7 @@ let rec is_boxed_binder r : expr -> bool = function
 (* [read_as r original e expected] -- [e], the rewritten [original], read at
    [expected] where [original] is a box and [expected] is concrete. *)
 let read_as r original (e : expr) expected : expr =
-  if (returns_box original || is_boxed_binder r original) && is_concrete expected then
+  if (returns_a_box original || is_boxed_binder r original) && castable_to expected then
     Unbox (To (resolve_tvars_to_any expected), e)
   else e
 
@@ -1309,14 +1292,7 @@ let decide_constexpr (d : settled) : settled =
 
 (** {2 Free type variables} *)
 
-(** Whether [t] is the type variable named [id], under either spelling a
-    variable's head may have. *)
-let tvar_is id (t : ty) =
-  match t with
-  | Variable (Named n) -> Id.equal n id
-  | Variable (Index (i, name)) ->
-    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Cpp_ir.Type.positional_id i) id
-  | _ -> false
+let tvar_is = Cpp_ir.Type.is_variable_named
 
 (** Every spelling of every type variable [ty] names: the parameter name a
     variable was given and the positional name its index prints as. *)
@@ -1501,22 +1477,22 @@ let report_unspellable where (ty : ty) =
     (List.rev !empty_custom);
   if Sys.getenv_opt "CRANE_DBG_UNSPELLABLE" <> None then begin
     let shape : ty -> string = function
-      | Entity_application _ -> "Tglob"
-      | Apply _ -> "Tapply"
-      | Member _ -> "Tqualified"
-      | Variable _ -> "Tvar"
-      | Instance _ -> "Tinstance"
-      | Promoted_member _ -> "Tpromoted"
-      | Named _ -> "Tid"
-      | External _ -> "Tid_external"
-      | Non_deduced _ -> "Tnondeduced"
-      | Rebind _ -> "Trebind"
-      | Carrier_parameter -> "Thole"
-      | Reference (Forwarding, _) -> "Tfwd_ref"
-      | Type_of _ -> "Texpr_type"
-      | Decltype_auto -> "Tdecltype_auto"
-      | Type_constructor _ -> "Ttyctor"
-      | Any -> "Tany"
+      | Entity_application _ -> "Entity_application"
+      | Apply _ -> "Apply"
+      | Member _ -> "Member"
+      | Variable _ -> "Variable"
+      | Instance _ -> "Instance"
+      | Promoted_member _ -> "Promoted_member"
+      | Named _ -> "Named"
+      | External _ -> "External"
+      | Non_deduced _ -> "Non_deduced"
+      | Rebind _ -> "Rebind"
+      | Carrier_parameter -> "Carrier_parameter"
+      | Reference (Forwarding, _) -> "Reference (Forwarding, _)"
+      | Type_of _ -> "Type_of"
+      | Decltype_auto -> "Decltype_auto"
+      | Type_constructor _ -> "Type_constructor"
+      | Any -> "Any"
       | _ -> "other"
     in
     let tagged tag l = List.map (fun n -> n ^ " [" ^ tag ^ "]") l in

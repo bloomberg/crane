@@ -28,3 +28,12 @@ let template_of_text s =
     form = (if contains "%result" then Block else if String.contains s '%' then Templated else Bare_callee);
     shape = shape_of_text s;
     linear = Foreign_template.mentions_each_arg_once s }
+
+(** [uninstantiated r] is the anomaly for an application of [r]'s mapping
+    that places its arguments itself ({!Bare_callee}, {!Templated}) reaching
+    a reader of settled declarations -- the printer, or what it names: those
+    are instantiated before ({!Cpp_erasure.instantiate_foreign}), so meeting
+    one means that pass was not run. *)
+let uninstantiated r =
+  CErrors.anomaly
+    Pp.(str "a mapping's application reached the printer uninstantiated: " ++ Names.GlobRef.print r)

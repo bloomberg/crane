@@ -1,8 +1,6 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-open Minicpp
-
 let acquire_fence = "std::atomic_thread_fence(std::memory_order_acquire);"
 
 (* The header an external type, spelled [name], is declared in. *)
@@ -152,7 +150,7 @@ module Ir = struct
       match e with
       | Foreign (use, fr) -> foreign use fr
       | Entity (r, _, Some {inline = Some _; _}) | Call (_, Entity (r, _, Some {inline = Some _; _}), _) ->
-        uninstantiated_mapping r
+        Cpp_ir.Foreign.uninstantiated r
       | Entity (r, tys, _) ->
         global r;
         List.iter ty tys

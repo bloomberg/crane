@@ -98,7 +98,6 @@ and replace_return_this_stmt inner_ty = function
     body keeps raw [CPPthis] for direct method calls (safe because the
     method is invoked on a live object). *)
 let replace_this_in_lambdas ?receiver self_type stmts =
-  let id_type ty = ty in
   let self_id = Id.of_string "_self" in
   (* Check if CPPthis or CPPshared_from_this appears in an expression. *)
   let rec expr_has_this = function
@@ -106,7 +105,7 @@ let replace_this_in_lambdas ?receiver self_type stmts =
     | e ->
       let found = ref false in
       ignore (map_expr (fun e' ->
-        if expr_has_this e' then found := true; e') (fun s -> s) id_type e);
+        if expr_has_this e' then found := true; e') (fun s -> s) Fun.id e);
       !found
   in
   (* Check if CPPthis or CPPshared_from_this appears in statements. *)
@@ -116,7 +115,7 @@ let replace_this_in_lambdas ?receiver self_type stmts =
       ignore (map_stmt
         (fun e -> if expr_has_this e then found := true; e)
         (fun s' -> if stmt_has_this s' then found := true; s')
-        id_type s);
+        Fun.id s);
       !found
   in
   let stmts_have_this stmts = List.exists stmt_has_this stmts in
@@ -129,14 +128,14 @@ let replace_this_in_lambdas ?receiver self_type stmts =
         if lambda_captures_this_expr e' then found := true; e')
         (fun s ->
           if lambda_captures_this_stmt s then found := true; s)
-        id_type e);
+        Fun.id e);
       !found
   and lambda_captures_this_stmt s =
     let found = ref false in
     ignore (map_stmt
       (fun e -> if lambda_captures_this_expr e then found := true; e)
       (fun s' -> if lambda_captures_this_stmt s' then found := true; s')
-      id_type s);
+      Fun.id s);
     !found
   in
   let needs_self = List.exists lambda_captures_this_stmt stmts in
@@ -161,9 +160,9 @@ let replace_this_in_lambdas ?receiver self_type stmts =
       | CPPderef (CPPthis | CPPshared_from_this _) when is_value_self ->
         CPPvar self_id
       | CPPthis | CPPshared_from_this _ -> CPPvar self_id
-      | e -> map_expr subst_expr subst_stmt id_type e
+      | e -> map_expr subst_expr subst_stmt Fun.id e
     and subst_stmt s =
-      map_stmt subst_expr subst_stmt id_type s
+      map_stmt subst_expr subst_stmt Fun.id s
     in
     (* A closure taking the receiver by move takes the copy by move. *)
     let copy_moved l =
@@ -175,9 +174,9 @@ let replace_this_in_lambdas ?receiver self_type stmts =
     let rec walk_expr = function
       | CPPlambda ({cl_capture = Closure; _} as l) ->
         CPPlambda (copy_moved (map_lambda subst_stmt Fun.id l))
-      | e -> map_expr walk_expr walk_stmt id_type e
+      | e -> map_expr walk_expr walk_stmt Fun.id e
     and walk_stmt s =
-      map_stmt walk_expr walk_stmt id_type s
+      map_stmt walk_expr walk_stmt Fun.id s
     in
     let self_expr, self_ty =
       if is_value_self then
@@ -3109,7 +3108,6 @@ let gen_ind_header_v2
                 let ctor_struct_name =
                   ctor_struct_name_of_ref ~fallback_idx:i c
                 in
-                let source_ctor_ty = T.External (Id.to_string cname_id, []) in
                 let field_info =
                   List.mapi
                     (fun j ty ->
@@ -3193,7 +3191,7 @@ let gen_ind_header_v2
                         src_expr)
                     field_info
                 in
-                (source_ctor_ty, cname_id, field_info, converted)
+                (cname_id, field_info, converted)
               in
               let branches =
                 List.init n_ctors (fun i -> gen_branch i tys.(i))
@@ -3215,7 +3213,7 @@ let gen_ind_header_v2
               in
               let body =
                 if n_ctors = 1 then
-                  let source_ctor_ty, cname_id, field_info, converted =
+                  let cname_id, field_info, converted =
                     List.hd branches
                   in
                   make_branch_body cname_id field_info converted
@@ -3227,11 +3225,10 @@ let gen_ind_header_v2
                   in
                   let rec build_if_chain = function
                     | [] -> CErrors.anomaly (Pp.str "converting constructor: empty constructor list")
-                    | [(_, cname_id, field_info, converted)] ->
+                    | [(cname_id, field_info, converted)] ->
                       (* Last branch: no guard *)
                       make_branch_body cname_id field_info converted
-                    | (_source_ctor_ty, cname_id, field_info, converted)
-                      :: rest ->
+                    | (cname_id, field_info, converted) :: rest ->
                       let guard =
                         B.call
                           (E.Holds_alternative

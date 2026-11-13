@@ -46,11 +46,7 @@ let count_stmts x (stmts : stmt list) =
 
 let count_stmt x s = count_stmts x [s]
 
-(* Whether [e] evaluates each of its operands whenever it is evaluated: not a
-   lambda, a conditional or a connective. *)
-let evaluates_operands : expr -> bool = function
-  | Lambda _ | Conditional _ | Binary ((And | Or), _, _) -> false
-  | _ -> true
+let evaluates_operands = Cpp_ir.Variables.evaluates_operands
 
 let rec is_reference_type : Cpp_ir.Lowered.Type.t -> bool = function
   | Reference _ -> true

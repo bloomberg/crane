@@ -200,8 +200,8 @@ let checked_before_instantiation : obligation -> bool = function Unlowered_condi
 
 (** What [o] is and the pass that owes it, as a failed check reports it. *)
 let describe : obligation -> string = function
-  | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
-  | Opaque_type -> "an unsettled representation (Topaque), owed by " ^ seam
+  | Unresolved_type -> "an undetermined type (Obligation Unresolved_type), owed by the pass that wrote it"
+  | Opaque_type -> "an unsettled representation (Obligation Opaque_type), owed by " ^ seam
   | Unspellable_binder -> "a custom match binder's unspellable type, owed by " ^ seam
   | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
   | Unresolved_cast -> "an unresolved cast, owed by " ^ casts.name

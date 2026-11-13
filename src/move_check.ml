@@ -575,9 +575,7 @@ let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
     check_body (GlobRef.print r) ss;
     check_local_conventions (GlobRef.print r) ss;
     check_by_reference_closures (GlobRef.print r) ss;
-    (* A function definition holds its parameters last first; the plan
-       states them in declaration order. *)
-    if path.inner = [] then check_convention (GlobRef.print r) r (List.rev params) ss
+    if path.inner = [] then check_convention (GlobRef.print r) r params ss
   | Template (_, _, inner) -> check_decl inner
   | Namespace (_, ds) -> List.iter check_decl ds
   | Struct s | Merged_struct_members s -> List.iter field s.fields

@@ -987,9 +987,8 @@ and Function : sig
   }
 
   (** A definition names every parameter and has a body; a declaration may
-      leave a parameter anonymous.  Both hold their parameters last first,
-      unlike a call's arguments and a lambda's parameters, which are in
-      source order; the printer reverses them. *)
+      leave a parameter anonymous.  Both hold their parameters in source
+      order, as a call's arguments and a lambda's parameters are. *)
   type 'p shape =
     | Definition of (Id.t * 'p Type.t) list * 'p Stmt.t list
     | Declaration of (Id.t option * 'p Type.t) list

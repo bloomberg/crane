@@ -22,23 +22,11 @@ open Loopify_tmc
 
 (** {3 Frame-based non-tail recursion helpers} *)
 
-(** Derive field names from saved expressions. If an expression is [Local id],
-    use that variable name; otherwise fall back to ["_s{j}"]. Deduplicates by
-    appending numeric suffixes when the same name appears more than once. *)
-let derive_field_names (exprs : expr list) : Id.t list =
-  let raw_names =
-    List.mapi (fun j e ->
-      match e with
-      | Local id -> Id.to_string id
-      | Move (Local id) -> Id.to_string id
-      | Access_call (_, Local id, _, []) -> Id.to_string id
-      | Access (_, _, field_id) -> Id.to_string field_id
-      | Dereference (Local id) -> Id.to_string id
-      | Call (_, _, [Local id]) -> Id.to_string id
-      | Call (_, _, [Move (Local id)]) -> Id.to_string id
-      | _ -> "_s" ^ string_of_int j)
-    exprs
-  in
+(** Field names for the locals a frame saves: each local's own name,
+    deduplicated by appending numeric suffixes when the same name appears more
+    than once. *)
+let derive_field_names (locals : Id.t list) : Id.t list =
+  let raw_names = List.map Id.to_string locals in
   (* Count occurrences of each name *)
   let counts = Hashtbl.create 8 in
   List.iter (fun name ->
@@ -61,16 +49,18 @@ let derive_field_names (exprs : expr list) : Id.t list =
 (** One value a frame saves across the recursive call.
 
     The three facts about a saved value (what it is called in the frame
-    struct, what its type is, and which expression produced it) are one
+    struct, what its type is, and which local it saves) are one
     record per value, so a frame whose names and types have drifted out of
     step is not a thing that can be built. *)
 type saved_slot = {
   ss_field : Id.t;
       (** field name in the frame struct (see {!derive_field_names}) *)
   ss_ty : ty;
-      (** the declared type, or [(Obligation Unresolved_type)] when the frame was built before
-          the type was known, in which case {!saved_slot.ss_expr} recovers it *)
-  ss_expr : expr;  (** the saved expression *)
+      (** the type the local was declared at, or
+          [(Obligation Unresolved_type)] when the frame's environment does
+          not know it; the frame struct then spells it from
+          {!saved_slot.ss_local} *)
+  ss_local : Id.t;  (** the saved local *)
 }
 
 (** A collected call frame — saved values + handler body. *)
@@ -79,32 +69,29 @@ type call_frame_info = {
       (** e.g. [CraneCont0] — assigned when the push statement is generated *)
   cf_slots : saved_slot list;
   cf_env : (Id.t * ty) list;
-      (** type env at frame creation, for decltype resolution *)
+      (** type env at frame creation, for the [decltype] fallback *)
   cf_handler : stmt list;
   cf_pointers : bool list;
       (** Which slots the frame keeps as pointers, as the recursion plan has
           it *)
 }
 
-(** [make_slots ~types ~exprs] pairs a frame's saved types with the
-    expressions that produced them and names each one.
+(** [make_slots ~types ~locals] pairs a frame's saved types with the
+    locals they are saved from and names each one.
 
     Naming is {!derive_field_names} over the whole list, so it has to happen
     here rather than per slot: the names are deduplicated against each other.
     This is the only way to build a slot list, which is what keeps names,
-    types and expressions in step. *)
-let make_slots ~types ~exprs =
-  let names = derive_field_names exprs in
+    types and locals in step. *)
+let make_slots ~types ~locals =
+  let names = derive_field_names locals in
   map3_exn ~what:"make_slots"
-    (fun ss_field ss_ty ss_expr -> {ss_field; ss_ty; ss_expr})
-    names types exprs
+    (fun ss_field ss_ty ss_local -> {ss_field; ss_ty; ss_local})
+    names types locals
 
 (* A frame's slots read one fact at a time. *)
 let cf_field_names cf = List.map (fun s -> s.ss_field) cf.cf_slots
 let cf_saved_types cf = List.map (fun s -> s.ss_ty) cf.cf_slots
-let cf_saved_exprs cf = List.map (fun s -> s.ss_expr) cf.cf_slots
-
-(** Type environment for inferring saved expression types. *)
 
 (** Collect type bindings from a list of statements. Handles
     [Bind_variable (id, Declare (ty, _), _)], [Declare (id, ty, _)] and a
@@ -118,9 +105,7 @@ let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
         { params = params;
           return_type = ret_ty_opt;
           _ }) ->
-        let param_types =
-          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (List.rev params)
-        in
+        let param_types = List.map (fun (t, _) -> strip_ref_and_const_type t) params in
         let ret_ty = match ret_ty_opt with
           | Some t when t <> Void -> t
           | _ -> Void
@@ -138,8 +123,8 @@ let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
       | Match (scrut, branches, default) ->
         List.concat_map
           (fun (br : branch) ->
-            (* Register structured-binding field types so that
-               [infer_saved_type] can resolve them for frame structs. *)
+            (* Register structured-binding field types so that a frame
+               saving one knows its type. *)
             let field_type_bindings =
               List.map
                 (fun (fb : field_binding) -> (fb.name, fb.type_))
@@ -164,170 +149,13 @@ let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
 (** Look up a variable's type in the environment. *)
 let lookup_var_type env id = List.assoc_opt id env
 
-(** Given template parameters and a type variable id, the return type of the
-    parameter's [Callable_declared] constraint, if it is a callable one
-    ({!Loopify_tail.lookup_tparam_fun_type}). *)
-let lookup_tparam_return_type tparams id =
-  match lookup_tparam_fun_type tparams id with
-  | Some (Function (_, cod)) -> Some cod
-  | _ -> None
-
-(** The C++ [bool] type, as the printer spells it. *)
-let ty_bool = External ("bool", [])
-
-(** Whether a binary operator's result is [bool] whatever its operands are.
-    Comparisons and the short-circuiting connectives are the ones that do not
-    hand their operand's type back. *)
-let binop_yields_bool : Cpp_ir.Binary_operator.t -> bool = function
-  | Equal | Not_equal | And | Or -> true
-  | Assign -> false
-
-(** The raw-pointer type an owning or raw pointer decays to.  Both
-    [crane_raw(x)] and [x.get()] answer this way.  [None] for anything that is
-    not a pointer, which has no raw form to decay to. *)
-let as_raw_ptr : ty -> ty option = function
-  | Pointer t | Shared_pointer t -> Some (Pointer t)
-  | _ -> None
-
-(** Infer the C++ type of a saved expression bottom-up, or [None] when
-    there is nothing to go on.
-
-    Not knowing is an ordinary answer here, so it is one the type admits: this
-    walks expressions the loopifier saved into a frame, and a variable it never
-    saw bound, or a call through a global, simply cannot be typed from what is
-    in hand.  Callers that need a type anyway fall back at their own boundary
-    -- see {!infer_saved_types}.
-
-    Handles the common cases: variable lookups, smart-pointer derefs,
-    [Binary] operators (a comparison is [bool], anything else an operand's
-    type), and lambdas (return type inferred from body [Return] statements).
-    Used by [compute_frame_field_types] to emit [std::function<R(Args...)>]
-    instead of [decltype(lambda)] for closures in loopification frame structs. *)
-let rec infer_saved_type tparams (env : (Id.t * ty) list) (e : expr) :
-    ty option =
-  match e with
-  | Local id ->
-    (* A forwarding parameter's value is held at [std::decay_t<F>]: its [F]
-       may be deduced as a reference. *)
-    Option.map
-      (function Reference (Forwarding, t) -> Decay (strip_ref_type t) | t -> strip_ref_type t)
-      (lookup_var_type env id)
-  | Move inner -> infer_saved_type tparams env inner
-  | Dereference inner ->
-    (* Peel the qualifiers off the pointer before taking its pointee: the
-       loopified receiver [_self] has type [const T *], and
-       [strip_ref_and_const_type] deliberately keeps the [const] on such a
-       type.  Missing the pointee would give the saved frame field the
-       pointer's type while the push and the handler both use it as a
-       value. *)
-    let rec pointee = function
-      | Reference (_, t) | Const t -> pointee t
-      | Shared_pointer t | Pointer t -> t
-      | t -> t
-    in
-    Option.map pointee (infer_saved_type tparams env inner)
-  | Binary (op, _, _) when binop_yields_bool op -> Some ty_bool
-  (* [&x] points at whatever [x] is, its [const] kept. *)
-  | Unary (Address_of, inner) ->
-    Option.map (fun t -> Pointer t) (infer_saved_type tparams env inner)
-  | Binary (_, lhs, rhs) ->
-    (* An arithmetic or assignment operator hands back an operand's type.
-       Try left first, fall back to right: this handles the common pattern
-       [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda param) is,
-       and the result type matches the param type. *)
-    ( match infer_saved_type tparams env lhs with
-    | Some _ as ty -> ty
-    | None -> infer_saved_type tparams env rhs )
-  | Numeral (r, _) -> Some (Entity_application (r, [], []))
-  (* A primitive string literal is a [std::string], as its ML type [Tstring]
-     converts. *)
-  | Literal (String _) -> Some (External ("std::string", []))
-  | Literal (Bool _) -> Some ty_bool
-  | Entity (_, _, Some {custom_yields = Some ty; _}) ->
-    (* Translation recorded what the reference evaluates to while the
-       global's ML type was in hand; nothing here can improve on it. *)
-    Some (strip_ref_and_const_type ty)
-  | Call ({yields = Yields ty; _}, _, _) ->
-    (* The call says what it yields; nothing below can improve on that, and
-       a guess that disagreed with it would be a bug. *)
-    Some (strip_ref_and_const_type ty)
-  | Call (_, Runtime Crane_rt.Raw, [ inner ]) ->
-    (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
-       already raw (arena mode).  Infer from the inner expression. *)
-    Option.bind (infer_saved_type tparams env inner) as_raw_ptr
-  | Call (_, Local f, _) ->
-    ( match lookup_var_type env f with
-    | Some (Function (_, cod)) -> Some cod
-    | Some ty ->
-      (* f might be a template param with forwarding ref type *)
-      Option.bind (extract_fwd_ref_tvar ty) (lookup_tparam_return_type tparams)
-    | None -> None )
-  | Call (_, Lambda {return_type = Some ret_ty; _}, _) -> Some ret_ty
-  (* A lambda applied in place yields what its body returns. *)
-  | Call (_, (Lambda _ as l), _) -> (
-    match infer_saved_type tparams env l with
-    | Some (Function (_, cod)) -> Some cod
-    | _ -> None )
-  | Call (_, Access (Dot, inner, id), [])
-    when String.equal (Id.to_string id) "get" ->
-    (* shared_ptr::get() returns a raw pointer.
-       Infer from the inner expression. *)
-    Option.bind (infer_saved_type tparams env inner) as_raw_ptr
-  | Call _ -> None
-  | Converting_construct (ty, _) | Box (ty, _) ->
-    Some (strip_ref_and_const_type ty)
-  (* A record field read says what the field is. *)
-  | Project (_, _, Some ty) -> Some (strip_ref_and_const_type ty)
-  | Lambda {params = params; return_type = ret_ty_opt; body = body; _} ->
-    let param_types = List.rev_map fst (List.rev params) in
-    let ret_ty =
-      match ret_ty_opt with
-      | Some ty when ty <> Void -> Some ty
-      | _ ->
-        (* No recorded return type: some of translation's lambda
-           construction sites record none, and then the body's [Return]
-           statements are the only answer available here. *)
-        let lam_env =
-          collect_type_env body
-          @ List.fold_left
-              (fun acc (ty, id_opt) ->
-                match id_opt with
-                | Some id -> (id, ty) :: acc
-                | None -> acc)
-              env (List.rev params)
-        in
-        (* The first [return] that can be typed answers for the whole body --
-           in any branch, a match's included: a lambda over a pair opens with
-           the structured binding that destructures it.  A branch's own
-           bindings are not in [lam_env], so a [return] reading one of them
-           may go untyped and leave the answer to another. *)
-        let rec of_stmt = function
-          | Return (Some e) -> infer_saved_type tparams lam_env e
-          | If {condition = _; then_ = then_body; else_ = else_body}
-          | If_declaration {name = _; type_ = _; init = _; then_ = then_body; else_ = else_body} ->
-            List.find_map of_stmt (then_body @ else_body)
-          | Block stmts -> List.find_map of_stmt stmts
-          | Match (_, branches, default) ->
-            List.find_map of_stmt
-              (List.concat_map (fun (b : branch) -> b.body) branches
-              @ Option.default [] default)
-          | Custom_match {branches; _} ->
-            List.find_map of_stmt
-              (List.concat_map (fun (b : custom_branch) -> b.body) branches)
-          | Switch {scrutinee = _; enum = _; branches = branches; default = default} ->
-            List.find_map of_stmt
-              (List.concat_map snd branches @ Option.default [] default)
-          | _ -> None
-        in
-        List.find_map of_stmt body
-    in
-    Option.map
-      (fun r ->
-        Function
-          ( List.map strip_ref_and_const_type param_types,
-            strip_ref_and_const_type r ) )
-      ret_ty
-  | _ -> None
+(** The type a frame keeps a saved local at: the type the local was declared
+    at, or [None] when [env] does not know it.  A forwarding parameter's value
+    is held at [std::decay_t<F>]: its [F] may be deduced as a reference. *)
+let saved_local_type (env : (Id.t * ty) list) id : ty option =
+  Option.map
+    (function Reference (Forwarding, t) -> Decay (strip_ref_type t) | t -> strip_ref_type t)
+    (lookup_var_type env id)
 
 (** {3 Continuation variable helpers}
 
@@ -401,15 +229,15 @@ let make_cont_env cont_vars cont_types env =
 
     @param frames_ref Mutable reference to the list of collected frames
     @param name Frame struct name (e.g., [CraneCont0])
-    @param saved_types Types of saved expressions
-    @param saved_exprs The saved expressions (for decltype fallback)
+    @param saved_types Types of the saved locals
+    @param saved_locals The saved locals
     @param env Type environment at frame creation point
     @param handler The handler body statements *)
-let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler ~pointers =
+let register_frame frames_ref ~name ~saved_types ~saved_locals ~env ~handler ~pointers =
   frames_ref :=
     !frames_ref
     @ [{cf_name = name;
-        cf_slots = make_slots ~types:saved_types ~exprs:saved_exprs;
+        cf_slots = make_slots ~types:saved_types ~locals:saved_locals;
         cf_env = env; cf_handler = handler; cf_pointers = pointers}]
 
 (** {3 Frame-based non-tail rewrite}
@@ -465,21 +293,15 @@ let make_call_frame_name (prefix : string) (counter : int ref)
   if n = 0 then candidate
   else candidate ^ "_" ^ string_of_int n
 
-(** Batch-infer types for a list of saved expressions.
+(** The types a frame keeps [locals] at ({!saved_local_type}).
 
-    @param tparams Template parameters context
-    @param env Type environment for variable lookups
-    @param exprs The expressions whose types to infer
-    @return A list of inferred [ty] values, parallel to [exprs]
-
-    This is the boundary where not knowing becomes {!Cpp_ir.Representation_obligation.Unresolved_type}: a
-    frame field's declared type is a slot that has to hold something, and
-    [(Obligation Unresolved_type)] is what the rest of the frame machinery reads as "not settled
-    yet". *)
-let infer_saved_types tparams env exprs =
-  List.map
-    (fun e -> Option.default (Obligation Unresolved_type) (infer_saved_type tparams env e))
-    exprs
+    This is the boundary where not knowing becomes
+    {!Cpp_ir.Representation_obligation.Unresolved_type}: a frame field's
+    declared type is a slot that has to hold something, and
+    [(Obligation Unresolved_type)] is what the rest of the frame machinery
+    reads as "not settled yet". *)
+let saved_local_types env locals =
+  List.map (fun id -> Option.default (Obligation Unresolved_type) (saved_local_type env id)) locals
 
 (** {3 Enter-rewrite context} *)
 
@@ -773,21 +595,21 @@ let decline_reason ad =
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~stmts ~planned = function
   | Bind_variable (impl_id, Declare (Auto, _), Lambda {params; body; return_type; fixpoint = lambda_fixpoint; binders; _}) -> (
-    let lparams = List.rev params in
-    match (lambda_fixpoint, fixpoint_self lambda_fixpoint lparams) with
+    match (lambda_fixpoint, fixpoint_self lambda_fixpoint params) with
     | None, _ | _, None -> None
     | Some ({name; _} as fixpoint), Some self_id ->
       if not (planned fixpoint) then None
       else
         (* Drop the self-parameter, and any unnamed one: a frame can only
-           carry a binder it can name. *)
+           carry a binder it can name.  The rest are kept the last first, as
+           a loop's parameters are. *)
         let params =
-          match List.rev lparams with
-          | _self :: rest_rev ->
+          match params with
+          | _self :: rest ->
             List.filter_map
               (fun (ty, id_opt) ->
                 match id_opt with Some id -> Some (id, ty) | None -> None )
-              (List.rev rest_rev)
+              (List.rev rest)
           | [] -> []
         in
         let bound = self_id :: List.map fst params in
@@ -890,8 +712,6 @@ type enter_rewrite_ctx = {
       (** Identifies recursive calls in expressions *)
   er_entries : machine_entry list;
       (** The machine's entry points, indexed by {!Loopify_analysis.call_site.cs_entry} *)
-  er_tparams : (param_kind * Id.t) list;
-      (** Template parameters of the enclosing function *)
   er_env : (Id.t * ty) list;
       (** Type environment — changes when entering sub-scopes *)
   er_result_ty : ty;
@@ -1204,7 +1024,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     ]
   | Match (scrut, branches, default) ->
     (* Augment the env with each branch's binding variable types so that
-       [infer_saved_types] resolves field types correctly per-branch. *)
+       {!saved_local_types} resolves field types correctly per-branch. *)
     let rw_branch (br : branch) =
       let branch_env =
         (* Register structured-binding field types. *)
@@ -1286,7 +1106,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     @param stmts  The statement sequence to process
     @return Rewritten statement list (typically stack push operations) *)
 and rewrite_enter_stmts ctx stmts =
-  let { er_check = check; er_tparams = tparams;
+  let { er_check = check;
         er_env = env;
         er_call_counter = call_counter; er_frames_ref = frames_ref;
         er_branch_ctx = branch_ctx;
@@ -1352,13 +1172,12 @@ and rewrite_enter_stmts ctx stmts =
         in
         List.map (fun x -> Option.cata passed false (binder_of ctx x)) cont_vars
       in
-      let cont_saved = List.map (fun cid -> Local cid) cont_vars in
       (* Each kept at the type its local was declared at: the binder's. *)
-      let cont_types = infer_saved_types tparams env cont_saved in
+      let cont_types = saved_local_types env cont_vars in
       if Probe.checking () && List.exists (function (Obligation Unresolved_type) | Auto -> true | _ -> false) cont_types then
         Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
       let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
-      let field_names = derive_field_names cont_saved in
+      let field_names = derive_field_names cont_vars in
       let bindings = make_cont_bindings ~field_names cont_vars cont_types in
       (* The rest sees the result binding too: a later frame saving it needs
          its type.  Where the body says only [auto], the binding holds the
@@ -1488,7 +1307,7 @@ and rewrite_enter_stmts ctx stmts =
           cont_vars pointers
       in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
-        ~saved_exprs:cont_saved ~env ~handler ~pointers;
+        ~saved_locals:cont_vars ~env ~handler ~pointers;
       [
         make_stack_push (Local_aggregate {struct_ = Id.of_string call_name; type_args = []; values = saved_conv});
         make_stack_push enter;
@@ -1573,7 +1392,7 @@ and rewrite_enter_stmts ctx stmts =
       resume_violation ()
     | _ -> () );
     (* Extend the environment with any variable bound by this statement so
-       that [infer_saved_type] can resolve its type when processing [rest].
+       that a frame saving it in [rest] knows its type.
        This is important when a local [std::function] (e.g. from [let fix])
        is defined here and then used as the callee in a continuation. *)
     let updated_env =
@@ -1582,9 +1401,7 @@ and rewrite_enter_stmts ctx stmts =
         { params = params;
           return_type = ret_ty_opt;
           _ }) ->
-        let param_types =
-          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (List.rev params)
-        in
+        let param_types = List.map (fun (t, _) -> strip_ref_and_const_type t) params in
         let ret_ty = match ret_ty_opt with
           | Some t when t <> Void -> t
           | _ -> Void
@@ -1948,142 +1765,20 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       Return (Some (Local (id_result)));
     ]
 
-(* Enclosing-scope variables referenced anywhere inside [body], in order of
-   first occurrence.  A name is "enclosing" exactly when [env] knows its type;
-   anything declared inside the lambda itself (its parameters, its locals) is
-   absent from [env] and so is correctly left alone. *)
-let collect_env_vars env body =
-  let acc = ref [] in
-  let add id =
-    if not (List.exists (Id.equal id) !acc) && lookup_var_type env id <> None
-    then acc := !acc @ [id]
+(** The [std::decay_t<decltype(id)>] a frame field falls back on when the
+    type of the saved local [id] is unknown.  The frame struct is defined
+    where the local is not in scope, so a local [env] knows the type of is
+    read as [std::declval<T&>()] instead.
+
+    @param env  Type environment at the frame's creation ({!call_frame_info.cf_env})
+    @param id   The saved local *)
+let decltype_of_saved_local env id =
+  let read =
+    match lookup_var_type env id with
+    | Some ty -> Declval (Reference (Lvalue, strip_ref_type ty))
+    | None -> Local id
   in
-  let rec fe e =
-    (match e with
-     | Local id -> add id
-     | Lambda
-       { body = lbody;
-         _ } -> List.iter (fun s -> ignore (fs s)) lbody
-     | _ -> ());
-    map_expr fe Fun.id Fun.id e
-  and fs s = map_stmt fe fs Fun.id s in
-  List.iter (fun s -> ignore (fs s)) body;
-  !acc
-
-(** Rewrite variable references and field accesses on lambda-scoped variables
-    to use std::declval, so that decltype expressions are valid at struct
-    definition scope.  E.g., [_args.d_a0] becomes
-    [std::declval<CtorType&>().d_a0] and plain [b] becomes
-    [std::declval<unsigned int&>()].
-
-    @param env      Type environment mapping variable [Id.t]s to their types,
-                    used to resolve the concrete type for [std::declval]
-    @param expr     Expression to rewrite
-    @return [expr] with in-scope variable and field-access references replaced
-            by [std::declval]-based equivalents safe at struct scope *)
-let rec rewrite_field_access_for_decltype env expr =
-  match expr with
-  | Call (_, Lambda
-    { params = params;
-      return_type = rt;
-      body = body;
-      _ }, args)
-    when body <> [] && collect_env_vars env body <> [] ->
-    (* An immediately-invoked lambda -- Crane's encoding of a local [fix] used
-       in expression position.  Substituting [std::declval] for the captured
-       variables *inside* the body would put it in evaluated context, where its
-       [static_assert] fires ("declval can only be used in an unevaluated
-       context").  The body is a real function body even though the surrounding
-       [decltype] is not evaluated.
-
-       So lift the captures to parameters instead and pass the [declval]s as
-       call arguments, which is the position [decltype] makes unevaluated:
-
-         decltype([](lst& _c0, uint64_t& _c1) { ...uses _c0, _c1... }
-                    (std::declval<lst&>(), std::declval<uint64_t&>()))
-
-       The capture-default is dropped for the same reason it is dropped on
-       plain lambdas below: a lambda in an unevaluated operand may not capture.
-       The body is left untouched -- with the captures now parameters, it needs
-       no rewriting. *)
-    let free = collect_env_vars env body in
-    let extra =
-      List.map
-        (fun id ->
-          (Reference (Lvalue, strip_ref_type (Option.get (lookup_var_type env id))), Some id))
-        free
-    in
-    (* The new entries trail the parameters and the arguments alike, so the
-       two line up. *)
-    let extra_args = List.map (fun (ty, _) -> Declval ty) extra in
-    Call
-      (call_opaque, Lambda
-        { params = List.rev (extra @ List.rev params);
-          type_params = [];
-          binders = [];
-          fixpoint = None;
-          moved = [];
-          return_type = rt;
-          body = body;
-          capture = Runs_in_place },
-        List.rev
-          ( extra_args
-          @ List.map (rewrite_field_access_for_decltype env) (List.rev args)
-          ) )
-  | Local id ->
-    ( match lookup_var_type env id with
-    | Some ty ->
-      let base_ty = strip_ref_type ty in
-      Declval (Reference (Lvalue, base_ty))
-    | None -> expr )
-  | Member (Local id, field) ->
-    (* Dot access on a variable.  Strip const to get the struct type for
-       std::declval. *)
-    ( match lookup_var_type env id with
-    | Some ty ->
-      let base_ty = strip_ref_type ty in
-      let struct_ty =
-        match base_ty with
-        | Const t -> t
-        | t -> t
-      in
-      Access (Dot, Declval (Reference (Lvalue, struct_ty)), field)
-    | None -> expr )
-  | Access (Arrow, Local id, field) ->
-    (* Arrow access on a pointer variable — used by Match bindings
-       ([_m->d_field] from [std::get_if]) and loopify frame dispatch. *)
-    ( match lookup_var_type env id with
-    | Some ty ->
-      let base_ty = strip_ref_type ty in
-      let pointee_ty =
-        match base_ty with
-        | Pointer (Const t) | Pointer t -> t
-        | t -> t
-      in
-      Access (Dot, Declval (Reference (Lvalue, pointee_ty)), field)
-    | None -> expr )
-  | Lambda ({body = body; _} as l) ->
-    (* Rewrite variables inside the lambda body to use std::declval, and remove
-       any capture-default so the lambda is valid inside decltype (which is an
-       unevaluated context where capture-defaults are not allowed in C++23). *)
-    let fe = rewrite_field_access_for_decltype env in
-    let rec fs stmt = map_stmt fe fs Fun.id stmt in
-    Lambda {l with body = List.map fs body; capture = Runs_in_place}
-  | _ ->
-    map_expr (rewrite_field_access_for_decltype env) Fun.id Fun.id expr
-
-(** Build a [std::decay_t<decltype(expr)>] type, suitable for struct field type annotations
-    when the actual type is unknown. Rewrites variable references to use
-    std::declval so that decltype is valid at struct definition scope.
-
-    @param env      Type environment for resolving variable types in the
-                    [decltype] expression
-    @param expr     The expression whose type to capture via [decltype]
-    @return [std::decay_t<decltype(rewritten_expr)>] where [rewritten_expr] uses
-            [std::declval] for any in-scope variables *)
-let make_decltype_ty env expr =
-  let expr = rewrite_field_access_for_decltype env expr in
-  Decay (Type_of expr)
+  Decay (Type_of read)
 
 (** Fix bindings in a continuation frame handler for fields that became
     pointer-safe ({!call_frame_info.cf_pointers}).
@@ -2423,7 +2118,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     List.fold_left aliased_after Id.Set.empty (make_param_copies (entry_emission ?pointer_safe en []).ee_params)
   in
   let ctx = { er_check = check; er_entries = entries;
-               er_tparams = tparams;
                er_env = env;
                er_result_ty = ret_ty;
                er_binders = List.map (fun (id, b) -> (id, Some b)) binders;
@@ -2524,58 +2218,16 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     cf.cf_name ^ ":" ^ field_names_str
     ^ " resumes after recursive call, then processes rest."
   in
-  (* Find the first Return expression in a lambda body, for return-type inference. *)
-  let rec extract_lambda_return_expr = function
-    | [] -> None
-    | Return (Some e) :: _ -> Some e
-    | If {condition = _; then_ = then_body; else_ = else_body} :: rest ->
-      (match extract_lambda_return_expr then_body with
-       | Some e -> Some e
-       | None ->
-         match extract_lambda_return_expr else_body with
-         | Some e -> Some e
-         | None -> extract_lambda_return_expr rest)
-    | Block stmts :: rest ->
-      (match extract_lambda_return_expr stmts with
-       | Some e -> Some e
-       | None -> extract_lambda_return_expr rest)
-    | _ :: rest -> extract_lambda_return_expr rest
-  in
   let compute_frame_field_types cf cf_ps =
     map2_exn ~what:"compute_frame_field_types"
-      (fun ps {ss_ty = ty; ss_expr = expr; _} ->
+      (fun ps {ss_ty = ty; ss_local = id; _} ->
         if ps then
           match ty with
           | Shared_pointer inner -> Pointer (Const inner)
           | _ -> Pointer (Const (strip_ref_and_const_type ty))
         else
           match ty with
-          | (Obligation Unresolved_type) | Auto ->
-            let inferred = infer_saved_type tparams cf.cf_env expr in
-            (match inferred with
-            | None | Some Auto ->
-              (* For lambda expressions whose return type can't be inferred
-                 (e.g., a method call like a1_value.length()), generate
-                 std::function<decltype(body_ret_expr)(params)> instead of
-                 std::decay_t<decltype(lambda)>.  The lambda in decltype at
-                 struct definition scope and the actual stored lambda are
-                 different C++ types, so std::decay_t<decltype(lambda)> does
-                 not work.  std::function accepts any callable with a
-                 matching signature. *)
-              let base_expr = match expr with Move e -> e | e -> e in
-              (match base_expr with
-               | Lambda {params = params; body = body; _} ->
-                 let param_types =
-                   List.map (fun (ty, _) -> strip_ref_and_const_type ty)
-                     (List.rev params)
-                 in
-                 (match extract_lambda_return_expr body with
-                  | Some ret_expr ->
-                    let rewritten = rewrite_field_access_for_decltype cf.cf_env ret_expr in
-                    Function (param_types, Decay (Type_of rewritten))
-                  | None -> make_decltype_ty cf.cf_env expr)
-               | _ -> make_decltype_ty cf.cf_env expr)
-            | Some ty -> ty)
+          | (Obligation Unresolved_type) | Auto -> decltype_of_saved_local cf.cf_env id
           | _ -> frame_field_type ty)
       cf_ps cf.cf_slots
   in

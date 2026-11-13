@@ -31,7 +31,9 @@ let opt = Option.map
 let typed m ps = list (fun (t, x) -> (m.type_ t, x)) ps
 let fields m ps = list (fun (x, t) -> (x, m.type_ t)) ps
 
-(* The arguments of a call, last first. *)
+(* The arguments of a call, last first: the order MiniCpp held them in, which
+   the names a rewriter numbers as it lifts them out ([_litN], [_onceN],
+   [_lcN]) follow. *)
 let arguments m args = List.rev (list m.expr (List.rev args))
 
 let foreign m (f : 'p Foreign.t) : 'p Foreign.t =

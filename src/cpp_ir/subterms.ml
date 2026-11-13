@@ -5,8 +5,8 @@
     its statement lists as lists, so that a visitor threading a scope
     through a block sees the block whole.  Types are not visited.
 
-    The order is fixed and some visitors depend on it: a call's callee, then
-    its arguments last first; of a requires expression, the expressions it
+    The order is fixed: a call's callee, then its arguments first to last,
+    as {!Children.expr} visits them; of a requires expression, the expressions it
     constrains and not the constraints; any other children in the order they
     are written. *)
 
@@ -23,7 +23,7 @@ let expr : type p. expr:(p Expr.t -> unit) -> stmts:(p Stmt.t list -> unit) -> p
     ()
   | Call (_, f, args) ->
     expr f;
-    each (List.rev args)
+    each args
   | Erased_call (f, a) ->
     expr f;
     expr a

@@ -16,3 +16,12 @@ let positional_name i = "T" ^ string_of_int i
 
 (** [positional_id i] is {!positional_name} as an identifier. *)
 let positional_id i = Names.Id.of_string (positional_name i)
+
+(** Whether [t] is the type variable named [id], under either spelling a
+    variable's head may have. *)
+let is_variable_named id (t : _ t) =
+  match t with
+  | Variable (Named n) -> Names.Id.equal n id
+  | Variable (Index (i, name)) ->
+    (match name with Some n -> Names.Id.equal n id | None -> false) || Names.Id.equal (positional_id i) id
+  | _ -> false

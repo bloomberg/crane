@@ -242,10 +242,11 @@ let gen_typeclass_cpp name fields =
      real type parameters. This indicates the field's type is entirely
      determined by a promoted associated type, so we can't decompose it into
      args and return type at concept time (the concrete type might be a
-     function). *)
+     function).  A field type is read off the class's declaration, never
+     rigidified; rigidity says nothing here either way. *)
   let is_bare_promoted_tvar ty =
     match ty with
-    | Miniml.Tvar (Schematic, n) -> not (is_tparam (n - 1))
+    | Miniml.Tvar (_, n) -> not (is_tparam (n - 1))
     | _ -> false
   in
   (* Check if a field type is a typeclass-typed promoted field.  Such
