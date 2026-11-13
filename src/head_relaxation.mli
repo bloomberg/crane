@@ -13,12 +13,12 @@
     under that head applies it ({!apply}) rather than deciding it again. *)
 
 type t =
-  | Computed_return of Minicpp.cpp_type
+  | Computed_return of Cpp_ir.Lowered.Type.t
       (** The return type is the result of the callback that produces it:
           a template template parameter nothing deduces is dropped for it. *)
   | Param_applications of {
       relaxed : Names.Id.t list;
-      deduced : ((Names.Id.t * Minicpp.cpp_type list) * Names.Id.t) list;
+      deduced : ((Names.Id.t * Cpp_ir.Lowered.Type.t list) * Names.Id.t) list;
     }
       (** Each application of a [relaxed] variable, by the variable and the
           arguments it is applied to, is the template parameter [deduced]

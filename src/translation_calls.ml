@@ -163,10 +163,12 @@ let callee_abi ~instances id =
     value for some of its variables, [by_var] pairing each variable with its
     C++ type: planned against [id]'s head, no dictionary among them. *)
 let written_at_variables id by_var =
-  Template_application.to_list
-    (Template_application.plan (callee_abi ~instances:0 id)
-       ~instance:(fun _ -> None)
-       ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
+  List.map Cpp_ir_to_legacy_minicpp.ty
+    (Template_application.to_list
+       (Template_application.plan (callee_abi ~instances:0 id)
+          ~instance:(fun _ -> None)
+          ~scheme:(fun v ->
+            Option.map Legacy_minicpp_to_cpp_ir.lower_type (List.assoc_opt (Scheme.Var.ordinal v) by_var) ) ) )
 
 (** A call lowered against its callee's plan: the plan its arguments are
     lowered by, the callee's C++ type at the call, the written type arguments by
@@ -721,8 +723,8 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
   let apply regular =
     let regular = at_plain_positions regular in
     Template_application.plan abi
-      ~instance:(fun k -> List.nth_opt instance_args k)
-      ~scheme:(fun v -> Scheme.Var.assoc_opt v regular)
+      ~instance:(fun k -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (List.nth_opt instance_args k))
+      ~scheme:(fun v -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (Scheme.Var.assoc_opt v regular))
   in
   let regular = build_type_args tyargs in
   (* A class parameter is quantified first, so the carrier is the callee's
@@ -781,7 +783,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         | refilled -> refilled
   in
   let application = apply regular in
-  let all_type_args = Template_application.to_list application in
+  let all_type_args = List.map Cpp_ir_to_legacy_minicpp.ty (Template_application.to_list application) in
 
   (* An argument written as an erased placeholder at a variable the use
      wrote nothing for, and nothing resolved since, is a guess: such a

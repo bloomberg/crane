@@ -619,11 +619,10 @@ let planned_methods ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
     let abi = Callable_abi.planned_instance_method ~instance:r m.name in
     match Callable_abi.receiver abi with
     | Some {params; ret; _} when List.length params = List.length m.params ->
-      let ty = Legacy_minicpp_to_cpp_ir.lower_type in
       { m with
-        type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters (Callable_abi.declared_head abi);
-        return_type = ty ret;
-        params = List.map2 (fun (id, _) t -> (id, ty t)) m.params params }
+        type_params = Callable_abi.declared_head abi;
+        return_type = ret;
+        params = List.map2 (fun (id, _) t -> (id, t)) m.params params }
     | Some _ | None ->
       CErrors.anomaly
         Pp.(str "the method " ++ Id.print m.name ++ str " of " ++ GlobRef.print r

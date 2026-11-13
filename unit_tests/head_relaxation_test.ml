@@ -22,13 +22,13 @@ let fn ret params body = Dfun (mk_dfun ~ret (r "f") (Ddef (params, body)))
 
 let () =
   let decl = fn (Tapply (named "T1", [nat])) [(id "x", Tapply (named "T1", [nat]))] [] in
-  ( match Head_relaxation.apply (Head_relaxation.Computed_return nat) decl with
+  ( match Head_relaxation.apply (Head_relaxation.Computed_return (Legacy_minicpp_to_cpp_ir.lower_type nat)) decl with
   | Dfun {df_ret; df_shape = Ddef (params, _); _} ->
     check "a computed return replaces the return type" (df_ret = nat);
     check "and nothing else" (params = [(id "x", Tapply (named "T1", [nat]))])
   | _ -> check "a function stays a function" false );
   let relaxed =
-    Head_relaxation.Param_applications {relaxed = [id "T1"]; deduced = [((id "T1", [nat]), id "_P0")]}
+    Head_relaxation.Param_applications {relaxed = [id "T1"]; deduced = [((id "T1", [Legacy_minicpp_to_cpp_ir.lower_type nat]), id "_P0")]}
   in
   ( match Head_relaxation.apply relaxed decl with
   | Dfun {df_ret; df_shape = Ddef (params, _); _} ->
@@ -47,5 +47,5 @@ let () =
     check "but not as an any_cast's target" (target = named "T2")
   | _ -> check "a function stays a function" false );
   check "relaxations apply first first"
-    ( Head_relaxation.apply_all [relaxed; Head_relaxation.Computed_return nat] decl
+    ( Head_relaxation.apply_all [relaxed; Head_relaxation.Computed_return (Legacy_minicpp_to_cpp_ir.lower_type nat)] decl
     = fn nat [(id "x", named "_P0")] [] )

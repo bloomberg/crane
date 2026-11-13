@@ -8,10 +8,10 @@ open Names
 open Minicpp
 
 type t =
-  | Computed_return of cpp_type
+  | Computed_return of Cpp_ir.Lowered.Type.t
   | Param_applications of {
       relaxed : Id.t list;
-      deduced : ((Id.t * cpp_type list) * Id.t) list;
+      deduced : ((Id.t * Cpp_ir.Lowered.Type.t list) * Id.t) list;
     }
   | Deapplied of {
       plain : Id.t list;
@@ -24,6 +24,7 @@ let equal = ( = )
 (* {!Param_applications}'s rewrite of one type: an application of a
    [relaxed] variable is replaced by the parameter [deduced] names for it. *)
 let param_applications relaxed deduced =
+  let deduced = List.map (fun ((x, args), d) -> ((x, List.map Cpp_ir_to_legacy_minicpp.ty args), d)) deduced in
   let key t =
     match t with
     | Tapply (h, args) -> (
@@ -79,7 +80,8 @@ let unmentioned_erased ids =
 
 let apply relaxation decl =
   match relaxation with
-  | Computed_return ret -> ( match decl with Dfun f -> Dfun {f with df_ret = ret} | d -> d )
+  | Computed_return ret -> (
+    match decl with Dfun f -> Dfun {f with df_ret = Cpp_ir_to_legacy_minicpp.ty ret} | d -> d )
   | Param_applications {relaxed; deduced} -> (
     (* The body annotates the very types the parameters do -- a pattern match
        names the scrutinee's constructor struct -- so a relaxation that

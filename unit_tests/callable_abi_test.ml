@@ -25,11 +25,11 @@ let () =
           (Common.tvar_id 2, Scheme_param 2);
           (Common.fun_tparam_id 0, Callable_param 0);
           (Common.tvar_id 1, Scheme_param 1) ]
-      [ (Minicpp.TTtypename, Common.tc_instance_id 0);
-        (Minicpp.TTtypename, Common.tvar_id 2);
-        (Minicpp.TTfun ([], Minicpp.Tvoid), Common.fun_tparam_id 0);
-        (Minicpp.TTtypename, id "CraneP0");
-        (Minicpp.TTtypename_default Minicpp.Tvoid, Common.tvar_id 1) ]
+      [ (Typename, Common.tc_instance_id 0);
+        (Typename, Common.tvar_id 2);
+        (Callable_declared ([], Void), Common.fun_tparam_id 0);
+        (Typename, id "CraneP0");
+        (Typename_default Void, Common.tvar_id 1) ]
   in
   let origins = List.map (fun p -> p.origin) (template_head abi) in
   check "origins"
@@ -49,12 +49,12 @@ let () =
   (* The origin is what the builder recorded, not what the name says: a
      parameter spelled as a variable's is none without the record, and one
      spelled otherwise is the variable recorded. *)
-  let other = of_head ~callee ~scheme:(Some scheme) [(Minicpp.TTtypename, Common.tvar_id 1)] in
+  let other = of_head ~callee ~scheme:(Some scheme) [(Typename, Common.tvar_id 1)] in
   check "an unrecorded T1 is no variable"
     (match template_head other with [{origin = Derived _; _}] -> true | _ -> false);
   let renamed =
     of_head ~callee ~scheme:(Some scheme) ~minted:[(id "A", Scheme_param 2)]
-      [(Minicpp.TTtypename, id "A")]
+      [(Typename, id "A")]
   in
   check "a recorded A is its variable"
     ( match template_head renamed with

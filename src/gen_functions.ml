@@ -382,11 +382,13 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
 
 (** The value-parameter types, in declaration order, and the return type of
     a function declaration, which keeps its parameters last first. *)
-let declared_signature = function
+let declared_signature =
+  let lower = Legacy_minicpp_to_cpp_ir.lower_type in
+  function
   | Dfun {df_ret; df_shape = Ddef (params, _); _} ->
-    Some {Callable_abi.params = List.rev_map snd params; ret = df_ret}
+    Some {Callable_abi.params = List.rev_map (fun (_, t) -> lower t) params; ret = lower df_ret}
   | Dfun {df_ret; df_shape = Ddecl params; _} ->
-    Some {Callable_abi.params = List.rev_map snd params; ret = df_ret}
+    Some {Callable_abi.params = List.rev_map (fun (_, t) -> lower t) params; ret = lower df_ret}
   | _ -> None
 
 (** The head [n] is declared with: [temps] relaxed against [signature]
@@ -401,7 +403,8 @@ let plan_function_head ?deduced_callables ?passing ~minted n ty temps signature 
       ~omitted:(Translation_support.type_arg_omission n)
       ~phantom_prefix:(Translation_types.leading_phantom_count n)
       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
-      ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
+      ~callee:n ~scheme:(Mlutil.reference_scheme n)
+      (Legacy_minicpp_to_cpp_ir.lower_template_parameters temps)
   in
   (abi, temps, relaxations)
 
@@ -1118,7 +1121,7 @@ let planned_scope_head n ty scope =
   if Probe.checking () then (
     let decided, _, _ = plan_scope_head n ty scope in
     Callable_abi.check decided );
-  (Callable_abi.declared_head abi, Callable_abi.relaxations abi)
+  (Cpp_ir_to_legacy_minicpp.template_parameters (Callable_abi.declared_head abi), Callable_abi.relaxations abi)
 
 (** The reference a self-call of [n] in its own body is written with: every
     template parameter its plan lets a call write, at itself -- the call is
@@ -1178,11 +1181,13 @@ let declare_planned_signature n decl =
         Pp.(
           str "the declaration of " ++ GlobRef.print n
           ++ str " has another signature than its plan" );
-    match (planned, decl) with
-    | Some {Callable_abi.params; ret}, Dfun ({df_shape = Ddef (ps, body); _} as f)
+    let raised = Option.map (fun {Callable_abi.params; ret} ->
+        (List.map Cpp_ir_to_legacy_minicpp.ty params, Cpp_ir_to_legacy_minicpp.ty ret)) planned in
+    match (raised, decl) with
+    | Some (params, ret), Dfun ({df_shape = Ddef (ps, body); _} as f)
       when List.compare_lengths params ps = 0 ->
       Dfun {f with df_ret = ret; df_shape = Ddef (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params), body)}
-    | Some {Callable_abi.params; ret}, Dfun ({df_shape = Ddecl ps; _} as f)
+    | Some (params, ret), Dfun ({df_shape = Ddecl ps; _} as f)
       when List.compare_lengths params ps = 0 ->
       Dfun {f with df_ret = ret; df_shape = Ddecl (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params))}
     | _ -> decl

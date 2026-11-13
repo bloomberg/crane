@@ -12,7 +12,7 @@ let check name cond =
     exit 1 )
 
 let callee = Names.GlobRef.VarRef (Names.Id.of_string "f")
-let ty name = Minicpp.Tid_external (name, [])
+let ty name : Callable_abi.ty = External (name, [])
 
 let () =
   Random.init 20261013;
@@ -28,19 +28,19 @@ let () =
     in
     let entries =
       List.init (Random.int 2) (fun k ->
-          (Minicpp.TTtypename, Common.tc_instance_id k, Instance_param k) )
+          ((Typename : Callable_abi.kind), Common.tc_instance_id k, Instance_param k) )
       @ List.concat_map
           (fun v ->
             let i = Scheme.Var.ordinal v in
             let kind =
               match Random.int 4 with
-              | 0 -> Minicpp.TTtemplate 1
-              | 1 -> Minicpp.TTtypename_default Minicpp.Tvoid
-              | _ -> Minicpp.TTtypename
+              | 0 -> (Template 1 : Callable_abi.kind)
+              | 1 -> Typename_default Void
+              | _ -> Typename
             in
             (kind, Common.tvar_id i, Scheme_param i)
             :: ( if Random.int 4 = 0 then
-                   [(Minicpp.TTfun ([], Minicpp.Tvoid), Common.fun_tparam_id i, Callable_param i)]
+                   [(Callable_declared ([], Void), Common.fun_tparam_id i, Callable_param i)]
                  else [] ) )
           shuffled
     in
@@ -70,7 +70,7 @@ let () =
           match Option.flatten (List.assoc_opt v values) with
           | Some t ->
             check "a value lands at its own variable"
-              (a = t || a = Minicpp.Ttyctor t)
+              (a = t || a = Type_constructor t)
           | None ->
             check "a missing value is filled only as the plan allows"
               ( match p.write with

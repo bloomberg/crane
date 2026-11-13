@@ -18,7 +18,7 @@
 type t = private
   | Deduce_all
       (** none: C++ deduces every parameter *)
-  | Explicit_prefix of Minicpp.cpp_type list  (** the arguments for a
+  | Explicit_prefix of Cpp_ir.Lowered.Type.t list  (** the arguments for a
       prefix of the head, in order; never empty *)
 
 (** [plan abi ~instance ~scheme] writes, at each parameter of [abi]'s head in
@@ -26,16 +26,16 @@ type t = private
     [scheme v] for a scheme variable, nothing for a deduced callable or a
     parameter the declaration derives.  A value is adapted to the
     parameter's kind: a template-template parameter takes a template name
-    ([Ttyctor]), a type parameter a type.  A phantom parameter is always
+    ([Type_constructor]), a type parameter a type.  A phantom parameter is always
     written, with its filler where it has no value: nothing deduces it. *)
 val plan :
   Callable_abi.t ->
-  instance:(int -> Minicpp.cpp_type option) ->
-  scheme:(Scheme.Var.t -> Minicpp.cpp_type option) ->
+  instance:(int -> Cpp_ir.Lowered.Type.t option) ->
+  scheme:(Scheme.Var.t -> Cpp_ir.Lowered.Type.t option) ->
   t
 
 (** The arguments as a list, [[]] for {!Deduce_all}. *)
-val to_list : t -> Minicpp.cpp_type list
+val to_list : t -> Cpp_ir.Lowered.Type.t list
 
 (** The invariants a written argument list keeps: no longer than the head, each argument
     kind-correct for the parameter it stands at, no erased placeholder

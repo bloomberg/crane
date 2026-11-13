@@ -381,7 +381,7 @@ let relax_tt_applied_return temps decl =
               | _ -> Some (tt, i) )
             temps
         in
-        (temps, Some (Head_relaxation.Computed_return ret)) )
+        (temps, Some (Head_relaxation.Computed_return (Legacy_minicpp_to_cpp_ir.lower_type ret))) )
     | _ -> (temps, None) )
   | _ -> (temps, None)
 
@@ -514,7 +514,8 @@ let relax_applied_param temps decl =
           temps
         @ !fresh
       in
-      (temps, Some (Head_relaxation.Param_applications {relaxed = List.map snd relaxed; deduced = !seen}))
+      let deduced = List.map (fun ((x, args), d) -> ((x, List.map Legacy_minicpp_to_cpp_ir.lower_type args), d)) !seen in
+      (temps, Some (Head_relaxation.Param_applications {relaxed = List.map snd relaxed; deduced}))
     end
   | _ -> (temps, None)
 

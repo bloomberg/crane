@@ -3991,11 +3991,12 @@ and project_through_instance env use args (projection : Elaborated_call.static_p
      result. *)
   let targs =
     let by_var = List.map (fun (v, t) -> (v, cpp_of_ml env t)) (Mlutil.Var_types.bindings tys) in
-    Template_application.to_list
-      (Template_application.plan
-         (Callable_abi.projection projection_abi x)
-         ~instance:(fun _ -> None)
-         ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) )
+    List.map Cpp_ir_to_legacy_minicpp.ty
+      (Template_application.to_list
+         (Template_application.plan
+            (Callable_abi.projection projection_abi x)
+            ~instance:(fun _ -> None)
+            ~scheme:(fun v -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (Scheme.Var.assoc_opt v by_var)) ) )
   in
   (* What each operand is written into.  [tys] leads with the carrier, which
      is how the field's own type numbers the class parameter, so the single
@@ -4526,7 +4527,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     in
     let ty = lowered.lc_callee_type
     and tys = lowered.lc_written
-    and all_type_args = Template_application.to_list lowered.lc_application
+    and all_type_args = List.map Cpp_ir_to_legacy_minicpp.ty (Template_application.to_list lowered.lc_application)
     and written_tvar_args = lowered.lc_written_by_var in
     (* The callee's declared type at the type arguments the call writes: what
        C++ checks the arguments against and returns.  A type argument standing

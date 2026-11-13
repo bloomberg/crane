@@ -651,10 +651,11 @@ let method_plan func_ref s h =
       { dropped =
           List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped;
         dropped_names = List.map snd h.mh_dropped;
-        params = List.map snd s.ms_params;
-        ret = h.mh_ret;
+        params = List.map (fun (_, t) -> Legacy_minicpp_to_cpp_ir.lower_type t) s.ms_params;
+        ret = Legacy_minicpp_to_cpp_ir.lower_type h.mh_ret;
         return_only = Id.Set.elements h.mh_return_only }
-    ~callee:func_ref ~scheme h.mh_tparams
+    ~callee:func_ref ~scheme
+    (Legacy_minicpp_to_cpp_ir.lower_template_parameters h.mh_tparams)
 
 (** [plan_method name vars candidate] is the callable plan of the method
     made of [candidate] in the inductive [name] whose variables are [vars],
@@ -672,7 +673,11 @@ let planned_method_head func_ref vars s =
   let abi = Callable_abi.planned func_ref in
   if Probe.checking () then Callable_abi.check (method_plan func_ref s (method_head vars s));
   match Callable_abi.receiver abi with
-  | Some r -> (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
+  | Some r ->
+    ( Cpp_ir_to_legacy_minicpp.template_parameters (Callable_abi.declared_head abi),
+      Cpp_ir_to_legacy_minicpp.ty r.ret,
+      Id.Set.of_list r.return_only,
+      r.dropped_names )
   | None ->
     CErrors.anomaly
       Pp.(str "the method " ++ GlobRef.print func_ref ++ str " was planned as a function.")

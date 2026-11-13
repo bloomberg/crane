@@ -3,6 +3,9 @@
 
 open Names
 
+type ty = Cpp_ir.Lowered.Type.t
+type kind = Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t
+
 module Template_param = struct
   type t = {
     position : int;
@@ -28,21 +31,21 @@ type minted =
 type write_policy =
   | Writable
   | Deduce_only
-  | Defaulted of Minicpp.cpp_type
-  | Phantom of Minicpp.cpp_type
+  | Defaulted of ty
+  | Phantom of ty
 
 type template_parameter = {
   id : Template_param.t;
   origin : origin;
-  kind : Minicpp.template_type;
+  kind : kind;
   write : write_policy;
 }
 
 type receiver = {
   dropped : Scheme.Var.t list;
   dropped_names : Id.t list;
-  params : Minicpp.cpp_type list;
-  ret : Minicpp.cpp_type;
+  params : ty list;
+  ret : ty;
   return_only : Id.t list;
 }
 
@@ -56,8 +59,8 @@ type passing =
   | Forwarded
 
 type signature = {
-  params : Minicpp.cpp_type list;
-  ret : Minicpp.cpp_type;
+  params : ty list;
+  ret : ty;
 }
 
 type t = {
@@ -117,11 +120,11 @@ let mark_phantoms n head =
     | [] -> []
     | ({origin = From_scheme _; kind; _} as p) :: rest when n > 0 ->
       let filler =
-        match kind with Minicpp.TTtypename_default d -> d | _ -> Minicpp.Tvoid
+        match (kind : kind) with Typename_default d -> d | _ -> Void
       in
       let p =
-        match kind with
-        | Minicpp.TTtypename | Minicpp.TTtypename_default _ -> {p with write = Phantom filler}
+        match (kind : kind) with
+        | Typename | Typename_default _ -> {p with write = Phantom filler}
         | _ -> p
       in
       p :: go (n - 1) rest
@@ -149,8 +152,8 @@ let of_head ?omitted ?(phantom_prefix = 0) ?(relaxed = fun _ -> false) ?(deduced
       (fun position (kind, name) ->
         let origin = minted_origin ~relaxed ~scheme minted name in
         let write =
-          match (kind, origin) with
-          | Minicpp.TTtypename_default d, _ -> Defaulted d
+          match ((kind : kind), origin) with
+          | Typename_default d, _ -> Defaulted d
           | _, From_callable _ -> Deduce_only
           | _ -> Writable
         in
@@ -176,15 +179,14 @@ let signature abi = abi.signature
    quantifiers, all named, and the class-typed arguments it takes, which the
    struct's builder records as its dictionaries. *)
 let of_instance_method ?minted ~instance (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) =
-  let ty = Cpp_ir_to_legacy_minicpp.ty in
   of_head ?minted ~callee:instance ~scheme:None
     ~receiver:
       { dropped = [];
         dropped_names = [];
-        params = List.map (fun (_, t) -> ty t) m.params;
-        ret = ty m.return_type;
+        params = List.map snd m.params;
+        ret = m.return_type;
         return_only = [] }
-    (Cpp_ir_to_legacy_minicpp.template_parameters m.type_params)
+    m.type_params
 
 let deduces_callable_at abi pos = List.exists (Param_pos.equal pos) abi.deduced_callables
 
@@ -267,13 +269,13 @@ let () =
 
 (* The head of [abi], one line, for a violation report. *)
 let describe abi =
-  let kind = function
-    | Minicpp.TTtypename -> "typename"
-    | Minicpp.TTtypename_default _ -> "typename="
-    | Minicpp.TTtemplate n -> Printf.sprintf "template/%d" n
-    | Minicpp.TTfun _ -> "callable"
-    | Minicpp.TTinvocable _ -> "invocable"
-    | Minicpp.TTconcept _ -> "concept"
+  let kind : kind -> string = function
+    | Typename -> "typename"
+    | Typename_default _ -> "typename="
+    | Template n -> Printf.sprintf "template/%d" n
+    | Callable_declared _ -> "callable"
+    | Invocable _ -> "invocable"
+    | Concept _ -> "concept"
   in
   let origin = function
     | From_scheme v -> Printf.sprintf "var %d" (Scheme.Var.ordinal v)
@@ -373,7 +375,7 @@ let with_dictionaries instances abi =
         let name = Common.tc_instance_id k in
         { id = {Template_param.position = k; name};
           origin = From_instance k;
-          kind = Minicpp.TTtypename;
+          kind = Typename;
           write = Writable } )
   in
   let shift p = {p with id = {p.id with Template_param.position = p.id.position + instances}} in
@@ -386,9 +388,9 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
       (fun v ->
         let name = Common.tvar_id (Scheme.Var.ordinal v) in
         if relaxed (Scheme.Var.ordinal v) then
-          (Minicpp.TTtypename_default Minicpp.Tvoid, name, Derived name)
+          ((Typename_default Void : kind), name, Derived name)
         else
-          ( (if higher_kinded v then Minicpp.TTtemplate 1 else Minicpp.TTtypename),
+          ( (if higher_kinded v then Template 1 else Typename),
             name,
             From_scheme v ) )
       (List.filteri (fun k _ -> k < reachable)
@@ -397,7 +399,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
   let head =
     List.mapi
       (fun position (kind, name, origin) ->
-        let write = match kind with Minicpp.TTtypename_default d -> Defaulted d | _ -> Writable in
+        let write = match (kind : kind) with Typename_default d -> Defaulted d | _ -> Writable in
         {id = {Template_param.position; name}; origin; kind; write} )
       variables
   in
