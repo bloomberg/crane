@@ -9,7 +9,8 @@
     method or a projection written as a call of a function, a lambda invoked
     only to choose between two values, a member read of a moved object, a
     definition not yet known to be [constexpr] or not, a mapping's text not
-    yet instantiated.
+    yet instantiated, a pointer whose slot is not written down, a match
+    whose scrutinee no local holds, a lambda whose capture is not decided.
 
     Each is discharged by one resolution pass, and a resolved declaration
     owes none.  The list is closed: a new kind of debt the printer must not

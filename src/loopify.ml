@@ -6,6 +6,10 @@
     Transforms recursive C++ functions and methods ({!Cpp_ir.Lowered}) into iterative equivalents
     using while loops and explicit stacks. This eliminates C++ stack recursion,
     enabling safe execution of deeply recursive algorithms extracted from Coq.
+    It runs on CppIR between translation and the finish pipeline: translation
+    reaches it through four entry points that convert MiniCpp to CppIR and
+    back, and ControlIR lowering ({!Control_to_cpp_ir}) calls the exported
+    transforms directly.
 
     {2 Motivation}
 
@@ -268,7 +272,8 @@ let method_survivors (mf : meth) = calls_checker (Option.cata definition_calls [
     top-level functions. *)
 
 (* The positions of the parameters of the loop [l] its lambda takes, those
-   that are not void, last first, as a lambda stores them. *)
+   that are not void, last first: the order Loopify keeps a local
+   fixpoint's parameters in, the reverse of the lambda's own. *)
 let kept_positions (l : Control_ir.Term.loop) =
   List.filteri (fun _ (_, ty) -> not (Ml_type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
   |> List.rev_map fst
@@ -343,18 +348,19 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   (* Y-combinator idiom emitted by {!Translation.gen_local_fix_by_ref} for
      local fixpoints:
      {v
-       auto f_impl = [&](A... args, auto& _self_f) { ... _self_f(newargs, _self_f) ... };
-       auto f      = [&](A... args) { return f_impl(args, f_impl); };
+       auto f_impl = [&](auto& _self_f, A... args) { ... _self_f(_self_f, newargs) ... };
+       auto f      = [&](A... args) { return f_impl(f_impl, args); };
      v}
-     The lambda's LAST parameter is a single self-reference [_self_f] and the
-     recursive call forwards it as its own last argument.  Recognise it by
+     The lambda's FIRST parameter is a single self-reference [_self_f] and
+     the recursive call forwards it as its own first argument.  Recognise it by
      the self-parameter its encoding recorded ({!fixpoint_self}), not by
      name, and lower it as the recursion plan has the member: a tail loop
      through {!transform_tail}, otherwise a machine through
      {!transform_nontail}, with a checker taking the calls the recursion
      plan finds of the member ({!planned_self_checker}), dropping the
-     trailing self-forward argument so the remaining args align positionally
-     with the non-self loop params.  After transformation the self-parameter
+     self-forward argument so the remaining args, the last first, align
+     positionally with the non-self loop params, kept the last first too
+     ([lparams] here is the lambda's parameters reversed).  After transformation the self-parameter
      is unreferenced; the {!Cpp_print} lambda printer emits unreferenced
      params without a name, so there is no [-Wunused-parameter].  Only single
      (non-mutual) fixpoints are handled; a mutual group's lambda (one
@@ -373,7 +379,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
       | Suspended _ -> None
       | (Modulo_cons _ | Frame_stack) when tail_only -> None
       | (Tail_loop | Modulo_cons _ | Frame_stack) as strategy ->
-        (* Loop params = all params except the trailing self-param. *)
+        (* Loop params = all params except the self-param, the first as
+           written and so the last of [lparams]; still the last first. *)
         let loop_lparams =
           match List.rev lparams with _ :: rest -> List.rev rest | [] -> []
         in
@@ -429,8 +436,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     match stmts with
     | [] -> []
     (* A Y-combinator local fixpoint from {!gen_local_fix_by_ref}:
-       [Bind_variable(id, Declare Auto, Lambda(...))] whose last param is the
-       single self-reference its encoding recorded. *)
+       [Bind_variable(id, Declare Auto, Lambda(...))] whose first param is
+       the single self-reference its encoding recorded. *)
     | Bind_variable
         ( id,
           (Declare (Auto, _) as tgt),

@@ -21,11 +21,13 @@
     hands back the printable declaration.  Under [CRANE_TRACE_PASSES] ([1], or a substring of the
     declaration's name) it reports which passes changed [decl] and its node
     count before and after each.  Under [CRANE_CHECK_IR] it fails if [decl]
-    is not what control lowering recorded deciding of it, or if the result still owes
-    the printer a decision one of its passes makes: an
+    is not what control lowering recorded deciding of it, if the result
+    still owes the printer a decision one of its passes makes (an
     unspellable type, an unsettled constraint, an unresolved cast, an
-    undeclared type variable, a mapping's unsupplied type argument, or a
-    method or projection called as a function. *)
+    undeclared type variable, a mapping's unsupplied type argument, a method
+    or projection called as a function, and the rest of
+    {!Cpp_ir.Representation_obligation.t}), or if what it borrows and moves
+    fails {!Borrow_projection.check_decl} or {!Move_check.check_decl}. *)
 val finish : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [lower d] is the MiniCpp declaration [d] in CppIR

@@ -197,7 +197,7 @@ let rec storage_root ~root ~bound e =
   | Variant_get (_, Some e) -> inside e
   | _ -> None
 
-(** Pointer-safety flags for [params], parallel to it: a parameter is
+(** Pointer-safety flags for [params], parallel to it and to [parts]: a parameter is
     pointer-safe when every recursive call passes it a value stored inside
     what the caller passed for it ([parts], as the loop's ControlIR derives
     it with {!Control_ir.Term.parts_passed}) and its type is a borrowed value
@@ -648,8 +648,9 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
     call(); return val;   (* ITree unit-continuation variant *)  v}
 
     Both forms are rewritten as [Return (Some call)] so the statement-level
-    rewriter can handle them as ordinary tail calls.  This pattern is produced
-    by [cofix_wrap] and [gen_stmts] for void-returning recursive functions. *)
+    rewriter can handle them as ordinary tail calls.  Translation
+    ({!Translation.gen_stmts}) produces this pattern for void- and
+    unit-returning recursive functions. *)
 and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
   | Expression e :: Return _ :: rest
     when trc.trc_detect_void_tail && trc.trc_inner.rc_check e <> None ->

@@ -7,8 +7,8 @@
 
 open Grammar
 
-(** Whether [t] is written [std::any]: the erased types, and a lowered type
-    whose representation is not yet known. *)
+(** Whether [t] is written as the erased box [crane::obj]: the erased types,
+    and a lowered type whose representation is not yet known. *)
 let prints_as_any : type p. p Type.t -> bool = function
   | Any | Erased _ | Obligation Opaque_type -> true
   | _ -> false

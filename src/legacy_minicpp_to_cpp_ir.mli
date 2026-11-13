@@ -1,11 +1,15 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The conversion of MiniCpp into CppIR.
+(** The conversion of MiniCpp into CppIR, at the seams where code still
+    built as MiniCpp meets code that reads CppIR.
 
-    A generated declaration is lowered ({!Cpp_ir.Lowered}) where
-    {!Cpp_pipeline.finish} starts, and every pass after that reads CppIR.  A
-    type or value written outside every declaration converts to
+    A translated declaration is lowered ({!Cpp_ir.Lowered}) by
+    {!Cpp_pipeline.lower} before {!Cpp_pipeline.finish}, and every pass after
+    that reads CppIR.  Control lowering ({!Control_to_cpp_ir}) converts at its
+    entry points, and the declaration generators convert the MiniCpp types,
+    expressions and members translation hands them.  A type or value written
+    outside every declaration converts to
     {!Cpp_ir.Resolved} on its own: a form that exists only in a lowered
     program -- a type with no C++ spelling, an unsettled callable parameter,
     an undecided capture or [constexpr], an uninstantiated mapping -- has no

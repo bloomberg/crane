@@ -522,11 +522,19 @@ let cpp_type_has_tvar name =
     annotations, so before the body is generated. *)
 type method_head = {
   mh_tparams : (template_type * Id.t) list;
+      (** The template parameters the method keeps: instances, its own
+          variables that something still names, callables. *)
   mh_ret : cpp_type;
+      (** The C++ return type, with {!mh_return_only} erased to [std::any]. *)
   mh_return_only : Id.Set.t;
+      (** Its own variables that only the return type mentions. *)
   mh_dropped : (int * Id.t) list;
+      (** Its own variables it does not quantify, each with the variable of
+          the function's scheme it stood for. *)
 }
 
+(** [method_head vars s] decides the {!method_head} of the method whose scope
+    is [s], in an inductive whose template variables are [vars]. *)
 let method_head vars s =
   let {
     ms_extra_tvars_orig = extra_tvars_orig;
@@ -770,8 +778,10 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      explicit template args for non-deducible params. Replace CPPglob(func_ref,
      []) with CPPglob(func_ref, all_type_args).
 
-     The type args must be in the ORIGINAL tys order (matching
-     ind_tvar_positions used by pp_cpp_expr for filtering). Position i in tys
+     The type args must be in the ORIGINAL tys order (matching the
+     inductive's variable positions {!Cpp_names.method_type_args} filters out
+     at the call site, {!Cpp_state.lookup_method_ind_tvar_positions}).
+     Position i in tys
      corresponds to Tvar (i+1) in the original ML type. After remapping, Tvar
      (i+1) → remap_ml_tvar(i+1). We construct the C++ type arg from
      extended_vars at that remapped position. *)
@@ -1174,6 +1184,7 @@ let rec is_ref_to ref_name ref_vars = function
   | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
   | _ -> false
 
+(* Short names for the CppIR modules the struct is built from. *)
 module T = Cpp_ir.Type
 module E = Cpp_ir.Expr
 module S = Cpp_ir.Stmt
@@ -1917,8 +1928,9 @@ let gen_ind_header_v2
              work at all.
 
              Under [Crane NonAtomicRc] the control block is single-threaded --
-             no atomics, no decrement to pair with -- so no fence is emitted
-             and <atomic> is not included (see extract_env.ml). *)
+             no atomics, no decrement to pair with -- so no fence is emitted,
+             and <atomic>, which {!Cpp_demands} demands for the fence's text,
+             is not included on its account. *)
           let unique_fence =
             if Table.non_atomic_rc () then []
             else [S.Foreign_text Cpp_demands.acquire_fence]
@@ -2353,7 +2365,7 @@ let gen_ind_header_v2
               | _ -> []) classified_fields
           in
           (* For each constructor, classify recursive fields and build an
-             [Sif_decl] that uses [get_if] to test the variant alternative
+             [If_declaration] that uses [get_if] to test the variant alternative
              and drain recursive fields onto the stack.  Returns [Some stmt]
              for constructors with recursive fields, [None] otherwise.
 
@@ -2600,7 +2612,7 @@ let gen_ind_header_v2
                 None drain_stmts ~capture:Runs_in_place
             in
             (* Build the per-partner drain logic used inside the while loop.
-               For each partner type, generates an [Sif_decl] that casts the
+               For each partner type, generates an [If_declaration] that casts the
                [std::any] stack entry to [shared_ptr<Partner>], then drains
                the partner's recursive fields into the shared stack. *)
             let gen_partner_branch (pname, pcnames, ptys, _) =

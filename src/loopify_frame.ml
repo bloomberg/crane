@@ -69,7 +69,7 @@ type saved_slot = {
       (** field name in the frame struct (see {!derive_field_names}) *)
   ss_ty : ty;
       (** the declared type, or [(Obligation Unresolved_type)] when the frame was built before
-          the type was known, in which case {!ss_expr} recovers it *)
+          the type was known, in which case {!saved_slot.ss_expr} recovers it *)
   ss_expr : expr;  (** the saved expression *)
 }
 
@@ -107,8 +107,9 @@ let cf_saved_exprs cf = List.map (fun s -> s.ss_expr) cf.cf_slots
 (** Type environment for inferring saved expression types. *)
 
 (** Collect type bindings from a list of statements. Handles
-    [Bind_variable(id, Declare ty, _)] and [Declare(id, ty)]. Also recurses into
-    [Custom_match] branches to pick up pattern-bound variables. *)
+    [Bind_variable (id, Declare (ty, _), _)], [Declare (id, ty, _)] and a
+    [Foreign_block]'s result.  Also recurses into [Custom_match] branches,
+    [If], [Match] and [Block] to pick up pattern-bound variables. *)
 let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
   List.concat_map
     (fun s ->
@@ -163,8 +164,9 @@ let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
 (** Look up a variable's type in the environment. *)
 let lookup_var_type env id = List.assoc_opt id env
 
-(** Given template parameters and a type variable id, find the return type of a
-    TTfun constraint if the template param is function-typed. *)
+(** Given template parameters and a type variable id, the return type of the
+    parameter's [Callable_declared] constraint, if it is a callable one
+    ({!Loopify_tail.lookup_tparam_fun_type}). *)
 let lookup_tparam_return_type tparams id =
   match lookup_tparam_fun_type tparams id with
   | Some (Function (_, cod)) -> Some cod
@@ -197,8 +199,8 @@ let as_raw_ptr : ty -> ty option = function
     -- see {!infer_saved_types}.
 
     Handles the common cases: variable lookups, smart-pointer derefs,
-    arithmetic inlined operators (detected by their format-string pattern),
-    and lambdas (return type inferred from body [Return] statements).
+    [Binary] operators (a comparison is [bool], anything else an operand's
+    type), and lambdas (return type inferred from body [Return] statements).
     Used by [compute_frame_field_types] to emit [std::function<R(Args...)>]
     instead of [decltype(lambda)] for closures in loopification frame structs. *)
 let rec infer_saved_type tparams (env : (Id.t * ty) list) (e : expr) :
@@ -512,7 +514,7 @@ type frame_param = {
 type machine_entry = {
   en_enter_id : Id.t;  (** Frame struct entering this point goes through *)
   en_params : (Id.t * ty) list;  (** The parameters this entry binds *)
-  en_varying : bool list;  (** Mask over {!en_params} *)
+  en_varying : bool list;  (** Mask over {!machine_entry.en_params} *)
 }
 
 (** An entry binding [params], entered through [enter_id], carrying the
@@ -666,7 +668,7 @@ and drop_bindings_expr dropped e =
 
 (** Whether [st] binds a lambda the local fixpoint [fixpoint] is generated
     as: the one taking its self-parameter, or, unless [~knot:false], the
-    wrapper tying the knot ({!wraps}) -- by the Core fixpoint it was made of,
+    wrapper tying the knot ({!Loopify_analysis.wraps}) -- by the Core fixpoint it was made of,
     not by its name, which another fixpoint may share. *)
 let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
   | Bind_variable (_, Declare _, Lambda {fixpoint = Some {member = (o, j); encoding; _}; _}) -> (
@@ -676,7 +678,7 @@ let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
   | _ -> false
 
 (** The binder of the wrapper lambda for the local fixpoint [fixpoint]
-    ({!wraps}).  Searched over the same flow the fixpoint itself is, since
+    ({!Loopify_analysis.wraps}).  Searched over the same flow the fixpoint itself is, since
     translation emits the pair together. *)
 let find_fix_wrapper fixpoint stmts =
   find_in_flow stmts
@@ -689,31 +691,31 @@ let find_fix_wrapper fixpoint stmts =
     where the [CraneEnter] rewriter does not go, so that a single-entry
     machine cannot linearise them.
 
-    {!ad_install} rewrites the enclosing body so that the calls that enter
-    the adopted body are calls on the one name {!ad_entry_id}, whether they
+    {!adopted.ad_install} rewrites the enclosing body so that the calls that enter
+    the adopted body are calls on the one name {!adopted.ad_entry_id}, whether they
     name the fixpoint or a binder of it.  Everything downstream keys on that
     name. *)
 type adopted = {
   ad_name : string;  (** Names the entry's frame, [CraneEnter_<name>] *)
   ad_entry_id : Id.t;
-      (** The synthetic name {!ad_install} routes this entry's calls through *)
+      (** The synthetic name {!adopted.ad_install} routes this entry's calls through *)
   ad_params : (Id.t * ty) list;  (** Parameters, in call-argument order *)
   ad_ret : ty option;
       (** The body's result type, where its lambda records one.  The entry
           shares the machine's one [_result], so it must be the function's. *)
   ad_captures : Id.t list;
       (** Free variables the body takes from the enclosing scope.  The entry's
-          frame carries these alongside {!ad_params}: they are in scope for a
+          frame carries these alongside {!adopted.ad_params}: they are in scope for a
           lambda but not for a dispatch loop re-entering it from a popped
           frame. *)
   ad_binders : (Id.t * Core_binder.t) list;
       (** The Core binder each parameter and capture stands for, by name *)
   ad_body : stmt list;
       (** The entry's handler, already installed: its own recursive calls go
-          through {!ad_entry_id} like every other call into this entry. *)
+          through {!adopted.ad_entry_id} like every other call into this entry. *)
   ad_install : stmt list -> stmt list;
       (** Prepare the enclosing body for the adoption: route every call that
-          enters this body through {!ad_entry_id}, and drop the bindings the
+          enters this body through {!adopted.ad_entry_id}, and drop the bindings the
           adoption makes dead.  Those are not merely untidy -- they still hold
           a call the loopification postcondition would see, so leaving them in
           gets the function reported as declined even though its machine is
@@ -758,16 +760,16 @@ let decline_reason ad =
     member of which calls back into the enclosing function
     ({!Recursion_plan.adoptable}).
 
-    The shape is the Y-combinator pair {!Translation.gen_local_fix_by_ref}
-    emits (see {!fixpoint_self}).  A fixpoint whose body calls none of the
-    enclosing function is left for {!Loopify.loopify_inner_lambdas}, which handles it
+    The shape is the Y-combinator pair [Translation.gen_local_fix_by_ref]
+    emits (see {!Loopify_analysis.fixpoint_self}).  A fixpoint whose body calls none of the
+    enclosing function is left for [Loopify.loopify_inner_lambdas], which handles it
     correctly on its own; one that does call back cannot be loopified alone,
     because two machines leave each other's stack to unwind.
 
     Calls reach the fixpoint two ways -- from inside through its
     self-reference parameter, from outside through the [wrapper] lambda that
     ties the knot -- and installation rewrites both into calls on
-    {!ad_entry_id}.  The self-call forwards the fixpoint as a leading argument
+    {!adopted.ad_entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~stmts ~planned = function
   | Bind_variable (impl_id, Declare (Auto, _), Lambda {params; body; return_type; fixpoint = lambda_fixpoint; binders; _}) -> (
@@ -881,13 +883,13 @@ let any_checker (checkers : call_checker list) : call_checker =
     positional arguments.
 
     All fields are constant within a single invocation of the outer
-    transformation ({!transform_nontail}) except {!er_env}, which is narrowed
+    transformation ({!transform_nontail}) except {!enter_rewrite_ctx.er_env}, which is narrowed
     when entering lambda bodies, match branches, or continuations. *)
 type enter_rewrite_ctx = {
   er_check : call_checker;
       (** Identifies recursive calls in expressions *)
   er_entries : machine_entry list;
-      (** The machine's entry points, indexed by {!call_site.cs_entry} *)
+      (** The machine's entry points, indexed by {!Loopify_analysis.call_site.cs_entry} *)
   er_tparams : (param_kind * Id.t) list;
       (** Template parameters of the enclosing function *)
   er_env : (Id.t * ty) list;
@@ -1083,7 +1085,7 @@ let planned_frame ctx ~keeps (p : Recursion_plan.resume) =
       | standing -> List.find_map (fun (x, _) -> if keeps b x then Some x else None) standing )
     p.live
 
-(* Why no machine is made ({!Not_linearisable}). *)
+(* Why no machine is made ({!Loopify_analysis.Not_linearisable}). *)
 let no_resume_point = "the recursion plan has no one point a call's result resumes at"
 
 let no_resume_plan = "the recursion plan does not say whether a statement making a recursive call resumes after it"
@@ -2177,7 +2179,7 @@ let fix_handler_bindings field_names cf_ps handler =
     using CraneFrame = std::variant<CraneEnter, CraneCont1>;
 
     let f x_init =
-      std::vector<CraneFrame> _stack;
+      crane::small_vector<CraneFrame> _stack;
       _stack.emplace_back(CraneEnter{x_init});
       T _result;
       while (!_stack.empty()) {
@@ -2221,7 +2223,7 @@ let fix_handler_bindings field_names cf_ps handler =
                     parameter standing for a Core binder
     @param parts    Which parameters every recursive call passes a part of
                     what the caller passed, as the loop's ControlIR says
-                    ({!pointer_safe_flags})
+                    ({!Loopify_tail.pointer_safe_flags})
     @param check    Call checker for identifying recursive calls
     @param tparams  Template parameter context of the enclosing function
     @param params   Function parameters [(id, type)]

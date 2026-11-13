@@ -3,8 +3,9 @@
 
 (** Loopify pass: transforms recursive C++ functions into iterative ones.
 
-    Operates on {!Cpp_ir.Lowered} declarations after translation produces them but
-    before pretty-printing.  Each function, method and local fixpoint is
+    Operates on {!Cpp_ir.Lowered} declarations after translation produces them
+    and before the finish pipeline ({!Cpp_pipeline}); ControlIR lowering
+    ({!Control_to_cpp_ir}) is its main caller.  Each function, method and local fixpoint is
     lowered as the recursion plan decided from its Core body
     ({!Recursion_plan.strategy}): a [while] loop, a loop tail modulo cons,
     or a machine with an explicit stack of frames, which keeps deep inputs
@@ -197,8 +198,8 @@ val local_frame_machine :
 
 (** What the ControlIR loop of a local fixpoint's function says of each
     parameter its lambda takes -- the loop's parameters that are not void
-    ({!Ml_type_util.void_binder}), in the order a lambda stores them, the
-    last first: whether some Continue changes it
+    ({!Ml_type_util.void_binder}), the last first, the reverse of the
+    source order the lambda keeps them in: whether some Continue changes it
     ({!Control_ir.Term.invariant_parameters}), and whether every Continue passes
     it a value stored in what the caller passed for it
     ({!Control_ir.Term.parts_passed}) or, of a machine with a stack of frames,
@@ -214,7 +215,7 @@ type member_plan = {
 }
 
 (** [member_plan ~frames member params] is the plan of the local fixpoint
-    function [member] whose lambda takes [params], lowered as a machine with
+    function [member] whose lambda takes [params], the last first, lowered as a machine with
     a stack of frames where [frames]; [None] where it has no ControlIR loop,
     or the lambda takes other parameters than the loop. *)
 val member_plan :

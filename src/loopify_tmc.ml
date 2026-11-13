@@ -3,7 +3,9 @@
 
 (** Tail-modulo-cons loopification for {!Loopify}: detection, the
     destination-passing rewrite, and the Perceus reuse cursor the loop uses
-    under [Crane Reuse]. *)
+    under [Crane Reuse].  Rewrites {!Cpp_ir.Lowered} function bodies; which
+    functions it lowers, and the shapes of the cells each turn builds, come
+    from the recursion plan or the loop's ControlIR. *)
 
 open Names
 open Cpp_ir.Type
@@ -28,18 +30,21 @@ open Loopify_tail
     [cons x _] are each represented by one [tmc_cell_alloc]. *)
 type tmc_cell_alloc = {
   tca_factory : expr;
-      (** Constructor factory function, e.g., [list<T>::ctor::Cons_] *)
+      (** The constructor factory the call names, a [Type_member] of the
+          inductive, e.g. [list<T>::cons] *)
   tca_constructor : GlobRef.t;  (** The constructor the cell is built by *)
   tca_type : ty;
       (** The cell's type, e.g., [list<T>], as the factory call records what
           it yields: spelled as a type, which the factory's qualifier, a
           value's spelling, is not *)
   tca_ctor_name : string;
-      (** Constructor name without trailing underscore, e.g., ["Cons"] *)
+      (** The constructor struct's name
+          ({!Ml_type_util.ctor_struct_name_of_ref}), e.g. ["Cons"] *)
   tca_rec_field_idx : int;
-      (** Index of the recursive argument in the constructor args *)
+      (** Index of the recursive argument (the hole) among the constructor
+          args, which a cell keeps the last first ({!is_ctor_factory_call}) *)
   tca_non_rec_args : (int * expr) list;
-      (** [(index, expr)] for non-recursive arguments *)
+      (** [(index, expr)] for non-recursive arguments, indexed the same way *)
   tca_n_args : int;
       (** Total number of constructor arguments *)
   tca_ptr_fields : ptr_field list;
@@ -132,9 +137,9 @@ let is_ctor_factory_call = function
        one that has none is no cell. *)
     if not (Hashtbl.mem ctor_ptr_fields (Common.ctor_owner_key c, struct_name)) then None
     else
-      (* The arguments come back reversed, the last first.  Everything
-         downstream indexes them in that space; see [uptr_idxs] in
-         [make_cell]. *)
+      (* The call holds its arguments in source order; a cell keeps them
+         reversed, the last first, the space everything downstream indexes
+         them in; see [uptr_idxs] in [make_cell]. *)
       Some (c, factory, ty, struct_name, List.rev args)
   | _ -> None
 
@@ -271,20 +276,23 @@ let branch_along shapes check expr =
     constructor cells immediately with [nullptr] holes, linking nested cells
     together, then filling the innermost hole on the next iteration.
 
+    [_write] points at the hole the next value fills: [_head] at first,
+    then the recursive field of the innermost cell built last.
+
     Single-cell example ([cons x (f xs)]):
     {[
-      auto _cell = Cons_(x, nullptr);
-      <patch _head/_last with _cell>
-      _last = _cell;
+      auto _cell = list::cons(x, nullptr);
+      *_write = _cell;
+      _write = &<_cell's recursive field>;
     ]}
 
     Nested-cell example ([cons x (cons x (f xs))]):
     {[
-      auto _cell  = Cons_(x, nullptr);   // outer
-      auto _cell1 = Cons_(x, nullptr);   // inner
-      _cell.tail  = _cell1;              // link
-      <patch _head/_last with _cell>
-      _last = _cell1;                    // advance to innermost
+      auto _cell  = list::cons(x, nullptr);   // outer
+      auto _cell1 = list::cons(x, nullptr);   // inner
+      <_cell's recursive field> = _cell1;     // link
+      *_write = _cell;
+      _write = &<_cell1's recursive field>;   // advance to innermost
     ]} *)
 
 (* [std::get<typename Type::Ctor>(ptr->v_mut()).<field> = val] -- the
@@ -296,7 +304,7 @@ let branch_along shapes check expr =
     resolved via {!Common.lookup_ctor_field_name}, which returns the
     descriptive Rocq binder name (e.g. [d_tl]) when one was registered
     during inductive definition, or falls back to the positional name
-    [d_a{idx}].
+    ({!Common.field_param_name}: [a{idx}], or [d_a{idx}] under BDE).
 
     {!cell_rec_field} returns that lvalue split as [(object, field)], because
     the write-pointer update needs to take its address rather than assign to
@@ -684,17 +692,19 @@ let cursor_jump ?cursor ~cursor_used ~derefs ~updates varying shadow_params call
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
     Allocates all cells with [nullptr] holes, links consecutive pairs via
-    {!patch_cell_field}, patches the destination with the outermost cell, and
-    sets [_last] to the innermost.
+    {!patch_cell_field}, writes the outermost cell through [_write], and
+    points [_write] at the innermost cell's hole.  Under {!Value_root} the
+    outermost cell is built as a value instead and placed with
+    {!place_value}.
 
     For a single cell, emits the single-cell form of the TMC transformation
     above.  For nested cells (e.g., [cons x (cons x (RECURSE xs))]), emits:
     {[
-      auto _cell  = Cons_(x, nullptr);    // outer
-      auto _cell1 = Cons_(x, nullptr);    // inner
-      outer.tail = _cell1;                // link
-      <patch _head/_last with _cell>      // destination
-      _last = _cell1;                     // advance
+      auto _cell  = list::cons(x, nullptr);   // outer
+      auto _cell1 = list::cons(x, nullptr);   // inner
+      <_cell's recursive field> = _cell1;     // link
+      *_write = _cell;                        // destination
+      _write = &<_cell1's recursive field>;   // advance
       <shadow updates>
     ]} *)
 let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~storage br
@@ -828,11 +838,9 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
 (** Rewrite a single statement for TMC loopification.
 
     Constructs a TMC {!top_rewrite_config} and delegates to
-    {!generic_rewrite_stmt}.  The inner config emits a plain [If].  Base
-    returns patch the write pointer and break; TMC branches allocate cells
-    with holes.  Tail calls
-    at the top level append [Continue]; inside visitor lambdas they do not
-    (the lambda returns and the [while] loop naturally continues).
+    {!generic_rewrite_stmt}.  Base returns write the value where the result
+    is assembled ({!place_base}) and break; TMC branches allocate cells with
+    holes; both TMC branches and tail calls end in [Continue].
 
     @param storage where the result is assembled
     @param branch  a returned expression as a TMC branch ({!branch_along})
@@ -840,8 +848,8 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
 let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~branch check
     varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
-     [suffix] is appended after TMC branches: empty inside visitor lambdas,
-     [[Continue]] at the top level. *)
+     [suffix] is appended after TMC branches: [[Continue]], the one
+     suffix the rewrite passes. *)
   let tmc_on_other_return ~derefs ~suffix e =
     let n = count_calls_expr check e in
     if n = 0 then
@@ -856,7 +864,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
         @ suffix
       | None ->
         (* A call the plan's chains do not reach stays a call; the loop is
-           then not taken ({!Loopify.apply_nontail_loopification}). *)
+           then not taken ([Loopify.apply_nontail_loopification]). *)
         [Return (Some e)]
   in
   let inner_rc =

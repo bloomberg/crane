@@ -152,7 +152,8 @@ let local_fixpoint (f : Local_fixpoint.t) : local_fixpoint =
     lf_captured = f.captured;
     lf_encoding = local_fixpoint_encoding f.encoding }
 
-(* A list in source order, stored reversed. *)
+(* [reversed f xs] is the source-order list [xs], mapped by [f], as the
+   reversed list MiniCpp stores a call's arguments in. *)
 let reversed f xs = of_reversed (List.rev_map f xs)
 
 let rec ty : l Type.t -> cpp_type = function

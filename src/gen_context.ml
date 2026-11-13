@@ -6,7 +6,10 @@
     variables and higher-kinded carriers in scope.  It sits between
     {!Translation} (expressions and statements) and the declaration
     generators ([Gen_functions], [Gen_records], [Gen_instances],
-    [Gen_inductives]) that build MiniCpp declarations from MiniML ones. *)
+    [Gen_inductives]) that build CppIR declarations from MiniML ones.  Types
+    and expressions are still produced as MiniCpp by translation and
+    lowered to CppIR ({!Legacy_minicpp_to_cpp_ir}) where a generator
+    assembles a declaration. *)
 
 open Common
 open Miniml
@@ -646,7 +649,7 @@ let hkt_tvar_resolutions_of_type ?source_order ty =
     (hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
-    {!hkt_tvar_resolutions_of_type}) throughout a C++ type. *)
+    {!hkt_tvar_resolutions_of_type}) throughout a MiniCpp type. *)
 let apply_hkt_resolutions resolutions ty =
   if resolutions = [] then ty
   else
@@ -662,7 +665,8 @@ let apply_hkt_resolutions_stmts resolutions stmts =
     and fs s = Minicpp.map_stmt fe fs ft s in
     List.map fs stmts
 
-(** Rewrite those type variables throughout a whole declaration: an instance
+(** Rewrite those type variables throughout a whole CppIR declaration, the
+    resolutions lowered first: an instance
     struct resolves its carrier the same way a function does, but it has no
     single signature to rewrite -- the variable turns up in its [using]
     aliases, in every method's signature and in every method's body. *)
@@ -681,8 +685,8 @@ let apply_hkt_resolutions_decl resolutions (decl : Cpp_ir.Lowered.Decl.t) =
     which are template parameters of whatever [r] is generated as -- see
     {!Table.promoted_type_params}.  They trail a concept's arguments (the
     instance comes first, see {!Gen_records.gen_typeclass_cpp}) and lead a
-    struct's (see [Cpp_ind]); every use has to supply them in this order, or it names a
-    different template. *)
+    record struct's (see [Gen_records]); every use has to supply them in this
+    order, or it names a different template. *)
 let mentioned_promoted_args r =
   List.map (fun v -> Tpromoted v) (Table.promoted_type_params r)
 

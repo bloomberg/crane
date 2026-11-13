@@ -11,7 +11,7 @@
     [T m() const &&] for a temporary, which copies.  No call reaches the
     reference through a temporary.
 
-    Which methods are projections is not read off their C++ bodies: it was
+    Which methods are projections is not read off their C++ bodies: it is
     decided from the Core function each method is made of
     ({!Escape.returns_receiver_field}), and recorded on its receiver
     ([returns_field] of {!Minicpp.receiver}).  Under [CRANE_CHECK_IR]
@@ -29,5 +29,6 @@ val lend :
   (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list
 
 (** [check_decl d] -- a {!Probe.violation} for each projection of a
-    coinductive [d] declares unsplit. *)
+    coinductive [d] declares unsplit.  Run on each finished declaration
+    under [CRANE_CHECK_IR]. *)
 val check_decl : Cpp_ir.Lowered.Decl.t -> unit

@@ -293,8 +293,8 @@ let unbox_ir (ty : ty) (e : expr) : expr =
 
 (* [boxed] is the set of binders in scope whose declared type is [std::any].
    It is threaded through the walk so that a binder is boxed exactly where
-   C++ would see its declaration.  [ret] is the enclosing lambda's declared
-   return type, or [None] outside one. *)
+   C++ would see its declaration.  [resolve_stmt]'s [ret] is the enclosing
+   lambda's declared return type, or [None] outside one. *)
 let rec resolve_expr boxed (e : expr) : expr =
   match e with
   | Any_cast (ty, inner) ->
@@ -1144,8 +1144,8 @@ let lower_method_calls (d : settled) : settled =
 (* A projection reads a field, and the field's name does not depend on what
    the record was instantiated at, so its type arguments are ignored rather
    than required to be absent: one of a module obtained by functor
-   application is applied at a type, and once fell through to an ordinary
-   call of a function a suppressed projection never has. *)
+   application is applied at a type, and must still become a field read, not
+   an ordinary call of a function a suppressed projection never has. *)
 let lower_projections (d : settled) : settled =
   let rec fe (e : expr) : expr =
     match e with

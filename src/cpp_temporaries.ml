@@ -17,7 +17,11 @@
     of temporaries it heads, at a position that statement evaluates
     unconditionally -- never into a reference's initialiser or the scrutinee
     of a match that borrows it, where a reference into the inlined value
-    would outlive it. *)
+    would outlive it.
+
+    One of the per-declaration passes of {!Cpp_pipeline}, after the
+    constants are hoisted; Loopify reads a body's own statements through
+    {!own_stmts} before the declaration is finished. *)
 
 open Names
 

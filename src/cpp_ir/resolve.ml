@@ -19,6 +19,8 @@ let owed form = raise_notrace (Owed form)
 let list = List.map
 let opt = Option.map
 
+(** [type_ t] is [t] at the resolved phase; raises {!Owed} at an
+    obligation. *)
 let rec type_ : l Type.t -> r Type.t = function
   | Variable v -> Variable v
   | Instance (x, c) -> Instance (x, c)
@@ -80,6 +82,8 @@ and lambda (l : l Lambda.t) : r Lambda.t =
 and aggregate : 'n. ('n, l) Aggregate.t -> ('n, r) Aggregate.t =
  fun a -> {struct_ = a.struct_; type_args = list type_ a.type_args; values = list expr a.values}
 
+(** [expr e] is [e] at the resolved phase; raises {!Owed} at an obligation,
+    a suspension, or an undecided capture. *)
 and expr : l Expr.t -> r Expr.t = function
   | Local x -> Local x
   | Entity (r, ts, c) -> Entity (r, list type_ ts, opt custom c)
@@ -189,6 +193,8 @@ and match_branch (b : l Match.branch) : r Match.branch =
 
 and stmts ss = list stmt ss
 
+(** [stmt s] is [s] at the resolved phase; raises {!Owed} at an
+    uninstantiated mapping block or match template. *)
 and stmt : l Stmt.t -> r Stmt.t = function
   | Return e -> Return (opt expr e)
   | Declare (x, t, b) -> Declare (x, type_ t, b)
@@ -310,6 +316,8 @@ let function_ (f : l Function.t) : r Function.t =
     binders = f.binders;
     loop = f.loop }
 
+(** [decl d] is [d] at the resolved phase; raises {!Owed} also at a callable
+    parameter's declared constraint or an undecided [constexpr]. *)
 let rec decl : l Decl.t -> r Decl.t = function
   | Template (ps, c, d) -> Template (parameters ps, opt expr c, decl d)
   | Namespace (w, ds) -> Namespace (w, list decl ds)

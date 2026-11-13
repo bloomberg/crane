@@ -69,7 +69,7 @@ let instance_promoted_types name body ty =
     | _ -> [] )
   | _ -> []
 
-(** Generate a C++ struct for a type class instance.
+(** Generate the CppIR struct for a type class instance.
     Type class instances become structs with static methods.
     Example: [Instance IntEq : Eq int := { eqb := Int.eqb }.]
     becomes: [struct IntEq { static bool eqb(int a, int b) { ... } };]
@@ -116,8 +116,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
         | Some id -> id
         | None -> Id.of_string "_" )
   in
-  (* Template params: typeclass params first, then type vars (matches gen_dfun
-     convention) *)
+  (* Template params: typeclass params first, then type vars, as
+     {!Gen_functions.gen_dfun} orders them. *)
   let template_params = tc_temps @ tv_temps in
   (* A promoted associated type named inside the instance's own field bodies is
      the associated type of one of its class-typed parameters, and resolves
@@ -573,9 +573,9 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   ) stmts (List.rev cast_info)
                 in
                 (* Sync param names with push_vars' output (lowercased
-                   and uniquified) so signatures match bodies.  ml_vars
-                   was built via List.rev_map, so renamed_eta is in
-                   reversed order — reverse back to align with params. *)
+                   and uniquified) so signatures match bodies.  [ml_vars]
+                   is [params] reversed, innermost binder first, and so is
+                   [renamed_eta]: reverse it back to align with [params]. *)
                 let cpp_params =
                   List.map2
                     (fun (new_name, _) (_, cpp_ty) ->
@@ -777,8 +777,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       (* Check if an ML expression is a parameterized reference whose
          typeclass arguments have been erased — e.g.,
          [MLapp(MLglob opposite_category, [MLdummy Ktype])].  Such
-         references produce incomplete [Tglob(r, [], [])] that can't
-         be used as using declarations. *)
+         references produce an incomplete [Entity_application (r, [], [])]
+         that can't be used as a [using] declaration. *)
       let tc_promoted_usings =
         if List.length fields = List.length method_bodies then
           List.filter_map

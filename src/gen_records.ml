@@ -3,8 +3,12 @@
 
 (** Records and type classes: a record's struct, a class's concept and the
     constraint a class-typed parameter states.  Part of declaration
-    generation (MiniML to CppIR), called from {!Gen_inductives},
-    {!Gen_functions} and {!Gen_instances}. *)
+    generation (MiniML to CppIR), re-exported by {!Gen_decls}: {!Cpp_ind}
+    asks it for a record's struct and a class's concept, {!Gen_functions}
+    and {!Gen_instances} for the constraint on a class-typed parameter.
+    Types are converted through MiniCpp and lowered into CppIR with
+    {!Legacy_minicpp_to_cpp_ir.lower_type}; the declarations it returns are
+    {!Cpp_ir.Lowered.Decl.t}. *)
 
 open Common
 open Miniml
@@ -21,9 +25,13 @@ module IntSet = Escape.IntSet
 
     Only actual type parameters ([Keep] in [ip_sign]) become C++ template
     parameters.  Promoted Type-valued fields (present in [ip_vars] but past
-    the [Keep] entries) are erased to [std::any] — they have no C++ template
+    the [Keep] entries) are erased to [std::any]: they have no C++ template
     counterpart in a plain struct (unlike typeclasses, which turn them into
-    [typename I::field] requirements). *)
+    [typename I::field] requirements).  The promoted variables the fields
+    {e mention} without the record declaring them are the exception: those
+    lead the template parameter list, see {!Table.promoted_type_params}.
+    The struct also carries a conversion to every other instantiation of
+    its parameters, from {!Gen_context.conversion_to_other_instantiation}. *)
 let gen_record_cpp name fields ind =
   let nb_keep = count_keep_params ind.ip_sign in
   let param_ip_vars = List.filteri (fun i _ -> i < nb_keep) ind.ip_vars in
@@ -107,7 +115,9 @@ let gen_record_cpp name fields ind =
         needs_shared_from_this = false }
     : Cpp_ir.Lowered.Decl.t )
 
-(** The concept constraint an instance parameter of type [ty] carries.
+(** The concept constraint an instance parameter of type [ty] carries, as a
+    MiniCpp template-parameter kind ([TTconcept]); [None] when [ty] is not
+    an applied global.
 
     Three things go into the argument list, and the only reason this is a
     function is that two call sites -- {!Gen_instances.instance_layers} for an
@@ -115,13 +125,14 @@ let gen_record_cpp name fields ind =
     for a declared one -- have
     to agree on all three or the constraint does not match the concept:
 
-    - the instance itself, which the printer supplies as the first argument;
-    - the class's kept type arguments, for a multi-parameter concept;
-    - the promoted variables the class {e mentions} without declaring, which
+    {ul
+    {- the instance itself, which the printer supplies as the first argument;}
+    {- the class's kept type arguments, for a multi-parameter concept;}
+    {- the promoted variables the class {e mentions} without declaring, which
       {!gen_typeclass_cpp} makes template parameters of the concept.  They are
       written as the bare names the class spells, so the pass that resolves a
       bare promoted name against the instance owning it reaches them the way it
-      reaches every other position in the signature. *)
+      reaches every other position in the signature.}} *)
 let concept_constraint_of_class_type ty =
   match ty with
   | Miniml.Tglob (class_ref, type_args, _) ->
@@ -137,13 +148,18 @@ let concept_constraint_of_class_type ty =
 
 (** Generate a C++ concept from a type class.
    Type class Eq(A) with method eqb : A -> A -> bool becomes:
+   {v
    template<typename I, typename A>
-   concept Eq = requires(A a0, A a1) {
-     { I::eqb(a0, a1) } -> std::convertible_to<bool>;
+   concept Eq = requires {
+     { I::eqb(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
    };
+   v}
 
-   Uses [Convertible_to] with the actual type for the constraint,
-   which the printer renders.
+   The instance [I] is the first template parameter, followed by the kept
+   type parameters and the promoted variables the class mentions.  Promoted
+   Type-valued fields and superclass fields become [typename I::field]
+   requirements; every other field becomes a call requirement whose result
+   is checked with a CppIR [Convertible_to], which the printer renders.
 *)
 let gen_typeclass_cpp name fields =
   let ip_vars = Table.get_ind_ip_vars name in
@@ -158,10 +174,11 @@ let gen_typeclass_cpp name fields =
     else Id.of_string "I"
   in
   (* Split ip_vars into param vars (real type params) and promoted vars
-     (associated types). Prefix param vars with t_ for BDE convention. *)
+     (associated types).  Param vars go through {!Common.tparam_name}, which
+     prefixes them with t_ under the BDE convention. *)
   (* A parameter that is itself a type constructor ([M : Type -> Type]) is not
      a C++ template type parameter but an associated type of the instance
-     ([typename I::M]) — the same treatment promoted Type-valued fields get. *)
+     ([typename I::M]), the same treatment promoted Type-valued fields get. *)
   let is_tparam i = is_class_tparam name i in
   let prefixed_ip_vars =
     List.mapi (fun i x -> if is_tparam i then Common.tparam_name x else x)
@@ -221,7 +238,7 @@ let gen_typeclass_cpp name fields =
   let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
     Scope (Local inst_id, Id.of_string method_name, type_args)
   in
-  (* Check if a type is a bare promoted Tvar — a Tvar whose index is beyond the
+  (* Check if a type is a bare promoted Tvar: a Tvar whose index is beyond the
      real type parameters. This indicates the field's type is entirely
      determined by a promoted associated type, so we can't decompose it into
      args and return type at concept time (the concrete type might be a
@@ -260,9 +277,10 @@ let gen_typeclass_cpp name fields =
                 ++ str "' both as a type and as a method." )
         | _ -> () )
       fields;
-  (* Generate a single method requirement. Returns either: - `Normal (params,
-     (call, constraint))` for regular methods - `Disjunctive expr` for fields
-     whose type is a bare promoted Tvar *)
+  (* Generate a single field's requirement: [None] for an anonymous field,
+     [`Type t] for a superclass field (a [typename I::field] requirement),
+     [`Disjunctive e] for a field whose type is a bare promoted Tvar, and
+     [`Normal (params, (call, constraint))] for every other method. *)
   let gen_method_req (field_opt, field_ty) =
     match field_opt with
     | None -> None (* Anonymous field, skip *)
@@ -342,7 +360,8 @@ let gen_typeclass_cpp name fields =
         in
         let callee = inst_scope method_name (List.init ntv (fun _ : Cpp_ir.Lowered.Type.t -> Any)) in
         let call = Cpp_ir.Build.call callee arg_declvals in
-        (* Constraint: use the cpp_type directly; the printer renders it. *)
+        (* Constraint: the converted CppIR return type; the printer renders
+           it. *)
         let constraint_expr : Cpp_ir.Lowered.Expr.t = Convertible_to ret_cpp in
         Some (`Normal ([], (call, constraint_expr)))
   in
