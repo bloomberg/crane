@@ -1368,13 +1368,13 @@ let declared_by_value declared ~summary =
     [owned] says are passed by value, of a type worth moving.  That is one
     {!Ownership_ir.worth_moving} accepts as reading [ty]; but an erased ML
     type says nothing of how the value is held, and there the type the head
-    [declared] it at is read instead ({!Ownership_ir.worth_moving_cpp}):
+    [declared] it at is read instead ({!Ownership_ir.worth_moving_ir}):
     [x] in an instance's [fun (A : Type) (x : A) => Some x] is a boxed
     [crane::obj]. *)
 let owned_parameters ?(declared = fun _ -> None) n ~owned ~ty =
   let worth i =
     match (resolve_tmeta (ty i), declared i) with
-    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_ir.worth_moving_cpp cty
+    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_ir.worth_moving_ir (Legacy_minicpp_to_cpp_ir.lower_type cty)
     | ty, _ -> Ownership_ir.worth_moving ty
   in
   List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)

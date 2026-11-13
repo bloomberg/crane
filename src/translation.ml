@@ -1460,14 +1460,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             match binder_cpp_type i with
             (* [auto] says nothing of the type it deduces. *)
             | Some (Tauto | Tconst Tauto | Tref (_, (Tauto | Tconst Tauto))) -> ()
-            | Some declared when Ownership_ir.copy_of_declared declared <> copy ->
+            | Some declared when Ownership_ir.copy_of_declared (Legacy_minicpp_to_cpp_ir.lower_type declared) <> copy ->
               let name : Ownership_ir.Use.t -> string = function
                 | Share -> "shares" | Clone -> "clones" | Copy -> "copies" | Move -> "moves" | Borrow -> "borrows"
               in
               Probe.violation "copy mode"
                 Pp.(
                   str "the plan " ++ str (name copy) ++ str " " ++ Id.print x ++ str " where its declaration "
-                  ++ str (name (Ownership_ir.copy_of_declared declared)) ++ str " it" )
+                  ++ str (name (Ownership_ir.copy_of_declared (Legacy_minicpp_to_cpp_ir.lower_type declared))) ++ str " it" )
             | Some _ | None -> () );
         false
       | Some use -> use = Move
