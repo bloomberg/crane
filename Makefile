@@ -22,7 +22,14 @@ extract: build
 		fi; \
 	done; \
 	if [ -n "$$vo_targets" ]; then \
-		dune build $$vo_targets 2>/dev/null || true; \
+		mkdir -p _build; \
+		dune build $$vo_targets 2> _build/extract-errors.log || true; \
+		n=$$(grep -c '^Error' _build/extract-errors.log || true); \
+		if [ "$$n" != 0 ]; then \
+			echo "Extraction: $$n errors, see _build/extract-errors.log"; \
+			grep -B1 '^Error' _build/extract-errors.log | grep '^File' || true; \
+			grep '^Error: Crane IR check' _build/extract-errors.log || true; \
+		fi; \
 	fi
 
 # Build just the plugin
