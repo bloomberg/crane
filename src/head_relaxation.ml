@@ -162,7 +162,7 @@ let lowered_tvar_name : L.Type.t -> Id.t option = function
   | _ -> None
 
 (* {!Minicpp.rebind_plain_var}. *)
-let lowered_rebind_plain_var ~in_scope (head : L.Type.t) (args : L.Type.t list) : L.Type.t =
+let rebind_plain_var_lowered ~in_scope (head : L.Type.t) (args : L.Type.t list) : L.Type.t =
   match args with
   | [a] when not (Cpp_ir.Types.prints_as_any a) ->
     let names = ref [] in
@@ -188,7 +188,7 @@ let deapplied_lowered ~plain ~in_scope =
               Variable (Index (i, List.find_opt (fun id -> lowered_tvar_is id head) plain))
             | _ -> head
           in
-          lowered_rebind_plain_var ~in_scope head args
+          rebind_plain_var_lowered ~in_scope head args
         | Type_constructor body -> Type_constructor (ft body)
         | t -> t )
       t
@@ -213,6 +213,47 @@ let settle_lowered_lambda (l : L.phase Cpp_ir.Expr.Lambda.t) =
     let ft = Cpp_ir.Types.map (fun t -> if List.exists (fun id -> lowered_tvar_is id t) ids then Any else t) in
     let kept = List.filter (fun x -> not (List.exists (Id.equal x) ids)) l.type_params in
     {(Cpp_ir.Map.lambda (lowered_deep ft) l) with type_params = kept}
+
+(* {!param_applications} over a CppIR type. *)
+let param_applications_lowered relaxed deduced =
+  let key (t : L.Type.t) =
+    match t with
+    | Apply (h, args) -> (
+      match List.find_opt (fun id -> lowered_tvar_is id h) relaxed with
+      | Some id -> Some (id, args)
+      | None -> None )
+    | _ -> None
+  in
+  Cpp_ir.Types.map (fun t ->
+      match Option.bind (key t) (fun k -> List.assoc_opt k deduced) with
+      | Some id -> (Variable (Named id) : L.Type.t)
+      | None -> t )
+
+(* {!unmentioned_erased} over a CppIR type. *)
+let unmentioned_erased_lowered ids =
+  let is_tvar id : L.Type.t -> bool = function
+    | Variable (Index (_, Some n) | Named n) -> Id.equal n id
+    | Variable (Index (i, None)) -> Id.equal (Common.tvar_id i) id
+    | _ -> false
+  in
+  let is_unmentioned (t : L.Type.t) =
+    let head = match t with Type_constructor h | Apply (h, _) -> h | h -> h in
+    List.exists (fun id -> is_tvar id head) ids
+  in
+  Cpp_ir.Types.map (fun t -> if is_unmentioned t then (Any : L.Type.t) else t)
+
+let apply_signature relaxation ~params ~ret =
+  match relaxation with
+  | Computed_return ret -> (params, ret)
+  | Param_applications {relaxed; deduced} ->
+    let ft = param_applications_lowered relaxed deduced in
+    (List.map ft params, ret)
+  | Deapplied {plain; in_scope} ->
+    let ft = deapplied_lowered ~plain ~in_scope in
+    (List.map ft params, ft ret)
+  | Unmentioned ids ->
+    let erase = unmentioned_erased_lowered ids in
+    (List.map erase params, erase ret)
 
 let deapply_struct ~plain ~in_scope (d : L.Decl.t) : L.Decl.t =
   let fe : L.Expr.t -> L.Expr.t = function Lambda l -> Lambda (settle_lowered_lambda l) | e -> e in

@@ -1531,13 +1531,6 @@ val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
 
-(** Whether a [TTfun] constraint states nothing the caller can be held to, and
-    so is dropped rather than printed: a rank-2 callback's result is not the
-    [std::any] the constraint would demand.  Read by the printer, which drops
-    the clause, and by the signature relaxations, which must not count a
-    dropped clause as a use of the variables it names. *)
-val tt_constraint_is_vacuous : cpp_type list -> cpp_type -> bool
-
 (** [fold_expr_children ~on_expr ~on_stmts acc e] folds over the immediate
     children of [e], threading [acc].  Mirrors {!iter_expr_children}: [on_expr]
     folds over child expressions and [on_stmts] over child statement lists

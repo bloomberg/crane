@@ -1367,7 +1367,7 @@ let gen_ind_header_v2
   let templates =
     hkt_templates name vars (List.concat (Array.to_list tys))
   in
-  let type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters templates in
+  let type_params = templates in
   let ty_vars = List.map B.named_variable vars in
 
   (* Handle empty inductives (no constructors) - generate uninhabitable

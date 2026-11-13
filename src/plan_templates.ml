@@ -13,23 +13,43 @@
     head are {!Head_relaxation}'s. *)
 
 open Miniml
-open Minicpp
 open Names
 open Util
 open Ml_type_util
 
+(** A C++ type, and a template parameter list, as a head is planned in. *)
+type head_type = Cpp_ir.Lowered.Type.t
+
+type head_params = Cpp_ir.Lowered.phase Cpp_ir.Template.parameters
+
+(** A value parameter's or return type's spelling of the template parameter
+    [id]: its head names it under either spelling a variable may have. *)
+let head_tvar_is id (t : head_type) = Cpp_ir.Type.is_variable_named id t
+
+(** Whether [t] names the template parameter [id] anywhere, a carrier
+    abstraction's head included. *)
+let head_tvar_named id (t : head_type) = Cpp_ir.Children.exists_type (head_tvar_is id) t
+
+let head_type_exists (p : head_type -> bool) (t : head_type) = Cpp_ir.Children.exists_type p t
+
+(** The name a variable goes by, whether or not its head was resolved. *)
+let head_tvar_name : head_type -> Id.t option = function
+  | Variable (Index (_, Some n) | Named n) -> Some n
+  | Variable (Index (i, None)) -> Some (Common.tvar_id i)
+  | _ -> None
+
 (** Arity of every type variable that [cty] applies to arguments, keyed by
     template parameter name.  A Rocq parameter of kind [Type -> Type] reaches
-    C++ as the head of a [Minicpp.Tapply], and a plain [typename] cannot be applied,
+    C++ as the head of an [Apply], and a plain [typename] cannot be applied,
     so such a parameter has to be declared [template <typename> class]. *)
-let applied_tvar_arities cty =
+let applied_tvar_arities (cty : head_type) =
   let arities = Hashtbl.create 4 in
-  exists_cpp_type
+  head_type_exists
     (fun t ->
       ( match t with
-      | Tapply (Tvar (Tv_named n), args) ->
+      | Apply (Variable (Named n), args) ->
         Hashtbl.replace arities n (List.length args)
-      | Tapply (Tvar (Tv_index (i, name)), args) ->
+      | Apply (Variable (Index (i, name)), args) ->
         (* The head may or may not have been resolved to its parameter name;
            key on both spellings so the caller's list matches either way. *)
         let arity = List.length args in
@@ -52,7 +72,7 @@ let applied_tvar_arities cty =
     can be taken back off, which {!deapply_plain_tvars} then does -- and the
     C++ type read here has not been through the relaxations, so it is not the
     place to look for the occurrence that would justify the higher kind. *)
-let with_applied_tvars ?ml_ty cty temps =
+let with_applied_tvars ?ml_ty (cty : head_type) (temps : head_params) : head_params =
   let arities = applied_tvar_arities cty in
   let arities =
     match ml_ty with
@@ -60,10 +80,10 @@ let with_applied_tvars ?ml_ty cty temps =
     | Some ty ->
       let hk = Ml_type_util.higher_kinded_ml_tvars [ty] in
       let veto = ref [] in
-      exists_cpp_type
+      head_type_exists
         (fun t ->
           ( match t with
-          | Tapply (Tvar (Tv_index (i, name)), _) when not (IntSet.mem i hk) ->
+          | Apply (Variable (Index (i, name)), _) when not (IntSet.mem i hk) ->
             veto := Common.tvar_id i :: !veto;
             Option.iter (fun n -> veto := n :: !veto) name
           | _ -> () );
@@ -96,9 +116,8 @@ let with_applied_tvars ?ml_ty cty temps =
            it replaced.  Kept phantom, the declaration contradicts its own
            parameter's type -- [Sub<UBE, T1>] wants a template where [T1] is
            a [typename] -- so the arity wins over the default. *)
-        match (tt, Hashtbl.find_opt arities id) with
-        | (TTtypename | TTtypename_default Tvoid), Some arity ->
-          (TTtemplate arity, id)
+        match ((tt : _ Cpp_ir.Template.Parameter_kind.t), Hashtbl.find_opt arities id) with
+        | (Typename | Typename_default Void), Some arity -> (Cpp_ir.Template.Parameter_kind.Template arity, id)
         | _ -> (tt, id) )
       temps
 
@@ -110,11 +129,11 @@ let with_applied_tvars ?ml_ty cty temps =
     is the rendered C++ body of a type alias, read instead of [tys] for the
     arities and for which parameters are phantom.  Returns the parameter list
     and its {!Tparam_kinds.t}; records nothing ({!hkt_templates} records). *)
-let template_kinds ?applied vars tys =
+let template_kinds ?(applied : head_type option) vars tys =
   (* Read from the rendered type where there is one: the ML body still applies
      a variable that erasure removed, and the parameter list has to agree with
      what the users of this name can see.  See
-     {!Ml_type_util.rendered_tvar_arities}. *)
+     {!Ml_type_util.rendered_tvar_arities_ir}. *)
   let arities =
     match applied with
     | Some a ->
@@ -122,21 +141,21 @@ let template_kinds ?applied vars tys =
          payloads below: applied only at erased or variable arguments --
          [IFun E F := forall T, E T -> F T], whose [T] erases -- is a family,
          and a family is a plain parameter. *)
-      let arities = Ml_type_util.rendered_tvar_arities a in
+      let arities = Ml_type_util.rendered_tvar_arities_ir a in
       let demanded = Hashtbl.create 4 in
-      let rec scan = function
-        | Tapply (Tvar (Tv_index (i, _)), tys) ->
+      let rec scan : head_type -> unit = function
+        | Apply (Variable (Index (i, _)), tys) ->
           if
             List.exists
-              (fun t ->
-                not (prints_as_any t || match t with Tvar _ -> true | _ -> false) )
+              (fun (t : head_type) ->
+                not (Cpp_ir.Types.prints_as_any t || match t with Variable _ -> true | _ -> false) )
               tys
           then Hashtbl.replace demanded i ();
           List.iter scan tys
-        | Tglob (_, tys, _) | Tvariant (_, tys) -> List.iter scan tys
-        | Tfun (tys, ty) -> List.iter scan (ty :: tys)
-        | Tconst ty | Tnamespace (_, ty) | Tref (_, ty) | Tshared_ptr ty -> scan ty
-        | Tapply (ty, tys) -> List.iter scan (ty :: tys)
+        | Entity_application (_, tys, _) | Variant (_, tys) -> List.iter scan tys
+        | Function (tys, ty) -> List.iter scan (ty :: tys)
+        | Const ty | In_namespace (_, ty) | Reference (_, ty) | Shared_pointer ty -> scan ty
+        | Apply (ty, tys) -> List.iter scan (ty :: tys)
         | _ -> ()
       in
       scan a;
@@ -182,35 +201,35 @@ let template_kinds ?applied vars tys =
      template of every use site for a position that holds nothing.  It is a
      plain parameter defaulted to [void], and {!Table.is_phantom_type_param}
      is what makes the use sites agree. *)
-  let rendered = Option.map Ml_type_util.get_rendered_tvar_indices applied in
+  let rendered = Option.map Ml_type_util.get_rendered_tvar_indices_ir applied in
   let rendered_in_cpp i =
     match rendered with None -> true | Some l -> List.mem i l
   in
-  let temps =
+  let temps : head_params =
     List.mapi
       (fun i n ->
-        if not (rendered_in_cpp (i + 1)) then (TTtypename_default Tvoid, n)
+        if not (rendered_in_cpp (i + 1)) then (Cpp_ir.Template.Parameter_kind.Typename_default Void, n)
         else
           match Hashtbl.find_opt arities (i + 1) with
-          | Some arity -> (TTtemplate arity, n)
-          | None -> (TTtypename, n) )
+          | Some arity -> (Template arity, n)
+          | None -> (Typename, n) )
       vars
   in
   (* A default may only stand in the trailing run of defaulted parameters:
      [template <typename obj = void, typename c>] does not parse.  A phantom
      followed by a required parameter stays phantom -- no use writes an
      instantiation in it -- but has to be written, so it loses its default. *)
-  let temps =
-    let rec go = function
+  let temps : head_params =
+    let rec go : head_params -> head_params * bool = function
       | [] -> ([], true)
       | (tt, n) :: rest ->
         let rest, all_defaulted = go rest in
         ( match tt with
-        | TTtypename_default _ when not all_defaulted -> (TTtypename, n) :: rest
-        | TTtypename_default _ -> (tt, n) :: rest
+        | Typename_default _ when not all_defaulted -> (Typename, n) :: rest
+        | Typename_default _ -> (tt, n) :: rest
         | _ -> (tt, n) :: rest ),
         all_defaulted
-        && (match tt with TTtypename_default _ -> true | _ -> false)
+        && (match tt with Typename_default _ -> true | _ -> false)
     in
     fst (go temps)
   in
@@ -220,7 +239,7 @@ let template_kinds ?applied vars tys =
   (* Applied in the definition and still plain: a family position. *)
   let applied_at_all =
     match applied with
-    | Some a -> Ml_type_util.rendered_tvar_arities a
+    | Some a -> Ml_type_util.rendered_tvar_arities_ir a
     | None -> Ml_type_util.applied_ml_tvar_arities tys
   in
   ( temps,
@@ -228,7 +247,7 @@ let template_kinds ?applied vars tys =
         List.filter_map
           (fun i ->
             match List.nth temps i with
-            | TTtemplate arity, _ -> Some (i, arity)
+            | Cpp_ir.Template.Parameter_kind.Template arity, _ -> Some (i, arity)
             | _ -> None )
           (List.mapi (fun i _ -> i) temps);
       families =
@@ -256,40 +275,40 @@ let hkt_templates ?applied r vars tys =
     Returns the relaxed head and no rewrite: the declaration keeps its
     spelling.  Like every relaxation below, [decl] is read as a signature
     and the result is [(temps, rewrite)] ({!relax_function_head}). *)
-let relax_applied_return temps decl =
+let relax_applied_return (temps : head_params) (signature : Callable_abi.signature) =
   (* Only a template template parameter is applied here: a family is a plain
      parameter, written applied until {!deapply_plain_tvars} takes the
      application off, and its return type deduces as any other. *)
   let hk =
     List.filter_map
-      (fun (tt, id) -> match tt with TTtemplate _ -> Some id | _ -> None)
+      (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) -> match tt with Template _ -> Some id | _ -> None)
       temps
   in
   let applies_tvar t =
-    exists_cpp_type
+    head_type_exists
       (function
-        | Tapply (head, _) -> List.exists (fun id -> tvar_is id head) hk
+        | Apply (head, _) -> List.exists (fun id -> head_tvar_is id head) hk
         | _ -> false )
       t
   in
-  match decl with
-  | Dfun {df_ret = cod0; df_shape = Ddef (params, _); _} when applies_tvar cod0 ->
-    let is_tvar = tvar_is in
-    let names = tvar_named in
-    let undeducible id = not (List.exists (fun (_, ty) -> names id ty) params) in
+  match signature with
+  | {ret = cod0; params} when applies_tvar cod0 ->
+    let is_tvar = head_tvar_is in
+    let names = head_tvar_named in
+    let undeducible id = not (List.exists (fun ty -> names id ty) params) in
     (* The result of the callback whose declared codomain is [id], spelled so
        that C++ can compute it from the callback's deduced type. *)
     let invoke_result id =
       List.find_map
-        (fun (tt, fid) ->
+        (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), fid) ->
           match tt with
-          | TTfun (doms, cod) when is_tvar id cod ->
+          | Callable_declared (doms, cod) when is_tvar id cod ->
             Some
-              (Tid_external
+              (External
                  ( "std::invoke_result_t",
-                   Tref (Lvalue, Tid_external (Id.to_string fid, []))
-                   :: List.map (fun d -> Tref (Lvalue, d)) doms
-                 ) )
+                   Reference (Lvalue, External (Id.to_string fid, []))
+                   :: List.map (fun d -> (Reference (Lvalue, d) : head_type)) doms
+                 ) : head_type)
           | _ -> None )
         temps
     in
@@ -299,12 +318,12 @@ let relax_applied_return temps decl =
        default names parameters declared after [id], so [id] moves to the end
        of the list; nothing supplies this signature's arguments explicitly, so
        the order is free. *)
-    let computed =
+    let computed : head_params =
       List.filter_map
-        (fun (tt, id) ->
+        (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) ->
           match tt with
-          | TTtypename when undeducible id ->
-            Option.map (fun r -> (TTtypename_default r, id)) (invoke_result id)
+          | Typename when undeducible id ->
+            Option.map (fun r -> (Cpp_ir.Template.Parameter_kind.Typename_default r, id)) (invoke_result id)
           | _ -> None )
         temps
     in
@@ -336,25 +355,24 @@ let relax_applied_return temps decl =
     [std::is_invocable_r_v<T3<std::any>, F0 &, T1<std::any> &>] was never a
     claim about this call anyway, since [std::any] stands in for the [X] the
     body chooses. *)
-let relax_tt_applied_return temps decl =
+let relax_tt_applied_return (temps : head_params) (signature : Callable_abi.signature) =
   let kind_of id =
     List.find_map (fun (tt, i) -> if Id.equal i id then Some tt else None) temps
   in
-  match decl with
-  | Dfun {df_ret = Tapply (head, [ret_arg]); df_shape = Ddef (params, _); _}
-    -> (
-    match tvar_name head with
+  match signature with
+  | {ret = Apply (head, [ret_arg]); params} -> (
+    match head_tvar_name head with
     | Some id
-      when kind_of id = Some (TTtemplate 1)
-           && not (List.exists (fun (_, ty) -> tvar_named id ty) params) ->
+      when kind_of id = Some (Cpp_ir.Template.Parameter_kind.Template 1)
+           && not (List.exists (fun ty -> head_tvar_named id ty) params) ->
       (* The callback whose codomain is this application, and the argument it
          is applied to there -- [T3<std::any>], whose [std::any] stands for
          the [X] that the return type instantiates at [ret_arg]. *)
       let producer =
         List.find_map
-          (fun (tt, fid) ->
+          (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), fid) ->
             match tt with
-            | TTfun (doms, Tapply (h, [carrier])) when tvar_is id h ->
+            | Callable_declared (doms, Apply (h, [carrier])) when head_tvar_is id h ->
               Some (fid, doms, carrier)
             | _ -> None )
           temps
@@ -363,25 +381,25 @@ let relax_tt_applied_return temps decl =
       | None -> (temps, None)
       | Some (fid, doms, carrier) ->
         let at_ret_arg t =
-          map_cpp_type (fun t -> if t = carrier then ret_arg else t) t
+          Cpp_ir.Types.map (fun t -> if t = carrier then ret_arg else t) t
         in
-        let ret =
-          Tid_external
+        let ret : head_type =
+          External
             ( "std::invoke_result_t",
-              Tref (Lvalue, Tid_external (Id.to_string fid, []))
-              :: List.map (fun d -> Tref (Lvalue, at_ret_arg d)) doms )
+              Reference (Lvalue, External (Id.to_string fid, []))
+              :: List.map (fun d -> (Reference (Lvalue, at_ret_arg d) : head_type)) doms )
         in
-        let temps =
+        let temps : head_params =
           List.filter_map
-            (fun (tt, i) ->
+            (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), i) ->
               match tt with
               | _ when Id.equal i id -> None
-              | TTfun (doms, cod) when List.exists (tvar_named id) (cod :: doms)
-                -> Some (TTtypename, i)
+              | Callable_declared (doms, cod) when List.exists (head_tvar_named id) (cod :: doms)
+                -> Some (Cpp_ir.Template.Parameter_kind.Typename, i)
               | _ -> Some (tt, i) )
             temps
         in
-        (temps, Some (Head_relaxation.Computed_return (Legacy_minicpp_to_cpp_ir.lower_type ret))) )
+        (temps, Some (Head_relaxation.Computed_return ret)) )
     | _ -> (temps, None) )
   | _ -> (temps, None)
 
@@ -402,16 +420,17 @@ let relax_tt_applied_return temps decl =
     the shape of the instantiation -- [hk_map] returns [T1<T3>] for the very
     [T1] its argument came in at -- and a parameter deduced on its own would
     not carry it. *)
-let relax_applied_param temps decl =
+let relax_applied_param (temps : head_params) (signature : Callable_abi.signature) =
   let occurrences p ty =
     let n = ref 0 in
-    ignore (exists_cpp_type (fun t -> if p t then incr n; false) ty);
+    ignore (head_type_exists (fun t -> if p t then incr n; false) ty);
     !n
   in
-  let applies id = function Tapply (h, _) -> tvar_is id h | _ -> false in
-  match decl with
-  | Dfun {df_ret = ret; df_shape = Ddef (params, _); _} ->
-    let param_tys = List.map snd params in
+  let applies id : head_type -> bool = function Apply (h, _) -> head_tvar_is id h | _ -> false in
+  match signature with
+  | {ret; params} ->
+    (* Last first, as the applications are named in that order. *)
+    let param_tys = List.rev params in
     (* A position that takes the variable as a bare template name --
        [Sum1<T1, T2, T4>], whose first two arguments are templates -- states
        its kind outright: what is supplied there {e is} a template, so the
@@ -419,37 +438,37 @@ let relax_applied_param temps decl =
        argument. *)
     let passed_as_template id =
       List.exists
-        (exists_cpp_type (function Ttyctor t -> tvar_named id t | _ -> false))
+        (head_type_exists (function Type_constructor t -> head_tvar_named id t | _ -> false))
         (ret :: param_tys)
     in
     (* A variable applied in the parameters and named nowhere else: not by the
        return type, not by another template parameter's constraint, and not
        bare among the parameters either. *)
     let only_applied_in_params id =
-      let total = List.fold_left (fun a t -> a + occurrences (tvar_is id) t) 0 in
+      let total = List.fold_left (fun a t -> a + occurrences (head_tvar_is id) t) 0 in
       let applied =
         List.fold_left (fun a t -> a + occurrences (applies id) t) 0
       in
       applied param_tys > 0
       && total param_tys = applied param_tys
       && (not (passed_as_template id))
-      && (not (tvar_named id ret))
+      && (not (head_tvar_named id ret))
       && not
            (List.exists
-              (fun (tt, i) ->
+              (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), i) ->
                 (not (Id.equal i id))
                 &&
                 match tt with
-                | TTfun (doms, cod) -> List.exists (tvar_named id) (cod :: doms)
-                | TTtypename_default d -> tvar_named id d
+                | Callable_declared (doms, cod) -> List.exists (head_tvar_named id) (cod :: doms)
+                | Typename_default d -> head_tvar_named id d
                 | _ -> false )
               temps )
     in
     let relaxed =
       List.filter
-        (fun (tt, id) ->
+        (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) ->
           match tt with
-          | TTtemplate _ -> only_applied_in_params id
+          | Template _ -> only_applied_in_params id
           | _ -> false )
         temps
     in
@@ -476,10 +495,10 @@ let relax_applied_param temps decl =
       (* Keyed by the variable and the arguments it is applied to, not by the
          type node: the same application is spelled with whatever [Tvar]
          rigidity the position it was built in gave it. *)
-      let key t =
+      let key (t : head_type) =
         match t with
-        | Tapply (h, args) -> (
-          match List.find_opt (fun (_, id) -> tvar_is id h) relaxed with
+        | Apply (h, args) -> (
+          match List.find_opt (fun (_, id) -> head_tvar_is id h) relaxed with
           | Some (_, id) -> Some (id, args)
           | None -> None )
         | _ -> None
@@ -492,32 +511,30 @@ let relax_applied_param temps decl =
           | Some id -> Some id
           | None ->
             let id = next_name () in
-            fresh := !fresh @ [(TTtypename, id)];
+            fresh := !fresh @ [(Cpp_ir.Template.Parameter_kind.Typename, id)];
             seen := (k, id) :: !seen;
             Some id )
       in
       (* Named in the order the parameters spell the applications. *)
       List.iter
-        (fun (_, ty) ->
+        (fun ty ->
           ignore
-            (map_cpp_type
+            (Cpp_ir.Types.map
                (fun t ->
-                 match deduced t with Some id -> Tvar (Tv_named id) | None -> t )
+                 match deduced t with Some id -> (Variable (Named id) : head_type) | None -> t )
                ty ) )
-        params;
-      let temps =
+        param_tys;
+      let temps : head_params =
         List.map
           (fun (tt, id) ->
             if List.exists (fun (_, i) -> Id.equal i id) relaxed then
-              (TTtypename, id)
+              (Cpp_ir.Template.Parameter_kind.Typename, id)
             else (tt, id) )
           temps
         @ !fresh
       in
-      let deduced = List.map (fun ((x, args), d) -> ((x, List.map Legacy_minicpp_to_cpp_ir.lower_type args), d)) !seen in
-      (temps, Some (Head_relaxation.Param_applications {relaxed = List.map snd relaxed; deduced}))
+      (temps, Some (Head_relaxation.Param_applications {relaxed = List.map snd relaxed; deduced = !seen}))
     end
-  | _ -> (temps, None)
 
 (** Take the application back off a type variable that was left a plain
     [typename].
@@ -528,21 +545,22 @@ let relax_applied_param temps decl =
     to a type -- which does not parse -- and the honest spelling is [T1]: the
     index is erased, so the family applied at it is the event struct itself and
     there is nothing for the argument list to say.  Applied at an argument the
-    declaration binds, it is [crane::rebind_t<T1, A>] ({!Minicpp.rebind_plain_var}):
+    declaration binds, it is [crane::rebind_t<T1, A>] ({!Head_relaxation.rebind_plain_var_lowered}):
     the variable may just as well be a type constructor given at its erased
     element, and then the argument is the element.
 
     The head and the rewrite of a declaration under it. *)
-let deapplied_head temps =
+let deapplied_head (temps : head_params) =
   let plain =
     List.filter_map
-      (fun (tt, id) -> match tt with TTtemplate _ -> None | _ -> Some id)
+      (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) -> match tt with Template _ -> None | _ -> Some id)
       temps
   in
   let in_scope = List.map snd temps in
   (* The parameters' own types too: a callable parameter's constraint
      ([is_invocable_r_v<T3, F1 &, T1<T2> &>]) and a default. *)
-  ( Minicpp.map_tparams (Head_relaxation.deapplied ~plain ~in_scope) temps,
+  let deapplied = Head_relaxation.deapplied_lowered ~plain ~in_scope in
+  ( Cpp_ir.Map.template_parameters (Cpp_ir.Map.make ~expr:Fun.id ~stmt:Fun.id ~type_:deapplied ()) temps,
     Head_relaxation.Deapplied {plain; in_scope} )
 
 (** [decl] under the head [temps], its plain variables deapplied
@@ -568,6 +586,20 @@ let deapply_plain_struct_tvars (decl : Cpp_ir.Lowered.Decl.t) =
     in
     Head_relaxation.deapply_struct ~plain ~in_scope:(List.map snd temps) decl
   | None -> decl
+
+(** Whether a callable parameter's declared constraint states nothing the
+    caller can be held to, and so is dropped rather than printed.
+
+    A rank-2 callback has no result to claim: the body applies it at a type of
+    its own choosing, and the [std::any] standing in for that type is not what
+    comes back -- a handler for [forall X, E X -> M X] returns [M nat] where the
+    constraint would demand [M std::any].  The result is recovered where it is
+    used, by {!relax_tt_applied_return} or by the deduction the call itself
+    performs.  A dropped clause is no use of the variables it names. *)
+let constraint_is_vacuous (dom : head_type list) (cod : head_type) =
+  List.exists
+    (fun t -> head_type_exists (function Any | Obligation Opaque_type -> true | _ -> false) t)
+    (cod :: List.filter (function (Function _ : head_type) -> true | _ -> false) dom)
 
 (** Default every template parameter the signature that came out of the
     relaxations no longer mentions.
@@ -606,80 +638,80 @@ let deapply_plain_struct_tvars (decl : Cpp_ir.Lowered.Decl.t) =
     declared, and a call site that knows what the value was stored as writes
     it -- which is the only way such a parameter is ever given a value, and
     the reason it is defaulted rather than dropped. *)
-let default_unmentioned_temps temps decl =
-  (* Stricter than {!Minicpp.tvar_is}, which lets an unresolved head answer to its
+let default_unmentioned_temps (temps : head_params) (signature : Callable_abi.signature) =
+  (* Stricter than {!head_tvar_is}, which lets an unresolved head answer to its
      index as well as to its name: a relaxation names its parameters [F1],
      [_P0] without renumbering them, so a variable that kept index 1 would
      otherwise answer for [T1] and no parameter would ever look unmentioned. *)
-  let is_tvar id = function
-    | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n id
-    | Tvar (Tv_index (i, None)) -> Id.equal (Common.tvar_id i) id
+  let is_tvar id : head_type -> bool = function
+    | Variable (Index (_, Some n) | Named n) -> Id.equal n id
+    | Variable (Index (i, None)) -> Id.equal (Common.tvar_id i) id
     | _ -> false
   in
   (* Only the arguments a type actually writes count: an argument in a
      position nothing writes is no more deducible than one that is not there. *)
-  let prune = Ml_type_util.prune_unwritten_args in
-  let has_tvar id ty = exists_cpp_type (is_tvar id) (prune ty) in
+  let prune = Ml_type_util.prune_unwritten_args_ir in
+  let has_tvar id ty = head_type_exists (is_tvar id) (prune ty) in
   let mentions id =
     let has = has_tvar id in
     (* A constraint on another parameter is a mention too: dropping the
        variable out of the deduction would leave the clause naming it. *)
     let in_temps =
       List.exists
-        (fun (tt, _) ->
+        (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), _) ->
           match tt with
-          | TTtypename_default d -> has d
-          | TTconcept (_, args) -> List.exists has args
-          | TTfun (dom, cod) ->
-            (not (Minicpp.tt_constraint_is_vacuous dom cod))
+          | Typename_default d -> has d
+          | Concept (_, args) -> List.exists has args
+          | Callable_declared (dom, cod) ->
+            (not (constraint_is_vacuous dom cod))
             && (List.exists has dom || has cod)
           | _ -> false )
         temps
     in
-    match decl with
-    | Dfun {df_ret; df_shape} ->
-      has df_ret || in_temps
-      || ( match df_shape with
-         | Ddef (params, _) -> List.exists (fun (_, t) -> has t) params
-         | Ddecl params -> List.exists (fun (_, t) -> has t) params )
-    | _ -> true
+    has signature.ret || in_temps || List.exists has signature.params
   in
   let unmentioned =
     List.filter_map
-      (fun (tt, id) ->
+      (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) ->
         match tt with
-        | (TTtypename | TTtemplate _) when not (mentions id) -> Some id
+        | (Typename | Template _) when not (mentions id) -> Some id
         | _ -> None )
       temps
   in
   if unmentioned = [] then (temps, None)
   else
-    let temps =
+    let temps : head_params =
       List.map
-        (fun (tt, id) ->
+        (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) ->
           match tt with
-          | (TTtypename | TTtemplate _) when List.exists (Id.equal id) unmentioned
+          | (Typename | Template _) when List.exists (Id.equal id) unmentioned
             ->
-            (TTtypename_default Tvoid, id)
+            (Cpp_ir.Template.Parameter_kind.Typename_default Void, id)
           | _ -> (tt, id) )
         temps
     in
     (temps, Some (Head_relaxation.Unmentioned unmentioned))
 
+(** [apply_signature r s] -- the signature [s] as the relaxation [r]
+    rewrites it ({!Head_relaxation.apply_signature}). *)
+let apply_signature r ({params; ret} : Callable_abi.signature) : Callable_abi.signature =
+  let params, ret = Head_relaxation.apply_signature r ~params ~ret in
+  {params; ret}
+
 (** A function's head, relaxed: what the relaxations above decide from the
-    head [temps] and the signature [signature] -- a declaration whose body
-    is not read -- and the rewrite that carries their decisions through the
-    declaration, its body included ({!Head_relaxation.apply}).  Each
-    relaxation decides from the signature the previous ones left, in order:
+    head [temps] and the declared [signature], the signature they leave, and
+    the rewrites that carry their decisions through the declaration, its
+    body included ({!Head_relaxation.apply}).  Each relaxation decides from
+    the signature the previous ones left, in order:
     {!relax_applied_return}, {!relax_tt_applied_return},
     {!relax_applied_param}, {!deapplied_head}, {!default_unmentioned_temps}. *)
-let relax_function_head temps signature =
-  let temps, _, relaxations =
+let relax_function_head (temps : head_params) (signature : Callable_abi.signature) =
+  let temps, signature, relaxations =
     List.fold_left
       (fun (temps, signature, relaxations) relax ->
         match relax temps signature with
         | temps, None -> (temps, signature, relaxations)
-        | temps, Some r -> (temps, Head_relaxation.apply r signature, relaxations @ [r]) )
+        | temps, Some r -> (temps, apply_signature r signature, relaxations @ [r]) )
       (temps, signature, [])
       [ relax_applied_return;
         relax_tt_applied_return;
@@ -687,7 +719,7 @@ let relax_function_head temps signature =
         (fun temps _ -> let temps, r = deapplied_head temps in (temps, Some r));
         default_unmentioned_temps ]
   in
-  (temps, relaxations)
+  (temps, signature, relaxations)
 
 (** Build template parameter list with phantom detection.
 
@@ -714,27 +746,27 @@ let relax_function_head temps signature =
     @param ml_ty  The ML type of the declaration, passed to
       {!with_applied_tvars} to veto higher kinds it does not demand. *)
 let phantom_aware_temps
-    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?ml_ty cty
-    tvars =
+    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?ml_ty (cty : head_type)
+    tvars : head_params =
   (* The leading phantoms are spelled out at every call site
      ({!Ml_type_util.explicit_tvar_prefix}), so they need no default.  A
      default there would let a call that supplies nothing silently pick
      [void] instead of failing to compile. *)
-  let undefault n temps =
+  let undefault n (temps : head_params) : head_params =
     List.mapi
-      (fun i (tt, id) ->
+      (fun i ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) ->
         match tt with
-        | TTtypename_default Tvoid when i < n -> (TTtypename, id)
+        | Typename_default Void when i < n -> (Cpp_ir.Template.Parameter_kind.Typename, id)
         | _ -> (tt, id) )
       temps
   in
-  undefault (explicit_tvar_prefix ~force_required cty)
+  undefault (explicit_tvar_prefix_ir ~force_required cty)
   @@ with_applied_tvars ?ml_ty cty
   @@
   match cty with
-  | Tfun (dom, cod) ->
-    let tvars_indexed = get_tvars_indexed cty in
-    let primary = primary_tvar_indices dom cod in
+  | Function (dom, cod) ->
+    let tvars_indexed = get_tvars_indexed_ir cty in
+    let primary = primary_tvar_indices_ir dom cod in
     let primary = IntSet.union primary force_required in
     (* [also_declared] is every variable the ML type has, which is not every
        variable the C++ type spells: an erased one is written nowhere in the
@@ -754,8 +786,8 @@ let phantom_aware_temps
     List.map
       (fun (i, id) ->
         if IntSet.mem i primary then
-          (TTtypename, id)
+          (Cpp_ir.Template.Parameter_kind.Typename, id)
         else
-          (TTtypename_default Tvoid, id) )
+          (Typename_default Void, id) )
       all_tvars_indexed
-  | _ -> List.map (fun id -> (TTtypename, id)) tvars
+  | _ -> List.map (fun id -> (Cpp_ir.Template.Parameter_kind.Typename, id)) tvars

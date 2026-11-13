@@ -754,11 +754,11 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
     (* The source instantiation is the same template as the destination, so its
        arguments have the same kinds: a [template <typename> class] parameter
        cannot be stood in for by a plain [typename]. *)
-    let tparams =
+    let tparams : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters =
       List.mapi
         (fun i u ->
-          let tt =
-            match List.nth_opt templates i with Some (tt, _) -> tt | None -> TTtypename
+          let tt : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t =
+            match List.nth_opt templates i with Some (tt, _) -> tt | None -> Typename
           in
           (tt, u) )
         u_var_names
@@ -767,7 +767,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
     let method_ : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
       { name = Id.of_string "operator_at_other_instantiation";
         globref = None;
-        type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters tparams;
+        type_params = tparams;
         return_type =
           Entity_application
             ( name,
