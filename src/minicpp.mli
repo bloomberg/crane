@@ -1437,13 +1437,9 @@ val map_args : (cpp_expr -> cpp_expr) -> cpp_expr revd -> cpp_expr revd
 val lambda_params :
   (cpp_type * Id.t option) revd -> (cpp_type * Id.t option) list
 
-(** The Core binder each local a lambda's body reads as its own stands for,
-    by name: its parameters, and the locals its local fixpoint captures. *)
-val lambda_binders : cpp_lambda -> (Id.t * Core_binder.t) list
-
 (** [rekey_lambda_binders x y l] is [l] recording by [y] the Core binders it
-    records by [x] ({!lambda_binders}): the local [y] now stands where [x]
-    did. *)
+    records by [x], of its parameters and of the locals its local fixpoint
+    captures: the local [y] now stands where [x] did. *)
 val rekey_lambda_binders : Id.t -> Id.t -> cpp_lambda -> cpp_lambda
 
 (** The member as a field, to be written where a field is written. *)
@@ -1795,9 +1791,6 @@ val dfun_path :
     empty; prefer {!dfun_path}, which cannot be handed one. *)
 val dfun_path_of_list : (GlobRef.t * cpp_type list) list -> dfun_path
 
-(** The entries of a qualified name, outermost first. *)
-val dfun_path_list : dfun_path -> (GlobRef.t * cpp_type list) list
-
 (** [mk_dfun ?inner ?targs ?no_pure ~ret r shape] is the function named [r]
     (qualified under [inner], if given), which is how all but one caller
     builds one. *)
@@ -1848,15 +1841,9 @@ val iter_globrefs : (GlobRef.t -> unit) -> cpp_decl -> unit
     evaluated. *)
 val evaluates_children : cpp_expr -> bool
 
-(** Whether a declaration of type [ty] binds a reference rather than a value. *)
-val is_reference_type : cpp_type -> bool
-
-(** The variables an expression, a statement or a statement list refers to
-    without binding them.  An under-approximation: a form it does not look
-    into contributes nothing. *)
+(** The variables an expression refers to without binding them.  An
+    under-approximation: a form it does not look into contributes nothing. *)
 val free_vars_expr : cpp_expr -> Id.t list
-val free_vars_stmt : cpp_stmt -> Id.t list
-val free_vars_body : cpp_stmt list -> Id.t list
 
 (** [reads_as_printed body x]: whether [body], as the printer spells it,
     reads [x] -- which decides whether a parameter is written with a name.
@@ -1877,14 +1864,3 @@ val assigned_vars : cpp_stmt list -> Id.Set.t
 
 (** The identifiers [stmts] declare, at any depth, in order of appearance. *)
 val declared_ids : cpp_stmt list -> Id.t list
-
-(** Turn destructive matches on any of the given locals back into borrowing
-    ones: clear [sc_owned] and drop the moves on their field bindings.
-    Always sound -- it only copies where it could have moved. *)
-val borrow_matches_on : Id.t list -> cpp_stmt list -> cpp_stmt list
-
-(** Make every match on a local bound by [const] reference or by pointer
-    borrow ({!borrow_matches_on}): such a local names a value something else
-    owns, and a destructive match would call [v_mut()] through a [const]
-    view. *)
-val borrow_bound_matches : cpp_stmt list -> cpp_stmt list
