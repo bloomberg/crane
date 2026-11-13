@@ -552,6 +552,10 @@ let ind_header_decls scope kn ind =
       if not at_namespace_scope then
         (group, [])
       else
+        (* Member_hoist reads CppIR; the group is converted for it and back. *)
+        let to_cpp_ir = List.map (fun (env, d) -> (env, Legacy_minicpp_to_cpp_ir.lower d)) in
+        let to_minicpp = List.map (fun (env, d) -> (env, Cpp_ir_to_legacy_minicpp.decl d)) in
+        let group = to_cpp_ir group in
         let group = if is_mutual then Member_hoist.split_group group else group in
         (* The other cycle a struct at namespace scope can be in, and the one
            its own layout says nothing about.  A function promoted to a method
@@ -597,7 +601,7 @@ let ind_header_decls scope kn ind =
               && not (List.mem (module_struct_name mp) own_nspace_names) )
             group
         in
-        (group, defs)
+        (to_minicpp group, to_minicpp defs)
     in
     {decls = forward_decls @ group; member_defs; promoted_sft = !promoted_sft}
 
