@@ -461,9 +461,9 @@ let record_method_candidates candidates =
     of, with the helpers lifted out of it. *)
 let record_method_entities r fields lifted =
   List.filter_map
-    (fun (f, _, _) ->
+    (fun ((f : Cpp_ir.Lowered.phase Cpp_ir.Field.t), _, _) ->
       match f with
-      | Fmethod {mf_globref = Some m; _} ->
+      | Method {globref = Some m; _} ->
         let own d =
           match Option.bind (decl_globref d) Lifted.of_ref with
           | Some h -> Option.equal Names.GlobRef.UserOrd.equal (Lifted.origin h) (Some m)

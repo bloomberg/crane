@@ -168,15 +168,16 @@ let signature abi = abi.signature
    global of its own, and no scheme -- its variables are the method's own
    quantifiers, all named, and the class-typed arguments it takes, which the
    struct's builder records as its dictionaries. *)
-let of_instance_method ?minted ~instance (mf : Minicpp.method_field) =
+let of_instance_method ?minted ~instance (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) =
+  let ty = Cpp_ir_to_legacy_minicpp.ty in
   of_head ?minted ~callee:instance ~scheme:None
     ~receiver:
       { dropped = [];
         dropped_names = [];
-        params = List.map snd mf.mf_params;
-        ret = mf.mf_ret_type;
+        params = List.map (fun (_, t) -> ty t) m.params;
+        ret = ty m.return_type;
         return_only = [] }
-    mf.mf_tparams
+    (Cpp_ir_to_legacy_minicpp.template_parameters m.type_params)
 
 let deduces_callable_at abi pos = List.exists (Param_pos.equal pos) abi.deduced_callables
 

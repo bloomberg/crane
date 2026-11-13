@@ -135,3 +135,79 @@ let apply relaxation decl =
     | d -> d )
 
 let apply_all relaxations decl = List.fold_left (fun d r -> apply r d) decl relaxations
+
+(* The CppIR counterparts of the [Deapplied] rewrite, for a generated struct
+   that is already CppIR. *)
+
+module L = Cpp_ir.Lowered
+
+(* {!Minicpp.tvar_is}: a variable answers to its parameter's name and to the
+   spelling of its index. *)
+let lowered_tvar_is id : L.Type.t -> bool = function
+  | Variable (Named n) -> Id.equal n id
+  | Variable (Index (i, name)) ->
+    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (tvar_id i) id
+  | _ -> false
+
+(* {!Minicpp.tvar_name}. *)
+let lowered_tvar_name : L.Type.t -> Id.t option = function
+  | Variable (Index (_, Some n) | Named n) -> Some n
+  | Variable (Index (i, None)) -> Some (tvar_id i)
+  | _ -> None
+
+(* {!Minicpp.rebind_plain_var}. *)
+let lowered_rebind_plain_var ~in_scope (head : L.Type.t) (args : L.Type.t list) : L.Type.t =
+  match args with
+  | [a] when not (Cpp_ir.Types.prints_as_any a) ->
+    let names = ref [] in
+    ignore
+      (Cpp_ir.Children.exists_type
+         (fun t ->
+           Option.iter (fun n -> names := n :: !names) (lowered_tvar_name t);
+           false )
+         a );
+    if List.for_all (fun n -> List.exists (Id.equal n) in_scope) !names then Rebind (head, a) else head
+  | _ -> head
+
+(* {!deapplied} over a CppIR type. *)
+let deapplied_lowered ~plain ~in_scope =
+  let rec ft t =
+    Cpp_ir.Types.map
+      (fun (t : L.Type.t) : L.Type.t ->
+        match t with
+        | Apply (head, args) when List.exists (fun id -> lowered_tvar_is id head) plain ->
+          let head : L.Type.t =
+            match head with
+            | Variable (Index (i, None)) ->
+              Variable (Index (i, List.find_opt (fun id -> lowered_tvar_is id head) plain))
+            | _ -> head
+          in
+          lowered_rebind_plain_var ~in_scope head args
+        | Type_constructor body -> Type_constructor (ft body)
+        | t -> t )
+      t
+  in
+  ft
+
+(* A rewrite of every expression, statement and type under it, bottom-up,
+   [fe] applied to each rebuilt expression. *)
+let lowered_deep ?(fe = Fun.id) (ft : L.Type.t -> L.Type.t) =
+  let rec m () = Cpp_ir.Map.make ~expr ~stmt ~type_:ft ()
+  and expr e = fe (Cpp_ir.Map.expr (m ()) e)
+  and stmt s = Cpp_ir.Map.stmt (m ()) s in
+  m ()
+
+(* {!Minicpp.settle_lambda_tparams}: [l] without the template parameters
+   none of its parameters names, each use of them erased. *)
+let settle_lowered_lambda (l : L.phase Cpp_ir.Expr.Lambda.t) =
+  let names id t = Cpp_ir.Children.exists_type (lowered_tvar_is id) t in
+  match List.filter (fun x -> not (List.exists (fun (t, _) -> names x t) l.params)) l.type_params with
+  | [] -> l
+  | ids ->
+    let ft = Cpp_ir.Types.map (fun t -> if List.exists (fun id -> lowered_tvar_is id t) ids then Any else t) in
+    let kept = List.filter (fun x -> not (List.exists (Id.equal x) ids)) l.type_params in
+    {(Cpp_ir.Map.lambda (lowered_deep ft) l) with type_params = kept}
+
+let deapply_struct ~plain ~in_scope (d : L.Decl.t) : L.Decl.t =
+  let fe : L.Expr.t -> L.Expr.t = function Lambda l -> Lambda (settle_lowered_lambda l) | e -> e in
+  Cpp_ir.Map.decl (lowered_deep ~fe (deapplied_lowered ~plain ~in_scope)) d

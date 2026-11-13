@@ -548,17 +548,24 @@ let deapplied_head temps =
     ({!deapplied_head}). *)
 let deapply_plain_tvars temps decl = Head_relaxation.apply (snd (deapplied_head temps)) decl
 
-(** {!deapply_plain_tvars} for a generated struct -- an inductive's, or an
-    instance's -- whose template parameters are its own. *)
-let deapply_plain_struct_tvars decl =
-  let rec tparams = function
-    | Dstruct ds -> Some ds.ds_tparams
-    | Dtemplate (temps, _, _) -> Some temps
-    | Dnspace (_, ds) -> List.find_map tparams ds
+(** {!deapply_plain_tvars} for a generated struct in CppIR -- an
+    inductive's, or an instance's -- whose template parameters are its own. *)
+let deapply_plain_struct_tvars (decl : Cpp_ir.Lowered.Decl.t) =
+  let rec tparams : Cpp_ir.Lowered.Decl.t -> _ = function
+    | Struct s -> Some s.type_params
+    | Template (temps, _, _) -> Some temps
+    | Namespace (_, ds) -> List.find_map tparams ds
     | _ -> None
   in
   match tparams decl with
-  | Some temps -> deapply_plain_tvars temps decl
+  | Some temps ->
+    let plain =
+      List.filter_map
+        (fun ((k : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t), id) ->
+          match k with Template _ -> None | _ -> Some id )
+        temps
+    in
+    Head_relaxation.deapply_struct ~plain ~in_scope:(List.map snd temps) decl
   | None -> decl
 
 (** Default every template parameter the signature that came out of the

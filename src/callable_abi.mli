@@ -206,7 +206,10 @@ val of_head :
     builder recorded of its parameters.  The method has no global of its
     own, so the plan's callee is the instance, and no scheme. *)
 val of_instance_method :
-  ?minted:(Names.Id.t * minted) list -> instance:Names.GlobRef.t -> Minicpp.method_field -> t
+  ?minted:(Names.Id.t * minted) list ->
+  instance:Names.GlobRef.t ->
+  Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t ->
+  t
 
 (** Whether the value parameter at the declared position [pos] is a callable
     the head deduces as an [F &&]: the callee then calls it at its own

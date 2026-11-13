@@ -494,7 +494,6 @@ let ind_header_decls scope kn ind =
               (List.rev methods)
               ind.ind_kind
             |> Plan_templates.deapply_plain_struct_tvars
-            |> Legacy_minicpp_to_cpp_ir.lower
           in
           (* Check if this inductive is being promoted into its module struct.
              When promoted, render fields flat (no wrapping struct) since the
@@ -612,32 +611,36 @@ let plan_instance_methods r a t =
 (* Each method of the struct of the instance [r] declared with the head its
    plan gives it, which was made before anything was generated; under
    [CRANE_CHECK_IR] the head it was generated with is checked against it. *)
-let planned_methods ~minted r decl =
-  let planned mf =
+let planned_methods ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
+  let planned (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
     if Probe.checking () then
-      Callable_abi.check_instance_method ~instance:r mf.mf_name
-        (Callable_abi.of_instance_method ?minted:(List.assoc_opt mf.mf_name minted) ~instance:r mf);
-    let abi = Callable_abi.planned_instance_method ~instance:r mf.mf_name in
+      Callable_abi.check_instance_method ~instance:r m.name
+        (Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:r m);
+    let abi = Callable_abi.planned_instance_method ~instance:r m.name in
     match Callable_abi.receiver abi with
-    | Some {params; ret; _} when List.length params = List.length mf.mf_params ->
-      { mf with
-        mf_tparams = Callable_abi.declared_head abi;
-        mf_ret_type = ret;
-        mf_params = List.map2 (fun (id, _) ty -> (id, ty)) mf.mf_params params }
+    | Some {params; ret; _} when List.length params = List.length m.params ->
+      let ty = Legacy_minicpp_to_cpp_ir.lower_type in
+      { m with
+        type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters (Callable_abi.declared_head abi);
+        return_type = ty ret;
+        params = List.map2 (fun (id, _) t -> (id, ty t)) m.params params }
     | Some _ | None ->
       CErrors.anomaly
-        Pp.(str "the method " ++ Id.print mf.mf_name ++ str " of " ++ GlobRef.print r
+        Pp.(str "the method " ++ Id.print m.name ++ str " of " ++ GlobRef.print r
             ++ str " is generated with other parameters than planned.")
   in
-  let rec on_decl = function
-    | Dstruct ds ->
-      Dstruct
-        { ds with
-          ds_fields =
+  let rec on_decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t = function
+    | Struct s ->
+      Struct
+        { s with
+          fields =
             List.map
-              (function Fmethod mf, vis, tag -> (Fmethod (planned mf), vis, tag) | f -> f)
-              ds.ds_fields }
-    | Dtemplate (temps, c, d) -> Dtemplate (temps, c, on_decl d)
+              (function
+                | (Cpp_ir.Field.Method m : Cpp_ir.Lowered.phase Cpp_ir.Field.t), vis, tag ->
+                  ((Method (planned m) : Cpp_ir.Lowered.phase Cpp_ir.Field.t), vis, tag)
+                | f -> f )
+              s.fields }
+    | Template (temps, c, d) -> Template (temps, c, on_decl d)
     | d -> d
   in
   on_decl decl
@@ -654,15 +657,7 @@ let instance_decls r a t =
   let ds_opt, class_ref_opt, concept_args, minted =
     Gen_decls.gen_instance_struct r a t
   in
-  (* The struct's methods are planned over MiniCpp: it is converted for
-     that and back. *)
-  let ds_opt =
-    Option.map
-      (fun d ->
-        Legacy_minicpp_to_cpp_ir.lower
-          (planned_methods ~minted r (finish_instance_struct (Cpp_ir_to_legacy_minicpp.decl d))) )
-      ds_opt
-  in
+  let ds_opt = Option.map (fun d -> planned_methods ~minted r (finish_instance_struct d)) ds_opt in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]
@@ -1433,7 +1428,7 @@ let modtype_concept ~module_ path ~params mt =
 (** The methods of each eponymous record, generated ahead of the files with
     the helpers lifted out of them, by the record. *)
 let record_methods_generated :
-    (ModPath.t * ((cpp_field * cpp_visibility * section_tag) list * cpp_decl list)) list
+    (ModPath.t * (Cpp_ir.Lowered.phase Cpp_ir.Field.member list * cpp_decl list)) list
     Ref.User.Tbl.t =
   Ref.User.Tbl.create 8
 
@@ -1497,7 +1492,7 @@ let generated_record_field_types () =
 let record_methods_decl r vars fields : Cpp_ir.Lowered.Decl.t =
   Merged_struct_members
     { ref_ = r;
-      fields = List.map Legacy_minicpp_to_cpp_ir.lower_member fields;
+      fields;
       type_params = Cpp_ir.Build.typenames vars;
       constraint_ = None;
       needs_shared_from_this = false }

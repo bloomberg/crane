@@ -8,9 +8,10 @@
     Part of declaration generation: {!Gen_decls} includes this module after
     {!Gen_functions}, and {!Cpp_ind} calls {!gen_ind_header_v2} and
     {!gen_record_methods} to turn an inductive or an eponymous record into a
-    MiniCpp [Dstruct] (or [Denum]).  Methods are generated ahead of the files
+    CppIR struct (or enum).  Methods are generated ahead of the files
     ({!generate_method_ahead}) and taken from {!methods_ahead} when the struct
-    is built. *)
+    is built; their bodies, like every type and conversion translation
+    produces, are MiniCpp until the struct takes them. *)
 
 open Common
 open Miniml
@@ -187,37 +188,30 @@ let replace_this_in_lambdas ?receiver self_type stmts =
     let self_binding = Sasgn (self_id, self_ty, self_expr) in
     self_binding :: List.map walk_stmt stmts
 
-(** Check if any expression or statement contains [CPPshared_from_this]. *)
-let rec expr_has_shared_from_this = function
-  | CPPshared_from_this _ -> true
-  | CPPlambda {cl_body = body; _} -> List.exists stmt_has_shared_from_this body
-  | CPPfun_call (_, f, args) ->
-    expr_has_shared_from_this f || List.exists expr_has_shared_from_this (to_reversed args)
+(** Whether an expression of a method body is [shared_from_this()]: itself,
+    or inside a lambda's body or a call. *)
+let rec expr_has_shared_from_this : Cpp_ir.Lowered.Expr.t -> bool = function
+  | Shared_from_this _ -> true
+  | Lambda {body; _} -> List.exists stmt_has_shared_from_this body
+  | Call (_, f, args) -> expr_has_shared_from_this f || List.exists expr_has_shared_from_this args
   | _ -> false
 
 (** Statement-level counterpart of {!expr_has_shared_from_this}: checks whether
-    any statement in a method body contains [CPPshared_from_this]. *)
-and stmt_has_shared_from_this = function
-  | Sreturn (Some e) -> expr_has_shared_from_this e
-  | Sexpr e -> expr_has_shared_from_this e
-  | Sif (_, then_stmts, else_stmts) ->
-    List.exists stmt_has_shared_from_this then_stmts
-    || List.exists stmt_has_shared_from_this else_stmts
-  | Scustom_case (_, _, _, brs, _) ->
-    List.exists
-      (fun (_, _, stmts) -> List.exists stmt_has_shared_from_this stmts)
-      brs
-  | Sswitch (_, _, brs, default) ->
-    List.exists
-      (fun (_, stmts) -> List.exists stmt_has_shared_from_this stmts)
-      brs
+    any statement in a method body contains [shared_from_this()]. *)
+and stmt_has_shared_from_this : Cpp_ir.Lowered.Stmt.t -> bool = function
+  | Return (Some e) -> expr_has_shared_from_this e
+  | Expression e -> expr_has_shared_from_this e
+  | If {then_; else_; _} ->
+    List.exists stmt_has_shared_from_this then_ || List.exists stmt_has_shared_from_this else_
+  | Custom_match {branches; _} ->
+    List.exists (fun (b : _ Cpp_ir.Stmt.Custom_match.branch) -> List.exists stmt_has_shared_from_this b.body) branches
+  | Switch {branches; default; _} ->
+    List.exists (fun (_, stmts) -> List.exists stmt_has_shared_from_this stmts) branches
     || (match default with Some stmts -> List.exists stmt_has_shared_from_this stmts | None -> false)
-  | Smatch (scrut, branches, default) ->
-    List.exists
-      (fun br -> List.exists stmt_has_shared_from_this br.smb_body)
-      branches
+  | Match (_, branches, default) ->
+    List.exists (fun (b : _ Cpp_ir.Stmt.Match.branch) -> List.exists stmt_has_shared_from_this b.body) branches
     || (match default with Some stmts -> List.exists stmt_has_shared_from_this stmts | None -> false)
-  | Sasgn (_, _, e) -> expr_has_shared_from_this e
+  | Bind_variable (_, _, e) -> expr_has_shared_from_this e
   | _ -> false
 
 (** What a method is generated under, settled before its body: the
@@ -1012,17 +1006,18 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
 (** The methods made of [candidates] in the inductive [name], as its struct
     declares them ({!Borrow_projection.lend}), with their control lowered
     from their ControlIR where that is the bridge's to lower
-    ({!Control_to_cpp_ir.lower_methods}).  The struct is merged into
+    ({!Control_to_cpp_ir.lower_struct_methods}).  The struct is merged into
     its module's where it is the one the module is promoting, or [merged]
     says so. *)
 let gen_methods ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
   in
-  Control_to_cpp_ir.lower_methods ~merged name vars
+  Control_to_cpp_ir.lower_struct_methods ~merged name vars
     (List.concat_map
        (fun c ->
-         Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )
+         List.map Legacy_minicpp_to_cpp_ir.lower_member
+           (Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c)) )
        candidates )
 
 (** Does the ML type [ml_ty] contain [ind_ref] (or a mutual sibling) anywhere
@@ -1179,6 +1174,107 @@ let rec is_ref_to ref_name ref_vars = function
   | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
   | _ -> false
 
+module T = Cpp_ir.Type
+module E = Cpp_ir.Expr
+module S = Cpp_ir.Stmt
+module F = Cpp_ir.Field
+module B = Cpp_ir.Build
+module V = F.Visibility
+module Sec = F.Section
+
+(* A translation result, converted where the struct takes it. *)
+let lower_type = Legacy_minicpp_to_cpp_ir.lower_type
+let lower_expr = Legacy_minicpp_to_cpp_ir.lower_expr
+
+(** A plain static member function: no template parameters, no [this], and
+    none of the qualifiers a real method carries.  Factories are the only
+    producer -- they are methods with every flag off, so they are spelled as
+    methods rather than as a second, near-identical field kind. *)
+let static_method ~name ~ret ~params ~body : Cpp_ir.Lowered.phase F.Method.t =
+  { name;
+    globref = None;
+    type_params = [];
+    return_type = ret;
+    params;
+    body;
+    receiver = Static;
+    is_inline = false;
+    no_pure = false;
+    constexpr = Undecided;
+    is_noexcept = false;
+    is_conversion = false;
+    binders = [];
+    receiver_binder = None;
+    loop = None }
+
+(** [accessor ~no_pure name ret body] is the member [name] of the struct
+    returning [ret] by [body], called on [this] and taking nothing else:
+    [const] unless [is_const] says otherwise, an accessor's section unless
+    [section] says otherwise. *)
+let accessor ?(is_const = true) ?(is_inline = false) ?(section = F.Section.Accessors) ~no_pure name ret body
+    : Cpp_ir.Lowered.phase F.member =
+  ( Method
+      { name = Id.of_string name;
+        globref = None;
+        type_params = [];
+        return_type = ret;
+        params = [];
+        body;
+        receiver = Instance {this_position = 0; is_const; ref_qualifier = Any; returns_field = false};
+        is_inline;
+        no_pure;
+        constexpr = Undecided;
+        is_noexcept = false;
+        is_conversion = false;
+        binders = [];
+        receiver_binder = None;
+        loop = None },
+    Public,
+    section )
+
+(** [constructor ?tparams ?explicit params inits] is a constructor of the
+    struct with an empty body, [explicit] unless said otherwise, in the
+    creators' section. *)
+let constructor ?(tparams = []) ?(explicit = true) params inits : Cpp_ir.Lowered.phase F.member =
+  (Constructor {type_params = tparams; params; inits; body = []; explicit; noexcept = false}, Public, Creators)
+
+(** {!Translation_support.qualify_inductives} in CppIR: each inductive [t]
+    names wrapped in its namespace, those [skip] answers for and inline
+    mappings excepted. *)
+let rec qualify_inductives_lowered ~skip (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  let go = qualify_inductives_lowered ~skip in
+  match t with
+  | Entity_application (g, ts, es) -> (
+    let core : Cpp_ir.Lowered.Type.t = Entity_application (g, List.map go ts, es) in
+    match g with
+    | GlobRef.IndRef _ when skip g -> core
+    | GlobRef.IndRef _ when Table.is_inline_custom g -> core
+    | GlobRef.IndRef _ -> In_namespace (g, core)
+    | _ -> core )
+  | In_namespace (g, t) -> (
+    let inner = go t in
+    match inner with In_namespace (g2, _) when GlobRef.CanOrd.equal g g2 -> inner | _ -> In_namespace (g, inner) )
+  | Shared_pointer t -> Shared_pointer (go t)
+  | Reference (k, t) -> Reference (k, go t)
+  | Const t -> Const (go t)
+  | Pointer t -> Pointer (go t)
+  | Function (args, ret) -> Function (List.map go args, go ret)
+  | Named (id, ts) -> Named (id, List.map go ts)
+  | External (id, ts) -> External (id, List.map go ts)
+  | Non_deduced t -> Non_deduced (go t)
+  | Rebind (h, x) -> Rebind (go h, go x)
+  | Member (base, id) -> Member (go base, id)
+  | t -> t
+
+(** {!Minicpp.mk_lambda} in CppIR, for a lambda with no template parameters
+    of its own: a [const] on the return type is dropped, and a nullary
+    lambda whose body only throws is that abort. *)
+let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_ir.Lowered.Expr.t =
+  let return_type = match ret with Some (T.Const t) -> Some t | r -> r in
+  match (params, body) with
+  | [], [S.Throw msg] -> E.Abort (msg, match return_type with Some t -> t | None -> T.Any)
+  | _ -> E.Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; fixpoint = None}
+
 (** Generate the C++ declaration of an inductive type: an encapsulated struct
     with its methods.
 
@@ -1237,7 +1333,7 @@ let gen_ind_header_v2
      recursive field is the ordinary smart pointer ([std::shared_ptr] /
      [crane::rc]); the recursive-field factory
      is the *runtime-arena-aware* one ([crane::arena_make_shared] /
-     [crane::rc<T>::make], see [Alloc_arena_scoped]), which bump-allocates from the
+     [crane::rc<T>::make], see [Arena_scoped]), which bump-allocates from the
      current arena only when a [crane::arena_scope] is open at the call site and
      otherwise falls back to a plain heap allocation.  [arena_runtime_ok] just
      decides whether the generated factory contains that runtime branch at all:
@@ -1256,7 +1352,8 @@ let gen_ind_header_v2
   let templates =
     hkt_templates name vars (List.concat (Array.to_list tys))
   in
-  let ty_vars = List.map named_tvar vars in
+  let type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters templates in
+  let ty_vars = List.map B.named_variable vars in
 
   (* Handle empty inductives (no constructors) - generate uninhabitable
      struct *)
@@ -1267,14 +1364,13 @@ let gen_ind_header_v2
     let method_fields =
       gen_methods name vars method_candidates
     in
-    Dstruct
-      {
-        ds_ref = name;
-        ds_fields = [(Fdeleted_ctor, VPublic, SNoTag)] @ method_fields;
-        ds_tparams = templates;
-        ds_constraint = None;
-        ds_needs_shared_from_this = false;
-      }
+    (Struct
+       { ref_ = name;
+         fields = [(F.Deleted_default_constructor, V.Public, Sec.Untagged)] @ method_fields;
+         type_params;
+         constraint_ = None;
+         needs_shared_from_this = false }
+      : Cpp_ir.Lowered.Decl.t)
   else (* Check if all constructors are nullary: eligible for enum class *)
     let all_nullary = Array.for_all (fun tys_list -> tys_list = []) tys in
     if all_nullary && vars = [] && (not is_mutual) && not (is_custom name) then (
@@ -1299,17 +1395,11 @@ let gen_ind_header_v2
                | _ -> "" )
              cnames )
       in
-      Denum
-        {
-          de_ref = name;
-          de_ctors = ctor_names;
-          de_ctor_rocq_names = rocq_names;
-          de_tparams = [];
-        } )
+      (Enum {ref_ = name; ctors = ctor_names; rocq_names; type_params = []} : Cpp_ir.Lowered.Decl.t) )
     else
       (* The main struct type: all inductives (including coinductives)
          are value types. *)
-      let self_ty = Tglob (name, ty_vars, []) in
+      let self_ty = T.Entity_application (name, ty_vars, []) in
 
       (* Preparation registered the flat inductives
          ({!Table.is_flat_inductive_packet}). *)
@@ -1343,76 +1433,54 @@ let gen_ind_header_v2
         in
         let flat_fields =
           List.mapi (fun j ty ->
-            (Fvar (List.nth field_ids j, stored_ty vars ty), VPublic, SData)
+            ((F.Data (List.nth field_ids j, lower_type (stored_ty vars ty)), V.Public, Sec.Data) : Cpp_ir.Lowered.phase F.member)
           ) tys_list
         in
-        let field_exprs = List.map (fun fid -> CPPvar fid) field_ids in
-        let clone_body = [Sreturn (Some (CPPbraced field_exprs))] in
-        let clone_field =
-          ( Fmethod
-              { mf_name = Id.of_string "clone";
-                mf_globref = None;
-                mf_tparams = [];
-                mf_ret_type = self_ty;
-                mf_params = [];
-                mf_body = clone_body;
-                mf_receiver =
-                  Instance
-                    { this_pos = 0;
-                      is_const = true;
-                      ref_qual = Rq_any;
-                      returns_field = false };
-                mf_is_inline = false;
-                mf_no_pure = true;
-                mf_constexpr = Undecided;
-                mf_is_noexcept = false;
-                mf_is_conversion = false;
-                mf_binders = [];
-                mf_receiver_binder = None;
-                mf_loop = None },
-            VPublic, SAccessors )
-        in
+        let field_exprs = List.map (fun fid -> E.Local fid) field_ids in
+        let clone_body = [S.Return (Some (E.Braced field_exprs))] in
+        let clone_field = accessor ~no_pure:true "clone" self_ty clone_body in
         let conversion_field =
           (* An inductive's [vars] already begin with its promoted variables
              (see [Cpp_ind]), so nothing is left to keep. *)
-          List.map Cpp_ir_to_legacy_minicpp.member
-            (conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
-               ~fields:
-                 (List.mapi
-                    (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
-                    tys_list))
+          conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
+            ~fields:
+              (List.mapi
+                 (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
+                 tys_list)
         in
         let factory_name = Id.of_string (factory_name_of_ctor c) in
         let factory_params =
           List.mapi (fun j ty -> (List.nth field_ids j, value_ty vars ty)) tys_list
         in
         let factory_args =
-          List.map2 (fun (param_name, cpp_ty) ty ->
+          List.map2 (fun (param_name, cpp_ty) ty : Cpp_ir.Lowered.Expr.t ->
             if boxes_field ty then
-              mk_call (CPPalloc (Alloc_heap, cpp_ty)) [CPPmove (CPPvar param_name)]
-            else if is_trivially_copyable_type cpp_ty then CPPvar param_name
-            else CPPmove (CPPvar param_name)
+              B.call (E.Allocate (Heap, lower_type cpp_ty)) [E.Move (E.Local param_name)]
+            else if is_trivially_copyable_type cpp_ty then E.Local param_name
+            else E.Move (E.Local param_name)
           ) factory_params tys_list
         in
-        let factory_body = [Sreturn (Some (CPPbraced factory_args))] in
-        let factory_field =
-          ( Fmethod
-              (static_fun ~name:factory_name ~ret:self_ty
-                 ~params:factory_params ~body:factory_body),
-            VPublic, SCreators )
+        let factory_body = [S.Return (Some (E.Braced factory_args))] in
+        let factory_field : Cpp_ir.Lowered.phase F.member =
+          ( Method
+              (static_method ~name:factory_name ~ret:self_ty
+                 ~params:(List.map (fun (x, t) -> (x, lower_type t)) factory_params) ~body:factory_body),
+            V.Public, Sec.Creators )
         in
         let method_fields = gen_methods name vars method_candidates in
         let all_flat_fields =
           flat_fields @ [clone_field] @ conversion_field @ [factory_field]
           @ method_fields
         in
-        Dstruct
-          { ds_ref = name;
-            ds_fields = all_flat_fields;
-            ds_tparams = templates;
-            ds_constraint = None;
-            ds_needs_shared_from_this = false; }
+        (Struct
+           { ref_ = name;
+             fields = all_flat_fields;
+             type_params;
+             constraint_ = None;
+             needs_shared_from_this = false }
+          : Cpp_ir.Lowered.Decl.t)
       end else
+
 
 
       let field_storage_ty var_names ty = constructor_field_storage ~name ~is_coinductive var_names ty in
@@ -1451,9 +1519,7 @@ let gen_ind_header_v2
               | None -> t )
             | _ -> t )
         in
-        { dfs_name = cname;
-          dfs_selves = List.map snd selves;
-          dfs_fields = List.map (fun (f, ty) -> (f, through_selves ty)) fields }
+        (List.map snd selves, List.map (fun (f, ty) -> (f, through_selves ty)) fields)
       in
       (* 1. Constructor alternative structs (simple, just fields, no make) *)
       let constructor_structs =
@@ -1481,30 +1547,36 @@ let gen_ind_header_v2
                    tys_list
                in
                (* Deferred only where a field names the incomplete type. *)
-               let deferred = deferred_ctor_struct cname fields in
-               if is_coinductive && deferred.dfs_fields <> fields then
-                 (Fdeferred_struct deferred, VPublic, STypes)
+               let lower_fields = List.map (fun (f, ty) -> (f, lower_type ty)) in
+               let selves, deferred_fields = deferred_ctor_struct cname fields in
+               if is_coinductive && deferred_fields <> fields then
+                 ( (F.Deferred_struct {name = cname; selves = lower_fields selves; fields = lower_fields deferred_fields}
+                     : Cpp_ir.Lowered.phase F.t),
+                   V.Public,
+                   Sec.Types )
                else
-                 ( Fnested_struct
+                 ( F.Nested_struct
                      ( cname,
-                       List.map (fun (f, ty) -> (Fvar (f, ty), VPublic, SNoTag)) fields ),
-                   VPublic,
-                   STypes ) )
+                       List.map
+                         (fun (f, ty) : Cpp_ir.Lowered.phase F.member -> (F.Data (f, lower_type ty), V.Public, Sec.Untagged))
+                         fields ),
+                   V.Public,
+                   Sec.Types ) )
              tys )
       in
 
       (* 2. variant_t type alias - use simple Id-based refs that match nested struct names *)
       (* Note: nested structs inherit template params from parent, so don't add <A> to them *)
-      let variant_ty =
-        Tvariant
-          ( (if Table.is_shared_variant name then Shared_variant else Inline_variant),
+      let variant_ty : Cpp_ir.Lowered.Type.t =
+        T.Variant
+          ( (if Table.is_shared_variant name then Shared else Inline),
             Array.to_list
              (Array.mapi
                 (fun i c ->
                   let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
-                  (* Use Tid for local nested struct types - no template args
+                  (* Use T.Named for local nested struct types - no template args
                      since they inherit *)
-                  Tid (cname_id, []) )
+                  T.Named (cname_id, []) )
                 cnames ) )
       in
       (* Collision detection: internal names must not equal the enclosing type name *)
@@ -1513,19 +1585,19 @@ let gen_ind_header_v2
         if String.equal base type_name_str then base ^ "_" else base
       in
       let variant_alias_name = escape_if_clashes "variant_t" in
-      let variant_using =
-        (Fnested_using ([], Id.of_string variant_alias_name, variant_ty), VPublic, STypes)
+      let variant_using : Cpp_ir.Lowered.phase F.member =
+        (F.Nested_type_alias ([], Id.of_string variant_alias_name, variant_ty), V.Public, Sec.Types)
       in
       (* A type parameterised by families is itself one: [crane::rebind_t]
          leaves it alone, as the family's own struct it is, rather than
          reading its erased index as an element (see [obj.h]). *)
-      let element_using =
+      let element_using : Cpp_ir.Lowered.phase F.member list =
         if List.exists (fun i -> Table.is_family_ind_param name i)
              (List.init (List.length vars) Fun.id)
         then
-          [ ( Fnested_using ([], Id.of_string "crane_family_tag", Tvoid),
-              VPublic,
-              STypes ) ]
+          [ ( F.Nested_type_alias ([], Id.of_string "crane_family_tag", T.Void),
+              V.Public,
+              Sec.Types ) ]
         else []
       in
       (* A coinductive value is a lazy cell, as cheap to copy as a pointer:
@@ -1533,7 +1605,7 @@ let gen_ind_header_v2
       let element_using =
         if is_coinductive && Table.boxed_fields () then
           element_using
-          @ [(Fnested_using ([], Id.of_string "crane_cheap_copy", Tvoid), VPublic, STypes)]
+          @ [(F.Nested_type_alias ([], Id.of_string "crane_cheap_copy", T.Void), V.Public, Sec.Types)]
         else element_using
       in
 
@@ -1546,24 +1618,25 @@ let gen_ind_header_v2
              (if is_coinductive then "lazy_v_" else "v_"))
       in
       let variant_alias_id = Id.of_string variant_alias_name in
-      let variant_alias_ty = Tid (variant_alias_id, []) in
+      let variant_alias_ty : Cpp_ir.Lowered.Type.t = T.Named (variant_alias_id, []) in
       let vmn_id = Id.of_string variant_member_name in
       let variant_member_ty =
         if is_coinductive then
-          Tid_external (Crane_rt.lazy_, [variant_alias_ty])
+          T.External (Crane_rt.lazy_, [variant_alias_ty])
         else
           variant_alias_ty
       in
-      let variant_member =
-        ( Fvar (Id.of_string variant_member_name, variant_member_ty),
-          VPrivate,
-          SData )
+      let variant_member : Cpp_ir.Lowered.phase F.member =
+        ( F.Data (Id.of_string variant_member_name, variant_member_ty),
+          V.Private,
+          Sec.Data )
       in
 
       (* A coinductive's cell type, [crane::lazy<variant_t>], as the callee of
          its constructor. *)
-      let lazy_cell =
-        CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">"))
+      let lazy_cell : Cpp_ir.Lowered.Expr.t =
+        E.Local (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">"))
+
       in
 
       (* 4. Public explicit constructors for each alternative.
@@ -1576,25 +1649,17 @@ let gen_ind_header_v2
              (fun i c ->
                let cname = ctor_struct_id_of_ref ~fallback_idx:i c in
                let param_name = Id.of_string "_v" in
-               let param_ty = Tid (cname, []) in
+               let param_ty = T.Named (cname, []) in
                if is_coinductive then
                  (* For coinductive:
                     d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) *)
                  let init_expr =
-                   mk_call lazy_cell
-                     [ mk_call (CPPvar variant_alias_id)
-                         [CPPmove (CPPvar param_name)] ]
+                   B.call lazy_cell
+                     [ B.call (E.Local variant_alias_id)
+                         [E.Move (E.Local param_name)] ]
                  in
                  let init_list = [(vmn_id, init_expr)] in
-                 ( Fconstructor
-                     { fc_tparams = [];
-                       fc_params = [(param_name, param_ty)];
-                       fc_inits = init_list;
-                       fc_body = [];
-                       fc_explicit = true;
-                       fc_noexcept = false },
-                   VPublic,
-                   SCreators )
+                 constructor [(param_name, param_ty)] init_list
                else
                  (* For inductive: d_v_(std::move(_v)) when the constructor
                     struct has non-trivial fields (shared_ptr etc.).  For
@@ -1605,21 +1670,13 @@ let gen_ind_header_v2
                    List.exists (fun ty -> not (isTdummy ty)) tys.(i)
                  in
                  let init_v =
-                   if has_nontrivial_fields then CPPmove (CPPvar param_name)
-                   else CPPvar param_name
+                   if has_nontrivial_fields then E.Move (E.Local param_name)
+                   else E.Local param_name
                  in
                  let init_list =
                    [(vmn_id, init_v)]
                  in
-                 ( Fconstructor
-                     { fc_tparams = [];
-                       fc_params = [(param_name, param_ty)];
-                       fc_inits = init_list;
-                       fc_body = [];
-                       fc_explicit = true;
-                       fc_noexcept = false },
-                   VPublic,
-                   SCreators ) )
+                 constructor [(param_name, param_ty)] init_list )
              cnames )
       in
 
@@ -1629,15 +1686,7 @@ let gen_ind_header_v2
          empty one -- the state a moved-from value is already in, and which
          only a slot written before it is read, as [_result] is, may hold. *)
       let default_ctor =
-        [( Fconstructor
-            { fc_tparams = [];
-              fc_params = [];
-              fc_inits = [];
-              fc_body = [];
-              fc_explicit = false;
-              fc_noexcept = false },
-           VPublic,
-           SCreators )]
+        [constructor ~explicit:false [] []]
       in
 
       (* Iterative destructor preventing stack overflow from deeply recursive
@@ -1788,19 +1837,19 @@ let gen_ind_header_v2
           (* The alias, under whatever name it was actually emitted: an
              inductive named [variant_t] pushes it to [variant_t_]. *)
           let variant_t_ty = variant_alias_ty in
-          let self_ty = Tglob (name, ty_vars, []) in
+          let self_ty : Cpp_ir.Lowered.Type.t = T.Entity_application (name, ty_vars, []) in
           (* Qualify inductive references for use outside [name]'s own scope;
              [name] itself is skipped because the destructor is written inside
              it. *)
           let q_destr ty =
             let skip g = GlobRef.CanOrd.equal g name in
-            qualify_inductives ~skip ty
+            qualify_inductives_lowered ~skip ty
           in
           (* Expand a [Drain "..."] template for a custom container field into a
              statement list. [%scrut] -> the container field expression [scrut];
              [%yield(e)] -> a structured [push_back(make_rc<Self>(e))] onto the
              worklist. The template is split into raw chunks around the structured
-             pushes so that the [_stack] reference is a real [CPPvar] the lambda
+             pushes so that the [_stack] reference is a real [E.Local] the lambda
              capture-analysis can see (a fully-raw body would collapse to an
              empty [[]] capture). [%yield]'s argument is captured with
              balanced-paren matching, so it may itself contain parentheses
@@ -1809,14 +1858,14 @@ let gen_ind_header_v2
             let subst s = Common.render_template [("%scrut", scrut)] s in
             List.map
               (function
-                | Foreign_template.Drain_text t -> Sraw (subst t)
+                | Foreign_template.Drain_text t -> S.Foreign_text (subst t)
                 | Drain_yield arg ->
-                  Sexpr
-                    (CPPaccess_call
-                       ( Adot,
-                         CPPvar _stack_id,
+                  S.Expression
+                    (E.Access_call
+                       ( Dot,
+                         E.Local _stack_id,
                          Id.of_string "push_back",
-                         [mk_call (CPPalloc (Alloc_heap, self)) [CPPraw (subst arg)]] )) )
+                         [B.call (E.Allocate (Heap, self)) [E.Foreign_text (subst arg)]] )) )
               (Foreign_template.drain_template tmpl)
           in
           (* Every drain below establishes sole ownership with
@@ -1872,10 +1921,10 @@ let gen_ind_header_v2
              and <atomic> is not included (see extract_env.ml). *)
           let unique_fence =
             if Table.non_atomic_rc () then []
-            else [Sraw Cpp_demands.acquire_fence]
+            else [S.Foreign_text Cpp_demands.acquire_fence]
           in
           let is_sole p =
-            CPPbinop (Beq, CPPaccess_call (Adot, p, Id.of_string "use_count", []), CPPint 1)
+            E.Binary (Equal, E.Access_call (Dot, p, Id.of_string "use_count", []), E.Literal (Int 1))
           in
           (* Generic mediator harvester.
 
@@ -1923,36 +1972,35 @@ let gen_ind_header_v2
             p ^ string_of_int !hv_seq
           in
           let cpp_of_ml t =
-            convert_ml_type_to_cpp_type (empty_env ()) vars t
+            lower_type (convert_ml_type_to_cpp_type (empty_env ()) vars t)
           in
+
           (* Spelled as from outside the inductive's own scope, which is where
              the destructor's helper types are named. *)
           let outer_ty = q_destr in
           let outer_ml t = outer_ty (cpp_of_ml t) in
           (* [e.m()] -- the harvester only ever calls nullary members
              ([use_count], [reset], [has_value], [v_mut]) on a value. *)
-          let dot0 e m = CPPaccess_call (Adot, e, Id.of_string m, []) in
+          let dot0 e m = E.Access_call (Dot, e, Id.of_string m, []) in
           (* [p->m()], for a [p] that is a raw or smart pointer. *)
-          let arrow0 e m = CPPaccess_call (Aarrow, e, Id.of_string m, []) in
+          let arrow0 e m = E.Access_call (Arrow, e, Id.of_string m, []) in
           (* Guard [body] on [p] being the sole owner of its pointee -- every
              drain moves a value out of one, so it must first establish that
              nobody else can see it.  The acquire fence follows the [use_count]
              test rather than preceding it; see [unique_fence]. *)
           let sole_owner p body =
-            [Sif (
-              CPPbinop (Band, p,
-                CPPbinop (Beq, dot0 p "use_count", CPPint 1)),
-              unique_fence @ body, [])]
+            [S.If {condition = E.Binary (And, p,
+                E.Binary (Equal, dot0 p "use_count", E.Literal (Int 1))); then_ = unique_fence @ body; else_ = []}]
           in
           (* [_stack.push_back(make_shared<Self>(std::move(e)))] -- hand one
              discovered [Self] to the destructor's worklist. *)
           let push_self_stmt e =
-            Sexpr (CPPaccess_call (Adot, 
-              CPPvar _stack_id,
+            S.Expression (E.Access_call (Dot, 
+              E.Local _stack_id,
               Id.of_string "push_back",
-              [ mk_call
-                  (CPPalloc (Alloc_heap, outer_ty self_ty))
-                  [CPPmove e] ]))
+              [ B.call
+                  (E.Allocate (Heap, outer_ty self_ty))
+                  [E.Move e] ]))
           in
           (* Substitute a mediator's actual type arguments into one of its
              declared constructor field types. *)
@@ -2022,14 +2070,14 @@ let gen_ind_header_v2
                  | Some tmpl when starts_with "std::optional" tmpl ->
                    (match args with
                     | [a] ->
-                      let body = harvest_val (fuel - 1) a (CPPderef e) in
+                      let body = harvest_val (fuel - 1) a (E.Dereference e) in
                       if body = [] then []
-                      else [Sif (dot0 e "has_value", body, [])]
+                      else [S.If {condition = dot0 e "has_value"; then_ = body; else_ = []}]
                     | _ -> raise Harvest_bail)
                  | Some tmpl when starts_with "std::pair" tmpl ->
                    (match args with
                     | [a; b] ->
-                      let fld n = CPPaccess (Adot, e, Id.of_string n) in
+                      let fld n = E.Access (Dot, e, Id.of_string n) in
                       (if contains_self a
                        then harvest_val (fuel - 1) a (fld "first")
                        else [])
@@ -2041,9 +2089,9 @@ let gen_ind_header_v2
                  | None -> harvest_ind (fuel - 1) g args e)
               | _ -> raise Harvest_bail
           and harvest_ptr fuel ty p =
-            let body = harvest_val fuel ty (CPPderef p) in
+            let body = harvest_val fuel ty (E.Dereference p) in
             if body = [] then []
-            else sole_owner p (body @ [Sexpr (dot0 p "reset")])
+            else sole_owner p (body @ [S.Expression (dot0 p "reset")])
           and harvest_ind fuel g args e =
             (* Mutual blocks would need a heterogeneous worklist; the mutual
                drain further down handles those for [Self] itself, but not for
@@ -2131,8 +2179,8 @@ let gen_ind_header_v2
                        if not (contains_self inst) then []
                        else
                          let fe =
-                           CPPaccess
-                             (Adot, x, Id.of_string_soft (List.nth names k))
+                           E.Access
+                             (Dot, x, Id.of_string_soft (List.nth names k))
                          in
                          if field_is_ptr g fty
                          then harvest_ptr (fuel - 1) inst fe
@@ -2144,7 +2192,7 @@ let gen_ind_header_v2
                 let cname_str =
                   ctor_struct_name_of_ref ~fallback_idx:0 (ctor_ref j)
                 in
-                field_stmts cname_str (fun f -> CPPaccess (Adot, x, f)) ftys
+                field_stmts cname_str (fun f -> E.Access (Dot, x, f)) ftys
               | _ ->
                 List.concat_map
                   (fun (j, ftys) ->
@@ -2155,17 +2203,14 @@ let gen_ind_header_v2
                     let av = Id.of_string (fresh_hv "_ha") in
                     let inner =
                       field_stmts cname_str (fun f ->
-                        CPPaccess (Aarrow, CPPvar av, f) )
+                        E.Access (Arrow, E.Local av, f) )
                         ftys
                     in
                     if inner = [] then []
                     else
-                      [Sif_decl (
-                         av, Tptr Tauto,
-                         CPPstd_get_if (
-                           Tqualified (g_cpp, Id.of_string_soft cname_str),
-                           CPPunop (Uaddr, dot0 x "v_mut")),
-                         inner, [])])
+                      [S.If_declaration {name = av; type_ = T.Pointer T.Auto; init = E.Variant_get_if (
+                           T.Member (g_cpp, Id.of_string_soft cname_str),
+                           E.Unary (Address_of, dot0 x "v_mut")); then_ = inner; else_ = []}])
                   ctors
             in
             if not self_recursive then body_for None e
@@ -2175,36 +2220,34 @@ let gen_ind_header_v2
               let pv = Id.of_string (wl ^ "p")
               and ev = Id.of_string (wl ^ "e") in
               let wl_ty =
-                Tid_external
-                  (Crane_rt.small_vector, [Tshared_ptr (outer_ml g_ty)])
+                T.External
+                  (Crane_rt.small_vector, [T.Shared_pointer (outer_ml g_ty)])
               in
               let push fe =
-                [Sexpr (CPPaccess_call (Adot, 
-                   CPPvar wl_id, Id.of_string "push_back", [CPPmove fe]))]
+                [S.Expression (E.Access_call (Dot, 
+                   E.Local wl_id, Id.of_string "push_back", [E.Move fe]))]
               in
               let on_spine = Some push in
-              [Sdecl (wl_id, wl_ty, None)]
+              [S.Declare (wl_id, wl_ty, None)]
               @ body_for on_spine e
-              @ [Swhile (
-                   CPPunop (Unot, dot0 (CPPvar wl_id) "empty"),
-                   [ Sasgn (pv, Declare (Tauto, None),
-                       CPPmove (dot0 (CPPvar wl_id) "back"));
-                     Sexpr (dot0 (CPPvar wl_id) "pop_back");
-                     Sif (
-                       CPPbinop (Bor, CPPunop (Unot, CPPvar pv),
-                         CPPbinop (Bneq, dot0 (CPPvar pv) "use_count",
-                           CPPint 1)),
-                       [Scontinue], []) ]
+              @ [S.While (
+                   E.Unary (Not, dot0 (E.Local wl_id) "empty"),
+                   [ S.Bind_variable (pv, S.Binding.Declare (T.Auto, None),
+                       E.Move (dot0 (E.Local wl_id) "back"));
+                     S.Expression (dot0 (E.Local wl_id) "pop_back");
+                     S.If {condition = E.Binary (Or, E.Unary (Not, E.Local pv),
+                         E.Binary (Not_equal, dot0 (E.Local pv) "use_count",
+                           E.Literal (Int 1))); then_ = [S.Continue]; else_ = []} ]
                    @ unique_fence
-                   @ [Sasgn (ev, Declare (Tref (Lvalue, Tauto), None), CPPderef (CPPvar pv))]
-                   @ body_for on_spine (CPPvar ev))]
+                   @ [S.Bind_variable (ev, S.Binding.Declare (T.Reference (Lvalue, T.Auto), None), E.Dereference (E.Local pv))]
+                   @ body_for on_spine (E.Local ev))]
             end
           in
           (* Drain statements for a nested-mediator field, or [None] if the
              shape is one the harvester does not handle. *)
           let harvest_field field_id ml_ty =
             try
-              let fe = CPPaccess (Aarrow, CPPvar _alt_id, field_id) in
+              let fe = E.Access (Arrow, E.Local _alt_id, field_id) in
               match harvest_ptr harvest_fuel ml_ty fe with
               | [] -> None
               | stmts -> Some stmts
@@ -2219,26 +2262,25 @@ let gen_ind_header_v2
              harvester's own statements. *)
           let mk_classified_field_stmts classified_fields =
             List.concat_map (fun (field_id, cls) ->
-              let fe = CPPaccess (Aarrow, CPPvar _alt_id, field_id) in
+              let fe = E.Access (Arrow, E.Local _alt_id, field_id) in
               match cls with
               | `Stmts stmts -> stmts
               | `Direct ->
                 (* Only a child this node owns alone would be freed with it;
                    any other is a decrement, done by the member's own
                    destructor, and never touches the worklist. *)
-                [Sif (CPPbinop (Band, fe, is_sole fe),
-                  [Sexpr (CPPaccess_call (Adot, 
-                     CPPvar _stack_id,
+                [S.If {condition = E.Binary (And, fe, is_sole fe); then_ = [S.Expression (E.Access_call (Dot, 
+                     E.Local _stack_id,
                      Id.of_string "push_back",
-                     [CPPmove fe]))], [])]
+                     [E.Move fe]))]; else_ = []}]
               | `Wrapper wfields ->
                 (* Reach through a uniquely-owned wrapper cell and move each
                    nested [Self] onto the worklist, then drop the cell. *)
                 sole_owner fe
                   (List.map
-                     (fun wf -> push_self_stmt (CPPaccess (Aarrow, fe, wf)))
+                     (fun wf -> push_self_stmt (E.Access (Arrow, fe, wf)))
                      wfields
-                   @ [Sexpr (dot0 fe "reset")])
+                   @ [S.Expression (dot0 fe "reset")])
               | `List list_g ->
                 (* This iterative drain stands in for the naive recursive
                    destructor, so cleanup of a deep deque-backed recursive
@@ -2267,12 +2309,12 @@ let gen_ind_header_v2
                   | None ->
                     let elem = Id.of_string "_elem" in
                     sole_owner fe
-                      [ Sfor_range (elem, CPPderef fe,
-                          [push_self_stmt (CPPvar elem)]);
-                        Sexpr (dot0 fe "reset") ]
+                      [ S.For_range (elem, E.Dereference fe,
+                          [push_self_stmt (E.Local elem)]);
+                        S.Expression (dot0 fe "reset") ]
                   end
                 else
-                  let ls = outer_ty (Tglob (list_g, [self_ty], [])) in
+                  let ls = outer_ty (T.Entity_application (list_g, [self_ty], [])) in
                   let (_nil_s, cons_s) = list_ctor_struct_names list_g in
                   let cons_id = Id.of_string_soft cons_s in
                   let elem_field =
@@ -2282,7 +2324,7 @@ let gen_ind_header_v2
                     Common.lookup_ctor_field_name ~owner:list_g cons_s 1
                   in
                   let lp = Id.of_string "_lp" and lc = Id.of_string "_lc" in
-                  let tail = CPPaccess (Adot, CPPvar lc, tail_field) in
+                  let tail = E.Access (Dot, E.Local lc, tail_field) in
                   (* Walk the cons spine, moving each element onto the
                      worklist.  Ownership must be re-established at every cell,
                      not just the head: list cells share their tails through
@@ -2292,25 +2334,22 @@ let gen_ind_header_v2
                      a tail is not uniquely owned -- the remaining cells then
                      die with their real owner. *)
                   sole_owner fe
-                    [ Sasgn (lp, Declare (Tauto, None), dot0 fe "get");
-                      Swhile (
-                        mk_call
-                          (CPPstd_holds_alternative (Tqualified (ls, cons_id)))
-                          [arrow0 (CPPvar lp) "v"],
-                        [ Sasgn (lc, Declare (Tref (Lvalue, Tauto), None),
-                            CPPstd_get (Tqualified (ls, cons_id),
-                              Some (arrow0 (CPPvar lp) "v_mut")));
+                    [ S.Bind_variable (lp, S.Binding.Declare (T.Auto, None), dot0 fe "get");
+                      S.While (
+                        B.call
+                          (E.Holds_alternative (T.Member (ls, cons_id)))
+                          [arrow0 (E.Local lp) "v"],
+                        [ S.Bind_variable (lc, S.Binding.Declare (T.Reference (Lvalue, T.Auto), None),
+                            E.Variant_get (T.Member (ls, cons_id),
+                              Some (arrow0 (E.Local lp) "v_mut")));
                           push_self_stmt
-                            (CPPaccess (Adot, CPPvar lc, elem_field));
-                          Sif (
-                            CPPbinop (Band, tail,
-                              CPPbinop (Beq, dot0 tail "use_count", CPPint 1)),
-                            (* The fence follows the [use_count] test rather
+                            (E.Access (Dot, E.Local lc, elem_field));
+                          S.If {condition = E.Binary (And, tail,
+                              E.Binary (Equal, dot0 tail "use_count", E.Literal (Int 1))); then_ = (* The fence follows the [use_count] test rather
                                than preceding it -- see [unique_fence]. *)
                             unique_fence
-                            @ [Sasgn (lp, Existing, dot0 tail "get")],
-                            [Sbreak]) ]);
-                      Sexpr (dot0 fe "reset") ]
+                            @ [S.Bind_variable (lp, S.Binding.Existing, dot0 tail "get")]; else_ = [S.Break]} ]);
+                      S.Expression (dot0 fe "reset") ]
               | _ -> []) classified_fields
           in
           (* For each constructor, classify recursive fields and build an
@@ -2368,15 +2407,11 @@ let gen_ind_header_v2
                 ctor_struct_id_of_ref ~fallback_idx:i cnames_arr.(i)
               in
               let ctor_arg = match ctor_opt with
-                | None -> Tid (ctor_id, [])
-                | Some _ -> Tqualified (parent_ty, ctor_id)
+                | None -> T.Named (ctor_id, [])
+                | Some _ -> T.Member (parent_ty, ctor_id)
               in
-              Some (Sif_decl (
-                _alt_id, Tptr Tauto,
-                CPPstd_get_if (ctor_arg,
-                  CPPunop (Uaddr, CPPvar variant_var)),
-                mk_classified_field_stmts classified_fields,
-                []))
+              Some (S.If_declaration {name = _alt_id; type_ = T.Pointer T.Auto; init = E.Variant_get_if (ctor_arg,
+                  E.Unary (Address_of, E.Local variant_var)); then_ = mk_classified_field_stmts classified_fields; else_ = []})
           in
           let drain_stmts =
             Array.to_list
@@ -2426,45 +2461,40 @@ let gen_ind_header_v2
           match drain_stmts, linear_fields with
           | [], _ -> []
           | _, Some ((_ :: _) as fields) when not has_mutual ->
-            let ptr_ty = Tshared_ptr self_ty in
+            let ptr_ty = T.Shared_pointer self_ty in
             let next_id = Id.of_string "_next" in
             let take (ctor_id, field_id) =
-              let fe = CPPaccess (Aarrow, CPPvar _alt_id, field_id) in
-              Sif_decl
-                ( _alt_id, Tptr Tauto,
-                  CPPstd_get_if (Tid (ctor_id, []), CPPunop (Uaddr, CPPvar _v_id)),
-                  [ Sif (CPPbinop (Band, fe, is_sole fe),
-                      unique_fence @ [Sreturn (Some (CPPmove fe))], []) ],
-                  [] )
+              let fe = E.Access (Arrow, E.Local _alt_id, field_id) in
+              S.If_declaration {name = _alt_id; type_ = T.Pointer T.Auto; init = E.Variant_get_if (T.Named (ctor_id, []), E.Unary (Address_of, E.Local _v_id)); then_ = [ S.If {condition = E.Binary (And, fe, is_sole fe); then_ = unique_fence @ [S.Return (Some (E.Move fe))]; else_ = []} ]; else_ = []}
             in
             let next_lambda =
-              mk_lambda
-                [(Tref (Lvalue, variant_t_ty), Some _v_id)]
+              lambda
+                [(T.Reference (Lvalue, variant_t_ty), Some _v_id)]
                 (Some ptr_ty)
-                (List.map take fields @ [Sreturn (Some CPPnullptr)])
-                ~capture:Immediate
+                (List.map take fields @ [S.Return (Some (E.Literal Null_pointer))])
+                ~capture:Runs_in_place
             in
             let body =
-              [ Sasgn (next_id, Declare (Tauto, None), next_lambda);
-                Sasgn (_cur_id, Declare (ptr_ty, None),
-                  mk_call (CPPvar next_id) [mk_call (CPPvar (Id.of_string "v_mut")) []]);
-                Swhile (CPPvar _cur_id,
-                  [ Sasgn (_cur_id, Existing,
-                      mk_call (CPPvar next_id)
-                        [CPPaccess_call (Aarrow, CPPvar _cur_id, Id.of_string "v_mut", [])]) ]) ]
+              [ S.Bind_variable (next_id, S.Binding.Declare (T.Auto, None), next_lambda);
+                S.Bind_variable (_cur_id, S.Binding.Declare (ptr_ty, None),
+                  B.call (E.Local next_id) [B.call (E.Local (Id.of_string "v_mut")) []]);
+                S.While (E.Local _cur_id,
+                  [ S.Bind_variable (_cur_id, S.Binding.Existing,
+                      B.call (E.Local next_id)
+                        [E.Access_call (Arrow, E.Local _cur_id, Id.of_string "v_mut", [])]) ]) ]
             in
-            [(Fdestructor body, VPublic, SManipulators)]
+            [(F.Destructor body, V.Public, Sec.Manipulators)]
           | _ when not has_mutual ->
             (* Self-recursive only: stack holds shared_ptr<Self> directly *)
-            let stack_elem_ty = Tshared_ptr self_ty in
+            let stack_elem_ty = T.Shared_pointer self_ty in
             let stack_ty =
-              Tid_external (Crane_rt.small_vector, [stack_elem_ty])
+              T.External (Crane_rt.small_vector, [stack_elem_ty])
             in
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
-              mk_lambda
-                [(Tref (Lvalue, variant_t_ty), Some _v_id)]
-                None drain_stmts ~capture:Immediate
+              lambda
+                [(T.Reference (Lvalue, variant_t_ty), Some _v_id)]
+                None drain_stmts ~capture:Runs_in_place
             in
             (* Most destroyed values own none of their children alone: they
                are temporaries that were moved from, or nodes whose children
@@ -2499,90 +2529,82 @@ let gen_ind_header_v2
                          List.fold_left
                            (fun acc f ->
                              let fe =
-                               CPPaccess (Aarrow, CPPvar _alt_id, Option.get f)
+                               E.Access (Arrow, E.Local _alt_id, Option.get f)
                              in
-                             let owned = CPPbinop (Band, fe, is_sole fe) in
+                             let owned = E.Binary (And, fe, is_sole fe) in
                              match acc with
                              | None -> Some owned
-                             | Some e -> Some (CPPbinop (Bor, e, owned)))
+                             | Some e -> Some (E.Binary (Or, e, owned)))
                            None fields
                        in
                        let ctor_id =
                          ctor_struct_id_of_ref ~fallback_idx:i cnames.(i)
                        in
-                       let v_mut = mk_call (CPPvar (Id.of_string "v_mut")) [] in
+                       let v_mut = B.call (E.Local (Id.of_string "v_mut")) [] in
                        match owns_one with
                        | None ->
                          Some
-                           (Sif
-                              ( mk_call
-                                  (CPPstd_holds_alternative (Tid (ctor_id, [])))
-                                  [v_mut],
-                                [Sreturn None], [] ))
+                           (S.If {condition = B.call
+                                  (E.Holds_alternative (T.Named (ctor_id, [])))
+                                  [v_mut]; then_ = [S.Return None]; else_ = []})
                        | Some e ->
                          Some
-                           (Sif_decl
-                              ( _alt_id, Tptr Tauto,
-                                CPPstd_get_if
-                                  (Tid (ctor_id, []), CPPunop (Uaddr, v_mut)),
-                                [Sif (CPPunop (Unot, e), [Sreturn None], [])],
-                                [] )))
+                           (S.If_declaration {name = _alt_id; type_ = T.Pointer T.Auto; init = E.Variant_get_if
+                                  (T.Named (ctor_id, []), E.Unary (Address_of, v_mut)); then_ = [S.If {condition = E.Unary (Not, e); then_ = [S.Return None]; else_ = []}]; else_ = []}))
                    tys)
               |> List.filter_map Fun.id
             in
             let body =
               early_returns @
-              [ Sasgn (_stack_id, Declare (stack_ty, None),
-                  CPPbraced []);
+              [ S.Bind_variable (_stack_id, S.Binding.Declare (stack_ty, None),
+                  E.Braced []);
                 (* Most drains only ever hold a handful of pending nodes at
                    once (worklist depth tracks tree height, not size), so
                    [crane::small_vector] keeps the first 8 elements inline
                    with no heap allocation at all, spilling to a heap
                    std::vector only if a destructor happens to drain a
                    worklist deeper than that. *)
-                Sasgn (_drain_id, Declare (Tauto, None), drain_lambda);
-                Sexpr (mk_call (CPPvar _drain_id)
-                  [mk_call (CPPvar (Id.of_string "v_mut")) []]);
-                Swhile (
-                  CPPunop (Unot,
-                    CPPaccess_call (Adot, CPPvar _stack_id,
+                S.Bind_variable (_drain_id, S.Binding.Declare (T.Auto, None), drain_lambda);
+                S.Expression (B.call (E.Local _drain_id)
+                  [B.call (E.Local (Id.of_string "v_mut")) []]);
+                S.While (
+                  E.Unary (Not,
+                    E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "empty", [])),
-                  [ Sasgn (_cur_id, Declare (Tauto, None),
-                      CPPmove (CPPaccess_call (Adot, CPPvar _stack_id,
+                  [ S.Bind_variable (_cur_id, S.Binding.Declare (T.Auto, None),
+                      E.Move (E.Access_call (Dot, E.Local _stack_id,
                         Id.of_string "back", [])));
-                    Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
+                    S.Expression (E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "pop_back", []));
-                    Sif (
-                      CPPbinop (Beq,
-                        CPPaccess_call (Adot, CPPvar _cur_id,
+                    S.If {condition = E.Binary (Equal,
+                        E.Access_call (Dot, E.Local _cur_id,
                           Id.of_string "use_count", []),
-                        CPPint 1),
-                      unique_fence
-                      @ [Sexpr (mk_call (CPPvar _drain_id)
-                        [CPPaccess_call (Aarrow, CPPvar _cur_id,
-                          Id.of_string "v_mut", [])])], [])
+                        E.Literal (Int 1)); then_ = unique_fence
+                      @ [S.Expression (B.call (E.Local _drain_id)
+                        [E.Access_call (Arrow, E.Local _cur_id,
+                          Id.of_string "v_mut", [])])]; else_ = []}
                   ])
               ]
             in
-            [(Fdestructor body, VPublic, SManipulators)]
+            [(F.Destructor body, V.Public, Sec.Manipulators)]
           | _, _ ->
             (* Mutual recursion: stack holds std::any to accommodate
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
-              Tid_external (Crane_rt.small_vector, [Tany])
+              T.External (Crane_rt.small_vector, [T.Any])
             in
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
-              mk_lambda
-                [(Tref (Lvalue, variant_t_ty), Some _v_id)]
-                None drain_stmts ~capture:Immediate
+              lambda
+                [(T.Reference (Lvalue, variant_t_ty), Some _v_id)]
+                None drain_stmts ~capture:Runs_in_place
             in
             (* Build the per-partner drain logic used inside the while loop.
                For each partner type, generates an [Sif_decl] that casts the
                [std::any] stack entry to [shared_ptr<Partner>], then drains
                the partner's recursive fields into the shared stack. *)
             let gen_partner_branch (pname, pcnames, ptys, _) =
-              let partner_ty = Tglob (pname, ty_vars, []) in
+              let partner_ty = T.Entity_application (pname, ty_vars, []) in
               let partner_drains =
                 Array.to_list
                   (Array.mapi
@@ -2600,20 +2622,19 @@ let gen_ind_header_v2
             (* Build the chained if/else-if for any_cast branches in the loop.
                Self branch: any_cast<shared_ptr<Self>>, call _drain_self.
                Partner branches: any_cast<shared_ptr<Partner>>, inline drain. *)
-            let deref_sp = CPPderef (CPPvar _sp_id) in
+            let deref_sp = E.Dereference (E.Local _sp_id) in
             let sp_alive_and_unique =
-              CPPbinop (Band, deref_sp,
-                CPPbinop (Beq,
-                  CPPaccess_call (Adot, deref_sp,
+              E.Binary (And, deref_sp,
+                E.Binary (Equal,
+                  E.Access_call (Dot, deref_sp,
                     Id.of_string "use_count", []),
-                  CPPint 1))
+                  E.Literal (Int 1)))
             in
             let self_branch_body =
-              [Sif (sp_alive_and_unique,
-                unique_fence
-                @ [Sexpr (mk_call (CPPvar _drain_self_id)
-                  [CPPaccess_call (Aarrow, deref_sp,
-                    Id.of_string "v_mut", [])])], [])]
+              [S.If {condition = sp_alive_and_unique; then_ = unique_fence
+                @ [S.Expression (B.call (E.Local _drain_self_id)
+                  [E.Access_call (Arrow, deref_sp,
+                    Id.of_string "v_mut", [])])]; else_ = []}]
             in
             let rec build_if_chain branches =
               match branches with
@@ -2621,42 +2642,36 @@ let gen_ind_header_v2
               | (partner_ty, partner_drains) :: rest ->
                 let inner = build_if_chain rest in
                 let partner_body =
-                  [Sif (sp_alive_and_unique,
-                    Sasgn (_pv_id, Declare (Tref (Lvalue, Tauto), None),
-                      CPPaccess_call (Aarrow, deref_sp,
+                  [S.If {condition = sp_alive_and_unique; then_ = S.Bind_variable (_pv_id, S.Binding.Declare (T.Reference (Lvalue, T.Auto), None),
+                      E.Access_call (Arrow, deref_sp,
                         Id.of_string "v_mut", []))
-                    :: partner_drains, [])]
+                    :: partner_drains; else_ = []}]
                 in
-                [Sif_decl (_sp_id, Tptr Tauto,
-                  Cpp_erasure.unbox (Tshared_ptr partner_ty)
-                    (CPPunop (Uaddr, CPPvar _cur_id)),
-                  partner_body, inner)]
+                [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox_ir (T.Shared_pointer partner_ty)
+                    (E.Unary (Address_of, E.Local _cur_id)); then_ = partner_body; else_ = inner}]
             in
             let loop_body_stmts =
-              [Sif_decl (_sp_id, Tptr Tauto,
-                Cpp_erasure.unbox (Tshared_ptr self_ty)
-                  (CPPunop (Uaddr, CPPvar _cur_id)),
-                self_branch_body,
-                build_if_chain partner_branches)]
+              [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox_ir (T.Shared_pointer self_ty)
+                  (E.Unary (Address_of, E.Local _cur_id)); then_ = self_branch_body; else_ = build_if_chain partner_branches}]
             in
             let body =
-              [ Sasgn (_stack_id, Declare (stack_ty, None), CPPbraced []);
-                Sasgn (_drain_self_id, Declare (Tauto, None), drain_self_lambda);
-                Sexpr (mk_call (CPPvar _drain_self_id)
-                  [mk_call (CPPvar (Id.of_string "v_mut")) []]);
-                Swhile (
-                  CPPunop (Unot,
-                    CPPaccess_call (Adot, CPPvar _stack_id,
+              [ S.Bind_variable (_stack_id, S.Binding.Declare (stack_ty, None), E.Braced []);
+                S.Bind_variable (_drain_self_id, S.Binding.Declare (T.Auto, None), drain_self_lambda);
+                S.Expression (B.call (E.Local _drain_self_id)
+                  [B.call (E.Local (Id.of_string "v_mut")) []]);
+                S.While (
+                  E.Unary (Not,
+                    E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "empty", [])),
-                  Sasgn (_cur_id, Declare (Tauto, None),
-                    CPPmove (CPPaccess_call (Adot, CPPvar _stack_id,
+                  S.Bind_variable (_cur_id, S.Binding.Declare (T.Auto, None),
+                    E.Move (E.Access_call (Dot, E.Local _stack_id,
                       Id.of_string "back", [])))
-                  :: Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
+                  :: S.Expression (E.Access_call (Dot, E.Local _stack_id,
                        Id.of_string "pop_back", []))
                   :: loop_body_stmts)
               ]
             in
-            [(Fdestructor body, VPublic, SManipulators)]
+            [(F.Destructor body, V.Public, Sec.Manipulators)]
       in
 
       (* For coinductive types, add public constructor accepting
@@ -2664,25 +2679,17 @@ let gen_ind_header_v2
       let lazy_ctor =
         if is_coinductive then
           let param_name = Id.of_string "_thunk" in
-          let param_ty = Tfun ([], variant_alias_ty) in
+          let param_ty = T.Function ([], variant_alias_ty) in
           let init_expr =
-            mk_call
-              (CPPvar
+            B.call
+              (E.Local
                  (Id.of_string_soft
                     (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">") ))
-              [CPPmove (CPPvar param_name)]
+              [E.Move (E.Local param_name)]
           in
           let init_list = [(vmn_id, init_expr)] in
           [
-            ( Fconstructor
-                     { fc_tparams = [];
-                       fc_params = [(param_name, param_ty)];
-                       fc_inits = init_list;
-                       fc_body = [];
-                       fc_explicit = true;
-                       fc_noexcept = false },
-              VPublic,
-              SCreators );
+            constructor [(param_name, param_ty)] init_list;
           ]
         else
           []
@@ -2764,6 +2771,7 @@ let gen_ind_header_v2
               (param_name_of j, param_ty) )
             cpp_tys
         in
+        let lower_params = List.map (fun (x, t) -> (x, lower_type t)) in
         (* A conversion between the parameter and its field reads the
            parameter for the last time, and takes it by move where it reads
            it once, outside any closure. *)
@@ -2789,10 +2797,13 @@ let gen_ind_header_v2
             in
             moved e
         in
+        (* The argument each field is built from.  A conversion is a
+           translation result, converted where the argument takes it. *)
         let ctor_args =
           List.map
-            (fun (j, storage_ty, api_ty) ->
+            (fun (j, storage_ty, api_ty) : Cpp_ir.Lowered.Expr.t ->
               let var = CPPvar (param_name_of j) in
+              let local : Cpp_ir.Lowered.Expr.t = E.Local (param_name_of j) in
               match storage_ty with
               | Tfun (storage_args, storage_ret) -> begin
                 match api_ty with
@@ -2801,7 +2812,7 @@ let gen_ind_header_v2
                   let lambda_params =
                     List.mapi
                       (fun k storage_arg ->
-                        (storage_arg, Some (Id.of_string ("x" ^ string_of_int k)))
+                        (lower_type storage_arg, Some (Id.of_string ("x" ^ string_of_int k)))
                       )
                       storage_args
                   in
@@ -2832,12 +2843,13 @@ let gen_ind_header_v2
                      construction -- [ret] is the call converted into it.  Say
                      so, rather than leaving a later pass to read it back off
                      the body. *)
-                  mk_lambda lambda_params (Some storage_ret)
-                    [Sreturn (Some ret)] ~capture:Closure
-                | _ when storage_ty = api_ty -> CPPmove var
+                  lambda lambda_params (Some (lower_type storage_ret))
+                    [S.Return (Some (lower_expr ret))] ~capture:Stored
+                | _ when storage_ty = api_ty -> E.Move local
                 | _ ->
-                  sink_converted api_ty var
-                    (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
+                  lower_expr
+                    (sink_converted api_ty var
+                       (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var))
               end
               | Tshared_ptr inner ->
                 let arg = if is_coinductive then var else CPPmove var in
@@ -2846,21 +2858,22 @@ let gen_ind_header_v2
                   else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
                 (* A single factory call.  For arena-eligible types this is
-                   the runtime-arena-aware factory ([Alloc_arena_scoped]:
+                   the runtime-arena-aware factory ([Arena_scoped]:
                    crane::rc<T>::make / crane::arena_make_shared), which
                    bump-allocates only when a scope is open and otherwise is
                    exactly make_shared/make_rc; NoArena / coinductive / mutual
                    types keep the plain factory. *)
                 if arena_runtime_ok then
-                  mk_call (CPPalloc (Alloc_arena_scoped, inner)) [converted]
+                  B.call (E.Allocate (Arena_scoped, lower_type inner)) [lower_expr converted]
                 else
-                  mk_call (CPPalloc (Alloc_heap, inner)) [converted]
+                  B.call (E.Allocate (Heap, lower_type inner)) [lower_expr converted]
               | _ when storage_ty = api_ty ->
-                if is_trivially_copyable_type api_ty then var
-                else CPPmove var
+                if is_trivially_copyable_type api_ty then local
+                else E.Move local
               | _ ->
-                sink_converted api_ty var
-                  (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
+                lower_expr
+                  (sink_converted api_ty var
+                     (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)) )
             cpp_tys
         in
         (* Under [Crane NonAtomicRc], a field holding the inductive itself
@@ -2889,18 +2902,18 @@ let gen_ind_header_v2
         in
         let primary_ctor_args =
           List.map2
-            (fun (((j, _, _) as f), ty) arg ->
+            (fun (((j, _, _) as f), ty) arg : Cpp_ir.Lowered.Expr.t ->
               if child_field f ty then
-                CPPaccess_call (Adot, CPPvar (param_name_of j), Id.of_string "take", [])
+                E.Access_call (Dot, E.Local (param_name_of j), Id.of_string "take", [])
               else arg )
             fields ctor_args
         in
-        let body = [Sreturn (Some (build i cname primary_ctor_args))] in
-        let primary =
-          ( Fmethod
-              (static_fun ~name:factory_name ~ret:ret_ty ~params:primary_params ~body),
-            VPublic,
-            SCreators )
+        let body = [S.Return (Some (build i cname primary_ctor_args))] in
+        let primary : Cpp_ir.Lowered.phase F.member =
+          ( Method
+              (static_method ~name:factory_name ~ret:ret_ty ~params:(lower_params primary_params) ~body),
+            V.Public,
+            Sec.Creators )
         in
         (* Perceus reuse factory (Crane Reuse): a variant [<ctor>__reuse] that
            takes a leading reuse-token parameter [_tok] and, for the first
@@ -2927,28 +2940,31 @@ let gen_ind_header_v2
            the new fields are written into it ([shared_variant::try_reuse]);
            otherwise the value is built as [<ctor>] builds it.  The test is
            the factory's, so a match arm needs no path of its own. *)
-        let shared_reuse_factory () =
+        let shared_reuse_factory () : Cpp_ir.Lowered.phase F.member list =
           let tok_id = Id.of_string "_tok" and alt_id = Id.of_string "_alt" in
-          let reused =
-            CPPaccess_call
-              ( Adot,
-                CPPaccess (Adot, CPPvar tok_id, Id.of_string "v_"),
+          let reused : Cpp_ir.Lowered.Expr.t =
+            E.Access_call
+              ( Dot,
+                E.Access (Dot, E.Local tok_id, Id.of_string "v_"),
                 Id.of_string "try_reuse",
-                [CPPmove (CPPvar alt_id)] )
+                [E.Move (E.Local alt_id)] )
           in
           let body =
-            [ Sasgn (alt_id, Declare (Tauto, None), CPPstruct_id (Id.of_string cname, [], ctor_args));
-              Sif (reused, [Sreturn (Some (CPPvar tok_id))], []);
-              Sreturn (Some (build i cname [CPPmove (CPPvar alt_id)])) ]
+            [ S.Bind_variable
+                ( alt_id,
+                  S.Binding.Declare (T.Auto, None),
+                  E.Local_aggregate {struct_ = Id.of_string cname; type_args = []; values = ctor_args} );
+              S.If {condition = reused; then_ = [S.Return (Some (E.Local tok_id))]; else_ = []};
+              S.Return (Some (build i cname [E.Move (E.Local alt_id)])) ]
           in
-          [ ( Fmethod
-                (static_fun
+          [ ( Method
+                (static_method
                    ~name:(Generated_name.companion (Id.of_string fname) "reuse")
-                   ~ret:ret_ty ~params:((tok_id, ret_ty) :: params) ~body),
-              VPublic,
-              SCreators ) ]
+                   ~ret:ret_ty ~params:((tok_id, ret_ty) :: lower_params params) ~body),
+              V.Public,
+              Sec.Creators ) ]
         in
-        let reuse_factory =
+        let reuse_factory : Cpp_ir.Lowered.phase F.member list =
           if Table.reuse () && (not is_coinductive) && Table.is_shared_variant name then
             (* A constructor with no fields has no block to write into. *)
             if tys_list = [] then [] else shared_reuse_factory ()
@@ -2964,25 +2980,24 @@ let gen_ind_header_v2
               in
               let reuse_ctor_args =
                 List.map2
-                  (fun (j, _, _) a ->
+                  (fun (j, _, _) (a : Cpp_ir.Lowered.Expr.t) ->
                     match a with
-                    | CPPfun_call (_, CPPalloc (Alloc_heap, inner), cargs)
-                    | CPPfun_call
-                        (_, CPPalloc (Alloc_arena_scoped, inner), cargs)
+                    | Call (_, Allocate (Heap, inner), cargs)
+                    | Call (_, Allocate (Arena_scoped, inner), cargs)
                       when j = tok_j ->
                       (* make_rc_reusing takes the token first. *)
-                      mk_call (CPPalloc (Alloc_reusing, inner))
-                        (CPPmove (CPPvar tok_id) :: call_args cargs)
+                      B.call (E.Allocate (Reusing, inner))
+                        (E.Move (E.Local tok_id) :: cargs)
                     | other -> other )
                   cpp_tys ctor_args
               in
-              let reuse_body = [Sreturn (Some (build i cname reuse_ctor_args))] in
-              [ ( Fmethod
-                    (static_fun
+              let reuse_body = [S.Return (Some (build i cname reuse_ctor_args))] in
+              [ ( Method
+                    (static_method
                        ~name:(Generated_name.companion (Id.of_string fname) "reuse")
-                       ~ret:ret_ty ~params:reuse_params ~body:reuse_body),
-                  VPublic,
-                  SCreators ) ]
+                       ~ret:ret_ty ~params:(lower_params reuse_params) ~body:reuse_body),
+                  V.Public,
+                  Sec.Creators ) ]
           | _ -> []
         in
         primary :: reuse_factory
@@ -3005,12 +3020,14 @@ let gen_ind_header_v2
                       through the wrapper ([List::list]) is no longer the
                       injected-class-name, so class template argument
                       deduction is not available. *)
-                   (fun i cname args ->
-                     let self = mk_cppglob name ty_vars in
+                   (fun i cname args : Cpp_ir.Lowered.Expr.t ->
+                     let self = lower_expr (mk_cppglob name (List.map named_tvar vars)) in
                      if is_coinductive then
-                       mk_call self
-                         [mk_call lazy_cell (CPPin_place :: CPPin_place_index i :: args)]
-                     else mk_call self [CPPstruct_id (Id.of_string cname, [], args)] ) )
+                       B.call self
+                         [B.call lazy_cell (E.In_place :: E.In_place_index i :: args)]
+                     else
+                       B.call self
+                         [E.Local_aggregate {struct_ = Id.of_string cname; type_args = []; values = args}] ) )
                 tys ) )
       in
 
@@ -3024,32 +3041,27 @@ let gen_ind_header_v2
         if is_coinductive then
           let f = Id.of_string "F" in
           let thunk = Id.of_string "thunk" in
-          let cell_ty = Tid_external (Crane_rt.lazy_, [variant_alias_ty]) in
+          let cell_ty = T.External (Crane_rt.lazy_, [variant_alias_ty]) in
           let delegate =
-            mk_call
-              (CPPscope (lazy_cell, Id.of_string "delegate", []))
-              [CPPforward (named_tvar f, CPPvar thunk)]
+            B.call
+              (E.Scope (lazy_cell, Id.of_string "delegate", []))
+              [E.Forward (B.named_variable f, E.Local thunk)]
           in
-          let body = [Sreturn (Some (mk_call (mk_cppglob name ty_vars) [delegate]))] in
+          let body =
+            [S.Return (Some (B.call (lower_expr (mk_cppglob name (List.map named_tvar vars))) [delegate]))]
+          in
           let m =
-            { (static_fun ~name:(Id.of_string "lazy_") ~ret:self_ty
-                 ~params:[(thunk, rval_ref (named_tvar f))] ~body)
-              with mf_tparams = [(TTtypename, f)] }
+            { (static_method ~name:(Id.of_string "lazy_") ~ret:self_ty
+                 ~params:[(thunk, T.Reference (Forwarding, B.named_variable f))] ~body)
+              with type_params = [(Typename, f)] }
           in
           (* The cell the factory builds a value around. *)
           let cell_ctor =
             let c = Id.of_string "_cell" in
-            ( Fconstructor
-                { fc_tparams = [];
-                  fc_params = [(c, cell_ty)];
-                  fc_inits = [(vmn_id, CPPmove (CPPvar c))];
-                  fc_body = [];
-                  fc_explicit = true;
-                  fc_noexcept = false },
-              VPublic,
-              SCreators )
+            constructor [(c, cell_ty)] [(vmn_id, E.Move (E.Local c))]
           in
-          [cell_ctor; (Fmethod m, VPublic, SCreators)]
+          [cell_ctor; (Method m, V.Public, Sec.Creators)]
+
         else
           []
       in
@@ -3073,9 +3085,9 @@ let gen_ind_header_v2
                 List.mapi (fun i _ -> Generated_name.member "U" ~of_:n_vars i) vars
               in
               let u_tys =
-                List.map named_tvar u_var_names
+                List.map B.named_variable u_var_names
               in
-              let source_ty = Tglob (name, u_tys, []) in
+              let source_ty = T.Entity_application (name, u_tys, []) in
               let n_ctors = Array.length cnames in
               let other_id = Id.of_string "_other" in
               let vmn_id = Id.of_string variant_member_name in
@@ -3085,7 +3097,7 @@ let gen_ind_header_v2
                 let ctor_struct_name =
                   ctor_struct_name_of_ref ~fallback_idx:i c
                 in
-                let source_ctor_ty = Tid_external (Id.to_string cname_id, []) in
+                let source_ctor_ty = T.External (Id.to_string cname_id, []) in
                 let field_info =
                   List.mapi
                     (fun j ty ->
@@ -3153,7 +3165,10 @@ let gen_ind_header_v2
                             s, d )
                         | _ -> (CPPvar field_id, src_fty, dst_fty)
                       in
-                      gen_type_conversion_expr
+                      (* A translation result, converted where the branch
+                         takes it. *)
+                      lower_expr @@ gen_type_conversion_expr
+
                         (* Every inductive generated into this same scope --
                            the type itself, its mutual siblings, and any other
                            module-local inductive -- is spelled bare here, so
@@ -3175,16 +3190,16 @@ let gen_ind_header_v2
                  instantiation; see [init] below. *)
               let make_branch_body cname_id field_info converted =
                 match field_info with
-                | [] -> [Sreturn (Some (CPPstruct_id (cname_id, [], [])))]
+                | [] -> [S.Return (Some (E.Local_aggregate {struct_ = cname_id; type_args = []; values = []}))]
                 | _ ->
                   (* The alternative is named exactly as the
                      [std::holds_alternative] guard names it. *)
-                  [ Sbind
+                  [ S.Structured_binding
                       ( List.map (fun (id, _, _) -> id) field_info,
-                        CPPstd_get
-                          ( Tqualified (source_ty, cname_id),
-                            Some (CPPaccess_call (Adot, CPPvar other_id, Id.of_string "v", [])) ) );
-                    Sreturn (Some (CPPstruct_id (cname_id, [], converted))) ]
+                        E.Variant_get
+                          ( T.Member (source_ty, cname_id),
+                            Some (E.Access_call (Dot, E.Local other_id, Id.of_string "v", [])) ) );
+                    S.Return (Some (E.Local_aggregate {struct_ = cname_id; type_args = []; values = converted})) ]
               in
               let body =
                 if n_ctors = 1 then
@@ -3195,7 +3210,7 @@ let gen_ind_header_v2
                 else
                   (* Build if/else if/else chain *)
                   let other_v =
-                    CPPaccess_call (Adot, CPPvar other_id,
+                    E.Access_call (Dot, E.Local other_id,
                                        Id.of_string "v", [])
                   in
                   let rec build_if_chain = function
@@ -3206,15 +3221,15 @@ let gen_ind_header_v2
                     | (_source_ctor_ty, cname_id, field_info, converted)
                       :: rest ->
                       let guard =
-                        mk_call
-                          (CPPstd_holds_alternative
-                             (Tqualified (source_ty, cname_id)))
+                        B.call
+                          (E.Holds_alternative
+                             (T.Member (source_ty, cname_id)))
                           [other_v]
                       in
                       let body =
                         make_branch_body cname_id field_info converted
                       in
-                      [Sif (guard, body, build_if_chain rest)]
+                      [S.If {condition = guard; then_ = body; else_ = build_if_chain rest}]
                   in
                   build_if_chain branches
               in
@@ -3225,17 +3240,17 @@ let gen_ind_header_v2
               let tparams =
                 List.mapi
                   (fun i u ->
-                    let tt =
-                      match List.nth_opt templates i with
+                    let tt : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t =
+                      match List.nth_opt type_params i with
                       | Some (tt, _) -> tt
-                      | None -> TTtypename
+                      | None -> Typename
                     in
                     (tt, u) )
                   u_var_names
               in
               let ctor_params =
                 [(other_id,
-                  Tref (Lvalue, Tconst source_ty))]
+                  T.Reference (Lvalue, T.Const source_ty))]
               in
               (* The variant is initialised, not assigned: default-constructing
                  it first needs the first alternative's fields to have a
@@ -3243,20 +3258,20 @@ let gen_ind_header_v2
                  value converts when it is forced, so the conversion is its
                  thunk, holding a copy of the source. *)
               let convert_variant ~capture =
-                mk_lambda [] (Some variant_alias_ty) body ~capture
+                lambda [] (Some variant_alias_ty) body ~capture
               in
               let init =
                 if is_coinductive then
                   (* Through [converted_from]: a conversion back to the type
                      the source came from is the source's own cell. *)
-                  mk_call
-                    (CPPvar
+                  B.call
+                    (E.Local
                        (Id.of_string_soft
                           (Crane_rt.lazy_ ^ "<" ^ variant_alias_name
                           ^ ">::converted_from") ))
-                    [ mk_call (CPPaccess (Adot, CPPvar other_id, Id.of_string "lazy_cell")) [];
-                      convert_variant ~capture:Closure ]
-                else mk_call (convert_variant ~capture:Immediate) []
+                    [ B.call (E.Access (Dot, E.Local other_id, Id.of_string "lazy_cell")) [];
+                      convert_variant ~capture:Stored ]
+                else B.call (convert_variant ~capture:Runs_in_place) []
               in
               (* Non-explicit: erased grammar actions produce a [List<std::any>]
                  that must implicitly recover to the concrete-element list at
@@ -3265,14 +3280,7 @@ let gen_ind_header_v2
                  fail with "no viable conversion".  Element recovery is a guarded
                  per-element [any_cast], so allowing the implicit conversion is
                  safe for well-typed extracted code. *)
-              [( Fconstructor
-                   { fc_tparams = tparams;
-                     fc_params = ctor_params;
-                     fc_inits = [(vmn_id, init)];
-                     fc_body = [];
-                     fc_explicit = false;
-                     fc_noexcept = false },
-                 VPublic, SCreators )]
+              [constructor ~tparams ~explicit:false ctor_params [(vmn_id, init)]]
           in
           converting_ctor
       in
@@ -3284,101 +3292,23 @@ let gen_ind_header_v2
       let lazy_cell_accessor =
         if not is_coinductive then []
         else
-          [ ( Fmethod
-                {
-                  mf_name = Id.of_string "lazy_cell";
-                  mf_globref = None;
-                  mf_tparams = [];
-                  mf_ret_type =
-                    Tconst
-                      (Tref (Lvalue, Tid_external
-                            (Crane_rt.lazy_, [variant_alias_ty])));
-                  mf_params = [];
-                  mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                  mf_receiver =
-                    Instance
-                      { this_pos = 0;
-                        is_const = true;
-                        ref_qual = Rq_any;
-                        returns_field = false };
-                  mf_is_inline = false;
-                  mf_no_pure = false;
-                  mf_constexpr = Undecided;
-                  mf_is_noexcept = false;
-                  mf_is_conversion = false;
-                  mf_binders = [];
-                  mf_receiver_binder = None;
-                  mf_loop = None;
-                },
-              VPublic,
-              SAccessors ) ]
+          [ accessor ~no_pure:false "lazy_cell"
+              (T.Const (T.Reference (Lvalue, T.External (Crane_rt.lazy_, [variant_alias_ty]))))
+              [S.Return (Some (E.Local vmn_id))] ]
       in
       (* Add public accessor for v_ to enable pattern matching from outside *)
       let v_accessor =
         if is_coinductive then
           (* For coinductive: const variant_t& v() const { return
              lazy_v_.force(); } *)
-          ( Fmethod
-              {
-                mf_name = Id.of_string "v";
-                mf_globref = None;
-                mf_tparams = [];
-                mf_ret_type =
-                  Tconst (Tref (Lvalue, variant_alias_ty));
-                mf_params = [];
-                mf_body =
-                  [
-                    Sreturn
-                      (Some
-                         (mk_call
-                            (CPPaccess
-                               (Adot, CPPvar vmn_id, Id.of_string "force"))
-                            [] ) );
-                  ];
-                mf_receiver =
-                  Instance
-                    { this_pos = 0;
-                      is_const = true;
-                      ref_qual = Rq_any;
-                      returns_field = false };
-                mf_is_inline = false;
-                mf_no_pure = false;
-                mf_constexpr = Undecided;
-                mf_is_noexcept = false;
-                mf_is_conversion = false;
-                mf_binders = [];
-                mf_receiver_binder = None;
-                mf_loop = None;
-              },
-            VPublic,
-            SAccessors )
+          accessor ~no_pure:false "v"
+            (T.Const (T.Reference (Lvalue, variant_alias_ty)))
+            [ S.Return
+                (Some (B.call (E.Access (Dot, E.Local vmn_id, Id.of_string "force")) [])) ]
         else (* For inductive: const variant_t& v() const { return v_; } *)
-          ( Fmethod
-              {
-                mf_name = Id.of_string "v";
-                mf_globref = None;
-                mf_tparams = [];
-                mf_ret_type =
-                  Tconst (Tref (Lvalue, variant_alias_ty));
-                mf_params = [];
-                mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                mf_receiver =
-                  Instance
-                    { this_pos = 0;
-                      is_const = true;
-                      ref_qual = Rq_any;
-                      returns_field = false };
-                mf_is_inline = false;
-                mf_no_pure = false;
-                mf_constexpr = Undecided;
-                mf_is_noexcept = false;
-                mf_is_conversion = false;
-                mf_binders = [];
-                mf_receiver_binder = None;
-                mf_loop = None;
-              },
-            VPublic,
-            SAccessors )
+          accessor ~no_pure:false "v"
+            (T.Const (T.Reference (Lvalue, variant_alias_ty)))
+            [S.Return (Some (E.Local vmn_id))]
       in
 
       (* Mutable accessor, for in-place reuse of a uniquely-owned value and
@@ -3389,33 +3319,9 @@ let gen_ind_header_v2
         if is_coinductive then
           []
         else
-          [
-            ( Fmethod
-                {
-                  mf_name = Id.of_string "v_mut";
-                  mf_globref = None;
-                  mf_tparams = [];
-                  mf_ret_type = Tref (Lvalue, variant_alias_ty);
-                  mf_params = [];
-                  mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                  mf_receiver =
-                    Instance
-                      { this_pos = 0;
-                        is_const = false;
-                        ref_qual = Rq_any;
-                        returns_field = false };
-                  mf_is_inline = true;
-                  mf_no_pure = true;
-                  mf_constexpr = Undecided;
-                  mf_is_noexcept = false;
-                  mf_is_conversion = false;
-                  mf_binders = [];
-                  mf_receiver_binder = None;
-                  mf_loop = None;
-                },
-              VPublic,
-              SManipulators );
-          ]
+          [ accessor ~is_const:false ~is_inline:true ~section:Manipulators ~no_pure:true "v_mut"
+              (T.Reference (Lvalue, variant_alias_ty))
+              [S.Return (Some (E.Local vmn_id))] ]
       in
 
       (* 6. Generate methods from method candidates using shared helper *)
@@ -3428,10 +3334,10 @@ let gen_ind_header_v2
          std::enable_shared_from_this. *)
       let needs_shared_from_this =
         List.exists
-          (fun (fld, _vis, _tag) ->
+          (fun ((fld : Cpp_ir.Lowered.phase F.t), _vis, _tag) ->
             match fld with
-            | Fmethod {mf_body; _} ->
-              List.exists stmt_has_shared_from_this mf_body
+            | Method {body; _} ->
+              List.exists stmt_has_shared_from_this body
             | _ -> false )
           method_fields
       in
@@ -3440,20 +3346,20 @@ let gen_ind_header_v2
          MANIPULATORS *)
       let method_fields =
         List.map
-          (fun (fld, vis, _tag) ->
+          (fun ((fld : Cpp_ir.Lowered.phase F.t), vis, _tag) ->
             match fld with
-            | Fmethod {mf_receiver = Instance {is_const = true; _}; _} ->
-              (fld, vis, SAccessors)
-            | Fmethod _ -> (fld, vis, SManipulators)
-            | _ -> (fld, vis, SNoTag) )
+            | Method {receiver = Instance {is_const = true; _}; _} ->
+              (fld, vis, Sec.Accessors)
+            | Method _ -> (fld, vis, Sec.Manipulators)
+            | _ -> (fld, vis, Sec.Untagged) )
           method_fields
       in
       (* Split methods into manipulators and accessors *)
       let method_manipulators =
-        List.filter (fun (_, _, tag) -> tag = SManipulators) method_fields
+        List.filter (fun (_, _, tag) -> tag = Sec.Manipulators) method_fields
       in
       let method_accessors =
-        List.filter (fun (_, _, tag) -> tag <> SManipulators) method_fields
+        List.filter (fun (_, _, tag) -> tag <> Sec.Manipulators) method_fields
       in
 
       (* BDE field ordering: public: constructor structs, variant_using,
@@ -3488,7 +3394,7 @@ let gen_ind_header_v2
            lowering therefore never moves from invariant parameters,
            prvalues or borrowed cells. *)
         @ (match iterative_destructor with
-           | _ :: _ -> [(Fdefaulted_special_members, VPublic, SManipulators)]
+           | _ :: _ -> [(F.Defaulted_special_members, V.Public, Sec.Manipulators)]
            | [] -> [])
         @ v_mut_accessor
         @ method_manipulators
@@ -3498,14 +3404,14 @@ let gen_ind_header_v2
       in
 
       (* Just the struct itself - no extra namespace wrapper *)
-      Dstruct
-        {
-          ds_ref = name;
-          ds_fields = all_fields;
-          ds_tparams = templates;
-          ds_constraint = None;
-          ds_needs_shared_from_this = needs_shared_from_this;
-        }
+      (Struct
+         { ref_ = name;
+           fields = all_fields;
+           type_params;
+           constraint_ = None;
+           needs_shared_from_this }
+        : Cpp_ir.Lowered.Decl.t)
+
 
 (** Generate methods for eponymous records: the record's fields are merged
     into its module's struct, and the functions taking the record become

@@ -1151,15 +1151,6 @@ and foreign_use =
 
 (** {2 Type schemas} *)
 
-(** A plain static member function: no template parameters, no [this], and
-    none of the qualifiers a real method carries.  Factory functions are the
-    only producer. *)
-val static_fun :
-  name:Id.t ->
-  ret:cpp_type ->
-  params:(Id.t * cpp_type) list ->
-  body:cpp_stmt list ->
-  method_field
 
 val inline_shape_of_text : string -> inline_shape
 

@@ -287,7 +287,7 @@ val record_methods :
   Names.GlobRef.t ->
   Names.Id.t list ->
   Method_registry.method_candidate list ->
-  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list * Minicpp.cpp_decl list
+  Cpp_ir.Lowered.phase Cpp_ir.Field.member list * Minicpp.cpp_decl list
 
 (** [record_field_types r vars fields] is the C++ type of each of the
     fields [fields] of the eponymous record [r], of variables [vars], which
@@ -312,7 +312,7 @@ val generated_record_field_types : unit -> Cpp_ir.Resolved.Type.t list
 val record_methods_finishing :
   Names.GlobRef.t ->
   Names.Id.t list ->
-  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
+  Cpp_ir.Lowered.phase Cpp_ir.Field.member list ->
   Unit_program.job
 
 (** [finished_record_methods r vars fields] is {!record_methods_finishing}
@@ -320,7 +320,7 @@ val record_methods_finishing :
 val finished_record_methods :
   Names.GlobRef.t ->
   Names.Id.t list ->
-  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
+  Cpp_ir.Lowered.phase Cpp_ir.Field.member list ->
   Cpp_ir.Resolved.Decl.t
 
 (** [regenerating f] runs [f], generating again what was generated ahead

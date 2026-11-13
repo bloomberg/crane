@@ -47,3 +47,11 @@ val apply : t -> Minicpp.cpp_decl -> Minicpp.cpp_decl
 
 (** Each relaxation applied in turn, the first first. *)
 val apply_all : t list -> Minicpp.cpp_decl -> Minicpp.cpp_decl
+
+(** [deapply_struct ~plain ~in_scope d] -- {!Deapplied}'s rewrite of a
+    generated struct [d] in CppIR: its members, their bodies, and its
+    template parameters, a lambda whose parameter deduced a template
+    parameter only through an application taken off settled again
+    ({!Minicpp.settle_lambda_tparams}). *)
+val deapply_struct :
+  plain:Names.Id.t list -> in_scope:Names.Id.t list -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
