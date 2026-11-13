@@ -99,7 +99,7 @@
     Core body before any of this ({!Recursion_plan.splice_partners}).  What
     it lowers, and where,
     is the recursion plan's, read off the ControlIR of each loop as the
-    definition is generated ({!Control_to_legacy_minicpp}).
+    definition is generated ({!Control_to_cpp_ir}).
 
     @since Crane 1.0 *)
 

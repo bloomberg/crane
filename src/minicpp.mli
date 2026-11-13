@@ -992,7 +992,7 @@ and method_field = {
   mf_loop : Control_ir.Loop.t option;
       (** The loop of its {!Control_ir} the body already is, where it was
           lowered from there when the method was generated
-          ({!Control_to_legacy_minicpp}): no later pass lowers its control *)
+          ({!Control_to_cpp_ir}): no later pass lowers its control *)
 }
 
 (** A method's receiver.  A static method has none, so it has no position for
@@ -1738,7 +1738,7 @@ and dfun = {
   df_loop : Control_ir.Loop.t option;
       (** The loop of its {!Control_ir} the body already is, where it was
           lowered from there when the function was generated
-          ({!Control_to_legacy_minicpp}): no later pass lowers its control *)
+          ({!Control_to_cpp_ir}): no later pass lowers its control *)
 }
 
 (** The qualified name a function is written under.

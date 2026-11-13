@@ -112,7 +112,7 @@ let declaring id b stmts =
 
 (* The statements a local fixpoint is declared by: for a fixpoint of one
    member, its loop, lowered from its ControlIR, where it is one
-   ({!Control_to_legacy_minicpp.local_loop}), and otherwise the Y-combinator
+   ({!Control_to_cpp_ir.local_loop}), and otherwise the Y-combinator
    [self_passing ()] -- the impl lambdas [impl_stmts], taking their
    self-parameters [selves], and the wrappers.  The loop is the impl lambda
    without the self-parameter, its body, the one of [funs_with_params],
@@ -129,7 +129,7 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
         cl_body = List.map flat body }
     in
     match
-      Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
+      Control_to_cpp_ir.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
         ~lifted:(!tctx).lifted_fixpoints ~member
         ~tparams:(get_current_template_head ()) ~name:fix_id lam
     with
@@ -8635,7 +8635,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let lifted_decl =
             Dtemplate (class_temps @ all_temps_with_funs, None, inner)
           in
-          add_lifted_decl (Control_to_legacy_minicpp.lower_lifted lifted_decl) )
+          add_lifted_decl (Control_to_cpp_ir.lower_lifted lifted_decl) )
         funs_compiled;
       (* In the continuation body b, the fixpoint name should resolve to a call
          to the lifted function with appropriate type arguments. We push the fix
@@ -9534,7 +9534,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let lifted_decl =
               Dtemplate (class_temps @ all_temps_with_funs, None, inner)
             in
-            add_lifted_decl (Control_to_legacy_minicpp.lower_lifted lifted_decl) )
+            add_lifted_decl (Control_to_cpp_ir.lower_lifted lifted_decl) )
           funs_compiled;
         let call_type_args =
           lifted_call_type_args ~class_args ~env ~outer_tvars
@@ -10062,13 +10062,13 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     match (local, lifted) with
     | Some occ, _ when n_fix_funs = 1 -> (
       match
-        Control_to_legacy_minicpp.local_resumes ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
+        Control_to_cpp_ir.local_resumes ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
           ~lifted:(!tctx).lifted_fixpoints ~member:(occ, fix_idx) ~depth:(List.length (fst env)) ~arity:n_lam_params
       with
       | Some (resumes, certain) -> (Some resumes, Some certain)
       | None -> (None, None) )
     | _, Some r when n_fix_funs = 1 ->
-      ( Control_to_legacy_minicpp.lifted_resumes r ~owner:(!tctx).body_owner ~depth:(List.length (fst env))
+      ( Control_to_cpp_ir.lifted_resumes r ~owner:(!tctx).body_owner ~depth:(List.length (fst env))
           ~arity:n_lam_params,
         None )
     | _ -> (None, None)

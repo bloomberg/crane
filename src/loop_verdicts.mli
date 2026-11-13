@@ -3,7 +3,7 @@
 
 (** What control lowering did with each loop it decided on: the record the
     finished program is checked against under [CRANE_CHECK_IR]
-    ({!Control_to_legacy_minicpp.check_lowered}), in place of running Loopify
+    ({!Control_to_cpp_ir.check_lowered}), in place of running Loopify
     again to see what it would change.  Written only while the checks run,
     for one generated file. *)
 

@@ -4,7 +4,7 @@
 (** The Perceus reuse cursor of a loop built tail modulo cons, decided over
     its ControlIR: each turn's outermost allocation reuses the storage of the
     input cell the loop frees in that turn.  Read when the loop is lowered
-    to MiniCpp ([Control_to_legacy_minicpp]) and checked by [Loopify_tmc].
+    to MiniCpp ([Control_to_cpp_ir]) and checked by [Loopify_tmc].
 
     A loop built tail modulo cons walks an input of the type it builds, a
     turn at a time, and builds one cell of its output per turn.  Where the

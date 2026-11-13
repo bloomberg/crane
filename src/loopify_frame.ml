@@ -1156,7 +1156,7 @@ let resume_violation () = Probe.violation "resume plan" (Pp.str resume_disagreem
     A returned expression made of one of the loop's Continues, which the
     machine's checker recognises, is a tail call, and re-enters by
     [CraneEnter]; any other is the result.  A call it holds that its
-    ControlIR takes is left there, which {!Control_to_legacy_minicpp}
+    ControlIR takes is left there, which {!Control_to_cpp_ir}
     reports of the lowered loop.
 
     @param ctx  Enter-rewrite context (see {!enter_rewrite_ctx})

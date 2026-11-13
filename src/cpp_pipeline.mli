@@ -7,8 +7,8 @@
     ({!Cpp_ir.Resolved}).
 
     Control was lowered as the declaration was generated
-    ({!Control_to_legacy_minicpp}), and is only checked here, under
-    [CRANE_CHECK_IR] ({!Control_to_legacy_minicpp.check_lowered}).  Depth flattening and the {!Cpp_erasure} seam
+    ({!Control_to_cpp_ir}), and is only checked here, under
+    [CRANE_CHECK_IR] ({!Control_to_cpp_ir.check_lowered}).  Depth flattening and the {!Cpp_erasure} seam
     have to run in that order, and both have to run: a declaration that skipped
     flattening crashes the C++ parser, and one that skipped the seam is not a
     {!Cpp_erasure.settled} declaration at all.  So the sequence is a single

@@ -8,7 +8,7 @@
     {!make_shadow_updates}).  Runs on {!Cpp_ir.Lowered} function bodies, after
     translation and before printing; which functions it lowers, and which
     calls are its jumps, the ControlIR of each loop decides
-    ({!Control_to_legacy_minicpp}). *)
+    ({!Control_to_cpp_ir}). *)
 
 open Names
 open Cpp_ir.Type
