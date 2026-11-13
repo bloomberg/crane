@@ -75,9 +75,10 @@ let dependencies decls =
     decls;
   !found
 
-type job = id * cpp_decl
+type job = id * Cpp_ir.Lowered.Decl.t
 
 let job id d : job = (id, d)
+let legacy_job id d = job id (Cpp_pipeline.lower d)
 
 type declaration = {
   id : id;

@@ -1681,7 +1681,7 @@ let finishing (aheads : Cpp_ind.ahead list) =
   List.concat_map (fun (a : Cpp_ind.ahead) -> a.finishing) aheads
   @ List.concat_map
       (fun (a : Cpp_ind.ahead) ->
-        List.map (fun d -> Unit_program.job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
+        List.map (fun d -> Unit_program.legacy_job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
       aheads
 
 (** Record the unit's program ({!Unit_program.record_ahead}) and finish
@@ -1814,7 +1814,7 @@ let generate_ahead s =
           later
             { Cpp_ind.nothing_ahead with
               entities = [Cpp_ind.entity r [Cpp_ind.concept_id r] []];
-              finishing = [Unit_program.job (Cpp_ind.concept_id r) d] } ) )
+              finishing = [Unit_program.legacy_job (Cpp_ind.concept_id r) d] } ) )
     ~after_module:(fun ~module_ frame _ ->
       convert_eponymous_record_fields ~module_ frame;
       Option.iter

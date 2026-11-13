@@ -1058,7 +1058,7 @@ let finished_of ~what id d =
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
     let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
-    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Unit_program.finishes_as d f.finished)
+    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Unit_program.finishes_as (Cpp_pipeline.lower d) f.finished)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1095,7 +1095,7 @@ let instance_ids r ds = numbered (source r) ds
 let finished_instance r ds = finished_group ~what:"an instance" (instance_ids r ds) ds
 
 let instance_jobs r (ds : generated) =
-  List.map2 (fun id (_, d) -> Unit_program.job id d) (instance_ids r ds) ds
+  List.map2 (fun id (_, d) -> Unit_program.legacy_job id d) (instance_ids r ds) ds
 
 let instance_placed r (ds : generated) helpers =
   helpers_placed helpers @ List.combine (instance_ids r ds) (List.map snd ds)
@@ -1110,7 +1110,7 @@ let finished_concept r d = finished_of ~what:"a class concept" (concept_id r) d
     among them, then every declaration. *)
 let functions_finishing elements =
   let funs = List.concat_map (fun (fallback, gs) -> List.map (fun g -> (fallback, g)) gs) elements in
-  let job (fallback, g) = Unit_program.job (function_id ~fallback g) (function_decl g) in
+  let job (fallback, g) = Unit_program.legacy_job (function_id ~fallback g) (function_decl g) in
   List.filter_map
     (fun ((_, (g : Gen_decls.generated_fun)) as f) ->
       match g.gf_entity with Defined _ -> Some (job f) | Declared _ -> None )
@@ -1499,7 +1499,7 @@ let record_methods_decl r vars fields =
 let record_methods_id r = {Unit_program.owner = source r; part = Methods}
 
 let record_methods_finishing r vars fields =
-  Unit_program.job (record_methods_id r) (record_methods_decl r vars fields)
+  Unit_program.legacy_job (record_methods_id r) (record_methods_decl r vars fields)
 
 let finished_record_methods r vars fields =
   finished_of ~what:"an eponymous record's methods" (record_methods_id r) (record_methods_decl r vars fields)
@@ -1588,7 +1588,7 @@ let generate_ahead ~module_ d =
   | Header_only gen ->
     let g, lifted = header_entity ~module_ d gen in
     let member_def_ids, decl_ids = header_ids d g in
-    let jobs ids ds = List.map2 (fun id (_, decl) -> Unit_program.job id decl) ids ds in
+    let jobs ids ds = List.map2 (fun id (_, decl) -> Unit_program.legacy_job id decl) ids ds in
     { nothing_ahead with
       entities = [entity (decl_entity d) (member_def_ids @ decl_ids) lifted];
       finishing = jobs member_def_ids g.member_defs @ jobs decl_ids g.decls }
