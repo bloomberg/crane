@@ -2250,22 +2250,6 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
   in
   typ
 
-(** The C++ type of the binder at de Bruijn index [i], for readers that have
-    to produce an answer for every binder: the assignment made where it was
-    bound, and failing that the conversion of its ML type under the current
-    scope.
-
-    The fallback is not a second opinion -- it is what the assignment
-    deliberately declines to record.  {!assign_binder_types} keeps no entry
-    when the conversion is [Topaque], a dummy, or fails outright, because
-    recording those would state a fact it does not have.  Prefer
-    {!binder_cpp_type} where [None] is a usable answer; this is for the
-    places where it is not. *)
-let binder_cpp_type_or_derive env i =
-  match binder_cpp_type i with
-  | Some _ as t -> t
-  | None -> Option.map (cpp_of_ml env) (get_env_type_opt i)
-
 (** Follow a name for a type through to the type it stands for.  A [using]
     alias hides the arguments its right-hand side was written with, and those
     arguments are exactly what a value built into such a slot has to agree
@@ -2294,46 +2278,6 @@ let rec unfold_cpp_typedef env cpp_ty =
           body
     | None -> cpp_ty )
   | _ -> cpp_ty
-
-(** Whether an application reads its result out of a value that carries
-    erasure.
-
-    An accessor's ML result type says nothing on its own: the second component
-    of a dependent pair is a bare type variable whatever the pair holds.  What
-    decides is the value being projected from -- a [SigT<std::any, std::any>]
-    hands back a box, a [SigT<List<uint64_t>, List<uint64_t>>] hands back a
-    list.  So the arguments are the evidence, and each is asked at whichever
-    is the better authority on its C++ type: the assignment made where a
-    binder was bound, or the term's own ML type. *)
-let app_reads_erased_value env args =
-  let carries t =
-    Ml_type_util.has_erased_type_in_type (unfold_cpp_typedef env t)
-  in
-  (* A typeclass dictionary is not one of the values the result is read out
-     of: it is how the call states its type arguments, and C++ resolves the
-     result through it. *)
-  let is_dictionary a =
-    match infer_ml_body_type (strip_magic a) with
-    | Some ty -> (
-      match resolve_tmeta ty with
-      | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
-      | _ -> false )
-    | None -> false
-  in
-  List.exists
-    (fun a ->
-      if is_dictionary a then false
-      else
-      match strip_magic a with
-      | MLrel (i, _) -> (
-        match binder_cpp_type_or_derive env i with
-        | Some t -> carries (strip_cpp_ref_const t)
-        | None -> false )
-      | a -> (
-        match infer_ml_body_type a with
-        | Some ty -> carries (cpp_of_ml env ty)
-        | None -> false ) )
-    args
 
 (** Whether the pattern variable at de Bruijn index [i] holds a box, and so
     must be recovered with an [any_cast] before it is used at a concrete
@@ -2403,6 +2347,7 @@ let read_is_boxed i occ =
 let rec type_shape = function
   | Tfun (dom, cod) -> "fn(" ^ String.concat "," (List.map type_shape dom) ^ ")->" ^ type_shape cod
   | Tany -> "any"
+  | Tauto -> "auto"
   | Topaque -> "opaque"
   | Tconst t -> "const " ^ type_shape t
   | Tref (_, t) -> "ref " ^ type_shape t
@@ -2472,6 +2417,70 @@ let planned_position occ ~live =
   | None ->
     Probe.violation "coercion position" Pp.(str ("a coercion" ^ owner () ^ " is in no position plan of the region it is lowered in"));
     live
+
+(** [t] with every type variable named by the default spelling of its
+    index ({!Minicpp.tvar_spelling}) written by the index alone: the two
+    print the same, and lowering records a binder's type before its
+    variables are named. *)
+let default_tvar_names t =
+  map_cpp_type
+    (function
+      | Tvar (Tv_index (i, Some n)) when String.equal (Id.to_string n) (tvar_spelling i) -> Tvar (Tv_index (i, None))
+      | t -> t )
+    t
+
+(** [planned_binder_type_or_derive ~use ~agree env i occ] -- the
+    planned C++ type of the binder of the variable [i] read at [occ]
+    ({!planned_binder_type}), and failing one the conversion of its ML type
+    under the current scope: an answer for every binder, where the plan
+    deliberately has none for one at [Topaque], a dummy, or a conversion
+    that failed.  Under [CRANE_CHECK_IR] the answer is held, through
+    [agree], to the same derivation from the type lowering recorded for the
+    binder ({!binder_cpp_type}). *)
+let planned_binder_type_or_derive ~use ~agree env i occ =
+  let derive = function Some _ as t -> t | None -> Option.map (cpp_of_ml env) (get_env_type_opt i) in
+  derive (planned_binder_type ~use ~agree:(fun p l -> agree (derive p) (derive l)) i occ)
+
+(** Whether an application reads its result out of a value that carries
+    erasure.
+
+    An accessor's ML result type says nothing on its own: the second component
+    of a dependent pair is a bare type variable whatever the pair holds.  What
+    decides is the value being projected from -- a [SigT<std::any, std::any>]
+    hands back a box, a [SigT<List<uint64_t>, List<uint64_t>>] hands back a
+    list.  So the arguments are the evidence, and each is asked at whichever
+    is the better authority on its C++ type: the type a variable's binder is
+    planned at, or the term's own ML type. *)
+let app_reads_erased_value env args =
+  let carries t =
+    Ml_type_util.has_erased_type_in_type (unfold_cpp_typedef env t)
+  in
+  (* A typeclass dictionary is not one of the values the result is read out
+     of: it is how the call states its type arguments, and C++ resolves the
+     result through it. *)
+  let is_dictionary a =
+    match infer_ml_body_type (strip_magic a) with
+    | Some ty -> (
+      match resolve_tmeta ty with
+      | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
+      | _ -> false )
+    | None -> false
+  in
+  List.exists
+    (fun a ->
+      if is_dictionary a then false
+      else
+      match strip_magic a with
+      | MLrel (i, occ) -> (
+        let carried = Option.map (fun t -> carries (strip_cpp_ref_const t)) in
+        match planned_binder_type_or_derive ~use:"erased argument" ~agree:(fun p l -> carried p = carried l) env i occ with
+        | Some t -> carries (strip_cpp_ref_const t)
+        | None -> false )
+      | a -> (
+        match infer_ml_body_type a with
+        | Some ty -> carries (cpp_of_ml env ty)
+        | None -> false ) )
+    args
 
 (** Record the C++ type of each of the [ids] most recently pushed binders,
     without pushing them again.  [?cpp] overrides the conversion for binders
@@ -3569,11 +3578,13 @@ let regroup_crossing ~from ~into expr =
   | _ -> CPPconvert (into, expr)
 
 (** The C++ type the value [e] has where that is known without generating
-    it: a variable's binder type, a global value's declared type.  [None]
-    for anything else. *)
-let value_cpp_type env e =
+    it: a variable's binder type as planned, a global value's declared type.
+    [None] for anything else.  [agree] says when the planned and the
+    recorded binder type give the caller one answer
+    ({!planned_binder_type_or_derive}). *)
+let value_cpp_type ~agree env e =
   match strip_magic e with
-  | MLrel (j, _) -> binder_cpp_type_or_derive env j
+  | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
   | MLglob ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
     Option.map (cpp_of_ml env) (find_type_opt r)
   | _ -> None

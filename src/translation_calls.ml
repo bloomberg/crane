@@ -423,8 +423,11 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
           with
           | Some arg -> (
             match strip_magic arg with
-            | MLrel (j, _) -> (
-              match Option.map unwrap (binder_cpp_type_or_derive env j) with
+            | MLrel (j, occ) -> (
+              match
+                Option.map unwrap
+                  (planned_binder_type_or_derive ~use:"argument's type argument" ~agree:( = ) env j occ)
+              with
               | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
                 && not (prints_as_any x) ->
                 Some x
@@ -1469,17 +1472,21 @@ type argument_position = {
   ap_expected_subst : cpp_type option;
 }
 
-(** Whether the binder at de Bruijn index [j] holds a function, by the C++
-    type lowering recorded for it. *)
+(** Whether the variable [j] holds a function, by the C++ type lowering
+    recorded for its binder, failing one by its ML type.  Not the planned
+    type: a lifted local fixpoint's parameter is planned at the [auto] it is
+    declared with, which lowering then records at the function type its
+    uses give it, and the plan cannot tell it from an [auto] that stays. *)
 let local_callable env j =
-  match Option.map (unfold_cpp_typedef env) (binder_cpp_type_or_derive env j) with
+  let ty = match binder_cpp_type j with Some _ as t -> t | None -> Option.map (cpp_of_ml env) (get_env_type_opt j) in
+  match Option.map (unfold_cpp_typedef env) ty with
   | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
   | _ -> false
 
 (** [argument_position ~local_callable env id plan i ml_arg] -- where the
     [i]th regular argument [ml_arg] of the call to [id] planned as [plan]
     ({!plan_call}) is generated: {!argument_position}.  [local_callable j]
-    says whether the local at [j] holds a function. *)
+    says whether the variable [j] holds a function. *)
 let argument_position ~local_callable env id plan i ml_arg =
   let {
     cp_instantiated =

@@ -1537,11 +1537,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          once -- a [let fix] or a parameter of type [nat -> nat -> nat] where
          a [nat -> (nat -> nat)] is expected -- is curried to the slot, as a
          global named as a value is. *)
+      let unfolded = Option.map (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t)) in
+      let curries t =
+        match (expected_ty, unfolded t) with
+        | Some (Tfun ((_ :: _ as exp_dom), _)), Some (Tfun (dom, _)) -> List.length dom > List.length exp_dom
+        | _ -> false
+      in
       ( match
         ( expected_ty,
-          Option.map
-            (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t))
-            (binder_cpp_type_or_derive env i) )
+          unfolded
+            (planned_binder_type_or_derive ~use:"curried read" ~agree:(fun p l -> curries p = curries l) env i occ) )
       with
       | Some (Tfun ((_ :: _ as exp_dom), _)), Some (Tfun (dom, _))
         when List.length dom > List.length exp_dom -> (
@@ -1697,19 +1702,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        codomain it names. *)
     let binder_result_is_boxed =
       match f with
-      | MLrel (i, _) ->
-        ( match
-            Option.map
-              (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t))
-              (binder_cpp_type_or_derive env i)
-          with
-        | Some (Tfun (doms, cod)) ->
-          let n_runtime =
-            List.length
-              (List.filter (fun a -> not (Mlutil.isMLdummy (strip_magic a))) args)
-          in
-          prints_as_any cod && List.length doms = n_runtime
-        | _ -> false )
+      | MLrel (i, occ) ->
+        let n_runtime =
+          List.length (List.filter (fun a -> not (Mlutil.isMLdummy (strip_magic a))) args)
+        in
+        let boxes t =
+          match Option.map (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t)) t with
+          | Some (Tfun (doms, cod)) -> prints_as_any cod && List.length doms = n_runtime
+          | _ -> false
+        in
+        boxes (planned_binder_type_or_derive ~use:"callee result" ~agree:(fun p l -> boxes p = boxes l) env i occ)
       | _ -> false
     in
     (* Nor can a global whose declaration boxed its result -- [id] declared
@@ -5286,7 +5288,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
            says: an argument that is already a box is left alone. *)
         let from =
           match ml_arg with
-          | MLrel (j, _) -> binder_cpp_type_or_derive env j
+          | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
           | _ -> None
         in
         coerce ~term:ml_arg ?from ~into:Tany expr
@@ -5600,9 +5602,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              && not (List.exists (fun t -> Table.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
         List.map2
           (fun (ml_arg, a) into ->
-            match value_cpp_type env ml_arg with
-            | Some from -> regroup_crossing ~from ~into a
-            | None -> a )
+            let crossed = function Some from -> regroup_crossing ~from ~into a | None -> a in
+            (* What the crossing writes depends on the source only through
+               whether it converts. *)
+            let converts t = crossed t != a in
+            crossed (value_cpp_type ~agree:(fun p l -> converts p = converts l) env ml_arg) )
           (List.combine regular_ml_args args)
           (List.filteri (fun i _ -> i < List.length args) doms)
       | _ -> args
@@ -5775,7 +5779,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | Some (Tfun (_, c)), Some exp when prints_as_any c && not (prints_as_any exp) ->
             let arg_ty a =
               match a with
-              | MLrel (j, _) -> binder_cpp_type_or_derive env j
+              | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
               | _ -> Option.map (cpp_of_ml env) (ml_ast_type_hint a)
             in
             let rest_tys = List.map arg_ty rest_ml in
@@ -5831,11 +5835,20 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           List.mapi
             (fun i e ->
               match (List.nth_opt doms i, List.nth_opt excess_args i) with
-              | Some d, Some (MLrel (j, _)) when prints_as_any d -> (
+              | Some d, Some (MLrel (j, occ)) when prints_as_any d -> (
+                let unfolded = Option.map (fun t -> strip_ns_tglob (unfold_cpp_typedef env t)) in
+                (* Read for the inductive, its arity and namespace, and
+                   whether every argument is already a box. *)
+                let reading t =
+                  match unfolded t with
+                  | Some (Tglob ((GlobRef.IndRef _ as g), (_ :: _ as args), ns)) ->
+                    Some (g, List.length args, ns, List.for_all (fun a -> a = Tany) args)
+                  | _ -> None
+                in
                 match
-                  Option.map
-                    (fun t -> strip_ns_tglob (unfold_cpp_typedef env t))
-                    (binder_cpp_type_or_derive env j)
+                  unfolded
+                    (planned_binder_type_or_derive ~use:"excess argument" ~agree:(fun p l -> reading p = reading l)
+                       env j occ)
                 with
                 | Some (Tglob ((GlobRef.IndRef _ as g), (_ :: _ as args), ns))
                   when (not (Table.is_custom g))
@@ -6673,7 +6686,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        binders -- a handler the callee takes polymorphically is a function
        object, not the erased signature. *)
     let declared_dom i =
-      match Option.bind callee_rel_idx binder_cpp_type with
+      match
+        match f with
+        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+          let respelled = Option.map default_tvar_names in
+          respelled (planned_binder_type ~use:"declared domain" ~agree:(fun p l -> respelled p = respelled l) j occ)
+        | _ -> None
+      with
       | Some (Tfun (dom, _)) -> (
         match List.nth_opt dom i with
         | Some t when not (exists_cpp_type prints_as_any t) -> Some t
@@ -7339,9 +7358,14 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     constructor type parameters are concrete for code generation. *)
 and gen_cpp_case (typ : ml_type) t env pv case_occ =
   let typ =
-    match_scrutinee_type env typ t pv
-      ~var_type:(fun i -> try Some (get_env_type i) with _ -> None)
-      ~var_cpp_type:binder_cpp_type
+    let var_type i = try Some (get_env_type i) with _ -> None in
+    let at bt = match_scrutinee_type env typ t pv ~var_type ~var_cpp_type:(fun _ -> bt) in
+    (* Asked only of the variable the scrutinee reads; the binder's type
+       matters only through the match type it gives. *)
+    let read = match t with MLrel (_, occ) | MLmagic (_, MLrel (_, occ), _) -> Some occ | _ -> None in
+    match_scrutinee_type env typ t pv ~var_type
+      ~var_cpp_type:(fun i ->
+        Option.bind read (fun occ -> planned_binder_type ~use:"scrutinee" ~agree:(fun p l -> at p = at l) i occ))
   in
   let scrut_is_mlmagic_case = match t with MLmagic (_, _, _) -> true | _ -> false in
   (* Check if this is an enum inductive type *)
