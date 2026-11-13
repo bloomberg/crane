@@ -445,18 +445,6 @@ let is_cpp_unit_type = function
   | Tnamespace (r, _) -> Table.is_unit_type r
   | _ -> false
 
-(** Recursively replace Rocq's unit enum type with [Tvoid] in a C++ type.
-    Handles both direct [Unit -> void] (sequential mode) and nested
-    [shared_ptr<ITree<Unit>> -> shared_ptr<ITree<void>>] (reified mode). *)
-let rec voidify_unit_in_type = function
-  | t when is_cpp_unit_type t -> Tvoid
-  | Tglob (r, args, ns) ->
-    Tglob (r, List.map voidify_unit_in_type args, ns)
-  | Tnamespace (r, t) ->
-    Tnamespace (r, voidify_unit_in_type t)
-  | Tshared_ptr t -> Tshared_ptr (voidify_unit_in_type t)
-  | t -> t
-
 (** Check if an ML type represents a void or unit type. *)
 let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
 

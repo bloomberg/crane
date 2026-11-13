@@ -250,9 +250,6 @@ val own_type_variables : n_outer:int -> Miniml.ml_type list -> bool
 (** Whether a C++ type is the unit type. *)
 val is_cpp_unit_type : Minicpp.cpp_type -> bool
 
-(** Rewrite occurrences of the unit type into void within a C++ type. *)
-val voidify_unit_in_type : Minicpp.cpp_type -> Minicpp.cpp_type
-
 (** Whether a MiniML type is unit or void. *)
 val ml_type_is_unit_or_void : Miniml.ml_type -> bool
 
@@ -421,9 +418,6 @@ val has_erased_type_in_type : Minicpp.cpp_type -> bool
 (** Whether a C++ type still holds a promoted type variable this scope could
     not answer -- erased in the same sense as [std::any]. *)
 val has_unresolved_promoted_in_type : Minicpp.cpp_type -> bool
-
-(** Whether a C++ type is a dummy Prop type. *)
-val is_cpp_dummy_prop : Minicpp.cpp_type -> bool
 
 (** {!filter_erased_type_args} over arguments each carrying a key -- the
     scheme variable it stands for -- which survives with it. *)
