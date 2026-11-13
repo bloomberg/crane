@@ -562,7 +562,7 @@ let constant_name e =
       | Some ("positive", 2), [p] -> Option.map (fun v -> Z.mul v (Z.of_int 2)) (pos p)
       | Some ("positive", 3), [] -> Some Z.one
       | _ -> None )
-    | MLmagic (_, a) -> pos a
+    | MLmagic (_, a, _) -> pos a
     | _ -> None
   in
   let rec nat = function
@@ -2110,7 +2110,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         in
         (* Generate the body, then check if the body returns a lambda (this
            happens when extract_cons_app generates curried partial constructor
-           applications with an MLmagic (_, barrier)). If so, convert the returned
+           applications with an MLmagic (_, barrier, _)). If so, convert the returned
            lambda to capture by value to avoid dangling references to the outer
            lambda's parameters. *)
         (* A lambda stored into an erased slot IS the value in that slot, so
@@ -2845,7 +2845,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let container_cast_erased_field ml_ft ml_arg expr =
       let is_erased_rel =
         match ml_arg with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
           read_is_boxed j occ
         | _ -> false
       in
@@ -2919,7 +2919,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                           ts
                       in
                       ( match first_elem with
-                      | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                      | Some (MLmagic (_, MLcons (elem_ty, _, _, _), _)) -> elem_ty
                       | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                       | _ -> t )
                     | _ -> t )
@@ -2942,7 +2942,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts, arg_occ)
                   | _ ->
                     MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts, arg_occ) )
-                | MLmagic (m, inner) -> MLmagic (m, update_nested_ty inner)
+                | MLmagic (m, inner, mocc) -> MLmagic (m, update_nested_ty inner, mocc)
                 | other -> other
               in
               List.map update_nested_ty ts
@@ -3040,7 +3040,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let erase_past_type_arg temps =
         let rec first_ktype_dummy i = function
           | [] -> max_int
-          | (MLdummy Ktype | MLmagic (_, MLdummy Ktype)) :: _ -> i
+          | (MLdummy Ktype | MLmagic (_, MLdummy Ktype, _)) :: _ -> i
           | _ :: rest -> first_ktype_dummy (i + 1) rest
         in
         let cutoff = first_ktype_dummy 0 ts_updated in
@@ -3091,7 +3091,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                         ts_updated
                     in
                     ( match first_elem with
-                    | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                    | Some (MLmagic (_, MLcons (elem_ty, _, _, _), _)) -> elem_ty
                     | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                     | _ -> t )
                   | _ -> t )
@@ -3401,7 +3401,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_concrete_param_tys =
                   let rec collect_lam_tys = function
                     | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                    | MLmagic (_, inner) -> collect_lam_tys inner
+                    | MLmagic (_, inner, _) -> collect_lam_tys inner
                     | _ -> []
                   in
                   collect_lam_tys ml_e
@@ -3430,7 +3430,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_body_ret_ty =
                   let rec get_body = function
                     | MLlam (_, _, body) -> get_body body
-                    | MLmagic (_, inner) -> get_body inner
+                    | MLmagic (_, inner, _) -> get_body inner
                     | body -> infer_ml_body_type body
                   in
                   get_body ml_e
@@ -3526,7 +3526,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _, _) ->
                     let ind = GlobRef.IndRef (kn, 0) in
                     Ml_type_util.is_custom_list_global ind
-                  | MLmagic (_, inner) -> is_custom_list_cons inner
+                  | MLmagic (_, inner, _) -> is_custom_list_cons inner
                   | _ -> false
                 in
                 if is_custom_list_cons ml_e then begin
@@ -3573,7 +3573,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_body_ret_ty =
                   let rec get_body = function
                     | MLlam (_, _, body) -> get_body body
-                    | MLmagic (_, inner) -> get_body inner
+                    | MLmagic (_, inner, _) -> get_body inner
                     | body -> infer_ml_body_type body
                   in
                   get_body ml_e
@@ -3581,7 +3581,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_concrete_param_tys =
                   let rec collect_lam_tys = function
                     | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                    | MLmagic (_, inner) -> collect_lam_tys inner
+                    | MLmagic (_, inner, _) -> collect_lam_tys inner
                     | _ -> []
                   in
                   collect_lam_tys ml_e
@@ -3776,7 +3776,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let ml_concrete_param_tys =
               let rec collect_lam_tys = function
                 | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                | MLmagic (_, inner) -> collect_lam_tys inner
+                | MLmagic (_, inner, _) -> collect_lam_tys inner
                 | _ -> []
               in
               collect_lam_tys ml_e
@@ -3896,7 +3896,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some ft ->
               let is_erased_rel =
                 match e with
-                | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+                | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
                   read_is_boxed j occ
                 | _ -> false
               in
@@ -4208,7 +4208,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft ->
             let is_erased_rel =
               match e with
-              | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+              | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
                 read_is_boxed j occ
               | _ -> false
             in
@@ -4437,7 +4437,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        wrap field references in MLmagic due to Tvar/Tglob mismatches *)
     let body' =
       match body with
-      | MLmagic (_, b) -> b
+      | MLmagic (_, b, _) -> b
       | b -> b
     in
     ( match (record_body, body') with
@@ -4551,7 +4551,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                off the receiver, which names a concrete instance. *)
             let from_receiver =
               match t with
-              | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}) -> (
+              | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}, _) -> (
                 match resolve_tmeta (Table.find_type r) with
                 | Miniml.Tglob (_, (_ :: _ as args), _) -> Some args
                 | _ | (exception Not_found) -> None )
@@ -4833,7 +4833,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let elems = Array.map (gen_expr env) elems in
     let def = gen_expr env def in
     CPPparray (elems, def)
-  | MLmagic (m, t) ->
+  | MLmagic (m, t, _) ->
     (* A value crossing into a slot that is really [std::any] has to be built
        at the canonical erased shape -- every component boxed -- because the
        consumer recovers it with a fixed [any_cast] and cannot know the
@@ -4906,7 +4906,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
         let rec is_cpp_erased_var_rec = function
           | MLrel (i, occ) -> read_is_boxed i occ
-          | MLmagic (_, t') -> is_cpp_erased_var_rec t'
+          | MLmagic (_, t', _) -> is_cpp_erased_var_rec t'
           | _ -> false
         in
         let is_cpp_erased_var = is_cpp_erased_var_rec t in
@@ -4942,7 +4942,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 ~agree:(fun p l -> (p = Some Topaque) = (l = Some Topaque))
                 i occ
               = Some Topaque
-            | MLmagic (_, t') -> binder_is_opaque t'
+            | MLmagic (_, t', _) -> binder_is_opaque t'
             | _ -> false
           in
           coerce ~from:(if binder_is_opaque t then Topaque else Tany)
@@ -5188,7 +5188,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
               Mlutil.collect_n_lams expected ml_arg
             in
             let barrier =
-              Mlutil.named_lams outer_ids (MLmagic (Mbarrier, inner_body))
+              Mlutil.named_lams outer_ids (MLmagic (Mbarrier, inner_body, Occurrence.fresh ()))
             in
             (* Compute the return type from the substituted param type by
                stripping [expected] top-level arrows.  The remaining type
@@ -5300,7 +5300,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
       match ml_arg with
       (* A lambda under a coercion is written against the slot all the
          same. *)
-      | MLlam _ | MLmagic (_, MLlam _) -> param_expected_at_declared_arity ()
+      | MLlam _ | MLmagic (_, MLlam _, _) -> param_expected_at_declared_arity ()
       | _ ->
       ( match
           match Param_pos.nth fn_param_ml_tys_orig param_index with
@@ -5311,7 +5311,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
       | Some _ as t -> t
       | None ->
       ( match ml_arg with
-      | MLmagic (_, _) -> param_expected_subst ()
+      | MLmagic (_, _, _) -> param_expected_subst ()
       (* [MLglob]: a bare function name handed over as a value may need
          re-currying.  Count the arrows in the callee's {e unsubstituted}
          parameter type: arrows past the point where the codomain becomes a
@@ -5419,7 +5419,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
     in
     let arg_expected_ty =
       match ml_arg with
-      | (MLlam _ | MLmagic (_, MLlam _)) when deduced_callable ->
+      | (MLlam _ | MLmagic (_, MLlam _, _)) when deduced_callable ->
         Option.map deduce_erased_domains arg_expected_ty
       | _ -> arg_expected_ty
     in
@@ -5581,7 +5581,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
        non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
     let ml_arg_is_erased_rel =
       match ml_arg with
-      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) -> read_is_boxed j occ
+      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) -> read_is_boxed j occ
       | _ -> false
     in
     match param_ml_ty with
@@ -5742,7 +5742,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
        accepts void-returning functions. *)
     | Some param_ty
       when (match ml_arg with
-            | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}) -> is_void_ified_ref r
+            | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}, _) -> is_void_ified_ref r
             | _ -> false)
            && (match param_ty with Miniml.Tarr _ -> true | _ -> false)
            && ml_type_is_unit (ml_codomain param_ty)
@@ -6657,11 +6657,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                specialised, so the variable holds the concrete pair.  Judge by
                the variable's type when it is known; a coercion is still the
                only evidence available when it is not. *)
-            | MLmagic (_, MLrel (i, _)) -> (
+            | MLmagic (_, MLrel (i, _), _) -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
               | None -> true )
-            | MLmagic (_, _) -> true
+            | MLmagic (_, _, _) -> true
             | MLapp (MLglob {callee = r; _}, args) as node ->
               (* If the callee is itself a pair accessor (.first/.second) and
                  its product arg was coerced, result is also std::any *)
@@ -6792,7 +6792,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        call goes through. *)
     let erased_callee =
       match f with
-      | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> erased_member i
+      | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> erased_member i
       | _ -> false
     in
     let callee_fun_ml_ty =
@@ -6815,9 +6815,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             (* A member of a group recursing at a ground instance takes its
                arguments adapted to its erased parameters
                ({!erased_member_types}). *)
-            | MLrel (i, _) | MLmagic (_, MLrel (i, _)) when erased_callee ->
+            | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) when erased_callee ->
               get_env_type_opt i
-            | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> (
+            | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> (
               match get_env_type_opt i with
               | Some (Miniml.Tglob (GlobRef.ConstRef _, _, _) as ty) -> (
                 match expand_ml_fun_alias ty with
@@ -6841,7 +6841,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       match callee_fun_ml_ty with Some fty -> extract_params fty | None -> []
     in
     let callee_rel_idx = match f with
-      | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> Some i
+      | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> Some i
       | _ -> None
     in
     let callee_env_ty =
@@ -6851,7 +6851,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     in
     let callee_cpp_erased =
       match f with
-      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> read_is_boxed i occ
+      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ), _) -> read_is_boxed i occ
       | _ -> false
     in
     (* A pattern binder whose definition-site field type is a type variable
@@ -6956,7 +6956,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | e when ml_value_is_void_call e ->
           wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
         | MLlam _ -> gen_expr ?expected_ty:(declared_dom i) ~slot:arg_slot env x
-        | MLmagic (_, _) ->
+        | MLmagic (_, _, _) ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
         | MLrel (j, occ) when read_is_boxed j occ ->
@@ -6981,7 +6981,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
       let rel_idx_f = match f with
-        | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> Some (i, occ)
+        | MLrel (i, occ) | MLmagic (_, MLrel (i, occ), _) -> Some (i, occ)
         | _ -> None
       in
       match rel_idx_f with
@@ -7124,7 +7124,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           let proj_idx =
             match br_body with
             | MLrel (i, _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
-            | MLmagic (_, MLrel (i, _)) when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | MLmagic (_, MLrel (i, _), _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
             | _ -> None
           in
           ( match proj_idx with
@@ -7612,7 +7612,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
       ~var_type:(fun i -> try Some (get_env_type i) with _ -> None)
       ~var_cpp_type:binder_cpp_type
   in
-  let scrut_is_mlmagic_case = match t with MLmagic (_, _) -> true | _ -> false in
+  let scrut_is_mlmagic_case = match t with MLmagic (_, _, _) -> true | _ -> false in
   (* Check if this is an enum inductive type *)
   let is_enum =
     match typ with
@@ -8066,7 +8066,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
     | Tvar _ ->
       let body_is_erased =
         match body with
-        | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ)) ->
+        | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ), _) ->
           not (read_is_boxed i occ) && is_env_var_erased env tvars i
         | _ -> false
       in
@@ -9210,7 +9210,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            zero-copy closure generation. *)
         let is_single_use_partial_app =
           match a with
-          | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args)) ->
+          | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args), _) ->
             (match Escape.partial_app_remaining head ml_args with
              | Some remaining ->
                Escape.nb_occur_match 1 b <= 1
@@ -9289,7 +9289,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                   match args with
                   | [] -> None
                   | (Miniml.MLrel (r, _)) :: _ when r = target_rel -> Some i
-                  | (Miniml.MLmagic (_, Miniml.MLrel (r, _))) :: _ when r = target_rel -> Some i
+                  | (Miniml.MLmagic (_, Miniml.MLrel (r, _), _)) :: _ when r = target_rel -> Some i
                   | _ :: rest -> find_pos rest (i + 1)
                 in
                 (match find_pos app_args 0 with
@@ -9833,7 +9833,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     (* Generate throw statement for unreachable/absurd cases (e.g., empty
        match) *)
     [Sthrow msg]
-  | MLmagic (_, MLexn msg) ->
+  | MLmagic (_, MLexn msg, _) ->
     (* Handle MLexn wrapped in MLmagic *)
     [Sthrow msg]
   | MLcase (typ, t, pv, case_occ) when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
@@ -9944,7 +9944,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        variables are direct values (bind desugars to let-binding); in
        reified mode, they are trees returned as-is. *)
     let is_void_tail = match t with
-      | MLapp (f, args) | MLmagic (_, MLapp (f, args)) ->
+      | MLapp (f, args) | MLmagic (_, MLapp (f, args), _) ->
         ml_callee_is_void f
         (* Only treat as void if fully applied — partial applications
            return a function value, not void. *)

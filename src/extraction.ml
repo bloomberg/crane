@@ -2374,7 +2374,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         (* Split: outer lambda has [context_arity_before_unify] params, inner
            lambda has the rest. The inner lambda captures the outer params and
            applies the constructor with all args. We wrap the inner lambda in
-           [MLmagic (Mbarrier, _)] so that {!Mlutil.collect_lams} stops at the
+           [MLmagic (Mbarrier, _, _)] so that {!Mlutil.collect_lams} stops at the
            outer lambda boundary: it only collects consecutive [MLlam] nodes.
            [Mbarrier] carries no coercion, so the C++ translation renders the
            inner lambda as the return value of the outer lambda. *)
@@ -2384,7 +2384,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         let outer_types = List.firstn ca missing_types in
         let inner_types = List.skipn ca missing_types in
         let inner = anonym_or_dummy_lams_typed (head mla) inner_types inner_s in
-        let inner_barrier = MLmagic (Mbarrier, inner) in
+        let inner_barrier = MLmagic (Mbarrier, inner, Occurrence.fresh ()) in
         put_magic_if
           ~from:a
           ~into:mlt

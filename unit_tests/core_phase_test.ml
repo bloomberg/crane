@@ -97,7 +97,7 @@ let () =
       structure =
         Modutil.map_struct_decls
           (function
-            | Dterm (r, b, t) -> Dterm (r, MLmagic (Mcoerce (t, t), b), t)
+            | Dterm (r, b, t) -> Dterm (r, MLmagic (Mcoerce (t, t), b, Occurrence.fresh ()), t)
             | d -> d )
           p.structure }
   in

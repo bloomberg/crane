@@ -35,7 +35,7 @@ let rec iter_annotations f = function
   | MLapp (g, args) ->
     iter_annotations f g;
     List.iter (iter_annotations f) args
-  | MLmagic (_, a) -> iter_annotations f a
+  | MLmagic (_, a, _) -> iter_annotations f a
   | MLparray (arr, def) ->
     Array.iter (iter_annotations f) arr;
     iter_annotations f def
@@ -82,7 +82,7 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
 let rec tail_result_type = function
-  | MLlam (_, _, b) | MLletin (_, _, _, b, _) | MLmagic (_, b) -> tail_result_type b
+  | MLlam (_, _, b) | MLletin (_, _, _, b, _) | MLmagic (_, b, _) -> tail_result_type b
   | MLcons (ty, _, _, _) -> Some ty
   | MLapp (f, args) -> Translation_types.ml_app_result_type f args
   | MLcase (_, _, brs, _) ->

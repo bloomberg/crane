@@ -1903,7 +1903,7 @@ let gen_spec__inner n b ty =
          coercion at its head. *)
       let has_magic, inner_body =
         match b with
-        | MLmagic (_, inner) -> (true, inner)
+        | MLmagic (_, inner, _) -> (true, inner)
         | _ -> (false, b)
       in
       (* A constant typed by a name -- an instance of a single-method class is

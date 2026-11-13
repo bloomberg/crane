@@ -33,7 +33,7 @@ let rec canonical self body =
         Array.map (canonical self) bodies,
         co,
         occ )
-  | MLmagic (m, a) -> MLmagic (m, canonical self a)
+  | MLmagic (m, a, mocc) -> MLmagic (m, canonical self a, mocc)
   | e -> Mlutil.ast_map (canonical self) e
 
 (* A forwarder with [body]'s parameters, calling [target] at its own type

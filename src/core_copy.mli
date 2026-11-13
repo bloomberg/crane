@@ -6,7 +6,7 @@
     a callee at a call.
 
     Every consumer of Core names a place in a definition by an occurrence: a
-    read's, a let's, a match's, a construction's, a local fixpoint's or a global use's -- the recursion
+    read's, a let's, a match's, a construction's, a coercion's, a local fixpoint's or a global use's -- the recursion
     plan's calls, ControlIR's turns, the ownership plan's reads and the C++
     call made of a Core call all do.  A copy keeping the original's would be
     two places with one name, so a copy mints every occurrence afresh.  It

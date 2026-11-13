@@ -122,7 +122,7 @@ let adapter_arg (_, id) = CPPvar (Option.get id)
 
 (** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
     in the ML AST and should be ignored by numeral-folding traversals. *)
-let rec strip_magic = function MLmagic (_, e) -> strip_magic e | e -> e
+let rec strip_magic = function MLmagic (_, e, _) -> strip_magic e | e -> e
 
 (** A dictionary as an argument, without what only wraps it: coercions, and
     the lambdas over a singleton class method's erased type arguments that
@@ -393,7 +393,7 @@ let dict_carrier_ml_type ~lex ~caller id args =
     go 0 [] (ml_domains ty)
   in
   let rec head_glob = function
-    | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) | Miniml.MLapp (b, _) ->
+    | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b, _) | Miniml.MLapp (b, _) ->
       head_glob b
     | Miniml.MLglob {callee = r; _} -> Some r
     | _ -> None
@@ -409,7 +409,7 @@ let dict_carrier_ml_type ~lex ~caller id args =
      the shape that made this findable. *)
   let rec dict_ml_type ?(depth = 0) = function
     | Miniml.MLlam (_, _, b) -> dict_ml_type ~depth:(depth + 1) b
-    | Miniml.MLmagic (_, b) -> dict_ml_type ~depth b
+    | Miniml.MLmagic (_, b, _) -> dict_ml_type ~depth b
     | Miniml.MLapp (b, dicts) as tm ->
       (* The head's codomain still names its own class parameters; the
          dictionaries it is applied to are what say which carriers those are.
@@ -514,7 +514,7 @@ let ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
     itself, and that is where the value's C++ type was pinned down. *)
 let rec scrutinee_binder = function
   | MLrel (i, _) -> Some i
-  | MLmagic (_, e) -> scrutinee_binder e
+  | MLmagic (_, e, _) -> scrutinee_binder e
   | MLapp (h, _) when not (scrutinee_head_is_callable h) ->
     scrutinee_binder h
   | _ -> None
@@ -1157,8 +1157,8 @@ let promoted_tys_of_arity n =
 let rec mark_own_param_for_pair_erasure n body =
   match body with
   | MLcase (ty, (MLrel (i, _) as scrut), pv, occ) when i = n && is_custom_match pv ->
-    MLcase (ty, MLmagic (Mboxed, scrut), pv, occ)
-  | MLmagic (m, a) -> MLmagic (m, mark_own_param_for_pair_erasure n a)
+    MLcase (ty, MLmagic (Mboxed, scrut, Occurrence.fresh ()), pv, occ)
+  | MLmagic (m, a, mocc) -> MLmagic (m, mark_own_param_for_pair_erasure n a, mocc)
   | other -> other
 
 (** [field_stores_erased_fn_value ~field_cpp_ty field_types i e] — true when
@@ -2169,7 +2169,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
   in
   let typ =
     match t with
-    | MLrel (i, _) | MLmagic (_, MLrel (i, _)) ->
+    | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) ->
       (* Scrutinee is a variable reference — use its concrete type, the one
          its binder was given, a parameter's as much as a let's.  Unwrap Tmeta
          wrappers since env_types may store types in Tmeta form. *)
@@ -2888,7 +2888,7 @@ let ml_expr_is_function_value e =
      than in [infer_ml_body_type] itself (whose result also feeds unrelated
      callers like lambda return-type annotation), so this fix cannot change
      behavior anywhere but function-value detection. *)
-  | MLapp (MLmagic (_, f), args) ->
+  | MLapp (MLmagic (_, f, _), args) ->
     ( match infer_ml_body_type (MLapp (f, args)) with
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
@@ -3647,7 +3647,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
     ( match find_type_opt r with
       | Some ml_ty -> prints_as_any (cpp_of_ml env ml_ty)
       | None -> false )
-  | MLmagic (_, inner) -> ml_expr_is_erased env inner
+  | MLmagic (_, inner, _) -> ml_expr_is_erased env inner
   | MLcase (case_ty, _, _, _) ->
     ( match case_ty with
       | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
@@ -3805,7 +3805,7 @@ let rec flatten_app = function
     ( match flatten_app f with
     | MLapp (f', inner_args) -> flatten_app (MLapp (f', inner_args @ args))
     | f' -> MLapp (f', args) )
-  | MLmagic (_, e) -> flatten_app e
+  | MLmagic (_, e, _) -> flatten_app e
   | other -> other
 
 let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
@@ -3813,13 +3813,13 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
      [std::any]) even though the ML AST may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
      by an outer [fix_a_fired] pair match (detected via its binder). *)
-  let scrut_is_mlmagic = match t with MLmagic (m, _) -> magic_is_boxed env m | _ -> false in
+  let scrut_is_mlmagic = match t with MLmagic (m, _, _) -> magic_is_boxed env m | _ -> false in
   let scrut_is_cpp_erased = match t with
     | MLrel (i, occ) -> var_boxed i occ
     | _ -> false
   in
   let scrut_is_magic = match t with
-    | MLmagic (m, _) -> magic_is_boxed env m
+    | MLmagic (m, _, _) -> magic_is_boxed env m
     | MLrel (i, occ) ->
       var_boxed i occ
       || (match var_type i with
@@ -3889,7 +3889,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
     | _ -> None
   in
   let scrut_is_trivial_ml = match t with
-    | MLrel _ | MLmagic (_, MLrel _) -> true
+    | MLrel _ | MLmagic (_, MLrel _, _) -> true
     | _ -> false
   in
   let needs_pair_any_cast =

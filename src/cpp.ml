@@ -2287,7 +2287,7 @@ let plan_referenced_names s =
       Array.iter (fun (_, _, p, _) -> pattern p) brs
     | MLlam (_, t, _) | MLletin (_, t, _, _, _) -> ty t
     | MLfix (_, fs, _, _, _) -> Array.iter (fun (_, t) -> ty t) fs
-    | MLmagic (Mcoerce (a, b), _) ->
+    | MLmagic (Mcoerce (a, b), _, _) ->
       ty a;
       ty b
     | MLrel _ | MLapp _ | MLtuple _ | MLexn _ | MLdummy _ | MLaxiom _ | MLmagic _ | MLuint _
@@ -2712,7 +2712,7 @@ let plan_nested_structs s =
      [using] ({!Gen_decls.gen_instance_struct}). *)
   let instance_has_struct body ty =
     let rec past_parameters = function
-      | MLlam (_, _, b) | MLmagic (_, b) -> past_parameters b
+      | MLlam (_, _, b) | MLmagic (_, b, _) -> past_parameters b
       | b -> b
     in
     match Ml_type_util.ml_return_type ty with

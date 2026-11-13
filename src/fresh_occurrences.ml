@@ -11,6 +11,7 @@ let rec term e =
   | MLletin (x, ty, a, b, _) -> MLletin (x, ty, a, b, Occurrence.fresh ())
   | MLcase (ty, scrut, branches, _) -> MLcase (ty, scrut, branches, Occurrence.fresh ())
   | MLcons (ty, r, args, _) -> MLcons (ty, r, args, Occurrence.fresh ())
+  | MLmagic (m, a, _) -> MLmagic (m, a, Occurrence.fresh ())
   | MLfix (i, ids, bodies, cofix, occ) ->
     let occ' = Occurrence.fresh () in
     (* A group recursing at a ground instance stays one under its new
