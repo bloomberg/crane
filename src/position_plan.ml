@@ -186,7 +186,7 @@ let region ~outer ~reads body =
                of that read, which holds no coercion. *)
             let ap =
               with_cpp_return_type ret (fun () ->
-                  Translation_calls.argument_position ~local_callable:(fun _ -> false) (named_env lex) use.callee plan i a )
+                  Translation_calls.argument_position ~local_callable:(fun _ _ -> false) (named_env lex) use.callee plan i a )
             in
             let slot =
               { slot with

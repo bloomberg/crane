@@ -1472,21 +1472,23 @@ type argument_position = {
   ap_expected_subst : cpp_type option;
 }
 
-(** Whether the variable [j] holds a function, by the C++ type lowering
-    recorded for its binder, failing one by its ML type.  Not the planned
-    type: a lifted local fixpoint's parameter is planned at the [auto] it is
-    declared with, which lowering then records at the function type its
-    uses give it, and the plan cannot tell it from an [auto] that stays. *)
-let local_callable env j =
-  let ty = match binder_cpp_type j with Some _ as t -> t | None -> Option.map (cpp_of_ml env) (get_env_type_opt j) in
-  match Option.map (unfold_cpp_typedef env) ty with
-  | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
-  | _ -> false
+(** Whether the variable [j], read at [occ], holds a function, by the C++
+    type the representation plan gives its binder, failing one by its ML
+    type; under [CRANE_CHECK_IR] held to the same reading of the type
+    lowering recorded for the binder. *)
+let local_callable env j occ =
+  let callable ty =
+    let ty = match ty with Some _ -> ty | None -> Option.map (cpp_of_ml env) (get_env_type_opt j) in
+    match Option.map (unfold_cpp_typedef env) ty with
+    | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
+    | _ -> false
+  in
+  callable (planned_binder_type ~use:"local callable" ~agree:(fun p l -> callable p = callable l) j occ)
 
 (** [argument_position ~local_callable env id plan i ml_arg] -- where the
     [i]th regular argument [ml_arg] of the call to [id] planned as [plan]
-    ({!plan_call}) is generated: {!argument_position}.  [local_callable j]
-    says whether the variable [j] holds a function. *)
+    ({!plan_call}) is generated: {!argument_position}.  [local_callable j
+    occ] says whether the variable [j] read at [occ] holds a function. *)
 let argument_position ~local_callable env id plan i ml_arg =
   let {
     cp_instantiated =
@@ -1639,7 +1641,7 @@ let argument_position ~local_callable env id plan i ml_arg =
        not to the callable it expects. *)
     | MLglob _ -> param_expected_at fn_param_ml_tys_orig param_index
     (* So may a local function, for the same reason. *)
-    | MLrel (j, _) when local_callable j -> param_expected_at fn_param_ml_tys_orig param_index
+    | MLrel (j, occ) when local_callable j occ -> param_expected_at fn_param_ml_tys_orig param_index
     (* A partial application is a callable built here rather than named,
        and reaches the slot at the arity the callee declared the parameter
        at, for the same reason a lambda does. *)
