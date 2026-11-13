@@ -2396,8 +2396,8 @@ let planned_binder_type ~use ~agree i occ =
 (** [planned_position occ ~live] -- the C++ type the position of the
     coercion at [occ] is generated against, as the region's position plan
     ({!Position_plan.region}) gives it, under [CRANE_CHECK_IR] held to
-    [live], the type lowering threaded there.  A constructor's field is not
-    planned ({!Translation_state.Stored}): its type is [live]. *)
+    [live], the type lowering threaded there.  A custom constructor's field
+    is not planned ({!Translation_state.Stored}): its type is [live]. *)
 let planned_position occ ~live =
   let show = function Some t -> type_shape t | None -> "none" in
   let owner () = match (!tctx).body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in

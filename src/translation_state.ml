@@ -213,8 +213,8 @@ and planned_position =
   | At of cpp_type option
       (** Generated against this type, none where the position states none. *)
   | Stored
-      (** A constructor's field, whose type lowering still decides from the
-          constructor it is building. *)
+      (** A custom constructor's field, whose type lowering still decides
+          from the constructor it is building. *)
 
 and binder_kind =
   | Kouter  (** bound outside the region *)
@@ -468,8 +468,10 @@ let plan_representation :
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
-let plan_positions : (outer:Lexenv.t -> ml_ast -> (Occurrence.t * planned_position) list) ref =
-  ref (fun ~outer:_ _ -> [])
+let plan_positions :
+    (outer:Lexenv.t -> reads:(Occurrence.t * planned_read) list -> ml_ast -> (Occurrence.t * planned_position) list)
+    ref =
+  ref (fun ~outer:_ ~reads:_ _ -> [])
 
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
@@ -496,8 +498,9 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (
       let binders, reads = !plan_representation ~outer:(!tctx).env_types body in
       (* A nested region's positions are planned at its own return type,
          which the enclosing walk does not know; they come first. *)
-      let positions = !plan_positions ~outer:(!tctx).env_types body in
-      ((!tctx).representation @ binders, (!tctx).planned_reads @ reads, positions @ (!tctx).planned_positions)
+      let reads = (!tctx).planned_reads @ reads in
+      let positions = !plan_positions ~outer:(!tctx).env_types ~reads body in
+      ((!tctx).representation @ binders, reads, positions @ (!tctx).planned_positions)
     | None -> ([], [], [])
   in
   with_field
