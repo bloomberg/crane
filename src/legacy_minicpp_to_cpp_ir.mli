@@ -40,6 +40,11 @@ val lower_expr : Minicpp.cpp_expr -> Cpp_ir.Lowered.Expr.t
     CppIR, as {!lower} converts a declaration. *)
 val lower_template_parameters : (Minicpp.template_type * Names.Id.t) list -> Cpp_ir.Lowered.phase Cpp_ir.Template.parameters
 
+(** [lower_member m] is the struct member [m] in CppIR, as {!lower}
+    converts a declaration. *)
+val lower_member :
+  Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag -> Cpp_ir.Lowered.phase Cpp_ir.Field.member
+
 (** [inline_template t] is the classified replacement text [t] in CppIR. *)
 val inline_template : Minicpp.inline_template -> Cpp_ir.Foreign.template
 

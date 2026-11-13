@@ -28,7 +28,7 @@
 
 (** Declarations as generated, each with the name environment it is printed
     in. *)
-type generated = (Common.env * Minicpp.cpp_decl) list
+type generated = (Common.env * Cpp_ir.Lowered.Decl.t) list
 
 (** Declarations finished for the printer: what one MiniML declaration
     became, as the unit's program finished it ({!Unit_program.finish}), in
@@ -89,9 +89,13 @@ val source : Names.GlobRef.t -> Unit_program.owner
     That [d] is not a lifted helper is an anomaly. *)
 val helper_id : Minicpp.cpp_decl -> Unit_program.id
 
+(** [helper_placed d] is the lifted helper [d] under its {!helper_id}, in
+    CppIR. *)
+val helper_placed : Minicpp.cpp_decl -> Unit_program.id * Cpp_ir.Lowered.Decl.t
+
 (** [helpers_placed ds] is each lifted helper of [ds] under its
-    {!helper_id}. *)
-val helpers_placed : Minicpp.cpp_decl list -> (Unit_program.id * Minicpp.cpp_decl) list
+    {!helper_id}, in CppIR. *)
+val helpers_placed : Minicpp.cpp_decl list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
 
 (** [instance_ids r ds] is the id of each of [ds], the declarations of the
     instance [r]. *)
@@ -106,7 +110,7 @@ val instance_jobs : Names.GlobRef.t -> generated -> Unit_program.job list
     its id: how a wrapper module places an instance, as it places a lifted
     helper. *)
 val instance_placed :
-  Names.GlobRef.t -> generated -> Minicpp.cpp_decl list -> (Unit_program.id * Minicpp.cpp_decl) list
+  Names.GlobRef.t -> generated -> Minicpp.cpp_decl list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
 
 (** [concept_id r] is the id of the concept of the class [r]. *)
 val concept_id : Names.GlobRef.t -> Unit_program.id
@@ -264,7 +268,7 @@ val concept_placement : concept_plan -> Cpp_state.held_concept -> concept_placem
     generated ahead of the files ({!generating_ahead}) in the module
     declaring the class, and taken from there by the header, which generates
     it again under [CRANE_CHECK_IR] to compare. *)
-val concept : module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.record_field list -> Minicpp.cpp_decl
+val concept : module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.record_field list -> Cpp_ir.Lowered.Decl.t
 
 (** [modtype_concept path ~params mt] is the concept of the module type [mt]
     at [path], over the functor parameters [params]: generated ahead of the
@@ -341,7 +345,7 @@ val regenerate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
     program has it ({!Unit_program}).  That the program does not have it
     is an anomaly; a file's pass finishes it again under [CRANE_CHECK_IR]
     and checks.  So for every [finished_] reader below. *)
-val finished_placed : Unit_program.id * Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
+val finished_placed : Unit_program.id * Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [finished_helper d] is the lifted helper [d] ({!finished_placed} under
     its {!helper_id}). *)
@@ -349,14 +353,14 @@ val finished_helper : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
 (** [entity_placed (id, d)] is the function entity of {!finished_placed}:
     its declaration and definition. *)
-val entity_placed : Unit_program.id * Minicpp.cpp_decl -> Function_entity.t
+val entity_placed : Unit_program.id * Cpp_ir.Lowered.Decl.t -> Function_entity.t
 
 (** [helper_entity d] is {!entity_placed} of the lifted helper [d] under
     its {!helper_id}. *)
 val helper_entity : Minicpp.cpp_decl -> Function_entity.t
 
 (** [finished_concept r d] is [d], the concept of the class [r]. *)
-val finished_concept : Names.GlobRef.t -> Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
+val finished_concept : Names.GlobRef.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [finished_declared ~fallback g d] is [d], the declaration without a
     definition that the generated function [g] is, [fallback] the entity it

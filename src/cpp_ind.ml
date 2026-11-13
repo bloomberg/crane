@@ -42,7 +42,7 @@ open Cpp_names
 
 (** Declarations as generated, each with the name environment it is printed
     in. *)
-type generated = (Common.env * Minicpp.cpp_decl) list
+type generated = (Common.env * Cpp_ir.Lowered.Decl.t) list
 
 (** Declarations finished for the printer. *)
 type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
@@ -200,7 +200,7 @@ let ind_header_decls scope kn ind =
     (* Skip if concepts have been hoisted or we're inside a struct *)
     declarations_only
       ( if scope.in_struct || scope.concepts_hoisted then []
-        else [(empty_env (), Cpp_ir_to_legacy_minicpp.decl (gen_typeclass_cpp names.(0) fields))] )
+        else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
   | Core.Inductive.Kind.Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
@@ -208,7 +208,7 @@ let ind_header_decls scope kn ind =
       ( match !eponymous_record with
       | Some (epon_ref, _, _) when globref_equal ind_ref epon_ref ->
         [] (* Skip - merged into module struct *)
-      | _ -> [(empty_env (), Cpp_ir_to_legacy_minicpp.decl (gen_record_cpp names.(0) fields ind.ind_packets.(0)))] )
+      | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.ind_packets.(0))] )
   | _ ->
     let is_mutual = Array.length ind.ind_packets > 1 in
     let forward_decls =
@@ -231,10 +231,10 @@ let ind_header_decls scope kn ind =
               (* The forward declaration carries the same name and the same
                  template parameters as the full definition below; both are
                  built from [param_vars] and printed by the same node. *)
-              let tparams =
-                List.map (fun v -> (TTtypename, v)) param_vars
+              let fwd_decl : Cpp_ir.Lowered.Decl.t =
+                Struct_forward_declaration (Cpp_ir.Build.typenames param_vars, names.(i))
               in
-              (empty_env (), Dstruct_fwd (tparams, names.(i))) :: fwd (i + 1)
+              (empty_env (), fwd_decl) :: fwd (i + 1)
         in
         fwd 0
       else
@@ -494,6 +494,7 @@ let ind_header_decls scope kn ind =
               (List.rev methods)
               ind.ind_kind
             |> Plan_templates.deapply_plain_struct_tvars
+            |> Legacy_minicpp_to_cpp_ir.lower
           in
           (* Check if this inductive is being promoted into its module struct.
              When promoted, render fields flat (no wrapping struct) since the
@@ -508,9 +509,9 @@ let ind_header_decls scope kn ind =
                struct it was merged into is its wrapper, so it contributes
                members rather than a nested type. *)
             match decl with
-            | Dstruct ds ->
-              promoted_sft := Some ds.ds_needs_shared_from_this;
-              (empty_env (), Dfields ds) :: pp (i + 1)
+            | Struct s ->
+              promoted_sft := Some s.needs_shared_from_this;
+              (empty_env (), (Merged_struct_members s : Cpp_ir.Lowered.Decl.t)) :: pp (i + 1)
             | _ ->
               (* Only an enum generates something else, and an enum is never
                  promoted ({!Module_frame.promoted}). *)
@@ -525,19 +526,19 @@ let ind_header_decls scope kn ind =
 
                This allows inductives to nest naturally inside modules while
                maintaining proper scoping at the module level. *)
-            let wrapped_decl =
+            let wrapped_decl : Cpp_ir.Lowered.Decl.t =
               match decl with
-              | Denum _ -> decl (* Enums don't need namespace wrapper *)
+              | Enum _ -> decl (* Enums don't need namespace wrapper *)
               | _ ->
                 if at_namespace_scope then
                   (* Written as one struct with the wrapper when it is the
                      wrapper's sole struct and nothing else of the module was
                      planned into the wrapper. *)
                   let merges =
-                    (match decl with Dstruct _ -> true | _ -> false)
+                    (match decl with Struct _ -> true | _ -> false)
                     && not (Cpp_state.in_unmerged_wrapper names.(i))
                   in
-                  Dnspace (Some {nw_ref = names.(i); nw_merges = merges}, [decl])
+                  Namespace (Some {ref_ = names.(i); merges}, [decl])
                 else decl
             in
             (empty_env (), wrapped_decl) :: pp (i + 1)
@@ -552,10 +553,6 @@ let ind_header_decls scope kn ind =
       if not at_namespace_scope then
         (group, [])
       else
-        (* Member_hoist reads CppIR; the group is converted for it and back. *)
-        let to_cpp_ir = List.map (fun (env, d) -> (env, Legacy_minicpp_to_cpp_ir.lower d)) in
-        let to_minicpp = List.map (fun (env, d) -> (env, Cpp_ir_to_legacy_minicpp.decl d)) in
-        let group = to_cpp_ir group in
         let group = if is_mutual then Member_hoist.split_group group else group in
         (* The other cycle a struct at namespace scope can be in, and the one
            its own layout says nothing about.  A function promoted to a method
@@ -601,7 +598,7 @@ let ind_header_decls scope kn ind =
               && not (List.mem (module_struct_name mp) own_nspace_names) )
             group
         in
-        (to_minicpp group, to_minicpp defs)
+        (group, defs)
     in
     {decls = forward_decls @ group; member_defs; promoted_sft = !promoted_sft}
 
@@ -657,9 +654,13 @@ let instance_decls r a t =
   let ds_opt, class_ref_opt, concept_args, minted =
     Gen_decls.gen_instance_struct r a t
   in
+  (* The struct's methods are planned over MiniCpp: it is converted for
+     that and back. *)
   let ds_opt =
     Option.map
-      (fun d -> planned_methods ~minted r (finish_instance_struct (Cpp_ir_to_legacy_minicpp.decl d)))
+      (fun d ->
+        Legacy_minicpp_to_cpp_ir.lower
+          (planned_methods ~minted r (finish_instance_struct (Cpp_ir_to_legacy_minicpp.decl d))) )
       ds_opt
   in
   let struct_decl =
@@ -668,16 +669,16 @@ let instance_decls r a t =
     | None -> []
   in
   let is_template =
-    match ds_opt with
-    | Some (Dtemplate _) -> true
-    | Some (Dstruct {ds_tparams = _ :: _; _}) -> true
+    match (ds_opt : Cpp_ir.Lowered.Decl.t option) with
+    | Some (Template _) -> true
+    | Some (Struct {type_params = _ :: _; _}) -> true
     | _ -> false
   in
-  let static_assert_decl =
+  let static_assert_decl : generated =
     match class_ref_opt with
     | Some class_ref when not is_template ->
-      [ ( empty_env (),
-          Dstatic_assert (CPPconcept_app (class_ref, r, concept_args), None) ) ]
+      let args = List.map Legacy_minicpp_to_cpp_ir.lower_type concept_args in
+      [(empty_env (), Static_assert (Concept_application (class_ref, r, args), None))]
     | _ -> []
   in
   struct_decl @ static_assert_decl
@@ -967,7 +968,7 @@ let generate scope ~module_ d =
       Header_only
         (fun () ->
           declarations_only
-            [(empty_env (), Cpp_ir_to_legacy_minicpp.decl (gen_typeclass_cpp r (Table.get_record_field_bindings r)))] )
+            [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))] )
   | Dtype (r, l, t) ->
     ( match t with
     | Miniml.Tdummy Miniml.Ktype -> Nothing (* erased Type aliases *)
@@ -979,7 +980,9 @@ let generate scope ~module_ d =
          for -- an event family -- is erased at every use, so nothing looks
          for it. *)
       Nothing
-    | t -> Header_only (fun () -> declarations_only [(empty_env (), gen_type_alias r l (Some t))]) )
+    | t ->
+      Header_only
+        (fun () -> declarations_only [(empty_env (), Legacy_minicpp_to_cpp_ir.lower (gen_type_alias r l (Some t)))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
     group [{fd_ref = r; fd_body = a; fd_type = t}]
   | Dterm (r, a, t) when is_typeclass_instance t -> Instance (r, a, t)
@@ -1058,7 +1061,7 @@ let finished_of ~what id d =
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
     let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
-    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Unit_program.finishes_as (Cpp_pipeline.lower d) f.finished)
+    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Unit_program.finishes_as d f.finished)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1075,13 +1078,17 @@ let entity_of ~what id d = Function_entity.of_finished (finished_of ~what id d)
 
 let finished_placed (id, d) = finished_of ~what:"a lifted declaration" id d
 
-let finished_helper d = finished_placed (helper_id d, d)
+(** The lifted helper [d], a MiniCpp declaration, under its {!helper_id}, in
+    CppIR. *)
+let helper_placed d = (helper_id d, Cpp_pipeline.lower d)
+
+let finished_helper d = finished_placed (helper_placed d)
 
 let entity_placed (id, d) = entity_of ~what:"a lifted declaration" id d
 
-let helper_entity d = entity_placed (helper_id d, d)
+let helper_entity d = entity_placed (helper_placed d)
 
-let helpers_placed ds = List.map (fun d -> (helper_id d, d)) ds
+let helpers_placed ds = List.map helper_placed ds
 
 (** [finished_group ~what ids ds] is [ds], each finished ahead of the files
     under its id in [ids]. *)
@@ -1095,7 +1102,7 @@ let instance_ids r ds = numbered (source r) ds
 let finished_instance r ds = finished_group ~what:"an instance" (instance_ids r ds) ds
 
 let instance_jobs r (ds : generated) =
-  List.map2 (fun id (_, d) -> Unit_program.legacy_job id d) (instance_ids r ds) ds
+  List.map2 (fun id (_, d) -> Unit_program.job id d) (instance_ids r ds) ds
 
 let instance_placed r (ds : generated) helpers =
   helpers_placed helpers @ List.combine (instance_ids r ds) (List.map snd ds)
@@ -1130,10 +1137,10 @@ let finalized ~fallback (funs : Gen_decls.generated_fun list) =
       match g.gf_entity with
       | Declared d -> (g, Finished_declaration d)
       | Defined (d, file) ->
-        (g, Finished_definition (file, entity_of ~what:"a function" (function_id ~fallback g) d)) )
+        (g, Finished_definition (file, entity_of ~what:"a function" (function_id ~fallback g) (Cpp_pipeline.lower d))) )
     funs
 
-let finished_declared ~fallback g d = finished_of ~what:"a declaration" (function_id ~fallback g) d
+let finished_declared ~fallback g d = finished_of ~what:"a declaration" (function_id ~fallback g) (Cpp_pipeline.lower d)
 
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
@@ -1391,7 +1398,7 @@ let render_section ctx (groups : section) =
 
 (** The concept of each class, generated ahead of the files in the module
     declaring it, by the class. *)
-let concepts_generated : (ModPath.t * cpp_decl) list Ref.User.Tbl.t = Ref.User.Tbl.create 16
+let concepts_generated : (ModPath.t * Cpp_ir.Lowered.Decl.t) list Ref.User.Tbl.t = Ref.User.Tbl.create 16
 
 let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset concepts_generated)
 
@@ -1405,7 +1412,7 @@ let concept ~module_ r fields =
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt concepts_generated r))
     ~record:(Ref.User.Tbl.replace concepts_generated r)
     ~same:(fun d d' -> compare d d' = 0)
-    (fun () -> Cpp_ir_to_legacy_minicpp.decl (Gen_decls.gen_typeclass_cpp r fields))
+    (fun () -> Gen_decls.gen_typeclass_cpp r fields)
 
 (** The concept of each module type, generated ahead of the files where
     the header writes it, by the module type's path. *)
@@ -1487,19 +1494,19 @@ let generated_record_field_types () =
 
 (** The struct members the methods [fields] of the eponymous record [r],
     of variables [vars], are finished as. *)
-let record_methods_decl r vars fields =
-  Dfields
-    { ds_ref = r;
-      ds_fields = fields;
-      ds_tparams = List.map (fun v -> (TTtypename, v)) vars;
-      ds_constraint = None;
-      ds_needs_shared_from_this = false }
+let record_methods_decl r vars fields : Cpp_ir.Lowered.Decl.t =
+  Merged_struct_members
+    { ref_ = r;
+      fields = List.map Legacy_minicpp_to_cpp_ir.lower_member fields;
+      type_params = Cpp_ir.Build.typenames vars;
+      constraint_ = None;
+      needs_shared_from_this = false }
 
 (** The id of the methods of the eponymous record [r]. *)
 let record_methods_id r = {Unit_program.owner = source r; part = Methods}
 
 let record_methods_finishing r vars fields =
-  Unit_program.legacy_job (record_methods_id r) (record_methods_decl r vars fields)
+  Unit_program.job (record_methods_id r) (record_methods_decl r vars fields)
 
 let finished_record_methods r vars fields =
   finished_of ~what:"an eponymous record's methods" (record_methods_id r) (record_methods_decl r vars fields)
@@ -1588,7 +1595,7 @@ let generate_ahead ~module_ d =
   | Header_only gen ->
     let g, lifted = header_entity ~module_ d gen in
     let member_def_ids, decl_ids = header_ids d g in
-    let jobs ids ds = List.map2 (fun id (_, decl) -> Unit_program.legacy_job id decl) ids ds in
+    let jobs ids ds = List.map2 (fun id (_, decl) -> Unit_program.job id decl) ids ds in
     { nothing_ahead with
       entities = [entity (decl_entity d) (member_def_ids @ decl_ids) lifted];
       finishing = jobs member_def_ids g.member_defs @ jobs decl_ids g.decls }
