@@ -819,7 +819,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
      value the parameter has already pinned down.  See {!Rank2}. *)
   let type_args_at_carrier r =
     match get_rank2_carrier () with
-    | Some x -> Option.default [] (Rank2.type_args_at_carrier x r)
+    | Some x -> Option.default [] (Option.map (List.map Cpp_ir_to_legacy_minicpp.ty) (Rank2.type_args_at_carrier x r))
     | None -> []
   in
   let result =
@@ -1994,7 +1994,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       else None
     in
     let at_carrier ty =
-      match rank2_carrier with None -> ty | Some x -> Rank2.at_carrier x ty
+      match rank2_carrier with
+      | None -> ty
+      | Some x -> Cpp_ir_to_legacy_minicpp.ty (Rank2.at_carrier x (Legacy_minicpp_to_cpp_ir.lower_type ty))
     in
     let f =
       with_escape_analysis (fun () ->

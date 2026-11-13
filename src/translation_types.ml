@@ -3130,7 +3130,9 @@ let lambda_binder_emitted env ~expected_ty ~body binders i ty =
     reads off Core. *)
 let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body ~unused ~slot_dom (id, ty, owned) =
   let at_carrier ty =
-    match rank2_carrier with None -> ty | Some x -> Rank2.at_carrier x ty
+    match rank2_carrier with
+    | None -> ty
+    | Some x -> Cpp_ir_to_legacy_minicpp.ty (Rank2.at_carrier x (Legacy_minicpp_to_cpp_ir.lower_type ty))
   in
   let tvar_in_scope n = List.exists (Id.equal n) tvars in
   let slot_param_cpp_ty =
@@ -3180,7 +3182,7 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
     | None
       when rank2_carrier <> None
            && has_tany_in_type bare_cpp_ty
-           && not (Rank2.is_bare_box bare_cpp_ty) ->
+           && not (Rank2.is_bare_box (Legacy_minicpp_to_cpp_ir.lower_type bare_cpp_ty)) ->
       Tref (Lvalue, Tconst (at_carrier bare_cpp_ty))
     | None
       when prints_as_any bare_cpp_ty
