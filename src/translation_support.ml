@@ -1209,7 +1209,7 @@ let naming_calls ~cpp_of r =
   | None -> false
   | Some (Cofixpoint | Monadic) -> true
   | Some Throws -> (
-    match Option.map cpp_of (find_type_opt r) with Some (Tfun _) -> false | _ -> true )
+    match Option.map cpp_of (callee_ml_type r) with Some (Tfun _) -> false | _ -> true )
 
 (** Whether evaluating [e] is only building a value: no call is made, so it
     cannot fail to terminate.  A lambda is a value; so is a constructor of

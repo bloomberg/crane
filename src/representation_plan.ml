@@ -457,9 +457,22 @@ let region ~outer body =
     | MLlam _ as e ->
       let ids, body = Mlutil.collect_lams e in
       walk (parameters ~body ids scope) body
+    (* A fixpoint with type variables of its own is lifted to a function of
+       its own ({!Translation.gen_stmts}), its parameters bound at the
+       conversion of their ML types ({!Translation.gen_fix}), not declared
+       as a lambda's. *)
     | MLfix (_, fs, defs, _, _) ->
       let scope = push Kfix (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) scope in
-      Array.iter (walk scope) defs
+      if
+        Ml_type_util.own_type_variables ~n_outer:(List.length (!tctx).current_type_vars)
+          (List.map snd (Array.to_list fs))
+      then
+        Array.iter
+          (fun d ->
+            let ids, body = Mlutil.collect_lams d in
+            walk (push Kparameter ids scope) body )
+          defs
+      else Array.iter (walk scope) defs
     (* A read: whatever its binder is planned. *)
     | MLrel (i, occ) ->
       let rd_kind = Option.default Kouter (List.nth_opt scope.kinds (i - 1)) in

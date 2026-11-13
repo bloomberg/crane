@@ -32,6 +32,39 @@ let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
 let find_type_opt (r : GlobRef.t) : ml_type option =
   try Some (Table.find_type r) with Not_found -> None
 
+(** [callee_ml_type r] -- the ML type of the callable [r] as the unit's plan
+    of it records it ({!Callable_abi.ml_type}): the signature call
+    translation rebuilds a C++ head from.  While the plans are being made a
+    global has none, and is read off the table; under [CRANE_CHECK_IR] a
+    planned one is held to the table, and emission finding none is a
+    violation. *)
+let callee_ml_type (r : GlobRef.t) : ml_type option =
+  match Callable_abi.planned_ml_type r with
+  | Some planned ->
+    if Probe.checking () then begin
+      let live = find_type_opt r in
+      let agrees =
+        match (planned, live) with
+        | Some a, Some b -> a == b || Mlutil.eq_ml_type a b
+        | None, None -> true
+        | _ -> false
+      in
+      Probe.hit "callee-ml-type" (fun () -> if agrees then "planned agree" else "planned disagree");
+      if not agrees then
+        Probe.violation "callee signature"
+          Pp.(str "the plan of " ++ GlobRef.print r ++ str " records an ML type the table does not have")
+    end;
+    planned
+  | None ->
+    let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
+    Probe.hit "callee-ml-type" (fun () -> (if emitting then "unplanned emit " else "unplanned plan ") ^ Pp.string_of_ppcmds (GlobRef.print r));
+    if emitting && Option.has_some (find_type_opt r) then
+      Probe.violation "callee signature" Pp.(str "emission reads the signature of " ++ GlobRef.print r ++ str ", which no plan covers");
+    find_type_opt r
+
+(** {!callee_ml_type}, raising [Not_found] where there is none. *)
+let callee_ml_type_exn r = match callee_ml_type r with Some t -> t | None -> raise Not_found
+
 (** What a binder of the lexical environment stands for ({!Lexenv.role}). *)
 type binder_role = Lexenv.role =
   | Value
@@ -118,7 +151,7 @@ type translation_ctx = {
      generated against, as {!Position_plan} plans it: by the coercion's
      occurrence, a region nested in another first.  Set beside
      {!planned_reads}. *)
-  planned_positions : (Occurrence.t * planned_position) list;
+  planned_positions : (Occurrence.t * cpp_type option) list;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
@@ -206,15 +239,6 @@ and planned_read = {
   rd_kind : binder_kind;
   rd_type : cpp_type option;
 }
-
-(** The type of the position a coercion fills, as {!Position_plan} plans
-    it. *)
-and planned_position =
-  | At of cpp_type option
-      (** Generated against this type, none where the position states none. *)
-  | Stored
-      (** A constructor's field, whose type lowering still decides from the
-          constructor it is building. *)
 
 and binder_kind =
   | Kouter  (** bound outside the region *)
@@ -468,8 +492,10 @@ let plan_representation :
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
-let plan_positions : (outer:Lexenv.t -> ml_ast -> (Occurrence.t * planned_position) list) ref =
-  ref (fun ~outer:_ _ -> [])
+let plan_positions :
+    (outer:Lexenv.t -> reads:(Occurrence.t * planned_read) list -> ml_ast -> (Occurrence.t * cpp_type option) list)
+    ref =
+  ref (fun ~outer:_ ~reads:_ _ -> [])
 
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
@@ -496,8 +522,9 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (
       let binders, reads = !plan_representation ~outer:(!tctx).env_types body in
       (* A nested region's positions are planned at its own return type,
          which the enclosing walk does not know; they come first. *)
-      let positions = !plan_positions ~outer:(!tctx).env_types body in
-      ((!tctx).representation @ binders, (!tctx).planned_reads @ reads, positions @ (!tctx).planned_positions)
+      let reads = (!tctx).planned_reads @ reads in
+      let positions = !plan_positions ~outer:(!tctx).env_types ~reads body in
+      ((!tctx).representation @ binders, reads, positions @ (!tctx).planned_positions)
     | None -> ([], [], [])
   in
   with_field
