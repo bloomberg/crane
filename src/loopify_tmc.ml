@@ -6,7 +6,9 @@
     under [Crane Reuse]. *)
 
 open Names
-open Minicpp
+open Cpp_ir.Type
+open Cpp_ir.Stmt
+open Cpp_ir.Expr
 open Loopify_analysis
 open Loopify_tail
 
@@ -25,10 +27,10 @@ open Loopify_tail
     For [cons x (cons x (stutter xs))], the outer [cons x _] and inner
     [cons x _] are each represented by one [tmc_cell_alloc]. *)
 type tmc_cell_alloc = {
-  tca_factory : cpp_expr;
+  tca_factory : expr;
       (** Constructor factory function, e.g., [list<T>::ctor::Cons_] *)
   tca_constructor : GlobRef.t;  (** The constructor the cell is built by *)
-  tca_type : cpp_type;
+  tca_type : ty;
       (** The cell's type, e.g., [list<T>], as the factory call records what
           it yields: spelled as a type, which the factory's qualifier, a
           value's spelling, is not *)
@@ -36,7 +38,7 @@ type tmc_cell_alloc = {
       (** Constructor name without trailing underscore, e.g., ["Cons"] *)
   tca_rec_field_idx : int;
       (** Index of the recursive argument in the constructor args *)
-  tca_non_rec_args : (int * cpp_expr) list;
+  tca_non_rec_args : (int * expr) list;
       (** [(index, expr)] for non-recursive arguments *)
   tca_n_args : int;
       (** Total number of constructor arguments *)
@@ -52,25 +54,25 @@ type tmc_cell_alloc = {
 type tmc_branch_info = {
   tmc_cells : tmc_cell_alloc list;
       (** Constructor cells, outermost first, innermost last *)
-  tmc_rec_args : cpp_expr list;
+  tmc_rec_args : expr list;
       (** Arguments to the innermost recursive call *)
-  tmc_call : cpp_expr;  (** The innermost recursive call *)
+  tmc_call : expr;  (** The innermost recursive call *)
 }
 
 (** Where a loop assembles its result, decided once per function from the
     return type and the reuse policy.  Each says what [_write] points at and
     what the function returns, so the three cannot be mixed within a loop. *)
 type result_storage =
-  | Value_root of cpp_type
+  | Value_root of ty
       (** A value-type result, assembled in a local [std::optional]: the first
           node is the result itself, so only the cells below it are
           allocated, and an empty result allocates nothing.  [_write] is null
           until that first node has been placed. *)
-  | Boxed_root of cpp_type
+  | Boxed_root of ty
       (** A value-type result whose first cell is a heap cell like the rest,
           moved out at the end.  The Perceus reuse cursor needs it: it recycles
           an input cell into every output cell, the first included. *)
-  | Pointer_result of cpp_type
+  | Pointer_result of ty
       (** A result that is itself the pointer at the head of the chain. *)
 
 (** What a loop's result is, decided from the inductive it builds -- the one
@@ -115,24 +117,25 @@ let cell_value_type = function
     scope: a [Fin.t] whose struct was put at file scope is [T], not
     [Fin::T].
 
-    A factory call records the constructor it builds ({!Minicpp.call_sig}),
+    A factory call records the constructor it builds ({!Cpp_ir.Expr.Call.signature}),
     and the struct is named after that constructor
     ({!Ml_type_util.ctor_struct_name_of_ref}).  The factory's own name does
     not say: it is the struct's lowercased, so [PeanoSucc] and [WW] have
     factories [peanosucc] and [ww], from which no capitalisation recovers
     them. *)
 let is_ctor_factory_call = function
-  | CPPfun_call ({cs_constructs = Some c; cs_yields; _}, (CPPqualified_t (qualifier, _) as factory), args) ->
-    let ty = match cs_yields with Ryields t -> t | Ropaque -> qualifier in
+  | Call ({constructs = Some c; yields; _}, (Type_member (qualifier, _) as factory), args) ->
+    let ty = match yields with Yields t -> t | Untyped -> qualifier in
     let struct_name = Ml_type_util.ctor_struct_name_of_ref c in
     (* A TMC-wrapping constructor has a field behind the pointer -- the hole
        the recursion writes into -- so it is recorded in [ctor_ptr_fields];
        one that has none is no cell. *)
     if not (Hashtbl.mem ctor_ptr_fields (Common.ctor_owner_key c, struct_name)) then None
     else
-      (* The arguments come back as stored -- reversed.  Everything downstream
-         indexes them in that space; see [uptr_idxs] in [make_cell]. *)
-      Some (c, factory, ty, struct_name, to_reversed args)
+      (* The arguments come back reversed, the last first.  Everything
+         downstream indexes them in that space; see [uptr_idxs] in
+         [make_cell]. *)
+      Some (c, factory, ty, struct_name, List.rev args)
   | _ -> None
 
 (** The cell the call of [factory] on [args] builds by the constructor [c],
@@ -143,8 +146,7 @@ let make_cell ~constructor ~factory ~cell_ty ~ctor_name args idx =
   let uptr_idxs =
     (* [ctor_ptr_fields] records shared_ptr field positions in STRUCT-field
        order, but [idx]/[tca_non_rec_args] here index into [args] from
-       [is_ctor_factory_call], which are stored REVERSED (as [CPPfun_call]
-       keeps them).  Map the struct-order positions into the same reversed
+       [is_ctor_factory_call], which are kept REVERSED.  Map the struct-order positions into the same reversed
        arg-space ([n_args - 1 - j]) so [build_cell_call]'s lookup of an
        argument's field aligns — otherwise a non-pointer field (e.g. a
        [cons] element) is spuriously [make_shared]-wrapped. *)
@@ -201,8 +203,8 @@ let control_shapes into =
 let planned_result shapes ret_ty =
   let read_off_type =
     let rec shared = function
-      | Tglob (r, _, _) -> Table.is_shared_variant r
-      | Tnamespace (_, t) | Tconst t -> shared t
+      | Entity_application (r, _, _) -> Table.is_shared_variant r
+      | In_namespace (_, t) | Const t -> shared t
       | _ -> false
     in
     {values = is_value_type_ret ret_ty; shared = shared ret_ty}
@@ -230,12 +232,13 @@ let planned_result shapes ret_ty =
     has: the factory calls it nests, each building its cell's constructor,
     holding the next in the cell's hole, the innermost a recursive call,
     made of the shape's call where it says.  A hole is counted among the
-    constructor's declared arguments; a factory call stores them reversed. *)
+    constructor's declared arguments; a cell keeps them reversed
+    ({!is_ctor_factory_call}). *)
 let branch_along shapes check expr =
   let rec follow expr call = function
     | [] -> None
     | (constructor, hole) :: inner -> (
-      let expr = match expr with CPPmove e -> e | e -> e in
+      let expr = match expr with Move e -> e | e -> e in
       match is_ctor_factory_call expr with
       | Some (c, factory, cell_ty, ctor_name, args) when Common.globref_equal c constructor ->
         let idx = List.length args - 1 - hole in
@@ -287,8 +290,8 @@ let branch_along shapes check expr =
 (* [std::get<typename Type::Ctor>(ptr->v_mut()).<field> = val] -- the
     statement that patches the recursive field of a TMC cell.
 
-    The field index accounts for the reversed argument order a [CPPfun_call]
-    stores ({!Minicpp.of_reversed}): argument index [rec_field_idx] maps to
+    The field index accounts for the reversed order a cell's arguments are
+    kept in ({!is_ctor_factory_call}): argument index [rec_field_idx] maps to
     struct field index [n_args - 1 - rec_field_idx].  The actual field name is
     resolved via {!Common.lookup_ctor_field_name}, which returns the
     descriptive Rocq binder name (e.g. [d_tl]) when one was registered
@@ -299,28 +302,28 @@ let branch_along shapes check expr =
     the write-pointer update needs to take its address rather than assign to
     it; {!patch_cell_field} is the assignment. *)
 (** The constructor struct [cell] is built as: [Type::Ctor]. *)
-let cell_struct cell = Tqualified (cell.tca_type, Id.of_string cell.tca_ctor_name)
+let cell_struct cell : ty = Member (cell.tca_type, Id.of_string cell.tca_ctor_name)
 
 (** The recursive field of [cell], reached from [ptr] through [access], as
     [(object, field)]. *)
-let cell_rec_field ?(access = Aarrow) cell ptr =
+let cell_rec_field ?(access : Cpp_ir.Expr.Access.t = Arrow) cell ptr =
   let field_idx = cell.tca_n_args - 1 - cell.tca_rec_field_idx in
-  let v_mut = CPPaccess_call (access, ptr, id_v_mut, []) in
-  ( CPPstd_get (cell_struct cell, Some v_mut),
+  let v_mut = Access_call (access, ptr, id_v_mut, []) in
+  ( Variant_get (cell_struct cell, Some v_mut),
     Common.lookup_ctor_field_name ~owner:cell.tca_constructor cell.tca_ctor_name field_idx )
 
 (** [ptr]'s recursive field, as {!cell_rec_field} reaches it, assigned
     [val_expr]. *)
 let patch_cell_field cell ptr val_expr =
   let obj, field_id = cell_rec_field cell ptr in
-  Sassign_expr (CPPget (obj, field_id), val_expr)
+  Assign (Member (obj, field_id), val_expr)
 
 (** A heap allocation of a [ty] built from [v]. *)
 let alloc_value ty v =
-  CPPfun_call
-    ( call_sig ~yields:(Tshared_ptr ty) ~nargs:1 (),
-      CPPalloc (Alloc_heap, ty),
-      of_reversed [v] )
+  Call
+    ( signature ~yields:(Shared_pointer ty) ~nargs:1 (),
+      Allocate (Heap, ty),
+      [v] )
 
 (** [v] written where [storage] says the next value goes, as an expression
     that denotes the node it now is: the root, while nothing has been placed,
@@ -332,21 +335,21 @@ let alloc_value ty v =
 
     [v] is spliced into both arms, of which one runs: callers pass a local. *)
 let place_value ty v =
-  CPPcond
-    ( CPPvar id_write,
-      CPPderef (CPPbinop (Bassign, CPPderef (CPPvar id_write), alloc_value ty v)),
-      CPPaccess_call (Adot, CPPvar id_root, id_emplace, [v]) )
+  Conditional
+    ( Local id_write,
+      Dereference (Binary (Assign, Dereference (Local id_write), alloc_value ty v)),
+      Access_call (Dot, Local id_root, id_emplace, [v]) )
 
 (** Write the base value [e] where the result is being assembled. *)
 let place_base storage e =
   match storage with
   | Value_root ty ->
-    [ Sasgn (id_value, Declare (Tauto, None), e);
-      Sexpr (place_value ty (CPPmove (CPPvar id_value))) ]
+    [ Bind_variable (id_value, Declare (Auto, None), e);
+      Expression (place_value ty (Move (Local id_value))) ]
   | Boxed_root ty ->
-    [Sexpr (CPPbinop (Bassign, CPPderef (CPPvar id_write), alloc_value ty e))]
+    [Expression (Binary (Assign, Dereference (Local id_write), alloc_value ty e))]
   | Pointer_result _ ->
-    [Sexpr (CPPbinop (Bassign, CPPderef (CPPvar id_write), e))]
+    [Expression (Binary (Assign, Dereference (Local id_write), e))]
 
 (** Build a constructor call with [nullptr] at the recursive argument position.
 
@@ -366,15 +369,15 @@ let place_base storage e =
       returns only)
     @param cell A single TMC cell allocation descriptor
     @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
-let build_cell_call ?token ?(rec_arg = CPPnullptr) ?(allocate = true) ~vt_ret cell =
+let build_cell_call ?token ?(rec_arg = Literal Null_pointer) ?(allocate = true) ~vt_ret cell =
   (* The cell being built is not always of the function's return type: a
      constructor may nest one of a DIFFERENT inductive ([rnode (cons r nil)]
      wraps the recursive [rose] in a [list rose]).  Allocate at the cell's own
      type, which [tca_type] carries. *)
-  let mk_shared_cell = CPPalloc (Alloc_heap, cell.tca_type) in
+  let mk_shared_cell = Allocate (Heap, cell.tca_type) in
   (* What that allocation yields, recorded at the one place that knows it. *)
   let shared_cell_sig =
-    call_sig ~yields:(Tshared_ptr cell.tca_type) ~nargs:1 ()
+    signature ~yields:(Shared_pointer cell.tca_type) ~nargs:1 ()
   in
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
@@ -391,47 +394,47 @@ let build_cell_call ?token ?(rec_arg = CPPnullptr) ?(allocate = true) ~vt_ret ce
           | Some (Boxed _) ->
             (* A boxed field holds some other inductive: allocate at the
                argument's own type. *)
-            let boxed = Tdecay (Texpr_type e) in
-            CPPfun_call
-              ( call_sig ~yields:(Tshared_ptr boxed) ~nargs:1 (),
-                CPPalloc (Alloc_heap, boxed),
-                of_reversed [e] )
+            let boxed = Decay (Type_of e) in
+            Call
+              ( signature ~yields:(Shared_pointer boxed) ~nargs:1 (),
+                Allocate (Heap, boxed),
+                [e] )
           | Some (Recursive _) ->
-            CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([e]))
+            Call (shared_cell_sig, mk_shared_cell, [e])
           | None when expr_builds_cell_type e ->
-            CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([e]))
+            Call (shared_cell_sig, mk_shared_cell, [e])
           | None -> e )
         | Some e -> e
         | None ->
-          Cpp_erasure.converting_ctor Tany [] )
+          converting_ctor Any [] )
   in
   match vt_ret with
   | Some _ ->
     (* Direct struct construction, heap-allocated:
        make_shared<Type>(typename Type::Ctor{args...}) *)
     let struct_init =
-      CPPtype_name (cell_struct cell)
+      Type_name (cell_struct cell)
     in
-    let cell_expr = CPPfun_call (call_opaque, struct_init, of_reversed (args)) in
+    let cell_expr = Call (call_opaque, struct_init, List.rev args) in
     if not allocate then cell_expr
     else (match token with
      | Some tok ->
        (* T is deduced from the token's [rc<T>]; the cell value is built from
           the constructor struct exactly as [make_rc] would build it. *)
-       CPPfun_call (call_opaque, CPPrt Crane_rt.Make_rc_reusing_unchecked,
-                    of_reversed ([cell_expr; tok]))   (* reversed: (token, cell) *)
-     | None -> CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([cell_expr])))
+       Call (call_opaque, Runtime Crane_rt.Make_rc_reusing_unchecked,
+                    [tok; cell_expr])
+     | None -> Call (shared_cell_sig, mk_shared_cell, [cell_expr]))
   | None ->
-    CPPfun_call (call_opaque, cell.tca_factory, of_reversed (args))
+    Call (call_opaque, cell.tca_factory, List.rev args)
 
 (** Borrowing fix-up for the TMC loop: the scrutinee is reached through a
     pointer shadow.  See the ownership discussion in {!transform_tmc} -- under
     the reuse cursor the scrutinee is owned but not known to be unique, and only
     [crane::reuse_step] may consume it. *)
 let borrow_cursor_matches shadow_params stmts =
-  Minicpp.borrow_matches_on
+  Cpp_simplify.borrow_matches_on
     (List.filter_map
-       (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
+       (fun (id, ty) -> match ty with Pointer _ -> Some id | _ -> None)
        shadow_params)
     stmts
 
@@ -456,10 +459,10 @@ let borrow_cursor_matches shadow_params stmts =
     again. *)
 let unmove_in invariant_params ~block stmts =
   let rec expr = function
-    | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> CPPvar id
-    | CPPlambda l when List.exists (fun x -> Id.Set.mem x invariant_params) l.cl_moved ->
+    | Move (Local id) when Id.Set.mem id invariant_params -> Local id
+    | Lambda l when List.exists (fun x -> Id.Set.mem x invariant_params) l.moved ->
       expr
-        (CPPlambda {l with cl_moved = List.filter (fun x -> not (Id.Set.mem x invariant_params)) l.cl_moved})
+        (Lambda {l with moved = List.filter (fun x -> not (Id.Set.mem x invariant_params)) l.moved})
     | e -> map_expr ~fl:(block stmt) expr stmt Fun.id e
   and stmt s = map_stmt ~fl:(block stmt) expr stmt Fun.id s in
   if Id.Set.is_empty invariant_params then stmts else block stmt stmts
@@ -477,14 +480,14 @@ let unmove_invariant_on_continue invariant_params stmts =
   let rec mentions_continue l =
     List.exists
       (fun s ->
-        s = Scontinue
+        s = Continue
         || fold_stmt_children ~on_expr:(fun acc _ -> acc)
              ~on_stmts:(fun acc l -> acc || mentions_continue l)
              false s )
       l
   in
   let leaves l =
-    (match List.rev l with (Sbreak | Sreturn _ | Sthrow _) :: _ -> true | _ -> false)
+    (match List.rev l with (Break | Return _ | Throw _) :: _ -> true | _ -> false)
     && not (mentions_continue l)
   in
   unmove_in invariant_params
@@ -500,13 +503,10 @@ let unmove_invariant_on_continue invariant_params stmts =
 let return_from_switches ret stmts =
   let rec block ~in_switch l = List.map (stmt ~in_switch) l
   and stmt ~in_switch = function
-    | Sbreak when in_switch -> Sreturn (Some ret)
-    | Sswitch (scrut, r, branches, default) ->
-      Sswitch
-        ( scrut, r,
-          List.map (fun (p, b) -> (p, block ~in_switch:true b)) branches,
-          Option.map (block ~in_switch:true) default )
-    | (Swhile _ | Sfor_range _) as s -> s
+    | Break when in_switch -> Return (Some ret)
+    | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
+      Switch {scrutinee = scrut; enum = r; branches = List.map (fun (p, b) -> (p, block ~in_switch:true b)) branches; default = Option.map (block ~in_switch:true) default}
+    | (While _ | For_range _) as s -> s
     | s -> map_stmt Fun.id (stmt ~in_switch) Fun.id s
   in
   block ~in_switch:false stmts
@@ -531,8 +531,8 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
   let bind e =
     let n = List.length !decls in
     let id = Id.of_string (if n = 0 then "_read" else "_read" ^ string_of_int n) in
-    decls := Sasgn (id, Declare (Tauto, None), e) :: !decls;
-    CPPmove (CPPvar id)
+    decls := Bind_variable (id, Declare (Auto, None), e) :: !decls;
+    Move (Local id)
   in
   let cells_read_first = match step.action with Recycle {cells_read_first} -> cells_read_first | Release -> [] in
   let cells =
@@ -542,7 +542,7 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
           tca_non_rec_args =
             List.map
               (fun (i, e) ->
-                (* The arguments are stored reversed: [i] counts from the last declared. *)
+                (* A cell keeps its arguments reversed: [i] counts from the last declared. *)
                 if List.mem (k, cell.tca_n_args - 1 - i) cells_read_first then (i, bind e) else (i, e) )
               cell.tca_non_rec_args } )
       cells
@@ -563,7 +563,7 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
         if not (List.mem i step.arguments_read_first) then e
         else
           match shadow with
-          | Some (_, Tptr _) -> raise Cursor_declined
+          | Some (_, Pointer _) -> raise Cursor_declined
           | Some _ -> bind e
           | None -> e )
       (List.combine varying args)
@@ -634,12 +634,12 @@ let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call ar
     (* The field dereferenced, or named through a reference bound to its
        dereference. *)
     let field = function
-      | Some (CPPderef field) -> Some field
-      | Some (CPPvar v) -> List.find_map (fun (x, pointer) -> if Id.equal v x then Some pointer else None) derefs
+      | Some (Dereference field) -> Some field
+      | Some (Local v) -> List.find_map (fun (x, pointer) -> if Id.equal v x then Some pointer else None) derefs
       | Some _ | None -> None
     in
     match (List.nth_opt varying cursor.parameter, shadow, field (List.nth_opt args cursor.parameter)) with
-    | Some true, Some (cursor_id, Tptr _), Some field -> Some (step, cursor_id, field)
+    | Some true, Some (cursor_id, Pointer _), Some field -> Some (step, cursor_id, field)
     | _ ->
       Probe.violation "reuse cursor"
         Pp.(str "a turn the cursor steps at does not walk a pointer shadow on to a field of its cell");
@@ -648,13 +648,11 @@ let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call ar
 (** The statements stepping the cursor on to [field]: the reads [reads]
     first, then [reuse_step], which takes the token and the field. *)
 let step_stmts reads field =
-  (* CPPfun_call holds its arguments reversed ({!Minicpp.of_reversed}),
-     so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
   reads
-  @ [ Sasgn
+  @ [ Bind_variable
         ( id_rstep,
-          Declare (Tauto, None),
-          CPPfun_call (call_opaque, CPPrt Crane_rt.Reuse_step, of_reversed [field; CPPvar id_uniq; CPPvar id_own]) ) ]
+          Declare (Auto, None),
+          Call (call_opaque, Runtime Crane_rt.Reuse_step, [Local id_own; Local id_uniq; field]) ) ]
 
 (** The shadow updates [updates] of a turn the cursor steps at, its own
     shadow [cursor_id] advanced through [_own] instead: the field has been
@@ -663,12 +661,12 @@ let step_stmts reads field =
     that the current one is gone. *)
 let advance_cursor cursor_id updates =
   let is_cursor_update = function
-    | Sasgn (id, Existing, _) | Sexpr (CPPbinop (Bassign, CPPvar id, _)) -> Id.equal id cursor_id
+    | Bind_variable (id, Existing, _) | Expression (Binary (Assign, Local id, _)) -> Id.equal id cursor_id
     | _ -> false
   in
   List.filter (fun s -> not (is_cursor_update s)) updates
-  @ [ Sexpr (CPPbinop (Bassign, CPPvar id_own, CPPmove (CPPaccess (Adot, CPPvar id_rstep, Id.of_string "next"))));
-      Sexpr (CPPbinop (Bassign, CPPvar cursor_id, CPPaccess_call (Adot, CPPvar id_own, id_get, []))) ]
+  @ [ Expression (Binary (Assign, Local id_own, Move (Access (Dot, Local id_rstep, Id.of_string "next"))));
+      Expression (Binary (Assign, Local cursor_id, Access_call (Dot, Local id_own, id_get, []))) ]
 
 (** The jump the tail call [call] passing [args] becomes, its shadow
     updates [updates args]: where the cursor walks on there, the turn builds
@@ -720,7 +718,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
       raise Cursor_declined
     | None -> (None, [], br)
   in
-  let token = Option.map (fun _ -> CPPmove (CPPaccess (Adot, CPPvar id_rstep, Id.of_string "token"))) cursor in
+  let token = Option.map (fun _ -> Move (Access (Dot, Local id_rstep, Id.of_string "token"))) cursor in
   (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
   let cell_names =
     List.mapi
@@ -735,10 +733,10 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
     match cells, names with
     | cell :: rest_cells, outer_name :: (inner_name :: _ as rest_names) ->
       patch_cell_field cell
-        (CPPvar outer_name)
+        (Local outer_name)
         (match vt_ret with
-         | Some _ -> CPPmove (CPPvar inner_name)
-         | None -> CPPvar inner_name)
+         | Some _ -> Move (Local inner_name)
+         | None -> Local inner_name)
       :: link_cells rest_cells rest_names
     | _ -> []
   in
@@ -749,13 +747,13 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
     | [] -> assert false
     | [cell] ->
       let obj, field_id = cell_rec_field ~access cell ptr in
-      CPPget (obj, field_id)
+      Member (obj, field_id)
     | cell :: rest ->
       let obj, field_id = cell_rec_field ~access cell ptr in
-      innermost_hole Aarrow (CPPget (obj, field_id)) rest
+      innermost_hole Arrow (Member (obj, field_id)) rest
   in
   let advance_to hole =
-    Sexpr (CPPbinop (Bassign, CPPvar id_write, CPPunop (Uaddr, hole)))
+    Expression (Binary (Assign, Local id_write, Unary (Address_of, hole)))
   in
   let placement =
     match storage with
@@ -767,26 +765,26 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
       let inner_decls =
         List.map
           (fun (cell_id, cell) ->
-            Sasgn (cell_id, Declare (Tauto, None), build_cell_call ~vt_ret cell))
+            Bind_variable (cell_id, Declare (Auto, None), build_cell_call ~vt_ret cell))
           (List.combine inner_names inner_cells)
       in
       let inner_links = List.rev (link_cells inner_cells inner_names) in
       let rec_arg =
         match inner_names with
-        | n :: _ -> CPPmove (CPPvar n)
-        | [] -> CPPnullptr
+        | n :: _ -> Move (Local n)
+        | [] -> Literal Null_pointer
       in
       let outer = List.hd br.tmc_cells in
       inner_decls @ inner_links
-      @ [ Sasgn
+      @ [ Bind_variable
             ( List.hd cell_names,
-              Declare (Tauto, None),
+              Declare (Auto, None),
               build_cell_call ~rec_arg ~allocate:false ~vt_ret outer );
-          Sasgn
+          Bind_variable
             ( id_node,
-              Declare (Tref (Lvalue, ty), None),
-              place_value ty (CPPmove (CPPvar (List.hd cell_names))) );
-          advance_to (innermost_hole Adot (CPPvar id_node) br.tmc_cells) ]
+              Declare (Reference (Lvalue, ty), None),
+              place_value ty (Move (Local (List.hd cell_names))) );
+          advance_to (innermost_hole Dot (Local id_node) br.tmc_cells) ]
     | Boxed_root _ | Pointer_result _ ->
       (* Only the outermost cell may take the token: one input cell dies per
          iteration, so a nested chain still recycles exactly one of its cells. *)
@@ -794,18 +792,18 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
         List.mapi
           (fun i (cell_id, cell) ->
             let token = if i = 0 then token else None in
-            Sasgn (cell_id, Declare (Tauto, None), build_cell_call ?token ~vt_ret cell))
+            Bind_variable (cell_id, Declare (Auto, None), build_cell_call ?token ~vt_ret cell))
           (List.combine cell_names br.tmc_cells)
       in
       let link_stmts = List.rev (link_cells br.tmc_cells cell_names) in
-      let outermost = CPPvar (List.hd cell_names) in
+      let outermost = Local (List.hd cell_names) in
       let patch =
-        Sexpr
-          (CPPbinop
-             ( Bassign,
-               CPPderef (CPPvar id_write),
+        Expression
+          (Binary
+             ( Assign,
+               Dereference (Local id_write),
                match storage with
-               | Boxed_root _ -> CPPmove outermost
+               | Boxed_root _ -> Move outermost
                | _ -> outermost ))
       in
       let hole =
@@ -813,10 +811,10 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
         | Boxed_root _ ->
           (* The chain is held inside the cells, so walk down from [*_write]
              through each outer cell's recursive field. *)
-          innermost_hole Aarrow (CPPderef (CPPvar id_write)) br.tmc_cells
+          innermost_hole Arrow (Dereference (Local id_write)) br.tmc_cells
         | _ ->
-          innermost_hole Aarrow
-            (CPPvar (List.rev cell_names |> List.hd))
+          innermost_hole Arrow
+            (Local (List.rev cell_names |> List.hd))
             [List.rev br.tmc_cells |> List.hd]
       in
       cell_decls @ link_stmts @ [patch; advance_to hole]
@@ -830,10 +828,10 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
 (** Rewrite a single statement for TMC loopification.
 
     Constructs a TMC {!top_rewrite_config} and delegates to
-    {!generic_rewrite_stmt}.  The inner config emits a plain [Sif].  Base
+    {!generic_rewrite_stmt}.  The inner config emits a plain [If].  Base
     returns patch the write pointer and break; TMC branches allocate cells
     with holes.  Tail calls
-    at the top level append [Scontinue]; inside visitor lambdas they do not
+    at the top level append [Continue]; inside visitor lambdas they do not
     (the lambda returns and the [while] loop naturally continues).
 
     @param storage where the result is assembled
@@ -843,12 +841,12 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
     varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
-     [[Scontinue]] at the top level. *)
+     [[Continue]] at the top level. *)
   let tmc_on_other_return ~derefs ~suffix e =
     let n = count_calls_expr check e in
     if n = 0 then
       (* Base case — patch destination and stop *)
-      place_base storage e @ [Sbreak]
+      place_base storage e @ [Break]
     else
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
       match branch e with
@@ -859,7 +857,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
       | None ->
         (* A call the plan's chains do not reach stays a call; the loop is
            then not taken ({!Loopify.apply_nontail_loopification}). *)
-        [Sreturn (Some e)]
+        [Return (Some e)]
   in
   let inner_rc =
     { rc_check = check;
@@ -872,9 +870,9 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
     { trc_inner = inner_rc;
       trc_jump =
         (fun ~derefs ~updates call args ->
-          cursor_jump ?cursor ~cursor_used ~derefs ~updates varying shadow_params call args @ [Scontinue]);
+          cursor_jump ?cursor ~cursor_used ~derefs ~updates varying shadow_params call args @ [Continue]);
       trc_on_other =
-        (fun ~derefs e -> wrap_as_block (tmc_on_other_return ~derefs ~suffix:[Scontinue] e));
+        (fun ~derefs e -> wrap_as_block (tmc_on_other_return ~derefs ~suffix:[Continue] e));
       trc_rewrite_branch = Fun.id;
       trc_detect_void_tail = false }
 
@@ -921,12 +919,12 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
            {!tail_shadow_type} chose something else, it chose it because the
            parameter's own type cannot hold what the loop will put here. *)
         let decl_ty = match shadow_ty with
-          | Tptr _ -> shadow_ty
+          | Pointer _ -> shadow_ty
           | _ ->
             if has_custom_init then strip_ref_type shadow_ty
             else strip_ref_and_const_type shadow_ty
         in
-        Sasgn (shadow_id, Declare (decl_ty, None), init_expr) )
+        Bind_variable (shadow_id, Declare (decl_ty, None), init_expr) )
       varying_params
       shadow_params
   in
@@ -944,7 +942,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
       | Some _ | None -> None )
     | Some _ | None -> None
   in
-  (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers.  A step
+  (* Rewrite body for TMC, then flatten unnecessary Block wrappers.  A step
      the cursor's lowering cannot carry out declines it, and the body is
      rewritten without it, in the storage its type has: the first cell is
      allocated on the heap only for the cursor to recycle into.  The calls
@@ -970,17 +968,17 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
   in
   (* Where the result is assembled, and the hole [_write] starts at. *)
   let head_ty = match storage with
-    | Value_root t | Boxed_root t -> Tshared_ptr t
+    | Value_root t | Boxed_root t -> Shared_pointer t
     | Pointer_result t -> t
   in
   let root_decls =
     match storage with
     | Value_root t ->
-      [ Sdecl_init (id_root, Tid_external ((Cpp_state.sn ()).ns ^ "::optional", [t]));
-        Sasgn (id_write, Declare (Tptr head_ty, None), CPPnullptr) ]
+      [ Declare_value_initialized (id_root, External ((Cpp_state.sn ()).ns ^ "::optional", [t]));
+        Bind_variable (id_write, Declare (Pointer head_ty, None), Literal Null_pointer) ]
     | Boxed_root _ | Pointer_result _ ->
-      [ Sdecl_init (id_head, head_ty);
-        Sasgn (id_write, Declare (Tptr head_ty, None), CPPunop (Uaddr, CPPvar id_head)) ]
+      [ Declare_value_initialized (id_head, head_ty);
+        Bind_variable (id_write, Declare (Pointer head_ty, None), Unary (Address_of, Local id_head)) ]
   in
   List.iter jumped jumps;
   let body'' = body'' |> strip_unnecessary_blocks |> rewrite_borrowed_shadow_uses shadow_params in
@@ -999,20 +997,20 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
   let cursor_decls =
     if not cursor_used then []
     else
-      [ Sasgn (id_own, Declare (head_ty, None), Cpp_erasure.converting_ctor head_ty []);
-        (* [Tid] is the *user-defined* type constructor, so the printer
+      [ Bind_variable (id_own, Declare (head_ty, None), converting_ctor head_ty []);
+        (* [Named] is the *user-defined* type constructor, so the printer
            namespace-qualifies it ("Mod::bool").  This is the builtin, which
            must never be qualified. *)
-        Sasgn
+        Bind_variable
           ( id_uniq,
-            Declare (Tid_external ("bool", []), None),
-            CPPbool true )
+            Declare (External ("bool", []), None),
+            Literal (Bool true) )
       ]
   in
   let ret_expr = match storage with
-    | Value_root _ -> CPPmove (CPPderef (CPPvar id_root))
-    | Boxed_root _ -> CPPmove (CPPderef (CPPvar id_head))
-    | Pointer_result _ -> CPPvar id_head
+    | Value_root _ -> Move (Dereference (Local id_root))
+    | Boxed_root _ -> Move (Dereference (Local id_head))
+    | Pointer_result _ -> Local id_head
   in
   let shadow_decls, body'' = drop_unread_shadows shadow_decls body'' in
   let body'' = strip_unnecessary_blocks body'' in
@@ -1025,6 +1023,6 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
   @ cursor_decls
   @ shadow_decls
   @ [
-      Swhile (CPPbool true, body'');
-      Sreturn (Some ret_expr);
+      While (Literal (Bool true), body'');
+      Return (Some ret_expr);
     ]

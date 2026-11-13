@@ -3301,7 +3301,7 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
 
     Unless [passing], no self-parameter is passed: each call is flattened and
     still calls the fixpoint by its own name, as a loop lowered from the
-    fixpoint's ControlIR takes it ({!Control_to_legacy_minicpp.local_loop}),
+    fixpoint's ControlIR takes it ({!Control_to_cpp_ir.local_loop}),
     and a fixpoint named as a value is left as it is.
 
     @return the expression and statement rewriters, which are mutually

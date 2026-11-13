@@ -2,10 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A function's {!Control_ir} lowered, as the function is generated, to
-    the MiniCpp loop the passes after it read: the bridge from ControlIR to
-    the MiniCpp shapes Loopify's transforms build.  Every loop of the
-    program is made here, from the plan; {!Cpp_pipeline.finish} runs no loop
-    transform of its own.
+    the CppIR loop the passes after it read ({!Cpp_ir.Lowered}): the bridge
+    from ControlIR to the loop shapes Loopify's transforms build.  Every loop
+    of the program is made here, from the plan; {!Cpp_pipeline.finish} runs
+    no loop transform of its own.  Translation still generates MiniCpp: the
+    entry points below that take it convert it to CppIR on the way in and
+    back on the way out.
 
     It lowers the loop of direct tail recursion of a top-level
     function ({!Control_ir.Loop.Function}) that the configuration loopifies
@@ -14,7 +16,7 @@
     of its members are generated, each member alone: its partners' bodies
     are spliced into its Core body ({!Recursion_plan.splice_partners}).
     Its jumps are the C++ calls made of the loop's [Continue]s, by the
-    occurrence each records ({!Minicpp.call_sig.cs_occurrence}); the
+    occurrence each records ({!Cpp_ir.Expr.Call.signature}); the
     parameters a jump leaves alone are those every [Continue] passes on
     unchanged ({!Control_ir.Term.invariant_parameters}).  What is left to the
     C++ is how each is spelled: the arguments the call was translated with
@@ -141,7 +143,7 @@ val local_loop :
     of the inductive [r] of variables [vars], with each method made of a
     function the recursion plan lowers to a loop -- a tail loop, one tail
     modulo cons, or a machine with a stack -- and Loopify would loopify,
-    lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
+    lowered to that loop, recording it ({!Cpp_ir.Field.Method}),
     as Loopify lowers a method: its receiver the loop's first variable.
     [merged] says whether the struct is merged into its module's, whose
     members Loopify loopifies only where it loopifies everything. *)
@@ -165,7 +167,7 @@ val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
 
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above
-    where it is one, recording its loop ({!Minicpp.dfun.df_loop}).  A
+    where it is one, recording its loop ({!Cpp_ir.Function}).  A
     member Loopify loopifies of which no loop is made has the local
     fixpoints in its body lowered as {!lower_lifted} lowers a
     helper's. *)

@@ -746,7 +746,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      saves are planned with the body: certainly, or perhaps. *)
   let resumes, certain =
     match
-      Control_to_legacy_minicpp.method_resumes func_ref ~inductive:name ~receiver:this_pos
+      Control_to_cpp_ir.method_resumes func_ref ~inductive:name ~receiver:this_pos
         ~depth:(List.length (fst env))
     with
     | Some (resumes, certain) -> (Some resumes, Some certain)
@@ -1012,14 +1012,14 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
 (** The methods made of [candidates] in the inductive [name], as its struct
     declares them ({!Borrow_projection.lend}), with their control lowered
     from their ControlIR where that is the bridge's to lower
-    ({!Control_to_legacy_minicpp.lower_methods}).  The struct is merged into
+    ({!Control_to_cpp_ir.lower_methods}).  The struct is merged into
     its module's where it is the one the module is promoting, or [merged]
     says so. *)
 let gen_methods ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
   in
-  Control_to_legacy_minicpp.lower_methods ~merged name vars
+  Control_to_cpp_ir.lower_methods ~merged name vars
     (List.concat_map
        (fun c ->
          Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )

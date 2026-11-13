@@ -1347,7 +1347,7 @@ let gen_dfun ~minted n b cty ty temps =
   in
   begin_body ~owner:n ~function_:true ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
-  let resumes = Control_to_legacy_minicpp.function_resumes n ~depth:(List.length all_ids) in
+  let resumes = Control_to_cpp_ir.function_resumes n ~depth:(List.length all_ids) in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)
   let owned_params =
@@ -2011,14 +2011,14 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
     body once, then lower the group's control from its ControlIR where that
-    is the bridge's to lower ({!Control_to_legacy_minicpp}). *)
+    is the bridge's to lower ({!Control_to_cpp_ir}). *)
 let gen_dfuns_dual fds =
   let generated =
     List.map
       (fun {fd_ref; fd_body; fd_type} -> collecting_lifted (fun () -> gen_dfun_def fd_ref fd_body fd_type))
       fds
   in
-  let lowered = Control_to_legacy_minicpp.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in
+  let lowered = Control_to_cpp_ir.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in
   List.map2
     (fun ds ((_, env, tvars), lifted) -> {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted})
     lowered generated

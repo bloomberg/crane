@@ -38,7 +38,7 @@
     The loop of a top-level function is made from here as its recursive
     group is generated, that of a method as its struct's methods are, and
     that of a local fixpoint as translation generates it
-    ({!Control_to_legacy_minicpp}), a machine's entry with it, and that of
+    ({!Control_to_cpp_ir}), a machine's entry with it, and that of
     a helper lifted for a local fixpoint's function where translation makes
     the helper.  Loopify still makes the others -- a local fixpoint's that a
     machine may adopt or is lowered inside -- and under [CRANE_CHECK_IR]

@@ -1,9 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Loopify pass: transforms recursive MiniCpp functions into iterative ones.
+(** Loopify pass: transforms recursive C++ functions into iterative ones.
 
-    Operates on {!Minicpp.cpp_decl} nodes after translation produces them but
+    Operates on {!Cpp_ir.Lowered} declarations after translation produces them but
     before pretty-printing.  Each function, method and local fixpoint is
     lowered as the recursion plan decided from its Core body
     ({!Recursion_plan.strategy}): a [while] loop, a loop tail modulo cons,
@@ -13,7 +13,7 @@
     violation. *)
 
 open Names
-open Minicpp
+open Loopify_analysis
 
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
@@ -26,11 +26,11 @@ open Minicpp
 val after_tail_loop :
   ?strategy:Loopify_analysis.loopify_outcome ->
   ?survived:string ->
-  tparams:(template_type * Id.t) list ->
-  dfun ->
-  (Id.t * cpp_type) list ->
-  cpp_stmt list ->
-  cpp_stmt list
+  tparams:(param_kind * Id.t) list ->
+  func ->
+  (Id.t * ty) list ->
+  stmt list ->
+  stmt list
 
 (** Why no loop of a function Loopify loopifies was made: the transform
     declined it, [Declined why] recording [why] whatever the body holds; or
@@ -68,12 +68,12 @@ val frame_machine :
   ?entered_pointers:(Core_binder.t -> bool) ->
   varying:bool list ->
   parts:bool list ->
-  tparams:(template_type * Id.t) list ->
+  tparams:(param_kind * Id.t) list ->
   Loopify_analysis.call_checker ->
-  dfun ->
-  (Id.t * cpp_type) list ->
-  cpp_stmt list ->
-  (cpp_stmt list * string option, unlowered) result
+  func ->
+  (Id.t * ty) list ->
+  stmt list ->
+  (stmt list * string option, unlowered) result
 
 (** The recursive calls of the definition [r], each by the occurrence the
     C++ call made of it records: a function's own, in its recursive group's
@@ -88,11 +88,11 @@ val definition_calls : GlobRef.t -> Miniml.Occurrence.t list
     lowers it to none, a deferral for a suspended cofixpoint, and otherwise
     the decline, or the planned strategy read off [body]: a decline where a
     call of [f] is left in it ({!Loopify_analysis.report_outcome}). *)
-val record_unlowered : ?unlowered:unlowered -> dfun -> cpp_stmt list -> unit
+val record_unlowered : ?unlowered:unlowered -> func -> stmt list -> unit
 
 (** [record_unlowered_method m] is {!record_unlowered} for the method [m],
     of which no loop is attempted: its calls those of the method. *)
-val record_unlowered_method : method_field -> unit
+val record_unlowered_method : meth -> unit
 
 (** [modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check
     f params body] is the tail-modulo-cons loop of the function [f], whose
@@ -106,17 +106,17 @@ val record_unlowered_method : method_field -> unit
     [CRANE_CHECK_IR], or leave a call behind.  It raises
     [Loopify_analysis.Not_linearisable] where the transform declines. *)
 val modulo_cons_loop :
-  jumped:(cpp_expr -> unit) ->
+  jumped:(expr -> unit) ->
   ?cursor:Reuse_cursor.t ->
   varying:bool list ->
   parts:bool list ->
   shapes:Loopify_tmc.shape list ->
-  tparams:(template_type * Id.t) list ->
+  tparams:(param_kind * Id.t) list ->
   Loopify_analysis.call_checker ->
-  dfun ->
-  (Id.t * cpp_type) list ->
-  cpp_stmt list ->
-  cpp_stmt list option
+  func ->
+  (Id.t * ty) list ->
+  stmt list ->
+  stmt list option
 
 (** [transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams
     ~self_ty m] is Loopify's
@@ -142,10 +142,10 @@ val transform_method_own :
   varying:bool list ->
   parts:bool list ->
   park:Miniml.Occurrence.t list ->
-  tparams:(template_type * Id.t) list ->
-  self_ty:cpp_type ->
-  method_field ->
-  cpp_field
+  tparams:(param_kind * Id.t) list ->
+  self_ty:ty ->
+  meth ->
+  field
 
 (** Why a method is not lowered to a machine or a loop tail modulo cons
     whose recursive call passes a receiver made in a turn: a frame or a cell
@@ -161,14 +161,14 @@ val rebuilt_receiver_read : string
     tail-recursive local fixpoints in them turned into loops, under the
     template parameters [tparams]. *)
 val lower_local_tail_loops :
-  tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
+  tparams:(param_kind * Id.t) list -> stmt list -> stmt list
 
 (** [lower_function_locals ~tparams params body] is the body [body] of a
     function taking [params], of which Loopify makes no loop of its own,
     with every local fixpoint in it Loopify lowers turned into its loop or
     its machine. *)
 val lower_function_locals :
-  tparams:(template_type * Id.t) list -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
+  tparams:(param_kind * Id.t) list -> (Id.t * ty) list -> stmt list -> stmt list
 
 (** [local_frame_machine ~member ~name ~binders ~varying ~parts ~tparams
     check params ret_ty body] is the body of the machine with a stack of
@@ -188,17 +188,17 @@ val local_frame_machine :
   binders:(Id.t * Core_binder.t) list ->
   varying:bool list ->
   parts:bool list ->
-  tparams:(template_type * Id.t) list ->
+  tparams:(param_kind * Id.t) list ->
   Loopify_analysis.call_checker ->
-  (Id.t * cpp_type) list ->
-  cpp_type ->
-  cpp_stmt list ->
-  cpp_stmt list option
+  (Id.t * ty) list ->
+  ty ->
+  stmt list ->
+  stmt list option
 
 (** What the ControlIR loop of a local fixpoint's function says of each
     parameter its lambda takes -- the loop's parameters that are not void
     ({!Ml_type_util.void_binder}), in the order a lambda stores them, the
-    last first ({!Minicpp.to_reversed}): whether some Continue changes it
+    last first: whether some Continue changes it
     ({!Control_ir.Term.invariant_parameters}), and whether every Continue passes
     it a value stored in what the caller passed for it
     ({!Control_ir.Term.parts_passed}) or, of a machine with a stack of frames,
@@ -218,9 +218,9 @@ type member_plan = {
     a stack of frames where [frames]; [None] where it has no ControlIR loop,
     or the lambda takes other parameters than the loop. *)
 val member_plan :
-  frames:bool -> Miniml.Occurrence.t * int -> (Names.Id.t * cpp_type) list -> member_plan option
+  frames:bool -> Miniml.Occurrence.t * int -> (Names.Id.t * ty) list -> member_plan option
 
-val worthwhile_move_type : cpp_type -> bool
+val worthwhile_move_type : ty -> bool
 (** Whether a value of this type is expensive enough to copy that writing
     [std::move] around it earns its keep: a reference count to bump, an
     inductive to clone, or a type parameter that may be either.  Exported for

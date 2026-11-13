@@ -5,13 +5,15 @@
     ({!transform_tail}), the generic return-statement rewriter that
     {!Loopify_tmc} shares, and the shadow variables every strategy declares
     for the parameters a loop varies ({!build_shadow_setup},
-    {!make_shadow_updates}).  Runs on MiniCpp function bodies, after
+    {!make_shadow_updates}).  Runs on {!Cpp_ir.Lowered} function bodies, after
     translation and before printing; which functions it lowers, and which
     calls are its jumps, the ControlIR of each loop decides
-    ({!Control_to_legacy_minicpp}). *)
+    ({!Control_to_cpp_ir}). *)
 
 open Names
-open Minicpp
+open Cpp_ir.Type
+open Cpp_ir.Stmt
+open Cpp_ir.Expr
 open Loopify_analysis
 
 (** {2 Tail recursion transformation}
@@ -38,10 +40,10 @@ let shadow_name (id : Id.t) : Id.t = Generated_name.prefixed "_loop" id
 
 (** Strip reference and const modifiers from a type, converting it to a value
     type suitable for local variable declarations. [const shared_ptr<T> &]
-    becomes [shared_ptr<T>], and [F0 &&] ([Tref (Forwarding, Tvar)]) becomes [Tvar].
+    becomes [shared_ptr<T>], and [F0 &&] ([Reference (Forwarding, Variable)]) becomes [Variable].
 *)
 let rec strip_ref_type = function
-  | Tref (_, t) -> strip_ref_type t
+  | Reference (_, t) -> strip_ref_type t
   | t -> t
 
 (** Strip reference types AND const modifiers from a type. Used for shadow
@@ -52,9 +54,9 @@ let rec strip_ref_type = function
     through the pointer; removing it would break [_loop_self = this] when
     [this] is [const T *] in a const method. *)
 let rec strip_ref_and_const_type = function
-  | Tref (_, t) -> strip_ref_and_const_type t
-  | Tconst (Tptr _) as t -> t
-  | Tconst t -> strip_ref_and_const_type t
+  | Reference (_, t) -> strip_ref_and_const_type t
+  | Const (Pointer _) as t -> t
+  | Const t -> strip_ref_and_const_type t
   | t -> t
 
 (** Return [true] when a parameter is worth moving into a shadow variable.
@@ -64,8 +66,8 @@ let rec strip_ref_and_const_type = function
     -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
     and is moved as a type variable is ({!Ownership_ir.worth_moving_cpp}). *)
 let is_moveable_param_type = function
-  | Tref _ | Tconst _ -> false
-  | Tauto -> true
+  | Reference _ | Const _ -> false
+  | Auto -> true
   | ty -> worthwhile_move_type ty
 
 (** Extract the pointee type from a "borrowed value-type" parameter.
@@ -94,33 +96,33 @@ let is_moveable_param_type = function
 
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
-  | Tref (Lvalue, Tconst t) when is_value_type_ret t -> Some t
-  | Tconst (Tref (Lvalue, t)) when is_value_type_ret t -> Some t
-  | Tconst t when is_value_type_ret t -> Some t
+  | Reference (Lvalue, Const t) when is_value_type_ret t -> Some t
+  | Const (Reference (Lvalue, t)) when is_value_type_ret t -> Some t
+  | Const t when is_value_type_ret t -> Some t
   | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
     Some t
   | _ -> None
 
 (** Extract the underlying type variable id from a forwarding-reference type.
-    [Tref (Forwarding, Tvar (Tv_index (_, Some id) | Tv_named id))] gives
+    [Reference (Forwarding, Variable (Index (_, Some id) | Named id))] gives
     [Some id]; any reference wrapper is looked through, not only a
     forwarding one. *)
 let rec extract_fwd_ref_tvar = function
-  | Tref (_, inner) -> extract_fwd_ref_tvar inner
-  | Tvar (Tv_index (_, Some id) | Tv_named id) -> Some id
+  | Reference (_, inner) -> extract_fwd_ref_tvar inner
+  | Variable (Index (_, Some id) | Named id) -> Some id
   | _ -> None
 
 (** The arrow a template parameter is constrained to, when it is a callable one.
     [tparams] holds [(kind, name)] pairs from the surrounding template header;
-    a [TTfun (dom, cod)] kind is what becomes the
+    a [Callable_declared (dom, cod)] kind is what becomes the
     [std::is_invocable_r_v<cod, F &, dom &...>] clause. *)
 let lookup_tparam_fun_type tparams id =
   let name = Id.to_string id in
   List.find_map
-    (fun (tt, tparam_id) ->
+    (fun ((tt : param_kind), tparam_id) ->
       match tt with
-      | TTfun (dom, cod) when String.equal (Id.to_string tparam_id) name ->
-        Some (Tfun (dom, cod))
+      | Callable_declared (dom, cod) when String.equal (Id.to_string tparam_id) name ->
+        Some (Function (dom, cod))
       | _ -> None )
     tparams
 
@@ -140,7 +142,7 @@ let lookup_tparam_fun_type tparams id =
     Otherwise the shadow inherits the parameter's type verbatim. *)
 let tail_shadow_type ~tparams ~pointer_safe ty =
   match (pointer_safe, borrowed_value_param_pointee ty) with
-  | true, Some t -> Tptr (Tconst t)
+  | true, Some t -> Pointer (Const t)
   | _ ->
     ( match Option.bind (extract_fwd_ref_tvar ty) (lookup_tparam_fun_type tparams) with
     | Some arrow -> arrow
@@ -153,10 +155,10 @@ let tail_shadow_type ~tparams ~pointer_safe ty =
     - Otherwise: plain copy *)
 let tail_shadow_init orig_id shadow_ty ty =
   match shadow_ty, borrowed_value_param_pointee ty with
-  | Tptr _, Some _ -> CPPunop (Uaddr, CPPvar orig_id)
+  | Pointer _, Some _ -> Unary (Address_of, Local orig_id)
   | _ ->
-    if is_moveable_param_type ty then CPPmove (CPPvar orig_id)
-    else CPPvar orig_id
+    if is_moveable_param_type ty then Move (Local orig_id)
+    else Local orig_id
 
 (** Adjust a recursive-call argument to match the shadow variable's type.
 
@@ -172,11 +174,11 @@ let tail_shadow_init orig_id shadow_ty ty =
     @param shadow_ids  Shadow variable IDs that are already raw pointers *)
 let tail_shadow_arg ~shadow_ids shadow_ty arg =
   match shadow_ty, arg with
-  | Tptr _, CPPderef (CPPvar id) when List.exists (Id.equal id) shadow_ids ->
-    CPPvar id
-  | Tptr _, CPPderef inner ->
-    CPPfun_call (call_opaque, CPPrt Crane_rt.Raw, of_reversed ([inner]))
-  | Tptr _, CPPvar _ -> CPPunop (Uaddr, arg)
+  | Pointer _, Dereference (Local id) when List.exists (Id.equal id) shadow_ids ->
+    Local id
+  | Pointer _, Dereference inner ->
+    Call (call_opaque, Runtime Crane_rt.Raw, [inner])
+  | Pointer _, Local _ -> Unary (Address_of, arg)
   | _ -> arg
 
 (** The variable whose storage [e] stays inside, through dereferences, moves,
@@ -185,14 +187,14 @@ let tail_shadow_arg ~shadow_ids shadow_ty arg =
 let rec storage_root ~root ~bound e =
   let inside = storage_root ~root ~bound in
   match e with
-  | CPPvar x -> if root x then Some x else bound x
-  | CPPderef e | CPPmove e | CPPaccess (Adot, e, _) | CPPaccess (Aarrow, e, _)
-  | CPPget (e, _) | CPPget' (e, _, _) | CPPunop (_, e) ->
+  | Local x -> if root x then Some x else bound x
+  | Dereference e | Move e | Access (Dot, e, _) | Access (Arrow, e, _)
+  | Member (e, _) | Project (e, _, _) | Unary (_, e) ->
     inside e
-  | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) -> inside e
-  | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []}) | CPPaccess_call (Aarrow, e, _, []) ->
+  | Call (_, Runtime Crane_rt.Raw, [e]) -> inside e
+  | Call (_, Access (Dot, e, _), []) | Access_call (Arrow, e, _, []) ->
     inside e
-  | CPPstd_get (_, Some e) -> inside e
+  | Variant_get (_, Some e) -> inside e
   | _ -> None
 
 (** Pointer-safety flags for [params], parallel to it: a parameter is
@@ -205,7 +207,7 @@ let pointer_safe_flags ~parts params =
 
 (** Rewrite references to pointer-safe shadow variables ([const T*]) so that
     reads dereference the pointer and method calls use [->] via
-    [CPPaccess_call].
+    [Access_call].
 
     Pointer-safe shadows store a [const T*] instead of copying the value.
     Code originally written against [const T&] needs adjustment:
@@ -218,52 +220,50 @@ let pointer_safe_flags ~parts params =
       ordinary expression
 
     @param shadow_params The shadow parameter list; only entries whose type
-                         is [Tptr _] are considered pointer-safe
+                         is [Pointer _] are considered pointer-safe
     @param stmts         Statement list to rewrite
     @return Rewritten statements with pointer dereferences inserted *)
 let rewrite_borrowed_shadow_uses shadow_params stmts =
   let ptr_shadows =
     List.filter_map
-      (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
+      (fun (id, ty) -> match ty with Pointer _ -> Some id | _ -> None)
       shadow_params
   in
   let is_ptr_shadow id = List.exists (Id.equal id) ptr_shadows in
   let rec expr = function
-    | CPPfun_call (_, CPPaccess (Adot, CPPvar id, meth), args)
+    | Call (_, Access (Dot, Local id, meth), args)
       when is_ptr_shadow id ->
-      (* A method call's arguments are in source order, a function call's are
-         not: the reversal has to come off here. *)
-      CPPaccess_call (Aarrow, CPPvar id, meth, List.map expr (call_args args))
-    | CPPvar id when is_ptr_shadow id -> CPPderef (CPPvar id)
+      Access_call (Arrow, Local id, meth, List.map expr args)
+    | Local id when is_ptr_shadow id -> Dereference (Local id)
     | e -> map_expr expr stmt Fun.id e
   and stmt = function
-    | Sexpr (CPPbinop (Bassign, CPPvar id, rhs)) when is_ptr_shadow id ->
+    | Expression (Binary (Assign, Local id, rhs)) when is_ptr_shadow id ->
       (* Assignment to a pointer shadow: keep the LHS as a raw pointer
          (don't dereference it), only rewrite the RHS. *)
-      Sexpr (CPPbinop (Bassign, CPPvar id, expr rhs))
-    | Smatch (scrut, branches, default) ->
+      Expression (Binary (Assign, Local id, expr rhs))
+    | Match (scrut, branches, default) ->
       (* A scrutinee whose object is a pointer shadow -- [xs.v()] -- is
          matched through it, as a pointer rather than a value.  One whose
          object only mentions a shadow -- a call taking it as an argument --
          is a value like any other, the shadow read in it dereferenced. *)
       let ptr_scrutinee =
-        match scrut.sc_expr with
-        | CPPvar id
-        | CPPaccess_call (_, CPPvar id, _, [])
-        | CPPfun_call (_, CPPaccess (_, CPPvar id, _), {rev = []}) ->
+        match scrut.expr with
+        | Local id
+        | Access_call (_, Local id, _, [])
+        | Call (_, Access (_, Local id, _), []) ->
           is_ptr_shadow id
         | _ -> false
       in
-      Smatch
+      Match
         ( { scrut with
-            sc_expr =
-              (if ptr_scrutinee then scrut.sc_expr else expr scrut.sc_expr);
-            sc_access = (if ptr_scrutinee then Aarrow else scrut.sc_access) },
+            expr =
+              (if ptr_scrutinee then scrut.expr else expr scrut.expr);
+            access = (if ptr_scrutinee then Arrow else scrut.access) },
           List.map
-            (fun br ->
+            (fun (br : branch) ->
               { br with
-                smb_extra_conds = List.map expr br.smb_extra_conds;
-                smb_body = List.map stmt br.smb_body })
+                extra_conditions = List.map expr br.extra_conditions;
+                body = List.map stmt br.body })
             branches,
           Option.map (List.map stmt) default )
     | s -> map_stmt expr stmt Fun.id s
@@ -273,14 +273,14 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
 (** Whether a shadow's C++ type is a pointer ([const T *]), seen through
     [const] and references: a pointer shadow is repointed, never
     overwritten in place. *)
-let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false
+let rec pointer = function Pointer _ -> true | Const t | Reference (_, t) -> pointer t | _ -> false
 
 (** Wrap [e] in [std::move] only when it is an lvalue (a plain variable
     reference).  Wrapping rvalues (function calls, literals, binary ops) in
     [std::move] is a pessimising move: it prevents copy elision on the
     assignment and is rejected by [-Wpessimizing-move]. *)
 let move_if_lvalue = function
-  | CPPvar _ as e -> CPPmove e
+  | Local _ as e -> Move e
   | e -> e
 
 (** Assign [expr] to the [_result] accumulator variable:
@@ -288,13 +288,13 @@ let move_if_lvalue = function
     ({!Loopify_frame}), which keeps a [_result]; the tail loop returns
     directly ({!return_result}). *)
 let assign_result expr =
-  [Sexpr (CPPbinop (Bassign, CPPvar (id_result), move_if_lvalue expr))]
+  [Expression (Binary (Assign, Local (id_result), move_if_lvalue expr))]
 
 (** Return [expr] directly from the tail-recursion [while (true)] loop, which
     leaves both the loop and the function.  Used only in tail-recursion
     rewriting. *)
 let return_result expr =
-  [ Sreturn (Some (move_if_lvalue expr)) ]
+  [ Return (Some (move_if_lvalue expr)) ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For
     a recursive call like [f b (a mod b)], we must evaluate all argument
@@ -306,7 +306,7 @@ let return_result expr =
     Self-assignments ([_loop_x = _loop_x]) are skipped entirely. With at most
     one non-trivial assignment no temporary is made.
 
-    [CPPderef] arguments (advancing a list tail via [*(d_a1)]) are NOT moved
+    [Dereference] arguments (advancing a list tail via [*(d_a1)]) are NOT moved
     because the deref target may be through a shared_ptr whose pointee is
     aliased by the caller.
 
@@ -331,8 +331,8 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
   let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
   let is_self_assign shadow_id arg =
     match arg with
-    | CPPvar id when Id.equal id shadow_id -> true
-    | CPPmove (CPPvar id) when Id.equal id shadow_id -> true
+    | Local id when Id.equal id shadow_id -> true
+    | Move (Local id) when Id.equal id shadow_id -> true
     | _ -> false
   in
   let pairs =
@@ -362,19 +362,19 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
      torn down.  The cost is one shallow node copy, which the direct
      copy-assignment was paying anyway. *)
   let make_rhs ty arg =
-    let core = match arg with CPPmove a -> a | a -> a in
+    let core = match arg with Move a -> a | a -> a in
     (* The shadow's declared type still carries the parameter's [const &]; the
        shadow itself is an owning value of the stripped type. *)
     let vty = strip_ref_and_const_type ty in
     let dereference = function
-      | CPPderef _ -> true
-      | CPPvar v -> List.exists (fun (x, _) -> Id.equal v x) derefs
+      | Dereference _ -> true
+      | Local v -> List.exists (fun (x, _) -> Id.equal v x) derefs
       | _ -> false
     in
     match (ty, core) with
-    | Tptr _, _ -> arg
+    | Pointer _, _ -> arg
     | _, core when dereference core && is_value_type_ret vty ->
-      Cpp_erasure.converting_ctor vty [core]
+      converting_ctor vty [core]
     | _ -> arg
   in
   let by_value id = List.exists (fun (s, ty) -> Id.equal s id && not (pointer ty)) shadow_params in
@@ -385,12 +385,12 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
            let last v = List.exists (Id.equal v) last_reads && not (List.exists (Id.equal v) read) in
            let s =
              match s with
-             | Sasgn (x, Existing, CPPvar v) when by_value x && last v -> Sasgn (x, Existing, CPPmove (CPPvar v))
-             | Sasgn (x, (Declare (ty, _) as d), CPPvar v) when (not (pointer ty)) && last v ->
-               Sasgn (x, d, CPPmove (CPPvar v))
+             | Bind_variable (x, Existing, Local v) when by_value x && last v -> Bind_variable (x, Existing, Move (Local v))
+             | Bind_variable (x, (Declare (ty, _) as d), Local v) when (not (pointer ty)) && last v ->
+               Bind_variable (x, d, Move (Local v))
              | s -> s
            in
-           let reads = match s with Sasgn (_, _, e) | Sexpr e -> free_vars_expr e | _ -> [] in
+           let reads = match s with Bind_variable (_, _, e) | Expression e -> free_vars_expr e | _ -> [] in
            (s :: after, reads @ read) )
          updates ([], []))
   in
@@ -400,13 +400,13 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
     List.filter_map
       (fun ((shadow_id, ty), arg) ->
         if is_self_assign shadow_id arg then None
-        else Some (Sasgn (shadow_id, Existing, make_rhs ty arg)) )
+        else Some (Bind_variable (shadow_id, Existing, make_rhs ty arg)) )
       pairs
   else (* 2+ assignments: use temporaries only where needed *)
     (* Whether [e] reads one of the variables [names]. *)
     let rec mentions names e =
       match e with
-      | CPPvar v -> List.exists (Id.equal v) names
+      | Local v -> List.exists (Id.equal v) names
       | _ ->
         let found = ref false in
         iter_expr_children
@@ -464,7 +464,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
         (fun ((shadow_id, ty), arg) ->
           if needs_temp shadow_id then
             Some
-              (Sasgn
+              (Bind_variable
                  ( temp_name shadow_id,
                    Declare (strip_ref_and_const_type ty, None),
                    make_rhs ty arg ))
@@ -478,7 +478,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
           if needs_temp shadow_id then
             None
           else
-            Some (Sasgn (shadow_id, Existing, make_rhs ty arg)))
+            Some (Bind_variable (shadow_id, Existing, make_rhs ty arg)))
         non_trivial
     in
     (* Phase 2: copy from temps back to loop variables.  A temporary is dead
@@ -492,11 +492,11 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
             let rhs =
               let stripped = strip_ref_and_const_type ty in
               if is_trivially_copyable_type stripped && not (worthwhile_move_type stripped) then
-                CPPvar (temp_name shadow_id)
+                Local (temp_name shadow_id)
               else
-                CPPmove (CPPvar (temp_name shadow_id))
+                Move (Local (temp_name shadow_id))
             in
-            Some (Sexpr (CPPbinop (Bassign, CPPvar shadow_id, rhs)))
+            Some (Expression (Binary (Assign, Local shadow_id, rhs)))
           else
             None)
         non_trivial
@@ -506,8 +506,8 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
 (** {2 Generic return-statement rewriter}
 
     The tail-recursion and TMC loopification passes share the same structural
-    traversal of [Sif], [Scustom_case], [Smatch] and [Sblock].  They differ
-    only in how they handle [Sreturn]:
+    traversal of [If], [Custom_match], [Match] and [Block].  They differ
+    only in how they handle [Return]:
     tail recursion returns the value directly, while TMC ({!Loopify_tmc})
     patches a write pointer or allocates cells with holes.
 
@@ -526,14 +526,14 @@ type loop_rewrite_config = {
   (** Mask parallel to function parameters: [true] = varying (needs a shadow
       variable), [false] = invariant (referenced directly). *)
 
-  rc_shadow_params : (Id.t * cpp_type) list;
+  rc_shadow_params : (Id.t * ty) list;
   (** Shadow variable bindings [(name, type)] for varying parameters.
       Used by {!make_shadow_updates} when rewriting tail calls. *)
 
-  rc_jumped : cpp_expr -> unit;
+  rc_jumped : expr -> unit;
   (** Told each recursive call rewritten into a jump. *)
 
-  rc_last_reads : cpp_expr -> cpp_expr list -> Id.t list;
+  rc_last_reads : expr -> expr list -> Id.t list;
   (** The locals a recursive call passing the arguments given may move at
       their last read among its shadow updates ({!make_shadow_updates}). *)
 }
@@ -545,36 +545,36 @@ type top_rewrite_config = {
   (** Inner config for rewriting match-branch bodies. *)
 
   trc_jump :
-    derefs:(Id.t * cpp_expr) list -> updates:(cpp_expr list -> cpp_stmt list) -> cpp_expr -> cpp_expr list -> cpp_stmt list;
+    derefs:(Id.t * expr) list -> updates:(expr list -> stmt list) -> expr -> expr list -> stmt list;
   (** The statements a recursive call [e] in tail position passing [args],
       every parameter's, becomes, under the references to a dereference
       [derefs] declared before it, where [updates args] are the shadow
       updates passing [args] ({!make_shadow_updates}).  Plain tail recursion
       falls through to the [while (true)] test after them; TMC continues. *)
 
-  trc_on_other : derefs:(Id.t * cpp_expr) list -> cpp_expr -> cpp_stmt;
+  trc_on_other : derefs:(Id.t * expr) list -> expr -> stmt;
   (** Emit code for a non-tail, non-visit return at the top level, under
       the references to a dereference [derefs] declared before it
-      ({!make_shadow_updates}).  Wraps in [Sblock] as needed. *)
+      ({!make_shadow_updates}).  Wraps in [Block] as needed. *)
 
-  trc_rewrite_branch : smatch_branch -> smatch_branch;
+  trc_rewrite_branch : branch -> branch;
   (** Transform a match branch at the top level. *)
 
   trc_detect_void_tail : bool;
   (** Whether to detect the void tail-call pattern
-      [Sexpr call; Sreturn _] at the list level and rewrite it as
-      [Sreturn (Some call)].  Enabled for plain tail recursion; disabled
+      [Expression call; Return _] at the list level and rewrite it as
+      [Return (Some call)].  Enabled for plain tail recursion; disabled
       for TMC. *)
 }
 
 (** Generic top-level statement rewriter.
 
-    Rewrites every [Sreturn] in tail position of the loop body under [trc]:
+    Rewrites every [Return] in tail position of the loop body under [trc]:
     a recursive call becomes [trc.trc_jump], anything else
     [trc.trc_on_other].
-    {ul {- Returns a single [cpp_stmt] (wrapping in [Sblock] as needed).}
-        {- Recurses through [Sif], [Sswitch], [Scustom_case], [Smatch] and
-           [Sblock]; other statements are left alone.}
+    {ul {- Returns a single [stmt] (wrapping in [Block] as needed).}
+        {- Recurses through [If], [Switch], [Custom_match], [Match] and
+           [Block]; other statements are left alone.}
         {- Uses {!generic_rewrite_stmts} for list-level recursion, which
            optionally detects the void tail-call pattern.}}
 
@@ -582,7 +582,7 @@ type top_rewrite_config = {
     each with its shadow, and [derefs] the references to a dereference in
     scope ({!make_shadow_updates}). *)
 let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
-  | Sreturn (Some e) ->
+  | Return (Some e) ->
     ( match trc.trc_inner.rc_check e with
     | Some cs ->
       trc.trc_inner.rc_jumped e;
@@ -591,25 +591,21 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
           trc.trc_inner.rc_shadow_params
           (filter_by_mask trc.trc_inner.rc_varying args)
       in
-      Sblock (trc.trc_jump ~derefs ~updates e cs.cs_args)
+      Block (trc.trc_jump ~derefs ~updates e cs.cs_args)
     | None -> trc.trc_on_other ~derefs e )
-  | Sif (cond, then_br, else_br) ->
+  | If {condition = cond; then_ = then_br; else_ = else_br} ->
     let rw = generic_rewrite_stmts ~aliases ~derefs trc in
-    Sif (cond, rw then_br, rw else_br)
-  | Sswitch (scrut, r, branches, default) ->
+    If {condition = cond; then_ = rw then_br; else_ = rw else_br}
+  | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
     let rw = generic_rewrite_stmts ~aliases ~derefs trc in
-    Sswitch
-      ( scrut, r, List.map (fun (id, body) -> (id, rw body)) branches,
-        (* The default branch returns too: left as it was, its [return]
+    Switch {scrutinee = scrut; enum = r; branches = List.map (fun (id, body) -> (id, rw body)) branches; default = (* The default branch returns too: left as it was, its [return]
            would leave a tail-modulo-cons loop with the list built so far
            dropped. *)
-        Option.map rw default )
-  | Scustom_case (ty, scrut, tyargs, branches, err) ->
+        Option.map rw default}
+  | Custom_match m ->
     let rw = generic_rewrite_stmts ~aliases ~derefs trc in
-    Scustom_case (ty, scrut, tyargs,
-      List.map (fun (ps, ret_ty, body) -> (ps, ret_ty, rw body))
-        branches, err)
-  | Smatch (scrut, branches, default) ->
+    Custom_match {m with branches = List.map (fun (b : custom_branch) -> {b with body = rw b.body}) m.branches}
+  | Match (scrut, branches, default) ->
     (* A match on the storage of a shadow kept by value binds into it: its
        bindings are aliases of the shadow while the branch runs, and
        overwriting the shadow overwrites them.  A pointer shadow is only
@@ -623,47 +619,47 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
       storage_root
         ~root:(fun x -> List.exists (Id.equal x) by_value)
         ~bound:(fun x -> List.assoc_opt x aliases)
-        scrut.sc_expr
+        scrut.expr
     in
-    let inside br =
+    let inside (br : branch) =
       match root with
       | None -> aliases
       | Some s ->
-        let bound = List.map (fun fb -> fb.fb_name) br.smb_field_bindings in
-        let bound = match br.smb_var with Some v -> v :: bound | None -> bound in
+        let bound = List.map (fun (fb : field_binding) -> fb.name) br.field_bindings in
+        let bound = match br.var with Some v -> v :: bound | None -> bound in
         List.map (fun b -> (b, s)) bound @ aliases
     in
-    Smatch (
+    Match (
       scrut,
       List.map
-        (fun br ->
+        (fun (br : branch) ->
           let br' = trc.trc_rewrite_branch br in
-          { br' with smb_body = generic_rewrite_stmts ~aliases:(inside br') ~derefs trc br'.smb_body })
+          { br' with body = generic_rewrite_stmts ~aliases:(inside br') ~derefs trc br'.body })
         branches,
       Option.map (generic_rewrite_stmts ~aliases ~derefs trc) default)
-  | Sblock stmts ->
-    Sblock (generic_rewrite_stmts ~aliases ~derefs trc stmts)
+  | Block stmts ->
+    Block (generic_rewrite_stmts ~aliases ~derefs trc stmts)
   | s -> s
 
 (** List-level top-level rewriter.
 
-    Optionally detects the void tail-call pattern [Sexpr call; Sreturn _]:
+    Optionally detects the void tail-call pattern [Expression call; Return _]:
     {v  call(); return;       (* void tail call *)
     call(); return val;   (* ITree unit-continuation variant *)  v}
 
-    Both forms are rewritten as [Sreturn (Some call)] so the statement-level
+    Both forms are rewritten as [Return (Some call)] so the statement-level
     rewriter can handle them as ordinary tail calls.  This pattern is produced
     by [cofix_wrap] and [gen_stmts] for void-returning recursive functions. *)
 and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
-  | Sexpr e :: Sreturn _ :: rest
+  | Expression e :: Return _ :: rest
     when trc.trc_detect_void_tail && trc.trc_inner.rc_check e <> None ->
-    generic_rewrite_stmt ~aliases ~derefs trc (Sreturn (Some e))
+    generic_rewrite_stmt ~aliases ~derefs trc (Return (Some e))
     :: generic_rewrite_stmts ~aliases ~derefs trc rest
   | s :: rest ->
     let s' = generic_rewrite_stmt ~aliases ~derefs trc s in
     let derefs =
       match s with
-      | Sasgn (id, Declare (ty, _), CPPderef pointer) when is_reference_type ty -> (id, pointer) :: derefs
+      | Bind_variable (id, Declare (ty, _), Dereference pointer) when is_reference_type ty -> (id, pointer) :: derefs
       | _ -> derefs
     in
     s' :: generic_rewrite_stmts ~aliases ~derefs trc rest
@@ -672,7 +668,7 @@ and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
 (** Wrap a statement list as a single statement. *)
 let wrap_as_block = function
   | [s] -> s
-  | ss -> Sblock ss
+  | ss -> Block ss
 
 (** Rewrite a statement list for plain tail-call loopification.
 
@@ -699,22 +695,22 @@ let rewrite_visit_stmts ?(last_reads = fun _ _ -> []) ~jumped check varying shad
 
 (** Returns true if the statement declares a new variable or type binding. *)
 let declares_variable = function
-  | Sdecl _ | Sdecl_init _ | Sbind _ | Sstruct_def _ | Susing _ -> true
-  | Sasgn (_, Declare _, _) -> true (* typed assignment = declaration *)
+  | Declare _ | Declare_value_initialized _ | Structured_binding _ | Local_struct _ | Local_type_alias _ -> true
+  | Bind_variable (_, Declare _, _) -> true (* typed assignment = declaration *)
   | _ -> false
 
 (** Names declared directly by a statement (not recursing into sub-statements). *)
 let direct_decl_ids = function
-  | Sdecl (id, _, _) | Sdecl_init (id, _) -> [ id ]
-  | Sasgn (id, Declare _, _) -> [ id ]
-  | Susing (id, _) -> [ id ]
-  | Sbind (ids, _) -> ids
+  | Declare (id, _, _) | Declare_value_initialized (id, _) -> [ id ]
+  | Bind_variable (id, Declare _, _) -> [ id ]
+  | Local_type_alias (id, _) -> [ id ]
+  | Structured_binding (ids, _) -> ids
   | _ -> []
 
 (** Returns true if inlining [block_stmts] before [rest] at the same scope level
     would produce a duplicate declaration.  A conflict arises when a name first
     declared inside [block_stmts] also appears as a top-level declaration in
-    [rest] (including inside [Sblock] nodes in [rest] that would themselves be
+    [rest] (including inside [Block] nodes in [rest] that would themselves be
     inlined). *)
 let would_conflict block_stmts rest =
   if not (List.exists declares_variable block_stmts) then false
@@ -723,76 +719,64 @@ let would_conflict block_stmts rest =
     let rest_ids =
       List.concat_map
         (function
-          | Sblock ss -> List.concat_map direct_decl_ids ss
+          | Block ss -> List.concat_map direct_decl_ids ss
           | s -> direct_decl_ids s)
         rest
     in
     List.exists (fun id -> List.mem id rest_ids) block_ids
 
-(** Remove unnecessary [Sblock] wrappers throughout a statement list.
+(** Remove unnecessary [Block] wrappers throughout a statement list.
 
-    An [Sblock] wrapper is unnecessary, and can be inlined into the surrounding
+    An [Block] wrapper is unnecessary, and can be inlined into the surrounding
     list, when doing so would not introduce a duplicate declaration at the
     enclosing scope level.  Concretely:
 
-    - [Sblock []] is always dropped.
-    - [Sblock stmts] is inlined when none of its declared names would clash with
+    - [Block []] is always dropped.
+    - [Block stmts] is inlined when none of its declared names would clash with
       a name declared by any sibling statement in the enclosing list.  Since each
       [if]/[else]/[while] branch already provides its own [{}] scope in the emitted
       C++, inner blocks inside those branches are almost always safe to remove.
 
-    Recurses into [Sif], [Sswitch], [Scustom_case], [Smatch], and [Swhile] so
+    Recurses into [If], [Switch], [Custom_match], [Match], and [While] so
     that blocks nested inside branches are also simplified. *)
 let rec strip_unnecessary_blocks = function
-  | Sblock stmts :: rest ->
+  | Block stmts :: rest ->
     let inner' = strip_unnecessary_blocks stmts in
     let rest' = strip_unnecessary_blocks rest in
     ( match inner' with
     | [] -> rest'
     | _ when not (would_conflict inner' rest') -> inner' @ rest'
-    | _ -> Sblock inner' :: rest' )
+    | _ -> Block inner' :: rest' )
   | s :: rest -> strip_loopify_stmt s :: strip_unnecessary_blocks rest
   | [] -> []
 
 (** Recursively strip unnecessary blocks from a single statement's sub-branches
-    ([Sif], [Sswitch], [Scustom_case], [Smatch], [Swhile], nested [Sblock]). *)
+    ([If], [Switch], [Custom_match], [Match], [While], nested [Block]). *)
 and strip_loopify_stmt = function
-  | Sif (cond, then_br, else_br) ->
-    Sif
-      ( cond,
-        strip_unnecessary_blocks then_br,
-        strip_unnecessary_blocks else_br )
-  | Sswitch (scrut, r, branches, default) ->
-    Sswitch
-      ( scrut,
-        r,
-        List.map (fun (id, body) -> (id, strip_unnecessary_blocks body)) branches,
-        Option.map strip_unnecessary_blocks default )
-  | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    Scustom_case
-      ( ty,
-        scrut,
-        tyargs,
-        List.map
-          (fun (ps, ret_ty, body) -> (ps, ret_ty, strip_unnecessary_blocks body))
-          branches,
-        err )
-  | Smatch (scrut, branches, default) ->
-    Smatch
+  | If {condition = cond; then_ = then_br; else_ = else_br} ->
+    If {condition = cond; then_ = strip_unnecessary_blocks then_br; else_ = strip_unnecessary_blocks else_br}
+  | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
+    Switch {scrutinee = scrut; enum = r; branches = List.map (fun (id, body) -> (id, strip_unnecessary_blocks body)) branches; default = Option.map strip_unnecessary_blocks default}
+  | Custom_match m ->
+    Custom_match
+      { m with
+        branches = List.map (fun (b : custom_branch) -> {b with body = strip_unnecessary_blocks b.body}) m.branches }
+  | Match (scrut, branches, default) ->
+    Match
       ( scrut,
         List.map
-          (fun br -> { br with smb_body = strip_unnecessary_blocks br.smb_body })
+          (fun (br : branch) -> { br with body = strip_unnecessary_blocks br.body })
           branches,
         Option.map strip_unnecessary_blocks default )
-  | Swhile (cond, body) -> Swhile (cond, strip_unnecessary_blocks body)
-  | Sblock stmts ->
-    (* Reached when an Sblock appears as a non-first element inside another
+  | While (cond, body) -> While (cond, strip_unnecessary_blocks body)
+  | Block stmts ->
+    (* Reached when an Block appears as a non-first element inside another
        statement (rare; the list-level case above handles the common path). *)
     let stmts' = strip_unnecessary_blocks stmts in
     ( match stmts' with
-    | [] -> Sblock []
+    | [] -> Block []
     | [ s ] -> s
-    | _ -> Sblock stmts' )
+    | _ -> Block stmts' )
   | s -> s
 
 (** {3 Shadow variable setup}
@@ -812,9 +796,9 @@ type shadow_setup = {
   ss_varying : bool list;
       (** Bitmask parallel to [params]: [true] when the parameter changes
           across recursive calls and needs a shadow variable. *)
-  ss_varying_params : (Id.t * cpp_type) list;
+  ss_varying_params : (Id.t * ty) list;
       (** Only the varying parameters (filtered by {!ss_varying}). *)
-  ss_shadow_params : (Id.t * cpp_type) list;
+  ss_shadow_params : (Id.t * ty) list;
       (** Shadow variable names ([_loop_X]) and types for each varying
           parameter, respecting pointer-safety (borrowed params become
           [const T*] shadows). *)
@@ -843,16 +827,16 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
     let move_read x arg =
       let bare = ref 0 and moved = ref 0 and captured = ref 0 in
       let rec count = function
-        | CPPmove (CPPvar y) -> if Id.equal x y then incr moved
-        | CPPlambda _ as l -> if List.exists (Id.equal x) (free_vars_expr l) then incr captured
-        | CPPmove _ -> ()
-        | CPPvar y -> if Id.equal x y then incr bare
+        | Move (Local y) -> if Id.equal x y then incr moved
+        | Lambda _ as l -> if List.exists (Id.equal x) (free_vars_expr l) then incr captured
+        | Move _ -> ()
+        | Local y -> if Id.equal x y then incr bare
         | e -> iter_expr_children ~on_expr:count ~on_stmts:(fun _ -> ()) e
       in
       count arg;
       let rec move_in = function
-        | (CPPmove _ | CPPlambda _) as e -> e
-        | CPPvar y as e when Id.equal x y -> CPPmove e
+        | (Move _ | Lambda _) as e -> e
+        | Local y as e when Id.equal x y -> Move e
         | e -> map_expr move_in Fun.id Fun.id e
       in
       if !bare = 1 then move_in arg
@@ -914,7 +898,7 @@ let planned_last_reads ~moves e args =
       (List.map2
          (fun (move : Ownership_ir.Continue_move.t) arg ->
            match (move, arg) with
-           | Move_argument, (CPPvar x | CPPmove (CPPvar x)) -> [x]
+           | Move_argument, (Local x | Move (Local x)) -> [x]
            | _ -> [] )
          flags args )
   | Some _ | None -> []
@@ -962,11 +946,11 @@ let build_shadow_setup ~varying ~parts tparams params =
     @return the surviving declarations and the rewritten body *)
 let drop_unread_shadows shadow_decls body =
   let declared_id = function
-    | Sasgn (id, _, _) -> Some id
+    | Bind_variable (id, _, _) -> Some id
     | _ -> None
   in
   let write_target = function
-    | Sasgn (id, _, _) | Sexpr (CPPbinop (Bassign, CPPvar id, _)) -> Some id
+    | Bind_variable (id, _, _) | Expression (Binary (Assign, Local id, _)) -> Some id
     | _ -> None
   in
   (* Every variable the statements *read*: the target of an assignment is a
@@ -975,11 +959,11 @@ let drop_unread_shadows shadow_decls body =
     let tbl = Hashtbl.create 16 in
     let rec walk_expr e =
       match e with
-      | CPPvar id -> Hashtbl.replace tbl (Id.to_string id) ()
+      | Local id -> Hashtbl.replace tbl (Id.to_string id) ()
       | _ -> iter_expr_children ~on_expr:walk_expr ~on_stmts:walk_stmts e
     and walk_stmt s =
       match s with
-      | Sasgn (_, _, rhs) | Sexpr (CPPbinop (Bassign, CPPvar _, rhs)) ->
+      | Bind_variable (_, _, rhs) | Expression (Binary (Assign, Local _, rhs)) ->
         walk_expr rhs
       | _ -> iter_stmt_children ~on_expr:walk_expr ~on_stmts:walk_stmts s
     and walk_stmts ss = List.iter walk_stmt ss in
@@ -1001,7 +985,7 @@ let drop_unread_shadows shadow_decls body =
     (* A dead write nested in a branch becomes an empty block, which the
        existing cleanup pass then removes. *)
     let rec drop s =
-      if live s then map_stmt Fun.id drop Fun.id s else Sblock []
+      if live s then map_stmt Fun.id drop Fun.id s else Block []
     in
     let decls' = List.filter live decls in
     let body' = List.map drop body in
@@ -1031,7 +1015,7 @@ let drop_unread_shadows shadow_decls body =
     v}
 
     {b Void functions} (e.g. cofixpoint [spin], [forever]) exit via
-    [return;] ([Sreturn None]), and a trailing [return;] follows the loop:
+    [return;] ([Return None]), and a trailing [return;] follows the loop:
 
     {v
     CoFixpoint forever n := Tau (forever (S n))
@@ -1042,7 +1026,7 @@ let drop_unread_shadows shadow_decls body =
     v}
 
     After rewriting, {!strip_unnecessary_blocks} removes any empty
-    [Sblock]s left by tail-call rewrites that produced no shadow updates
+    [Block]s left by tail-call rewrites that produced no shadow updates
     (e.g. a zero-parameter cofixpoint like [spin] whose only recursive call
     has no arguments to update), and {!drop_unread_shadows} removes shadows
     the body only writes.
@@ -1067,7 +1051,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup ~varying ~parts tparams params
   in
-  let is_void = ret_ty = Tvoid in
+  let is_void = ret_ty = Void in
   (* Shadow variable declarations (only for varying params) *)
   let shadow_decls =
     List.map2
@@ -1077,7 +1061,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
           | Some custom -> custom
           | None -> tail_shadow_init orig_id shadow_ty ty
         in
-        Sasgn
+        Bind_variable
           ( shadow_id,
             Declare (strip_ref_and_const_type shadow_ty, None),
             init_expr ) )
@@ -1090,7 +1074,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
     |> rewrite_borrowed_shadow_uses shadow_params
   in
   (* Rewrite recursive calls (list-level rewrite handles void tail-call
-     pattern [Sexpr call; Sreturn None] -> [Sreturn (Some call)]) *)
+     pattern [Expression call; Return None] -> [Return (Some call)]) *)
   let check = moving_jumps ~moves ~subs ~shadow_params params check in
   let body'' =
     rewrite_visit_stmts ~last_reads:(planned_last_reads ~moves) ~jumped check varying shadow_params body'
@@ -1099,16 +1083,16 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
   (* Assemble the loop body.
      - Non-void: [... while (true) { ... return val; }]
      - Void:     [... while (true) { ... } return;]
-     Non-void base cases return directly via [Sreturn] (from
+     Non-void base cases return directly via [Return] (from
      [return_result]); no [_result] variable or trailing return needed
      since [while (true)] without [break] never falls through.
-     Void base cases exit via [Sreturn None] (plain [return;]).
+     Void base cases exit via [Return None] (plain [return;]).
      Both use [while (true)] for the loop condition. *)
   let shadow_decls, body'' = drop_unread_shadows shadow_decls body'' in
   let body'' = strip_unnecessary_blocks body'' in
   shadow_decls
-  @ [Swhile (CPPbool true, body'')]
-  @ (if is_void then [Sreturn None] else [])
+  @ [While (Literal (Bool true), body'')]
+  @ (if is_void then [Return None] else [])
 
 (* Non-tail recursion uses a frame-based stack with [CraneEnter] and
    continuation variants and a dispatch loop; see

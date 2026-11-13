@@ -7,7 +7,129 @@
     substitutions the rewrites use. *)
 
 open Names
-open Minicpp
+open Cpp_ir.Type
+open Cpp_ir.Stmt
+open Cpp_ir.Expr
+
+(** {2 CppIR}
+
+    The stack rewrites {!Cpp_ir.Lowered} code.  The names below are the
+    families it reads and builds, and the one-level traversals it is written
+    over: each visits a node's children in {!Cpp_ir.Map}'s and
+    {!Cpp_ir.Subterms}' order, which the names the transforms mint by counter
+    depend on. *)
+
+type phase = Cpp_ir.Lowered.phase
+type ty = Cpp_ir.Lowered.Type.t
+type expr = Cpp_ir.Lowered.Expr.t
+type stmt = Cpp_ir.Lowered.Stmt.t
+type decl = Cpp_ir.Lowered.Decl.t
+type lambda = phase Cpp_ir.Expr.Lambda.t
+type signature = phase Cpp_ir.Expr.Call.signature
+type meth = phase Cpp_ir.Field.Method.t
+type func = phase Cpp_ir.Function.t
+type param_kind = phase Cpp_ir.Template.Parameter_kind.t
+type scrutinee = phase Cpp_ir.Stmt.Match.scrutinee
+type branch = phase Cpp_ir.Stmt.Match.branch
+type field_binding = phase Cpp_ir.Stmt.Match.field_binding
+type custom_branch = phase Cpp_ir.Stmt.Custom_match.branch
+type custom_param = phase Cpp_ir.Stmt.Custom_match.param
+type binding = phase Cpp_ir.Stmt.Binding.t
+type field = phase Cpp_ir.Field.t
+type local_fixpoint = Cpp_ir.Expr.Local_fixpoint.t
+
+(** The signature of a call nothing is known about. *)
+let call_opaque : signature = {yields = Untyped; params = Unknown; constructs = None; occurrence = None}
+
+(** [signature ?yields ?params ?constructs ~nargs ()] is what a builder knows
+    about a call on [nargs] arguments; [params] is kept only where it is one
+    type per argument. *)
+let signature ?yields ?params ?constructs ~nargs () : signature =
+  { yields = (match yields with Some t -> Yields t | None -> Untyped);
+    params = (match params with Some ts when List.length ts = nargs -> Types ts | _ -> Unknown);
+    constructs;
+    occurrence = None }
+
+(** [call_made_of occurrence e] is the call [e] recording the Core call it is
+    made of; any other expression unchanged. *)
+let call_made_of occurrence : expr -> expr = function
+  | Call (s, f, args) -> Call ({s with occurrence = Some occurrence}, f, args)
+  | e -> e
+
+(** [map_args f args] rewrites a call's arguments, the last first. *)
+let map_args f (args : expr list) = List.rev (List.map f (List.rev args))
+
+(** [map_expr ?fl fe fs ft e] is [e] with its children rewritten: [fe] its
+    expressions, [fs] its statements -- or [fl] each statement list -- and
+    [ft] its types. *)
+let map_expr ?fl fe fs ft (e : expr) : expr =
+  Cpp_ir.Map.expr (Cpp_ir.Map.make ?stmts:fl ~expr:fe ~stmt:fs ~type_:ft ()) e
+
+(** [map_stmt ?fl fe fs ft s] is {!map_expr} of a statement. *)
+let map_stmt ?fl fe fs ft (s : stmt) : stmt =
+  Cpp_ir.Map.stmt (Cpp_ir.Map.make ?stmts:fl ~expr:fe ~stmt:fs ~type_:ft ()) s
+
+(** [iter_expr_children ~on_expr ~on_stmts e] visits the expressions and
+    statement lists [e] holds directly ({!Cpp_ir.Subterms}). *)
+let iter_expr_children ~on_expr ~on_stmts (e : expr) = Cpp_ir.Subterms.expr ~expr:on_expr ~stmts:on_stmts e
+
+(** [iter_stmt_children ~on_expr ~on_stmts s] is {!iter_expr_children} of a
+    statement. *)
+let iter_stmt_children ~on_expr ~on_stmts (s : stmt) = Cpp_ir.Subterms.stmt ~expr:on_expr ~stmts:on_stmts s
+
+(** [fold_expr_children ~on_expr ~on_stmts acc e] folds over what
+    {!iter_expr_children} visits. *)
+let fold_expr_children ~on_expr ~on_stmts acc (e : expr) =
+  let acc = ref acc in
+  iter_expr_children ~on_expr:(fun e -> acc := on_expr !acc e) ~on_stmts:(fun ss -> acc := on_stmts !acc ss) e;
+  !acc
+
+(** [fold_stmt_children ~on_expr ~on_stmts acc s] folds over what
+    {!iter_stmt_children} visits. *)
+let fold_stmt_children ~on_expr ~on_stmts acc (s : stmt) =
+  let acc = ref acc in
+  iter_stmt_children ~on_expr:(fun e -> acc := on_expr !acc e) ~on_stmts:(fun ss -> acc := on_stmts !acc ss) s;
+  !acc
+
+(** The variables an expression, a statement or a statement list reads
+    without binding them ({!Cpp_ir.Variables}). *)
+let free_vars_expr (e : expr) = Cpp_ir.Variables.free_in_expr e
+
+let free_vars_stmt (s : stmt) = Cpp_ir.Variables.free_in_stmt s
+let free_vars_body (ss : stmt list) = Cpp_ir.Variables.free_in_body ss
+
+(** Whether a declaration of type [ty] binds a reference rather than a value. *)
+let rec is_reference_type : ty -> bool = function
+  | Reference _ -> true
+  | Const t -> is_reference_type t
+  | _ -> false
+
+(** Whether a parameter declared at [ty] is a reference the body does not
+    own: a [const T &], or the [F &&] a deduced callable is. *)
+let rec declared_by_reference : ty -> bool = function
+  | Reference _ | Const _ -> true
+  | In_namespace (_, t) -> declared_by_reference t
+  | _ -> false
+
+(** Whether [ty] mentions a [std::shared_ptr] anywhere. *)
+let contains_shared_ptr (t : ty) = Cpp_ir.Children.exists_type (function Shared_pointer _ -> true | _ -> false) t
+
+(** The Core binder each local a lambda's body reads as its own stands for,
+    by name: its parameters, and the locals its local fixpoint captures. *)
+let lambda_binders (l : lambda) =
+  l.binders @ Option.cata (fun (f : Cpp_ir.Expr.Local_fixpoint.t) -> f.captured) [] l.fixpoint
+
+(** The type variable a template header declares under the name [x]. *)
+let named_tvar x : ty = Variable (Named x)
+
+(** [converting_ctor ty args]: [ty(args)], a box where [ty] is written
+    [std::any] -- of what a box holds, where [args] is one. *)
+let converting_ctor (ty : ty) (args : expr list) : expr =
+  match args with
+  | [inner] when Cpp_ir.Types.prints_as_any ty ->
+    let inner = match inner with Box (_, x) -> x | x -> x in
+    Box (ty, inner)
+  | _ -> Converting_construct (ty, args)
 
 (** {2 Named Constants}
 
@@ -41,7 +163,7 @@ let id_emplace      = Id.of_string "emplace"
 let id_uniq         = Id.of_string "_uniq"
 let id_rstep        = Id.of_string "_rs"
 
-(* Method names used with CPPaccess / CPPaccess_call: [get] and the variant
+(* Method names used with Access / Access_call: [get] and the variant
    accessors [v] / [v_mut] on a value, and the [std::vector] members an
    explicit frame stack is driven by. *)
 let id_get          = Id.of_string "get"
@@ -92,12 +214,12 @@ let map3_exn ~what f l1 l2 l3 =
 
     A single pair of mutually recursive functions that answer the question
     "does any expression in this AST satisfy [pred]?"  Used throughout the
-    loopify pass to detect recursive calls, [CPPthis] references, [lazy_]
+    loopify pass to detect recursive calls, [This] references, [lazy_]
     factories, pointer-shadow variables, and more.
 
     The traversal delegates structural recursion to
-    {!Minicpp.iter_expr_children} and {!Minicpp.iter_stmt_children}, which
-    already enumerate every constructor, so a new MiniCpp AST node is
+    {!Cpp_ir.Subterms.expr} and {!Cpp_ir.Subterms.stmt}, which
+    already enumerate every constructor, so a new CppIR node is
     automatically visible to every predicate here. *)
 
 (** Return [true] when [pred] holds for [e] or any sub-expression reachable
@@ -108,7 +230,7 @@ let map3_exn ~what f l1 l2 l3 =
 
     @param pred  Predicate to test on each expression node
     @param e     Root expression to search *)
-let rec expr_exists (pred : cpp_expr -> bool) (e : cpp_expr) : bool =
+let rec expr_exists (pred : expr -> bool) (e : expr) : bool =
   if pred e then true
   else
     try
@@ -125,7 +247,7 @@ let rec expr_exists (pred : cpp_expr -> bool) (e : cpp_expr) : bool =
 
     @param pred  Predicate to test on each expression node
     @param s     Statement to search *)
-and stmt_exists (pred : cpp_expr -> bool) (s : cpp_stmt) : bool =
+and stmt_exists (pred : expr -> bool) (s : stmt) : bool =
   try
     iter_stmt_children
       ~on_expr:(fun e -> if expr_exists pred e then raise Exit)
@@ -139,31 +261,31 @@ and stmt_exists (pred : cpp_expr -> bool) (s : cpp_stmt) : bool =
 
     @param pred   Predicate to test on each expression node
     @param stmts  Statement list (function body) to search *)
-let body_exists (pred : cpp_expr -> bool) (stmts : cpp_stmt list) : bool =
+let body_exists (pred : expr -> bool) (stmts : stmt list) : bool =
   List.exists (stmt_exists pred) stmts
 
-(** Check whether a C++ return type is a value-type inductive (a bare [Tglob]
+(** Check whether a C++ return type is a value-type inductive (a bare [Entity_application]
     that is neither coinductive nor custom-extracted).  When true, TMC must wrap [_head]/_write in
     [shared_ptr] because the constructor's recursive field is [shared_ptr].
-    Handles [Tnamespace] wrapping for out-of-line (.cpp) method definitions. *)
+    Handles [In_namespace] wrapping for out-of-line (.cpp) method definitions. *)
 let rec is_value_type_ret = function
-  | Tglob (r, _, _) -> not (Table.is_coinductive r) && not (Table.is_custom r)
-  | Tnamespace (_, t) -> is_value_type_ret t
+  | Entity_application (r, _, _) -> not (Table.is_coinductive r) && not (Table.is_custom r)
+  | In_namespace (_, t) -> is_value_type_ret t
   | _ -> false
 
 (** Whether a C++ type is trivially copyable (scalars, pointers, enums).
     For these types, copying is cheaper than indirecting through a reference,
     so frame-field bindings should remain copies rather than [const T&]. *)
 let rec is_trivially_copyable_type = function
-  | Tvoid | Tauto | Tunresolved | Tany -> true
-  | Tptr _ | Tref _ -> true
-  | Tconst t | Tnamespace (_, t) | Tqualified (t, _) ->
+  | Void | Auto | (Obligation Unresolved_type) | Any -> true
+  | Pointer _ | Reference _ -> true
+  | Const t | In_namespace (_, t) | Member (t, _) ->
     is_trivially_copyable_type t
-  | Tdecay (Texpr_type _) -> true
-  | Tvar _ -> true
-  | Tid (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
-  | Tid_external (s, ts) -> is_trivially_copyable_named s ts
-  | Tglob (r, ts, _) ->
+  | Decay (Type_of _) -> true
+  | Variable _ -> true
+  | Named (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
+  | External (s, ts) -> is_trivially_copyable_named s ts
+  | Entity_application (r, ts, _) ->
     Table.is_enum_inductive r || Table.is_custom_scalar_ref r
     || Table.is_trivially_copyable_ref r
        && List.for_all is_trivially_copyable_type ts
@@ -179,7 +301,7 @@ and is_trivially_copyable_named s ts =
   Table.is_trivially_copyable_cpp_name s
   && List.for_all is_trivially_copyable_type ts
 
-let worthwhile_move_type = Ownership_ir.worth_moving_cpp
+let worthwhile_move_type (t : ty) = Ownership_ir.worth_moving_ir t
 
 (** Whether a value of the C++ type [t] is copied as cheaply as it is moved:
     trivially copyable, and not worth a move -- a template type variable is
@@ -190,15 +312,15 @@ let copies_cheaply t = is_trivially_copyable_type t && not (worthwhile_move_type
     [const T] moved from is silently copied, and a [const T &] names what
     another holds. *)
 let rec is_borrowed = function
-  | Tref _ | Tconst _ -> true
-  | Tnamespace (_, t) -> is_borrowed t
+  | Reference _ | Const _ -> true
+  | In_namespace (_, t) -> is_borrowed t
   | _ -> false
 
 (** Whether a local declared at [ty] is one to move from at its last read:
     held by value, at a type worth moving.  [auto] never deduces a
     reference, and is how most temporaries are declared, so it is worth
     moving though its type is not written down. *)
-let movable ty = (not (is_borrowed ty)) && (ty = Tauto || worthwhile_move_type ty)
+let movable ty = (not (is_borrowed ty)) && (ty = Auto || worthwhile_move_type ty)
 
 (* Global mutable state in this file and their reset granularity:
    - outcomes : reset per generated file (State.Unit)
@@ -258,7 +380,7 @@ let agree_ptr_fields owner ctor_name fields =
 
 (** Information about a single recursive call site. *)
 type call_site = {
-  cs_args : cpp_expr list;  (** Arguments to the recursive call *)
+  cs_args : expr list;  (** Arguments to the recursive call *)
   cs_is_tail : bool;  (** Whether this call appears in tail position *)
   cs_entry : int;
       (** Which entry point of the frame machine this call targets, as an index
@@ -267,7 +389,7 @@ type call_site = {
           enclosing function and a fixpoint local to it share a single stack,
           where a call selects which [CraneEnter]-style frame to push and hence
           which parameter analysis applies. *)
-  cs_recv : cpp_expr option;
+  cs_recv : expr option;
       (** For a method call, the receiver expression {e as written}, before
           {!method_checker} converts it to the raw pointer stored in frames.
           Callers that need to reason about the receiver's storage duration
@@ -387,7 +509,7 @@ let report_outcomes ?(unit_name = "") () =
     the TMC and frame transforms internally, so it reports the choice here
     rather than leaving the caller to guess. *)
 type nontail_result = {
-  nt_body : cpp_stmt list;  (** The body to emit, transformed or original. *)
+  nt_body : stmt list;  (** The body to emit, transformed or original. *)
   nt_outcome : loopify_outcome;  (** Which transform fired, or why none did. *)
   nt_machine : bool;
       (** Whether a call enters the loop or machine the transform made: one
@@ -404,9 +526,9 @@ type nontail_result = {
     ({!planned_self_checker}); and those a body is left with are told by
     the Core use they are made of ({!calls_checker}). *)
 
-(** Type alias for recursive call detection functions. Given a [cpp_expr],
+(** Type alias for recursive call detection functions. Given a [expr],
     returns [Some call_site] if it is a direct recursive call, [None] otherwise. *)
-type call_checker = cpp_expr -> call_site option
+type call_checker = expr -> call_site option
 
 (** {3 The Y-combinator idiom for local fixpoints}
 
@@ -419,22 +541,22 @@ type call_checker = cpp_expr -> call_site option
 (** Whether [w] is the wrapper tying the knot of the local fixpoint
     [fixpoint] for its callers: a lambda lowering the same function of the
     same Core fixpoint through no self-parameter. *)
-let wraps fixpoint (w : cpp_lambda) =
-  match (fixpoint, w.cl_fixpoint) with
-  | Some {lf_member = occ, j; _}, Some {lf_member = occ', j'; lf_encoding = Knot; _} ->
+let wraps (fixpoint : local_fixpoint option) (w : lambda) =
+  match (fixpoint, w.fixpoint) with
+  | Some {member = occ, j; _}, Some {member = occ', j'; encoding = Knot; _} ->
     Miniml.Occurrence.equal occ occ' && Int.equal j j'
   | _ -> false
 
 (** The self-reference parameter of the lambda a single local fixpoint's
-    body is, as its encoding recorded it ({!Minicpp.local_fixpoint}): the
+    body is, as its encoding recorded it ({!Cpp_ir.Expr.Local_fixpoint}): the
     one self-parameter of [fixpoint], where it is the last of [lparams], the
-    lambda's parameters as stored.  A mutual group's lambda takes one per
+    lambda's parameters the last first.  A mutual group's lambda takes one per
     member, which the callers here cannot linearise.  Its name is no
     evidence: the encoding spells it [_self_f], and Crane spells other
     locals of its own in that space too ([_self_val]). *)
-let fixpoint_self fixpoint lparams =
+let fixpoint_self (fixpoint : local_fixpoint option) lparams =
   match (fixpoint, List.rev lparams) with
-  | Some {lf_encoding = Self_passing [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
+  | Some {encoding = Self_passing [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
   | _ -> None
 
 (** A checker matching the calls of the function [member] of a local
@@ -446,12 +568,12 @@ let planned_self_checker member : call_checker =
   fun e ->
     let planned =
       match e with
-      | CPPfun_call ({cs_occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
+      | Call ({occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
       | _ -> false
     in
     match e with
-    | CPPfun_call (_, _, args) when planned -> (
-      match call_args args with
+    | Call (_, _, args) when planned -> (
+      match args with
       | _self_arg :: rest_rev -> Some (mk_call_site (List.rev rest_rev))
       | [] -> None )
     | _ -> None
@@ -459,15 +581,15 @@ let planned_self_checker member : call_checker =
 (** The calls [calls] as a checker: a C++ call made of one of them, by the
     occurrence it records, whatever heads it. *)
 let calls_checker calls : call_checker = function
-  | CPPfun_call ({cs_occurrence = Some o; _}, _, args) when List.exists (Miniml.Occurrence.equal o) calls ->
-    Some (mk_call_site (to_reversed args))
+  | Call ({occurrence = Some o; _}, _, args) when List.exists (Miniml.Occurrence.equal o) calls ->
+    Some (mk_call_site (List.rev args))
   | _ -> None
 
 (** The receiver of a recursive call, with the wrappers that only re-spell an
     object stripped off.  [std::move] is one: it is a cast, so moving out of
     [this] still names the storage of [this] rather than making a temporary of
     its own. *)
-let rec receiver_storage = function CPPmove e -> receiver_storage e | e -> e
+let rec receiver_storage = function Move e -> receiver_storage e | e -> e
 
 (** Build a call checker for struct methods: a recursive call is a call of
     the global the method was made from, [self_ref], and when
@@ -489,26 +611,26 @@ let rec receiver_storage = function CPPmove e -> receiver_storage e | e -> e
                         an explicit first parameter (nontail / method
                         loopification context). Causes the receiver expression
                         to be prepended as the first call argument.
-    @param this_pos     Index of the [this]/receiver argument in the argument
-                        list of [CPPfun_call] forms. Used to extract and remove
+    @param this_position     Index of the [this]/receiver argument in the argument
+                        list of [Call] forms. Used to extract and remove
                         the receiver from over-long argument lists.
     @param self_ref     The global the method was made from, when known. *)
 let method_checker
     ~(n_params : int)
     ~(has_self_param : bool)
-    ~(this_pos : int)
+    ~(this_position : int)
     (self_ref : GlobRef.t option) : call_checker =
  (* Convert a receiver expression to the raw pointer an [Enter] frame stores.
-    CPPderef(p): [crane_raw(p)], which extracts a raw pointer from either a
+    Dereference(p): [crane_raw(p)], which extracts a raw pointer from either a
     [std::shared_ptr<T>] or an already-raw [T*] (arena mode) by overload
     resolution, where a bare [.get()] would assume one representation.
     Other: take the address. *)
  let recv_to_self recv =
    match receiver_storage recv with
-   | CPPderef inner ->
-     CPPfun_call (call_opaque, CPPrt Crane_rt.Raw, of_reversed ([inner]))
+   | Dereference inner ->
+     Call (call_opaque, Runtime Crane_rt.Raw, [inner])
    | _ ->
-     CPPunop (Uaddr, recv)
+     Unary (Address_of, recv)
  in
  let extract_at pos lst =
    let rec aux i acc = function
@@ -521,11 +643,11 @@ let method_checker
  in
  fun e ->
    match (e, self_ref) with
-   | CPPfun_call (_, CPPglob (r, _, _), args), Some self_ref ->
+   | Call (_, Entity (r, _, _), args), Some self_ref ->
      if Common.globref_equal r self_ref then
-       let args_normal = call_args args in
+       let args_normal = args in
        if has_self_param then
-         let self_arg, rest = extract_at this_pos args_normal in
+         let self_arg, rest = extract_at this_position args_normal in
          ( match self_arg with
          | Some recv ->
            Some (mk_call_site ~recv (recv_to_self recv :: rest))
@@ -533,7 +655,7 @@ let method_checker
        else
          let args_stripped =
            if List.length args_normal > n_params then
-             list_remove_at this_pos args_normal
+             list_remove_at this_position args_normal
            else
              args_normal
          in
@@ -543,7 +665,7 @@ let method_checker
    | _ -> None
 
 (** The occurrence of the Core call a C++ call is made of. *)
-let made_of = function CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None
+let made_of = function Call (cs, _, _) -> cs.occurrence | _ -> None
 
 (** Whether the calls [made], each by the occurrence it is made of
     ({!made_of}), are the calls [planned], as many times each. *)
@@ -566,28 +688,28 @@ let rec collect_expr (check : call_checker) expr =
     (* Also look for nested calls in the arguments (e.g., f(m', f(m, n'))) *)
     let nested =
       match expr with
-      | CPPfun_call (_, _, args) ->
-        List.concat_map (collect_expr check) (to_reversed args)
-      | CPPaccess_call (_, _, _, args) ->
+      | Call (_, _, args) ->
+        List.concat_map (collect_expr check) (List.rev args)
+      | Access_call (_, _, _, args) ->
         List.concat_map (collect_expr check) args
       | _ -> []
     in
     cs :: nested
   | None ->
   match expr with
-  | CPPparray (arr, def) ->
+  | Persistent_array (arr, def) ->
     Array.fold_left
       (fun acc e -> acc @ collect_expr check e)
       (collect_expr check def)
       arr
   (* A requires-expression is never evaluated. *)
-  | CPPrequires _ -> []
+  | Requires _ -> []
   | _ ->
     (* A call below an expression is not in tail position, but it is a call.
        A statement list there is a lambda's body: a call in it returns from
        the lambda, whose result the larger expression uses (e.g.
        Cons_(x, visit(l, {... => f(args)}))); collect_stmt sees the direct
-       Sreturn(Some(visit(...))) case, not this. *)
+       Return(Some(visit(...))) case, not this. *)
     let in_body stmts =
       List.map
         (fun cs -> {cs with cs_is_tail = false; cs_recv = None})
@@ -603,15 +725,15 @@ let rec collect_expr (check : call_checker) expr =
 and collect_stmts check ~in_visitor stmts =
   (* Detect void tail-call patterns at the end of a statement list.
 
-     Pattern A — [Sexpr call; Sreturn None]:
+     Pattern A — [Expression call; Return None]:
      In C++, a void function can end with [f(); return;] which is
      semantically [return f();] — the call is in tail position.
      Generated by cofix_wrap and gen_stmts when current_cpp_return_type
-     is Tvoid.
+     is Void.
 
-     Pattern B — [Sexpr call; Sreturn (Some val)]:
+     Pattern B — [Expression call; Return (Some val)]:
      Same situation but generated when current_cpp_return_type is a unit
-     type (not Tvoid), e.g. for ITree-unit-returning fixpoints whose
+     type (not Void), e.g. for ITree-unit-returning fixpoints whose
      return is threaded through the nat-match continuation [k].  The
      generated code is [f(); return Unit::e_TT;] which is semantically
      equivalent — [f()] is still the last meaningful call before the
@@ -619,16 +741,16 @@ and collect_stmts check ~in_visitor stmts =
      via collect_expr (cs_is_tail = false), misclassifying the function
      as Nontail_recursion and producing an unnecessary explicit stack. *)
   let rec go = function
-    | Sexpr e :: Sreturn None :: rest when Option.has_some (check e) ->
-      collect_stmt check ~in_visitor (Sreturn (Some e)) @ go rest
-    | Sexpr e :: Sreturn (Some _) :: rest when Option.has_some (check e) ->
+    | Expression e :: Return None :: rest when Option.has_some (check e) ->
+      collect_stmt check ~in_visitor (Return (Some e)) @ go rest
+    | Expression e :: Return (Some _) :: rest when Option.has_some (check e) ->
       (* Void/unit tail-call pattern [f(); return (val)] where [f()] is itself
          the recursive call — treat it as [return f()].  Guard on [check e] so
-         we only fire when the [Sexpr] is genuinely the recursive tail call; a
+         we only fire when the [Expression] is genuinely the recursive tail call; a
          bare side-effect followed by [return g()] (e.g. [writeSTRef(...);
          return _self_go(...)]) must fall through so the recursive call in the
-         [Sreturn] is not discarded. *)
-      collect_stmt check ~in_visitor (Sreturn (Some e)) @ go rest
+         [Return] is not discarded. *)
+      collect_stmt check ~in_visitor (Return (Some e)) @ go rest
     | s :: rest ->
       collect_stmt check ~in_visitor s @ go rest
     | [] -> []
@@ -636,43 +758,43 @@ and collect_stmts check ~in_visitor stmts =
   go stmts
 
 (** Collect recursive call sites from a single statement. Handles
-    [Sreturn], [Sif], [Scustom_case], [Sswitch], and nested visit lambdas.
+    [Return], [If], [Scustom_case], [Switch], and nested visit lambdas.
     When [~in_visitor:true], return-position calls are treated as tail calls. *)
 and collect_stmt check ~in_visitor = function
-  | Sreturn (Some e) ->
+  | Return (Some e) ->
     ( match check e with
     | Some cs ->
       (* Also look for nested calls in arguments (e.g., f(m', f(m, n'))) *)
       let nested =
         match e with
-        | CPPfun_call (_, _, args) ->
-        List.concat_map (collect_expr check) (to_reversed args)
-        | CPPaccess_call (Aarrow, _, _, args) ->
+        | Call (_, _, args) ->
+        List.concat_map (collect_expr check) (List.rev args)
+        | Access_call (Arrow, _, _, args) ->
           List.concat_map (collect_expr check) args
         | _ -> []
       in
       {cs with cs_is_tail = true} :: nested
     | None ->
     collect_expr check e )
-  | Sreturn None -> []
-  | Sexpr e | Sbind (_, e) -> collect_expr check e
-  | Sasgn (_, _, e) -> collect_expr check e
-  | Sassign_expr (lhs, e) -> collect_expr check lhs @ collect_expr check e
-  | Sif_constexpr (_, then_br, else_br) ->
+  | Return None -> []
+  | Expression e | Structured_binding (_, e) -> collect_expr check e
+  | Bind_variable (_, _, e) -> collect_expr check e
+  | Assign (lhs, e) -> collect_expr check lhs @ collect_expr check e
+  | If_constexpr {test = _; then_ = then_br; else_ = else_br} ->
     collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
-  | Sif (cond, then_br, else_br) ->
+  | If {condition = cond; then_ = then_br; else_ = else_br} ->
     collect_expr check cond
     @ collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
-  | Sif_decl (_, _, init, then_br, else_br) ->
+  | If_declaration {name = _; type_ = _; init = init; then_ = then_br; else_ = else_br} ->
     collect_expr check init
     @ collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
-  | Swhile (cond, body) | Sfor_range (_, cond, body) ->
+  | While (cond, body) | For_range (_, cond, body) ->
     collect_expr check cond @ collect_stmts check ~in_visitor body
-  | Sblock stmts -> collect_stmts check ~in_visitor stmts
-  | Sswitch (scrut, _, branches, default) ->
+  | Block stmts -> collect_stmts check ~in_visitor stmts
+  | Switch {scrutinee = scrut; enum = _; branches = branches; default = default} ->
     collect_expr check scrut
     @ List.concat_map
         (fun (_, body) -> collect_stmts check ~in_visitor body)
@@ -680,25 +802,25 @@ and collect_stmt check ~in_visitor = function
     @ (match default with
        | Some ss -> collect_stmts check ~in_visitor ss
        | None -> [])
-  | Scustom_case (_, scrut, _, branches, _) ->
+  | Custom_match {scrutinee = scrut; branches; _} ->
     collect_expr check scrut
     @ List.concat_map
-        (fun (_, _, body) -> collect_stmts check ~in_visitor body)
+        (fun (b : custom_branch) -> collect_stmts check ~in_visitor b.body)
         branches
-  | Sblock_custom (_, _, _, _, args, _, _) ->
+  | Foreign_block {custom = _; template = _; result = _; result_type = _; values = args; type_args = _; binder = _} ->
     List.concat_map (collect_expr check) args
-  | Smatch (scrut, branches, default) ->
-    collect_expr check scrut.sc_expr
+  | Match (scrut, branches, default) ->
+    collect_expr check scrut.expr
     @ List.concat_map
-      (fun br ->
-        List.concat_map (collect_expr check) br.smb_extra_conds
-        @ collect_stmts check ~in_visitor:true br.smb_body)
+      (fun (br : branch) ->
+        List.concat_map (collect_expr check) br.extra_conditions
+        @ collect_stmts check ~in_visitor:true br.body)
       branches
     @ ( match default with
       | Some stmts -> collect_stmts check ~in_visitor stmts
       | None -> [] )
-  | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _ | Sstruct_def _
-  | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> []
+  | Declare _ | Throw _ | Assert _ | Foreign_text _ | Comment _ | Local_struct _
+  | Local_type_alias _ | Declare_value_initialized _ | Continue | Break -> []
 
 (** Count recursive calls in an expression (not descending into lambdas). *)
 let rec count_calls_expr (check : call_checker) expr =
@@ -706,31 +828,27 @@ let rec count_calls_expr (check : call_checker) expr =
   | Some _ -> 1
   | None ->
   match expr with
-  | CPPfun_call (_, f, args) ->
+  | Call (_, f, args) ->
     count_calls_expr check f
     + List.fold_left
-        (fun acc a -> acc + count_calls_expr check a) 0 (to_reversed args)
-  | CPPaccess_call (Aarrow, obj, _, args) ->
+        (fun acc a -> acc + count_calls_expr check a) 0 (List.rev args)
+  | Access_call (Arrow, obj, _, args) ->
     count_calls_expr check obj
     + List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
-  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
+  | Move e | Dereference e | Forward (_, e) ->
     count_calls_expr check e
   (* A cast evaluates the call it reads, as {!collect_expr} counts it. *)
-  | CPPany_cast (_, e) | CPPany_cast_tolerant (_, e) | CPPunbox (_, e) | CPPconvert (_, e) ->
+  | Any_cast (_, e) | Tolerant_any_cast (_, e) | Unbox (_, e) | Convert (_, e) ->
     count_calls_expr check e
-  | CPPbinop (_, e1, e2) ->
+  | Binary (_, e1, e2) ->
     count_calls_expr check e1 + count_calls_expr check e2
-  | CPPget (e, _)
-   |CPPget' (e, _, _)
-   |CPPaccess (_, e, _)
-   |CPPscope (e, _, _) -> count_calls_expr check e
-  | CPPstructmk (_, _, args)
-   |CPPstruct (_, _, args)
-   |CPPstruct_id (_, _, args)
-   |CPPnew (_, args) ->
+  | Member (e, _)
+   |Project (e, _, _)
+   |Access (_, e, _)
+   |Scope (e, _, _) -> count_calls_expr check e
+  | Aggregate {values = args; _}
+   |Local_aggregate {values = args; _} ->
     List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
-  | CPPshared_ptr_ctor (_, e) ->
-    count_calls_expr check e
   | _ -> 0
 
 (** Count recursive calls in a statement list. *)
@@ -740,14 +858,14 @@ let rec count_calls_stmts (check : call_checker) stmts =
       acc
       +
       match stmt with
-      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) ->
+      | Return (Some e) | Expression e | Bind_variable (_, _, e) ->
         count_calls_expr check e
-      | Sif (cond, then_br, else_br) ->
+      | If {condition = cond; then_ = then_br; else_ = else_br} ->
         count_calls_expr check cond
         + count_calls_stmts check then_br
         + count_calls_stmts check else_br
-      | Sblock ss -> count_calls_stmts check ss
-      | Sswitch (e, _, branches, default) ->
+      | Block ss -> count_calls_stmts check ss
+      | Switch {scrutinee = e; enum = _; branches = branches; default = default} ->
         count_calls_expr check e
         + List.fold_left
             (fun acc (_, body) -> acc + count_calls_stmts check body)
@@ -756,19 +874,19 @@ let rec count_calls_stmts (check : call_checker) stmts =
         + (match default with
            | Some ss -> count_calls_stmts check ss
            | None -> 0)
-      | Scustom_case (_, scrut, _, branches, _) ->
+      | Custom_match {scrutinee = scrut; branches; _} ->
         count_calls_expr check scrut
         + List.fold_left
-            (fun acc (_, _, body) -> acc + count_calls_stmts check body)
+            (fun acc (b : custom_branch) -> acc + count_calls_stmts check b.body)
             0
             branches
-      | Smatch (scrut, branches, default) ->
-        count_calls_expr check scrut.sc_expr
+      | Match (scrut, branches, default) ->
+        count_calls_expr check scrut.expr
         + List.fold_left
-          (fun acc br ->
+          (fun acc (br : branch) ->
             acc
-            + List.fold_left (fun a c -> a + count_calls_expr check c) 0 br.smb_extra_conds
-            + count_calls_stmts check br.smb_body )
+            + List.fold_left (fun a c -> a + count_calls_expr check c) 0 br.extra_conditions
+            + count_calls_stmts check br.body )
           0 branches
         + (match default with Some ss -> count_calls_stmts check ss | None -> 0)
       | _ -> 0 )
@@ -786,17 +904,17 @@ let rec count_calls_stmts (check : call_checker) stmts =
 let rec expose_tail_calls check stmts = List.map (expose_stmt check) stmts
 
 and expose_stmt check = function
-  | Sreturn (Some e) -> expose_return check e
+  | Return (Some e) -> expose_return check e
   | s -> map_stmt ~fl:(expose_tail_calls check) Fun.id (expose_stmt check) Fun.id s
 
 and expose_return check e =
   let holds e = count_calls_expr check e > 0 in
   let return e = expose_return check e in
   match e with
-  | CPPcond (c, a, b) when holds a || holds b -> Sif (c, [return a], [return b])
-  | CPPbinop (Bor, a, b) when holds b -> Sif (a, [Sreturn (Some (CPPbool true))], [return b])
-  | CPPbinop (Band, a, b) when holds b -> Sif (a, [return b], [Sreturn (Some (CPPbool false))])
-  | _ -> Sreturn (Some e)
+  | Conditional (c, a, b) when holds a || holds b -> If {condition = c; then_ = [return a]; else_ = [return b]}
+  | Binary (Or, a, b) when holds b -> If {condition = a; then_ = [Return (Some (Literal (Bool true)))]; else_ = [return b]}
+  | Binary (And, a, b) when holds b -> If {condition = a; then_ = [return b]; else_ = [Return (Some (Literal (Bool false)))]}
+  | _ -> Return (Some e)
 
 (** Classify a function body's recursion pattern. Collects all recursive call
     sites and checks whether they are all in tail position, some non-tail, or
@@ -867,35 +985,35 @@ let filter_by_mask mask lst =
 
 (** {2 This→_self substitution for method loopification} *)
 
-(** True when an expression refers to the method receiver ([CPPthis]).
+(** True when an expression refers to the method receiver ([This]).
     Uses the generic {!expr_exists} traversal. *)
 let expr_contains_this e =
-  expr_exists (function CPPthis -> true | _ -> false) e
+  expr_exists (function This -> true | _ -> false) e
 
-(** Replace [CPPthis] with [CPPvar self_id] throughout an expression. *)
-let rec this_to_self_expr (self_id : Id.t) (e : cpp_expr) : cpp_expr =
+(** Replace [This] with [Local self_id] throughout an expression. *)
+let rec this_to_self_expr (self_id : Id.t) (e : expr) : expr =
   match e with
-  | CPPthis -> CPPvar self_id
+  | This -> Local self_id
   | _ ->
     map_expr (this_to_self_expr self_id) (this_to_self_stmt self_id) Fun.id e
 
-(** Replace [CPPthis] with [CPPvar self_id] throughout a statement. *)
-and this_to_self_stmt (self_id : Id.t) (s : cpp_stmt) : cpp_stmt =
+(** Replace [This] with [Local self_id] throughout a statement. *)
+and this_to_self_stmt (self_id : Id.t) (s : stmt) : stmt =
   match s with
-  | Smatch (scrut, branches, default) ->
+  | Match (scrut, branches, default) ->
     (* Matching on the receiver: [self] is a borrowed reference, so the
        payload must not be taken by [auto&] out of [v_mut()]. *)
-    let receiver_match = expr_contains_this scrut.sc_expr in
-    Smatch
+    let receiver_match = expr_contains_this scrut.expr in
+    Match
       ( { scrut with
-          sc_expr = this_to_self_expr self_id scrut.sc_expr;
-          sc_owned = (not receiver_match) && scrut.sc_owned },
+          expr = this_to_self_expr self_id scrut.expr;
+          owned = (not receiver_match) && scrut.owned },
         List.map
-          (fun br ->
+          (fun (br : branch) ->
             { br with
-              smb_extra_conds =
-                List.map (this_to_self_expr self_id) br.smb_extra_conds;
-              smb_body = List.map (this_to_self_stmt self_id) br.smb_body })
+              extra_conditions =
+                List.map (this_to_self_expr self_id) br.extra_conditions;
+              body = List.map (this_to_self_stmt self_id) br.body })
           branches,
         Option.map (List.map (this_to_self_stmt self_id)) default )
   | _ ->
@@ -913,8 +1031,8 @@ let rec subst_expr (subs : (Id.t * Id.t) list) e =
   in
   let e' =
     match e with
-    | CPPvar id -> CPPvar (rename id)
-    | CPPlambda l when l.cl_moved <> [] -> CPPlambda {l with cl_moved = List.map rename l.cl_moved}
+    | Local id -> Local (rename id)
+    | Lambda l when l.moved <> [] -> Lambda {l with moved = List.map rename l.moved}
     | _ -> e
   in
   map_expr (subst_expr subs) (subst_stmt subs) (fun t -> t) e'
