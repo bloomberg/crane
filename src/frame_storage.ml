@@ -76,7 +76,7 @@ let kept = function Cell -> Cell | Stable | Shares -> Shares | Fresh -> Fresh
    else is computed afresh. *)
 let rec kind ~in_place env = function
   | MLrel (db, _) -> Option.default Fresh (List.nth_opt env (db - 1))
-  | MLmagic (Mcoerce (from, into), e) when in_place from into -> kind ~in_place env e
+  | MLmagic (Mcoerce (from, into), e, _) when in_place from into -> kind ~in_place env e
   | _ -> Fresh
 
 (* Whether a frame may hold a pointer to a value of this kind. *)

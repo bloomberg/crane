@@ -216,7 +216,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
              returns_target (depth + n_bindings) branch_body )
            branches
     | MLletin (_, _, _, b, _) -> returns_target (depth + 1) b
-    | MLmagic (_, a) -> returns_target depth a
+    | MLmagic (_, a, _) -> returns_target depth a
     (* All other forms (MLapp, MLcons, MLlam, etc.) produce a NEW value, not a
        bare return of the argument. So they're safe. *)
     | _ -> false

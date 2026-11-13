@@ -114,6 +114,11 @@ type translation_ctx = {
      beside {!representation}; the only answer lowering reads
      ({!Translation_types.read_is_boxed}). *)
   planned_reads : (Occurrence.t * planned_read) list;
+  (* The C++ type the position each coercion of the region fills is
+     generated against, as {!Position_plan} plans it: by the coercion's
+     occurrence, a region nested in another first.  Set beside
+     {!planned_reads}. *)
+  planned_positions : (Occurrence.t * planned_position) list;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
@@ -202,6 +207,15 @@ and planned_read = {
   rd_type : cpp_type option;
 }
 
+(** The type of the position a coercion fills, as {!Position_plan} plans
+    it. *)
+and planned_position =
+  | At of cpp_type option
+      (** Generated against this type, none where the position states none. *)
+  | Stored
+      (** A constructor's field, whose type lowering still decides from the
+          constructor it is building. *)
+
 and binder_kind =
   | Kouter  (** bound outside the region *)
   | Kparameter  (** a lambda's parameter *)
@@ -243,6 +257,7 @@ let tctx =
         move_plan = Ownership_ir.empty;
         representation = [];
         planned_reads = [];
+        planned_positions = [];
         match_param_counter = 0;
         promoted_var_map = [];
         in_constructor_expr = false;
@@ -451,6 +466,11 @@ let plan_representation :
     ref =
   ref (fun ~outer:_ _ -> ([], []))
 
+(** {!Position_plan.region}, which is translation's to name, for the same
+    reason as {!plan_representation}. *)
+let plan_positions : (outer:Lexenv.t -> ml_ast -> (Occurrence.t * planned_position) list) ref =
+  ref (fun ~outer:_ _ -> [])
+
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
     [owned], its closures owning their copy of those at [copied], lowered as
@@ -470,17 +490,20 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (
      planning it again from its own scope would read those at the types they
      are bound at, not the ones their matches pinned down.  Its plan only adds
      what the enclosing one has no answer for. *)
-  let representation, reads =
+  let representation, reads, positions =
     match (!tctx).body_owner with
     | Some _ ->
       let binders, reads = !plan_representation ~outer:(!tctx).env_types body in
-      ((!tctx).representation @ binders, (!tctx).planned_reads @ reads)
-    | None -> ([], [])
+      (* A nested region's positions are planned at its own return type,
+         which the enclosing walk does not know; they come first. *)
+      let positions = !plan_positions ~outer:(!tctx).env_types body in
+      ((!tctx).representation @ binders, (!tctx).planned_reads @ reads, positions @ (!tctx).planned_positions)
+    | None -> ([], [], [])
   in
   with_field
-    (fun c -> (c.representation, c.planned_reads))
-    (fun (r, rd) -> tctx := { !tctx with representation = r; planned_reads = rd })
-    (representation, reads)
+    (fun c -> (c.representation, c.planned_reads, c.planned_positions))
+    (fun (r, rd, ps) -> tctx := { !tctx with representation = r; planned_reads = rd; planned_positions = ps })
+    (representation, reads, positions)
   @@ fun () -> with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative

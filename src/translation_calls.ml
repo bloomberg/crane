@@ -423,8 +423,11 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
           with
           | Some arg -> (
             match strip_magic arg with
-            | MLrel (j, _) -> (
-              match Option.map unwrap (binder_cpp_type_or_derive env j) with
+            | MLrel (j, occ) -> (
+              match
+                Option.map unwrap
+                  (planned_binder_type_or_derive ~use:"argument's type argument" ~agree:( = ) env j occ)
+              with
               | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
                 && not (prints_as_any x) ->
                 Some x
@@ -1452,6 +1455,334 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
     cp_instance_promoted = instance_promoted_map;
     cp_result_tvar_map = result_tvar_map
   }
+
+(** Where the [i]th regular argument of a call is generated: the parameter
+    it is passed at ([ap_index] of the unsubstituted list, [ap_param] its
+    substituted ML type), the C++ type it is generated against
+    ([ap_expected]), and the return type in force while it is ([ap_ret]),
+    with what {!gen_call_args} reads of these afterwards. *)
+type argument_position = {
+  ap_index : Param_pos.orig Param_pos.pos;
+  ap_param : ml_type option;
+  ap_expected : cpp_type option;
+  ap_ret : cpp_type option;
+  ap_tvar_erased : bool;
+  ap_written_by_call : bool;
+  ap_deduced_callable : bool;
+  ap_expected_subst : cpp_type option;
+}
+
+(** Whether the variable [j] holds a function, by the C++ type lowering
+    recorded for its binder, failing one by its ML type.  Not the planned
+    type: a lifted local fixpoint's parameter is planned at the [auto] it is
+    declared with, which lowering then records at the function type its
+    uses give it, and the plan cannot tell it from an [auto] that stays. *)
+let local_callable env j =
+  let ty = match binder_cpp_type j with Some _ as t -> t | None -> Option.map (cpp_of_ml env) (get_env_type_opt j) in
+  match Option.map (unfold_cpp_typedef env) ty with
+  | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
+  | _ -> false
+
+(** [argument_position ~local_callable env id plan i ml_arg] -- where the
+    [i]th regular argument [ml_arg] of the call to [id] planned as [plan]
+    ({!plan_call}) is generated: {!argument_position}.  [local_callable j]
+    says whether the variable [j] holds a function. *)
+let argument_position ~local_callable env id plan i ml_arg =
+  let {
+    cp_instantiated =
+      {
+        Elaborated_call.call = {Elaborated_call.callee_type = fn_ml_ty; _} as call;
+        tys;
+        params = fn_param_ml_tys;
+        params_orig = fn_param_ml_tys_orig;
+        subst_index_of_orig;
+        _
+      };
+    cp_instance_families = instance_families;
+    cp_result_tvar_map = result_tvar_map;
+    _
+  } = plan in
+  let leading_params = Elaborated_call.leading_params call in
+  let dictionary_filled = Elaborated_call.dictionary_filled call in
+  (* The callee's parameters are indexed from its class-dictionary
+     arguments, which [regular_ml_args] does not include, so this
+     argument's parameter is at [param_index] of the unsubstituted list --
+     and, being a position of that list, has to be converted before it
+     indexes the substituted one (see [subst_index_of_orig]). *)
+  let param_index = Param_pos.of_regular ~leading:leading_params i in
+  (* Where that parameter stands in the substituted list.  The
+     conversion is a statement about the callee's ML type, and it is worth
+     making only where the ML type is what the callee's C++ signature was
+     built from.
+
+     For a callee whose C++ form is written out by hand it is not: the
+     replacement text is what says how the arguments are taken, and it
+     need not take them at the Rocq types.  [crane_itree.h] invokes
+     [itree_vis]'s continuation at [std::any] whatever its Rocq domain
+     [X] is, so the substituted domain ([std::monostate]) is the one type
+     the lambda will never be called at -- while [itree_bind]'s, two lines
+     away in the same header, is taken at exactly its Rocq domain.
+     Nothing here can tell those apart, so such a callee keeps reading the
+     position it always read: no better answer is available, and a
+     confident wrong one is worse than the familiar one. *)
+  let subst_param_index =
+    if Table.is_inline_custom id then
+      Some (Param_pos.subst_at_declared param_index)
+    else subst_index_of_orig param_index
+  in
+  (* Where substitution erased the parameter -- [IFun b c] at objects the
+     call erases -- the declaration still takes it, at the type it
+     declares, and an argument reaching it is recovered at that type. *)
+  let param_ml_ty =
+    match subst_param_index with
+    | Some i -> Param_pos.nth fn_param_ml_tys i
+    | None -> (
+      match Param_pos.nth fn_param_ml_tys_orig param_index with
+      | Some t when not (erased_by_extraction t) -> Some t
+      | _ -> None )
+  in
+  let param_expected_at params pos =
+    match Param_pos.nth params pos with
+    | Some ml_ty ->
+      let cpp_ty = cpp_of_ml env ml_ty in
+      if prints_as_any cpp_ty then None else Some cpp_ty
+    | None -> None
+  in
+  (* The concrete types come from the substituted parameter type, but its
+     {e arity} must come from the unsubstituted one: substituting a
+     function type into a codomain that was a type variable flattens the
+     element's arrows into the callable's own parameter list, and a
+     template argument keeps its currying (see
+     {!template_arg_of_ml_type}).  A parameter declared as a bare type
+     variable has arity zero, so its value is curried throughout. *)
+  (* This parameter's substituted C++ type.  [param_index] counts
+     positions of the unsubstituted type, so it has to be converted before
+     it indexes the substituted list -- see [subst_index_of_orig]. *)
+  let param_expected_subst () =
+    Option.bind subst_param_index (param_expected_at fn_param_ml_tys)
+  in
+  (* Just the re-currying: [None] where the declaration's arity is already
+     the shape the substituted parameter type has, so a producer that has
+     its own better source keeps it. *)
+  let param_expected_recurried () =
+    match Param_pos.nth fn_param_ml_tys_orig param_index with
+    | Some orig ->
+      Option.bind (param_expected_subst ())
+        (respell_arrows (Declared_at (count_ml_value_arrows orig)))
+    | None -> None
+  in
+  let param_expected_at_declared_arity () =
+    match param_expected_recurried () with
+    | Some _ as t -> t
+    | None -> (
+      match Param_pos.nth fn_param_ml_tys_orig param_index with
+      | Some _ -> param_expected_subst ()
+      | None -> None )
+  in
+  (* The callee declares this parameter as one of its own template
+     parameters [Tvar j], and some {e other} parameter carries that same
+     [j] in a position the instantiation erased -- so that parameter's
+     argument deduces [j] as [std::any].  This one has to arrive boxed for
+     the two deductions to agree.  Erasure of the type argument alone is
+     not enough of a reason: unless another position states it as
+     [std::any], boxing here would be the only thing making the deduction
+     disagree. *)
+  let param_tvar_erased =
+    let this = param_index in
+    let rec mentions j = function
+      | Miniml.Tvar (_, j') -> j = j'
+      | Miniml.Tglob (_, ts, _) -> List.exists (mentions j) ts
+      | Miniml.Tapp (h, ts) -> h = j || List.exists (mentions j) ts
+      | Miniml.Tarr (a, b) -> mentions j a || mentions j b
+      | Miniml.Tmeta {contents = Some t} -> mentions j t
+      | _ -> false
+    in
+    let tvar_arg_erased j =
+      match Mlutil.Var_types.find_tvar tys j with
+      | Some t ->
+        Ml_type_util.has_erased_type_in_type
+          (unfold_cpp_typedef env (cpp_of_ml env t))
+      | None -> false
+    in
+    match Param_pos.nth fn_param_ml_tys_orig this with
+    | Some (Miniml.Tvar (_, j)) when tvar_arg_erased j ->
+      List.exists
+        (fun (k, orig) ->
+          (not (Param_pos.equal k this))
+          && param_states_type_args id orig
+          && mentions j orig
+          && Ml_type_util.has_erased_type_in_type
+               (unfold_cpp_typedef env (cpp_of_ml env (Mlutil.Var_types.apply tys orig))))
+        (Param_pos.positioned fn_param_ml_tys_orig)
+    | _ -> false
+  in
+  let arg_expected_ty =
+    match ml_arg with
+    (* A lambda under a coercion is written against the slot all the
+       same. *)
+    | MLlam _ | MLmagic (_, MLlam _, _) -> param_expected_at_declared_arity ()
+    | _ ->
+    ( match
+        match Param_pos.nth fn_param_ml_tys_orig param_index with
+        | Some (Miniml.Tvar (_, _)) ->
+          param_expected_at_declared_arity ()
+        | _ -> None
+      with
+    | Some _ as t -> t
+    | None ->
+    ( match ml_arg with
+    | MLmagic (_, _, _) -> param_expected_subst ()
+    (* [MLglob]: a bare function name handed over as a value may need
+       re-currying.  Count the arrows in the callee's {e unsubstituted}
+       parameter type: arrows past the point where the codomain becomes a
+       type variable belong to the element type the callee is generic in,
+       not to the callable it expects. *)
+    | MLglob _ -> param_expected_at fn_param_ml_tys_orig param_index
+    (* So may a local function, for the same reason. *)
+    | MLrel (j, _) when local_callable j -> param_expected_at fn_param_ml_tys_orig param_index
+    (* A partial application is a callable built here rather than named,
+       and reaches the slot at the arity the callee declared the parameter
+       at, for the same reason a lambda does. *)
+    | MLapp _ -> param_expected_at_declared_arity ()
+    (* A constructed value is spelled here for the first time, so only the
+       slot can say how its type arguments are curried.  Everything else
+       about the type the constructor's own annotation knows better: it
+       carries this producer's instantiation, which the parameter type may
+       have erased.  So take the currying and nothing else. *)
+    | MLcons _ -> param_expected_recurried ()
+    (* A match in argument position becomes an immediately-invoked lambda,
+       whose branches have to agree on one return type -- and the branches
+       are where a value is spelled for the first time, so nothing inside
+       states it.  Only the slot does. *)
+    | MLcase _ -> param_expected_at_declared_arity ()
+    | _ -> None ) )
+  in
+  (* Where the substituted parameter says nothing, the result may:
+     [trigger (subevent ...)] at a tree of family [Sum1<...>] fixes
+     [trigger]'s family, which is what its parameter -- the [subevent]
+     call's result -- has to be. *)
+  let arg_expected_ty =
+    match
+      ( Lazy.force result_tvar_map,
+        Param_pos.nth fn_param_ml_tys_orig param_index )
+    with
+    | (result_names, (_ :: _ as m)), Some pt -> (
+      let d =
+        convert_ml_type_to_cpp_type env result_names (type_simpl pt)
+        |> deapply_families
+        |> map_cpp_type (function
+             | Tvar (Tv_index (_, Some v) | Tv_named v) as t -> (
+               match List.find_opt (fun (v', _) -> Id.equal v v') m with
+               | Some (_, t') -> t'
+               | None -> t )
+             | t -> t )
+      in
+      match arg_expected_ty with
+      (* No slot at all: the declaration's type is the slot, where it is
+         one this scope can write. *)
+      | None | Some Tany ->
+        ( match spell_in_scope d with
+        | Some _ as t -> t
+        | None -> arg_expected_ty )
+      (* A slot erased inside: each erased part is filled from the
+         declaration where it says; what the declaration still says in
+         its own variables is no answer. *)
+      | Some slot ->
+        let scope = current_scope_type_names () in
+        let d =
+          map_cpp_type
+            (function
+              | Tvar tv as t ->
+                let id = tvar_spelled tv in
+                if List.exists (Id.equal id) scope then t else Tany
+              | t -> t )
+            d
+        in
+        Some (Ml_type_util.refine_erased_by ~expected:d slot) )
+    | _ -> arg_expected_ty
+  in
+  (* Only a parameter the carrier reaches: one that mentions a
+     higher-kinded variable of the callee.  [interp_state]'s tree
+     [itree E T] is at the source family [E], and filling its erased
+     family with the monad's [BotE] turned the inner [interp] into one
+     over the target family. *)
+  let param_mentions_carrier =
+    match Param_pos.nth fn_param_ml_tys_orig param_index with
+    | Some t ->
+      let hk = declared_higher_kinded_tvars fn_ml_ty in
+      not (IntSet.is_empty (IntSet.inter hk (collect_tvars_set IntSet.empty t)))
+    | None -> true
+  in
+  let arg_expected_ty =
+    if not param_mentions_carrier then arg_expected_ty
+    else
+      List.fold_left
+        (fun t b -> Option.map (refine_by_instance_family b) t)
+        arg_expected_ty instance_families
+  in
+  (* A callable the callee deduces is called at the callee's instantiation,
+     so it goes over unadapted -- a lambda, or a callable passed on, as a
+     self-call forwards its own ({!deduces_callable}); and a lambda takes
+     what it is given where the slot erases. *)
+  let deduced_callable =
+    Option.has_some (Param_pos.nth fn_param_ml_tys_orig param_index)
+    && deduces_callable id param_index
+  in
+  let arg_expected_ty =
+    match ml_arg with
+    | (MLlam _ | MLmagic (_, MLlam _, _)) when deduced_callable ->
+      Option.map deduce_erased_domains arg_expected_ty
+    | _ -> arg_expected_ty
+  in
+  (* When the callee's declared parameter type is value-dependent and
+     resolves to [std::any] (e.g. [syms_semty xs]), a concrete pair/tuple
+     literal passed at this call site (e.g. [(n, (n, tt))] for a literal
+     [xs]) must be DEEP-erased — every component boxed into [std::any] —
+     so that the callee's generic body, which reconstructs the value via
+     [any_cast<pair<any,any>>], can recover it.  The deep-erasing
+     constructor path in [gen_expr_custom_cons] is normally driven by the
+     enclosing function's erased return type, so it is reached here by
+     treating this call argument as if it were itself in erased "return"
+     position for the duration of its generation. *)
+  (* Where the call writes the variable -- the dictionary stated it --
+     nothing deduces it, and an argument boxed to agree with a deduction
+     would only fail to convert. *)
+  let param_written_by_call = param_tvar_erased && dictionary_filled in
+  let param_resolves_to_any =
+    (param_tvar_erased && not param_written_by_call)
+    ||
+    match param_ml_ty with
+    | Some ml_ty -> ml_erases_to_box env ml_ty
+    | None -> false
+  in
+  let ret =
+    if param_resolves_to_any then Some Tany
+    (* An argument is not a tail position, so the enclosing function's
+       return type does not describe it -- and what the parameter says
+       does.  Left to {!position_cpp_ty}'s fallback, a match in argument
+       position builds its branches at the type the {e call} returns.
+
+       Only where the parameter's type can be written, though: installed
+       as a return type it is written out, as the argument's own explicit
+       template arguments among other places, and a type naming a skipped
+       global renders there as a bare argument list -- [<std::any,
+       <std::any, std::any>>].  Where it cannot be written the enclosing
+       return type is not right, but it is spellable, and a parameter
+       that answers in text no compiler takes has not answered. *)
+    else
+      match arg_expected_ty with
+      | Some t when Ml_type_util.has_no_cpp_spelling t ->
+        (!tctx).current_cpp_return_type
+      | t -> t
+  in
+  { ap_index = param_index;
+    ap_param = param_ml_ty;
+    ap_expected = arg_expected_ty;
+    ap_ret = ret;
+    ap_tvar_erased = param_tvar_erased;
+    ap_written_by_call = param_written_by_call;
+    ap_deduced_callable = deduced_callable;
+    ap_expected_subst = param_expected_subst () }
 
 (** [lower_call ~caller ~slot ?expected_ty env use args]: the call [use]
     [args] in the declaration [caller], lowered against its callee before any

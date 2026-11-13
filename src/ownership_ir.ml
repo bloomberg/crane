@@ -119,7 +119,7 @@ let empty =
 let closure_reads d t =
   let rec go d' acc = function
     | MLrel (i, o) -> if d' - i < d then (d' - i, o) :: acc else acc
-    | MLmagic (_, t) -> go d' acc t
+    | MLmagic (_, t, _) -> go d' acc t
     | MLapp (f, args) -> List.fold_left (go d') acc (f :: args)
     | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go d') acc args
     | MLparray (elems, default) -> List.fold_left (go d') acc (default :: Array.to_list elems)
@@ -301,7 +301,7 @@ let projected d r t =
     | _ -> None )
   | _ -> None
 
-let rec strip = function MLmagic (_, t) -> strip t | t -> t
+let rec strip = function MLmagic (_, t, _) -> strip t | t -> t
 
 (* What a match's pattern variables are parts of: the variable it matches,
    when it matches one. *)
@@ -333,7 +333,7 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
   match t with
   | MLrel (i, _) ->
     if i > 0 && not (Levels.mem (d - i) outside) then Levels.singleton (d - i) else Levels.empty
-  | MLmagic (_, t) -> free parents d t
+  | MLmagic (_, t, _) -> free parents d t
   | MLapp (MLglob {callee = r; _}, [arg]) when parts && projected d r (strip arg) <> None ->
     Levels.singleton (fst (Option.get (projected d r (strip arg))))
   | MLapp (f, args) -> frees parents d (f :: args)
@@ -403,7 +403,7 @@ let field_of = function
    variable or a record field of one. *)
 let rec spelled_in_place = function
   | MLrel _ -> true
-  | MLmagic (_, t) -> spelled_in_place t
+  | MLmagic (_, t, _) -> spelled_in_place t
   | t -> ( match field_of t with Some t -> spelled_in_place t | None -> false )
 
 (* Whether a match may take its scrutinee's value, as translation generates
@@ -606,7 +606,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       saves := {save_at = s.let_at; saved = List.map (fun (b, l) -> (b, l, last l)) s.kept_at} :: !saves;
       Levels.union saved (walk ~consumed ~pinned parents d after_save t)
     | MLrel (i, occurrence) -> read (d - i) occurrence
-    | MLmagic (_, t) -> walk ~consumed ?tail ~pinned parents d live t
+    | MLmagic (_, t, _) -> walk ~consumed ?tail ~pinned parents d live t
     (* A component read through its projection is a part of the pair: a read
        of the other component is not a later read of it. *)
     | MLapp (MLglob {callee = r; _}, [arg]) when projected d r (strip arg) <> None ->
@@ -759,7 +759,7 @@ let matched_inductive branches =
    application is read in place. *)
 let rec scrutinee_storage = function
   | MLrel (i, o) -> Some (i, o)
-  | MLmagic (_, t) | MLapp (t, _) -> scrutinee_storage t
+  | MLmagic (_, t, _) | MLapp (t, _) -> scrutinee_storage t
   | _ -> None
 
 let scrutinee_var scrut = match strip scrut with MLrel (i, o) -> Some (i, o) | _ -> None
@@ -872,7 +872,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
       out := (occurrence, Levels.mem (d - i) owned) :: !out;
       read_types := (occurrence, read_type (d - i)) :: !read_types;
       if Levels.mem (d - i) copied then copied_reads := occurrence :: !copied_reads
-    | MLmagic (_, t) -> own owned d t
+    | MLmagic (_, t, _) -> own owned d t
     (* A bind generated as sequencing binds its continuation's parameter to
        the action's value. *)
     | MLapp (MLglob use, (_ :: _ :: _ as args)) when sequential_bind use -> (
@@ -1345,7 +1345,7 @@ let moved_captures_by_member p fix =
 let moved_reads p ts =
   let rec go acc = function
     | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc
-    | MLmagic (_, t) -> go acc t
+    | MLmagic (_, t, _) -> go acc t
     | MLapp (f, args) -> List.fold_left go acc (f :: args)
     | MLcons (_, _, args, _) | MLtuple args -> List.fold_left go acc args
     (* What a closure among them takes by move, the closure made around

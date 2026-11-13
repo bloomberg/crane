@@ -56,7 +56,7 @@ let reads env e =
     | MLfix (_, ids, funs, _, _) -> Array.fold_left (go (depth + Array.length ids)) acc funs
     | MLapp (f, args) -> List.fold_left (go depth) acc (f :: args)
     | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go depth) acc args
-    | MLmagic (_, e) -> go depth acc e
+    | MLmagic (_, e, _) -> go depth acc e
     | MLparray (elements, default) -> Array.fold_left (go depth) (go depth acc default) elements
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> acc
   in
@@ -65,7 +65,7 @@ let reads env e =
 (* [e] without the in-place coercions around it: they change nothing a
    parameter stands for. *)
 let rec strip ~in_place = function
-  | MLmagic (Mcoerce (from, into), e) when in_place from into -> strip ~in_place e
+  | MLmagic (Mcoerce (from, into), e, _) when in_place from into -> strip ~in_place e
   | e -> e
 
 (* The declared argument of its constructor each binder of [b] is bound at,
@@ -141,13 +141,13 @@ let own_value ty value =
     | MLlam _ | MLfix _ -> false
     | MLapp (f, args) -> List.for_all closure_free (f :: args)
     | MLcons (_, _, args, _) | MLtuple args -> List.for_all closure_free args
-    | MLmagic (_, e) -> closure_free e
+    | MLmagic (_, e, _) -> closure_free e
     | MLletin (_, _, a, b, _) -> closure_free a && closure_free b
     | MLcase (_, s, branches, _) -> closure_free s && Array.for_all (fun (_, _, _, b) -> closure_free b) branches
     | MLparray (elements, default) -> Array.for_all closure_free elements && closure_free default
     | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
   in
-  let rec head = function MLmagic (_, e) -> head e | e -> e in
+  let rec head = function MLmagic (_, e, _) -> head e | e -> e in
   (* A custom computes a value of its own unless its text binds the result
      itself or yields its argument, or a field of it, as an lvalue. *)
   let computes r =

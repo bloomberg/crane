@@ -5,7 +5,7 @@ open Names
 open Miniml
 open Ml_type_util
 
-let rec strip_magic = function MLmagic (_, e) -> strip_magic e | e -> e
+let rec strip_magic = function MLmagic (_, e, _) -> strip_magic e | e -> e
 
 let registered_constructor name = function
   | GlobRef.ConstructRef (ind, idx) when Rocqlib.has_ref name && Rocqlib.check_ref name (GlobRef.IndRef ind) ->

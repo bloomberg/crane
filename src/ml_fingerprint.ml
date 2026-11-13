@@ -104,7 +104,7 @@ and ml_ast w = function
   | MLexn s -> tag w "MLexn"; str w s
   | MLdummy k -> tag w "MLdummy"; kill_reason w k
   | MLaxiom s -> tag w "MLaxiom"; str w s
-  | MLmagic (m, a) -> tag w "MLmagic"; magic w m; ml_ast w a
+  | MLmagic (m, a, _) -> tag w "MLmagic"; magic w m; ml_ast w a
   | MLuint n -> tag w "MLuint"; str w (Uint63.to_string n)
   | MLfloat f -> tag w "MLfloat"; str w (Float64.to_hex_string f)
   | MLstring s -> tag w "MLstring"; str w (Pstring.to_string s)

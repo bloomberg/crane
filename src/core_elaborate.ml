@@ -376,7 +376,7 @@ let is_shared_constant_term e =
   let rec closed = function
     | MLcons (_, _, ts, _) -> List.for_all closed ts
     | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
-    | MLmagic (_, a) -> closed a
+    | MLmagic (_, a, _) -> closed a
     | _ -> false
   in
   match e with
@@ -643,7 +643,7 @@ let rec walk w ?(position = no_position) lex e =
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
     Array.iter (go (push Lexenv.Value fs lex)) defs
-  | MLmagic (_, e) -> go ~position lex e
+  | MLmagic (_, e, _) -> go ~position lex e
   | MLparray (elems, def) ->
     Array.iter (go lex) elems;
     go lex def
@@ -754,7 +754,7 @@ let declaration ?caller ?scope b ty body =
    function of the full signature, which no partial application fills. *)
 let constant_at_alias ~caller b ty body =
   let ty = Mlutil.type_simpl ty in
-  let body = match body with MLmagic (_, b) -> b | b -> b in
+  let body = match body with MLmagic (_, b, _) -> b | b -> b in
   if Ml_type_util.ml_domains ty = [] then
     match Ml_type_util.eta_expand_to (Ml_type_util.expand_ml_fun_alias ty) body with
     | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Lexenv.empty expanded
@@ -1014,6 +1014,12 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
              | `Ambiguous _ -> " has no single instantiation planned for it."
              | `Unwalked -> " is translated where Core elaboration did not reach it." ) );
       live () )
+
+let planned_instantiation use args =
+  let n = List.length args in
+  match (roles !installed use n, planned !installed use n) with
+  | Some roles, `Planned p -> Some (Elaborated_call.at_call p (of_roles use args roles))
+  | _ -> None
 
 (* [lookup what ~equal ~live planned] -- the answer the installed walk
    planned ([planned], [None] where it planned none or its entries

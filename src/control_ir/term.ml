@@ -151,7 +151,7 @@ type provenance =
    a loop's parameters, innermost first. *)
 let rec provenance ~in_place env = function
   | Miniml.MLrel (db, _) -> Option.flatten (List.nth_opt env (db - 1))
-  | Miniml.MLmagic (Miniml.Mcoerce (from, into), e) when in_place from into -> provenance ~in_place env e
+  | Miniml.MLmagic (Miniml.Mcoerce (from, into), e, _) when in_place from into -> provenance ~in_place env e
   | _ -> None
 
 (* Each Continue of the loop [l], in order, with the provenance of each
@@ -275,7 +275,7 @@ let rebuilt ~pointer_fields ~in_place (l : loop) i =
       | Miniml.MLfix (_, ids, funs, _, _) -> Array.exists (go (depth + Array.length ids)) funs
       | Miniml.MLapp (f, args) -> go depth f || List.exists (go depth) args
       | Miniml.MLcons (_, _, args, _) | Miniml.MLtuple args -> List.exists (go depth) args
-      | Miniml.MLmagic (_, e) -> go depth e
+      | Miniml.MLmagic (_, e, _) -> go depth e
       | Miniml.MLparray (elements, default) -> Array.exists (go depth) elements || go depth default
       | Miniml.MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false
     in

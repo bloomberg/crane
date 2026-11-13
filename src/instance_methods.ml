@@ -61,7 +61,7 @@ let layers ty body =
 let record_body name class_ref inner_ty lam_params inner_body =
   let inner_body =
     match inner_body with
-    | MLmagic (_, b) -> b
+    | MLmagic (_, b, _) -> b
     | b -> b
   in
   let as_method m = function
@@ -230,7 +230,7 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
   (* Strip MLmagic wrappers from the field body -- promoted dependent
      records produce MLmagic due to Tvar/Tglob mismatches. *)
   let rec strip_magic = function
-    | MLmagic (_, b) -> strip_magic b
+    | MLmagic (_, b, _) -> strip_magic b
     | b -> b
   in
   (* The method is generated more than once -- declared, then defined --

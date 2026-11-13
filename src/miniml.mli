@@ -287,7 +287,10 @@ and ml_ast =
   | MLexn of string
   | MLdummy of kill_reason
   | MLaxiom of string
-  | MLmagic of ml_magic * ml_ast
+  | MLmagic of ml_magic * ml_ast * Occurrence.t
+      (** What the gap is, the term crossing it, and the occurrence telling
+          this crossing apart from every other one, so that what is planned
+          of the position it fills is found again where it is lowered. *)
   | MLuint of Uint63.t
   | MLfloat of Float64.t
   | MLstring of Pstring.t

@@ -180,7 +180,7 @@ and ml_ast =
   | MLexn of string
   | MLdummy of kill_reason
   | MLaxiom of string
-  | MLmagic of ml_magic * ml_ast
+  | MLmagic of ml_magic * ml_ast * Occurrence.t
   | MLuint of Uint63.t
   | MLfloat of Float64.t
   | MLstring of Pstring.t

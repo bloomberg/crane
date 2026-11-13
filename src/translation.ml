@@ -562,7 +562,7 @@ let constant_name e =
       | Some ("positive", 2), [p] -> Option.map (fun v -> Z.mul v (Z.of_int 2)) (pos p)
       | Some ("positive", 3), [] -> Some Z.one
       | _ -> None )
-    | MLmagic (_, a) -> pos a
+    | MLmagic (_, a, _) -> pos a
     | _ -> None
   in
   let rec nat = function
@@ -1537,11 +1537,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          once -- a [let fix] or a parameter of type [nat -> nat -> nat] where
          a [nat -> (nat -> nat)] is expected -- is curried to the slot, as a
          global named as a value is. *)
+      let unfolded = Option.map (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t)) in
+      let curries t =
+        match (expected_ty, unfolded t) with
+        | Some (Tfun ((_ :: _ as exp_dom), _)), Some (Tfun (dom, _)) -> List.length dom > List.length exp_dom
+        | _ -> false
+      in
       ( match
         ( expected_ty,
-          Option.map
-            (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t))
-            (binder_cpp_type_or_derive env i) )
+          unfolded
+            (planned_binder_type_or_derive ~use:"curried read" ~agree:(fun p l -> curries p = curries l) env i occ) )
       with
       | Some (Tfun ((_ :: _ as exp_dom), _)), Some (Tfun (dom, _))
         when List.length dom > List.length exp_dom -> (
@@ -1697,19 +1702,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        codomain it names. *)
     let binder_result_is_boxed =
       match f with
-      | MLrel (i, _) ->
-        ( match
-            Option.map
-              (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t))
-              (binder_cpp_type_or_derive env i)
-          with
-        | Some (Tfun (doms, cod)) ->
-          let n_runtime =
-            List.length
-              (List.filter (fun a -> not (Mlutil.isMLdummy (strip_magic a))) args)
-          in
-          prints_as_any cod && List.length doms = n_runtime
-        | _ -> false )
+      | MLrel (i, occ) ->
+        let n_runtime =
+          List.length (List.filter (fun a -> not (Mlutil.isMLdummy (strip_magic a))) args)
+        in
+        let boxes t =
+          match Option.map (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t)) t with
+          | Some (Tfun (doms, cod)) -> prints_as_any cod && List.length doms = n_runtime
+          | _ -> false
+        in
+        boxes (planned_binder_type_or_derive ~use:"callee result" ~agree:(fun p l -> boxes p = boxes l) env i occ)
       | _ -> false
     in
     (* Nor can a global whose declaration boxed its result -- [id] declared
@@ -2110,7 +2112,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         in
         (* Generate the body, then check if the body returns a lambda (this
            happens when extract_cons_app generates curried partial constructor
-           applications with an MLmagic (_, barrier)). If so, convert the returned
+           applications with an MLmagic (_, barrier, _)). If so, convert the returned
            lambda to capture by value to avoid dangling references to the outer
            lambda's parameters. *)
         (* A lambda stored into an erased slot IS the value in that slot, so
@@ -2845,7 +2847,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let container_cast_erased_field ml_ft ml_arg expr =
       let is_erased_rel =
         match ml_arg with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
           read_is_boxed j occ
         | _ -> false
       in
@@ -2919,7 +2921,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                           ts
                       in
                       ( match first_elem with
-                      | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                      | Some (MLmagic (_, MLcons (elem_ty, _, _, _), _)) -> elem_ty
                       | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                       | _ -> t )
                     | _ -> t )
@@ -2942,7 +2944,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts, arg_occ)
                   | _ ->
                     MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts, arg_occ) )
-                | MLmagic (m, inner) -> MLmagic (m, update_nested_ty inner)
+                | MLmagic (m, inner, mocc) -> MLmagic (m, update_nested_ty inner, mocc)
                 | other -> other
               in
               List.map update_nested_ty ts
@@ -3040,7 +3042,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let erase_past_type_arg temps =
         let rec first_ktype_dummy i = function
           | [] -> max_int
-          | (MLdummy Ktype | MLmagic (_, MLdummy Ktype)) :: _ -> i
+          | (MLdummy Ktype | MLmagic (_, MLdummy Ktype, _)) :: _ -> i
           | _ :: rest -> first_ktype_dummy (i + 1) rest
         in
         let cutoff = first_ktype_dummy 0 ts_updated in
@@ -3091,7 +3093,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                         ts_updated
                     in
                     ( match first_elem with
-                    | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                    | Some (MLmagic (_, MLcons (elem_ty, _, _, _), _)) -> elem_ty
                     | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                     | _ -> t )
                   | _ -> t )
@@ -3401,7 +3403,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_concrete_param_tys =
                   let rec collect_lam_tys = function
                     | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                    | MLmagic (_, inner) -> collect_lam_tys inner
+                    | MLmagic (_, inner, _) -> collect_lam_tys inner
                     | _ -> []
                   in
                   collect_lam_tys ml_e
@@ -3430,7 +3432,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_body_ret_ty =
                   let rec get_body = function
                     | MLlam (_, _, body) -> get_body body
-                    | MLmagic (_, inner) -> get_body inner
+                    | MLmagic (_, inner, _) -> get_body inner
                     | body -> infer_ml_body_type body
                   in
                   get_body ml_e
@@ -3526,7 +3528,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _, _) ->
                     let ind = GlobRef.IndRef (kn, 0) in
                     Ml_type_util.is_custom_list_global ind
-                  | MLmagic (_, inner) -> is_custom_list_cons inner
+                  | MLmagic (_, inner, _) -> is_custom_list_cons inner
                   | _ -> false
                 in
                 if is_custom_list_cons ml_e then begin
@@ -3573,7 +3575,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_body_ret_ty =
                   let rec get_body = function
                     | MLlam (_, _, body) -> get_body body
-                    | MLmagic (_, inner) -> get_body inner
+                    | MLmagic (_, inner, _) -> get_body inner
                     | body -> infer_ml_body_type body
                   in
                   get_body ml_e
@@ -3581,7 +3583,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ml_concrete_param_tys =
                   let rec collect_lam_tys = function
                     | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                    | MLmagic (_, inner) -> collect_lam_tys inner
+                    | MLmagic (_, inner, _) -> collect_lam_tys inner
                     | _ -> []
                   in
                   collect_lam_tys ml_e
@@ -3776,7 +3778,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let ml_concrete_param_tys =
               let rec collect_lam_tys = function
                 | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                | MLmagic (_, inner) -> collect_lam_tys inner
+                | MLmagic (_, inner, _) -> collect_lam_tys inner
                 | _ -> []
               in
               collect_lam_tys ml_e
@@ -3896,7 +3898,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some ft ->
               let is_erased_rel =
                 match e with
-                | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+                | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
                   read_is_boxed j occ
                 | _ -> false
               in
@@ -4208,7 +4210,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft ->
             let is_erased_rel =
               match e with
-              | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+              | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
                 read_is_boxed j occ
               | _ -> false
             in
@@ -4437,7 +4439,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        wrap field references in MLmagic due to Tvar/Tglob mismatches *)
     let body' =
       match body with
-      | MLmagic (_, b) -> b
+      | MLmagic (_, b, _) -> b
       | b -> b
     in
     ( match (record_body, body') with
@@ -4551,7 +4553,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                off the receiver, which names a concrete instance. *)
             let from_receiver =
               match t with
-              | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}) -> (
+              | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}, _) -> (
                 match resolve_tmeta (Table.find_type r) with
                 | Miniml.Tglob (_, (_ :: _ as args), _) -> Some args
                 | _ | (exception Not_found) -> None )
@@ -4833,7 +4835,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let elems = Array.map (gen_expr env) elems in
     let def = gen_expr env def in
     CPPparray (elems, def)
-  | MLmagic (m, t) ->
+  | MLmagic (m, t, occ) ->
+    let expected_ty = planned_position occ ~live:expected_ty in
     (* A value crossing into a slot that is really [std::any] has to be built
        at the canonical erased shape -- every component boxed -- because the
        consumer recovers it with a fixed [any_cast] and cannot know the
@@ -4906,7 +4909,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
         let rec is_cpp_erased_var_rec = function
           | MLrel (i, occ) -> read_is_boxed i occ
-          | MLmagic (_, t') -> is_cpp_erased_var_rec t'
+          | MLmagic (_, t', _) -> is_cpp_erased_var_rec t'
           | _ -> false
         in
         let is_cpp_erased_var = is_cpp_erased_var_rec t in
@@ -4942,7 +4945,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 ~agree:(fun p l -> (p = Some Topaque) = (l = Some Topaque))
                 i occ
               = Some Topaque
-            | MLmagic (_, t') -> binder_is_opaque t'
+            | MLmagic (_, t', _) -> binder_is_opaque t'
             | _ -> false
           in
           coerce ~from:(if binder_is_opaque t then Topaque else Tany)
@@ -5091,7 +5094,6 @@ and gen_call_args ~slot ?expected_ty env id plan =
     _
   } = plan in
   let leading_params = Elaborated_call.leading_params call in
-  let dictionary_filled = Elaborated_call.dictionary_filled call in
   List.mapi (fun i ml_arg ->
     match strip_magic ml_arg with
     | MLdummy _ -> (
@@ -5112,43 +5114,12 @@ and gen_call_args ~slot ?expected_ty env id plan =
           ~capture:Closure
       | _ -> Cpp_erasure.empty_box )
     | _ ->
-    (* The callee's parameters are indexed from its class-dictionary
-       arguments, which [regular_ml_args] does not include, so this
-       argument's parameter is at [param_index] of the unsubstituted list --
-       and, being a position of that list, has to be converted before it
-       indexes the substituted one (see [subst_index_of_orig]). *)
-    let param_index = Param_pos.of_regular ~leading:leading_params i in
-    (* Where that parameter stands in the substituted list.  The
-       conversion is a statement about the callee's ML type, and it is worth
-       making only where the ML type is what the callee's C++ signature was
-       built from.
-
-       For a callee whose C++ form is written out by hand it is not: the
-       replacement text is what says how the arguments are taken, and it
-       need not take them at the Rocq types.  [crane_itree.h] invokes
-       [itree_vis]'s continuation at [std::any] whatever its Rocq domain
-       [X] is, so the substituted domain ([std::monostate]) is the one type
-       the lambda will never be called at -- while [itree_bind]'s, two lines
-       away in the same header, is taken at exactly its Rocq domain.
-       Nothing here can tell those apart, so such a callee keeps reading the
-       position it always read: no better answer is available, and a
-       confident wrong one is worse than the familiar one. *)
-    let subst_param_index =
-      if Table.is_inline_custom id then
-        Some (Param_pos.subst_at_declared param_index)
-      else subst_index_of_orig param_index
+    let ({ap_index = param_index; ap_param = param_ml_ty; ap_expected = arg_expected_ty; ap_ret = ret;
+           ap_tvar_erased = param_tvar_erased; ap_written_by_call = param_written_by_call;
+           ap_deduced_callable = deduced_callable; ap_expected_subst} : argument_position) =
+      argument_position ~local_callable:(local_callable env) env id plan i ml_arg
     in
-    (* Where substitution erased the parameter -- [IFun b c] at objects the
-       call erases -- the declaration still takes it, at the type it
-       declares, and an argument reaching it is recovered at that type. *)
-    let param_ml_ty =
-      match subst_param_index with
-      | Some i -> Param_pos.nth fn_param_ml_tys i
-      | None -> (
-        match Param_pos.nth fn_param_ml_tys_orig param_index with
-        | Some t when not (erased_by_extraction t) -> Some t
-        | _ -> None )
-    in
+    let param_expected_subst () = ap_expected_subst in
     (* {b Lambda arity limiting.}  When a lambda argument has more binders
        than the callee's parameter type has top-level arrows, the extra
        binders come from the return type being a function (instantiated
@@ -5188,7 +5159,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
               Mlutil.collect_n_lams expected ml_arg
             in
             let barrier =
-              Mlutil.named_lams outer_ids (MLmagic (Mbarrier, inner_body))
+              Mlutil.named_lams outer_ids (MLmagic (Mbarrier, inner_body, Occurrence.fresh ()))
             in
             (* Compute the return type from the substituted param type by
                stripping [expected] top-level arrows.  The remaining type
@@ -5221,250 +5192,12 @@ and gen_call_args ~slot ?expected_ty env id plan =
         | None -> (ml_arg, None) )
       | _ -> (ml_arg, None)
     in
-    let param_expected_at params pos =
-      match Param_pos.nth params pos with
-      | Some ml_ty ->
-        let cpp_ty = cpp_of_ml env ml_ty in
-        if prints_as_any cpp_ty then None else Some cpp_ty
-      | None -> None
-    in
-    (* The concrete types come from the substituted parameter type, but its
-       {e arity} must come from the unsubstituted one: substituting a
-       function type into a codomain that was a type variable flattens the
-       element's arrows into the callable's own parameter list, and a
-       template argument keeps its currying (see
-       {!template_arg_of_ml_type}).  A parameter declared as a bare type
-       variable has arity zero, so its value is curried throughout. *)
-    (* This parameter's substituted C++ type.  [param_index] counts
-       positions of the unsubstituted type, so it has to be converted before
-       it indexes the substituted list -- see [subst_index_of_orig]. *)
-    let param_expected_subst () =
-      Option.bind subst_param_index (param_expected_at fn_param_ml_tys)
-    in
-    (* Just the re-currying: [None] where the declaration's arity is already
-       the shape the substituted parameter type has, so a producer that has
-       its own better source keeps it. *)
-    let param_expected_recurried () =
-      match Param_pos.nth fn_param_ml_tys_orig param_index with
-      | Some orig ->
-        Option.bind (param_expected_subst ())
-          (respell_arrows (Declared_at (count_ml_value_arrows orig)))
-      | None -> None
-    in
-    let param_expected_at_declared_arity () =
-      match param_expected_recurried () with
-      | Some _ as t -> t
-      | None -> (
-        match Param_pos.nth fn_param_ml_tys_orig param_index with
-        | Some _ -> param_expected_subst ()
-        | None -> None )
-    in
-    (* The callee declares this parameter as one of its own template
-       parameters [Tvar j], and some {e other} parameter carries that same
-       [j] in a position the instantiation erased -- so that parameter's
-       argument deduces [j] as [std::any].  This one has to arrive boxed for
-       the two deductions to agree.  Erasure of the type argument alone is
-       not enough of a reason: unless another position states it as
-       [std::any], boxing here would be the only thing making the deduction
-       disagree. *)
-    let param_tvar_erased =
-      let this = param_index in
-      let rec mentions j = function
-        | Miniml.Tvar (_, j') -> j = j'
-        | Miniml.Tglob (_, ts, _) -> List.exists (mentions j) ts
-        | Miniml.Tapp (h, ts) -> h = j || List.exists (mentions j) ts
-        | Miniml.Tarr (a, b) -> mentions j a || mentions j b
-        | Miniml.Tmeta {contents = Some t} -> mentions j t
-        | _ -> false
-      in
-      let tvar_arg_erased j =
-        match Mlutil.Var_types.find_tvar tys j with
-        | Some t ->
-          Ml_type_util.has_erased_type_in_type
-            (unfold_cpp_typedef env (cpp_of_ml env t))
-        | None -> false
-      in
-      match Param_pos.nth fn_param_ml_tys_orig this with
-      | Some (Miniml.Tvar (_, j)) when tvar_arg_erased j ->
-        List.exists
-          (fun (k, orig) ->
-            (not (Param_pos.equal k this))
-            && param_states_type_args id orig
-            && mentions j orig
-            && Ml_type_util.has_erased_type_in_type
-                 (unfold_cpp_typedef env (cpp_of_ml env (Mlutil.Var_types.apply tys orig))))
-          (Param_pos.positioned fn_param_ml_tys_orig)
-      | _ -> false
-    in
-    let arg_expected_ty =
-      match ml_arg with
-      (* A lambda under a coercion is written against the slot all the
-         same. *)
-      | MLlam _ | MLmagic (_, MLlam _) -> param_expected_at_declared_arity ()
-      | _ ->
-      ( match
-          match Param_pos.nth fn_param_ml_tys_orig param_index with
-          | Some (Miniml.Tvar (_, _)) ->
-            param_expected_at_declared_arity ()
-          | _ -> None
-        with
-      | Some _ as t -> t
-      | None ->
-      ( match ml_arg with
-      | MLmagic (_, _) -> param_expected_subst ()
-      (* [MLglob]: a bare function name handed over as a value may need
-         re-currying.  Count the arrows in the callee's {e unsubstituted}
-         parameter type: arrows past the point where the codomain becomes a
-         type variable belong to the element type the callee is generic in,
-         not to the callable it expects. *)
-      | MLglob _ -> param_expected_at fn_param_ml_tys_orig param_index
-      (* So may a local function, for the same reason. *)
-      | MLrel (j, _)
-        when (match Option.map (unfold_cpp_typedef env) (binder_cpp_type_or_derive env j) with
-              | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
-              | _ -> false) ->
-        param_expected_at fn_param_ml_tys_orig param_index
-      (* A partial application is a callable built here rather than named,
-         and reaches the slot at the arity the callee declared the parameter
-         at, for the same reason a lambda does. *)
-      | MLapp _ -> param_expected_at_declared_arity ()
-      (* A constructed value is spelled here for the first time, so only the
-         slot can say how its type arguments are curried.  Everything else
-         about the type the constructor's own annotation knows better: it
-         carries this producer's instantiation, which the parameter type may
-         have erased.  So take the currying and nothing else. *)
-      | MLcons _ -> param_expected_recurried ()
-      (* A match in argument position becomes an immediately-invoked lambda,
-         whose branches have to agree on one return type -- and the branches
-         are where a value is spelled for the first time, so nothing inside
-         states it.  Only the slot does. *)
-      | MLcase _ -> param_expected_at_declared_arity ()
-      | _ -> None ) )
-    in
-    (* Where the substituted parameter says nothing, the result may:
-       [trigger (subevent ...)] at a tree of family [Sum1<...>] fixes
-       [trigger]'s family, which is what its parameter -- the [subevent]
-       call's result -- has to be. *)
-    let arg_expected_ty =
-      match
-        ( Lazy.force result_tvar_map,
-          Param_pos.nth fn_param_ml_tys_orig param_index )
-      with
-      | (result_names, (_ :: _ as m)), Some pt -> (
-        let d =
-          convert_ml_type_to_cpp_type env result_names (type_simpl pt)
-          |> deapply_families
-          |> map_cpp_type (function
-               | Tvar (Tv_index (_, Some v) | Tv_named v) as t -> (
-                 match List.find_opt (fun (v', _) -> Id.equal v v') m with
-                 | Some (_, t') -> t'
-                 | None -> t )
-               | t -> t )
-        in
-        match arg_expected_ty with
-        (* No slot at all: the declaration's type is the slot, where it is
-           one this scope can write. *)
-        | None | Some Tany ->
-          ( match spell_in_scope d with
-          | Some _ as t -> t
-          | None -> arg_expected_ty )
-        (* A slot erased inside: each erased part is filled from the
-           declaration where it says; what the declaration still says in
-           its own variables is no answer. *)
-        | Some slot ->
-          let scope = current_scope_type_names () in
-          let d =
-            map_cpp_type
-              (function
-                | Tvar tv as t ->
-                  let id = tvar_spelled tv in
-                  if List.exists (Id.equal id) scope then t else Tany
-                | t -> t )
-              d
-          in
-          Some (Ml_type_util.refine_erased_by ~expected:d slot) )
-      | _ -> arg_expected_ty
-    in
-    (* Only a parameter the carrier reaches: one that mentions a
-       higher-kinded variable of the callee.  [interp_state]'s tree
-       [itree E T] is at the source family [E], and filling its erased
-       family with the monad's [BotE] turned the inner [interp] into one
-       over the target family. *)
-    let param_mentions_carrier =
-      match Param_pos.nth fn_param_ml_tys_orig param_index with
-      | Some t ->
-        let hk = declared_higher_kinded_tvars fn_ml_ty in
-        not (IntSet.is_empty (IntSet.inter hk (collect_tvars_set IntSet.empty t)))
-      | None -> true
-    in
-    let arg_expected_ty =
-      if not param_mentions_carrier then arg_expected_ty
-      else
-        List.fold_left
-          (fun t b -> Option.map (refine_by_instance_family b) t)
-          arg_expected_ty instance_families
-    in
     let arg_expected_ml_ty =
       match param_ml_ty with
       | Some ml_ty when not (ml_type_contains_erased ml_ty) -> Some ml_ty
       | _ -> slot.expected_ml_ty
     in
-    (* A callable the callee deduces is called at the callee's instantiation,
-       so it goes over unadapted -- a lambda, or a callable passed on, as a
-       self-call forwards its own ({!deduces_callable}); and a lambda takes
-       what it is given where the slot erases. *)
-    let deduced_callable =
-      Option.has_some (Param_pos.nth fn_param_ml_tys_orig param_index)
-      && deduces_callable id param_index
-    in
-    let arg_expected_ty =
-      match ml_arg with
-      | (MLlam _ | MLmagic (_, MLlam _)) when deduced_callable ->
-        Option.map deduce_erased_domains arg_expected_ty
-      | _ -> arg_expected_ty
-    in
-    (* When the callee's declared parameter type is value-dependent and
-       resolves to [std::any] (e.g. [syms_semty xs]), a concrete pair/tuple
-       literal passed at this call site (e.g. [(n, (n, tt))] for a literal
-       [xs]) must be DEEP-erased — every component boxed into [std::any] —
-       so that the callee's generic body, which reconstructs the value via
-       [any_cast<pair<any,any>>], can recover it.  The deep-erasing
-       constructor path in [gen_expr_custom_cons] is normally driven by the
-       enclosing function's erased return type, so it is reached here by
-       treating this call argument as if it were itself in erased "return"
-       position for the duration of its generation. *)
-    (* Where the call writes the variable -- the dictionary stated it --
-       nothing deduces it, and an argument boxed to agree with a deduction
-       would only fail to convert. *)
-    let param_written_by_call = param_tvar_erased && dictionary_filled in
-    let param_resolves_to_any =
-      (param_tvar_erased && not param_written_by_call)
-      ||
-      match param_ml_ty with
-      | Some ml_ty -> ml_erases_to_box env ml_ty
-      | None -> false
-    in
     let expr =
-      let ret =
-        if param_resolves_to_any then Some Tany
-        (* An argument is not a tail position, so the enclosing function's
-           return type does not describe it -- and what the parameter says
-           does.  Left to {!position_cpp_ty}'s fallback, a match in argument
-           position builds its branches at the type the {e call} returns.
-
-           Only where the parameter's type can be written, though: installed
-           as a return type it is written out, as the argument's own explicit
-           template arguments among other places, and a type naming a skipped
-           global renders there as a bare argument list -- [<std::any,
-           <std::any, std::any>>].  Where it cannot be written the enclosing
-           return type is not right, but it is spellable, and a parameter
-           that answers in text no compiler takes has not answered. *)
-        else
-          match arg_expected_ty with
-          | Some t when Ml_type_util.has_no_cpp_spelling t ->
-            (!tctx).current_cpp_return_type
-          | t -> t
-      in
       with_cpp_return_type ret (fun () ->
           gen_expr ?expected_ty:arg_expected_ty
             ~slot:
@@ -5555,7 +5288,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
            says: an argument that is already a box is left alone. *)
         let from =
           match ml_arg with
-          | MLrel (j, _) -> binder_cpp_type_or_derive env j
+          | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
           | _ -> None
         in
         coerce ~term:ml_arg ?from ~into:Tany expr
@@ -5581,7 +5314,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
        non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
     let ml_arg_is_erased_rel =
       match ml_arg with
-      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) -> read_is_boxed j occ
+      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) -> read_is_boxed j occ
       | _ -> false
     in
     match param_ml_ty with
@@ -5742,7 +5475,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
        accepts void-returning functions. *)
     | Some param_ty
       when (match ml_arg with
-            | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}) -> is_void_ified_ref r
+            | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}, _) -> is_void_ified_ref r
             | _ -> false)
            && (match param_ty with Miniml.Tarr _ -> true | _ -> false)
            && ml_type_is_unit (ml_codomain param_ty)
@@ -5869,9 +5602,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              && not (List.exists (fun t -> Table.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
         List.map2
           (fun (ml_arg, a) into ->
-            match value_cpp_type env ml_arg with
-            | Some from -> regroup_crossing ~from ~into a
-            | None -> a )
+            let crossed = function Some from -> regroup_crossing ~from ~into a | None -> a in
+            (* What the crossing writes depends on the source only through
+               whether it converts. *)
+            let converts t = crossed t != a in
+            crossed (value_cpp_type ~agree:(fun p l -> converts p = converts l) env ml_arg) )
           (List.combine regular_ml_args args)
           (List.filteri (fun i _ -> i < List.length args) doms)
       | _ -> args
@@ -6044,7 +5779,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | Some (Tfun (_, c)), Some exp when prints_as_any c && not (prints_as_any exp) ->
             let arg_ty a =
               match a with
-              | MLrel (j, _) -> binder_cpp_type_or_derive env j
+              | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
               | _ -> Option.map (cpp_of_ml env) (ml_ast_type_hint a)
             in
             let rest_tys = List.map arg_ty rest_ml in
@@ -6100,11 +5835,20 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           List.mapi
             (fun i e ->
               match (List.nth_opt doms i, List.nth_opt excess_args i) with
-              | Some d, Some (MLrel (j, _)) when prints_as_any d -> (
+              | Some d, Some (MLrel (j, occ)) when prints_as_any d -> (
+                let unfolded = Option.map (fun t -> strip_ns_tglob (unfold_cpp_typedef env t)) in
+                (* Read for the inductive, its arity and namespace, and
+                   whether every argument is already a box. *)
+                let reading t =
+                  match unfolded t with
+                  | Some (Tglob ((GlobRef.IndRef _ as g), (_ :: _ as args), ns)) ->
+                    Some (g, List.length args, ns, List.for_all (fun a -> a = Tany) args)
+                  | _ -> None
+                in
                 match
-                  Option.map
-                    (fun t -> strip_ns_tglob (unfold_cpp_typedef env t))
-                    (binder_cpp_type_or_derive env j)
+                  unfolded
+                    (planned_binder_type_or_derive ~use:"excess argument" ~agree:(fun p l -> reading p = reading l)
+                       env j occ)
                 with
                 | Some (Tglob ((GlobRef.IndRef _ as g), (_ :: _ as args), ns))
                   when (not (Table.is_custom g))
@@ -6657,11 +6401,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                specialised, so the variable holds the concrete pair.  Judge by
                the variable's type when it is known; a coercion is still the
                only evidence available when it is not. *)
-            | MLmagic (_, MLrel (i, _)) -> (
+            | MLmagic (_, MLrel (i, _), _) -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
               | None -> true )
-            | MLmagic (_, _) -> true
+            | MLmagic (_, _, _) -> true
             | MLapp (MLglob {callee = r; _}, args) as node ->
               (* If the callee is itself a pair accessor (.first/.second) and
                  its product arg was coerced, result is also std::any *)
@@ -6792,7 +6536,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        call goes through. *)
     let erased_callee =
       match f with
-      | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> erased_member i
+      | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> erased_member i
       | _ -> false
     in
     let callee_fun_ml_ty =
@@ -6815,9 +6559,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             (* A member of a group recursing at a ground instance takes its
                arguments adapted to its erased parameters
                ({!erased_member_types}). *)
-            | MLrel (i, _) | MLmagic (_, MLrel (i, _)) when erased_callee ->
+            | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) when erased_callee ->
               get_env_type_opt i
-            | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> (
+            | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> (
               match get_env_type_opt i with
               | Some (Miniml.Tglob (GlobRef.ConstRef _, _, _) as ty) -> (
                 match expand_ml_fun_alias ty with
@@ -6841,7 +6585,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       match callee_fun_ml_ty with Some fty -> extract_params fty | None -> []
     in
     let callee_rel_idx = match f with
-      | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> Some i
+      | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> Some i
       | _ -> None
     in
     let callee_env_ty =
@@ -6851,7 +6595,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     in
     let callee_cpp_erased =
       match f with
-      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> read_is_boxed i occ
+      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ), _) -> read_is_boxed i occ
       | _ -> false
     in
     (* A pattern binder whose definition-site field type is a type variable
@@ -6942,7 +6686,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        binders -- a handler the callee takes polymorphically is a function
        object, not the erased signature. *)
     let declared_dom i =
-      match Option.bind callee_rel_idx binder_cpp_type with
+      match
+        match f with
+        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+          let respelled = Option.map default_tvar_names in
+          respelled (planned_binder_type ~use:"declared domain" ~agree:(fun p l -> respelled p = respelled l) j occ)
+        | _ -> None
+      with
       | Some (Tfun (dom, _)) -> (
         match List.nth_opt dom i with
         | Some t when not (exists_cpp_type prints_as_any t) -> Some t
@@ -6956,7 +6706,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | e when ml_value_is_void_call e ->
           wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
         | MLlam _ -> gen_expr ?expected_ty:(declared_dom i) ~slot:arg_slot env x
-        | MLmagic (_, _) ->
+        | MLmagic (_, _, _) ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
         | MLrel (j, occ) when read_is_boxed j occ ->
@@ -6981,7 +6731,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
       let rel_idx_f = match f with
-        | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> Some (i, occ)
+        | MLrel (i, occ) | MLmagic (_, MLrel (i, occ), _) -> Some (i, occ)
         | _ -> None
       in
       match rel_idx_f with
@@ -7124,7 +6874,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           let proj_idx =
             match br_body with
             | MLrel (i, _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
-            | MLmagic (_, MLrel (i, _)) when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | MLmagic (_, MLrel (i, _), _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
             | _ -> None
           in
           ( match proj_idx with
@@ -7608,11 +7358,16 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     constructor type parameters are concrete for code generation. *)
 and gen_cpp_case (typ : ml_type) t env pv case_occ =
   let typ =
-    match_scrutinee_type env typ t pv
-      ~var_type:(fun i -> try Some (get_env_type i) with _ -> None)
-      ~var_cpp_type:binder_cpp_type
+    let var_type i = try Some (get_env_type i) with _ -> None in
+    let at bt = match_scrutinee_type env typ t pv ~var_type ~var_cpp_type:(fun _ -> bt) in
+    (* Asked only of the variable the scrutinee reads; the binder's type
+       matters only through the match type it gives. *)
+    let read = match t with MLrel (_, occ) | MLmagic (_, MLrel (_, occ), _) -> Some occ | _ -> None in
+    match_scrutinee_type env typ t pv ~var_type
+      ~var_cpp_type:(fun i ->
+        Option.bind read (fun occ -> planned_binder_type ~use:"scrutinee" ~agree:(fun p l -> at p = at l) i occ))
   in
-  let scrut_is_mlmagic_case = match t with MLmagic (_, _) -> true | _ -> false in
+  let scrut_is_mlmagic_case = match t with MLmagic (_, _, _) -> true | _ -> false in
   (* Check if this is an enum inductive type *)
   let is_enum =
     match typ with
@@ -8066,7 +7821,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
     | Tvar _ ->
       let body_is_erased =
         match body with
-        | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ)) ->
+        | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ), _) ->
           not (read_is_boxed i occ) && is_env_var_erased env tvars i
         | _ -> false
       in
@@ -9210,7 +8965,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            zero-copy closure generation. *)
         let is_single_use_partial_app =
           match a with
-          | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args)) ->
+          | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args), _) ->
             (match Escape.partial_app_remaining head ml_args with
              | Some remaining ->
                Escape.nb_occur_match 1 b <= 1
@@ -9289,7 +9044,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                   match args with
                   | [] -> None
                   | (Miniml.MLrel (r, _)) :: _ when r = target_rel -> Some i
-                  | (Miniml.MLmagic (_, Miniml.MLrel (r, _))) :: _ when r = target_rel -> Some i
+                  | (Miniml.MLmagic (_, Miniml.MLrel (r, _), _)) :: _ when r = target_rel -> Some i
                   | _ :: rest -> find_pos rest (i + 1)
                 in
                 (match find_pos app_args 0 with
@@ -9833,7 +9588,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     (* Generate throw statement for unreachable/absurd cases (e.g., empty
        match) *)
     [Sthrow msg]
-  | MLmagic (_, MLexn msg) ->
+  | MLmagic (_, MLexn msg, _) ->
     (* Handle MLexn wrapped in MLmagic *)
     [Sthrow msg]
   | MLcase (typ, t, pv, case_occ) when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
@@ -9944,7 +9699,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        variables are direct values (bind desugars to let-binding); in
        reified mode, they are trees returned as-is. *)
     let is_void_tail = match t with
-      | MLapp (f, args) | MLmagic (_, MLapp (f, args)) ->
+      | MLapp (f, args) | MLmagic (_, MLapp (f, args), _) ->
         ml_callee_is_void f
         (* Only treat as void if fully applied — partial applications
            return a function value, not void. *)
@@ -10099,6 +9854,7 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
 
 let () = type_term_arg := fun env a -> gen_expr env a
 let () = plan_representation := Representation_plan.region
+let () = plan_positions := Position_plan.region
 
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
