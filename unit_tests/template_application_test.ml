@@ -38,7 +38,7 @@ let () =
               | 1 -> Minicpp.TTtypename_default Minicpp.Tvoid
               | _ -> Minicpp.TTtypename
             in
-            (kind, Minicpp.tvar_id i, Scheme_param i)
+            (kind, Common.tvar_id i, Scheme_param i)
             :: ( if Random.int 4 = 0 then
                    [(Minicpp.TTfun ([], Minicpp.Tvoid), Common.fun_tparam_id i, Callable_param i)]
                  else [] ) )

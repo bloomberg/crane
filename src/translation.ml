@@ -5026,9 +5026,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               map_cpp_type (function
                 | Tvar (Tv_index (i, None))
                   when not
-                         (List.exists (Id.equal (Minicpp.tvar_id i))
+                         (List.exists (Id.equal (Common.tvar_id i))
                             (!tctx).current_type_vars) ->
-                  Tvar (Tv_index (i, Some (Minicpp.tvar_id i)))
+                  Tvar (Tv_index (i, Some (Common.tvar_id i)))
                 | t -> t )
             in
             (List.map name_free missing_args, name_free cod)

@@ -2426,13 +2426,13 @@ let reads_erased_pair_component env t =
   | _ -> false
 
 (** [t] with every type variable named by the default spelling of its
-    index ({!Minicpp.tvar_spelling}) written by the index alone: the two
+    index ({!Common.tvar_name}) written by the index alone: the two
     print the same, and lowering records a binder's type before its
     variables are named. *)
 let default_tvar_names t =
   map_cpp_type
     (function
-      | Tvar (Tv_index (i, Some n)) when String.equal (Id.to_string n) (tvar_spelling i) -> Tvar (Tv_index (i, None))
+      | Tvar (Tv_index (i, Some n)) when String.equal (Id.to_string n) (Common.tvar_name i) -> Tvar (Tv_index (i, None))
       | t -> t )
     t
 

@@ -34,7 +34,7 @@ let applied_tvar_arities cty =
            key on both spellings so the caller's list matches either way. *)
         let arity = List.length args in
         Option.iter (fun n -> Hashtbl.replace arities n arity) name;
-        Hashtbl.replace arities (tvar_id i) arity
+        Hashtbl.replace arities (Common.tvar_id i) arity
       | _ -> () );
       false )
     cty
@@ -64,7 +64,7 @@ let with_applied_tvars ?ml_ty cty temps =
         (fun t ->
           ( match t with
           | Tapply (Tvar (Tv_index (i, name)), _) when not (IntSet.mem i hk) ->
-            veto := tvar_id i :: !veto;
+            veto := Common.tvar_id i :: !veto;
             Option.iter (fun n -> veto := n :: !veto) name
           | _ -> () );
           false )
@@ -76,7 +76,7 @@ let with_applied_tvars ?ml_ty cty temps =
          applies it, and no application can be taken back off to make it not
          be.  Added after the veto, which speaks only about applications. *)
       List.iter
-        (fun (i, arity) -> Hashtbl.replace arities (tvar_id i) arity)
+        (fun (i, arity) -> Hashtbl.replace arities (Common.tvar_id i) arity)
         (Ml_type_util.hkt_arg_ml_tvar_arities [ty]);
       arities
   in
@@ -612,7 +612,7 @@ let default_unmentioned_temps temps decl =
      otherwise answer for [T1] and no parameter would ever look unmentioned. *)
   let is_tvar id = function
     | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n id
-    | Tvar (Tv_index (i, None)) -> Id.equal (tvar_id i) id
+    | Tvar (Tv_index (i, None)) -> Id.equal (Common.tvar_id i) id
     | _ -> false
   in
   (* Only the arguments a type actually writes count: an argument in a
@@ -743,7 +743,7 @@ let phantom_aware_temps
     let extra =
       IntSet.fold (fun i acc ->
         if List.exists (fun (j, _) -> j = i) tvars_indexed then acc
-        else (i, tvar_id i) :: acc
+        else (i, Common.tvar_id i) :: acc
       ) (IntSet.union force_required also_declared) []
     in
     let all_tvars_indexed =

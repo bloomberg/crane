@@ -1424,12 +1424,6 @@ val tvar_hint : tvar -> Id.t option
 (** The name a type variable is written under: its parameter's, or [T<i>]. *)
 val tvar_spelled : tvar -> Id.t
 
-(** [tvar_spelling i] is the name of the type variable at index [i] in a
-    declaration's parameter list; [tvar_id] is the same as an [Id.t].
-    Re-exported as {!Common.tvar_name} and {!Common.tvar_id}. *)
-val tvar_spelling : int -> string
-val tvar_id : int -> Names.Id.t
-
 (** [tvar_is id ty] is whether [ty] is the type variable [id].  A tvar whose
     head was never resolved to its parameter name answers to the generated
     spelling of its index as well. *)

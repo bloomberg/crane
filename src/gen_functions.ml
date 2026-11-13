@@ -1066,7 +1066,7 @@ let dfun_body_scope ~minted n b cty ty temps =
      template parameters: nothing would deduce them.  They stay in
      [regular_temps] below, which only feeds Tvar index resolution. *)
   let is_hkt_temp (_, id) =
-    List.exists (fun (i, _) -> tvar_id i = id) hkt_tvar_resolutions
+    List.exists (fun (i, _) -> Common.tvar_id i = id) hkt_tvar_resolutions
   in
   let temps =
     typeclass_temps_basic
@@ -1688,7 +1688,7 @@ let scheme_params ?(extra = IntSet.empty) cty =
   @ List.filter_map
       (fun i ->
         if List.mem_assoc i spelled then None
-        else Some (tvar_id i, Callable_abi.Scheme_param i) )
+        else Some (Common.tvar_id i, Callable_abi.Scheme_param i) )
       (IntSet.elements extra)
 
 (** Generate the C++ declaration of [n] from its ML definition: a function
@@ -1778,7 +1778,7 @@ let with_function_head n b ty k =
   let index_tvar_set = collect_ml_type_index_tvars ty in
   let extra_index_tvars =
     IntSet.fold (fun i acc ->
-      let id = tvar_id i in
+      let id = Common.tvar_id i in
       if List.exists (Id.equal id) tvars then acc
       else id :: acc
     ) index_tvar_set []

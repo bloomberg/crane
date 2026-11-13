@@ -1673,19 +1673,19 @@ let stmts_reference_var (target : Id.t) (stmts : cpp_stmt list) : bool =
 
 (** Build type variable names for a list of Tvar indices. Indices within
     [n_outer] reuse names from [outer_tvars]; indices beyond get fresh
-    [tvar_id i] names. Converts [outer_tvars] to an array for O(1) lookup. *)
+    [Common.tvar_id i] names. Converts [outer_tvars] to an array for O(1) lookup. *)
 let build_tvar_names ~outer_tvars tvar_indices =
   let n_outer = List.length outer_tvars in
   let outer_arr = Array.of_list outer_tvars in
   List.map
     (fun i ->
-      if i <= n_outer then outer_arr.(i - 1) else tvar_id i)
+      if i <= n_outer then outer_arr.(i - 1) else Common.tvar_id i)
     tvar_indices
 
 (** Build extended tvar names covering both signature and body Tvar indices.
     A body index absent from the signature is mapped, by the offset between
     the smallest such index and the smallest signature index, onto a
-    signature name where that lands in range, and onto [tvar_id i] otherwise;
+    signature name where that lands in range, and onto [Common.tvar_id i] otherwise;
     an index neither covers is named by [anon_tvar_id].
 
     @param sig_indices  sorted Tvar indices from the function signature
@@ -1713,7 +1713,7 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
             let name = List.assoc mapped_sig_idx tvar_name_map in
             (i, name) :: acc
           else
-            (i, tvar_id i) :: acc )
+            (i, Common.tvar_id i) :: acc )
         tvar_name_map
         body_extra_tvars
     else

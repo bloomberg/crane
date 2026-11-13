@@ -68,7 +68,7 @@ let unmentioned_erased ids =
      otherwise answer for [T1]. *)
   let is_tvar id = function
     | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n id
-    | Tvar (Tv_index (i, None)) -> Id.equal (tvar_id i) id
+    | Tvar (Tv_index (i, None)) -> Id.equal (Common.tvar_id i) id
     | _ -> false
   in
   let is_unmentioned t =
@@ -150,13 +150,13 @@ module L = Cpp_ir.Lowered
 let lowered_tvar_is id : L.Type.t -> bool = function
   | Variable (Named n) -> Id.equal n id
   | Variable (Index (i, name)) ->
-    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (tvar_id i) id
+    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Common.tvar_id i) id
   | _ -> false
 
 (* {!Minicpp.tvar_name}. *)
 let lowered_tvar_name : L.Type.t -> Id.t option = function
   | Variable (Index (_, Some n) | Named n) -> Some n
-  | Variable (Index (i, None)) -> Some (tvar_id i)
+  | Variable (Index (i, None)) -> Some (Common.tvar_id i)
   | _ -> None
 
 (* {!Minicpp.rebind_plain_var}. *)

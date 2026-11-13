@@ -384,7 +384,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
   let variables =
     List.map
       (fun v ->
-        let name = Minicpp.tvar_id (Scheme.Var.ordinal v) in
+        let name = Common.tvar_id (Scheme.Var.ordinal v) in
         if relaxed (Scheme.Var.ordinal v) then
           (Minicpp.TTtypename_default Minicpp.Tvoid, name, Derived name)
         else
