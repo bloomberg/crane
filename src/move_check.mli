@@ -22,8 +22,9 @@
     A method is called on the whole local.  A reuse arm's token is checked
     as a linear one, used exactly once: the reuse factory it is handed to
     consumes the token's storage, which nothing may read or consume again,
-    though what the arm moved out of the local before is not read of it.  An assignment gives a local, or a member, a new value; a [return]
-    or a [throw] ends the path; a loop's body is followed by its head; the
+    though what the arm moved out of the local before is not read of it.
+    An assignment gives a local, or a member, a new value; a [return] or a
+    [throw] ends the path; a loop's body is followed by its head; the
     arms of a conditional are alternatives.  A closure reads what it closes
     over where it is made, and its own body is checked as a body.  A body
     holding raw C++ is not checked.

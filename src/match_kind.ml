@@ -21,7 +21,8 @@ type t =
 
 (* A custom match is decided first: a record whose match is mapped is
    matched by its template.  A projection's body is looked at through one
-   coercion. *)
+   coercion; its [field] counts from the first binder, where [MLrel i]
+   counts from the last. *)
 let classify ty branches =
   if Table.is_custom_match branches then Custom
   else

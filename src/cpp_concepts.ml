@@ -117,6 +117,9 @@ let concept_body_names : Modtype_concept.t -> _ = function
     @ List.concat_map (fun (_, ty) -> type_names [] ty) refinements
   | Constraint c -> constraint_names [] c
 
+(* What the whole declaration of the concept of the module type at [path]
+   names: its own name, the functor parameters [params] it is written over,
+   and its body ({!concept_body_names}). *)
 let modtype_concept_names ~path ~params (c : Modtype_concept.t) =
   (([], Cpp_resolution.Modtype_concept_declared path) :: modules [] params) @ concept_body_names c
 

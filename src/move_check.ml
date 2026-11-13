@@ -365,8 +365,6 @@ let check_body owner ss =
           ++ str " is read after " ++ Id.print base ++ str " is given a new value" ) )
     (List.sort_uniq compare report.stale)
 
-(* What the parameters [params] of a callable whose plan passes them as
-   [passing] says, and whose body is [body], break of it. *)
 (* Whether a parameter of type [t] is declared by reference: a [const]
    type is one, as the declaration writes it. *)
 let rec declared_by_reference : ty -> bool = function
@@ -374,6 +372,8 @@ let rec declared_by_reference : ty -> bool = function
   | In_namespace (_, t) -> declared_by_reference t
   | _ -> false
 
+(* What the parameters [params] of a callable whose plan passes them as
+   [passing] says, and whose body is [body], break of it. *)
 let passing_violations (passing : Callable_abi.passing list) params body =
   if List.compare_lengths passing params <> 0 then
     [ Printf.sprintf "the plan passes %d parameters, the declaration takes %d" (List.length passing)
@@ -575,6 +575,8 @@ let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
     check_body (GlobRef.print r) ss;
     check_local_conventions (GlobRef.print r) ss;
     check_by_reference_closures (GlobRef.print r) ss;
+    (* A function definition holds its parameters last first; the plan
+       states them in declaration order. *)
     if path.inner = [] then check_convention (GlobRef.print r) r (List.rev params) ss
   | Template (_, _, inner) -> check_decl inner
   | Namespace (_, ds) -> List.iter check_decl ds

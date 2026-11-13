@@ -5,7 +5,7 @@
 
 open Grammar
 
-(** Whether an application's head is written [std::any], so that the
+(** Whether an application's head is written as the erased box, so that the
     application is too, and its arguments are not written. *)
 let erased_head : 'p Type.t -> bool = function
   | Type_constructor (Any | Erased _) | Any | Erased _ -> true

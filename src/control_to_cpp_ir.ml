@@ -229,7 +229,9 @@ let planned (f : func) =
   | (Definition _ | Declaration _), _ -> None
 
 (* The jump a C++ call is, where it is made of one of the Continues
-   [continues]: the arguments it passes the loop's parameters. *)
+   [continues]: the arguments it passes the loop's parameters, the last
+   first, as a definition stores its parameters ({!Cpp_ir.Function.shape});
+   the call holds them in source order. *)
 let jump continues : Loopify_analysis.call_checker = function
   | Call ({occurrence = Some o; _}, _, args) when List.exists (Miniml.Occurrence.equal o) continues ->
     Some (Loopify_analysis.mk_call_site (List.rev args))

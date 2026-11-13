@@ -170,9 +170,10 @@ let local_fixpoint (f : local_fixpoint) : E.Local_fixpoint.t =
     encoding = local_fixpoint_encoding f.lf_encoding }
 
 (* The conversion is structural: each MiniCpp constructor maps to its CppIR
-   counterpart.  A form only a lowered program may hold raises
-   [Lowered_only]; a MiniCpp form no pass produces any more raises
-   [Dead]. *)
+   counterpart at the lowered phase, a call's reversed argument list turned
+   into source order.  A MiniCpp form no pass produces any more raises
+   [Dead]; a form only a lowered program may hold converts, and fails later,
+   in {!Cpp_ir.Resolve}, where the caller wants a resolved value. *)
 let rec ty : cpp_type -> phase T.t = function
   | Tvar v -> Variable (tvar v)
   | Tinstance (x, r) -> Instance (x, r)
@@ -501,8 +502,9 @@ let rec decl : cpp_decl -> phase D.t = function
         member = out_of_line m.dm_field }
   | Denum e -> Enum {ref_ = e.de_ref; ctors = e.de_ctors; rocq_names = e.de_ctor_rocq_names; type_params = tparams e.de_tparams}
 
-(* The exported conversions catch [Unconvertible]: [lower] treats it as an
-   anomaly, [resolved] reports it. *)
+(* The exported conversions catch [Unconvertible]: [lowered], behind the
+   [lower*] functions, treats it as an anomaly; [resolved] returns it as an
+   [Error], as it does a form {!Cpp_ir.Resolve} finds owed. *)
 let lowered convert x =
   match convert x with
   | x -> x

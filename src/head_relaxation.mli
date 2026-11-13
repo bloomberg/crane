@@ -42,10 +42,11 @@ val equal : t -> t -> bool
 (** [deapplied ~plain ~in_scope ty] -- {!Deapplied}'s rewrite of one type. *)
 val deapplied : plain:Names.Id.t list -> in_scope:Names.Id.t list -> Minicpp.cpp_type -> Minicpp.cpp_type
 
-(** [apply r d] -- the declaration [d] rewritten as [r] decided. *)
+(** [apply r d] -- the MiniCpp declaration [d] rewritten as [r] decided.
+    A declaration of a kind [r] does not concern is returned unchanged. *)
 val apply : t -> Minicpp.cpp_decl -> Minicpp.cpp_decl
 
-(** Each relaxation applied in turn, the first first. *)
+(** Each relaxation applied in turn by {!apply}, the first first. *)
 val apply_all : t list -> Minicpp.cpp_decl -> Minicpp.cpp_decl
 
 (** [deapply_struct ~plain ~in_scope d] -- {!Deapplied}'s rewrite of a

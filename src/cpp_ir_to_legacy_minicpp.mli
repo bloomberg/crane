@@ -1,9 +1,11 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Lowered CppIR back into MiniCpp: what control lowering hands back to
-    translation, which still generates MiniCpp, and what
-    {!Cpp_pipeline}'s round-trip check under [CRANE_CHECK_IR] compares.
+(** Lowered CppIR back into MiniCpp: what control lowering
+    ({!Control_to_cpp_ir}) hands back to translation, which still generates
+    MiniCpp; the CppIR types translation and callable planning read back;
+    and what {!Cpp_pipeline.lower}'s round-trip check under [CRANE_CHECK_IR]
+    compares.
 
     The conversion inverts {!Legacy_minicpp_to_cpp_ir.lower}: lowering a
     declaration and converting it back gives the declaration back. *)

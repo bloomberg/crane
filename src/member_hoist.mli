@@ -8,7 +8,13 @@
     no order in which each struct is written whole satisfies all of them:
     whichever comes first names a type that is still only forward-declared.
     Laying out every struct in the group first and writing the members that
-    cross the cycle afterwards is the order that exists. *)
+    cross the cycle afterwards is the order that exists.
+
+    Works on lowered CppIR declarations ({!Cpp_ir.Lowered.Decl.t}): a member
+    that crosses the cycle becomes an [Out_of_line_declaration] in its struct
+    and a [Member_definition] after the group.  {!Cpp_ind} calls it while
+    laying out the declarations of an inductive group, before the finish
+    pipeline runs. *)
 
 (** [split_group decls] is the group's structs, each with the members that
     name a sibling left as declarations, followed by those members'

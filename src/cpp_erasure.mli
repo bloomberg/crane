@@ -14,8 +14,8 @@ open Minicpp
 (** {2 Axiom types}
 
     A Rocq axiom has no computational content, so its type extracts to
-    [std::any].  The registry is populated by {!Cpp_ind} as declarations are
-    processed. *)
+    [std::any].  The registry is populated from each unit's declarations
+    before any of them is generated ({!Cpp.prepare_structure}). *)
 
 (** Register a GlobRef as an axiom type. *)
 val register_axiom_type : GlobRef.t -> unit
@@ -88,9 +88,10 @@ val unbox_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.
 
 (** {2 The passes} *)
 
-(** A type and a declaration at the lowered phase. *)
+(** A type at the lowered phase. *)
 type ty = Cpp_ir.Lowered.Type.t
 
+(** A declaration at the lowered phase, before the seam. *)
 type decl = Cpp_ir.Lowered.Decl.t
 
 (** A declaration whose types are all spelled the way they will be written

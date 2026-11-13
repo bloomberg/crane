@@ -11,7 +11,10 @@
     The same value written as a run of local bindings costs the parser nothing,
     each binding being one shallow expression.  This pass rewrites an
     initialiser that is too deep into such a run, inside an immediately-invoked
-    lambda so that it stays an expression. *)
+    lambda so that it stays an expression.
+
+    One of the per-declaration passes of {!Cpp_pipeline}, run before the
+    {!Cpp_erasure} seam. *)
 
 open Names
 

@@ -11,9 +11,10 @@
     it held before and after -- enough to see which pass did something,
     without a printer, whose queues a dump would disturb. *)
 
-(** The name of [decl] if [CRANE_TRACE_PASSES] asks for it. *)
+(** [CRANE_TRACE_PASSES], read once. *)
 let trace_pattern = lazy (Sys.getenv_opt "CRANE_TRACE_PASSES")
 
+(** The name of [decl] if [CRANE_TRACE_PASSES] asks for it. *)
 let traced decl =
   match Lazy.force trace_pattern with
   | None | Some "" -> None
@@ -120,7 +121,7 @@ let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
     on_decl "shared_args" Cpp_shared_args.transform_decl;
-    (* Small local simplifications, before ownership reads the uses. *)
+    (* Small local simplifications, each removing something. *)
     on_decl "simplify" Cpp_simplify.transform_decl;
     (* An initialiser nested deeper than a compiler will parse becomes a run of
        bindings; everything shallower is left as it stands. *)
@@ -186,6 +187,7 @@ let pass_names =
     the end none is outstanding. *)
 type obligation = Cpp_ir.Representation_obligation.t
 
+(** Every obligation, each checked by {!owes}. *)
 let obligations = Cpp_ir.Representation_obligation.all
 
 (** Whether [o] is checked before the instantiation passes rather than on
@@ -196,6 +198,7 @@ let obligations = Cpp_ir.Representation_obligation.all
     finds nothing to do whether or not the first paid what it owed. *)
 let checked_before_instantiation : obligation -> bool = function Unlowered_conditional -> true | _ -> false
 
+(** What [o] is and the pass that owes it, as a failed check reports it. *)
 let describe : obligation -> string = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
   | Opaque_type -> "an unsettled representation (Topaque), owed by " ^ seam
@@ -309,6 +312,10 @@ let resolved (d : Cpp_erasure.settled) =
         | Some r -> str " in " ++ Table.safe_pr_global r
         | None -> mt () )
 
+(* Under [CRANE_CHECK_IR] the obligations are checked in two halves around
+   the instantiation passes ({!checked_before_instantiation}), and the
+   instantiated declaration is checked for what it borrows and moves
+   ({!Borrow_projection.check_decl}, {!Move_check.check_decl}). *)
 let finish decl =
   let trace = traced decl in
   let steps = ref [] in

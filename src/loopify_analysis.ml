@@ -1,10 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Recursive-call analysis for {!Loopify}: the named constants and utilities the
-    strategies share, the definitions partners are inlined from, outcome diagnostics, call
-    checkers and call collection, invariant-parameter detection, and the
-    substitutions the rewrites use. *)
+(** Recursive-call analysis for {!Loopify}: the CppIR vocabulary and
+    traversals the strategies share, named constants, the constructor
+    pointer-field table, outcome diagnostics, call checkers and call
+    collection, and the substitutions the rewrites use.  Everything here
+    reads and builds {!Cpp_ir.Lowered} code, the form Loopify and ControlIR
+    lowering ({!Control_to_cpp_ir}) rewrite between translation and the
+    finish pipeline. *)
 
 open Names
 open Cpp_ir.Type
@@ -301,6 +304,8 @@ and is_trivially_copyable_named s ts =
   Table.is_trivially_copyable_cpp_name s
   && List.for_all is_trivially_copyable_type ts
 
+(** Whether a value of type [t] is worth a [std::move]
+    ({!Ownership_ir.worth_moving_ir}). *)
 let worthwhile_move_type (t : ty) = Ownership_ir.worth_moving_ir t
 
 (** Whether a value of the C++ type [t] is copied as cheaply as it is moved:
@@ -380,7 +385,11 @@ let agree_ptr_fields owner ctor_name fields =
 
 (** Information about a single recursive call site. *)
 type call_site = {
-  cs_args : expr list;  (** Arguments to the recursive call *)
+  cs_args : expr list;
+      (** Arguments to the recursive call, parallel to the parameters of the
+          loop the checker that found it serves ({!filter_by_mask}): the
+          last first where the checker reverses the call's source-order
+          arguments, as those of a function's or a local fixpoint's loop do *)
   cs_is_tail : bool;  (** Whether this call appears in tail position *)
   cs_entry : int;
       (** Which entry point of the frame machine this call targets, as an index
@@ -505,7 +514,7 @@ let report_outcomes ?(unit_name = "") () =
         | _ -> ())
       final
 
-(** What {!Loopify.apply_nontail_loopification} did with a body.  It chooses between
+(** What [Loopify.apply_nontail_loopification] did with a body.  It chooses between
     the TMC and frame transforms internally, so it reports the choice here
     rather than leaving the caller to guess. *)
 type nontail_result = {
@@ -533,8 +542,9 @@ type call_checker = expr -> call_site option
 (** {3 The Y-combinator idiom for local fixpoints}
 
     {!Translation.gen_local_fix_by_ref} emits Coq's [let fix] as a pair of
-    lambdas: an [f_impl] taking its own self-reference as a trailing parameter,
-    and an [f] that ties the knot by passing [f_impl] to itself. These
+    lambdas: an [f_impl] taking its own self-reference as its first
+    parameter, and an [f] that ties the knot by passing [f_impl] to itself
+    ([f_impl(f_impl, args...)]). These
     recognise that shape. They sit here, beside the other checkers, because
     both {!Loopify_frame} and {!Loopify.loopify_inner_lambdas} need them. *)
 
@@ -550,7 +560,8 @@ let wraps (fixpoint : local_fixpoint option) (w : lambda) =
 (** The self-reference parameter of the lambda a single local fixpoint's
     body is, as its encoding recorded it ({!Cpp_ir.Expr.Local_fixpoint}): the
     one self-parameter of [fixpoint], where it is the last of [lparams], the
-    lambda's parameters the last first.  A mutual group's lambda takes one per
+    lambda's parameters the last first (the reverse of the source order a
+    lambda keeps them in), so the first parameter as written.  A mutual group's lambda takes one per
     member, which the callers here cannot linearise.  Its name is no
     evidence: the encoding spells it [_self_f], and Crane spells other
     locals of its own in that space too ([_self_val]). *)
@@ -562,7 +573,9 @@ let fixpoint_self (fixpoint : local_fixpoint option) lparams =
 (** A checker matching the calls of the function [member] of a local
     fixpoint to itself, as the recursion plan has them
     ({!Recursion_plan.member_calls}), each forwarding the self-parameter as
-    its last argument, which the call site drops. *)
+    its first argument, which the call site drops.  The other arguments are
+    reported the last first, parallel to the parameters a local fixpoint's
+    loop is lowered over. *)
 let planned_self_checker member : call_checker =
   let calls = Recursion_plan.member_calls member in
   fun e ->
@@ -579,7 +592,8 @@ let planned_self_checker member : call_checker =
     | _ -> None
 
 (** The calls [calls] as a checker: a C++ call made of one of them, by the
-    occurrence it records, whatever heads it. *)
+    occurrence it records, whatever heads it, its arguments reported the last
+    first. *)
 let calls_checker calls : call_checker = function
   | Call ({occurrence = Some o; _}, _, args) when List.exists (Miniml.Occurrence.equal o) calls ->
     Some (mk_call_site (List.rev args))
@@ -611,9 +625,11 @@ let rec receiver_storage = function Move e -> receiver_storage e | e -> e
                         an explicit first parameter (nontail / method
                         loopification context). Causes the receiver expression
                         to be prepended as the first call argument.
-    @param this_position     Index of the [this]/receiver argument in the argument
-                        list of [Call] forms. Used to extract and remove
-                        the receiver from over-long argument lists.
+    @param this_position     Index of the [this]/receiver argument among a
+                        [Call]'s arguments, in source order. Used to
+                        extract and remove the receiver from over-long
+                        argument lists; the arguments are reported in
+                        source order.
     @param self_ref     The global the method was made from, when known. *)
 let method_checker
     ~(n_params : int)
@@ -728,8 +744,8 @@ and collect_stmts check ~in_visitor stmts =
      Pattern A — [Expression call; Return None]:
      In C++, a void function can end with [f(); return;] which is
      semantically [return f();] — the call is in tail position.
-     Generated by cofix_wrap and gen_stmts when current_cpp_return_type
-     is Void.
+     Translation ({!Translation.gen_stmts}) emits it when
+     current_cpp_return_type is Void.
 
      Pattern B — [Expression call; Return (Some val)]:
      Same situation but generated when current_cpp_return_type is a unit
@@ -758,7 +774,8 @@ and collect_stmts check ~in_visitor stmts =
   go stmts
 
 (** Collect recursive call sites from a single statement. Handles
-    [Return], [If], [Scustom_case], [Switch], and nested visit lambdas.
+    [Return], [If], [Custom_match], [Switch], [Match] and nested blocks; a
+    call in a match branch's return position is a tail call.
     When [~in_visitor:true], return-position calls are treated as tail calls. *)
 and collect_stmt check ~in_visitor = function
   | Return (Some e) ->

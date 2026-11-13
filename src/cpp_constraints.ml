@@ -222,6 +222,9 @@ let rec body : decl -> (Id.t * ty) list * stmt list = function
   | Variable {init; _} -> ([], [Return (Some init)])
   | _ -> ([], [])
 
+(** [ps] with each {!Cpp_ir.Grammar.Parameter_kind.Callable_declared}
+    settled against the value parameters [params] and the statements [body]
+    that use them, by the three rules of [cpp_constraints.mli]. *)
 let settle_parameters ~params body (ps : parameters) : parameters =
   let stored = erased_into_storage_tparam ~params body in
   List.map

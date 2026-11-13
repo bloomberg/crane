@@ -21,6 +21,8 @@ type t =
 
 let equal = ( = )
 
+(* {!Param_applications}'s rewrite of one type: an application of a
+   [relaxed] variable is replaced by the parameter [deduced] names for it. *)
 let param_applications relaxed deduced =
   let key t =
     match t with
@@ -57,6 +59,8 @@ let deapplied ~plain ~in_scope =
   in
   ft
 
+(* {!Unmentioned}'s rewrite of one type: a variable among [ids], applied or
+   not, becomes [std::any]. *)
 let unmentioned_erased ids =
   (* Stricter than {!Minicpp.tvar_is}, which lets an unresolved head answer to its
      index as well as to its name: a relaxation names its parameters [F1],

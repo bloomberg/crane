@@ -128,6 +128,8 @@ let constructor_literal = function
       | None, _ -> None ) )
   | _ -> None
 
+(* The numeral mapping and value of [e], where {!fold} writes it as a
+   literal: a converter applied to one digit chain, or a constructor term. *)
 let literal = function
   | MLapp (MLglob {callee = r; _}, [arg]) -> converter_literal r arg
   | MLcons _ as e -> constructor_literal e

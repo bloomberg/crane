@@ -17,7 +17,10 @@
 
     One of the per-declaration passes of {!Cpp_pipeline}. *)
 
-(** [d] with each function body's constants declared once at its top.
-    Outside any function body (a global's initialiser) a marked constant is
-    its initialiser; a lambda's body is a function body of its own. *)
+(** [d] with each function body's constants declared once at its top; a
+    constant in a lambda nested in a function body is declared at the top of
+    that function body, where the lambda reads the static without capturing
+    it.  Outside any function body (a global's initialiser) a marked constant
+    is its initialiser, unless it sits in a lambda there: that lambda's body
+    declares its own constants at its top. *)
 val decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t

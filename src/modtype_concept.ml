@@ -61,6 +61,7 @@ let ir_expr e =
 let rec is_under base mp =
   ModPath.equal mp base || match mp with MPdot (parent, _) -> is_under base parent | _ -> false
 
+(* The module path [mp] is rooted at: a file, or a bound functor parameter. *)
 let rec base_mp = function MPdot (parent, _) -> base_mp parent | mp -> mp
 
 (* A parameter of a functor declaring a module type is an argument of its
@@ -80,6 +81,9 @@ let is_member_ref signature r =
   is_under signature rmp
   || match base_mp rmp with MPbound _ -> not (is_functor_param_ref r) | _ -> false
 
+(* The translated type [ty] as the requirements of the concept of the
+   signature at [signature] spell it: [M]'s members, the functor's
+   parameters and custom mappings told apart. *)
 let rec concept_type signature ty =
   let args = List.map (concept_type signature) in
   match ty with
@@ -115,6 +119,7 @@ let rec arrows = function
     (arg :: args, ret)
   | ret -> ([], ret)
 
+(* An ML type as translation converts it, outside any function. *)
 let convert t = Translation_types.convert_ml_type_to_cpp_type (Common.empty_env ()) [] t
 
 (* The requirements one specification of the signature at [signature]
@@ -219,6 +224,7 @@ and cpp_type_refs note (ty : Ir.Type.t) =
   | _ -> () );
   Cpp_ir.Children.type_children (cpp_type_refs note) ty
 
+(* {!type_refs} of the types one requirement writes. *)
 let requirement_refs note = function
   | Inductive_member _ | Type_member _ | Submodule _ -> ()
   | Instance_member {arguments; _} -> List.iter (type_refs note) arguments
@@ -227,6 +233,8 @@ let requirement_refs note = function
     List.iter (type_refs note) parameters;
     type_refs note result
 
+(* {!type_refs} of a constraint's requirements, a reference to a member of a
+   signature in [visible] or nested in it not noted. *)
 let rec constraint_refs ~visible note = function
   | Named _ -> ()
   | Requirements {signature; items; _} ->

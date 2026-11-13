@@ -114,6 +114,9 @@ let split_named ?body_only ~names (decls : ('a * decl) list) : ('a * decl) list 
       ((x, d) :: structs, List.map (fun d -> (x, d)) ds @ defs) )
     decls ([], [])
 
+(* The group is the set of globals the declarations themselves declare; a
+   member naming any of them is hoisted, and every hoisted definition goes
+   after all of the group's structs. *)
 let split_group (decls : ('a * decl) list) : ('a * decl) list =
   let group =
     List.fold_left

@@ -14,7 +14,10 @@
     {- A local closure whose result is applied at once, [k(a)(b)], is
        [crane::apply2(k, a, b)], which skips the closure in between; and a
        lambda that only returns a lambda returns it unboxed, so that the
-       skip has something to skip.}}
+       skip has something to skip.}
+    {- Under [Crane Reuse], a match on a local bound by [const] reference or
+       by pointer borrows its scrutinee ({!borrow_matches_on}): the local
+       names a value something else owns.}}
 
     Effects and evaluation counts are kept: a mapped constant is never pure,
     so nothing its text might do is removed. *)
