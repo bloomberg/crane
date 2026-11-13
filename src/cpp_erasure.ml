@@ -1315,7 +1315,7 @@ let tvar_is id (t : ty) =
   match t with
   | Variable (Named n) -> Id.equal n id
   | Variable (Index (i, name)) ->
-    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Minicpp.tvar_id i) id
+    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Cpp_ir.Type.positional_id i) id
   | _ -> false
 
 (** Every spelling of every type variable [ty] names: the parameter name a
@@ -1329,7 +1329,7 @@ let tvar_spellings (ty : ty) =
          | Variable (Named n) -> acc := Id.Set.add n !acc
          | Variable (Index (i, name)) ->
            Option.iter (fun n -> acc := Id.Set.add n !acc) name;
-           acc := Id.Set.add (Minicpp.tvar_id i) !acc
+           acc := Id.Set.add (Cpp_ir.Type.positional_id i) !acc
          | _ -> () );
          false )
        ty );

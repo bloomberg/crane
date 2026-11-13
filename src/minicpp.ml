@@ -1301,11 +1301,11 @@ let tvar_spelled = function
   | Tv_index (i, None) -> Id.of_string ("T" ^ string_of_int i)
 
 (** The spelling of the type variable at index [i] in a declaration's
-    parameter list.  The one place the convention is written down; re-exported
-    as {!Common.tvar_name}, alongside the other generated names. *)
-let tvar_spelling i = "T" ^ string_of_int i
+    parameter list ({!Cpp_ir.Type.positional_name}); re-exported as
+    {!Common.tvar_name}, alongside the other generated names. *)
+let tvar_spelling = Cpp_ir.Type.positional_name
 
-let tvar_id i = Id.of_string (tvar_spelling i)
+let tvar_id = Cpp_ir.Type.positional_id
 
 (** Whether a type is the type variable named [id].  The head of a tvar is not
     always resolved to its parameter name, so a tvar answers to either
