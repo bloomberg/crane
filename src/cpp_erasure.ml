@@ -715,7 +715,7 @@ let is_templated : phase Cpp_ir.Foreign.custom option -> bool = function
   | _ -> false
 
 (** The form an inline mapping's text is written in. *)
-let form_of_text s = (Legacy_minicpp_to_cpp_ir.inline_template (Minicpp.inline_template s)).form
+let form_of_text s = (Cpp_ir.Foreign.template_of_text s).form
 
 let rec instantiated_type ~boxing (t : ty) : ty =
   Types.rewrite
@@ -879,11 +879,7 @@ let instantiate_foreign (d : settled) : settled =
    keeps its type spelling, without the keyword. *)
 let value_qualifier : ty -> expr option = function
   | Entity_application (r, tys, []) ->
-    let inline =
-      Option.map
-        (fun s -> Legacy_minicpp_to_cpp_ir.inline_template (Minicpp.inline_template s))
-        (Table.inline_custom_text r)
-    in
+    let inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r) in
     Some (Entity (r, tys, Some {inline; custom_yields = None}))
   | _ -> None
 
