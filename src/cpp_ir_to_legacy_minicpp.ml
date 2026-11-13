@@ -439,8 +439,9 @@ let dfun (f : l Function.t) : dfun =
     df_constexpr = constexpr f.constexpr;
     df_shape =
       ( match f.shape with
-      | Definition (ps, body) -> Ddef (typed ps, stmts body)
-      | Declaration ps -> Ddecl (list (fun (x, t) -> (x, ty t)) ps) );
+      (* MiniCpp holds a function's parameters last first. *)
+      | Definition (ps, body) -> Ddef (List.rev (typed ps), stmts body)
+      | Declaration ps -> Ddecl (List.rev (list (fun (x, t) -> (x, ty t)) ps)) );
     df_binders = f.binders;
     df_loop = f.loop }
 

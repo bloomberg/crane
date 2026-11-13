@@ -217,6 +217,10 @@ let position r (l : Control_ir.Term.loop) (b : Core_binder.t option) =
 
 let binder_of binders (id, _) = List.find_map (fun (x, b) -> if Id.equal x id then Some b else None) binders
 
+(* A definition's parameters, held in source order, as loop lowering takes
+   them: the last first, the order Loopify keeps a loop's parameters in. *)
+let loop_params params = List.rev params
+
 (* The loop the function [f] is lowered to, where it is one this module
    lowers, each of its C++ parameters standing for one of the loop's. *)
 let planned (f : func) =
@@ -224,7 +228,7 @@ let planned (f : func) =
   | Definition (params, _), [] ->
     let r = fst f.path.outer in
     Option.bind (planned_loop r) (fun (l, lowering) ->
-        let positions = List.map (fun p -> position r l (binder_of f.binders p)) params in
+        let positions = List.map (fun p -> position r l (binder_of f.binders p)) (loop_params params) in
         if List.for_all Option.has_some positions then Some (planned_at l lowering positions) else None )
   | (Definition _ | Declaration _), _ -> None
 
@@ -306,8 +310,8 @@ let fixpoint_parameters stmts =
 
 (* The positions among the parameters of the loop [l] of those the C++
    parameters [params] of a helper lifted out for the function of a local
-   fixpoint stand for, as a definition stores them, the last first
-   ({!Cpp_ir.Function.shape}): the variables the helper captures, stored
+   fixpoint stand for, as loop lowering takes them, the last first
+   ({!loop_params}): the variables the helper captures, stored
    first, stand for none, every call passing them on as they are; the rest
    for the parameters of [l] that are not void
    ({!Ml_type_util.void_binder}), the last first.  [None] where they are
@@ -384,14 +388,16 @@ let machine_storage (f : func) params body (l : Control_ir.Term.loop) =
    lowered to the loop [l] varying the parameters [varying]; [Error why]
    where Loopify makes no loop of it -- a call passing the loop other
    arguments than it has parameters, say -- for the reason [why]
-   ({!Loopify.unlowered}). *)
+   ({!Loopify.unlowered}).  The lowerings below take the parameters as
+   {!loop_params} has them. *)
 let rec lower_function ~tparams (f : func) {loop = l; lowering; varying; parts; cursor; moves} =
   match (f.shape, lowering) with
   | Declaration _, _ -> Error (Loopify.Left None)
   | Definition (params, body), Modulo_cons ->
-    lower_modulo_cons ~tparams f params body l ?cursor ~varying ~parts (Control_ir.Term.continues_into l.body)
-  | Definition (params, body), Frames -> lower_frames ~tparams f params body l ~varying ~parts
+    lower_modulo_cons ~tparams f (loop_params params) body l ?cursor ~varying ~parts (Control_ir.Term.continues_into l.body)
+  | Definition (params, body), Frames -> lower_frames ~tparams f (loop_params params) body l ~varying ~parts
   | Definition (params, body), Tail -> (
+    let params = loop_params params in
     let continues = Control_ir.Term.continues l.body in
     let jumps = ref [] in
     let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
@@ -402,7 +408,7 @@ let rec lower_function ~tparams (f : func) {loop = l; lowering; varying; parts; 
       if Probe.checking () then check_jumps ~loop:"tail loop" f ~continues ~jumped:(List.rev !jumps);
       match Loopify.after_tail_loop ~tparams f params loop with
       | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
-      | body -> Ok {f with shape = Definition (params, body); loop = Some l.loop} ) )
+      | body -> Ok {f with shape = Definition (List.rev params, body); loop = Some l.loop} ) )
 
 (* The function [f] lowered to the loop [l] tail modulo cons, building the
    cells of its turns [into] around the calls they continue by. *)
@@ -419,7 +425,7 @@ and lower_modulo_cons ~tparams (f : func) params body l ?cursor ~varying ~parts 
     if Probe.checking () then check_jumps ~loop:"loop tail modulo cons" f ~continues ~jumped:(List.rev !jumps);
     match Loopify.after_tail_loop ~strategy:Lp_tmc ~tparams f params loop with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
-    | body -> Ok {f with shape = Definition (params, body); loop = Some l.loop} )
+    | body -> Ok {f with shape = Definition (List.rev params, body); loop = Some l.loop} )
 
 (* The function [f] lowered to the machine with a stack of frames of its
    loop [l], entered by the calls made of [l]'s Continues of it, and by
@@ -447,7 +453,7 @@ and lower_frames ~tparams (f : func) params body (l : Control_ir.Term.loop) ~var
   | Ok (machine, survived) -> (
     match Loopify.after_tail_loop ~strategy:Lp_frame ?survived ~tparams f params machine with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
-    | body -> Ok {f with shape = Definition (params, body); loop = Some l.loop} )
+    | body -> Ok {f with shape = Definition (List.rev params, body); loop = Some l.loop} )
 
 (* The function a generated declaration is, with the template parameters
    it is generated under. *)
@@ -723,7 +729,7 @@ let lower_struct_methods ~merged inductive vars fields =
 let lower_locals ?unlowered d =
   match function_of d with
   | Some (tparams, ({shape = Definition (params, body); _} as f)) when Table.should_loopify (fst f.path.outer) ->
-    let body = Loopify.lower_function_locals ~tparams params body in
+    let body = Loopify.lower_function_locals ~tparams (loop_params params) body in
     Loopify.record_unlowered ?unlowered f body;
     with_function {f with shape = Definition (params, body)} d
   | Some _ | None -> d
@@ -766,7 +772,7 @@ let lower_lifted_helper d =
             ( l.loop,
               lowered_or_left
                 (lower_function ~tparams f)
-                (Option.map (planned_at l lowering) (lifted_positions l params)) ) )
+                (Option.map (planned_at l lowering) (lifted_positions l (loop_params params))) ) )
           (lifted_loop (fst f.path.outer))
       | Declaration _ -> None )
   in

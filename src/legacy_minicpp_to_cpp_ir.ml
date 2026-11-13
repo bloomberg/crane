@@ -478,8 +478,9 @@ let dfun (f : dfun) : phase Cpp_ir.Function.t =
     constexpr = constexpr f.df_constexpr;
     shape =
       ( match f.df_shape with
-      | Ddef (ps, body) -> Definition (fields_of ps, stmts body)
-      | Ddecl ps -> Declaration (list (fun (x, t) -> (x, ty t)) ps) );
+      (* MiniCpp holds a function's parameters last first. *)
+      | Ddef (ps, body) -> Definition (List.rev (fields_of ps), stmts body)
+      | Ddecl ps -> Declaration (List.rev (list (fun (x, t) -> (x, ty t)) ps)) );
     binders = f.df_binders;
     loop = f.df_loop }
 

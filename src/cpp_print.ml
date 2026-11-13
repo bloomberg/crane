@@ -2624,7 +2624,7 @@ and pp_leaf_decl ctx env (d : decl) =
             (fun (id, ty) ->
               if not (read id) then pp_type ctx ty
               else pp_type ctx ty ++ str " " ++ Id.print id)
-            (List.rev params)
+            params
         in
         let qualifier =
           if may_be_constexpr df_constexpr && ctx.rc_in_struct && not is_out_of_struct_def
@@ -2639,7 +2639,7 @@ and pp_leaf_decl ctx env (d : decl) =
               match id with
               | Some id -> pp_type ctx ty ++ str " " ++ Id.print id
               | None -> pp_type ctx ty )
-            (List.rev params)
+            params
         in
         (params_s, mt (), str ";")
     in
