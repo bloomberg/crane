@@ -30,7 +30,7 @@ rules=(
   # CppIR is one node of the dependency graph (src/cpp_ir/ is a namespace), so
   # none of its files may reach a module that names it: not MiniCpp, not the
   # program, not the conversion into it.
-  "cpp_ir/grammar cpp_ir/representation_obligation cpp_ir/type cpp_ir/expr cpp_ir/stmt cpp_ir/decl cpp_ir/field cpp_ir/template cpp_ir/inductive cpp_ir/foreign cpp_ir/function cpp_ir/struct cpp_ir/type_alias cpp_ir/member_definition cpp_ir/binary_operator cpp_ir/unary_operator cpp_ir/resolved cpp_ir/lowered cpp_ir/children cpp_ir/globrefs cpp_ir/written cpp_ir/resolve cpp_ir/map cpp_ir/variables cpp_ir/subterms cpp_ir/types : $TRANSLATION $PRINTER $FINISHING Table Common Minicpp Unit_program"
+  "cpp_ir/grammar cpp_ir/representation_obligation cpp_ir/type cpp_ir/expr cpp_ir/stmt cpp_ir/decl cpp_ir/field cpp_ir/template cpp_ir/inductive cpp_ir/foreign cpp_ir/function cpp_ir/struct cpp_ir/type_alias cpp_ir/member_definition cpp_ir/binary_operator cpp_ir/unary_operator cpp_ir/resolved cpp_ir/lowered cpp_ir/children cpp_ir/globrefs cpp_ir/written cpp_ir/resolve cpp_ir/map cpp_ir/variables cpp_ir/subterms cpp_ir/types cpp_ir/build : $TRANSLATION $PRINTER $FINISHING Table Common Minicpp Unit_program"
   "cpp_print : $TRANSLATION $PRINTER_FINISHING"
 )
 

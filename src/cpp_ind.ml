@@ -200,7 +200,7 @@ let ind_header_decls scope kn ind =
     (* Skip if concepts have been hoisted or we're inside a struct *)
     declarations_only
       ( if scope.in_struct || scope.concepts_hoisted then []
-        else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
+        else [(empty_env (), Cpp_ir_to_legacy_minicpp.decl (gen_typeclass_cpp names.(0) fields))] )
   | Core.Inductive.Kind.Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
@@ -208,7 +208,7 @@ let ind_header_decls scope kn ind =
       ( match !eponymous_record with
       | Some (epon_ref, _, _) when globref_equal ind_ref epon_ref ->
         [] (* Skip - merged into module struct *)
-      | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.ind_packets.(0))] )
+      | _ -> [(empty_env (), Cpp_ir_to_legacy_minicpp.decl (gen_record_cpp names.(0) fields ind.ind_packets.(0)))] )
   | _ ->
     let is_mutual = Array.length ind.ind_packets > 1 in
     let forward_decls =
@@ -959,7 +959,7 @@ let generate scope ~module_ d =
       Header_only
         (fun () ->
           declarations_only
-            [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))] )
+            [(empty_env (), Cpp_ir_to_legacy_minicpp.decl (gen_typeclass_cpp r (Table.get_record_field_bindings r)))] )
   | Dtype (r, l, t) ->
     ( match t with
     | Miniml.Tdummy Miniml.Ktype -> Nothing (* erased Type aliases *)
@@ -1397,7 +1397,7 @@ let concept ~module_ r fields =
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt concepts_generated r))
     ~record:(Ref.User.Tbl.replace concepts_generated r)
     ~same:(fun d d' -> compare d d' = 0)
-    (fun () -> Gen_decls.gen_typeclass_cpp r fields)
+    (fun () -> Cpp_ir_to_legacy_minicpp.decl (Gen_decls.gen_typeclass_cpp r fields))
 
 (** The concept of each module type, generated ahead of the files where
     the header writes it, by the module type's path. *)

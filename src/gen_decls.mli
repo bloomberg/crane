@@ -99,12 +99,12 @@ val instance_promoted_types : GlobRef.t -> ml_ast -> ml_type -> (Id.t * ml_type)
 val constructor_pointer_fields :
   name:GlobRef.t -> is_coinductive:bool -> Id.t list -> ml_type list -> (int * bool) list
 
-(** Generate C++ code for a record type. *)
+(** The struct of a record type, in CppIR. *)
 val gen_record_cpp :
-  GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> cpp_decl
+  GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> Cpp_ir.Lowered.Decl.t
 
-(** Generate C++ concept for a type class. *)
-val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> cpp_decl
+(** The concept of a type class, in CppIR. *)
+val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> Cpp_ir.Lowered.Decl.t
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).

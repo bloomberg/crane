@@ -33,6 +33,13 @@ val lower_stmt : Minicpp.cpp_stmt -> Cpp_ir.Lowered.Stmt.t
 (** [lower_type t] is [t] in CppIR, as {!lower} converts a declaration. *)
 val lower_type : Minicpp.cpp_type -> Cpp_ir.Lowered.Type.t
 
+(** [lower_expr e] is [e] in CppIR, as {!lower} converts a declaration. *)
+val lower_expr : Minicpp.cpp_expr -> Cpp_ir.Lowered.Expr.t
+
+(** [lower_template_parameters ps] is the template parameter list [ps] in
+    CppIR, as {!lower} converts a declaration. *)
+val lower_template_parameters : (Minicpp.template_type * Names.Id.t) list -> Cpp_ir.Lowered.phase Cpp_ir.Template.parameters
+
 (** [inline_template t] is the classified replacement text [t] in CppIR. *)
 val inline_template : Minicpp.inline_template -> Cpp_ir.Foreign.template
 
