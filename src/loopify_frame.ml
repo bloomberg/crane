@@ -5,7 +5,7 @@
     frame stacks, continuations, multi-call decomposition, and the bodies the
     machine adopts as extra entry points.
 
-    It rewrites a translated MiniCpp function body into a dispatch loop over a
+    It rewrites a translated C++ function body into a dispatch loop over a
     stack of frames ({!transform_nontail}).  What the machine keeps across a
     call, which calls enter it, and which values a frame holds by pointer or
     moves are read from the recursion plan ({!Recursion_plan}), the function's
@@ -13,27 +13,29 @@
     module decides only their C++ spelling. *)
 
 open Names
-open Minicpp
+open Cpp_ir.Type
+open Cpp_ir.Stmt
+open Cpp_ir.Expr
 open Loopify_analysis
 open Loopify_tail
 open Loopify_tmc
 
 (** {3 Frame-based non-tail recursion helpers} *)
 
-(** Derive field names from saved expressions. If an expression is [CPPvar id],
+(** Derive field names from saved expressions. If an expression is [Local id],
     use that variable name; otherwise fall back to ["_s{j}"]. Deduplicates by
     appending numeric suffixes when the same name appears more than once. *)
-let derive_field_names (exprs : cpp_expr list) : Id.t list =
+let derive_field_names (exprs : expr list) : Id.t list =
   let raw_names =
     List.mapi (fun j e ->
       match e with
-      | CPPvar id -> Id.to_string id
-      | CPPmove (CPPvar id) -> Id.to_string id
-      | CPPaccess_call (_, CPPvar id, _, []) -> Id.to_string id
-      | CPPaccess (_, _, field_id) -> Id.to_string field_id
-      | CPPderef (CPPvar id) -> Id.to_string id
-      | CPPfun_call (_, _, {rev = [CPPvar id]}) -> Id.to_string id
-      | CPPfun_call (_, _, {rev = [CPPmove (CPPvar id)]}) -> Id.to_string id
+      | Local id -> Id.to_string id
+      | Move (Local id) -> Id.to_string id
+      | Access_call (_, Local id, _, []) -> Id.to_string id
+      | Access (_, _, field_id) -> Id.to_string field_id
+      | Dereference (Local id) -> Id.to_string id
+      | Call (_, _, [Local id]) -> Id.to_string id
+      | Call (_, _, [Move (Local id)]) -> Id.to_string id
       | _ -> "_s" ^ string_of_int j)
     exprs
   in
@@ -65,10 +67,10 @@ let derive_field_names (exprs : cpp_expr list) : Id.t list =
 type saved_slot = {
   ss_field : Id.t;
       (** field name in the frame struct (see {!derive_field_names}) *)
-  ss_ty : cpp_type;
-      (** the declared type, or [Tunresolved] when the frame was built before
+  ss_ty : ty;
+      (** the declared type, or [(Obligation Unresolved_type)] when the frame was built before
           the type was known, in which case {!ss_expr} recovers it *)
-  ss_expr : cpp_expr;  (** the saved expression *)
+  ss_expr : expr;  (** the saved expression *)
 }
 
 (** A collected call frame — saved values + handler body. *)
@@ -76,9 +78,9 @@ type call_frame_info = {
   cf_name : string;
       (** e.g. [CraneCont0] — assigned when the push statement is generated *)
   cf_slots : saved_slot list;
-  cf_env : (Id.t * cpp_type) list;
+  cf_env : (Id.t * ty) list;
       (** type env at frame creation, for decltype resolution *)
-  cf_handler : cpp_stmt list;
+  cf_handler : stmt list;
   cf_pointers : bool list;
       (** Which slots the frame keeps as pointers, as the recursion plan has
           it *)
@@ -105,56 +107,56 @@ let cf_saved_exprs cf = List.map (fun s -> s.ss_expr) cf.cf_slots
 (** Type environment for inferring saved expression types. *)
 
 (** Collect type bindings from a list of statements. Handles
-    [Sasgn(id, Declare ty, _)] and [Sdecl(id, ty)]. Also recurses into
-    Scustom_case
-    branches to pick up pattern-bound variables. *)
-let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
+    [Bind_variable(id, Declare ty, _)] and [Declare(id, ty)]. Also recurses into
+    [Custom_match] branches to pick up pattern-bound variables. *)
+let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
   List.concat_map
     (fun s ->
       match s with
-      | Sasgn (id, Declare (Tauto, _), CPPlambda
-        { cl_params = params;
-          cl_ret = ret_ty_opt;
+      | Bind_variable (id, Declare (Auto, _), Lambda
+        { params = params;
+          return_type = ret_ty_opt;
           _ }) ->
         let param_types =
-          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
+          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (List.rev params)
         in
         let ret_ty = match ret_ty_opt with
-          | Some t when t <> Tvoid -> t
-          | _ -> Tvoid
+          | Some t when t <> Void -> t
+          | _ -> Void
         in
-        [(id, Tfun (param_types, ret_ty))]
-      | Sasgn (id, Declare (ty, _), _) -> [(id, ty)]
-      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _, _) -> [(id, ty)]
-      | Scustom_case (_, _, _, branches, _) ->
+        [(id, Function (param_types, ret_ty))]
+      | Bind_variable (id, Declare (ty, _), _) -> [(id, ty)]
+      | Declare (id, ty, _) | Foreign_block {custom = _; template = _; result = id; result_type = ty; values = _; type_args = _; binder = _} -> [(id, ty)]
+      | Custom_match {branches; _} ->
         List.concat_map
-          (fun (ps, _, body) -> List.map (fun p -> (p.cp_name, p.cp_type)) ps @ collect_type_env body)
+          (fun (b : custom_branch) ->
+            List.map (fun (p : custom_param) -> (p.name, p.type_)) b.params @ collect_type_env b.body)
           branches
-      | Sif (_, then_br, else_br) ->
+      | If {condition = _; then_ = then_br; else_ = else_br} ->
         collect_type_env then_br @ collect_type_env else_br
-      | Smatch (scrut, branches, default) ->
+      | Match (scrut, branches, default) ->
         List.concat_map
-          (fun br ->
+          (fun (br : branch) ->
             (* Register structured-binding field types so that
                [infer_saved_type] can resolve them for frame structs. *)
             let field_type_bindings =
               List.map
-                (fun fb -> (fb.fb_name, fb.fb_type))
-                br.smb_field_bindings
+                (fun (fb : field_binding) -> (fb.name, fb.type_))
+                br.field_bindings
             in
             (* Also register the aggregate binding for frame-dispatch
-               branches (which use [smb_var] without structured bindings). *)
+               branches (which use [var] without structured bindings). *)
             let var_binding =
-              match br.smb_var with
-              | Some id when br.smb_field_bindings = [] ->
-                [(id, Tconst (br.smb_ctor_type))]
+              match br.var with
+              | Some id when br.field_bindings = [] ->
+                [(id, Const (br.ctor_type))]
               | _ -> []
             in
             field_type_bindings @ var_binding
-            @ collect_type_env br.smb_body )
+            @ collect_type_env br.body )
           branches
         @ (match default with Some ss -> collect_type_env ss | None -> [])
-      | Sblock ss -> collect_type_env ss
+      | Block ss -> collect_type_env ss
       | _ -> [] )
     stmts
 
@@ -165,27 +167,27 @@ let lookup_var_type env id = List.assoc_opt id env
     TTfun constraint if the template param is function-typed. *)
 let lookup_tparam_return_type tparams id =
   match lookup_tparam_fun_type tparams id with
-  | Some (Tfun (_, cod)) -> Some cod
+  | Some (Function (_, cod)) -> Some cod
   | _ -> None
 
 (** The C++ [bool] type, as the printer spells it. *)
-let ty_bool = Tid_external ("bool", [])
+let ty_bool = External ("bool", [])
 
 (** Whether a binary operator's result is [bool] whatever its operands are.
     Comparisons and the short-circuiting connectives are the ones that do not
     hand their operand's type back. *)
-let binop_yields_bool = function
-  | Beq | Bneq | Band | Bor -> true
-  | Bassign -> false
+let binop_yields_bool : Cpp_ir.Binary_operator.t -> bool = function
+  | Equal | Not_equal | And | Or -> true
+  | Assign -> false
 
 (** The raw-pointer type an owning or raw pointer decays to.  Both
     [crane_raw(x)] and [x.get()] answer this way.  [None] for anything that is
     not a pointer, which has no raw form to decay to. *)
-let as_raw_ptr = function
-  | Tptr t | Tshared_ptr t -> Some (Tptr t)
+let as_raw_ptr : ty -> ty option = function
+  | Pointer t | Shared_pointer t -> Some (Pointer t)
   | _ -> None
 
-(** Infer the C++ type of a saved CPP expression bottom-up, or [None] when
+(** Infer the C++ type of a saved expression bottom-up, or [None] when
     there is nothing to go on.
 
     Not knowing is an ordinary answer here, so it is one the type admits: this
@@ -196,20 +198,20 @@ let as_raw_ptr = function
 
     Handles the common cases: variable lookups, smart-pointer derefs,
     arithmetic inlined operators (detected by their format-string pattern),
-    and lambdas (return type inferred from body [Sreturn] statements).
+    and lambdas (return type inferred from body [Return] statements).
     Used by [compute_frame_field_types] to emit [std::function<R(Args...)>]
     instead of [decltype(lambda)] for closures in loopification frame structs. *)
-let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
-    cpp_type option =
+let rec infer_saved_type tparams (env : (Id.t * ty) list) (e : expr) :
+    ty option =
   match e with
-  | CPPvar id ->
+  | Local id ->
     (* A forwarding parameter's value is held at [std::decay_t<F>]: its [F]
        may be deduced as a reference. *)
     Option.map
-      (function Tref (Forwarding, t) -> Tdecay (strip_ref_type t) | t -> strip_ref_type t)
+      (function Reference (Forwarding, t) -> Decay (strip_ref_type t) | t -> strip_ref_type t)
       (lookup_var_type env id)
-  | CPPmove inner -> infer_saved_type tparams env inner
-  | CPPderef inner ->
+  | Move inner -> infer_saved_type tparams env inner
+  | Dereference inner ->
     (* Peel the qualifiers off the pointer before taking its pointee: the
        loopified receiver [_self] has type [const T *], and
        [strip_ref_and_const_type] deliberately keeps the [const] on such a
@@ -217,16 +219,16 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
        pointer's type while the push and the handler both use it as a
        value. *)
     let rec pointee = function
-      | Tref (_, t) | Tconst t -> pointee t
-      | Tshared_ptr t | Tptr t -> t
+      | Reference (_, t) | Const t -> pointee t
+      | Shared_pointer t | Pointer t -> t
       | t -> t
     in
     Option.map pointee (infer_saved_type tparams env inner)
-  | CPPbinop (op, _, _) when binop_yields_bool op -> Some ty_bool
+  | Binary (op, _, _) when binop_yields_bool op -> Some ty_bool
   (* [&x] points at whatever [x] is, its [const] kept. *)
-  | CPPunop (Uaddr, inner) ->
-    Option.map (fun t -> Tptr t) (infer_saved_type tparams env inner)
-  | CPPbinop (_, lhs, rhs) ->
+  | Unary (Address_of, inner) ->
+    Option.map (fun t -> Pointer t) (infer_saved_type tparams env inner)
+  | Binary (_, lhs, rhs) ->
     (* An arithmetic or assignment operator hands back an operand's type.
        Try left first, fall back to right: this handles the common pattern
        [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda param) is,
@@ -234,58 +236,54 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     ( match infer_saved_type tparams env lhs with
     | Some _ as ty -> ty
     | None -> infer_saved_type tparams env rhs )
-  | CPPnumeral (r, _) -> Some (Tglob (r, [], []))
+  | Numeral (r, _) -> Some (Entity_application (r, [], []))
   (* A primitive string literal is a [std::string], as its ML type [Tstring]
      converts. *)
-  | CPPstring _ -> Some (Tid_external ("std::string", []))
-  | CPPbool _ -> Some ty_bool
-  | CPPglob (_, _, Some {ci_yields = Some ty; _}) ->
+  | Literal (String _) -> Some (External ("std::string", []))
+  | Literal (Bool _) -> Some ty_bool
+  | Entity (_, _, Some {custom_yields = Some ty; _}) ->
     (* Translation recorded what the reference evaluates to while the
        global's ML type was in hand; nothing here can improve on it. *)
     Some (strip_ref_and_const_type ty)
-  | CPPfun_call ({cs_yields = Ryields ty; _}, _, _) ->
+  | Call ({yields = Yields ty; _}, _, _) ->
     (* The call says what it yields; nothing below can improve on that, and
        a guess that disagreed with it would be a bug. *)
     Some (strip_ref_and_const_type ty)
-  | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [ inner ]}) ->
+  | Call (_, Runtime Crane_rt.Raw, [ inner ]) ->
     (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
        already raw (arena mode).  Infer from the inner expression. *)
     Option.bind (infer_saved_type tparams env inner) as_raw_ptr
-  | CPPfun_call (_, CPPvar f, _) ->
+  | Call (_, Local f, _) ->
     ( match lookup_var_type env f with
-    | Some (Tfun (_, cod)) -> Some cod
+    | Some (Function (_, cod)) -> Some cod
     | Some ty ->
       (* f might be a template param with forwarding ref type *)
       Option.bind (extract_fwd_ref_tvar ty) (lookup_tparam_return_type tparams)
     | None -> None )
-  | CPPfun_call (_, CPPnamespace (_, CPPvar f), _) ->
-    ( match lookup_var_type env f with
-    | Some (Tfun (_, cod)) -> Some cod
-    | _ -> None )
-  | CPPfun_call (_, CPPlambda {cl_ret = Some ret_ty; _}, _) -> Some ret_ty
+  | Call (_, Lambda {return_type = Some ret_ty; _}, _) -> Some ret_ty
   (* A lambda applied in place yields what its body returns. *)
-  | CPPfun_call (_, (CPPlambda _ as l), _) -> (
+  | Call (_, (Lambda _ as l), _) -> (
     match infer_saved_type tparams env l with
-    | Some (Tfun (_, cod)) -> Some cod
+    | Some (Function (_, cod)) -> Some cod
     | _ -> None )
-  | CPPfun_call (_, CPPaccess (Adot, inner, id), {rev = []})
+  | Call (_, Access (Dot, inner, id), [])
     when String.equal (Id.to_string id) "get" ->
     (* shared_ptr::get() returns a raw pointer.
        Infer from the inner expression. *)
     Option.bind (infer_saved_type tparams env inner) as_raw_ptr
-  | CPPfun_call _ -> None
-  | CPPconverting_ctor (ty, _) | CPPbox (ty, _) ->
+  | Call _ -> None
+  | Converting_construct (ty, _) | Box (ty, _) ->
     Some (strip_ref_and_const_type ty)
   (* A record field read says what the field is. *)
-  | CPPget' (_, _, Some ty) -> Some (strip_ref_and_const_type ty)
-  | CPPlambda {cl_params = params; cl_ret = ret_ty_opt; cl_body = body; _} ->
-    let param_types = List.rev_map fst (to_reversed params) in
+  | Project (_, _, Some ty) -> Some (strip_ref_and_const_type ty)
+  | Lambda {params = params; return_type = ret_ty_opt; body = body; _} ->
+    let param_types = List.rev_map fst (List.rev params) in
     let ret_ty =
       match ret_ty_opt with
-      | Some ty when ty <> Tvoid -> Some ty
+      | Some ty when ty <> Void -> Some ty
       | _ ->
         (* No recorded return type: some of translation's lambda
-           construction sites record none, and then the body's [Sreturn]
+           construction sites record none, and then the body's [Return]
            statements are the only answer available here. *)
         let lam_env =
           collect_type_env body
@@ -294,7 +292,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
                 match id_opt with
                 | Some id -> (id, ty) :: acc
                 | None -> acc)
-              env (to_reversed params)
+              env (List.rev params)
         in
         (* The first [return] that can be typed answers for the whole body --
            in any branch, a match's included: a lambda over a pair opens with
@@ -302,19 +300,19 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
            bindings are not in [lam_env], so a [return] reading one of them
            may go untyped and leave the answer to another. *)
         let rec of_stmt = function
-          | Sreturn (Some e) -> infer_saved_type tparams lam_env e
-          | Sif (_, then_body, else_body)
-          | Sif_decl (_, _, _, then_body, else_body) ->
+          | Return (Some e) -> infer_saved_type tparams lam_env e
+          | If {condition = _; then_ = then_body; else_ = else_body}
+          | If_declaration {name = _; type_ = _; init = _; then_ = then_body; else_ = else_body} ->
             List.find_map of_stmt (then_body @ else_body)
-          | Sblock stmts -> List.find_map of_stmt stmts
-          | Smatch (_, branches, default) ->
+          | Block stmts -> List.find_map of_stmt stmts
+          | Match (_, branches, default) ->
             List.find_map of_stmt
-              (List.concat_map (fun b -> b.smb_body) branches
+              (List.concat_map (fun (b : branch) -> b.body) branches
               @ Option.default [] default)
-          | Scustom_case (_, _, _, branches, _) ->
+          | Custom_match {branches; _} ->
             List.find_map of_stmt
-              (List.concat_map (fun (_, _, body) -> body) branches)
-          | Sswitch (_, _, branches, default) ->
+              (List.concat_map (fun (b : custom_branch) -> b.body) branches)
+          | Switch {scrutinee = _; enum = _; branches = branches; default = default} ->
             List.find_map of_stmt
               (List.concat_map snd branches @ Option.default [] default)
           | _ -> None
@@ -323,16 +321,11 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     in
     Option.map
       (fun r ->
-        Tfun
+        Function
           ( List.map strip_ref_and_const_type param_types,
             strip_ref_and_const_type r ) )
       ret_ty
   | _ -> None
-
-(* Free variables, as {!Minicpp} computes them. *)
-let free_vars_expr = Minicpp.free_vars_expr
-let free_vars_stmt = Minicpp.free_vars_stmt
-let free_vars_body = Minicpp.free_vars_body
 
 (** {3 Continuation variable helpers}
 
@@ -352,8 +345,8 @@ let compute_rest_free_vars rest =
   let rest_defined =
     List.filter_map
       (function
-        | Sasgn (vid, _, _) -> Some vid
-        | Sdecl (vid, _, _) -> Some vid
+        | Bind_variable (vid, _, _) -> Some vid
+        | Declare (vid, _, _) -> Some vid
         | _ -> None)
       rest
   in
@@ -371,25 +364,25 @@ let make_cont_bindings ~field_names cont_vars cont_types =
   List.mapi
     (fun i id ->
       let ty = List.nth cont_types i in
-      let field_expr = CPPaccess (Adot, CPPvar id_f, List.nth field_names i) in
+      let field_expr = Access (Dot, Local id_f, List.nth field_names i) in
       match ty with
-      | Tshared_ptr _ -> Sasgn (id, Declare (ty, None), CPPmove field_expr)
-      | Tunresolved -> Sasgn (id, Existing, field_expr)
-      | Tconst inner when not (is_trivially_copyable_type inner) ->
-        Sasgn (id, Declare (Tref (Lvalue, Tconst inner), None), field_expr)
-      | Tvar _ ->
+      | Shared_pointer _ -> Bind_variable (id, Declare (ty, None), Move field_expr)
+      | (Obligation Unresolved_type) -> Bind_variable (id, Existing, field_expr)
+      | Const inner when not (is_trivially_copyable_type inner) ->
+        Bind_variable (id, Declare (Reference (Lvalue, Const inner), None), field_expr)
+      | Variable _ ->
         (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
            deduced as a reference type, [F0 f = std::move(_f.f)] would be
            ill-formed — a non-const lvalue reference cannot bind to an rvalue.
            Use [auto] so the declared type is always deduced as a value type,
            regardless of whether [F0] was a reference or function type. *)
-        Sasgn (id, Declare (Tauto, None), CPPmove field_expr)
+        Bind_variable (id, Declare (Auto, None), Move field_expr)
       | t when not (copies_cheaply t) ->
         (* Move from frame field to avoid O(n) deep copy of owned value types
            (e.g. [List<T>]).  Safe because [_f] was obtained via
            [std::move(std::get<...>(_frame))] and this field is not used again. *)
-        Sasgn (id, Declare (ty, None), CPPmove field_expr)
-      | _ -> Sasgn (id, Declare (ty, None), field_expr))
+        Bind_variable (id, Declare (ty, None), Move field_expr)
+      | _ -> Bind_variable (id, Declare (ty, None), field_expr))
     cont_vars
 
 (** Build a type environment from continuation variables and their types,
@@ -427,25 +420,25 @@ let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler ~poi
     [frames_ref] accumulates call frame info in order. *)
 
 (** Build a stack push expression. Uses
-    [CPPfun_call (CPPaccess (Adot, ...))] so that
-    [CPPvar "_stack"] is visible to capture detection (ensuring [[&]] capture),
+    [Call (Access (Dot, ...))] so that
+    [Local "_stack"] is visible to capture detection (ensuring [[&]] capture),
     and renders with [.] not [->]. *)
 let make_stack_push arg =
-  Sexpr
-    (CPPfun_call
-       (call_opaque, CPPaccess (Adot, CPPvar (id_stack), id_emplace_back),
-         of_reversed [arg] ) )
+  Expression
+    (Call
+       (call_opaque, Access (Dot, Local (id_stack), id_emplace_back),
+         [arg] ) )
 
 (** {4 Frame construction helpers}
 
     These helpers reduce code duplication when constructing frame instances and
     managing the frame counter. *)
 
-(** Extract a short constructor name from a [cpp_type], for use in frame
+(** Extract a short constructor name from a [ty], for use in frame
     name suffixes. Returns [None] for types that don't have a clear short name. *)
-let ctor_type_short_name : cpp_type -> string option = function
-  | Tid (id, _) -> Some (Id.to_string id)
-  | Tqualified (_, id) -> Some (Id.to_string id)
+let ctor_type_short_name : ty -> string option = function
+  | Named (id, _) -> Some (Id.to_string id)
+  | Member (_, id) -> Some (Id.to_string id)
   | _ -> None
 
 (** Generate a unique call frame name from a role prefix (e.g. [CraneCont])
@@ -475,15 +468,15 @@ let make_call_frame_name (prefix : string) (counter : int ref)
     @param tparams Template parameters context
     @param env Type environment for variable lookups
     @param exprs The expressions whose types to infer
-    @return A list of inferred [cpp_type] values, parallel to [exprs]
+    @return A list of inferred [ty] values, parallel to [exprs]
 
-    This is the boundary where not knowing becomes {!Minicpp.Tunresolved}: a
+    This is the boundary where not knowing becomes {!Cpp_ir.Representation_obligation.Unresolved_type}: a
     frame field's declared type is a slot that has to hold something, and
-    [Tunresolved] is what the rest of the frame machinery reads as "not settled
+    [(Obligation Unresolved_type)] is what the rest of the frame machinery reads as "not settled
     yet". *)
 let infer_saved_types tparams env exprs =
   List.map
-    (fun e -> Option.default Tunresolved (infer_saved_type tparams env e))
+    (fun e -> Option.default (Obligation Unresolved_type) (infer_saved_type tparams env e))
     exprs
 
 (** {3 Enter-rewrite context} *)
@@ -498,7 +491,7 @@ let infer_saved_types tparams env exprs =
     in step. *)
 type frame_param = {
   fp_name : Id.t;
-  fp_ty : cpp_type;
+  fp_ty : ty;
   fp_pointer_safe : bool;
 }
 
@@ -518,7 +511,7 @@ type frame_param = {
     {!machine_entry}, which checks that the mask describes those parameters. *)
 type machine_entry = {
   en_enter_id : Id.t;  (** Frame struct entering this point goes through *)
-  en_params : (Id.t * cpp_type) list;  (** The parameters this entry binds *)
+  en_params : (Id.t * ty) list;  (** The parameters this entry binds *)
   en_varying : bool list;  (** Mask over {!en_params} *)
 }
 
@@ -547,7 +540,7 @@ let entry_varying_types en = List.map snd (entry_varying_params en)
 type entry_emission = {
   ee_id : Id.t;
   ee_params : frame_param list;
-  ee_body : cpp_stmt list;
+  ee_body : stmt list;
 }
 
 (** What [en] contributes to the machine, given the [body] its handler runs.
@@ -583,12 +576,12 @@ let entry_emission ?pointer_safe en body =
     scope this machine does not control. *)
 let invoked_body e =
   match e with
-  | CPPfun_call
-      (res, CPPlambda ({cl_params = {rev = []}; _} as l), ({rev = []} as noargs))
+  | Call
+      (res, Lambda ({params = []; _} as l), ([] as noargs))
     ->
     Some
-      ( l.cl_body,
-        fun body -> CPPfun_call (res, CPPlambda {l with cl_body = body}, noargs)
+      ( l.body,
+        fun body -> Call (res, Lambda {l with body = body}, noargs)
       )
   | _ -> None
 
@@ -596,7 +589,7 @@ let invoked_body e =
    inside any lambda's body, outermost first. *)
 let rec invoked_bodies_expr e =
   let acc = ref (match invoked_body e with Some (b, _) -> [b] | None -> []) in
-  Minicpp.iter_expr_children
+  iter_expr_children
     ~on_expr:(fun c -> acc := !acc @ invoked_bodies_expr c)
     ~on_stmts:(fun _ -> ())
     e;
@@ -659,9 +652,9 @@ let rec drop_bindings dropped stmts =
     block so that it fits where one statement is expected. *)
 and drop_bindings_stmt dropped s =
   match drop_bindings dropped [s] with
-  | [] -> Sblock []
+  | [] -> Block []
   | [one] -> one
-  | many -> Sblock many
+  | many -> Block many
 
 (** [drop_bindings] reaching through expressions into the bodies of
     {!invoked_body} lambdas -- the statements the searches above look in, so
@@ -676,10 +669,10 @@ and drop_bindings_expr dropped e =
     wrapper tying the knot ({!wraps}) -- by the Core fixpoint it was made of,
     not by its name, which another fixpoint may share. *)
 let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
-  | Sasgn (_, Declare _, CPPlambda {cl_fixpoint = Some {lf_member = (o, j); lf_encoding; _}; _}) -> (
-    let (o', j') = fixpoint.lf_member in
+  | Bind_variable (_, Declare _, Lambda {fixpoint = Some {member = (o, j); encoding; _}; _}) -> (
+    let (o', j') = fixpoint.member in
     Miniml.Occurrence.equal o o' && Int.equal j j'
-    && match lf_encoding with Self_passing _ -> true | Knot -> knot | Lowered -> false )
+    && match encoding with Self_passing _ -> true | Knot -> knot | Lowered -> false )
   | _ -> false
 
 (** The binder of the wrapper lambda for the local fixpoint [fixpoint]
@@ -688,7 +681,7 @@ let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
 let find_fix_wrapper fixpoint stmts =
   find_in_flow stmts
     ~on_stmt:(function
-      | Sasgn (wid, Declare (Tauto, _), CPPlambda w) when wraps fixpoint w -> Some wid
+      | Bind_variable (wid, Declare (Auto, _), Lambda w) when wraps fixpoint w -> Some wid
       | _ -> None )
 
 (** A body this machine adopts as an extra entry point: a fixpoint local to
@@ -704,8 +697,8 @@ type adopted = {
   ad_name : string;  (** Names the entry's frame, [CraneEnter_<name>] *)
   ad_entry_id : Id.t;
       (** The synthetic name {!ad_install} routes this entry's calls through *)
-  ad_params : (Id.t * cpp_type) list;  (** Parameters, in call-argument order *)
-  ad_ret : cpp_type option;
+  ad_params : (Id.t * ty) list;  (** Parameters, in call-argument order *)
+  ad_ret : ty option;
       (** The body's result type, where its lambda records one.  The entry
           shares the machine's one [_result], so it must be the function's. *)
   ad_captures : Id.t list;
@@ -715,10 +708,10 @@ type adopted = {
           frame. *)
   ad_binders : (Id.t * Core_binder.t) list;
       (** The Core binder each parameter and capture stands for, by name *)
-  ad_body : cpp_stmt list;
+  ad_body : stmt list;
       (** The entry's handler, already installed: its own recursive calls go
           through {!ad_entry_id} like every other call into this entry. *)
-  ad_install : cpp_stmt list -> cpp_stmt list;
+  ad_install : stmt list -> stmt list;
       (** Prepare the enclosing body for the adoption: route every call that
           enters this body through {!ad_entry_id}, and drop the bindings the
           adoption makes dead.  Those are not merely untidy -- they still hold
@@ -742,10 +735,10 @@ let adopted_entry_id name = Id.of_string ("_adopted_" ^ name)
     appending them here -- in the order the entry's parameter list is built --
     is what makes the two agree. *)
 let adopted_checker ~entry ad : call_checker =
-  let captured = List.map (fun id -> CPPvar id) ad.ad_captures in
+  let captured = List.map (fun id -> Local id) ad.ad_captures in
   function
-  | CPPfun_call (_, CPPvar id, args) when Id.equal id ad.ad_entry_id ->
-    Some (mk_call_site ~entry (to_reversed args @ captured))
+  | Call (_, Local id, args) when Id.equal id ad.ad_entry_id ->
+    Some (mk_call_site ~entry (List.rev args @ captured))
   | _ -> None
 
 (** Why a single-entry machine cannot linearise the function [ad] was found
@@ -777,11 +770,11 @@ let decline_reason ad =
     {!ad_entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~stmts ~planned = function
-  | Sasgn (impl_id, Declare (Tauto, _), CPPlambda {cl_params; cl_body; cl_ret; cl_fixpoint; cl_binders; _}) -> (
-    let lparams = to_reversed cl_params in
-    match (cl_fixpoint, fixpoint_self cl_fixpoint lparams) with
+  | Bind_variable (impl_id, Declare (Auto, _), Lambda {params; body; return_type; fixpoint = lambda_fixpoint; binders; _}) -> (
+    let lparams = List.rev params in
+    match (lambda_fixpoint, fixpoint_self lambda_fixpoint lparams) with
     | None, _ | _, None -> None
-    | Some ({lf_name; _} as fixpoint), Some self_id ->
+    | Some ({name; _} as fixpoint), Some self_id ->
       if not (planned fixpoint) then None
       else
         (* Drop the self-parameter, and any unnamed one: a frame can only
@@ -797,27 +790,27 @@ let adopt_local_fix ~stmts ~planned = function
         in
         let bound = self_id :: List.map fst params in
         let captures =
-          free_vars_body cl_body
+          free_vars_body body
           |> List.filter (fun v -> not (List.exists (Id.equal v) bound))
           |> List.sort_uniq Id.compare
         in
-        let name = Id.to_string lf_name in
+        let name = Id.to_string name in
         let entry_id = adopted_entry_id name in
-        let wrapper = find_fix_wrapper cl_fixpoint stmts in
+        let wrapper = find_fix_wrapper lambda_fixpoint stmts in
         (* A call enters the fixpoint where it is made of one of the calls
            the plan has entering it -- not where it names the fixpoint,
            whose names another fixpoint may share.  How it is rerouted is
            its shape: one through the self-parameter forwards it as a
            leading argument the entry does not take. *)
-        let entering = Recursion_plan.entering (fst fixpoint.lf_member) in
+        let entering = Recursion_plan.entering (fst fixpoint.member) in
         let reroute e =
           match e with
-          | CPPfun_call (({cs_occurrence = Some o; _} as res), CPPvar id, args)
+          | Call (({occurrence = Some o; _} as res), Local id, args)
             when List.exists (Miniml.Occurrence.equal o) entering -> (
-            if not (Id.equal id self_id) then CPPfun_call (res, CPPvar entry_id, args)
+            if not (Id.equal id self_id) then Call (res, Local entry_id, args)
             else
-              match call_args args with
-              | _self_arg :: rest -> CPPfun_call (res, CPPvar entry_id, of_reversed (List.rev rest))
+              match args with
+              | _self_arg :: rest -> Call (res, Local entry_id, rest)
               | [] -> e )
           | _ -> e
         in
@@ -856,13 +849,13 @@ let adopt_local_fix ~stmts ~planned = function
           { ad_name = name;
             ad_entry_id = entry_id;
             ad_params = params;
-            ad_ret = cl_ret;
+            ad_ret = return_type;
             ad_captures = captures;
-            ad_binders = cl_binders @ fixpoint.lf_captured;
-            ad_body = install_calls cl_body;
+            ad_binders = binders @ fixpoint.captured;
+            ad_body = install_calls body;
             ad_install = install;
             ad_what = "the local fixpoint " ^ name;
-            ad_fixpoint = fst fixpoint.lf_member } )
+            ad_fixpoint = fst fixpoint.member } )
   | _ -> None
 
 (** The body this machine should adopt, if any: a local fixpoint, the shape
@@ -871,7 +864,7 @@ let adopt_local_fix ~stmts ~planned = function
     first in the flow lowering can take is adopted. *)
 let find_adopted ~adoptable stmts =
   let planned (lf : local_fixpoint) =
-    List.exists (Miniml.Occurrence.equal (fst lf.lf_member)) adoptable
+    List.exists (Miniml.Occurrence.equal (fst lf.member)) adoptable
   in
   find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned)
 
@@ -895,11 +888,11 @@ type enter_rewrite_ctx = {
       (** Identifies recursive calls in expressions *)
   er_entries : machine_entry list;
       (** The machine's entry points, indexed by {!call_site.cs_entry} *)
-  er_tparams : (template_type * Id.t) list;
+  er_tparams : (param_kind * Id.t) list;
       (** Template parameters of the enclosing function *)
-  er_env : (Id.t * cpp_type) list;
+  er_env : (Id.t * ty) list;
       (** Type environment — changes when entering sub-scopes *)
-  er_result_ty : cpp_type;
+  er_result_ty : ty;
       (** The type the machine's [_result] is declared at: a call's value as
           the machine resumes with it *)
   er_binders : (Id.t * Core_binder.t option) list;
@@ -916,7 +909,7 @@ type enter_rewrite_ctx = {
   er_invariant_params : Id.Set.t;
       (** Invariant parameter ids — referenced directly from function scope,
           not stored in continuation frames *)
-  er_bound : (Id.t * cpp_stmt) list;
+  er_bound : (Id.t * stmt) list;
       (** The locals the machine's body has declared so far, innermost
           first, each with the statement declaring it: what a continuation
           binds again of what its frame does not keep. *)
@@ -924,7 +917,7 @@ type enter_rewrite_ctx = {
       (** The calls that enter the machine, as the recursion plan names
           what a point resumes after; [None] where the plan does not
           describe the machine. *)
-  er_entered : resumes:bool -> cpp_expr -> unit;
+  er_entered : resumes:bool -> expr -> unit;
       (** Told each call that enters the machine, and whether the machine
           resumes after it. *)
   er_points_into : Core_binder.t -> bool;
@@ -951,11 +944,11 @@ let with_aliased aliased ids = List.fold_left (fun s id -> Id.Set.add id s) alia
     declares joins them, as a reference, with what it names, or leaves them,
     held by value. *)
 let aliased_after aliased = function
-  | Sasgn (id, Declare (ty, _), e) ->
+  | Bind_variable (id, Declare (ty, _), e) ->
     if is_borrowed ty then with_aliased aliased (id :: free_vars_expr e) else Id.Set.remove id aliased
-  | Sasgn (id, Declare_static _, _) -> Id.Set.add id aliased
-  | Sdecl (id, _, _) | Sdecl_init (id, _) | Sblock_custom (_, _, id, _, _, _, _) -> Id.Set.remove id aliased
-  | Sbind (ids, e) -> with_aliased aliased (ids @ free_vars_expr e)
+  | Bind_variable (id, Declare_static _, _) -> Id.Set.add id aliased
+  | Declare (id, _, _) | Declare_value_initialized (id, _) | Foreign_block {custom = _; template = _; result = id; result_type = _; values = _; type_args = _; binder = _} -> Id.Set.remove id aliased
+  | Structured_binding (ids, e) -> with_aliased aliased (ids @ free_vars_expr e)
   | _ -> aliased
 
 (** The entry point a call site targets. *)
@@ -963,7 +956,7 @@ let entry_of ctx cs = List.nth ctx.er_entries cs.cs_entry
 
 (** The frame of entry [en]'s struct holding [fields], already narrowed to
     the entry's varying positions. *)
-let enter_frame en fields = CPPstruct_id (en.en_enter_id, [], fields)
+let enter_frame en fields = Local_aggregate {struct_ = en.en_enter_id; type_args = []; values = fields}
 
 (** The frame that re-enters machine entry [entry] with [args], narrowed to
     that entry's varying positions.  The invariant ones are in scope at the
@@ -981,8 +974,8 @@ let make_enter_at ctx entry args =
     nothing. *)
 let rec calls_nothing e =
   match e with
-  | CPPfun_call _ -> false
-  | CPPlambda _ -> true
+  | Call _ -> false
+  | Lambda _ -> true
   | _ ->
     let ok = ref true in
     iter_expr_children
@@ -992,7 +985,7 @@ let rec calls_nothing e =
     !ok
 
 (** [bound] once [stmt] has run ({!enter_rewrite_ctx.er_bound}). *)
-let bound_after bound = function Sasgn (id, Declare _, _) as stmt -> (id, stmt) :: bound | _ -> bound
+let bound_after bound = function Bind_variable (id, Declare _, _) as stmt -> (id, stmt) :: bound | _ -> bound
 
 (** The Core binder the local [x] stands for, if any. *)
 let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.er_binders)
@@ -1010,10 +1003,10 @@ let make_enter_for ctx ~called cs =
   let moved = Option.default [] (Option.bind (Loopify_analysis.made_of called) Ownership_ir.Entry_moves.lookup) in
   let takes (_, ty) arg =
     match arg with
-    | CPPvar x
+    | Local x
       when worthwhile_move_type (strip_ref_and_const_type ty)
            && Option.cata (fun b -> List.exists (Core_binder.equal b) moved) false (binder_of ctx x) ->
-      CPPmove arg
+      Move arg
     | _ -> arg
   in
   let args =
@@ -1046,7 +1039,7 @@ let rebuilt_binders ctx (p : Recursion_plan.resume) =
     the local it names. *)
 let respells ctx x =
   match (List.assoc_opt x ctx.er_bound, binder_of ctx x) with
-  | Some (Sasgn (_, Declare (ty, _), e)), Some b ->
+  | Some (Bind_variable (_, Declare (ty, _), e)), Some b ->
     is_reference_type ty && free_vars_expr e <> [] && List.for_all (stands_for ctx b) (free_vars_expr e)
   | _ -> false
 
@@ -1058,7 +1051,7 @@ let rebuilt_bindings ctx ~kept reads =
     if List.exists (Id.equal v) needed || kept v then needed
     else
       match List.assoc_opt v ctx.er_bound with
-      | Some (Sasgn (_, _, e)) -> List.fold_left need (v :: needed) (free_vars_expr e)
+      | Some (Bind_variable (_, _, e)) -> List.fold_left need (v :: needed) (free_vars_expr e)
       | Some _ | None -> needed
   in
   let needed = List.fold_left need [] reads in
@@ -1069,9 +1062,9 @@ let rebuilt_bindings ctx ~kept reads =
 
 (** [binders] once [stmt] has run: the local it declares joins them. *)
 let declared_binders binders = function
-  | Sasgn (id, Declare (_, b), _) | Sdecl (id, _, b) | Sblock_custom (_, _, id, _, _, _, b) -> (id, b) :: binders
-  | Sasgn (id, Declare_static _, _) | Sdecl_init (id, _) -> (id, None) :: binders
-  | Sbind (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
+  | Bind_variable (id, Declare (_, b), _) | Declare (id, _, b) | Foreign_block {custom = _; template = _; result = id; result_type = _; values = _; type_args = _; binder = b} -> (id, b) :: binders
+  | Bind_variable (id, Declare_static _, _) | Declare_value_initialized (id, _) -> (id, None) :: binders
+  | Structured_binding (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
   | _ -> binders
 
 (** The locals of the scope of [ctx] that the planned resume point [p]
@@ -1102,7 +1095,7 @@ let no_entering_calls = "no ControlIR loop says which calls enter the machine a 
     ({!Core_binder.site}).  Where the result stands for no Core binder or
     the plan has no one point for it, a violation, the machine is not made:
     nothing else says what its frame keeps. *)
-let planned_point ctx id tgt =
+let planned_point ctx id (tgt : binding) =
   let binder =
     match tgt with
     | Declare (_, b) -> b
@@ -1126,10 +1119,10 @@ let planned_point ctx id tgt =
     machine ({!enter_rewrite_ctx.er_entered_by}).  A statement assigning a
     local declared before it is one branch of a match the Core binds as one
     let, and resumes only if [e] is itself such a call, which the call the
-    C++ made of it records ({!Minicpp.call_sig.cs_occurrence}).  [None]
+    C++ made of it records ({!Cpp_ir.Expr.Call.signature}).  [None]
     where the plan does not say: the statement binds a local of the
     backend's own, or the machine is not one the plan describes. *)
-let planned_resume ctx id tgt e =
+let planned_resume ctx id (tgt : binding) e =
   let point b = match Recursion_plan.resumes_binding b with [p] -> Some p | _ -> None in
   match ctx.er_entered_by with
   | None -> None
@@ -1141,7 +1134,7 @@ let planned_resume ctx id tgt e =
       Option.map
         (fun b ->
           match (point b, e) with
-          | Some p, CPPfun_call ({cs_occurrence = Some o; _}, _, _) ->
+          | Some p, Call ({occurrence = Some o; _}, _, _) ->
             List.exists
               (fun (c : Recursion_plan.call) -> entered_by c && Miniml.Occurrence.equal c.occurrence o)
               p.after
@@ -1167,101 +1160,100 @@ let resume_violation () = Probe.violation "resume plan" (Pp.str resume_disagreem
     reports of the lowered loop.
 
     @param ctx  Enter-rewrite context (see {!enter_rewrite_ctx})
-    @param stmt The statement to rewrite (typically a [Sreturn] statement)
+    @param stmt The statement to rewrite (typically a [Return] statement)
     @return A list of rewritten statements (frame pushes or result assignments) *)
 let rec rewrite_enter_lambda_return ctx stmt =
   let { er_check = check; er_env = env; _ } = ctx in
   match stmt with
-  | Sreturn (Some e) -> (
+  | Return (Some e) -> (
     match check e with
     | Some cs ->
       ctx.er_entered ~resumes:false e;
       [make_stack_push (make_enter_for ctx ~called:e cs)]
     | None -> assign_result e )
-  | Sif (cond, then_br, else_br) ->
+  | If {condition = cond; then_ = then_br; else_ = else_br} ->
     let rw_stmts = rewrite_enter_stmts ctx in
     let rw_then = rw_stmts then_br in
     let rw_else = rw_stmts else_br in
-    [Sif (cond, rw_then, rw_else)]
-  | Scustom_case (ty, scrut, tyargs, branches, err) ->
+    [If {condition = cond; then_ = rw_then; else_ = rw_else}]
+  | Custom_match ({scrutinee = scrut; branches; _} as m) ->
     (* A recursive call in the scrutinee is bound before the match by
        {!Normalize}; only the branches are left to rewrite. *)
     [
-      Scustom_case
-        ( ty,
-          scrut,
-          tyargs,
+      Custom_match
+        { m with
+          branches =
           List.map
-            (fun (ps, ret_ty2, body) ->
-              let lenv = List.map (fun p -> (p.cp_name, p.cp_type)) ps @ env in
+            (fun (b : custom_branch) ->
+              let ps = b.params in
+              let lenv = List.map (fun (p : custom_param) -> (p.name, p.type_)) ps @ env in
               let br_ctx = match ps with
-                | p :: _ -> Some (Id.to_string p.cp_name)
+                | p :: _ -> Some (Id.to_string p.name)
                 | [] -> None
               in
-              ( ps, ret_ty2,
+              { b with body =
                 rewrite_enter_stmts { ctx with er_env = lenv;
-                                               er_binders = List.map (fun p -> (p.cp_name, p.cp_binder)) ps @ ctx.er_binders;
+                                               er_binders = List.map (fun (p : custom_param) -> (p.name, p.binder)) ps @ ctx.er_binders;
                                                er_branch_ctx = br_ctx;
                                                er_aliased =
                                                  with_aliased ctx.er_aliased
-                                                   (free_vars_expr scrut @ List.map (fun p -> p.cp_name) ps) } body ) )
-            branches,
-          err );
+                                                   (free_vars_expr scrut @ List.map (fun (p : custom_param) -> p.name) ps) } b.body } )
+            branches };
     ]
-  | Smatch (scrut, branches, default) ->
+  | Match (scrut, branches, default) ->
     (* Augment the env with each branch's binding variable types so that
        [infer_saved_types] resolves field types correctly per-branch. *)
-    let rw_branch br =
+    let rw_branch (br : branch) =
       let branch_env =
         (* Register structured-binding field types. *)
         let fb_env =
-          List.map (fun fb -> (fb.fb_name, fb.fb_type)) br.smb_field_bindings
+          List.map (fun (fb : field_binding) -> (fb.name, fb.type_)) br.field_bindings
         in
         (* Also register aggregate binding for frame-dispatch branches. *)
         let var_env =
-          match br.smb_var with
-          | Some id when br.smb_field_bindings = [] ->
-            [(id, Tconst (br.smb_ctor_type))]
+          match br.var with
+          | Some id when br.field_bindings = [] ->
+            [(id, Const (br.ctor_type))]
           | _ -> []
         in
         fb_env @ var_env @ env
       in
       let branch_binders =
-        List.map (fun fb -> (fb.fb_name, fb.fb_binder)) br.smb_field_bindings
-        @ (match br.smb_var with Some id -> [(id, None)] | None -> [])
+        List.map (fun (fb : field_binding) -> (fb.name, fb.binder)) br.field_bindings
+        @ (match br.var with Some id -> [(id, None)] | None -> [])
         @ ctx.er_binders
       in
-      let br_ctx = ctor_type_short_name br.smb_ctor_type in
+      let br_ctx = ctor_type_short_name br.ctor_type in
       let branch_aliased =
         with_aliased ctx.er_aliased
-          (free_vars_expr scrut.sc_expr
-          @ Option.List.cons br.smb_var (List.map (fun fb -> fb.fb_name) br.smb_field_bindings))
+          (free_vars_expr scrut.expr
+          @ Option.List.cons br.var (List.map (fun (fb : field_binding) -> fb.name) br.field_bindings))
       in
       let rw = rewrite_enter_stmts { ctx with er_env = branch_env;
                                               er_binders = branch_binders;
                                               er_branch_ctx = br_ctx;
                                               er_aliased = branch_aliased } in
-      { br with smb_body = rw br.smb_body }
+      { br with body = rw br.body }
     in
     let rw_default = rewrite_enter_stmts { ctx with er_branch_ctx = None } in
-    [Smatch (scrut, List.map rw_branch branches, Option.map rw_default default)]
-  | Sblock stmts ->
-    [Sblock (rewrite_enter_stmts ctx stmts)]
-  | Sswitch (scrut, r, branches, default) ->
+    [Match (scrut, List.map rw_branch branches, Option.map rw_default default)]
+  | Block stmts ->
+    [Block (rewrite_enter_stmts ctx stmts)]
+  | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
     let rw_branches =
       List.map
         (fun (id, body) -> (id, rewrite_enter_stmts ctx body))
         branches
     in
     let rw_default = Option.map (rewrite_enter_stmts ctx) default in
-    [Sswitch (scrut, r, rw_branches, rw_default)]
+    [Switch {scrutinee = scrut; enum = r; branches = rw_branches; default = rw_default}]
   | s -> [s]
 
 (** Process a sequence of statements using continuation-passing to handle
     recursive calls in assignment positions.
 
     This is the core of the nontail frame-based transformation for statement
-    sequences. When it encounters [Sasgn(id, ty, e)] where [e] contains one or
+    sequences. When it encounters [Bind_variable(id, ty, e)] where [e] contains one or
     more recursive calls, it captures the remaining statements ([rest]) as a
     "continuation" that is embedded in the Call frame's handler.
 
@@ -1300,7 +1292,7 @@ and rewrite_enter_stmts ctx stmts =
   in
   match stmts with
   | [] -> []
-  | Sasgn (id, tgt, e) :: rest when count_calls_expr check e >= 1 ->
+  | Bind_variable (id, tgt, e) :: rest when count_calls_expr check e >= 1 ->
     let n_calls = count_calls_expr check e in
     let rest_free = compute_rest_free_vars rest in
     (* The continuation of [id = f(args)]: a frame saving what the rest
@@ -1308,7 +1300,7 @@ and rewrite_enter_stmts ctx stmts =
        rest, pushed under [enter], the call's re-entry.  [cast] is what the
        statement casts the call's result to, if anything. *)
     let make_cont_handler ~cast enter =
-      let result r = match cast with Some ty -> CPPany_cast (ty, r) | None -> r in
+      let result r = match cast with Some ty -> Any_cast (ty, r) | None -> r in
       (* Which Core values cross the call, in what order the frame keeps
          them, and which it binds again instead -- those no re-entry changes,
          and those recomputable from them -- is the plan's.  Of a value kept
@@ -1334,7 +1326,7 @@ and rewrite_enter_stmts ctx stmts =
               ( match binder_of ctx v with
               | Some b -> List.exists (Core_binder.equal b) recomputed || respells ctx v
               | None -> true )
-              && match st with Sasgn (_, _, e) -> calls_nothing e | _ -> false
+              && match st with Bind_variable (_, _, e) -> calls_nothing e | _ -> false
             in
             if not (List.for_all rebindable rebuilt) then
               Probe.violation "frame plan"
@@ -1358,10 +1350,10 @@ and rewrite_enter_stmts ctx stmts =
         in
         List.map (fun x -> Option.cata passed false (binder_of ctx x)) cont_vars
       in
-      let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
+      let cont_saved = List.map (fun cid -> Local cid) cont_vars in
       (* Each kept at the type its local was declared at: the binder's. *)
       let cont_types = infer_saved_types tparams env cont_saved in
-      if Probe.checking () && List.exists (function Tunresolved | Tauto -> true | _ -> false) cont_types then
+      if Probe.checking () && List.exists (function (Obligation Unresolved_type) | Auto -> true | _ -> false) cont_types then
         Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
       let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
       let field_names = derive_field_names cont_saved in
@@ -1372,8 +1364,8 @@ and rewrite_enter_stmts ctx stmts =
       let rest_env =
         let bound =
           match (tgt, cast) with
-          | Declare (Tauto, _), None -> [(id, ctx.er_result_ty)]
-          | Declare (ty, _), _ when ty <> Tauto -> [(id, ty)]
+          | Declare (Auto, _), None -> [(id, ctx.er_result_ty)]
+          | Declare (ty, _), _ when ty <> Auto -> [(id, ty)]
           | _ -> []
         in
         bound @ make_cont_env cont_vars cont_types env
@@ -1381,7 +1373,7 @@ and rewrite_enter_stmts ctx stmts =
       (* When tgt is Existing (a bare assignment), the variable was declared
          in the CraneEnter handler scope and does not exist in the CraneCont handler
          scope.  Promote to [auto] so the handler declares it. *)
-      let handler_ty = match tgt with Existing -> Declare (Tauto, None) | t -> t in
+      let handler_ty : binding = match tgt with Existing -> Declare (Auto, None) | t -> t in
       let remat_stmts = List.map snd remat in
       (* A variable the rest assigns before reading it was declared in the
          scope the call was made in, which the handler is not: its first
@@ -1390,11 +1382,11 @@ and rewrite_enter_stmts ctx stmts =
         let declared = ref [] in
         List.map
           (function
-            | Sasgn (v, Existing, e)
+            | Bind_variable (v, Existing, e)
               when (not (List.exists (Id.equal v) !declared)) && List.mem_assoc v env ->
               declared := v :: !declared;
-              Sasgn (v, Declare (List.assoc v env, None), e)
-            | (Sasgn (v, Declare _, _) | Sdecl (v, _, _)) as s ->
+              Bind_variable (v, Declare (List.assoc v env, None), e)
+            | (Bind_variable (v, Declare _, _) | Declare (v, _, _)) as s ->
               declared := v :: !declared;
               s
             | s -> s )
@@ -1408,7 +1400,7 @@ and rewrite_enter_stmts ctx stmts =
                   | Declare_static _ -> (id, None) :: ctx.er_binders);
                er_aliased =
                  List.fold_left aliased_after ctx.er_aliased
-                   (bindings @ remat_stmts @ [Sasgn (id, handler_ty, CPPvar id_result)]) }
+                   (bindings @ remat_stmts @ [Bind_variable (id, handler_ty, Local id_result)]) }
              rest)
       in
       (* The handler restores what it saved and rebuilds what it did not,
@@ -1419,14 +1411,14 @@ and rewrite_enter_stmts ctx stmts =
         let read_by_remat = List.concat_map free_vars_stmt remat_stmts in
         List.partition
           (function
-            | Sasgn (v, _, _) ->
+            | Bind_variable (v, _, _) ->
               (not (Mlutil.is_temporary_id v)) || List.exists (Id.equal v) read_by_remat
             | _ -> true )
           bindings
       in
       let handler =
         early @ remat_stmts @ late
-        @ (Sasgn (id, handler_ty, result (CPPmove (CPPvar id_result))) :: rest_processed)
+        @ (Bind_variable (id, handler_ty, result (Move (Local id_result))) :: rest_processed)
       in
       (* A local the frame keeps is read for the last time where it is
          saved, unless the call the frame is saved for reads it, which the
@@ -1490,13 +1482,13 @@ and rewrite_enter_stmts ctx stmts =
             if Probe.checking () && (not pointer) && owned cid && read_by_call cid = Some false && not planned then
               Probe.violation "frame save"
                 (Pp.str "a frame save the plan decides keeps a local the C++ reading would move");
-            if planned then CPPmove (CPPvar cid) else CPPvar cid )
+            if planned then Move (Local cid) else Local cid )
           cont_vars pointers
       in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
         ~saved_exprs:cont_saved ~env ~handler ~pointers;
       [
-        make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_conv));
+        make_stack_push (Local_aggregate {struct_ = Id.of_string call_name; type_args = []; values = saved_conv});
         make_stack_push enter;
       ]
     in
@@ -1510,7 +1502,7 @@ and rewrite_enter_stmts ctx stmts =
        by the call, and the handler casts its result. *)
     let cast, called =
       match e with
-      | CPPany_cast (ty, called) -> (Some ty, called)
+      | Any_cast (ty, called) -> (Some ty, called)
       | _ -> (None, e)
     in
     let call = if n_calls = 1 then check called else None in
@@ -1518,7 +1510,7 @@ and rewrite_enter_stmts ctx stmts =
     | Some true, Some cs ->
       ctx.er_entered ~resumes:true called;
       make_cont_handler ~cast (make_enter_for ctx ~called cs)
-    | Some false, None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest
+    | Some false, None -> Bind_variable (id, tgt, e) :: rewrite_enter_stmts ctx rest
     | Some _, _ ->
       resume_violation ();
       raise (Not_linearisable resume_disagreement)
@@ -1527,55 +1519,55 @@ and rewrite_enter_stmts ctx stmts =
       raise (Not_linearisable no_resume_plan) )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
-     so the recursive branch captures it via the Sasgn::rest CraneCont pattern while
+     so the recursive branch captures it via the Bind_variable::rest CraneCont pattern while
      the non-recursive branch processes it inline.
-     Non-recursive branches wrap [rest] in Sblock to prevent name collisions
-     with bindings generated by Scustom_case destructuring in the branch. *)
-  | Sif (cond, then_br, else_br) :: rest
+     Non-recursive branches wrap [rest] in Block to prevent name collisions
+     with bindings generated by custom match destructuring in the branch. *)
+  | If {condition = cond; then_ = then_br; else_ = else_br} :: rest
       when rest <> []
         && count_calls_expr check cond = 0
         && (count_calls_stmts check then_br > 0
             || count_calls_stmts check else_br > 0) ->
     let merge_rest br =
       if count_calls_stmts check br > 0 then br @ rest
-      else br @ [Sblock rest]
+      else br @ [Block rest]
     in
     rewrite_enter_lambda_return ctx
-      (Sif (cond, merge_rest then_br, merge_rest else_br))
+      (If {condition = cond; then_ = merge_rest then_br; else_ = merge_rest else_br})
 
-  | Scustom_case (ty, scrut, tyargs, branches, err) :: rest
+  | Custom_match ({scrutinee = scrut; branches; _} as m) :: rest
       when rest <> []
         && count_calls_expr check scrut = 0
-        && List.exists (fun (_, _, body) -> count_calls_stmts check body > 0)
+        && List.exists (fun (b : custom_branch) -> count_calls_stmts check b.body > 0)
              branches ->
     let merged =
-      List.map (fun (ps, rty, body) ->
-        if count_calls_stmts check body > 0 then (ps, rty, body @ rest)
-        else (ps, rty, body @ [Sblock rest]))
+      List.map (fun (b : custom_branch) ->
+        if count_calls_stmts check b.body > 0 then {b with body = b.body @ rest}
+        else {b with body = b.body @ [Block rest]})
         branches
     in
     rewrite_enter_lambda_return ctx
-      (Scustom_case (ty, scrut, tyargs, merged, err))
+      (Custom_match {m with branches = merged})
 
-  | Smatch (scrut, branches, default) :: rest
+  | Match (scrut, branches, default) :: rest
       when rest <> []
         && List.exists
-             (fun br -> count_calls_stmts check br.smb_body > 0)
+             (fun (br : branch) -> count_calls_stmts check br.body > 0)
              branches ->
     let merged_brs =
-      List.map (fun br ->
-        if count_calls_stmts check br.smb_body > 0
-        then { br with smb_body = br.smb_body @ rest }
-        else { br with smb_body = br.smb_body @ [Sblock rest] })
+      List.map (fun (br : branch) ->
+        if count_calls_stmts check br.body > 0
+        then { br with body = br.body @ rest }
+        else { br with body = br.body @ [Block rest] })
         branches
     in
     let merged_default = Option.map (fun d -> d @ rest) default in
     rewrite_enter_lambda_return ctx
-      (Smatch (scrut, merged_brs, merged_default))
+      (Match (scrut, merged_brs, merged_default))
 
   | stmt :: rest ->
     ( match stmt with
-    | Sasgn (id, tgt, e) when Probe.checking () && planned_resume ctx id tgt e = Some true ->
+    | Bind_variable (id, tgt, e) when Probe.checking () && planned_resume ctx id tgt e = Some true ->
       resume_violation ()
     | _ -> () );
     (* Extend the environment with any variable bound by this statement so
@@ -1584,25 +1576,25 @@ and rewrite_enter_stmts ctx stmts =
        is defined here and then used as the callee in a continuation. *)
     let updated_env =
       match stmt with
-      | Sasgn (id, Declare (Tauto, _), CPPlambda
-        { cl_params = params;
-          cl_ret = ret_ty_opt;
+      | Bind_variable (id, Declare (Auto, _), Lambda
+        { params = params;
+          return_type = ret_ty_opt;
           _ }) ->
         let param_types =
-          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
+          List.rev_map (fun (t, _) -> strip_ref_and_const_type t) (List.rev params)
         in
         let ret_ty = match ret_ty_opt with
-          | Some t when t <> Tvoid -> t
-          | _ -> Tvoid
+          | Some t when t <> Void -> t
+          | _ -> Void
         in
-        (id, Tfun (param_types, ret_ty)) :: ctx.er_env
-      | Sasgn (id, Declare (ty, _), _) -> (id, ty) :: ctx.er_env
-      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _, _) -> (id, ty) :: ctx.er_env
+        (id, Function (param_types, ret_ty)) :: ctx.er_env
+      | Bind_variable (id, Declare (ty, _), _) -> (id, ty) :: ctx.er_env
+      | Declare (id, ty, _) | Foreign_block {custom = _; template = _; result = id; result_type = ty; values = _; type_args = _; binder = _} -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
     let here =
       match stmt, rest with
-      | Sdecl (id, _, _), Sasgn (id', Existing, e) :: _ when Id.equal id id' && count_calls_expr check e >= 1 ->
+      | Declare (id, _, _), Bind_variable (id', Existing, e) :: _ when Id.equal id id' && count_calls_expr check e >= 1 ->
         (* The call assigning [id] ends this handler: all that follows it,
            every use of [id], runs in the continuation's, which declares
            [id] itself. *)
@@ -1621,17 +1613,17 @@ and rewrite_enter_stmts ctx stmts =
 (** Rewrite a single non-tail recursive statement for the Enter handler.
 
     Thin wrapper around {!rewrite_enter_lambda_return} that collapses a
-    multi-statement result into a single [Sblock]. This is the entry point used
+    multi-statement result into a single [Block]. This is the entry point used
     by {!transform_nontail} when rewriting each top-level body statement for the
     Enter handler of the frame-based loop.
 
     @param ctx  Enter-rewrite context (see {!enter_rewrite_ctx})
     @param stmt The single statement to rewrite
-    @return A single statement (possibly [Sblock] wrapping multiple results) *)
+    @return A single statement (possibly [Block] wrapping multiple results) *)
 let rewrite_enter_stmt ctx stmt =
   match rewrite_enter_lambda_return ctx stmt with
   | [s] -> s
-  | ss -> Sblock ss
+  | ss -> Block ss
 
 (** {3 Shared helpers for transform_nontail}
 
@@ -1646,20 +1638,17 @@ let rewrite_enter_stmt ctx stmt =
 let make_stack_init varying_params =
   let move_if_needed ty v =
     match ty with
-    | Tconst _ | Tref _ -> v
-    | t when not (copies_cheaply t) -> CPPmove v
+    | Const _ | Reference _ -> v
+    | t when not (copies_cheaply t) -> Move v
     | _ -> v
   in
   make_stack_push
-    (CPPstruct_id
-       ( id_enter,
-         [],
-         List.map
+    (Local_aggregate {struct_ = id_enter; type_args = []; values = List.map
            (fun p ->
-             let v = CPPvar p.fp_name in
-             if p.fp_pointer_safe then CPPunop (Uaddr, v)
+             let v = Local p.fp_name in
+             if p.fp_pointer_safe then Unary (Address_of, v)
              else move_if_needed p.fp_ty v )
-           varying_params ))
+           varying_params})
 
 (** Generate parameter bindings that read frame fields into locals.
     For trivially copyable types (scalars, pointers, enums), produces a copy.
@@ -1675,27 +1664,27 @@ let make_param_copies varying_params =
   (* Helper: choose the right binding expression for a frame field access. *)
   let bind_field id ty =
     let stripped = strip_ref_type ty in
-    let f = CPPaccess (Adot, CPPvar (id_f), id) in
+    let f = Access (Dot, Local (id_f), id) in
     match stripped with
-    | Tconst inner when not (is_trivially_copyable_type inner) ->
+    | Const inner when not (is_trivially_copyable_type inner) ->
       (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
          than cloning. *)
-      Sasgn (id, Declare (Tref (Lvalue, Tconst inner), None), f)
-    | Tvar _ ->
+      Bind_variable (id, Declare (Reference (Lvalue, Const inner), None), f)
+    | Variable _ ->
       (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
          deduced as a reference type, [F0 f = std::move(_f.f)] would be
          ill-formed — a non-const lvalue reference cannot bind to an rvalue.
          Use [auto] so the declared type is always deduced as a value type,
          regardless of whether [F0] was a reference or function type. *)
-      Sasgn (id, Declare (Tauto, None), CPPmove f)
+      Bind_variable (id, Declare (Auto, None), Move f)
     | t when not (copies_cheaply t) ->
       (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
          so the field is safe to consume. *)
-      Sasgn (id, Declare (t, None), CPPmove f)
+      Bind_variable (id, Declare (t, None), Move f)
     | _ ->
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
-      Sasgn (id, Declare (stripped, None), f)
+      Bind_variable (id, Declare (stripped, None), f)
   in
   List.map
     (fun {fp_name = id; fp_ty = ty; fp_pointer_safe} ->
@@ -1703,19 +1692,19 @@ let make_param_copies varying_params =
       else
         match borrowed_value_param_pointee ty with
         | Some t ->
-          Sasgn (id, Declare (Tref (Lvalue, Tconst t), None),
-                 CPPderef (CPPaccess (Adot, CPPvar (id_f), id)))
+          Bind_variable (id, Declare (Reference (Lvalue, Const t), None),
+                 Dereference (Access (Dot, Local (id_f), id)))
         | None ->
           let stripped = strip_ref_type ty in
-          Sasgn (id, Declare (stripped, None),
-                 CPPaccess (Adot, CPPvar (id_f), id)) )
+          Bind_variable (id, Declare (stripped, None),
+                 Access (Dot, Local (id_f), id)) )
     varying_params
 
 (** Rewrite frame push expressions so that pointer-safe positions use
     [&x] (for variables) or [crane_raw(x)] (for dereferences) instead of
     deep-copying.  Handles both [CraneEnter] and [CraneContN] pushes.
 
-    A [CPPvar x] at a pointer-safe position is looked up among the bindings
+    A [Local x] at a pointer-safe position is looked up among the bindings
     in scope where the push stands: if [x = *(sp)], emit [crane_raw(sp)]
     rather than [&x] (which would be a dangling pointer to a local).  Only
     those in scope: another handler, or another branch, may bind the same
@@ -1723,7 +1712,7 @@ let make_param_copies varying_params =
 
     @param frame_pointer_safe [(frame_name, bool list)] mapping
     @param frame_sptr  [(frame_name, bool list)] — positions where the
-           original saved type is [Tshared_ptr _]. At these positions, emit
+           original saved type is [Shared_pointer _]. At these positions, emit
            [crane_raw(...)] instead of [&] to extract the raw pointer. *)
 let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
   if frame_pointer_safe = [] then stmts
@@ -1733,9 +1722,9 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
     let adjust_arg binding_env safe is_uptr arg =
       if not safe then arg
       else
-      let arg = match arg with CPPmove a -> a | a -> a in
+      let arg = match arg with Move a -> a | a -> a in
       let raw_of e =
-        CPPfun_call (call_opaque, CPPrt Crane_rt.Raw, of_reversed ([e]))
+        Call (call_opaque, Runtime Crane_rt.Raw, [e])
       in
       if is_uptr then
         (* If the argument is a local variable loaded as a const-reference from a
@@ -1743,48 +1732,48 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
            take its address (&x) rather than extracting a raw pointer from a
            non-pointer local. *)
         (match arg with
-         | CPPvar x ->
+         | Local x ->
            (match List.assoc_opt x binding_env with
-            | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
+            | Some (Dereference (Access (Dot, Local f, _)))
               when Id.equal f id_f ->
-              CPPunop (Uaddr, arg)
+              Unary (Address_of, arg)
             | _ ->
               raw_of arg)
          | _ -> raw_of arg)
       else
         match arg with
-        | CPPderef (CPPvar x) ->
+        | Dereference (Local x) ->
           (match List.assoc_opt x binding_env with
-           | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
+           | Some (Dereference (Access (Dot, Local f, _)))
              when Id.equal f id_f ->
-             CPPunop (Uaddr, CPPvar x)
-           | Some (CPPderef sp) ->
+             Unary (Address_of, Local x)
+           | Some (Dereference sp) ->
              raw_of sp
            | _ ->
-             raw_of (CPPvar x))
-        | CPPderef inner ->
+             raw_of (Local x))
+        | Dereference inner ->
           raw_of inner
-        | CPPvar x ->
+        | Local x ->
           (match List.assoc_opt x binding_env with
-           | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
+           | Some (Dereference (Access (Dot, Local f, _)))
              when Id.equal f id_f ->
-             CPPunop (Uaddr, arg)
-           | Some (CPPderef sp) ->
+             Unary (Address_of, arg)
+           | Some (Dereference sp) ->
              raw_of sp
            (* A copy the handler took out of its frame dies with the handler,
               and the frame pushed would point at it. *)
-           | Some (CPPmove (CPPaccess (Adot, CPPvar f, _)) | CPPaccess (Adot, CPPvar f, _)) when Id.equal f id_f ->
+           | Some (Move (Access (Dot, Local f, _)) | Access (Dot, Local f, _)) when Id.equal f id_f ->
              raise (Not_linearisable "a frame would point at a copy its handler took out of the frame it popped")
-           | _ -> CPPunop (Uaddr, arg))
+           | _ -> Unary (Address_of, arg))
         | _ -> arg
     in
     (* [crane_raw(x)] of a local read through a pointer the frame saved --
        [const T &x = *_f.field] -- is that pointer. *)
     let saved_pointer binding_env arg =
       match arg with
-      | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [CPPvar x]}) -> (
+      | Call (_, Runtime Crane_rt.Raw, [Local x]) -> (
         match List.assoc_opt x binding_env with
-        | Some (CPPderef (CPPaccess (Adot, CPPvar f, _) as field)) when Id.equal f id_f -> field
+        | Some (Dereference (Access (Dot, Local f, _) as field)) when Id.equal f id_f -> field
         | _ -> arg )
       | _ -> arg
     in
@@ -1792,12 +1781,12 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
       | [] -> []
       | s :: rest ->
         let s' = on_stmt env s in
-        let env = match s with Sasgn (id, _, e) -> (id, e) :: env | _ -> env in
+        let env = match s with Bind_variable (id, _, e) -> (id, e) :: env | _ -> env in
         s' :: on_stmts env rest
     and on_stmt env = function
-      | Sexpr (CPPfun_call (_, callee, {rev = [CPPstruct_id (name, targs, args)]})) -> (
+      | Expression (Call (_, callee, [Local_aggregate {struct_ = name; type_args = targs; values = args}])) -> (
         let args = List.map (saved_pointer env) args in
-        let push args = Sexpr (CPPfun_call (call_opaque, callee, of_reversed [CPPstruct_id (name, targs, args)])) in
+        let push args = Expression (Call (call_opaque, callee, [Local_aggregate {struct_ = name; type_args = targs; values = args}])) in
         match lookup (Id.to_string name) with
         | Some flags when List.length args = List.length flags ->
           let uptr_flags = match lookup_uptr (Id.to_string name) with
@@ -1810,37 +1799,37 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
     in
     on_stmts [] stmts
 
-(** Rewrite [Smatch] nodes in [stmts] whose scrutinee is a value-type accessor
+(** Rewrite [Match] nodes in [stmts] whose scrutinee is a value-type accessor
     [param.v()] for any [param] in [owned_names], marking the scrutinee owned
     so that the printer emits [param.v_mut()] and [auto& [...]] structured
     bindings.  This enables [std::move] of child [shared_ptr] fields when the
     parameter was moved into the handler (not borrowed).
 
     Does not recurse into lambda bodies — only into statement-level nesting
-    ([Sblock], [Sif], [Swhile], [Smatch] branch bodies, etc.). *)
+    ([Block], [If], [While], [Match] branch bodies, etc.). *)
 let make_owned_param_matches owned_names stmts =
   let rec rewrite_stmts ss = List.map rewrite_stmt ss
   and rewrite_stmt s =
     match s with
-    | Smatch (scrut, branches, default) ->
+    | Match (scrut, branches, default) ->
       let is_owned_param =
         (* Value-type inductives:
-           scrutinee = CPPfun_call (CPPaccess (Adot, id, "v"), []) *)
-        match scrut.sc_expr with
-        | CPPfun_call (_, CPPaccess (Adot, CPPvar id, v_id), {rev = []})
+           scrutinee = Call (Access (Dot, id, "v"), []) *)
+        match scrut.expr with
+        | Call (_, Access (Dot, Local id, v_id), [])
           when Id.equal v_id id_v ->
           List.exists (Id.equal id) owned_names
         | _ -> false
       in
-      Smatch
-        ( { scrut with sc_owned = scrut.sc_owned || is_owned_param },
+      Match
+        ( { scrut with owned = scrut.owned || is_owned_param },
           List.map
-            (fun br -> { br with smb_body = rewrite_stmts br.smb_body })
+            (fun (br : branch) -> { br with body = rewrite_stmts br.body })
             branches,
           Option.map rewrite_stmts default )
     | s ->
       (* Recurse into statement-level nesting.  [Fun.id] for the expression
-         mapper ensures we never descend into [CPPlambda] bodies. *)
+         mapper ensures we never descend into [Lambda] bodies. *)
       map_stmt Fun.id rewrite_stmt Fun.id s
   in
   rewrite_stmts stmts
@@ -1855,56 +1844,56 @@ let make_owned_param_matches owned_names stmts =
     [_result = std::move(l)], is such a move. *)
 let own_moved_bindings body =
   let rec go = function
-    | Sasgn (id, Declare (Tref (Lvalue, Tconst t), None), (CPPaccess (Adot, CPPvar f, field) as read)) :: rest
+    | Bind_variable (id, Declare (Reference (Lvalue, Const t), None), (Access (Dot, Local f, field) as read)) :: rest
       when Id.equal f id_f
-           && body_exists (function CPPmove (CPPvar x) -> Id.equal x id | _ -> false) rest
+           && body_exists (function Move (Local x) -> Id.equal x id | _ -> false) rest
            && not
                 (body_exists
-                   (function CPPaccess (Adot, CPPvar f', field') -> Id.equal f' id_f && Id.equal field' field | _ -> false)
+                   (function Access (Dot, Local f', field') -> Id.equal f' id_f && Id.equal field' field | _ -> false)
                    rest ) ->
-      Sasgn (id, Declare (t, None), CPPmove read) :: go rest
+      Bind_variable (id, Declare (t, None), Move read) :: go rest
     | s :: rest -> s :: go rest
     | [] -> []
   in
   go body
 
-(** Build one branch of the frame-dispatch [Smatch].
+(** Build one branch of the frame-dispatch [Match].
 
     The loop variable [_frame] is the scrutinee; the frame struct type is
-    represented as [Tid_external name] (avoids the struct-name qualification
-    that [Tid] would add); [_f] is the frame, moved off it, that gives the
+    represented as [External name] (avoids the struct-name qualification
+    that [Named] would add); [_f] is the frame, moved off it, that gives the
     handler body access to the saved frame fields ({!own_moved_bindings}).
 
     @param frame_name Name of the frame struct (e.g. [CraneEnter], [CraneCont1])
     @param body       Handler body statements
-    @return An [smatch_branch] for use under {!frame_scrutinee} *)
-let make_frame_branch frame_name body =
-  { smb_ctor_type = Tid_external (frame_name, []);
-    smb_var = Some (id_f);
-    smb_field_bindings = [];
-    smb_extra_conds = [];
-    smb_body = own_moved_bindings body }
+    @return A branch for use under {!frame_scrutinee} *)
+let make_frame_branch frame_name body : branch =
+  { ctor_type = External (frame_name, []);
+    var = Some (id_f);
+    field_bindings = [];
+    extra_conditions = [];
+    body = own_moved_bindings body }
 
 (** The scrutinee of the frame-dispatch match: the loop variable [_frame],
     owned (it was moved off the stack) and held as a variant. *)
-let frame_scrutinee =
-  { sc_expr = CPPvar id_frame;
-    sc_access = Aarrow;
-    sc_owned = true;
-    sc_flat = false }
+let frame_scrutinee : scrutinee =
+  { expr = Local id_frame;
+    access = Arrow;
+    owned = true;
+    flat = false }
 
 (** Generate the while-loop body and surrounding boilerplate for the
     frame-dispatch loop.  Each iteration moves the top frame into a local,
-    pops the stack, then dispatches via an [Smatch] if/else-if chain.
+    pops the stack, then dispatches via an [Match] if/else-if chain.
 
     @param struct_defs The struct definitions ([CraneEnter], [CraneContN], etc.)
     @param ret_ty      Return type for the [_result] declaration
     @param init_push   The initial stack-push statement
-    @param branches    One [smatch_branch] per frame type, in dispatch order
+    @param branches    One [branch] per frame type, in dispatch order
     @return Complete statement list for the loopified function body *)
 let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches ~frame_names =
-  let result_decl = Sdecl_init (id_result, ret_ty) in
-  let frame_ty = Tid_external (Id.to_string id_Frame, []) in
+  let result_decl = Declare_value_initialized (id_result, ret_ty) in
+  let frame_ty = External (Id.to_string id_Frame, []) in
   (* [crane::small_vector] rather than [std::vector]: the frame stack is only
      as deep as the recursion it replaced, so for the overwhelming majority of
      calls it never exceeds the inline capacity.  A [std::vector] with
@@ -1913,24 +1902,24 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
      so that allocation is a third of all allocations in a comparison-heavy
      workload. *)
   let vector_ty =
-    Tid_external (Crane_rt.small_vector, [frame_ty])
+    External (Crane_rt.small_vector, [frame_ty])
   in
   let stack_id = id_stack in
-  let stack_decl = Sdecl (stack_id, vector_ty, None) in
+  let stack_decl = Declare (stack_id, vector_ty, None) in
   (* An exhaustive if/else-if chain; no wildcard needed, since the variant can
      only hold the listed frame types. *)
-  let dispatch_stmt = Smatch (frame_scrutinee, branches, None) in
+  let dispatch_stmt = Match (frame_scrutinee, branches, None) in
   let loop_body =
     [
-      Sasgn (id_frame, Declare (frame_ty, None),
-             CPPmove
-               (CPPfun_call
-                  (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
-                              id_back), of_reversed [])));
-      Sexpr
-        (CPPfun_call
-           (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
-                       id_pop_back), of_reversed []));
+      Bind_variable (id_frame, Declare (frame_ty, None),
+             Move
+               (Call
+                  (call_opaque, Access (Dot, Local (id_stack),
+                              id_back), [])));
+      Expression
+        (Call
+           (call_opaque, Access (Dot, Local (id_stack),
+                       id_pop_back), []));
       dispatch_stmt;
     ]
   in
@@ -1947,14 +1936,14 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       result_decl;
       stack_decl;
       init_push;
-      Scomment loop_comment;
-      Swhile
-        (CPPunop (Unot,
-                  CPPfun_call
-                    (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
-                                id_empty), of_reversed [])),
+      Comment loop_comment;
+      While
+        (Unary (Not,
+                  Call
+                    (call_opaque, Access (Dot, Local (id_stack),
+                                id_empty), [])),
          loop_body);
-      Sreturn (Some (CPPvar (id_result)));
+      Return (Some (Local (id_result)));
     ]
 
 (* Enclosing-scope variables referenced anywhere inside [body], in order of
@@ -1969,9 +1958,9 @@ let collect_env_vars env body =
   in
   let rec fe e =
     (match e with
-     | CPPvar id -> add id
-     | CPPlambda
-       { cl_body = lbody;
+     | Local id -> add id
+     | Lambda
+       { body = lbody;
          _ } -> List.iter (fun s -> ignore (fs s)) lbody
      | _ -> ());
     map_expr fe Fun.id Fun.id e
@@ -1992,10 +1981,10 @@ let collect_env_vars env body =
             by [std::declval]-based equivalents safe at struct scope *)
 let rec rewrite_field_access_for_decltype env expr =
   match expr with
-  | CPPfun_call (_, CPPlambda
-    { cl_params = params;
-      cl_ret = rt;
-      cl_body = body;
+  | Call (_, Lambda
+    { params = params;
+      return_type = rt;
+      body = body;
       _ }, args)
     when body <> [] && collect_env_vars env body <> [] ->
     (* An immediately-invoked lambda -- Crane's encoding of a local [fix] used
@@ -2019,34 +2008,33 @@ let rec rewrite_field_access_for_decltype env expr =
     let extra =
       List.map
         (fun id ->
-          (Tref (Lvalue, strip_ref_type (Option.get (lookup_var_type env id))), Some id))
+          (Reference (Lvalue, strip_ref_type (Option.get (lookup_var_type env id))), Some id))
         free
     in
-    (* Both lambda parameters and call arguments are stored reversed relative
-       to their printed order, so the new trailing entries go at the head of
-       each list -- and in the same orientation, so the two line up. *)
-    let extra_args = List.map (fun (ty, _) -> CPPdeclval ty) extra in
-    CPPfun_call
-      (call_opaque, CPPlambda
-        { cl_params = of_reversed (extra @ to_reversed params);
-          cl_tparams = [];
-          cl_binders = [];
-          cl_fixpoint = None;
-          cl_moved = [];
-          cl_ret = rt;
-          cl_body = body;
-          cl_capture = Immediate },
-        of_reversed
+    (* The new entries trail the parameters and the arguments alike, so the
+       two line up. *)
+    let extra_args = List.map (fun (ty, _) -> Declval ty) extra in
+    Call
+      (call_opaque, Lambda
+        { params = List.rev (extra @ List.rev params);
+          type_params = [];
+          binders = [];
+          fixpoint = None;
+          moved = [];
+          return_type = rt;
+          body = body;
+          capture = Runs_in_place },
+        List.rev
           ( extra_args
-          @ List.map (rewrite_field_access_for_decltype env) (to_reversed args)
+          @ List.map (rewrite_field_access_for_decltype env) (List.rev args)
           ) )
-  | CPPvar id ->
+  | Local id ->
     ( match lookup_var_type env id with
     | Some ty ->
       let base_ty = strip_ref_type ty in
-      CPPdeclval (Tref (Lvalue, base_ty))
+      Declval (Reference (Lvalue, base_ty))
     | None -> expr )
-  | CPPget (CPPvar id, field) ->
+  | Member (Local id, field) ->
     (* Dot access on a variable.  Strip const to get the struct type for
        std::declval. *)
     ( match lookup_var_type env id with
@@ -2054,31 +2042,31 @@ let rec rewrite_field_access_for_decltype env expr =
       let base_ty = strip_ref_type ty in
       let struct_ty =
         match base_ty with
-        | Tconst t -> t
+        | Const t -> t
         | t -> t
       in
-      CPPaccess (Adot, CPPdeclval (Tref (Lvalue, struct_ty)), field)
+      Access (Dot, Declval (Reference (Lvalue, struct_ty)), field)
     | None -> expr )
-  | CPPaccess (Aarrow, CPPvar id, field) ->
-    (* Arrow access on a pointer variable — used by Smatch bindings
+  | Access (Arrow, Local id, field) ->
+    (* Arrow access on a pointer variable — used by Match bindings
        ([_m->d_field] from [std::get_if]) and loopify frame dispatch. *)
     ( match lookup_var_type env id with
     | Some ty ->
       let base_ty = strip_ref_type ty in
       let pointee_ty =
         match base_ty with
-        | Tptr (Tconst t) | Tptr t -> t
+        | Pointer (Const t) | Pointer t -> t
         | t -> t
       in
-      CPPaccess (Adot, CPPdeclval (Tref (Lvalue, pointee_ty)), field)
+      Access (Dot, Declval (Reference (Lvalue, pointee_ty)), field)
     | None -> expr )
-  | CPPlambda ({cl_body = body; _} as l) ->
+  | Lambda ({body = body; _} as l) ->
     (* Rewrite variables inside the lambda body to use std::declval, and remove
        any capture-default so the lambda is valid inside decltype (which is an
        unevaluated context where capture-defaults are not allowed in C++23). *)
     let fe = rewrite_field_access_for_decltype env in
     let rec fs stmt = map_stmt fe fs Fun.id stmt in
-    CPPlambda {l with cl_body = List.map fs body; cl_capture = Immediate}
+    Lambda {l with body = List.map fs body; capture = Runs_in_place}
   | _ ->
     map_expr (rewrite_field_access_for_decltype env) Fun.id Fun.id expr
 
@@ -2093,7 +2081,7 @@ let rec rewrite_field_access_for_decltype env expr =
             [std::declval] for any in-scope variables *)
 let make_decltype_ty env expr =
   let expr = rewrite_field_access_for_decltype env expr in
-  Tdecay (Texpr_type expr)
+  Decay (Type_of expr)
 
 (** Fix bindings in a continuation frame handler for fields that became
     pointer-safe ({!call_frame_info.cf_pointers}).
@@ -2114,7 +2102,7 @@ let make_decltype_ty env expr =
     [CraneContN{..., id, ...}] push arguments at pointer-safe positions to [&id],
     recovering the [const T*] that those frames expect.
 
-    Only processes top-level [Sasgn] statements in the handler body, which is
+    Only processes top-level [Bind_variable] statements in the handler body, which is
     all that [make_cont_bindings] generates.  Does not recurse into nested
     statement structures (inner lambdas, visitor branches, etc.).
 
@@ -2132,7 +2120,7 @@ let fix_handler_bindings field_names cf_ps handler =
   if ps_field_ids = [] then handler
   else
     let is_ps_field_access = function
-      | CPPaccess (Adot, CPPvar f, field_id)
+      | Access (Dot, Local f, field_id)
         when Id.equal f id_f ->
         List.exists (Id.equal field_id) ps_field_ids
       | _ -> false
@@ -2142,24 +2130,24 @@ let fix_handler_bindings field_names cf_ps handler =
       List.map
         (fun stmt ->
           match stmt with
-          | Sasgn (id, Declare (orig_ty, _), CPPmove e) when is_ps_field_access e ->
+          | Bind_variable (id, Declare (orig_ty, _), Move e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
-              | Tshared_ptr inner -> inner
+              | Shared_pointer inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty), None), CPPderef e)
-          | Sasgn (id, Declare (orig_ty, _), e) when is_ps_field_access e ->
+            Bind_variable (id, Declare (Reference (Lvalue, Const base_ty), None), Dereference e)
+          | Bind_variable (id, Declare (orig_ty, _), e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
-              | Tshared_ptr inner -> inner
+              | Shared_pointer inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty), None), CPPderef e)
+            Bind_variable (id, Declare (Reference (Lvalue, Const base_ty), None), Dereference e)
           | s -> s)
         handler
     in
-    (* Rewrite CPPderef(CPPvar x) → CPPvar x for remapped IDs.
+    (* Rewrite Dereference(Local x) → Local x for remapped IDs.
        After rebinding as [const T &x = *_f.field], any [*x] expression that
        previously dereferenced the shared_ptr is now a double-dereference of a
        reference, which is invalid.  Replace with [x] directly. *)
@@ -2167,7 +2155,7 @@ let fix_handler_bindings field_names cf_ps handler =
     else
       let rids = !remapped in
       let rec fe e = match e with
-        | CPPderef (CPPvar x) when List.exists (Id.equal x) rids -> CPPvar x
+        | Dereference (Local x) when List.exists (Id.equal x) rids -> Local x
         | e -> map_expr fe Fun.id Fun.id e
       in
       let rec fs s = map_stmt fe fs Fun.id s in
@@ -2282,7 +2270,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
            corpus has: under [CRANE_CHECK_IR] a violation. *)
         let unnameable_param =
           List.exists
-            (fun (_, ty) -> strip_ref_and_const_type ty = Tauto)
+            (fun (_, ty) -> strip_ref_and_const_type ty = Auto)
             ad.ad_params
         in
         let env = collect_type_env body @ params in
@@ -2335,7 +2323,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
   let env = params @ outer_env in
   (* A parameter that is a raw pointer already -- a method's receiver,
      [_self] -- takes a pointer at every entry. *)
-  let is_pointer_param (_, ty) = match ty with Tptr _ | Tconst (Tptr _) -> true | _ -> false in
+  let is_pointer_param (_, ty) = match ty with Pointer _ | Const (Pointer _) -> true | _ -> false in
   let entry_pointers = List.map2 ( || ) pointer_safe (List.map is_pointer_param params) in
   (* Of the adopted entry's parameters, those its frames hold by pointer:
      its parameters as the plan has them, of a type a pointer can stand for.
@@ -2352,7 +2340,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
       let dereferences = ref [] in
       let rec scan s =
         ( match s with
-        | Sasgn (id, Declare (ty, _), CPPderef _) when is_reference_type ty -> dereferences := id :: !dereferences
+        | Bind_variable (id, Declare (ty, _), Dereference _) when is_reference_type ty -> dereferences := id :: !dereferences
         | _ -> () );
         map_stmt Fun.id (fun s -> ignore (scan s); s) Fun.id s
       in
@@ -2363,7 +2351,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
             match check e with
             | Some cs when List.compare_lengths cs.cs_args entry_pointers = 0 ->
               List.exists2
-                (fun a pointer -> pointer && match a with CPPvar x | CPPmove (CPPvar x) -> Id.equal x id | _ -> false)
+                (fun a pointer -> pointer && match a with Local x | Move (Local x) -> Id.equal x id | _ -> false)
                 cs.cs_args entry_pointers
             | Some _ | None -> false )
           ad.ad_body
@@ -2513,14 +2501,14 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
      deduced from a [const T &] or a value and is never a reference. *)
   let frame_field_type ty =
     match ty with
-    | Tref (Forwarding, t) -> Tdecay (strip_ref_and_const_type t)
+    | Reference (Forwarding, t) -> Decay (strip_ref_and_const_type t)
     | ty -> strip_ref_and_const_type ty
   in
   let entry_fields ee =
     List.map
       (fun p ->
         match p.fp_pointer_safe, borrowed_value_param_pointee p.fp_ty with
-        | true, Some t -> (p.fp_name, Tptr (Tconst t))
+        | true, Some t -> (p.fp_name, Pointer (Const t))
         | _ -> (p.fp_name, frame_field_type p.fp_ty) )
       ee.ee_params
   in
@@ -2534,18 +2522,18 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     cf.cf_name ^ ":" ^ field_names_str
     ^ " resumes after recursive call, then processes rest."
   in
-  (* Find the first Sreturn expression in a lambda body, for return-type inference. *)
+  (* Find the first Return expression in a lambda body, for return-type inference. *)
   let rec extract_lambda_return_expr = function
     | [] -> None
-    | Sreturn (Some e) :: _ -> Some e
-    | Sif (_, then_body, else_body) :: rest ->
+    | Return (Some e) :: _ -> Some e
+    | If {condition = _; then_ = then_body; else_ = else_body} :: rest ->
       (match extract_lambda_return_expr then_body with
        | Some e -> Some e
        | None ->
          match extract_lambda_return_expr else_body with
          | Some e -> Some e
          | None -> extract_lambda_return_expr rest)
-    | Sblock stmts :: rest ->
+    | Block stmts :: rest ->
       (match extract_lambda_return_expr stmts with
        | Some e -> Some e
        | None -> extract_lambda_return_expr rest)
@@ -2556,14 +2544,14 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
       (fun ps {ss_ty = ty; ss_expr = expr; _} ->
         if ps then
           match ty with
-          | Tshared_ptr inner -> Tptr (Tconst inner)
-          | _ -> Tptr (Tconst (strip_ref_and_const_type ty))
+          | Shared_pointer inner -> Pointer (Const inner)
+          | _ -> Pointer (Const (strip_ref_and_const_type ty))
         else
           match ty with
-          | Tunresolved | Tauto ->
+          | (Obligation Unresolved_type) | Auto ->
             let inferred = infer_saved_type tparams cf.cf_env expr in
             (match inferred with
-            | None | Some Tauto ->
+            | None | Some Auto ->
               (* For lambda expressions whose return type can't be inferred
                  (e.g., a method call like a1_value.length()), generate
                  std::function<decltype(body_ret_expr)(params)> instead of
@@ -2572,17 +2560,17 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
                  different C++ types, so std::decay_t<decltype(lambda)> does
                  not work.  std::function accepts any callable with a
                  matching signature. *)
-              let base_expr = match expr with CPPmove e -> e | e -> e in
+              let base_expr = match expr with Move e -> e | e -> e in
               (match base_expr with
-               | CPPlambda {cl_params = params; cl_body = body; _} ->
+               | Lambda {params = params; body = body; _} ->
                  let param_types =
                    List.map (fun (ty, _) -> strip_ref_and_const_type ty)
-                     (to_reversed params)
+                     (List.rev params)
                  in
                  (match extract_lambda_return_expr body with
                   | Some ret_expr ->
                     let rewritten = rewrite_field_access_for_decltype cf.cf_env ret_expr in
-                    Tfun (param_types, Tdecay (Texpr_type rewritten))
+                    Function (param_types, Decay (Type_of rewritten))
                   | None -> make_decltype_ty cf.cf_env expr)
                | _ -> make_decltype_ty cf.cf_env expr)
             | Some ty -> ty)
@@ -2604,25 +2592,25 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
             (fun s ty -> (s.ss_field, ty))
             cf.cf_slots field_tys
         in
-        [Scomment (frame_description cf);
-         Sstruct_def (Id.of_string cf.cf_name, fields)])
+        [Comment (frame_description cf);
+         Local_struct (Id.of_string cf.cf_name, fields)])
       frames
   in
   let call_names = List.map (fun cf -> cf.cf_name) frames in
   let variant_tys =
-    List.map (fun ee -> Tid_external (ee_name ee, [])) emissions
-    @ List.map (fun name -> Tid_external (name, [])) call_names
+    List.map (fun ee -> External (ee_name ee, [])) emissions
+    @ List.map (fun name -> External (name, [])) call_names
   in
   let struct_defs =
     List.concat_map
       (fun ee ->
-        [Scomment
+        [Comment
            (ee_name ee
            ^ ": captures varying parameters for each recursive call.");
-         Sstruct_def (ee.ee_id, entry_fields ee)])
+         Local_struct (ee.ee_id, entry_fields ee)])
       emissions
     @ call_structs
-    @ [Susing (id_Frame, Tvariant (Inline_variant, variant_tys))]
+    @ [Local_type_alias (id_Frame, Variant (Inline, variant_tys))]
   in
   (* The machine is entered at its first entry point: that is the call the
      caller made. *)
@@ -2632,7 +2620,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     | [] -> CErrors.anomaly (Pp.str "loopify: frame machine with no entry point")
   in
   (* Identify varying params that are moved into the Enter handler (not passed
-     as pointers).  For these, the Smatch scrutinee should use [v_mut()] so
+     as pointers).  For these, the Match scrutinee should use [v_mut()] so
      that [shared_ptr] child fields are mutable and can be moved into the next
      [CraneEnter] frame (avoiding an unnecessary refcount bump).
 
@@ -2645,8 +2633,8 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
         if p.fp_pointer_safe then None
         else
           match strip_ref_type p.fp_ty with
-          | Tconst _ -> None  (* const-ref bind: not owned *)
-          | Tglob (r, _, _) when Table.is_coinductive r -> None
+          | Const _ -> None  (* const-ref bind: not owned *)
+          | Entity_application (r, _, _) when Table.is_coinductive r -> None
           | t when not (copies_cheaply t) -> Some p.fp_name
           | _ -> None )
       ee.ee_params

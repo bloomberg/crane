@@ -510,6 +510,9 @@ let lowered convert x =
 
 let lower d = lowered decl d
 let lower_stmt s = lowered stmt s
+let lower_expr e = lowered expr e
+let lower_template_parameters ps = lowered tparams ps
+let lower_member m = lowered member m
 
 let resolved resolve convert x =
   match resolve (convert x) with

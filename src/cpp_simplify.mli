@@ -22,3 +22,9 @@
 (** [transform_decl d]: [d] with every simplification above applied
     throughout its statements and expressions. *)
 val transform_decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
+
+(** [borrow_matches_on ids stmts]: [stmts] with every destructive match on
+    one of the locals [ids] made borrowing, and the moves out of the fields
+    such a match binds dropped.  Always sound: it only copies where it could
+    have moved. *)
+val borrow_matches_on : Names.Id.t list -> Cpp_ir.Lowered.Stmt.t list -> Cpp_ir.Lowered.Stmt.t list
