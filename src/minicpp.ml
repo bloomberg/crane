@@ -828,10 +828,6 @@ let inline_template s =
 
 let inline_shape ci = Option.map (fun t -> t.it_shape) ci.ci_inline
 
-let uninstantiated_mapping r =
-  CErrors.anomaly
-    Pp.(str "a mapping's application reached the printer uninstantiated: " ++ GlobRef.print r)
-
 let custom_match_text cm =
   match cm.cm_scrutinee with
   | Scrut_owned when Foreign_template.structured_binding cm.cm_template <> None ->

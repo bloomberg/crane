@@ -21,6 +21,9 @@
     text that repeats it. *)
 
 (** [transform_decl d] is [d] with each repeated argument of every
-    statement's unconditional calls bound once, to a fresh [_onceN] local
-    that names nothing else in [d]. *)
+    statement's unconditional calls bound once, to a fresh [_onceN] local:
+    one no body of [d] visited so far declares or reads.  A function's own
+    body is visited before anything nested in it, and a parameter its body
+    does not read is written unnamed, so nothing in scope at the binding
+    shares its name. *)
 val transform_decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t

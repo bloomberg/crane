@@ -760,7 +760,7 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Foreign ((Constant | Call), fr) -> pp_foreign ctx env [] fr
   | Foreign (Statements, fr) ->
     CErrors.anomaly Pp.(str "a block's statements written other than as the declaration they assign: " ++ GlobRef.print fr.custom)
-  | Entity (x, _, Some {inline = Some _; _}) -> Minicpp.uninstantiated_mapping x
+  | Entity (x, _, Some {inline = Some _; _}) -> Cpp_ir.Foreign.uninstantiated x
   | Method_value {method_; access; receiver; params; type_args} ->
     let names =
       match params with
@@ -824,7 +824,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     apply full_name
   (* A callee's text was instantiated as the call's callee, and a template's
      or a block's as the whole call ({!Cpp_erasure.instantiate_foreign}). *)
-  | Call (_, Entity (n, _, Some {inline = Some _; _}), _) -> Minicpp.uninstantiated_mapping n
+  | Call (_, Entity (n, _, Some {inline = Some _; _}), _) -> Cpp_ir.Foreign.uninstantiated n
   | Method_call {method_; access; receiver; type_args; args = method_args} ->
     pp_cpp_expr ctx env args receiver
     ++ str (pp_obj_access access)

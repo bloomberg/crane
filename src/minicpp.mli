@@ -477,8 +477,8 @@ and erase_shape =
 
     Translation knows the C++ types of every call it builds -- it has to, to
     decide boxing -- and used to drop them, leaving later passes to
-    reconstruct them from the untyped expression.  {!Loopify.infer_saved_type}
-    is what that reconstruction looked like for the result: a bottom-up guess
+    reconstruct them from the untyped expression.  Loopify's frame-type
+    inference was what that reconstruction looked like for the result: a bottom-up guess
     that fell back on matching the callee's *name string*.  The printer did
     the same for the parameters, re-reading the callee's ML type out of the
     front-end table and re-splitting its arrows.  Carrying the answers is
@@ -1149,13 +1149,6 @@ val inline_template : string -> inline_template
 
 (** The shape of [ci]'s replacement text, [None] where it is not inlined. *)
 val inline_shape : custom_info -> inline_shape option
-
-(** [uninstantiated_mapping r] is the anomaly for an application of [r]'s
-    mapping that places its arguments itself ({!Bare_callee}, {!Templated})
-    reaching a reader of settled declarations -- the printer, or what it
-    names: those are instantiated before ({!Cpp_erasure.instantiate_foreign}),
-    so meeting one means that pass was not run. *)
-val uninstantiated_mapping : GlobRef.t -> 'a
 
 (** The text a custom match is printed from: its template, binding by value
     where it holds its scrutinee so and the template is a structured binding

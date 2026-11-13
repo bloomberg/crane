@@ -20,11 +20,7 @@ let repeating_text : expr -> string option = function
   | Entity (_, _, Some {inline = Some {linear = false; text; _}; _}) -> Some text
   | _ -> None
 
-(* Whether [e] evaluates each of its operands whenever it is evaluated: not a
-   lambda, a conditional or a connective. *)
-let evaluates_operands : expr -> bool = function
-  | Lambda _ | Conditional _ | Binary ((And | Or), _, _) -> false
-  | _ -> true
+let evaluates_operands = Cpp_ir.Variables.evaluates_operands
 
 (* [e] with each argument it must evaluate once named, at every position [e]
    evaluates unconditionally; [bind x a] binds [x] to [a] ahead of [e], in

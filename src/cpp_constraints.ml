@@ -16,14 +16,7 @@ type parameters = Cpp_ir.Lowered.phase Template.parameters
 let iter_expr ~expr ~stmts e = Cpp_ir.Subterms.expr ~expr ~stmts e
 let iter_stmt ~expr ~stmts s = Cpp_ir.Subterms.stmt ~expr ~stmts s
 
-(** Whether [t] is the type variable named [id], under either spelling a
-    variable's head may have. *)
-let tvar_is id (t : ty) =
-  match t with
-  | Variable (Named n) -> Id.equal n id
-  | Variable (Index (i, name)) ->
-    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Cpp_ir.Type.positional_id i) id
-  | _ -> false
+let tvar_is = Cpp_ir.Type.is_variable_named
 
 (** The value parameters [body] only ever hands to a representation-tolerant
     helper: erased into storage ([crane_erase_fn]) or applied through

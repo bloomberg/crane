@@ -11,13 +11,13 @@ let without bound xs = List.filter (fun x -> not (mem x bound)) xs
 
 (** The variables an expression refers to without binding them, in the
     order they are met, repeated as often as they are met.  A call's
-    arguments are met last first; a [decltype] in a type is not read. *)
+    arguments are met first to last; a [decltype] in a type is not read. *)
 let rec free_in_expr : type p. p Expr.t -> Id.t list =
  fun e ->
   let expr = free_in_expr and many es = List.concat_map free_in_expr es in
   match e with
   | Local x -> [x]
-  | Call (_, f, args) -> expr f @ many (List.rev args)
+  | Call (_, f, args) -> expr f @ many args
   | Access_call (_, e, _, args) -> expr e @ many args
   | Method_call m -> expr m.receiver @ many m.args
   | Projection p -> expr p.record @ many p.args
@@ -142,7 +142,7 @@ let declared : type p. p Stmt.t list -> Id.t list =
     | _ -> () );
     Children.stmt visitor s
   and expr (e : p Expr.t) =
-    (match e with Lambda l -> List.iter (fun (_, x) -> Option.iter note x) (List.rev l.params) | _ -> ());
+    (match e with Lambda l -> List.iter (fun (_, x) -> Option.iter note x) l.params | _ -> ());
     Children.expr visitor e
   in
   List.iter stmt stmts;
@@ -160,6 +160,12 @@ let rec pure : type p. p Expr.t -> bool = function
   | Binary (o, a, b) -> o <> Assign && pure a && pure b
   | Unary (o, a) -> o <> Address_of && pure a
   | _ -> false
+
+(** Whether [e] evaluates each of its operands whenever it is evaluated: not
+    a lambda, a conditional or a connective. *)
+let evaluates_operands : type p. p Expr.t -> bool = function
+  | Lambda _ | Conditional _ | Binary ((And | Or), _, _) -> false
+  | _ -> true
 
 (** [lambda_needs_capture params body] is [(needs_capture, uses_this)]:
     whether a lambda of these parameters and this body names a variable it
