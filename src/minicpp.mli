@@ -1424,12 +1424,6 @@ val tvar_hint : tvar -> Id.t option
 (** The name a type variable is written under: its parameter's, or [T<i>]. *)
 val tvar_spelled : tvar -> Id.t
 
-(** [tvar_spelling i] is the name of the type variable at index [i] in a
-    declaration's parameter list; [tvar_id] is the same as an [Id.t].
-    Re-exported as {!Common.tvar_name} and {!Common.tvar_id}. *)
-val tvar_spelling : int -> string
-val tvar_id : int -> Names.Id.t
-
 (** [tvar_is id ty] is whether [ty] is the type variable [id].  A tvar whose
     head was never resolved to its parameter name answers to the generated
     spelling of its index as well. *)
@@ -1536,13 +1530,6 @@ val iter_expr_children :
 val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
-
-(** Whether a [TTfun] constraint states nothing the caller can be held to, and
-    so is dropped rather than printed: a rank-2 callback's result is not the
-    [std::any] the constraint would demand.  Read by the printer, which drops
-    the clause, and by the signature relaxations, which must not count a
-    dropped clause as a use of the variables it names. *)
-val tt_constraint_is_vacuous : cpp_type list -> cpp_type -> bool
 
 (** [fold_expr_children ~on_expr ~on_stmts acc e] folds over the immediate
     children of [e], threading [acc].  Mirrors {!iter_expr_children}: [on_expr]

@@ -1294,14 +1294,7 @@ let tvar_hint = function Tv_index (_, n) -> n | Tv_named x -> Some x
 (** The name a type variable is written under: its parameter's, or [T<i>]. *)
 let tvar_spelled = function
   | Tv_index (_, Some n) | Tv_named n -> n
-  | Tv_index (i, None) -> Id.of_string ("T" ^ string_of_int i)
-
-(** The spelling of the type variable at index [i] in a declaration's
-    parameter list ({!Cpp_ir.Type.positional_name}); re-exported as
-    {!Common.tvar_name}, alongside the other generated names. *)
-let tvar_spelling = Cpp_ir.Type.positional_name
-
-let tvar_id = Cpp_ir.Type.positional_id
+  | Tv_index (i, None) -> Cpp_ir.Type.positional_id i
 
 (** Whether a type is the type variable named [id].  The head of a tvar is not
     always resolved to its parameter name, so a tvar answers to either
@@ -1310,7 +1303,7 @@ let tvar_is id = function
   | Tvar (Tv_named n) -> Id.equal n id
   | Tvar (Tv_index (i, name)) ->
     (match name with Some n -> Id.equal n id | None -> false)
-    || Id.equal (tvar_id i) id
+    || Id.equal (Cpp_ir.Type.positional_id i) id
   | _ -> false
 
 (** Whether [ty] names the type variable [id] anywhere. *)
@@ -1319,7 +1312,7 @@ let tvar_named id ty = exists_cpp_type (tvar_is id) ty
 (** The name a tvar goes by, whether or not its head was resolved. *)
 let tvar_name = function
   | Tvar (Tv_index (_, Some n) | Tv_named n) -> Some n
-  | Tvar (Tv_index (i, None)) -> Some (tvar_id i)
+  | Tvar (Tv_index (i, None)) -> Some (Cpp_ir.Type.positional_id i)
   | _ -> None
 
 (** Every type variable [ty] names.
@@ -1686,23 +1679,6 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
       List.iter on_expr br.smb_extra_conds;
       on_stmts br.smb_body) branches;
     Option.iter on_stmts default
-
-(** Whether a [TTfun] constraint states nothing the caller can be held to, and
-    so is dropped rather than printed.
-
-    A rank-2 callback has no result to claim: the body applies it at a type of
-    its own choosing, and the [std::any] standing in for that type is not what
-    comes back -- a handler for [forall X, E X -> M X] returns [M nat] where the
-    constraint would demand [M std::any].  The result is recovered where it is
-    used, by {!Plan_templates.relax_tt_applied_return} or by the deduction the call
-    itself performs.
-
-    Read by the printer, which drops such a clause, and by the relaxations,
-    which must not count a dropped clause as a use of the variables it names. *)
-let tt_constraint_is_vacuous dom cod =
-  List.exists
-    (fun t -> exists_cpp_type (function Tany | Topaque -> true | _ -> false) t)
-    (cod :: List.filter (function Tfun _ -> true | _ -> false) dom)
 
 (** Fold over immediate children of a [cpp_expr].  Mirrors
     {!iter_expr_children} but threads an accumulator: [on_expr] folds over

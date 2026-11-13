@@ -1078,7 +1078,7 @@ let method_value n (tys : ty list) pos : expr =
       (* The plan records the declared parameters in order, without the
          receiver's slot; each carries however many qualifiers the
          declaration gave it, and the lambda spells its own. *)
-      let declared = List.map Legacy_minicpp_to_cpp_ir.lower_type (Option.default [] (Callable_abi.method_params n)) in
+      let declared = Option.default [] (Callable_abi.method_params n) in
       let rec unqualified : ty -> ty = function Reference (_, t) | Const t -> unqualified t | t -> t in
       let param i =
         if i = pos then receiver

@@ -250,6 +250,9 @@ val own_type_variables : n_outer:int -> Miniml.ml_type list -> bool
 (** Whether a C++ type is the unit type. *)
 val is_cpp_unit_type : Minicpp.cpp_type -> bool
 
+(** {!is_cpp_unit_type} over a CppIR type. *)
+val is_cpp_unit_type_ir : Cpp_ir.Lowered.Type.t -> bool
+
 (** Whether a MiniML type is unit or void. *)
 val ml_type_is_unit_or_void : Miniml.ml_type -> bool
 
@@ -448,6 +451,9 @@ val tvar_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
 (** Erase a type down to its outermost applied type constructors, boxing every
     leaf: [List<Nat>] becomes [List<std::any>], [Nat] becomes [std::any]. *)
 val index_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** {!index_erase_type} over a CppIR type. *)
+val index_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether a C++ type contains an unnamed type variable. *)
 val has_unnamed_tvar : Minicpp.cpp_type -> bool
@@ -664,8 +670,8 @@ val written_type_args :
 val type_arg_is_written : Names.GlobRef.t -> int -> bool
 
 (** Replace every unwritten type argument (see {!written_type_args}) by
-    [Tvoid], so a predicate over the result reads the type as it is spelled. *)
-val prune_unwritten_args : Minicpp.cpp_type -> Minicpp.cpp_type
+    [void], so a predicate over the result reads the type as it is spelled. *)
+val prune_unwritten_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
     erased argument in a position nothing writes never reaches the C++. *)
@@ -758,6 +764,9 @@ val refine_param_from_slot :
 (** [(index, name)] of every type variable in a C++ type, sorted by index. *)
 val get_tvars_indexed : Minicpp.cpp_type -> (int * Names.Id.t) list
 
+(** {!get_tvars_indexed} over a CppIR type. *)
+val get_tvars_indexed_ir : Cpp_ir.Lowered.Type.t -> (int * Names.Id.t) list
+
 (** The names of the type variables in a C++ type, sorted by index. *)
 val get_tvars : Minicpp.cpp_type -> Names.Id.t list
 
@@ -769,7 +778,7 @@ val get_tvar_indices : Minicpp.cpp_type -> int list
     ({!written_type_args}).  Erasure can leave an application in the ML type
     that the C++ type never spells, so where a rendered type is available its
     arities are the ones its users must agree with. *)
-val rendered_tvar_arities : Minicpp.cpp_type -> (int, int) Hashtbl.t
+val rendered_tvar_arities_ir : Cpp_ir.Lowered.Type.t -> (int, int) Hashtbl.t
 
 (** The type-variable indices a C++ type actually renders, skipping the
     positions a spelling does not write ({!written_type_args}): a phantom
@@ -777,11 +786,17 @@ val rendered_tvar_arities : Minicpp.cpp_type -> (int, int) Hashtbl.t
     Unsorted. *)
 val get_rendered_tvar_indices : Minicpp.cpp_type -> int list
 
+(** {!get_rendered_tvar_indices} over a CppIR type. *)
+val get_rendered_tvar_indices_ir : Cpp_ir.Lowered.Type.t -> int list
+
 (** [primary_tvar_indices dom cod] is the set of type-variable indices
     represented concretely in a generated signature, and so deducible from a
     call. The rest are phantom: a caller must spell them out. *)
 val primary_tvar_indices :
   Minicpp.cpp_type list -> Minicpp.cpp_type -> IntSet.t
+
+(** {!primary_tvar_indices} over CppIR types. *)
+val primary_tvar_indices_ir : Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t -> IntSet.t
 
 (** The type-variable indices appearing in type INDEX positions of inductives
     in an ML type. [convert_ml_type_to_cpp_type] strips these from the C++
@@ -853,3 +868,6 @@ val index_only_result_tvar : Miniml.ml_type -> int option
     C++ lets a call supply a prefix of the arguments and deduce the rest. *)
 val explicit_tvar_prefix :
   ?force_required:IntSet.t -> Minicpp.cpp_type -> int
+
+(** {!explicit_tvar_prefix} over a CppIR type. *)
+val explicit_tvar_prefix_ir : ?force_required:IntSet.t -> Cpp_ir.Lowered.Type.t -> int

@@ -98,7 +98,7 @@ let gen_record_cpp name fields ind =
   let ty_vars = Cpp_ir.Build.typenames (Table.promoted_type_params name @ vars) in
   let conversion_field =
     conversion_to_other_instantiation ~leading:(mentioned_promoted_args name)
-      ~name ~templates:(List.map (fun x -> (TTtypename, x)) vars) ~vars
+      ~name ~templates:(Cpp_ir.Build.typenames vars) ~vars
       ~fields:
         (List.mapi
            (fun i (x, t) ->

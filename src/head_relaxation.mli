@@ -13,12 +13,12 @@
     under that head applies it ({!apply}) rather than deciding it again. *)
 
 type t =
-  | Computed_return of Minicpp.cpp_type
+  | Computed_return of Cpp_ir.Lowered.Type.t
       (** The return type is the result of the callback that produces it:
           a template template parameter nothing deduces is dropped for it. *)
   | Param_applications of {
       relaxed : Names.Id.t list;
-      deduced : ((Names.Id.t * Minicpp.cpp_type list) * Names.Id.t) list;
+      deduced : ((Names.Id.t * Cpp_ir.Lowered.Type.t list) * Names.Id.t) list;
     }
       (** Each application of a [relaxed] variable, by the variable and the
           arguments it is applied to, is the template parameter [deduced]
@@ -39,12 +39,29 @@ type t =
     are compared. *)
 val equal : t -> t -> bool
 
-(** [deapplied ~plain ~in_scope ty] -- {!Deapplied}'s rewrite of one type. *)
-val deapplied : plain:Names.Id.t list -> in_scope:Names.Id.t list -> Minicpp.cpp_type -> Minicpp.cpp_type
+(** [deapplied_lowered ~plain ~in_scope ty] -- {!Deapplied}'s rewrite of one
+    type. *)
+val deapplied_lowered :
+  plain:Names.Id.t list -> in_scope:Names.Id.t list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+
+(** [rebind_plain_var_lowered ~in_scope head args] -- {!Minicpp.rebind_plain_var}
+    over CppIR types: the variable [head], declared a plain [typename],
+    applied to [args]. *)
+val rebind_plain_var_lowered :
+  in_scope:Names.Id.t list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t
 
 (** [apply r d] -- the MiniCpp declaration [d] rewritten as [r] decided.
     A declaration of a kind [r] does not concern is returned unchanged. *)
 val apply : t -> Minicpp.cpp_decl -> Minicpp.cpp_decl
+
+(** [apply_signature r ~params ~ret] -- a signature, its value parameters'
+    types [params] and its return type [ret], rewritten as [r] decided: what
+    {!apply} does to a function declaration's own types. *)
+val apply_signature :
+  t ->
+  params:Cpp_ir.Lowered.Type.t list ->
+  ret:Cpp_ir.Lowered.Type.t ->
+  Cpp_ir.Lowered.Type.t list * Cpp_ir.Lowered.Type.t
 
 (** Each relaxation applied in turn by {!apply}, the first first. *)
 val apply_all : t list -> Minicpp.cpp_decl -> Minicpp.cpp_decl

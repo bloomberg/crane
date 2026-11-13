@@ -1,22 +1,21 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-open Minicpp
 open Callable_abi
 
 type t =
   | Deduce_all
-  | Explicit_prefix of cpp_type list
+  | Explicit_prefix of Cpp_ir.Lowered.Type.t list
 
 (* A value at the kind its parameter declares: a template-template parameter
    takes the template name, a type parameter a type -- a carrier abstraction
    applied at the erased index, as a bare family head is. *)
-let adapt kind v =
+let adapt (kind : Callable_abi.kind) (v : Callable_abi.ty) : Callable_abi.ty =
   match (kind, v) with
-  | TTtemplate _, Ttyctor _ -> v
-  | TTtemplate _, v -> Ttyctor v
-  | _, (Ttyctor body as t) -> (
-    match Minicpp.tapply t [Tany] with Tapply _ -> body | applied -> applied )
+  | Template _, Type_constructor _ -> v
+  | Template _, v -> Type_constructor v
+  | _, (Type_constructor body as t) -> (
+    match Cpp_ir.Types.apply t [Any] with Apply _ -> body | applied -> applied )
   | _, v -> v
 
 (* The value a use gives the parameter [p], found by its origin; none for a
@@ -75,14 +74,14 @@ let validate abi app =
       (List.mapi
          (fun k a ->
            match List.nth_opt head k with
-           | Some {kind = TTtemplate _; _} -> (
-             match a with
-             | Ttyctor _ -> []
+           | Some {kind = Template _; _} -> (
+             match (a : Callable_abi.ty) with
+             | Type_constructor _ -> []
              | _ -> [Printf.sprintf "argument %d is no template name" k] )
            | Some _ -> (
-             match a with
-             | Ttyctor _ -> [Printf.sprintf "argument %d is a template name at a type parameter" k]
-             | Terased _ -> [Printf.sprintf "argument %d writes an erased placeholder" k]
+             match (a : Callable_abi.ty) with
+             | Type_constructor _ -> [Printf.sprintf "argument %d is a template name at a type parameter" k]
+             | Erased _ -> [Printf.sprintf "argument %d writes an erased placeholder" k]
              | _ -> [] )
            | None -> [] )
          args )

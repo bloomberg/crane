@@ -60,6 +60,10 @@ val ml_codomain : Miniml.ml_type -> Miniml.ml_type
 val convert_ml_type_to_cpp_type :
   env -> ?ns:Ref.User.Set.t -> Id.t list -> ml_type -> cpp_type
 
+(** {!convert_ml_type_to_cpp_type} in CppIR. *)
+val cpp_ir_of_ml_type :
+  env -> ?ns:Ref.User.Set.t -> Id.t list -> ml_type -> Cpp_ir.Lowered.Type.t
+
 (** Check if a C++ type is erased to std::any (for indexed inductive methods).
     Returns true if the type is Tany or contains an unnamed Tvar. *)
 val type_is_erased : cpp_type -> bool

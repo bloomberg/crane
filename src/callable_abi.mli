@@ -23,6 +23,12 @@
     declaration generated with no plan is one the planning missed.  Both are
     reported under [CRANE_CHECK_IR]. *)
 
+(** A C++ type, as a plan records it. *)
+type ty = Cpp_ir.Lowered.Type.t
+
+(** How a template parameter is declared, as a plan records it. *)
+type kind = Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t
+
 (** A parameter of one head. *)
 module Template_param : sig
   type t
@@ -65,9 +71,9 @@ type minted =
 type write_policy =
   | Writable  (** A call may write it, and must where nothing deduces it. *)
   | Deduce_only  (** No call writes it: C++ deduces it from an argument. *)
-  | Defaulted of Minicpp.cpp_type
+  | Defaulted of Cpp_ir.Lowered.Type.t
       (** A call may leave it to the default the declaration gives it. *)
-  | Phantom of Minicpp.cpp_type
+  | Phantom of Cpp_ir.Lowered.Type.t
       (** A leading parameter no signature mentions, declared without a
           default: nothing deduces it, so a call writing anything after it
           writes it too, as this filler. *)
@@ -76,7 +82,7 @@ type write_policy =
 type template_parameter = {
   id : Template_param.t;  (** its place and name *)
   origin : origin;  (** what it stands for *)
-  kind : Minicpp.template_type;  (** how it is declared *)
+  kind : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t;  (** how it is declared *)
   write : write_policy;  (** how a call may supply it *)
 }
 
@@ -90,10 +96,10 @@ type receiver = {
   dropped_names : Names.Id.t list;
       (** The names those variables had in the method, its own variables
           included, which the function's scheme has no variable for. *)
-  params : Minicpp.cpp_type list;
+  params : Cpp_ir.Lowered.Type.t list;
       (** The C++ types the method's parameters other than its receiver are
           declared at, in declaration order. *)
-  ret : Minicpp.cpp_type;  (** The return type the method is declared at. *)
+  ret : Cpp_ir.Lowered.Type.t;  (** The return type the method is declared at. *)
   return_only : Names.Id.t list;
       (** The method's own variables the return type alone mentions, which it
           spells erased there. *)
@@ -123,8 +129,8 @@ type passing =
     after the relaxations of its head ({!relaxations}), ownership wrappers
     included. *)
 type signature = {
-  params : Minicpp.cpp_type list;  (** value parameters' types *)
-  ret : Minicpp.cpp_type;  (** the return type *)
+  params : Cpp_ir.Lowered.Type.t list;  (** value parameters' types *)
+  ret : Cpp_ir.Lowered.Type.t;  (** the return type *)
 }
 
 (** The plan of one callable. *)
@@ -151,7 +157,7 @@ val template_head : t -> template_parameter list
 
 (** The head as the declaration spells it: each parameter's kind and name,
     in order. *)
-val declared_head : t -> (Minicpp.template_type * Names.Id.t) list
+val declared_head : t -> Cpp_ir.Lowered.phase Cpp_ir.Template.parameters
 
 (** What the relaxations that made the head out of the declaration's own
     decided ({!Head_relaxation}), in the order they were made: a
@@ -198,7 +204,7 @@ val of_head :
   ?minted:(Names.Id.t * minted) list ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
-  (Minicpp.template_type * Names.Id.t) list ->
+  Cpp_ir.Lowered.phase Cpp_ir.Template.parameters ->
   t
 
 (** The plan of the method [mf] of the struct of [instance]: its head, its
@@ -338,7 +344,7 @@ val dropped_positions : Names.GlobRef.t -> int list
 (** The C++ types the planned method [r]'s parameters other than its
     receiver are declared at ({!receiver}); [None] where [r] is not a
     planned method. *)
-val method_params : Names.GlobRef.t -> Minicpp.cpp_type list option
+val method_params : Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option
 
 (** The callee's ML type the plan was made against: the ML-shaped signature
     beside the declared one ({!signature}), before the head's relaxations,

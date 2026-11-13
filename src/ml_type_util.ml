@@ -445,6 +445,11 @@ let is_cpp_unit_type = function
   | Tnamespace (r, _) -> Table.is_unit_type r
   | _ -> false
 
+let is_cpp_unit_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Entity_application ((GlobRef.IndRef _ as r), _, _) -> Table.is_unit_type r
+  | In_namespace (r, _) -> Table.is_unit_type r
+  | _ -> false
+
 (** Check if an ML type represents a void or unit type. *)
 let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
 
@@ -990,20 +995,21 @@ let tvar_erase_type =
     A leaf is collapsed rather than recursed into so that a namespaced [Tglob]
     like [Nat] yields plain [std::any], not the malformed
     [typename Nat::std::any]. *)
-let rec index_erase_type (ty : cpp_type) : cpp_type =
+let rec index_erase_type_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   match ty with
-  | Tglob (r, (_ :: _ as tys), args) ->
-    Tglob (r, List.map index_erase_type tys, args)
-  | Tid (id, (_ :: _ as tys)) -> Tid (id, List.map index_erase_type tys)
-  | Tid_external (id, (_ :: _ as tys)) ->
-    Tid_external (id, List.map index_erase_type tys)
-  | Tnondeduced t -> Tnondeduced (index_erase_type t)
-  | Trebind (h, x) -> Trebind (index_erase_type h, index_erase_type x)
-  | Tnamespace (r, inner) ->
-    ( match index_erase_type inner with
-    | Tany -> Tany
-    | t -> Tnamespace (r, t) )
-  | _ -> Tany
+  | Entity_application (r, (_ :: _ as tys), args) -> Entity_application (r, List.map index_erase_type_ir tys, args)
+  | Named (id, (_ :: _ as tys)) -> Named (id, List.map index_erase_type_ir tys)
+  | External (id, (_ :: _ as tys)) -> External (id, List.map index_erase_type_ir tys)
+  | Non_deduced t -> Non_deduced (index_erase_type_ir t)
+  | Rebind (h, x) -> Rebind (index_erase_type_ir h, index_erase_type_ir x)
+  | In_namespace (r, inner) -> (
+    match index_erase_type_ir inner with
+    | Any -> Any
+    | t -> In_namespace (r, t) )
+  | _ -> Any
+
+let index_erase_type ty =
+  Cpp_ir_to_legacy_minicpp.ty (index_erase_type_ir (Legacy_minicpp_to_cpp_ir.lower_type ty))
 
 (** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
     detect types that can't be fully resolved in monomorphized contexts
@@ -1375,12 +1381,17 @@ let written_type_args g tys =
 
 (** Replace every unwritten type argument (see {!written_type_args}) by
     [Tvoid], so a predicate over the result reads the type as it is spelled. *)
-let prune_unwritten_args =
-  Minicpp.map_cpp_type (function
-    | Tglob (g, tys, es) ->
-      let written = type_arg_is_written g in
-      Tglob (g, List.mapi (fun i t -> if written i then t else Tvoid) tys, es)
-    | t -> t )
+let prune_unwritten_args_ir =
+  Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+      match t with
+      | Entity_application (g, tys, es) ->
+        let written = type_arg_is_written g in
+        Entity_application (g, List.mapi (fun i t -> if written i then t else (Void : Cpp_ir.Lowered.Type.t)) tys, es)
+      | t -> t )
+
+let lower_type = Legacy_minicpp_to_cpp_ir.lower_type
+
+let prune_unwritten_args t = Cpp_ir_to_legacy_minicpp.ty (prune_unwritten_args_ir (lower_type t))
 
 (** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
     erased argument in a position nothing writes never reaches the C++. *)
@@ -1476,40 +1487,42 @@ let refine_param_from_slot ~tvars ~slot bare =
 
 (** Collect (index, name) pairs for all Tvar occurrences, sorted by index; a
     variable known only by name stands at index [0], ahead of the others. *)
-let get_tvars_indexed t =
+let get_tvars_indexed_ir (t : Cpp_ir.Lowered.Type.t) =
   let get_name i n =
     match n with
     | None -> tvar_id i
     | Some n -> n
   in
-  let rec aux l = function
-    | Tpromoted _ ->
+  let rec aux l : Cpp_ir.Lowered.Type.t -> _ = function
+    | Promoted_member _ ->
       (* Promoted type var marker from a Record-turned-Type_class.  These
          represent projected type members (e.g., [Obj] from [PreCategory])
          and must be resolved through typeclass instance access — not as
          standalone template parameters. *)
       l
-    | Tvar (Tv_index (i, n)) ->
+    | Variable (Index (i, n)) ->
       if List.exists (fun (x, _) -> i == x) l then
         l
       else
         (i, get_name i n) :: l
-    | Tvar (Tv_named n) ->
+    | Variable (Named n) ->
       if List.exists (fun (_, m) -> Id.equal n m) l then l else (0, n) :: l
-    | Tglob (_, tys, _) -> List.fold_left aux l tys
-    | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
-    | Tconst ty -> aux l ty
-    | Tnamespace (_, ty) -> aux l ty
-    | Tref (_, ty) -> aux l ty
-    | Tvariant (_, tys) -> List.fold_left aux l tys
-    | Tshared_ptr ty -> aux l ty
-    | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
+    | Entity_application (_, tys, _) -> List.fold_left aux l tys
+    | Function (tys, ty) -> List.fold_left aux l (ty :: tys)
+    | Const ty -> aux l ty
+    | In_namespace (_, ty) -> aux l ty
+    | Reference (_, ty) -> aux l ty
+    | Variant (_, tys) -> List.fold_left aux l tys
+    | Shared_pointer ty -> aux l ty
+    | Apply (ty, tys) -> List.fold_left aux l (ty :: tys)
     (* A carrier abstraction names the variables its body does -- written
        through a holder, [crane_carrier_tch<T1>::template c]. *)
-    | Ttyctor ty -> aux l ty
+    | Type_constructor ty -> aux l ty
     | _ -> l
   in
   List.sort (fun (x, _) (y, _) -> Int.compare x y) (aux [] t)
+
+let get_tvars_indexed t = get_tvars_indexed_ir (lower_type t)
 
 (** Like [get_tvar_indices] but only collects tvars that will actually
     appear in the rendered C++ type.  For custom types with a template
@@ -1517,23 +1530,25 @@ let get_tvars_indexed t =
     referenced by the template are visited.  Unreferenced positions hold
     phantom tvars (e.g. E in [itree E R] where the template only uses
     [%t1] = R) that the C++ compiler cannot deduce. *)
-let get_rendered_tvar_indices t =
-  let rec aux l = function
-    | Tpromoted _ -> l
-    | Tvar (Tv_index (i, _)) ->
+let get_rendered_tvar_indices_ir (t : Cpp_ir.Lowered.Type.t) =
+  let rec aux l : Cpp_ir.Lowered.Type.t -> _ = function
+    | Promoted_member _ -> l
+    | Variable (Index (i, _)) ->
       if List.mem i l then l else i :: l
-    | Tglob (g, tys, _) ->
+    | Entity_application (g, tys, _) ->
       List.fold_left aux l (written_type_args g tys)
-    | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
-    | Tconst ty -> aux l ty
-    | Tnamespace (_, ty) -> aux l ty
-    | Tref (_, ty) -> aux l ty
-    | Tvariant (_, tys) -> List.fold_left aux l tys
-    | Tshared_ptr ty -> aux l ty
-    | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
+    | Function (tys, ty) -> List.fold_left aux l (ty :: tys)
+    | Const ty -> aux l ty
+    | In_namespace (_, ty) -> aux l ty
+    | Reference (_, ty) -> aux l ty
+    | Variant (_, tys) -> List.fold_left aux l tys
+    | Shared_pointer ty -> aux l ty
+    | Apply (ty, tys) -> List.fold_left aux l (ty :: tys)
     | _ -> l
   in
   aux [] t
+
+let get_rendered_tvar_indices t = get_rendered_tvar_indices_ir (lower_type t)
 
 (** The arity at which the {e rendered} type applies each type variable.
 
@@ -1547,17 +1562,17 @@ let get_rendered_tvar_indices t =
     hands it to declared [typename e], which is the mismatch.  What the
     rendered type does with the variable is what its users have to agree
     with. *)
-let rendered_tvar_arities t =
+let rendered_tvar_arities_ir (t : Cpp_ir.Lowered.Type.t) =
   let arities = Hashtbl.create 4 in
-  let rec aux = function
-    | Tapply (Tvar (Tv_index (i, _)), tys) ->
+  let rec aux : Cpp_ir.Lowered.Type.t -> unit = function
+    | Apply (Variable (Index (i, _)), tys) ->
       Hashtbl.replace arities i (List.length tys);
       List.iter aux tys
-    | Tglob (g, tys, _) -> List.iter aux (written_type_args g tys)
-    | Tfun (tys, ty) -> List.iter aux (ty :: tys)
-    | Tconst ty | Tnamespace (_, ty) | Tref (_, ty) | Tshared_ptr ty -> aux ty
-    | Tvariant (_, tys) -> List.iter aux tys
-    | Tapply (ty, tys) -> List.iter aux (ty :: tys)
+    | Entity_application (g, tys, _) -> List.iter aux (written_type_args g tys)
+    | Function (tys, ty) -> List.iter aux (ty :: tys)
+    | Const ty | In_namespace (_, ty) | Reference (_, ty) | Shared_pointer ty -> aux ty
+    | Variant (_, tys) -> List.iter aux tys
+    | Apply (ty, tys) -> List.iter aux (ty :: tys)
     | _ -> ()
   in
   aux t;
@@ -1584,23 +1599,25 @@ let get_tvar_indices t = List.map fst (get_tvars_indexed t)
     constraint and plain [TTtypename]), by {!Plan_templates.phantom_aware_temps}
     (to choose whether a template parameter needs a [void] default) and by the
     call emitter ({!explicit_tvar_prefix}). *)
-let primary_tvar_indices dom cod =
+let primary_tvar_indices_ir (dom : Cpp_ir.Lowered.Type.t list) cod =
   let add_rendered acc t =
     List.fold_left
       (fun acc i -> IntSet.add i acc)
       acc
-      (get_rendered_tvar_indices t)
+      (get_rendered_tvar_indices_ir t)
   in
   let concrete, clean_fun =
     List.fold_left
-      (fun (concrete, clean_fun) t ->
+      (fun (concrete, clean_fun) (t : Cpp_ir.Lowered.Type.t) ->
         match t with
-        | Tfun _ -> (concrete, add_rendered clean_fun t)
+        | Function _ -> (concrete, add_rendered clean_fun t)
         | _ -> (add_rendered concrete t, clean_fun) )
       (add_rendered IntSet.empty cod, IntSet.empty)
       dom
   in
   IntSet.union concrete clean_fun
+
+let primary_tvar_indices dom cod = primary_tvar_indices_ir (List.map lower_type dom) (lower_type cod)
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
@@ -1996,19 +2013,19 @@ let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml
 
     @param force_required  as in {!Plan_templates.phantom_aware_temps}: indices that
       count as represented even though they do not appear in [cty]. *)
-let explicit_tvar_prefix ?(force_required = IntSet.empty) cty =
+let explicit_tvar_prefix_ir ?(force_required = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   match cty with
-  | Tfun (dom, cod) ->
+  | Function (dom, cod) ->
     let primary =
-      IntSet.union (primary_tvar_indices dom cod) force_required
+      IntSet.union (primary_tvar_indices_ir dom cod) force_required
     in
     let indexed =
       List.sort
         (fun (x, _) (y, _) -> Int.compare x y)
-        ( get_tvars_indexed cty
+        ( get_tvars_indexed_ir cty
         @ IntSet.fold
             (fun i acc ->
-              if List.exists (fun (j, _) -> j = i) (get_tvars_indexed cty) then
+              if List.exists (fun (j, _) -> j = i) (get_tvars_indexed_ir cty) then
                 acc
               else (i, tvar_id i) :: acc )
             force_required [] )
@@ -2019,3 +2036,5 @@ let explicit_tvar_prefix ?(force_required = IntSet.empty) cty =
     in
     count indexed
   | _ -> 0
+
+let explicit_tvar_prefix ?force_required cty = explicit_tvar_prefix_ir ?force_required (lower_type cty)
