@@ -4,7 +4,7 @@
 (** Type-class instances: the struct carrying an instance's methods, its
     template head, and the static assertion against the class's concept.
 
-    Part of declaration generation, the MiniML-to-MiniCpp step after
+    Part of declaration generation, the MiniML-to-CppIR step after
     translation's expression lowering: {!Gen_decls} includes this module,
     and the backend calls it to plan an instance's callables before
     rendering ({!plan_instance_methods}) and to generate its struct. *)
@@ -82,7 +82,7 @@ let instance_promoted_types name body ty =
     arguments ({!Callable_abi.minted}).  [~bodies:false] generates the
     methods' heads alone. *)
 let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
-    cpp_decl option * GlobRef.t option * cpp_type list * (Id.t * (Id.t * Callable_abi.minted) list) list =
+    Cpp_ir.Lowered.Decl.t option * GlobRef.t option * cpp_type list * (Id.t * (Id.t * Callable_abi.minted) list) list =
   let instance_ref = name in
   (* Without bodies the methods are their heads alone: what planning reads
      ({!plan_instance_methods}), decided by the very code that generates
@@ -658,45 +658,40 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
           (* The class-typed arguments are the method's dictionaries, in
              order; its own variables are no scheme's. *)
           let minted = List.mapi (fun k p -> (p, Callable_abi.Instance_param k)) tc_tparams in
+          let method_ : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
+            { name = method_name;
+              (* The global the method is made from is the instance: it has
+                 none of its own, so no call in its body names it, and a
+                 call on a global that merely shares its label -- the
+                 class's [fmap] at the inner instance, inside
+                 [Functor_stateT]'s [fmap] -- is not a self-call. *)
+              globref = Some instance_ref;
+              (* Undefaulted: every caller spells the arguments out --
+                 the forwarding wrapper as [_tcI0::template ret<T2>(x)],
+                 the concept probe at [std::any].  A default here would
+                 let a call that fails to deduce silently fall back to
+                 [std::any] instead of failing to compile. *)
+              (* The class-typed arguments follow the method's own type
+                 variables: the concept probe supplies both lists, and it
+                 reads the declared signature in the same order.  They are
+                 left unconstrained, so that the probe can instantiate the
+                 declaration at [std::any] without satisfying the class. *)
+              type_params = Cpp_ir.Build.typenames (method_tvars @ tc_tparams);
+              return_type = Legacy_minicpp_to_cpp_ir.lower_type ret_ty;
+              params = List.map (fun (x, t) -> (x, Legacy_minicpp_to_cpp_ir.lower_type t)) cpp_params;
+              body = List.map Legacy_minicpp_to_cpp_ir.lower_stmt body_stmts;
+              receiver = Static;
+              is_inline = false;
+              no_pure = false;
+              constexpr = Undecided;
+              is_noexcept = false;
+              is_conversion = false;
+              binders = [];
+              receiver_binder = None;
+              loop = None }
+          in
           Some
-            ( ( Fmethod
-                {
-                  mf_name = method_name;
-                  (* The global the method is made from is the instance: it has
-                     none of its own, so no call in its body names it, and a
-                     call on a global that merely shares its label -- the
-                     class's [fmap] at the inner instance, inside
-                     [Functor_stateT]'s [fmap] -- is not a self-call. *)
-                  mf_globref = Some instance_ref;
-                  (* Undefaulted: every caller spells the arguments out --
-                     the forwarding wrapper as [_tcI0::template ret<T2>(x)],
-                     the concept probe at [std::any].  A default here would
-                     let a call that fails to deduce silently fall back to
-                     [std::any] instead of failing to compile. *)
-                  (* The class-typed arguments follow the method's own type
-                     variables: the concept probe supplies both lists, and it
-                     reads the declared signature in the same order.  They are
-                     left unconstrained, so that the probe can instantiate the
-                     declaration at [std::any] without satisfying the class. *)
-                  mf_tparams =
-                    List.map
-                      (fun p -> (TTtypename, p))
-                      (method_tvars @ tc_tparams);
-                  mf_ret_type = ret_ty;
-                  mf_params = cpp_params;
-                  mf_body = body_stmts;
-                  mf_receiver = Static;
-                  mf_is_inline = false;
-                  mf_no_pure = false;
-                  mf_constexpr = Undecided;
-                  mf_is_noexcept = false;
-                  mf_is_conversion = false;
-                  mf_binders = [];
-                  mf_receiver_binder = None;
-                  mf_loop = None;
-                },
-              VPublic,
-              SNoTag ),
+            ( ((Method method_, Public, Untagged) : Cpp_ir.Lowered.phase Cpp_ir.Field.member),
               (method_name, minted) )
       in
       let method_pairs =
@@ -725,34 +720,34 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
          [opposite_category<typename _tcI0::base_category>]).
 
          This function interprets an ML expression at the type level:
-         - [MLglob r] → named type [Tglob(r, ...)]
+         - [MLglob r] → named type [Entity_application (r, ...)]
          - [MLapp(MLglob r, args)] → template type with type args
-         - [MLrel i] → the named template parameter it binds ([named_tvar])
+         - [MLrel i] → the named template parameter it binds
          - [MLmagic e] → strip magic wrapper
-         - a single-branch [MLcase] projecting a field → [Tqualified] *)
-      let rec ml_expr_to_cpp_type body =
+         - a single-branch [MLcase] projecting a field → [Member] *)
+      let rec ml_expr_to_cpp_type body : Cpp_ir.Lowered.Type.t =
         match body with
-        | MLglob {callee = r; _} -> Tglob (r, [], [])
+        | MLglob {callee = r; _} -> Entity_application (r, [], [])
         | MLapp (MLglob {callee = r; _}, args) ->
           let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
-          Tglob (r, type_args, [])
+          Entity_application (r, type_args, [])
         | MLapp (f, args) -> (
           match ml_expr_to_cpp_type f with
-          | Tglob (r, existing, es) ->
+          | Entity_application (r, existing, es) ->
             let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
-            Tglob (r, existing @ type_args, es)
+            Entity_application (r, existing @ type_args, es)
           | other -> other )
         | MLrel (i, _) -> (
           try
             let name = get_db_name i base_env in
-            named_tvar name
-          with Failure _ -> Tany )
+            Cpp_ir.Build.named_variable name
+          with Failure _ -> Any )
         | MLmagic (_, e) -> ml_expr_to_cpp_type e
         | MLcase (_, scrutinee, branches, _)
           when Array.length branches = 1 ->
           (* Single-branch case = record field projection.  The branch
              destructures the record into named bindings and selects one
-             via [MLrel].  Translate into [Tqualified(scrutinee, field)]. *)
+             via [MLrel].  Translate into [Member (scrutinee, field)]. *)
           let (binds, _, _, br_body) = branches.(0) in
           let base_ty = ml_expr_to_cpp_type scrutinee in
           ( match br_body with
@@ -761,16 +756,23 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
             let idx = List.length binds - j in
             let (field_id, _) = List.nth binds idx in
             ( match field_id with
-            | Id name | Tmp name -> Tqualified (base_ty, name)
-            | Dummy -> Tany )
+            | Id name | Tmp name -> Member (base_ty, name)
+            | Dummy -> Any )
           | _ ->
             (* Non-trivial body — recurse with extended environment *)
             ml_expr_to_cpp_type br_body )
-        | _ -> Tany
+        | _ -> Any
       and ml_expr_to_cpp_type_opt body =
         match ml_expr_to_cpp_type body with
-        | Tany -> None
+        | Any -> None
         | t -> Some t
+      in
+      let using params name ty : Cpp_ir.Lowered.phase Cpp_ir.Field.member =
+        (Nested_type_alias (Cpp_ir.Build.typenames params, name, ty), Public, Untagged)
+      in
+      (* The name a [using] member declares. *)
+      let using_name ((f, _, _) : Cpp_ir.Lowered.phase Cpp_ir.Field.member) =
+        match f with Nested_type_alias (_, id, _) -> Some id | _ -> None
       in
       (* Check if an ML expression is a parameterized reference whose
          typeclass arguments have been erased — e.g.,
@@ -800,12 +802,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                 else
                   let field_id = Common.id_of_global Term field_ref in
                   let cpp_ty = ml_expr_to_cpp_type body in
-                  if cpp_ty = Tany then None
-                  else
-                    Some
-                      ( Fnested_using ([], field_id, cpp_ty),
-                        VPublic,
-                        SNoTag )
+                  if cpp_ty = Any then None else Some (using [] field_id cpp_ty)
               | _ -> None )
             (List.combine fields method_bodies)
         else
@@ -843,9 +840,9 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
          [Tvar(_, Some "Obj")] where "Obj" is a promoted var)?  Such
          types are useless: [using Obj = Obj;] would just alias the
          enclosing scope, not the template parameter's type. *)
-      let is_self_referential_promoted var_name cpp_ty =
+      let is_self_referential_promoted var_name (cpp_ty : Cpp_ir.Lowered.Type.t) =
         match cpp_ty with
-        | Tpromoted id | Tvar (Tv_index (_, Some id) | Tv_named id) when Id.equal id var_name -> true
+        | Promoted_member id | Variable (Index (_, Some id) | Named id) when Id.equal id var_name -> true
         | _ -> false
       in
       (* For each concept-constrained template parameter, forward its
@@ -864,22 +861,14 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   (* A higher-kinded carrier forwards as an alias template,
                      since that is what the source instance declares. *)
                   let params = List.init arity hkt_alias_param_name in
-                  let qualified_ty =
-                    Tqualified (Tinstance (tc_name, class_ref_tc), var_name)
+                  let qualified_ty : Cpp_ir.Lowered.Type.t =
+                    Member (Instance (tc_name, class_ref_tc), var_name)
                   in
-                  let qualified_ty =
+                  let qualified_ty : Cpp_ir.Lowered.Type.t =
                     if params = [] then qualified_ty
-                    else
-                      Tapply
-                        ( qualified_ty,
-                          List.map named_tvar params )
+                    else Apply (qualified_ty, List.map Cpp_ir.Build.named_variable params)
                   in
-                  ( Fnested_using
-                      ( List.map (fun p -> (TTtypename, p)) params,
-                        var_name,
-                        qualified_ty ),
-                    VPublic,
-                    SNoTag ) )
+                  using params var_name qualified_ty )
                 (class_promoted_vars_arities class_ref_tc)
             | _ -> [] )
           template_params
@@ -888,22 +877,14 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
          constructor body).  These take priority over forwarded usings
          because they carry the computed type expression rather than
          a simple forward from the template parameter. *)
-      let tc_promoted_names =
-        List.filter_map
-          (fun (f, _, _) ->
-            match f with
-            | Fnested_using (_, id, _) -> Some id
-            | _ -> None )
-          tc_promoted_usings
-      in
+      let tc_promoted_names = List.filter_map using_name tc_promoted_usings in
       (* Remove forwarded usings that are superseded by TC-promoted usings *)
       let forwarded_usings =
         List.filter
-          (fun (f, _, _) ->
-            match f with
-            | Fnested_using (_, id, _) ->
-              not (List.exists (Id.equal id) tc_promoted_names)
-            | _ -> true )
+          (fun m ->
+            match using_name m with
+            | Some id -> not (List.exists (Id.equal id) tc_promoted_names)
+            | None -> true )
           forwarded_usings
       in
       (* Generate [using VarName = ConcreteType;] for each promoted
@@ -920,10 +901,11 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
               List.nth promoted_concrete_types i
             in
             let concrete_cpp_ty =
-              convert_ml_type_to_cpp_type
-                base_env
-                (alias_tvar_names @ alias_params)
-                concrete_ml_ty
+              Legacy_minicpp_to_cpp_ir.lower_type
+                (convert_ml_type_to_cpp_type
+                   base_env
+                   (alias_tvar_names @ alias_params)
+                   concrete_ml_ty)
             in
             (var_name, alias_params, concrete_cpp_ty) )
         |> List.filter_map (fun (var_name, alias_params, concrete_cpp_ty) ->
@@ -932,14 +914,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                  || is_self_referential_promoted var_name concrete_cpp_ty
                then
                  None
-               else
-                 Some
-                   ( Fnested_using
-                       ( List.map (fun p -> (TTtypename, p)) alias_params,
-                         var_name,
-                         concrete_cpp_ty ),
-                     VPublic,
-                     SNoTag ) )
+               else Some (using alias_params var_name concrete_cpp_ty) )
       in
       (* The instance's own binding of a class field beats one forwarded from
          a parameter under the same name: [Monad_stateT] takes a [Monad] for
@@ -947,17 +922,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
          carrier where the instance's own, [stateT S m], belongs.  The
          parameter's stays reachable as [_tcI0::m]. *)
       let forwarded_usings =
-        let own =
-          List.filter_map
-            (fun (f, _, _) ->
-              match f with Fnested_using (_, id, _) -> Some id | _ -> None )
-            concrete_usings
-        in
+        let own = List.filter_map using_name concrete_usings in
         List.filter
-          (fun (f, _, _) ->
-            match f with
-            | Fnested_using (_, id, _) -> not (List.exists (Id.equal id) own)
-            | _ -> true )
+          (fun m ->
+            match using_name m with
+            | Some id -> not (List.exists (Id.equal id) own)
+            | None -> true )
           forwarded_usings
       in
       (* Exclude promoted type args from the returned list (used for
@@ -974,17 +944,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       let direct_usings =
         tc_promoted_usings @ forwarded_usings @ concrete_usings
       in
-      let direct_names =
-        List.filter_map
-          (fun (f, _, _) ->
-            match f with Fnested_using (_, id, _) -> Some id | _ -> None)
-          direct_usings
-      in
+      let direct_names = List.filter_map using_name direct_usings in
       let nested_promoted_usings =
         List.concat_map
-          (fun (f, _, _) ->
-            match f with
-            | Fnested_using (_, using_name, _using_ty) ->
+          (fun m ->
+            match using_name m with
+            | Some using_name ->
               (* Find this field's ML type in the typeclass definition *)
               let field_ml_ty =
                 List.find_map
@@ -1005,32 +970,23 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   (fun v ->
                     if List.exists (Id.equal v) direct_names then None
                     else
-                      Some
-                        ( Fnested_using
-                            ( [],
-                              v,
-                              Tqualified
-                                (Tinstance (using_name, tc_ref), v) ),
-                          VPublic,
-                          SNoTag ))
+                      Some (using [] v (Member (Instance (using_name, tc_ref), v))))
                   nested_promoted
               | _ -> [] )
-            | _ -> [])
+            | None -> [])
           direct_usings
       in
       let all_usings = direct_usings @ nested_promoted_usings in
       if methods = [] && all_usings = [] then
         (None, Some class_ref, concept_args class_ref non_promoted_type_args, [])
       else
-        let decl =
-          Dstruct
-            {
-              ds_ref = name;
-              ds_fields = all_usings @ methods;
-              ds_tparams = template_params;
-              ds_constraint = None;
-              ds_needs_shared_from_this = false;
-            }
+        let decl : Cpp_ir.Lowered.Decl.t =
+          Struct
+            { ref_ = name;
+              fields = all_usings @ methods;
+              type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters template_params;
+              constraint_ = None;
+              needs_shared_from_this = false }
         in
         ( Some
             (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ~source_order:true ty) decl),
@@ -1041,12 +997,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
          declared at all. *)
-      ( Some
-          (Dusing
-             { du_tparams = [];
-               du_name = name;
-               du_rhs = Some (Tglob (other, [], []));
-               du_note = None } ),
+      ( Some (Type_alias {type_params = []; name; rhs = Some (Entity_application (other, [], [])); note = None}),
         Some class_ref,
         concept_args class_ref type_args,
         [] )
@@ -1067,6 +1018,7 @@ let plan_instance_methods ~finish name body ty =
   in
   match gen_instance_struct ~bodies:false name body ty with
   | Some decl, _, _, minted ->
+    let decl = Cpp_ir_to_legacy_minicpp.decl decl in
     List.map
       (fun mf ->
         ( mf.mf_name,

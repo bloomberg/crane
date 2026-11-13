@@ -165,7 +165,7 @@ val gen_instance_struct :
   GlobRef.t ->
   ml_ast ->
   ml_type ->
-  cpp_decl option
+  Cpp_ir.Lowered.Decl.t option
   * GlobRef.t option
   * cpp_type list
   * (Id.t * (Id.t * Callable_abi.minted) list) list

@@ -661,13 +661,15 @@ let apply_hkt_resolutions_stmts resolutions stmts =
     struct resolves its carrier the same way a function does, but it has no
     single signature to rewrite -- the variable turns up in its [using]
     aliases, in every method's signature and in every method's body. *)
-let apply_hkt_resolutions_decl resolutions decl =
+let apply_hkt_resolutions_decl resolutions (decl : Cpp_ir.Lowered.Decl.t) =
   if resolutions = [] then decl
   else
-    let ft = apply_hkt_resolutions resolutions in
-    let rec fe e = Minicpp.map_expr fe fs ft e
-    and fs s = Minicpp.map_stmt fe fs ft s in
-    Minicpp.map_decl fe fs ft decl
+    let resolutions = List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) resolutions in
+    let ft = Cpp_ir.Types.substitute (fun i -> List.assoc_opt i resolutions) in
+    let rec fe e = Cpp_ir.Map.expr (rw ()) e
+    and fs s = Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
+    Cpp_ir.Map.decl (rw ()) decl
 
 
 (** The arguments for the promoted variables [r] mentions without declaring,

@@ -653,7 +653,11 @@ let instance_decls r a t =
   let ds_opt, class_ref_opt, concept_args, minted =
     Gen_decls.gen_instance_struct r a t
   in
-  let ds_opt = Option.map (fun d -> planned_methods ~minted r (finish_instance_struct d)) ds_opt in
+  let ds_opt =
+    Option.map
+      (fun d -> planned_methods ~minted r (finish_instance_struct (Cpp_ir_to_legacy_minicpp.decl d)))
+      ds_opt
+  in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]
