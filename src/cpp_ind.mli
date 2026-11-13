@@ -4,7 +4,7 @@
 (** Which C++ declarations a MiniML declaration becomes.
 
    This module turns MiniML inductives ([ml_ind]) and declarations
-   ([ml_decl]) into {!Minicpp.cpp_decl} values, between translation
+   ([ml_decl]) into {!Cpp_ir.Lowered} declarations, between translation
    ({!Translation}, {!Gen_decls}) and the printer ({!Cpp}).  Everything a
    declaration becomes is generated once, ahead of both files
    ({!generate_ahead}), finished in the unit's program
