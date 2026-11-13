@@ -1446,20 +1446,6 @@ val lambda_binders : cpp_lambda -> (Id.t * Core_binder.t) list
     did. *)
 val rekey_lambda_binders : Id.t -> Id.t -> cpp_lambda -> cpp_lambda
 
-(** The member as a field, to be written where a field is written. *)
-val field_of_member : out_of_line_member -> cpp_field
-
-(** [out_of_line_member f] is [f] as a member that can be split in two, or
-    [None] when it is a kind that cannot. *)
-val out_of_line_member : cpp_field -> out_of_line_member option
-
-(** [map_out_of_line fs ft m] applies [fs] to [m]'s statements and [ft] to its
-    types. *)
-val map_out_of_line :
-  ?fl:(cpp_stmt list -> cpp_stmt list) ->
-  (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
-  out_of_line_member -> out_of_line_member
-
 (** [named_tvar x] is the type variable named [x] -- one that numbers against
     no declaration's parameter list, and so is spelled by name alone. *)
 val named_tvar : Names.Id.t -> cpp_type
@@ -1814,15 +1800,6 @@ val mk_dfun :
 (** [mk_dasgn r ty e] is the global variable [r] of type [ty] initialised to
     [e]. *)
 val mk_dasgn : GlobRef.t -> cpp_type -> cpp_expr -> cpp_decl
-
-(** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
-    sub-statements and [ft] to sub-types of a visibility-annotated field,
-    performing one level of structural descent.  Nested structs recurse. *)
-val map_field :
-  ?fl:(cpp_stmt list -> cpp_stmt list) ->
-  (cpp_expr -> cpp_expr) -> (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
-  cpp_field * cpp_visibility * section_tag ->
-  cpp_field * cpp_visibility * section_tag
 
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration, including every

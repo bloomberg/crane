@@ -2019,13 +2019,6 @@ let field_of_member = function
   | OLmethod m -> Fmethod m
   | OLdestructor body -> Fdestructor body
 
-(** [out_of_line_member f] is [f] as a member that can be split in two, or
-    [None] when it is a kind that cannot. *)
-let out_of_line_member = function
-  | Fmethod m -> Some (OLmethod m)
-  | Fdestructor body -> Some (OLdestructor body)
-  | _ -> None
-
 let map_out_of_line ?fl fs ft =
   let fl = Option.default (List.map fs) fl in
   function
