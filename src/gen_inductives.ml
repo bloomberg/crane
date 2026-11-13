@@ -1375,11 +1375,12 @@ let gen_ind_header_v2
         let conversion_field =
           (* An inductive's [vars] already begin with its promoted variables
              (see [Cpp_ind]), so nothing is left to keep. *)
-          conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
-            ~fields:
-              (List.mapi
-                 (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
-                 tys_list)
+          List.map Cpp_ir_to_legacy_minicpp.member
+            (conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
+               ~fields:
+                 (List.mapi
+                    (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
+                    tys_list))
         in
         let factory_name = Id.of_string (factory_name_of_ctor c) in
         let factory_params =

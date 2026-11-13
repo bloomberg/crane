@@ -20,12 +20,12 @@ let traced decl =
   | Some pattern ->
     (* An unnamed declaration -- an assignment, an alias, a group -- is named
        by what it declares. *)
-    let rec names : Minicpp.cpp_decl -> _ = function
-      | Dnspace (None, ds) -> List.concat_map names ds
-      | Dtemplate (_, _, d) -> names d
-      | Dfields {ds_ref = r; _} | Denum {de_ref = r; _} | Dasgn {da_ref = r; _} -> [r]
-      | Dusing {du_name = r; _} -> [r]
-      | d -> Option.List.cons (Minicpp.decl_globref d) []
+    let rec names : Cpp_ir.Lowered.Decl.t -> _ = function
+      | Namespace (None, ds) -> List.concat_map names ds
+      | Template (_, _, d) -> names d
+      | Merged_struct_members {ref_ = r; _} | Enum {ref_ = r; _} | Variable {ref_ = r; _} -> [r]
+      | Type_alias {name = r; _} -> [r]
+      | d -> Option.List.cons (Cpp_ir.Globrefs.declared d) []
     in
     let name =
       match names decl with
@@ -328,7 +328,7 @@ let finish decl =
         d' )
       d passes
   in
-  let decl = run Fun.id lowered_passes (lower decl) in
+  let decl = run Fun.id lowered_passes decl in
   let settled = Cpp_erasure.materialise decl in
   let inj (d : Cpp_erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);

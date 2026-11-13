@@ -17,7 +17,7 @@
     Each declaration carries a payload -- the environment it is rendered in --
     and a hoisted definition inherits the payload of the struct it came out
     of. *)
-val split_group : ('a * Minicpp.cpp_decl) list -> ('a * Minicpp.cpp_decl) list
+val split_group : ('a * Cpp_ir.Lowered.Decl.t) list -> ('a * Cpp_ir.Lowered.Decl.t) list
 
 (** [split_named ~names decls] is the same surgery for a cycle that is not
     between siblings: every member naming a global that satisfies [names] is
@@ -36,5 +36,5 @@ val split_group : ('a * Minicpp.cpp_decl) list -> ('a * Minicpp.cpp_decl) list
 val split_named :
   ?body_only:bool ->
   names:(Names.GlobRef.t -> bool) ->
-  ('a * Minicpp.cpp_decl) list ->
-  ('a * Minicpp.cpp_decl) list * ('a * Minicpp.cpp_decl) list
+  ('a * Cpp_ir.Lowered.Decl.t) list ->
+  ('a * Cpp_ir.Lowered.Decl.t) list * ('a * Cpp_ir.Lowered.Decl.t) list

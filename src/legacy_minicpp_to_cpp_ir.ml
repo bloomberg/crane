@@ -518,6 +518,9 @@ let resolved resolve convert x =
   | exception Cpp_ir.Resolve.Owed form -> Error (Lowered_only form)
 
 let lower_type t = lowered ty t
+let lower_expr e = lowered expr e
+let lower_template_parameters ps = lowered tparams ps
+let lower_member m = lowered member m
 let type_ t = resolved Cpp_ir.Resolve.type_ ty t
 let expr e = resolved Cpp_ir.Resolve.expr expr e
 

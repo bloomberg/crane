@@ -20,3 +20,6 @@ val expr : Cpp_ir.Lowered.Expr.t -> Minicpp.cpp_expr
 
 (** [stmt s] is [s] in MiniCpp. *)
 val stmt : Cpp_ir.Lowered.Stmt.t -> Minicpp.cpp_stmt
+
+(** [member m] is the struct member [m] in MiniCpp. *)
+val member : Cpp_ir.Lowered.phase Cpp_ir.Field.member -> Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag

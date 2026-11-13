@@ -112,3 +112,63 @@ let rec map : type p. (p Type.t -> p Type.t) -> p Type.t -> p Type.t =
   | Type_of _ | Decltype_auto | Type_constructor _ | Variable _ | Instance _ | Promoted_member _ | Void | Any | Auto
   | Carrier_parameter | Erased _ | Obligation _ ->
     t
+
+(** [apply h args] is [h] applied to [args] where a substitution puts [h] in
+    head position: an erased head erases the application, an instantiated
+    template is read at the argument ({!rebind_applied_head}), and a type
+    constructor whose body names its {!Type.Carrier_parameter} is that body
+    with the argument in its place. *)
+let apply : type p. p Type.t -> p Type.t list -> p Type.t =
+ fun h args ->
+  let rec applied_head (h : p Type.t) =
+    match h with Entity_application (_, _ :: _, _) -> true | In_namespace (_, h) -> applied_head h | _ -> false
+  in
+  let erased_head = match h with Type_constructor h' -> prints_as_any h' | h' -> prints_as_any h' in
+  match (h, args) with
+  | _ when erased_head -> Any
+  | h, _ when applied_head h -> rebind_applied_head h args
+  | Type_constructor body, [arg] ->
+    let fired = ref false in
+    let reduced =
+      map
+        (fun (t : p Type.t) ->
+          match t with
+          | Carrier_parameter ->
+            fired := true;
+            arg
+          | t -> t )
+        body
+    in
+    if !fired then reduced else Apply (h, args)
+  | _ -> Apply (h, args)
+
+(** [substitute sub t] replaces each numbered type variable [i] of [t] for
+    which [sub] answers, reaching inside a type constructor -- replacing one
+    template name with another leaves it printable -- and not inside a
+    [decltype].  An application whose head was substituted is rebuilt by
+    {!apply}: that is where a higher-kinded parameter's carrier arrives. *)
+let rec substitute : type p. (int -> p Type.t option) -> p Type.t -> p Type.t =
+ fun sub t ->
+  let go = substitute sub in
+  match t with
+  | Variable (Index (i, _)) -> ( match sub i with Some t' -> t' | None -> t )
+  | Entity_application (r, tys, args) -> Entity_application (r, List.map go tys, args)
+  | Foreign fr -> Foreign {fr with types = List.map go fr.types}
+  | Named (id, tys) -> Named (id, List.map go tys)
+  | External (id, tys) -> External (id, List.map go tys)
+  | Function (dom, cod) -> Function (List.map go dom, go cod)
+  | Const t -> Const (go t)
+  | Shared_pointer t -> Shared_pointer (go t)
+  | Reference (k, t) -> Reference (k, go t)
+  | Pointer t -> Pointer (go t)
+  | Variant (k, ts) -> Variant (k, List.map go ts)
+  | In_namespace (r, t) -> In_namespace (r, go t)
+  | Member (t, id) -> Member (go t, id)
+  | Apply (h, ts) -> apply (go h) (List.map go ts)
+  | Decay t -> Decay (go t)
+  | Non_deduced t -> Non_deduced (go t)
+  | Rebind (h, x) -> Rebind (go h, go x)
+  | Type_constructor t -> Type_constructor (go t)
+  | Type_of _ | Decltype_auto | Variable (Named _) | Instance _ | Promoted_member _ | Void | Any | Auto
+  | Carrier_parameter | Erased _ | Obligation _ ->
+    t

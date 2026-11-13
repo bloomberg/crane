@@ -1,8 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The passes a MiniCpp declaration goes through between translation and the
-    printer.  It is lowered into CppIR ({!Cpp_ir.Lowered}) first, every pass
+(** The passes a declaration goes through between generation and the
+    printer.  It reaches them in CppIR ({!Cpp_ir.Lowered}) -- a generator
+    still building MiniCpp has it lowered first ({!lower}) -- every pass
     runs over CppIR, and the declaration handed back is resolved
     ({!Cpp_ir.Resolved}).
 
@@ -25,7 +26,12 @@
     unspellable type, an unsettled constraint, an unresolved cast, an
     undeclared type variable, a mapping's unsupplied type argument, or a
     method or projection called as a function. *)
-val finish : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
+val finish : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
+
+(** [lower d] is the MiniCpp declaration [d] in CppIR
+    ({!Legacy_minicpp_to_cpp_ir.lower}).  Under [CRANE_CHECK_IR] it fails
+    unless converting it back gives [d] again. *)
+val lower : Minicpp.cpp_decl -> Cpp_ir.Lowered.Decl.t
 
 
 (** The names of the passes {!finish} runs, in order, the {!Cpp_erasure} seam

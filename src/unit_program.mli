@@ -104,7 +104,11 @@ val dependencies : Minicpp.cpp_decl list -> Entity_id.Set.t
 type job
 
 (** [job id d] is [d], to finish as the declaration [id]. *)
-val job : id -> Minicpp.cpp_decl -> job
+val job : id -> Cpp_ir.Lowered.Decl.t -> job
+
+(** [legacy_job id d] is {!job} of [d], a declaration a generator still
+    builds in MiniCpp, lowered ({!Cpp_pipeline.lower}). *)
+val legacy_job : id -> Minicpp.cpp_decl -> job
 
 (** A finished declaration of a program. *)
 type declaration = {
@@ -153,11 +157,9 @@ val record_lifted_ahead : Minicpp.cpp_decl list -> unit
 
 (** [finish jobs] is the unit's program with [jobs] finished, each once, in
     order: a job whose {!id} an earlier one finished already is that
-    declaration.  Every finished declaration is converted to CppIR
-    ({!Legacy_minicpp_to_cpp_ir}), which is all the program holds of it, and
-    what {!Cpp_demands} reads is read off the conversion; one that does not
-    convert is an anomaly.  Under [CRANE_CHECK_IR], two different
-    declarations under one id are a violation. *)
+    declaration.  What {!Cpp_demands} reads is read off the finished
+    declaration.  Under [CRANE_CHECK_IR], two different declarations under
+    one id are a violation. *)
 val finish : job list -> t
 
 (** Under [CRANE_CHECK_IR], fail unless [t] finished exactly the
@@ -176,9 +178,8 @@ val find : id -> Cpp_ir.Resolved.Decl.t option
 (** {!find}, with the declaration's id. *)
 val find_declaration : id -> declaration option
 
-(** [finishes_as d f] is whether finishing [d] again, and converting it to
-    CppIR, gives [f]. *)
-val finishes_as : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t -> bool
+(** [finishes_as d f] is whether finishing [d] again gives [f]. *)
+val finishes_as : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t -> bool
 
 (** [refinish jobs] finishes [jobs] again, in order, and fails unless each
     comes out as it is in the installed program, under the same {!id}. *)

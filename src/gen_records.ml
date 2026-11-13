@@ -3,7 +3,7 @@
 
 (** Records and type classes: a record's struct, a class's concept and the
     constraint a class-typed parameter states.  Part of declaration
-    generation (MiniML to MiniCpp), called from {!Gen_inductives},
+    generation (MiniML to CppIR), called from {!Gen_inductives},
     {!Gen_functions} and {!Gen_instances}. *)
 
 open Common
@@ -77,20 +77,17 @@ let gen_record_cpp name fields ind =
     | Some n -> n
     | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
   in
-  let l =
+  let l : Cpp_ir.Lowered.phase Cpp_ir.Field.member list =
     List.mapi
-      (fun i (x, t) ->
-        (Fvar' (field_name i x, field_cpp_ty vars t), VPublic, SNoTag) )
+      (fun i (x, t) : Cpp_ir.Lowered.phase Cpp_ir.Field.member ->
+        (Entity_data (field_name i x, Legacy_minicpp_to_cpp_ir.lower_type (field_cpp_ty vars t)), Public, Untagged) )
       fields
   in
   (* A record's fields are payloads like any other, so the promoted variables
      they name are template parameters here too -- see
      {!Table.promoted_type_params} and its use for the other inductive
      kinds. *)
-  let ty_vars =
-    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
-    @ List.map (fun x -> (TTtypename, x)) vars
-  in
+  let ty_vars = Cpp_ir.Build.typenames (Table.promoted_type_params name @ vars) in
   let conversion_field =
     conversion_to_other_instantiation ~leading:(mentioned_promoted_args name)
       ~name ~templates:(List.map (fun x -> (TTtypename, x)) vars) ~vars
@@ -102,14 +99,13 @@ let gen_record_cpp name fields ind =
                fun param_names -> field_cpp_ty param_names t ) )
            fields)
   in
-  Dstruct
-    {
-      ds_ref = name;
-      ds_fields = l @ conversion_field;
-      ds_tparams = ty_vars;
-      ds_constraint = None;
-      ds_needs_shared_from_this = false;
-    }
+  ( Struct
+      { ref_ = name;
+        fields = l @ conversion_field;
+        type_params = ty_vars;
+        constraint_ = None;
+        needs_shared_from_this = false }
+    : Cpp_ir.Lowered.Decl.t )
 
 (** The concept constraint an instance parameter of type [ty] carries.
 
@@ -146,7 +142,7 @@ let concept_constraint_of_class_type ty =
      { I::eqb(a0, a1) } -> std::convertible_to<bool>;
    };
 
-   Uses [CPPconvertible_to] with the actual cpp_type for the constraint,
+   Uses [Convertible_to] with the actual type for the constraint,
    which the printer renders.
 *)
 let gen_typeclass_cpp name fields =
@@ -178,28 +174,24 @@ let gen_typeclass_cpp name fields =
   let promoted_vars = class_promoted_vars name in
   (* Only param vars become concept template parameters; promoted vars become
      typename requirements inside the requires block *)
-  let ty_vars = List.map (fun x -> (TTtypename, x)) param_vars in
   (* The promoted variables the class {e mentions} without declaring them --
      [ptr] and [iptr], reached through a field whose type is a section
      inductive.  They are template parameters here for the same reason they
      are on {!gen_record_cpp}'s struct: the text spells them bare, and bare is
      what a template parameter of that name makes correct. *)
-  let mentioned_promoted =
-    List.map (fun v -> (TTtypename, v)) (Table.promoted_type_params name)
-  in
   let all_params =
-    ((TTtypename, inst_id) :: ty_vars) @ mentioned_promoted
+    Cpp_ir.Build.typenames ((inst_id :: param_vars) @ Table.promoted_type_params name)
   in
   (* Build typename requirements for promoted vars: typename I::field; *)
   (* A higher-kinded carrier is an alias template, so the concept cannot ask
      for it bare: it is probed at [std::any], the same erased element type the
      method requirements below are stated at. *)
-  let type_reqs =
+  let type_reqs : Cpp_ir.Lowered.Type.t list =
     List.map2
-      (fun var_id arity ->
-        let assoc = Tqualified (Tinstance (inst_id, name), var_id) in
+      (fun var_id arity : Cpp_ir.Lowered.Type.t ->
+        let assoc : Cpp_ir.Lowered.Type.t = Member (Instance (inst_id, name), var_id) in
         if arity = 0 then assoc
-        else Tapply (assoc, List.init arity (fun _ -> Tany)) )
+        else Apply (assoc, List.init arity (fun _ : Cpp_ir.Lowered.Type.t -> Any)) )
       promoted_vars
       (List.map snd (class_promoted_vars_arities name))
   in
@@ -218,6 +210,16 @@ let gen_typeclass_cpp name fields =
         | Some (_, replacement) -> Some replacement
         | None -> Some (named_tvar vname) )
       | _ -> None )
+  in
+  (* A type translation converted, with the promoted variables it names
+     respelled, in CppIR. *)
+  let converted ml_ty =
+    Legacy_minicpp_to_cpp_ir.lower_type
+      (subst_promoted_in_cpp_type
+         (convert_ml_type_to_cpp_type (empty_env ()) prefixed_ip_vars ml_ty))
+  in
+  let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
+    Scope (Local inst_id, Id.of_string method_name, type_args)
   in
   (* Check if a type is a bare promoted Tvar — a Tvar whose index is beyond the
      real type parameters. This indicates the field's type is entirely
@@ -274,9 +276,8 @@ let gen_typeclass_cpp name fields =
            type (e.g. [std::shared_ptr<PreCategory>]), which is invalid. *)
         Some
           (`Type
-            (Tqualified
-               ( Tinstance (inst_id, name),
-                 Common.id_of_global Term field_ref )))
+            (Member (Instance (inst_id, name), Common.id_of_global Term field_ref)
+              : Cpp_ir.Lowered.Type.t))
       else if is_bare_promoted_tvar field_ty then
         (* Field type is a bare promoted Tvar (e.g., fun_ind_prf :
            fun_ind_prf_ty). The concrete type could be a plain value or a
@@ -286,22 +287,18 @@ let gen_typeclass_cpp name fields =
            nullary accessors (Meyers singleton pattern). The second handles
            functions (pointer converts to std::function) and static data members
            (direct value). *)
-        let ret_cpp =
-          convert_ml_type_to_cpp_type
-            (empty_env ())
-            prefixed_ip_vars
-            field_ty
+        let constraint_expr : Cpp_ir.Lowered.Expr.t = Convertible_to (converted field_ty) in
+        let qualified = inst_scope method_name [] in
+        let call_form : Cpp_ir.Lowered.Expr.t =
+          Requires
+            { params = [];
+              constraints = [(Cpp_ir.Build.call qualified [], constraint_expr)];
+              type_requirements = [] }
         in
-        let ret_cpp = subst_promoted_in_cpp_type ret_cpp in
-        let constraint_expr = CPPconvertible_to ret_cpp in
-        let qualified =
-          CPPscope (CPPvar inst_id, Id.of_string method_name, [])
+        let value_form : Cpp_ir.Lowered.Expr.t =
+          Requires {params = []; constraints = [(qualified, constraint_expr)]; type_requirements = []}
         in
-        let call_form =
-          CPPrequires ([], [(mk_call qualified [], constraint_expr)], [])
-        in
-        let value_form = CPPrequires ([], [(qualified, constraint_expr)], []) in
-        Some (`Disjunctive (CPPbinop (Bor, call_form, value_form)))
+        Some (`Disjunctive (Binary (Or, call_form, value_form) : Cpp_ir.Lowered.Expr.t))
       else
         let args, ret = get_args_and_ret [] field_ty in
         (* Filter out type class instance arguments (they're passed via
@@ -310,13 +307,7 @@ let gen_typeclass_cpp name fields =
           List.filter (fun t ->
             not (Table.is_typeclass_type t) && not (erased_by_extraction t)) args
         in
-        let ret_cpp =
-          convert_ml_type_to_cpp_type
-            (empty_env ())
-            prefixed_ip_vars
-            ret
-        in
-        let ret_cpp = subst_promoted_in_cpp_type ret_cpp in
+        let ret_cpp = converted ret in
         (* Emit each argument inline as [std::declval<ArgType>()] rather than
            binding it to a shared [requires(...)] parameter.  A requires-
            expression has a single parameter list shared across all its
@@ -327,16 +318,7 @@ let gen_typeclass_cpp name fields =
            its own correctly-typed arguments, matching the module-type concept
            idiom ({!Cpp_concepts.pp_requirement}). *)
         let arg_declvals =
-          List.map
-            (fun arg_ty ->
-              let arg_cpp =
-                convert_ml_type_to_cpp_type
-                  (empty_env ())
-                  prefixed_ip_vars
-                  arg_ty
-              in
-              CPPdeclval (subst_promoted_in_cpp_type arg_cpp) )
-            args
+          List.map (fun arg_ty : Cpp_ir.Lowered.Expr.t -> Declval (converted arg_ty)) args
         in
         (* Method call: I::method_name(std::declval<...>(), ...). *)
         (* A method of a higher-kinded class is a member template, and the
@@ -358,17 +340,10 @@ let gen_typeclass_cpp name fields =
                  Table.is_typeclass_type
                  (fst (get_args_and_ret [] field_ty)) )
         in
-        let callee =
-          if ntv = 0 then
-            CPPscope (CPPvar inst_id, Id.of_string method_name, [])
-          else
-            CPPscope ( CPPvar inst_id,
-                Id.of_string method_name,
-                List.init ntv (fun _ -> Tany) )
-        in
-        let call = mk_call callee arg_declvals in
+        let callee = inst_scope method_name (List.init ntv (fun _ : Cpp_ir.Lowered.Type.t -> Any)) in
+        let call = Cpp_ir.Build.call callee arg_declvals in
         (* Constraint: use the cpp_type directly; the printer renders it. *)
-        let constraint_expr = CPPconvertible_to ret_cpp in
+        let constraint_expr : Cpp_ir.Lowered.Expr.t = Convertible_to ret_cpp in
         Some (`Normal ([], (call, constraint_expr)))
   in
   let all_reqs =
@@ -403,6 +378,10 @@ let gen_typeclass_cpp name fields =
   (* Build the concept body. Normal requirements go in a single requires{}
      block. Disjunctive requirements (for bare-Tvar fields) are &&-ed
      separately, each wrapped in parentheses via the || rendering. *)
+  let requires constraints type_requirements : Cpp_ir.Lowered.Expr.t =
+    Requires {params = []; constraints; type_requirements}
+  in
+  let conj a b : Cpp_ir.Lowered.Expr.t = Binary (And, a, b) in
   let concept_body =
     let normal_part =
       if normal_reqs = [] then
@@ -411,32 +390,19 @@ let gen_typeclass_cpp name fields =
         (* Arguments are emitted inline as [std::declval<...>()], so the
            requires-expression needs no parameter list. *)
         let constraints = List.map snd normal_reqs in
-        Some (CPPrequires ([], constraints, type_reqs))
+        Some (requires constraints type_reqs)
     in
     match (normal_part, disjunctive_exprs) with
     | Some np, [] -> np
-    | None, [d] ->
-      if type_reqs <> [] then
-        CPPbinop (Band, CPPrequires ([], [], type_reqs), d)
-      else
-        d
+    | None, [d] -> if type_reqs <> [] then conj (requires [] type_reqs) d else d
     | None, d :: rest ->
-      let base =
-        if type_reqs <> [] then
-          CPPbinop (Band, CPPrequires ([], [], type_reqs), d)
-        else
-          d
-      in
-      List.fold_left (fun acc e -> CPPbinop (Band, acc, e)) base rest
-    | Some np, ds -> List.fold_left (fun acc e -> CPPbinop (Band, acc, e)) np ds
-    | None, [] ->
-      if type_reqs <> [] then
-        CPPrequires ([], [], type_reqs)
-      else
-        CPPrequires ([], [], [])
-    (* degenerate: no requirements *)
+      let base = if type_reqs <> [] then conj (requires [] type_reqs) d else d in
+      List.fold_left conj base rest
+    | Some np, ds -> List.fold_left conj np ds
+    (* degenerate when [type_reqs] is empty too: no requirements *)
+    | None, [] -> requires [] type_reqs
   in
-  Dtemplate (all_params, None, Dconcept (name, concept_body))
+  (Template (all_params, None, Concept (name, concept_body)) : Cpp_ir.Lowered.Decl.t)
 
 
 (** What becomes of one of an instance method's binders in the C++ signature.

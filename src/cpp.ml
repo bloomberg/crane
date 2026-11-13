@@ -51,7 +51,7 @@ open Cpp_ind
     outside every struct too. *)
 let concept_names_member mp d =
   let names = ref false in
-  Minicpp.iter_globrefs
+  Cpp_ir.Globrefs.iter
     (fun r ->
       if MPset.mem mp (Table.prefixes_mp (modpath_of_r r)) && not (Table.is_typeclass r) then
         names := true )
@@ -229,7 +229,7 @@ let helper_entity (id, d) = Cpp_ind.entity_placed (id, d)
 
 (* The function the lifted helper [d], finalized as [e], defines, if it
    defines one: only a function's declaration can be hoisted. *)
-let hoistable_function e d = if Function_entity.defines_function e then decl_globref d else None
+let hoistable_function e d = if Function_entity.defines_function e then Cpp_ir.Globrefs.declared d else None
 
 (** Plan whether the declaration of the lifted helper [d], placed at
     namespace scope as an element of [module_], is hoisted
@@ -251,7 +251,7 @@ let plan_helper_hoist ~module_ ((_, d) as placed) =
     Both come from one finished definition, so the hoisted declaration states
     the head the definition does; the definition then leaves the template
     defaults to the declaration. *)
-let lifted_views ~module_ ?(may_hoist = true) ((_, d) as placed : Unit_program.id * cpp_decl) =
+let lifted_views ~module_ ?(may_hoist = true) ((_, d) as placed : Unit_program.id * Cpp_ir.Lowered.Decl.t) =
   let e = helper_entity placed in
   let planned = Option.bind (hoistable_function e d) (fun r -> GlobRef.Map_env.find_opt r !hoisted_helpers) in
   ( match planned with
@@ -701,7 +701,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                member's signature resolves against the struct, a nested [t] or
                a sibling type, and hoisting the declaration to file scope takes
                those names out of scope with it. *)
-            let def, _ = lifted_views ~module_ ~may_hoist:(not ctx.rc_in_struct) (Cpp_ind.helper_id d', d') in
+            let def, _ = lifted_views ~module_ ~may_hoist:(not ctx.rc_in_struct) (Cpp_ind.helper_placed d') in
             let pp = element (empty_env ()) def in
             if Cpp_ast.is_empty pp then acc
             else if Cpp_ast.is_empty acc then pp
@@ -1020,7 +1020,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                     (List.map
                        (fun h ->
                          Cpp_ast.seq
-                           [ Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false (Cpp_ind.helper_id h, h)));
+                           [ Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false (Cpp_ind.helper_placed h)));
                              Cpp_ast.text (fnl ()) ] )
                        method_helpers )
                 in
@@ -1681,7 +1681,7 @@ let finishing (aheads : Cpp_ind.ahead list) =
   List.concat_map (fun (a : Cpp_ind.ahead) -> a.finishing) aheads
   @ List.concat_map
       (fun (a : Cpp_ind.ahead) ->
-        List.map (fun d -> Unit_program.job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
+        List.map (fun d -> Unit_program.legacy_job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
       aheads
 
 (** Record the unit's program ({!Unit_program.record_ahead}) and finish

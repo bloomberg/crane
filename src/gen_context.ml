@@ -666,13 +666,15 @@ let apply_hkt_resolutions_stmts resolutions stmts =
     struct resolves its carrier the same way a function does, but it has no
     single signature to rewrite -- the variable turns up in its [using]
     aliases, in every method's signature and in every method's body. *)
-let apply_hkt_resolutions_decl resolutions decl =
+let apply_hkt_resolutions_decl resolutions (decl : Cpp_ir.Lowered.Decl.t) =
   if resolutions = [] then decl
   else
-    let ft = apply_hkt_resolutions resolutions in
-    let rec fe e = Minicpp.map_expr fe fs ft e
-    and fs s = Minicpp.map_stmt fe fs ft s in
-    Minicpp.map_decl fe fs ft decl
+    let resolutions = List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) resolutions in
+    let ft = Cpp_ir.Types.substitute (fun i -> List.assoc_opt i resolutions) in
+    let rec fe e = Cpp_ir.Map.expr (rw ()) e
+    and fs s = Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
+    Cpp_ir.Map.decl (rw ()) decl
 
 
 (** The arguments for the promoted variables [r] mentions without declaring,
@@ -728,7 +730,6 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
     let u_var_names =
       List.mapi (fun i _ -> Generated_name.member "U" ~of_:n_vars i) vars
     in
-    let u_tys = List.map named_tvar u_var_names in
     let converted =
       List.map
         (fun (field_id, at) ->
@@ -758,26 +759,27 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
           (tt, u) )
         u_var_names
     in
-    [ ( Fmethod
-          { mf_name = Id.of_string "operator_at_other_instantiation";
-            mf_globref = None;
-            mf_tparams = tparams;
-            mf_ret_type = Tglob (name, leading @ u_tys, []);
-            mf_params = [];
-            mf_body = [Sreturn (Some (CPPbraced converted))];
-            mf_receiver =
-              Instance
-                { this_pos = 0;
-                  is_const = true;
-                  ref_qual = Rq_any;
-                  returns_field = false };
-            mf_is_inline = false;
-            mf_no_pure = true;
-            mf_constexpr = Undecided;
-            mf_is_noexcept = false;
-            mf_is_conversion = true;
-            mf_binders = [];
-            mf_receiver_binder = None;
-            mf_loop = None },
-        VPublic,
-        SAccessors ) ]
+    let lower_expr = Legacy_minicpp_to_cpp_ir.lower_expr in
+    let method_ : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
+      { name = Id.of_string "operator_at_other_instantiation";
+        globref = None;
+        type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters tparams;
+        return_type =
+          Entity_application
+            ( name,
+              List.map Legacy_minicpp_to_cpp_ir.lower_type leading
+              @ List.map Cpp_ir.Build.named_variable u_var_names,
+              [] );
+        params = [];
+        body = [Return (Some (Braced (List.map lower_expr converted)))];
+        receiver = Instance {this_position = 0; is_const = true; ref_qualifier = Any; returns_field = false};
+        is_inline = false;
+        no_pure = true;
+        constexpr = Undecided;
+        is_noexcept = false;
+        is_conversion = true;
+        binders = [];
+        receiver_binder = None;
+        loop = None }
+    in
+    ([(Method method_, Public, Accessors)] : Cpp_ir.Lowered.phase Cpp_ir.Field.member list)
