@@ -232,16 +232,16 @@ type method_scope = {
           numbered as in its scheme. *)
   ms_extra_tvar_names : Id.t list;
       (** The C++ names of {!ms_extra_tvars_orig}, in the same order. *)
-  ms_subst_extra_tvars : cpp_type -> cpp_type;
+  ms_subst_extra_tvars : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t;
       (** Spells the function's own variables in a C++ type by their names. *)
   ms_method_ns : Ref.User.Set.t;
       (** The inductive alone: the scope its types are converted in, so a
           recursive occurrence inside a container is spelled as the struct's
           fields spell it. *)
-  ms_strip_self_ptr : cpp_type -> cpp_type;
+  ms_strip_self_ptr : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t;
       (** Removes the [shared_ptr] around a value-type inductive, which a
           method takes and returns by value. *)
-  ms_ret_cpp : cpp_type;
+  ms_ret_cpp : Cpp_ir.Lowered.Type.t;
       (** The C++ return type, before {!method_head} erases the variables it
           alone mentions. *)
   ms_ids_with_types : (ml_ident * ml_type) list;
@@ -252,16 +252,16 @@ type method_scope = {
       (** Whether each parameter is owned, innermost first. *)
   ms_this_arg_id : Id.t option;
       (** The parameter that becomes the receiver [this]. *)
-  ms_params : (Id.t * cpp_type) list;
+  ms_params : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** The C++ parameters: the runtime ones other than the receiver, each
           wrapped by ownership, a callable as an [F &&]. *)
   ms_passing : Callable_abi.passing list;
       (** How each of {!ms_params} is passed. *)
-  ms_fun_params : (Id.t * template_type * Id.t) list;
+  ms_fun_params : (Id.t * Callable_abi.kind * Id.t) list;
       (** The callable parameters generalised to a template parameter: the
-          parameter, its [TTfun] constraint and the template parameter's
-          name. *)
-  ms_template_params : (template_type * Id.t) list;
+          parameter, its [Callable_declared] constraint and the template
+          parameter's name. *)
+  ms_template_params : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters;
       (** The template parameters before {!method_head} drops any: the
           instances, then the function's own variables, then the
           callables. *)
@@ -301,7 +301,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let extra_tvars = List.map snd extra_remap in
   let extra_tvar_names = List.mapi (fun i _ -> tvar_id (i + 1)) extra_tvars in
   let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
-  let subst_extra_tvars = make_subst_extra_tvars num_ind_vars extra_tvar_map in
+  let subst_extra_tvars = make_subst_extra_tvars_ir num_ind_vars extra_tvar_map in
 
   (* For type conversion in method contexts, use ns = {name} so that
      self-references INSIDE container types get shared_ptr wrapping
@@ -309,24 +309,17 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      shared_ptr for the method's own type (value-type inductives are
      passed/returned by value, not by shared_ptr). *)
   let method_ns = Ref.User.Set.singleton name in
-  let rec strip_self_ptr ty =
+  let rec strip_self_ptr (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     match ty with
-    | Tshared_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
-      (match ty with Tshared_ptr inner -> inner | _ -> ty)
-    | Tglob (r, args, es) ->
-      Tglob (r, List.map strip_self_ptr args, es)
-    | Tfun (args, ret) ->
-      Tfun (List.map strip_self_ptr args, strip_self_ptr ret)
-    | Tref (k, t) -> Tref (k, strip_self_ptr t)
-    | Tconst t -> Tconst (strip_self_ptr t)
+    | Shared_pointer (Entity_application (g, _, _) as inner) when not (is_enum_inductive g) -> inner
+    | Entity_application (r, args, es) -> Entity_application (r, List.map strip_self_ptr args, es)
+    | Function (args, ret) -> Function (List.map strip_self_ptr args, strip_self_ptr ret)
+    | Reference (k, t) -> Reference (k, strip_self_ptr t)
+    | Const t -> Const (strip_self_ptr t)
     | _ -> ty
   in
   let strip_top_level_self_ptr ty = strip_self_ptr ty in
-  let ret_cpp =
-    convert_ml_type_to_cpp_type (empty_env ()) ~ns:method_ns
-      vars
-      ret_ty
-  in
+  let ret_cpp = cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars ret_ty in
   let ret_cpp = strip_top_level_self_ptr ret_cpp in
   let ret_cpp = subst_extra_tvars ret_cpp in
 
@@ -404,11 +397,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let params_with_idx =
     List.mapi
       (fun i (id, ty, orig_idx) ->
-        let cpp_ty =
-          convert_ml_type_to_cpp_type env ~ns:method_ns
-            vars
-            ty
-        in
+        let cpp_ty = cpp_ir_of_ml_type env ~ns:method_ns vars ty in
         let cpp_ty = strip_top_level_self_ptr cpp_ty in
         let cpp_ty = subst_extra_tvars cpp_ty in
         let owned = get_param_owned_flag orig_idx in
@@ -419,18 +408,18 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   (* Extract function-typed parameters for template params *)
   let fun_params =
     List.filter_map
-      (fun (id, cpp_ty, i, _, generalised) ->
+      (fun (id, (cpp_ty : Cpp_ir.Lowered.Type.t), i, _, generalised) ->
         match cpp_ty with
-        | Tfun (dom, cod) when generalised ->
-          let cod = if is_cpp_unit_type cod then Tvoid else cod in
-          Some (id, TTfun (dom, cod), fun_tparam_id i)
+        | Function (dom, cod) when generalised ->
+          let cod = if is_cpp_unit_type_ir cod then (Void : Cpp_ir.Lowered.Type.t) else cod in
+          Some (id, (Callable_declared (dom, cod) : Callable_abi.kind), fun_tparam_id i)
         | _ -> None )
       params_with_idx
   in
 
   (* Build template params *)
   let extra_type_params =
-    List.map (fun name -> (TTtypename, name)) extra_tvar_names
+    List.map (fun name -> ((Typename : Callable_abi.kind), name)) extra_tvar_names
   in
   let fun_template_params =
     List.map (fun (_, tt, fname) -> (tt, fname)) fun_params
@@ -438,7 +427,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   (* The instances come first, as they do for a free function: a call site
      spells the same list in the same order. *)
   let template_params =
-    List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
+    Legacy_minicpp_to_cpp_ir.lower_template_parameters (List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps)
     @ extra_type_params
     @ fun_template_params
   in
@@ -448,9 +437,9 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let deduced_callables =
     let binder_tys = List.rev_map snd ids_with_types in
     List.filter_map
-      (fun ((_, cpp_ty, _, _, generalised), (_, _, orig_idx)) ->
+      (fun ((_, (cpp_ty : Cpp_ir.Lowered.Type.t), _, _, generalised), (_, _, orig_idx)) ->
         match cpp_ty with
-        | Tfun _ when generalised -> Param_pos.of_source_index binder_tys orig_idx
+        | Function _ when generalised -> Param_pos.of_source_index binder_tys orig_idx
         | _ -> None )
       (List.combine params_with_idx param_ids_with_pos)
   in
@@ -461,17 +450,17 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      ensure forward declarations and definitions agree. *)
   let params =
     List.map2
-      (fun (id, cpp_ty, i, owned, generalised) (_, core, _) ->
-        let wrapped =
+      (fun (id, (cpp_ty : Cpp_ir.Lowered.Type.t), i, owned, generalised) (_, core, _) ->
+        let wrapped : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
-          | Tfun _ when generalised -> Tref (Forwarding, named_tvar (fun_tparam_id i))
-          | _ -> wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
+          | Function _ when generalised -> Reference (Forwarding, Variable (Named (fun_tparam_id i)))
+          | _ -> wrap_param_by_ownership_ir ~is_owned:owned ~core cpp_ty
         in
         (id, wrapped) )
       params_with_idx param_ids_with_pos
   in
   let passing =
-    List.map2 (fun (_, ty) (_, _, _, owned, _) -> param_passing ~owned ty) params params_with_idx
+    List.map2 (fun (_, ty) (_, _, _, owned, _) -> param_passing_ir ~owned ty) params params_with_idx
   in
 
   {
@@ -499,9 +488,9 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
       List.mapi (fun k (_, id, _, _) -> (id, Callable_abi.Instance_param k)) typeclass_temps
       @ List.map2 (fun name orig -> (name, Callable_abi.Scheme_param orig)) extra_tvar_names extra_tvars_orig
       @ List.filter_map
-          (fun (_, cpp_ty, i, _, generalised) ->
+          (fun (_, (cpp_ty : Cpp_ir.Lowered.Type.t), i, _, generalised) ->
             match cpp_ty with
-            | Tfun _ when generalised -> Some (fun_tparam_id i, Callable_abi.Callable_param i)
+            | Function _ when generalised -> Some (fun_tparam_id i, Callable_abi.Callable_param i)
             | _ -> None )
           params_with_idx;
     ms_deduced_callables = deduced_callables;
@@ -513,6 +502,13 @@ let cpp_type_has_tvar name =
     | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n name
     | _ -> false )
 
+(** {!cpp_type_has_tvar} over a CppIR type. *)
+let cpp_type_has_tvar_ir name =
+  Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
+      match t with
+      | Variable (Index (_, Some n) | Named n) -> Id.equal n name
+      | _ -> false )
+
 (** The head of the method [s] is the scope of, with which of its own
     variables it keeps decided: its template parameters, its return type, the
     variables of its own the return type alone mentions, which it erases
@@ -520,10 +516,10 @@ let cpp_type_has_tvar name =
     scheme it stood for.  Decided from the signature and the body's
     annotations, so before the body is generated. *)
 type method_head = {
-  mh_tparams : (template_type * Id.t) list;
+  mh_tparams : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters;
       (** The template parameters the method keeps: instances, its own
           variables that something still names, callables. *)
-  mh_ret : cpp_type;
+  mh_ret : Cpp_ir.Lowered.Type.t;
       (** The C++ return type, with {!mh_return_only} erased to [std::any]. *)
   mh_return_only : Id.Set.t;
       (** Its own variables that only the return type mentions. *)
@@ -576,14 +572,15 @@ let method_head vars s =
           List.rev_map
             (fun t ->
               subst_extra_tvars
-                (strip_top_level_self_ptr
-                   (convert_ml_type_to_cpp_type (empty_env ()) ~ns:method_ns vars (declined t)) ) )
+                (strip_top_level_self_ptr (cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars (declined t))) )
             !annotations )
     in
     let constraints =
-      List.concat_map (fun (_, tt, _) -> match tt with TTfun (d, c) -> c :: d | _ -> []) fun_params
+      List.concat_map
+        (fun (_, (tt : Callable_abi.kind), _) -> match tt with Callable_declared (d, c) -> c :: d | _ -> [])
+        fun_params
     in
-    fun name -> List.exists (cpp_type_has_tvar name) (constraints @ annotations)
+    fun name -> List.exists (cpp_type_has_tvar_ir name) (constraints @ annotations)
   in
   (* An extra tvar the return type is alone in mentioning is a dead letter.
      Nothing deduces it -- the receiver carries only the inductive's own
@@ -597,8 +594,8 @@ let method_head vars s =
       (fun (_tt, tname) ->
         if
           Id.Set.mem tname extra_tvar_name_set
-          && cpp_type_has_tvar tname ret_cpp
-          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params))
+          && cpp_type_has_tvar_ir tname ret_cpp
+          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar_ir tname pty) params))
           && not (body_names tname)
         then Some tname
         else None )
@@ -610,9 +607,10 @@ let method_head vars s =
   let ret_cpp =
     if Id.Set.is_empty return_only_set then ret_cpp
     else
-      map_cpp_type
-        (function
-          | Tvar (Tv_index (_, Some n) | Tv_named n) when Id.Set.mem n return_only_set -> Tany
+      Cpp_ir.Types.map
+        (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+          match t with
+          | Variable (Index (_, Some n) | Named n) when Id.Set.mem n return_only_set -> Any
           | t -> t )
         ret_cpp
   in
@@ -621,8 +619,8 @@ let method_head vars s =
       if not (Id.Set.mem tname extra_tvar_name_set) then true
       else if Id.Set.mem tname return_only_set then false
       else
-        cpp_type_has_tvar tname ret_cpp
-        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
+        cpp_type_has_tvar_ir tname ret_cpp
+        || List.exists (fun (_, pty) -> cpp_type_has_tvar_ir tname pty) params
         || body_names tname)
     template_params
   in
@@ -651,11 +649,10 @@ let method_plan func_ref s h =
       { dropped =
           List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped;
         dropped_names = List.map snd h.mh_dropped;
-        params = List.map (fun (_, t) -> Legacy_minicpp_to_cpp_ir.lower_type t) s.ms_params;
-        ret = Legacy_minicpp_to_cpp_ir.lower_type h.mh_ret;
+        params = List.map snd s.ms_params;
+        ret = h.mh_ret;
         return_only = Id.Set.elements h.mh_return_only }
-    ~callee:func_ref ~scheme
-    (Legacy_minicpp_to_cpp_ir.lower_template_parameters h.mh_tparams)
+    ~callee:func_ref ~scheme h.mh_tparams
 
 (** [plan_method name vars candidate] is the callable plan of the method
     made of [candidate] in the inductive [name] whose variables are [vars],
@@ -708,6 +705,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     ms_params = params;
     _
   } = s in
+  let ret_cpp = Cpp_ir_to_legacy_minicpp.ty ret_cpp in
+  let params = List.map (fun (x, t) -> (x, Cpp_ir_to_legacy_minicpp.ty t)) params in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method =

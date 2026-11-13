@@ -2910,27 +2910,25 @@ let ref_is_instance r =
   | None -> false
 
 
-(** Create a substitution function for extra type variables in C++ types:
+(** Create a substitution function for extra type variables in CppIR types:
     an index in [extra_tvar_map] becomes its named variable, and one of the
     containing inductive's own is left for [tvar_subst_stmt].
 
     @param num_ind_vars    number of type vars of the containing inductive/record
     @param extra_tvar_map  mapping from Tvar index to the name of an extra type var *)
-let make_subst_extra_tvars num_ind_vars extra_tvar_map =
-  let rec subst = function
-    | Tvar (Tv_index (i, None)) when List.mem_assoc i extra_tvar_map ->
-      named_tvar ((List.assoc i extra_tvar_map))
-    | Tvar (Tv_index (i, None)) when i >= 1 && i <= num_ind_vars ->
-      (* Inductive's type var - keep as-is for tvar_subst_stmt *)
-      Tvar (Tv_index (i, None))
-    | Tfun (dom, cod) -> Tfun (List.map subst dom, subst cod)
-    | Tshared_ptr t -> Tshared_ptr (subst t)
-    | Tglob (r, args, e) -> Tglob (r, List.map subst args, e)
-    | Tref (k, t) -> Tref (k, subst t)
-    | Tconst t -> Tconst (subst t)
-    | Tvariant (k, tys) -> Tvariant (k, List.map subst tys)
-    | Tnamespace (r, t) -> Tnamespace (r, subst t)
-    | Tqualified (t, id) -> Tqualified (subst t, id)
+let make_subst_extra_tvars_ir num_ind_vars extra_tvar_map =
+  let rec subst (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+    match t with
+    | Variable (Index (i, None)) when List.mem_assoc i extra_tvar_map -> Variable (Named (List.assoc i extra_tvar_map))
+    | Variable (Index (i, None)) when i >= 1 && i <= num_ind_vars -> Variable (Index (i, None))
+    | Function (dom, cod) -> Function (List.map subst dom, subst cod)
+    | Shared_pointer t -> Shared_pointer (subst t)
+    | Entity_application (r, args, e) -> Entity_application (r, List.map subst args, e)
+    | Reference (k, t) -> Reference (k, subst t)
+    | Const t -> Const (subst t)
+    | Variant (k, tys) -> Variant (k, List.map subst tys)
+    | In_namespace (r, t) -> In_namespace (r, subst t)
+    | Member (t, id) -> Member (subst t, id)
     | t -> t
   in
   subst
@@ -3090,6 +3088,48 @@ let cpp_lent_by_reference cpp_ty =
   | Tvar _ | Tqualified _ -> true
   | _ -> false
 
+(** {!names_value_inductive} over a CppIR type. *)
+let rec names_value_inductive_ir (cpp_ty : Cpp_ir.Lowered.Type.t) =
+  ( match cpp_ty with
+  | Entity_application ((GlobRef.IndRef _ as g), _, _) | In_namespace ((GlobRef.IndRef _ as g), _) ->
+    (not (Table.is_enum_inductive g)) && (not (Table.is_coinductive g)) && not (Table.is_custom_scalar_ref g)
+  | _ -> false )
+  ||
+  match cpp_ty with
+  | Entity_application ((GlobRef.ConstRef kn as r), args, _) when not (Table.is_custom r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> abbreviates_value_inductive_ir args body
+    | None -> false )
+  | _ -> false
+
+and abbreviates_value_inductive_ir args body =
+  match resolve_tmeta body with
+  | Miniml.Tglob ((GlobRef.IndRef _ as r), _, _) ->
+    (not (Table.is_enum_inductive r)) && (not (Table.is_coinductive r)) && not (Table.is_custom_scalar_ref r)
+  | Miniml.Tglob ((GlobRef.ConstRef kn as r), inner, _) when not (Table.is_custom r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> abbreviates_value_inductive_ir args (Mlutil.type_subst_list inner body)
+    | None -> false )
+  | Miniml.Tvar (_, j) when j >= 1 -> (
+    match List.nth_opt args (j - 1) with Some t -> names_value_inductive_ir t | None -> false )
+  | _ -> false
+
+(** {!cpp_lent_by_reference} over a CppIR type. *)
+let cpp_lent_by_reference_ir (cpp_ty : Cpp_ir.Lowered.Type.t) =
+  let rec shared_block (t : Cpp_ir.Lowered.Type.t) =
+    match t with
+    | Function _ -> true
+    | Non_deduced t | In_namespace (_, t) -> shared_block t
+    | Entity_application (r, _, _) -> Table.is_coinductive r
+    | _ -> false
+  in
+  match cpp_ty with
+  | Shared_pointer _ -> true
+  | _ when shared_block cpp_ty -> true
+  | _ when names_value_inductive_ir cpp_ty -> true
+  | Variable _ | Member _ -> true
+  | _ -> false
+
 (** Whether a parameter of Core type [ty] that its function does not own is
     lent by const reference, read off the Core type: a value inductive --
     named as itself, or through an abbreviation whose body is one -- a
@@ -3147,11 +3187,34 @@ let wrap_param_by_ownership ?(is_owned = false) ?core cpp_ty =
   (* Owned: by value, the caller moves it in. *)
   if lent && not is_owned then Tref (Lvalue, Tconst cpp_ty) else cpp_ty
 
+(** {!wrap_param_by_ownership} over a CppIR type. *)
+let wrap_param_by_ownership_ir ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  let by_cpp = cpp_lent_by_reference_ir cpp_ty in
+  let lent =
+    match Option.bind core core_lent_by_reference with
+    | Some by_core ->
+      if Probe.checking () && by_core <> by_cpp then
+        Probe.violation "parameter convention"
+          Pp.(
+            str "the Core type of a parameter says it is "
+            ++ str (if by_core then "lent by reference" else "copied")
+            ++ str ", its C++ type the other" );
+      by_core
+    | None -> by_cpp
+  in
+  if lent && not is_owned then Reference (Lvalue, Const cpp_ty) else cpp_ty
+
 (** How a parameter declared at [ty] -- after {!wrap_param_by_ownership},
     or as the [F &&] a deduced callable is -- with ownership [owned], is
     passed. *)
 let param_passing ~owned = function
   | Tref (Forwarding, _) -> Callable_abi.Forwarded
+  | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
+
+(** {!param_passing} over a CppIR type. *)
+let param_passing_ir ~owned (t : Cpp_ir.Lowered.Type.t) =
+  match t with
+  | Reference (Forwarding, _) -> Callable_abi.Forwarded
   | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
 
 (** Check if the return type of an ML function type is erased — i.e., it

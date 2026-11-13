@@ -333,6 +333,13 @@ val wrap_param_by_ownership : ?is_owned:bool -> ?core:Miniml.ml_type -> cpp_type
     or as the [F &&] a deduced callable is -- owned or not, is passed. *)
 val param_passing : owned:bool -> cpp_type -> Callable_abi.passing
 
+(** {!wrap_param_by_ownership} over a CppIR type. *)
+val wrap_param_by_ownership_ir :
+  ?is_owned:bool -> ?core:Miniml.ml_type -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+
+(** {!param_passing} over a CppIR type. *)
+val param_passing_ir : owned:bool -> Cpp_ir.Lowered.Type.t -> Callable_abi.passing
+
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
     [std::any], following erased-type constants and alias chains. *)
 val resolves_to_any_type : cpp_type -> bool
@@ -378,8 +385,8 @@ val ml_body_returns_erased_field : ml_ast -> bool
 
 (** Build a [Tvar i -> concrete_type] substitution mapping for extra type
     variables introduced beyond an inductive's own [num_ind_vars]. *)
-val make_subst_extra_tvars :
-  int -> (int * Id.t) list -> cpp_type -> cpp_type
+val make_subst_extra_tvars_ir :
+  int -> (int * Id.t) list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** A body whose returned lambdas hold copies, as Core made them: under
     [CRANE_CHECK_IR] one holding references is a violation, and is made a
