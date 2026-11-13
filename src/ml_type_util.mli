@@ -403,6 +403,10 @@ val is_ml_erased_ty : Miniml.ml_type -> bool
 (** Whether a C++ type should be skipped during extraction. *)
 val is_skipped_cpp_type : Minicpp.cpp_type -> bool
 
+(** Whether a C++ type is a type class's, under [const], a reference or a
+    [shared_ptr]. *)
+val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
+
 (** Whether a MiniML type should be skipped during extraction. *)
 val is_skipped_ml_type : Miniml.ml_type -> bool
 

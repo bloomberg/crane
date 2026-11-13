@@ -763,6 +763,14 @@ let is_skipped_cpp_type = function
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
+(** Whether a C++ type is a type class's, under [const], a reference or a
+    [shared_ptr]. *)
+let rec is_typeclass_type_cpp = function
+  | Minicpp.Tglob (r, _, _) -> Table.is_typeclass r
+  | Minicpp.Tconst t | Minicpp.Tref (Minicpp.Lvalue, t) | Minicpp.Tref (Minicpp.Forwarding, t) | Minicpp.Tshared_ptr t ->
+    is_typeclass_type_cpp t
+  | _ -> false
+
 (** Check if an ML type is a skipped type (inline custom with empty string).
     Same semantics as [is_skipped_cpp_type] but operates on the ML AST.
     Used to filter out parameters whose type was [Crane Extract Skip]-ped

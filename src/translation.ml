@@ -5599,7 +5599,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              && List.length doms >= List.length args
              && List.length regular_ml_args = List.length args
              && not (List.exists (function MLdummy _ -> true | _ -> false) regular_ml_args)
-             && not (List.exists (fun t -> Table.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
+             && not (List.exists (fun t -> Ml_type_util.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
         List.map2
           (fun (ml_arg, a) into ->
             let crossed = function Some from -> regroup_crossing ~from ~into a | None -> a in
@@ -5933,7 +5933,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         let dom =
           List.filter
             (fun t ->
-              (not (Table.is_typeclass_type_cpp t))
+              (not (Ml_type_util.is_typeclass_type_cpp t))
               && (not (is_cpp_dummy_type t))
               && not (is_skipped_cpp_type t) )
             dom

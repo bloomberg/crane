@@ -891,17 +891,6 @@ let is_typeclass_type = function
   | Tglob (r, _, _) -> is_typeclass r
   | _ -> false
 
-(** Checks if a C++ type is a typeclass type, unwrapping const/ref/ptr
-    modifiers. *)
-let rec is_typeclass_type_cpp = function
-  | Minicpp.Tglob (r, _, _) -> is_typeclass r
-  | Minicpp.Tconst t ->
-    is_typeclass_type_cpp t (* Unwrap const/static/extern *)
-  | Minicpp.Tref (Minicpp.Lvalue, t) | Minicpp.Tref (Minicpp.Forwarding, t) ->
-    is_typeclass_type_cpp t (* Unwrap references *)
-  | Minicpp.Tshared_ptr t -> is_typeclass_type_cpp t (* Unwrap shared_ptr *)
-  | _ -> false
-
 (** {2 Flat inductives table} *)
 
 let (_, add_flat_inductive, is_flat_inductive_registered) =
@@ -3179,10 +3168,6 @@ let written_custom_text r =
     check_written_custom r;
     Some s
   | None -> None
-
-let custom_info ?yields r : Minicpp.custom_info =
-  { ci_inline = (if to_inline r then Option.map Minicpp.inline_template (find_custom_opt r) else None);
-    ci_yields = yields }
 
 (** The C++ type names the user has declared trivially copyable with
     [Crane TriviallyCopyable], each without its arguments: the declaration on

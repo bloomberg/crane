@@ -464,9 +464,6 @@ val builds_instance : ?env:Environ.env -> GlobRef.t -> bool
 (** Check if ML type is a typeclass. *)
 val is_typeclass_type : ml_type -> bool
 
-(** Check if C++ type is a typeclass. *)
-val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
-
 (** Mark inductive as flat (single-ctor, no variant wrapper). *)
 val add_flat_inductive : GlobRef.t -> unit
 
@@ -1079,11 +1076,6 @@ val check_written_custom : GlobRef.t -> unit
 (** The replacement text of the custom [r], read to write it
     ({!check_written_custom}). *)
 val written_custom_text : GlobRef.t -> string option
-
-(** What a reference to [r] carries about its custom mapping: the replacement
-    text where [r] is inlined, and [yields], what it evaluates to where the
-    caller knows. *)
-val custom_info : ?yields:Minicpp.cpp_type -> GlobRef.t -> Minicpp.custom_info
 
 (** True when [s] names a C++ scalar type that is trivially copyable
     (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]),

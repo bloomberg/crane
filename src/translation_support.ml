@@ -3600,7 +3600,7 @@ let check_planned_arity abi live =
     | None -> ()
     | Some {Callable_abi.params; _} ->
       let doms = match live with Tfun (d, _) -> d | _ -> [] in
-      let dicts, values = List.partition Table.is_typeclass_type_cpp doms in
+      let dicts, values = List.partition Ml_type_util.is_typeclass_type_cpp doms in
       let values = List.filter (fun t -> not (is_skipped_cpp_type t)) values in
       let instances =
         List.length
