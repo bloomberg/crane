@@ -1772,8 +1772,10 @@ let slot_repr_of_cpp_type t =
     currently in effect.  Nearly every conversion inside expression generation
     wants this, and spelling out {!get_current_type_vars} at each one invites
     passing the wrong scope. *)
-let cpp_of_ml env t =
-  convert_ml_type_to_cpp_type env (get_current_type_vars ()) t
+let cpp_of_ml_ir env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
+
+(** {!cpp_of_ml_ir} in MiniCpp. *)
+let cpp_of_ml env t = Cpp_ir_to_legacy_minicpp.ty (cpp_of_ml_ir env t)
 
 (** [template_arg_of_ml_type ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says
@@ -1787,12 +1789,15 @@ let cpp_of_ml env t =
     parameter: the signature may mention it inside an arrow it writes out
     itself (as [ap : F (A -> B) -> ...] does), and there the currying is what
     makes the argument match. *)
-let template_arg_of_ml_type ~site env tvars ty =
+let template_arg_of_ml_type_ir ~site env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
-  spell_arrows site
-    (convert_ml_type_to_cpp_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
+  Cpp_ir.Types.spell_arrows site (cpp_ir_of_ml_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
+
+(** {!template_arg_of_ml_type_ir} in MiniCpp. *)
+let template_arg_of_ml_type ~site env tvars ty =
+  Cpp_ir_to_legacy_minicpp.ty (template_arg_of_ml_type_ir ~site env tvars ty)
 
 (** The site a callee's {e result} is spelled at ({!Minicpp.arrow_site}): a
     codomain that is a type variable takes its C++ shape from the template
@@ -1807,23 +1812,27 @@ let call_result_site id =
   if is_inline_custom id then Declared
   else match find_type_opt id with Some ml_ty -> codomain_site ml_ty | None -> Declared
 
-let build_template_params ~site env tvars tys =
+let build_template_params_ir ~site env tvars tys =
   List.map
     (fun ty ->
-      let t = template_arg_of_ml_type ~site env tvars ty in
+      let t = template_arg_of_ml_type_ir ~site env tvars ty in
       (* Check for unbound type variables *)
       match t with
-      | Tvar (Tv_index (_, None)) when tvars <> [] ->
+      | Variable (Index (_, None)) when tvars <> [] ->
         (* Type variable has no binding, but we're in a context with typename
            params. This means the Tvar index exceeds the scope of tvars.
            Mark as dummy_type to trigger full erasure via filter_erased_type_args.
            Using the unbound Tvar would generate invalid C++ references. *)
-        Terased Ek_type
+        (Erased Type : Cpp_ir.Lowered.Type.t)
       | _ ->
         (* Type is either bound, or we're in an untyped context (tvars = []).
            Keep the type as-is. *)
         t )
     tys
+
+(** {!build_template_params_ir} in MiniCpp. *)
+let build_template_params ~site env tvars tys =
+  List.map Cpp_ir_to_legacy_minicpp.ty (build_template_params_ir ~site env tvars tys)
 
 (** Generate code for a custom-extracted constructor application.
 
@@ -1859,8 +1868,11 @@ let build_template_params ~site env tvars tys =
 
 (** [template_params_of_ml ~site:Through_tvar env tys] is {!build_template_params} against the
     type variables the enclosing scope has in hand; see {!cpp_of_ml}. *)
+let template_params_of_ml_ir ~site env tys = build_template_params_ir ~site env (get_current_type_vars ()) tys
+
+(** {!template_params_of_ml_ir} in MiniCpp. *)
 let template_params_of_ml ~site env tys =
-  build_template_params ~site env (get_current_type_vars ()) tys
+  List.map Cpp_ir_to_legacy_minicpp.ty (template_params_of_ml_ir ~site env tys)
 
 (** [param_expected_cpp_ty env param_tys i] is the C++ type the callee declares
     for its [i]th parameter, and so the type an argument generated for that

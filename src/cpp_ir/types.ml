@@ -172,3 +172,32 @@ let rec substitute : type p. (int -> p Type.t option) -> p Type.t -> p Type.t =
   | Type_of _ | Decltype_auto | Variable (Named _) | Instance _ | Promoted_member _ | Void | Any | Auto
   | Carrier_parameter | Erased _ | Obligation _ ->
     t
+
+(** The site a function type stands at, which decides how its chain of
+    arrows is spelled: flat where a declaration writes it
+    ([crane::fn<R(A, B)>]), curried where a type variable stands for it
+    ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n] parameters
+    a declaration wrote and curried for the rest.  [Declared_at 0] is
+    [Through_tvar]. *)
+type arrow_site = Declared | Through_tvar | Declared_at of int
+
+(** [spell_arrows site t] respells every function type in [t] as [site]
+    spells it. *)
+let rec spell_arrows : type p. arrow_site -> p Type.t -> p Type.t =
+ fun site t ->
+  match site with
+  | Declared -> t
+  | Through_tvar | Declared_at 0 ->
+    map
+      (fun (t : p Type.t) ->
+        match t with
+        | Function (a :: (_ :: _ as rest), cod) -> Function ([a], Function (rest, cod))
+        | t -> t )
+      t
+  | Declared_at n -> (
+    match t with
+    | Function (dom, cod) when List.length dom > n ->
+      let outer = List.filteri (fun i _ -> i < n) dom in
+      let inner = List.filteri (fun i _ -> i >= n) dom in
+      Function (outer, spell_arrows Through_tvar (Function (inner, cod)))
+    | _ -> t )

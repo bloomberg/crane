@@ -1098,7 +1098,10 @@ let inactive_field_message =
 
     A value that crosses from one spelling to another is the same function
     regrouped, and the crossing is written ({!CPPregroup}). *)
-type arrow_site = Declared | Through_tvar | Declared_at of int
+type arrow_site = Cpp_ir.Types.arrow_site =
+  | Declared
+  | Through_tvar
+  | Declared_at of int
 
 let rec spell_arrows site ty =
   match site with

@@ -1256,7 +1256,10 @@ val inactive_field_message : string
     ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n] parameters
     a declaration wrote and curried for the rest.  See the implementation's
     {b Arity} section. *)
-type arrow_site = Declared | Through_tvar | Declared_at of int
+type arrow_site = Cpp_ir.Types.arrow_site =
+  | Declared
+  | Through_tvar
+  | Declared_at of int
 
 (** [spell_arrows site ty] respells every function type in [ty] as [site]
     spells it.  The only place a chain of arrows is regrouped. *)
