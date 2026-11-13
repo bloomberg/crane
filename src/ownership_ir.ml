@@ -150,26 +150,6 @@ let rec worth_moving = function
   | Tmeta {contents = Some t} -> worth_moving t
   | _ -> false
 
-let rec worth_moving_cpp (ty : Minicpp.cpp_type) =
-  let open Minicpp in
-  match ty with
-  | Tglob (r, tparams, _) -> worth_moving_ref worth_moving_cpp r tparams
-  | Tforeign {fr_custom; fr_types; _} -> worth_moving_ref worth_moving_cpp fr_custom fr_types
-  | Tshared_ptr _ | Tfun _ | Terased _ -> true
-  | Tvariant (_, ts) | Tid (_, ts) | Tid_external (_, ts) -> List.exists worth_moving_cpp ts
-  | Tnondeduced t -> worth_moving_cpp t
-  | Trebind (h, x) -> worth_moving_cpp h || worth_moving_cpp x
-  | Thole -> false
-  | Tref (Forwarding, t) -> worth_moving_cpp t
-  | Texpr_type _ | Tdecltype_auto -> false
-  | Tconst t | Tnamespace (_, t) | Tqualified (t, _) | Tapply (t, _)
-  | Tref (Lvalue, t) ->
-    worth_moving_cpp t
-  | Tvar _ | Tinstance _ | Tpromoted _ -> true
-  | Tdecay t -> worth_moving_cpp t
-  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque ->
-    false
-
 let rec worth_moving_ir : type p. p Cpp_ir.Type.t -> bool = function
   | Entity_application (r, tparams, _) -> worth_moving_ref worth_moving_ir r tparams
   | Foreign {custom; types; _} -> worth_moving_ref worth_moving_ir custom types
@@ -228,11 +208,12 @@ let rec copy_of_type ty =
    the program defines is read as its Core definition: one naming an
    argument as that argument, one of a closure, or with no argument,
    wholly. *)
-let rec copy_of_cpp (ty : Minicpp.cpp_type) =
+let rec copy_of_cpp : type p. p Cpp_ir.Type.t -> copy =
+ fun ty ->
   match ty with
-  | Tshared_ptr _ | Tfun _ -> Retain
-  | Tglob (r, _, _) when shares_ref r -> Retain
-  | Tglob ((Names.GlobRef.ConstRef kn as r), args, _)
+  | Shared_pointer _ | Function _ -> Retain
+  | Entity_application (r, _, _) when shares_ref r -> Retain
+  | Entity_application ((Names.GlobRef.ConstRef kn as r), args, _)
     when (not (Table.is_custom r))
          && (not (Table.is_promoted_type_var r || Table.is_erased_type_const r))
          && Option.has_some (Table.lookup_typedef_unchecked kn) -> (
@@ -244,14 +225,14 @@ let rec copy_of_cpp (ty : Minicpp.cpp_type) =
       match copy_of_type (Tglob (r, [], [])) with
       | Some Retain -> Retain
       | Some c when args = [] -> c
-      | Some _ | None -> if worth_moving_cpp ty then Duplicate else Bits ) )
-  | Tglob (r, args, _) -> if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) r args then Duplicate else Bits
-  | Tforeign {fr_custom; fr_types; _} ->
-    if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) fr_custom fr_types then Duplicate else Bits
+      | Some _ | None -> if worth_moving_ir ty then Duplicate else Bits ) )
+  | Entity_application (r, args, _) ->
+    if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) r args then Duplicate else Bits
+  | Foreign {custom; types; _} -> if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) custom types then Duplicate else Bits
   (* A box holds a value of its own, which a copy copies. *)
-  | Tany | Topaque -> Duplicate
-  | Tconst t | Tnamespace (_, t) | Tref (_, t) | Tnondeduced t -> copy_of_cpp t
-  | _ -> if worth_moving_cpp ty then Duplicate else Bits
+  | Any | Obligation Opaque_type -> Duplicate
+  | Const t | In_namespace (_, t) | Reference (_, t) | Non_deduced t -> copy_of_cpp t
+  | _ -> if worth_moving_ir ty then Duplicate else Bits
 
 (* A variable is named by its de Bruijn level in the region: the number of
    binders around its binding site, counted from the region's root, so that

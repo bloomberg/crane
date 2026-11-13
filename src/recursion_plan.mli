@@ -235,13 +235,13 @@ val adoptable_by_fixpoint : lifted:Miniml.Occurrence.t list -> Miniml.Occurrence
 (** The calls of the function [member] of the local fixpoint [occurrence]
     made in its group's bodies, each by the occurrence of the read at its
     head, which the C++ call made of it records
-    ({!Minicpp.call_sig.cs_occurrence}): the recursive calls a loop of that
+    ({!Cpp_ir.Expr.Call.signature.occurrence}): the recursive calls a loop of that
     function takes. *)
 val member_calls : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 
 (** The calls of the function [r] made in its recursive group's bodies,
     each by the occurrence of the use heading it, which the C++ call made
-    of it records ({!Minicpp.call_sig.cs_occurrence}): the recursive calls
+    of it records ({!Cpp_ir.Expr.Call.signature.occurrence}): the recursive calls
     of [r], the copies of its partners spliced into its body included.
     Empty for a function on no cycle. *)
 val calls : Names.GlobRef.t -> Miniml.Occurrence.t list
@@ -273,7 +273,7 @@ type target =
   | Entering of Miniml.Occurrence.t
 
 (** A call a function resumes after: what it calls, and the occurrence the
-    C++ call made of it records ({!Minicpp.call_sig.cs_occurrence}) -- the
+    C++ call made of it records ({!Cpp_ir.Expr.Call.signature.occurrence}) -- the
     global's use, the read of the member at its head, or the fixpoint's
     own where it is applied as written.  Two calls ending two branches of
     one right-hand side are told apart by it. *)

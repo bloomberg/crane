@@ -47,7 +47,7 @@ val empty : t
 
 (** Whether a body owning a value of ML type [ty] moves it at its last use:
     one a copy of which costs more than a move.  This is the reading
-    {!worth_moving_cpp} makes, made of the ML type: an inductive that is not
+    {!worth_moving_ir} makes, made of the ML type: an inductive that is not
     an enum or coinductive, a closure, a type variable or one applied to
     arguments, a type nothing determined (held in the box), and a mapped type unless it is a scalar or declared trivially
     copyable with arguments that are too. *)
@@ -57,9 +57,6 @@ val worth_moving : Miniml.ml_type -> bool
     reference count to bump, an inductive to clone, an erased box, or a type
     parameter that may be either.  What the backend asks of the locals and
     frame fields it declares itself. *)
-val worth_moving_cpp : Minicpp.cpp_type -> bool
-
-(** {!worth_moving_cpp}, asked of a CppIR type. *)
 val worth_moving_ir : 'p Cpp_ir.Type.t -> bool
 
 (** What both ask of the global type [r] applied to [args], [worth] judging
@@ -233,7 +230,7 @@ val read_is_typed : t -> Miniml.Occurrence.t -> bool
 (** What a copy of a variable declared at the C++ type [ty] is, as {!Use}
     names it: what the C++ a read is lowered to does, which the plan's
     reading of the Core type must agree with. *)
-val copy_of_declared : Minicpp.cpp_type -> Use.t
+val copy_of_declared : 'p Cpp_ir.Type.t -> Use.t
 
 (** [evaluated_first p at]: the positions among its arguments of those the
     local fixpoint applied where it is written, at the occurrence [at],

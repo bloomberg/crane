@@ -140,7 +140,7 @@ let sequential effects use =
    around it, so the argument is where the custom is: sequential [itree]
    maps [go] and [TauF] so, and [Tau t] is [t]. *)
 let identity r =
-  Table.is_custom r && Minicpp.inline_shape_of_text (Table.find_custom r) = Minicpp.Inline_identity
+  Table.is_custom r && Cpp_ir.Foreign.shape_of_text (Table.find_custom r) = Identity
 
 (* How [body], a function's body inside its parameters, calls the members
    of its recursive group, as the C++ it becomes does: a call is a tail call

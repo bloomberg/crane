@@ -50,18 +50,6 @@ open Names
     so with {!of_reversed}. *)
 type 'a revd = {rev : 'a list}
 
-(** {2 Inductive classification}
-
-    Determined once during translation. *)
-
-(** Classification of an inductive type for C++ code generation. *)
-type cpp_ind_kind =
-  | IK_Standard (* std::variant sum type *)
-  | IK_Enum (* enum class *)
-  | IK_Record of GlobRef.t option list (* struct with named fields *)
-  | IK_Eponymous of GlobRef.t option list (* record merged into module *)
-  | IK_TypeClass of GlobRef.t option list (* C++ concept *)
-
 (** Visibility for struct members. *)
 type cpp_visibility =
   | VPublic
@@ -818,12 +806,12 @@ and wrapper_piece = Wp_text of string | Wp_element
 
 and foreign_use = Foreign_constant | Foreign_call | Foreign_block of written_capture | Foreign_statements
 
-let inline_shape_of_text s =
-  if String.equal s "%a0" then Inline_identity
-  else
-    match Foreign_template.pair_projection_field s with
-    | Some f -> Inline_pair_projection f
-    | None -> Inline_other
+let inline_shape_of_shape : Cpp_ir.Foreign.shape -> inline_shape = function
+  | Identity -> Inline_identity
+  | Pair_projection f -> Inline_pair_projection f
+  | Other -> Inline_other
+
+let inline_shape_of_text s = inline_shape_of_shape (Cpp_ir.Foreign.shape_of_text s)
 
 let foreign_pair_projection = function
   | {fr_values = [pair]; fr_pieces = [Fp_text ""; Fp_value 0; Fp_text f] | [Fp_value 0; Fp_text f]; _}
@@ -832,18 +820,11 @@ let foreign_pair_projection = function
   | _ -> None
 
 let inline_template s =
-  let contains sub =
-    let n = String.length s and m = String.length sub in
-    let rec at i = i + m <= n && (String.sub s i m = sub || at (i + 1)) in
-    at 0
-  in
-  { it_text = s;
-    it_form =
-      ( if contains "%result" then Block_iife
-        else if String.contains s '%' then Templated
-        else Bare_callee );
-    it_shape = inline_shape_of_text s;
-    it_linear = Foreign_template.mentions_each_arg_once s }
+  let t = Cpp_ir.Foreign.template_of_text s in
+  { it_text = t.text;
+    it_form = (match t.form with Block -> Block_iife | Templated -> Templated | Bare_callee -> Bare_callee);
+    it_shape = inline_shape_of_shape t.shape;
+    it_linear = t.linear }
 
 let inline_shape ci = Option.map (fun t -> t.it_shape) ci.ci_inline
 
@@ -1320,11 +1301,11 @@ let tvar_spelled = function
   | Tv_index (i, None) -> Id.of_string ("T" ^ string_of_int i)
 
 (** The spelling of the type variable at index [i] in a declaration's
-    parameter list.  The one place the convention is written down; re-exported
-    as {!Common.tvar_name}, alongside the other generated names. *)
-let tvar_spelling i = "T" ^ string_of_int i
+    parameter list ({!Cpp_ir.Type.positional_name}); re-exported as
+    {!Common.tvar_name}, alongside the other generated names. *)
+let tvar_spelling = Cpp_ir.Type.positional_name
 
-let tvar_id i = Id.of_string (tvar_spelling i)
+let tvar_id = Cpp_ir.Type.positional_id
 
 (** Whether a type is the type variable named [id].  The head of a tvar is not
     always resolved to its parameter name, so a tvar answers to either

@@ -64,7 +64,7 @@ let rec strip_ref_and_const_type = function
     pessimizing-move warning since the move constructor receives [const T&&]
     and falls back to copy anyway; and a move of a type that copies for free
     -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
-    and is moved as a type variable is ({!Ownership_ir.worth_moving_cpp}). *)
+    and is moved as a type variable is ({!Ownership_ir.worth_moving_ir}). *)
 let is_moveable_param_type = function
   | Reference _ | Const _ -> false
   | Auto -> true

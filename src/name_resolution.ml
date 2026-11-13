@@ -11,12 +11,12 @@
     produce different output. *)
 
 open Names
-open Minicpp
 open Table
+module Kind = Cpp_ir.Inductive.Kind
 
 (** Name resolution cache: the inductive kind of each scanned inductive,
     indexed by GlobRef. *)
-type t = {ind_kinds : cpp_ind_kind Ref.User.Tbl.t}
+type t = {ind_kinds : Kind.t Ref.User.Tbl.t}
 
 (** Checks if a reference is an eponymous record type. Eponymous records flatten
     their single constructor into the parent namespace. *)
@@ -31,16 +31,16 @@ let is_global_scope_enum _ r = Module_plan.is_global_scope_enum r
 let get_ind_kind t r = Ref.User.Tbl.find_opt t.ind_kinds r
 
 (** Classifies packet [i] of an inductive using side-effect-free queries. *)
-let classify_inductive (kn : MutInd.t) (i : int) (ind : Miniml.ml_ind) : cpp_ind_kind =
+let classify_inductive (kn : MutInd.t) (i : int) (ind : Miniml.ml_ind) : Kind.t =
   let ind_ref = GlobRef.IndRef (kn, i) in
   match ind.Miniml.ind_kind with
   | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive ->
-    if is_enum_inductive ind_ref then IK_Enum else IK_Standard
+    if is_enum_inductive ind_ref then Enum else Sum
   | Core.Inductive.Kind.Record fields ->
     let projections = List.map fst fields in
-    if Module_plan.is_eponymous_record ind_ref then IK_Eponymous projections
-    else IK_Record projections
-  | Core.Inductive.Kind.Type_class fields -> IK_TypeClass (List.map fst fields)
+    if Module_plan.is_eponymous_record ind_ref then Eponymous_record projections
+    else Record projections
+  | Core.Inductive.Kind.Type_class fields -> Type_class (List.map fst fields)
 
 (** Creates a name resolution cache from an ML structure. Pre-computes type
     classifications for every inductive at top level or in a module structure,

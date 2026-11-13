@@ -445,18 +445,6 @@ let is_cpp_unit_type = function
   | Tnamespace (r, _) -> Table.is_unit_type r
   | _ -> false
 
-(** Recursively replace Rocq's unit enum type with [Tvoid] in a C++ type.
-    Handles both direct [Unit -> void] (sequential mode) and nested
-    [shared_ptr<ITree<Unit>> -> shared_ptr<ITree<void>>] (reified mode). *)
-let rec voidify_unit_in_type = function
-  | t when is_cpp_unit_type t -> Tvoid
-  | Tglob (r, args, ns) ->
-    Tglob (r, List.map voidify_unit_in_type args, ns)
-  | Tnamespace (r, t) ->
-    Tnamespace (r, voidify_unit_in_type t)
-  | Tshared_ptr t -> Tshared_ptr (voidify_unit_in_type t)
-  | t -> t
-
 (** Check if an ML type represents a void or unit type. *)
 let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
 
@@ -761,6 +749,14 @@ and is_ml_erased_ty = function
 let is_skipped_cpp_type = function
   | Minicpp.Tglob (r, _, _) ->
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+  | _ -> false
+
+(** Whether a C++ type is a type class's, under [const], a reference or a
+    [shared_ptr]. *)
+let rec is_typeclass_type_cpp = function
+  | Minicpp.Tglob (r, _, _) -> Table.is_typeclass r
+  | Minicpp.Tconst t | Minicpp.Tref (Minicpp.Lvalue, t) | Minicpp.Tref (Minicpp.Forwarding, t) | Minicpp.Tshared_ptr t ->
+    is_typeclass_type_cpp t
   | _ -> false
 
 (** Check if an ML type is a skipped type (inline custom with empty string).

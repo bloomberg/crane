@@ -154,10 +154,10 @@ let own_value ty value =
     match Table.find_custom_opt r with
     | None -> true
     | Some text -> (
-      let t = Minicpp.inline_template text in
-      match (t.it_form, t.it_shape) with
-      | Block_iife, _ | _, (Inline_identity | Inline_pair_projection _) -> false
-      | (Templated | Bare_callee), Inline_other -> true )
+      let t = Cpp_ir.Foreign.template_of_text text in
+      match (t.form, t.shape) with
+      | Block, _ | _, (Identity | Pair_projection _) -> false
+      | (Templated | Bare_callee), Other -> true )
   in
   let fresh =
     match head value with

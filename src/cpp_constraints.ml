@@ -22,7 +22,7 @@ let tvar_is id (t : ty) =
   match t with
   | Variable (Named n) -> Id.equal n id
   | Variable (Index (i, name)) ->
-    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Minicpp.tvar_id i) id
+    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Cpp_ir.Type.positional_id i) id
   | _ -> false
 
 (** The value parameters [body] only ever hands to a representation-tolerant

@@ -20,7 +20,6 @@ open Pp
 open Names
 open Table
 open Common
-open Minicpp
 open Cpp_state
 
 (** {2 Global name printing} *)
@@ -805,14 +804,14 @@ let is_global_scope_enum_cached : GlobRef.t -> bool =
 
 (** The C++ inductive kind of [r], as the cache classifies it; [None]
     where no cache is installed or it does not classify [r]. *)
-let get_ind_kind_cached : GlobRef.t -> Minicpp.cpp_ind_kind option =
+let get_ind_kind_cached : GlobRef.t -> Cpp_ir.Inductive.Kind.t option =
   with_cache Name_resolution.get_ind_kind (fun _ -> None)
 
 (** Whether [r] is an enum, as the cache classifies it, falling back to
     [is_enum_inductive]. *)
 let is_enum_cached (r : GlobRef.t) : bool =
   match get_ind_kind_cached r with
-  | Some IK_Enum -> true
+  | Some Enum -> true
   | Some _ -> false
   | None -> is_enum_inductive r
 
@@ -820,7 +819,7 @@ let is_enum_cached (r : GlobRef.t) : bool =
     falling back to {!is_record_inductive}. *)
 let is_record_cached (r : GlobRef.t) : bool =
   match get_ind_kind_cached r with
-  | Some (IK_Record _ | IK_Eponymous _) -> true
+  | Some (Record _ | Eponymous_record _) -> true
   | Some _ -> false
   | None -> is_record_inductive r
 

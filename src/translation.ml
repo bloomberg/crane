@@ -819,7 +819,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
      value the parameter has already pinned down.  See {!Rank2}. *)
   let type_args_at_carrier r =
     match get_rank2_carrier () with
-    | Some x -> Option.default [] (Rank2.type_args_at_carrier x r)
+    | Some x -> Option.default [] (Option.map (List.map Cpp_ir_to_legacy_minicpp.ty) (Rank2.type_args_at_carrier x r))
     | None -> []
   in
   let result =
@@ -1460,14 +1460,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             match binder_cpp_type i with
             (* [auto] says nothing of the type it deduces. *)
             | Some (Tauto | Tconst Tauto | Tref (_, (Tauto | Tconst Tauto))) -> ()
-            | Some declared when Ownership_ir.copy_of_declared declared <> copy ->
+            | Some declared when Ownership_ir.copy_of_declared (Legacy_minicpp_to_cpp_ir.lower_type declared) <> copy ->
               let name : Ownership_ir.Use.t -> string = function
                 | Share -> "shares" | Clone -> "clones" | Copy -> "copies" | Move -> "moves" | Borrow -> "borrows"
               in
               Probe.violation "copy mode"
                 Pp.(
                   str "the plan " ++ str (name copy) ++ str " " ++ Id.print x ++ str " where its declaration "
-                  ++ str (name (Ownership_ir.copy_of_declared declared)) ++ str " it" )
+                  ++ str (name (Ownership_ir.copy_of_declared (Legacy_minicpp_to_cpp_ir.lower_type declared))) ++ str " it" )
             | Some _ | None -> () );
         false
       | Some use -> use = Move
@@ -1994,7 +1994,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       else None
     in
     let at_carrier ty =
-      match rank2_carrier with None -> ty | Some x -> Rank2.at_carrier x ty
+      match rank2_carrier with
+      | None -> ty
+      | Some x -> Cpp_ir_to_legacy_minicpp.ty (Rank2.at_carrier x (Legacy_minicpp_to_cpp_ir.lower_type ty))
     in
     let f =
       with_escape_analysis (fun () ->
@@ -5599,7 +5601,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              && List.length doms >= List.length args
              && List.length regular_ml_args = List.length args
              && not (List.exists (function MLdummy _ -> true | _ -> false) regular_ml_args)
-             && not (List.exists (fun t -> Table.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
+             && not (List.exists (fun t -> Ml_type_util.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
         List.map2
           (fun (ml_arg, a) into ->
             let crossed = function Some from -> regroup_crossing ~from ~into a | None -> a in
@@ -5933,7 +5935,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         let dom =
           List.filter
             (fun t ->
-              (not (Table.is_typeclass_type_cpp t))
+              (not (Ml_type_util.is_typeclass_type_cpp t))
               && (not (is_cpp_dummy_type t))
               && not (is_skipped_cpp_type t) )
             dom

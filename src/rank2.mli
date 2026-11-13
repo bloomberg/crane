@@ -27,7 +27,7 @@ val carrier_name : Names.Id.t
 
 (** [carrier_type x] is the carrier as a type: a type variable with no index,
     since it numbers against no declaration's parameter list. *)
-val carrier_type : Names.Id.t -> Minicpp.cpp_type
+val carrier_type : Names.Id.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether an argument's ML type quantifies a type extraction erased -- the
     mark of a rank-2 (or higher) argument. *)
@@ -35,17 +35,17 @@ val quantifies_erased_type : Miniml.ml_type -> bool
 
 (** [at_carrier x ty] is [ty] with every erased position read as the carrier:
     inside a polymorphic function object that is what those positions denote. *)
-val at_carrier : Names.Id.t -> Minicpp.cpp_type -> Minicpp.cpp_type
+val at_carrier : Names.Id.t -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether a type is {e nothing but} an erased position, modulo [const] and
     [&].  Such a parameter is a box being passed through: naming it [_X]
     deduces [std::any] and says less than [std::any] did, so the carrier is
     only worth naming inside a type. *)
-val is_bare_box : Minicpp.cpp_type -> bool
+val is_bare_box : Cpp_ir.Lowered.Type.t -> bool
 
 (** [type_args_at_carrier x r] is the type-argument list an inductive (or one
     of its constructors) takes, every argument read as the carrier -- what to
     say when the ML annotation was erased down to nothing.  [None] when [r]
     takes no type parameters, so a caller keeps whatever it had. *)
 val type_args_at_carrier :
-  Names.Id.t -> Names.GlobRef.t -> Minicpp.cpp_type list option
+  Names.Id.t -> Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option

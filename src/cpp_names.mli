@@ -241,7 +241,7 @@ val is_eponymous_record_cached : Names.GlobRef.t -> bool
 val is_global_scope_enum_cached : Names.GlobRef.t -> bool
 
 (** Cached: the C++ inductive kind of the global, if any. *)
-val get_ind_kind_cached : Names.GlobRef.t -> Minicpp.cpp_ind_kind option
+val get_ind_kind_cached : Names.GlobRef.t -> Cpp_ir.Inductive.Kind.t option
 
 (** Cached: whether the global is an enum. *)
 val is_enum_cached : Names.GlobRef.t -> bool

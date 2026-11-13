@@ -16,13 +16,13 @@ open Minicpp
 open Names
 
 (** A [CPPglob] for the global [r] at [tys], its custom extraction
-    ({!Table.custom_info}) looked up once here.  [yields] is what
+    ({!Table.inline_custom_text}) looked up once here.  [yields] is what
     the global evaluates to, and is worth passing whenever the caller has the
     global's instantiated type: for a [%result] block template in value
     position it is the only record of the type, since there is no call node to
     carry one. *)
 let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
-  CPPglob (r, tys, Some (Table.custom_info ?yields r))
+  CPPglob (r, tys, Some {ci_inline = Option.map inline_template (Table.inline_custom_text r); ci_yields = yields})
 
 (** A [CPPglob] for a local variable ([VarRef]): no custom extraction applies. *)
 let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
