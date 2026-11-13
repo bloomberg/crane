@@ -1156,23 +1156,36 @@ let self_call_reference n ~undeducible =
   in
   mk_cppglob n (List.map (fun (_, id) -> named_tvar id) written)
 
-(** Checks the signature the function [n] is declared with, [decl], against
-    its plan's.  A top-level sequential [main] is declared to return [int]
-    for the entry point, which no call of it reads. *)
-let check_declared_signature n decl =
+(** The declaration of the function [n], [decl] as its body was generated,
+    with the value-parameter types and return type its plan's signature
+    gives ({!Callable_abi.signature}): the head a caller planned against is
+    the one declared.  Under [CRANE_CHECK_IR] the generated signature is
+    held to the plan's.  A top-level sequential [main] keeps its own: it is
+    declared to return [int] for the entry point, which no call of it
+    reads. *)
+let declare_planned_signature n decl =
   let is_entry_point =
     match (n, decl) with
     | GlobRef.ConstRef c, Dfun {df_ret = Tid_external ("int", []); _} ->
       String.equal (Label.to_string (Constant.label c)) "main"
     | _ -> false
   in
-  if not is_entry_point then
+  if is_entry_point then decl
+  else
     let planned = Callable_abi.signature (Callable_abi.planned n) in
-    if not (Option.equal ( = ) planned (declared_signature decl)) then
+    if Probe.checking () && not (Option.equal ( = ) planned (declared_signature decl)) then
       Probe.violation "callable ABI"
         Pp.(
           str "the declaration of " ++ GlobRef.print n
-          ++ str " has another signature than its plan" )
+          ++ str " has another signature than its plan" );
+    match (planned, decl) with
+    | Some {Callable_abi.params; ret}, Dfun ({df_shape = Ddef (ps, body); _} as f)
+      when List.compare_lengths params ps = 0 ->
+      Dfun {f with df_ret = ret; df_shape = Ddef (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params), body)}
+    | Some {Callable_abi.params; ret}, Dfun ({df_shape = Ddecl ps; _} as f)
+      when List.compare_lengths params ps = 0 ->
+      Dfun {f with df_ret = ret; df_shape = Ddecl (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params))}
+    | _ -> decl
 
 (** Generate the C++ definition of the function [n] from its ML body [b]:
     its {!body_scope}, the head its plan declares, the body with every
@@ -1516,8 +1529,7 @@ let gen_dfun ~minted n b cty ty temps =
   in
     (inner, env)
   in
-  let inner = Head_relaxation.apply_all relaxations inner in
-  if Probe.checking () then check_declared_signature n inner;
+  let inner = declare_planned_signature n (Head_relaxation.apply_all relaxations inner) in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
