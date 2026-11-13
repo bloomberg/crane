@@ -323,8 +323,8 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
             | Miniml.Tvar (_, j) -> (
               match Mlutil.Var_types.find_tvar tys j with
               | Some ty when not (Mlutil.isTdummy (resolve_tmeta ty)) ->
-                let c = template_arg_of_ml_type ~site:Through_tvar env tvars ty in
-                if prints_as_any c then None else Some c
+                let c = template_arg_of_ml_type_ir ~site:Through_tvar env tvars ty in
+                if Cpp_ir.Types.prints_as_any c then None else Some c
               | _ -> None )
             | _ -> None )
           element_args
@@ -344,27 +344,28 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
       in
       if element_tys = [] then
         if element_erased_by_declaration
-           && not (Ml_type_util.has_tany_written t')
+           && not (Ml_type_util.has_tany_written_ir t')
         then None
         else Some t'
       else
         (* Compared unqualified: the same type reaches here spelled
            through its wrapper struct and without it. *)
         let rec norm t =
-          map_cpp_type
-            (function
-              | Tnamespace (_, t) | Tconst t -> norm t
-              | Tany | Topaque | Tvar (Tv_index (_, None)) -> Tany
-              | Tvar (Tv_index (_, Some n) | Tv_named n)
+          Cpp_ir.Types.map
+            (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+              match t with
+              | In_namespace (_, t) | Const t -> norm t
+              | Any | Obligation Opaque_type | Variable (Index (_, None)) -> Any
+              | Variable (Index (_, Some n) | Named n)
                 when not (List.exists (Id.equal n) (!tctx).current_type_vars) ->
-                Tany
+                Any
               | t -> t )
             t
         in
         let element_tys = List.map norm element_tys in
         let t'' =
-          map_cpp_type
-            (fun t -> if List.mem (norm t) element_tys then Tany else t)
+          Cpp_ir.Types.map
+            (fun t -> if List.mem (norm t) element_tys then (Any : Cpp_ir.Lowered.Type.t) else t)
             t'
         in
         Some t''
@@ -402,14 +403,14 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
                              | _ -> false
                            in
                            has_class x) ->
-                let c = template_arg_of_ml_type ~site:Through_tvar env tvars x in
+                let c = template_arg_of_ml_type_ir ~site:Through_tvar env tvars x in
                 (* A carrier is written at the erased element, so an
                    instantiation that erases nothing is some application
                    of it, not the carrier. *)
                 ( match erase_carrier_elements i c with
                 | Some c
-                  when (not (prints_as_any c))
-                       && Ml_type_util.has_tany_written c ->
+                  when (not (Cpp_ir.Types.prints_as_any c))
+                       && Ml_type_util.has_tany_written_ir c ->
                   Some c
                 | _ -> None )
               | _ -> None )
@@ -432,7 +433,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
               with
               | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
                 && not (prints_as_any x) ->
-                Some x
+                Some (Legacy_minicpp_to_cpp_ir.lower_type x)
               | _ -> None )
             | _ -> None )
           | None -> None )
@@ -489,18 +490,18 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
               the constant carrier, not the head of the type it returns. *)
            let t =
              if constant_at_higher_kind i ty then carrier_template env tvars ty
-             else template_arg_of_ml_type ~site:Through_tvar env tvars ty
+             else template_arg_of_ml_type_ir ~site:Through_tvar env tvars ty
            in
            (* A higher-kinded variable of the caller's reaching such a
               position is spelled as the template it is, which names no
               type; the position takes it at the erased element. *)
            let t =
              match (t, resolve_tmeta ty) with
-             | (Tqualified _ | Tvar _), Miniml.Tvar (_, j)
+             | (Member _ | Variable _), Miniml.Tvar (_, j)
                when IntSet.mem i plain_carriers && caller_higher_kinded j ->
-               template_arg_of_ml_type ~site:Through_tvar env tvars
+               template_arg_of_ml_type_ir ~site:Through_tvar env tvars
                  (Miniml.Tapp (j, [Miniml.Tunknown]))
-             | _ when (prints_as_any t || under_applied_ind t)
+             | _ when (Cpp_ir.Types.prints_as_any t || under_applied_ind_ir t)
                       && IntSet.mem i plain_carriers -> (
                match carrier_from_dictionary i with
                | Some t' -> t'
@@ -514,11 +515,10 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
               nothing. *)
            ( v,
              match t with
-             | Tvar (Tv_index (_, None)) ->
-               Terased Ek_type
-             | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
+             | Variable (Index (_, None)) -> (Erased Type : Cpp_ir.Lowered.Type.t)
+             | t when has_unnamed_tvar_ir t -> Ml_type_util.resolve_tvars_to_any_ir t
              | t -> t ) )
-    |> List.filter (fun (v, t) -> not (mem v phantom_vars && prints_as_any t))
+    |> List.filter (fun (v, t) -> not (mem v phantom_vars && Cpp_ir.Types.prints_as_any t))
   in
   let regular_type_args = regular_of tys in
   (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
@@ -536,7 +536,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
      arguments — lambdas don't participate in template argument deduction. *)
   let regular_type_args =
     let filtered =
-      filter_erased_keyed
+      filter_erased_keyed_ir
         ~preserve_positions:(Table.is_inline_custom id)
         regular_type_args
     in
@@ -549,7 +549,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         match Option.map (fun t -> resolve_tmeta (ml_return_type t)) (find_type_opt id) with
         | Some (Miniml.Tvar (_, i)) -> (
           match scheme_var i with
-          | Some v when erased_type_binder v -> Some (v, ret_ty)
+          | Some v when erased_type_binder v -> Some (v, Legacy_minicpp_to_cpp_ir.lower_type ret_ty)
           | _ -> None )
         | _ -> None )
     in
@@ -599,7 +599,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         let hk = declared_higher_kinded_tvars ml_ty in
         not
           (List.exists
-             (fun (v, t) -> IntSet.mem (Scheme.Var.ordinal v) hk && prints_as_any t)
+             (fun (v, t) -> IntSet.mem (Scheme.Var.ordinal v) hk && Cpp_ir.Types.prints_as_any t)
              (regular_of ~keep:(Callable_abi.keeps (callee_abi ~instances:0 id)) tys) )
     in
     (* Writing the list out is what this call is left with once the
@@ -624,36 +624,36 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
                 (fun name -> List.find_opt (fun (v, _) -> Id.equal v name) m)
             with
             | Some (v, t') -> (
-              match erase_carrier_elements i t' with
+              match erase_carrier_elements i (Legacy_minicpp_to_cpp_ir.lower_type t') with
               | Some t'' -> Some (v, t'')
               | None -> None )
             | None -> None
           in
           ( v,
-            if prints_as_any t || under_applied_ind t then
+            if Cpp_ir.Types.prints_as_any t || under_applied_ind_ir t then
               match bound () with
               | Some (_, t') -> t'
               | None -> t
             (* Erased only in part -- a carrier [fun T => option (exp T)]
                written [std::optional<std::any>] -- the result fills the
                part it knows. *)
-            else if Ml_type_util.has_tany_written t then
+            else if Ml_type_util.has_tany_written_ir t then
               match bound () with
-              | Some (_, t') -> Ml_type_util.refine_erased_by ~expected:t' t
+              | Some (_, t') -> Ml_type_util.refine_erased_by_ir ~expected:t' t
               | None -> t
             else t ) )
         targs
     in
     let written_out () =
       if some_tvar_undeducible () && no_erased_hkt_arg () then
-        filter_erased_keyed ~preserve_positions:true
+        filter_erased_keyed_ir ~preserve_positions:true
           (from_expected
              (regular_of
                 (Call_tyargs.by_variable (resolve_from_argument_heads ~lex tyargs primary_ml_args)) ) )
       else filtered
     in
     if filtered = [] && regular_type_args <> [] && dictionary_filled then
-      filter_erased_keyed ~preserve_positions:true regular_type_args
+      filter_erased_keyed_ir ~preserve_positions:true regular_type_args
     else if filtered = [] && regular_type_args <> [] then
       (* Case (a): tys was non-empty but all got filtered. Only attempt
          recovery when there are no non-erased value args — if there are value
@@ -671,7 +671,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         List.map
           (fun (w, t) -> (w, if Scheme.Var.equal w v then ret_ty else t))
           regular_type_args
-        |> List.filter (fun (_, t) -> not (prints_as_any t))
+        |> List.filter (fun (_, t) -> not (Cpp_ir.Types.prints_as_any t))
       | None -> written_out ()
     else if Mlutil.Var_types.is_empty tys then
       (* Case (b): tys is empty — synthesize type args from scratch. Build one
@@ -692,7 +692,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         (* Use [concrete_tvar_type] when available (excess args case),
            otherwise fall back to the enclosing function's return type, at
            every variable of an erased type binder. *)
-        let t1 = Option.default ret_ty concrete_tvar_type in
+        let t1 = Option.default ret_ty (Option.map Legacy_minicpp_to_cpp_ir.lower_type concrete_tvar_type) in
         List.map
           (fun v -> (v, t1))
           (List.filter erased_type_binder (Option.cata Ml_schema.vars [] schema))
@@ -715,8 +715,8 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     List.map
       (fun (v, t) ->
         ( v,
-          if (not (IntSet.mem (Scheme.Var.ordinal v) hk)) && under_applied_ind t then
-            saturate_at_any t
+          if (not (IntSet.mem (Scheme.Var.ordinal v) hk)) && under_applied_ind_ir t then
+            saturate_at_any_ir t
           else t ) )
       regular
   in
@@ -724,7 +724,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     let regular = at_plain_positions regular in
     Template_application.plan abi
       ~instance:(fun k -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (List.nth_opt instance_args k))
-      ~scheme:(fun v -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (Scheme.Var.assoc_opt v regular))
+      ~scheme:(fun v -> Scheme.Var.assoc_opt v regular)
   in
   let regular = build_type_args tyargs in
   (* A class parameter is quantified first, so the carrier is the callee's
@@ -741,7 +741,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
          rather than merely miss.  Where it cannot be read off the value
          argument, name it -- the carrier is the callee's first variable. *)
       match
-        hkt_carrier_type_args env tvars ?result:expected_ty id tys
+        hkt_carrier_type_args env tvars ?result:(Option.map Legacy_minicpp_to_cpp_ir.lower_type expected_ty) id tys
       with
       | Some [carrier] -> carrier_first carrier
       | _ -> (

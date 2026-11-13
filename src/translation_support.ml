@@ -1456,6 +1456,27 @@ let under_applied_ind t =
     | None -> false )
   | _ -> false
 
+(** {!under_applied_ind} over a CppIR type. *)
+let under_applied_ind_ir (t : Cpp_ir.Lowered.Type.t) =
+  match t with
+  | Entity_application (g, args, _) | In_namespace (_, Entity_application (g, args, _)) -> (
+    match written_arity g with
+    | Some n -> List.length args < n
+    | None -> false )
+  | _ -> false
+
+(** {!saturate_at_any} over a CppIR type. *)
+let saturate_at_any_ir (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  let pad g args =
+    match written_arity g with
+    | Some n -> args @ List.init (n - List.length args) (fun _ : Cpp_ir.Lowered.Type.t -> Any)
+    | None -> args
+  in
+  match t with
+  | Entity_application (g, args, es) -> Entity_application (g, pad g args, es)
+  | In_namespace (ns, Entity_application (g, args, es)) -> In_namespace (ns, Entity_application (g, pad g args, es))
+  | t -> t
+
 (** [t], a type {!under_applied_ind} says is short of arguments, applied at
     [std::any] for each one missing: a family at an erased index. *)
 let saturate_at_any t =

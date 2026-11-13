@@ -2661,14 +2661,11 @@ let leading_phantom_count id =
     variable: [c] itself as a constructor, unless applying it changes
     nothing -- [fun T => list nat], which extraction writes as its body
     [list nat] -- when it is the constant one, [crane::constant_tc<c>::c]. *)
-let carrier_template env tvars c =
-  let carrier = template_arg_of_ml_type ~site:Through_tvar env tvars c in
+let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
+  let carrier = template_arg_of_ml_type_ir ~site:Through_tvar env tvars c in
   let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
-  Minicpp.Ttyctor
-    ( if constant then
-        Minicpp.Tqualified
-          (Minicpp.Tid_external (Crane_rt.constant_tc, [carrier]), Id.of_string "c")
-      else carrier )
+  Type_constructor
+    (if constant then Member (External (Crane_rt.constant_tc, [carrier]), Id.of_string "c") else carrier)
 
 (** The explicit type arguments a call needs when the callee is generic in a
     type {e constructor} and Rocq erased which one.
@@ -2726,29 +2723,26 @@ let hkt_carrier_type_args env tvars ?result id tys =
   in
   let* v_ml = Mlutil.Var_types.find_tvar tys v in
   let* result =
-    match result with None -> (!tctx).current_cpp_return_type | r -> r
+    match result with
+    | None -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (!tctx).current_cpp_return_type
+    | r -> r
   in
-  let over = template_arg_of_ml_type ~site:Through_tvar env tvars v_ml in
-  let* carrier = Minicpp.abstract_cpp_type ~over result in
+  let over = template_arg_of_ml_type_ir ~site:Through_tvar env tvars v_ml in
+  let* carrier = abstract_cpp_type_ir ~over result in
   (* A carrier that is one template applied to the argument is left to
      deduction, which reads it off the value argument and gets it right.  Only
      a carrier with no head to read -- a composite, or a partial application --
      has to be written, and it is written alone: everything after it deduces
      through the alias, which is transparent. *)
-  let sentinel = Minicpp.Thole in
-  let rec is_plain_head = function
+  let rec is_plain_head (t : Cpp_ir.Lowered.Type.t) =
+    match t with
     (* A namespace or a const/reference wrapper is spelling, not structure. *)
-    | Minicpp.Tnamespace (_, t) | Minicpp.Tconst t | Minicpp.Tref (Minicpp.Lvalue, t)
-    | Minicpp.Tref (Minicpp.Forwarding, t) ->
-      is_plain_head t
-    | Minicpp.Tglob (_, [arg], _)
-    | Minicpp.Tid (_, [arg])
-    | Minicpp.Tid_external (_, [arg])
-    | Minicpp.Tapply (_, [arg]) ->
-      arg = sentinel
+    | In_namespace (_, t) | Const t | Reference (_, t) -> is_plain_head t
+    | Entity_application (_, [arg], _) | Named (_, [arg]) | External (_, [arg]) | Apply (_, [arg]) ->
+      arg = Carrier_parameter
     | _ -> false
   in
-  if is_plain_head carrier then None else Some [Minicpp.Ttyctor carrier]
+  if is_plain_head carrier then None else Some [(Type_constructor carrier : Cpp_ir.Lowered.Type.t)]
 
 (** The explicit type arguments a call to a lifted helper has to carry.
 
@@ -2928,13 +2922,11 @@ let dict_carrier_type_args env tvars id args =
     | Miniml.Tglob (_, (t0 :: _ as targs), _)
     | Miniml.Tapp (_, (t0 :: _ as targs)) ->
       let whole = if List.exists unrecovered targs then t0 else traversed cod in
-      Some (template_arg_of_ml_type ~site:Through_tvar env tvars whole)
+      Some (template_arg_of_ml_type_ir ~site:Through_tvar env tvars whole)
     | _ -> None
   in
-  let* carrier =
-    Minicpp.abstract_cpp_type ~over (template_arg_of_ml_type ~site:Through_tvar env tvars cod)
-  in
-  Some [Minicpp.Ttyctor carrier]
+  let* carrier = abstract_cpp_type_ir ~over (template_arg_of_ml_type_ir ~site:Through_tvar env tvars cod) in
+  Some [(Type_constructor carrier : Cpp_ir.Lowered.Type.t)]
 
 (** Whether [e] denotes a value whose ML type is a function (at least one value
     arrow).  Used to decide, at a constructor argument that is stored into an
