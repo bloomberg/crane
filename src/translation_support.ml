@@ -958,15 +958,21 @@ let mk_itree_ret_for_value r_cpp r_ml v =
     monad erasure is just [R].  This function wraps it back into
     [shared_ptr<ITree<R>>] so the tree can be passed as a first-class value.
     Does nothing in sequential mode or when [ml_ty] is not monadic. *)
-let reify_monadic_param_type ml_ty cpp_ty =
+let reify_monadic_param_type_ir ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then begin
-    let r_ty =
+    let r_ty : Cpp_ir.Lowered.Type.t =
       match cpp_ty with
-      | Tglob (_, _ :: r :: _, _) -> r
+      | Entity_application (_, _ :: r :: _, _) -> r
       | t -> t
     in
-    mk_itree_type r_ty
+    Shared_pointer (External (Crane_rt.itree, [r_ty]))
   end
+  else cpp_ty
+
+(** {!reify_monadic_param_type_ir} over a MiniCpp type. *)
+let reify_monadic_param_type ml_ty cpp_ty =
+  if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then
+    Cpp_ir_to_legacy_minicpp.ty (reify_monadic_param_type_ir ml_ty (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty))
   else cpp_ty
 
 (** Check whether an ML expression already produces a reified monadic value
@@ -3480,12 +3486,37 @@ let boxed slot = match slot.repr with Boxed _ -> true | Native -> false
     the slot already carries is kept, being the outer and earlier one. *)
 let into_box kind slot = if boxed slot then slot else { slot with repr = Boxed kind }
 
+(** {!Minicpp.abstract_cpp_type} over a CppIR type: [ty] with every
+    occurrence of [over] -- a type variable compared by its index -- replaced
+    by the carrier parameter, or [None] where [over] does not occur. *)
+let abstract_cpp_type_ir ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Type.t) =
+  let fired = ref false in
+  (* Never descending into a [decltype]: comparing two expressions raises on
+     the closures one can hold. *)
+  let same (a : Cpp_ir.Lowered.Type.t) (b : Cpp_ir.Lowered.Type.t) =
+    match (a, b) with
+    | (Decay (Type_of _) | Type_of _), _ | _, (Decay (Type_of _) | Type_of _) -> false
+    | Variable (Index (i, _)), Variable (Index (j, _)) -> i = j
+    | Variable (Named x), Variable (Named y) -> Id.equal x y
+    | _ -> a = b
+  in
+  let abstracted =
+    Cpp_ir.Types.map
+      (fun t ->
+        if same t over then (
+          fired := true;
+          Carrier_parameter )
+        else t )
+      ty
+  in
+  if !fired then Some abstracted else None
+
 (** Mark the template arguments of [g] that its declaration spells
     [template <typename> class].  Such a position takes a bare template name
     ([wrapped<List, uint64_t>]), never an instantiation, so every site that
     spells an instantiation of [g] -- its type, its factory calls, and the
     constructor structs a match qualifies -- has to agree on this. *)
-let apply_hkt_tyctors g temps =
+let apply_hkt_tyctors_ir g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Type.t list =
   (* A template-template position takes a {e unary} constructor, and what
      reaches it may be an application of more than one argument: Rocq's
      [TFunctor (fun T => two T (FnBody T))] normalises to [two] applied to
@@ -3501,11 +3532,11 @@ let apply_hkt_tyctors g temps =
      The unary case goes through the same rule and comes out unchanged:
      [box<_CraneTcArg>] is a head plus the sentinel, which the printer
      recognises and prints as the bare name. *)
-  let rec abstract_leading_arg t =
+  let rec abstract_leading_arg (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     match t with
     (* A qualification is spelling: an external carrier ([ITree]'s [itree])
        arrives wrapped, and is abstracted inside the wrapper. *)
-    | Tnamespace (ns, inner) -> Tnamespace (ns, abstract_leading_arg inner)
+    | In_namespace (ns, inner) -> In_namespace (ns, abstract_leading_arg inner)
     | t ->
     let args =
       match t with
@@ -3513,8 +3544,8 @@ let apply_hkt_tyctors g temps =
          which argument the C++ template varies in, and that is not in general
          the leading one -- [itree]'s is its last.  The printer substitutes the
          sentinel through the mapping rather than into the argument list. *)
-      | Tglob (g, args, _) when not (Table.is_custom g) -> args
-      | Tid (_, args) | Tid_external (_, args) | Tapply (_, args) -> args
+      | Entity_application (g, args, _) when not (Table.is_custom g) -> args
+      | Named (_, args) | External (_, args) | Apply (_, args) -> args
       | _ -> []
     in
     (* A partial application -- [stateT S (itree E)], the carrier [itree E]
@@ -3525,21 +3556,21 @@ let apply_hkt_tyctors g temps =
     let hole =
       List.fold_left
         (fun (i, found) a ->
-          (i + 1, if a = Topaque || a = Tany then Some i else found) )
+          (i + 1, match (a : Cpp_ir.Lowered.Type.t) with Obligation Opaque_type | Any -> Some i | _ -> found) )
         (0, None) args
       |> snd
     in
-    let with_sentinel_at k =
+    let with_sentinel_at k : Cpp_ir.Lowered.Type.t =
       let args =
         List.mapi
-          (fun i a -> if i = k then Thole else a)
+          (fun i a -> if i = k then (Carrier_parameter : Cpp_ir.Lowered.Type.t) else a)
           args
       in
       match t with
-      | Tglob (g, _, es) -> Tglob (g, args, es)
-      | Tid (id, _) -> Tid (id, args)
-      | Tid_external (id, _) -> Tid_external (id, args)
-      | Tapply (h, _) -> Tapply (h, args)
+      | Entity_application (g, _, es) -> Entity_application (g, args, es)
+      | Named (id, _) -> Named (id, args)
+      | External (id, _) -> External (id, args)
+      | Apply (h, _) -> Apply (h, args)
       | t -> t
     in
     match args with
@@ -3552,17 +3583,18 @@ let apply_hkt_tyctors g temps =
       match hole with
       | Some k when k > 0 -> with_sentinel_at k
       | _ -> (
-        match Minicpp.abstract_cpp_type ~over t with Some b -> b | None -> t ) )
+        match abstract_cpp_type_ir ~over t with Some b -> b | None -> t ) )
     | _ -> t
   in
   List.mapi
     (fun i t ->
-      if Table.is_hkt_ind_param g i then Ttyctor (abstract_leading_arg t)
+      if Table.is_hkt_ind_param g i then (Type_constructor (abstract_leading_arg t) : Cpp_ir.Lowered.Type.t)
       else
         match t with
-        | Tapply ((Tvar tv as head), _)
+        | Apply ((Variable tv as head), _)
           when Table.is_phantom_type_param g i
-               || Option.cata is_current_typename_var false (tvar_hint tv) ->
+               || Option.cata is_current_typename_var false
+                    (match tv with Index (_, n) -> n | Named x -> Some x) ->
           (* The application cannot be written, so the head alone stands for
              it -- which is all a phantom position reads anyway, and all an
              erased family has left to say.
@@ -3579,6 +3611,11 @@ let apply_hkt_tyctors g temps =
           head
         | _ -> t )
     temps
+
+(** {!apply_hkt_tyctors_ir} over MiniCpp types. *)
+let apply_hkt_tyctors g temps =
+  List.map Cpp_ir_to_legacy_minicpp.ty
+    (apply_hkt_tyctors_ir g (List.map Legacy_minicpp_to_cpp_ir.lower_type temps))
 
 (** The name a type variable carries in [tvars], where it has one.  MiniML
     numbers them from one, and a scope shorter than the type -- a declaration

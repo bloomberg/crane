@@ -445,6 +445,11 @@ let is_cpp_unit_type = function
   | Tnamespace (r, _) -> Table.is_unit_type r
   | _ -> false
 
+let is_cpp_unit_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Entity_application ((GlobRef.IndRef _ as r), _, _) -> Table.is_unit_type r
+  | In_namespace (r, _) -> Table.is_unit_type r
+  | _ -> false
+
 (** Check if an ML type represents a void or unit type. *)
 let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
 
@@ -990,20 +995,21 @@ let tvar_erase_type =
     A leaf is collapsed rather than recursed into so that a namespaced [Tglob]
     like [Nat] yields plain [std::any], not the malformed
     [typename Nat::std::any]. *)
-let rec index_erase_type (ty : cpp_type) : cpp_type =
+let rec index_erase_type_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   match ty with
-  | Tglob (r, (_ :: _ as tys), args) ->
-    Tglob (r, List.map index_erase_type tys, args)
-  | Tid (id, (_ :: _ as tys)) -> Tid (id, List.map index_erase_type tys)
-  | Tid_external (id, (_ :: _ as tys)) ->
-    Tid_external (id, List.map index_erase_type tys)
-  | Tnondeduced t -> Tnondeduced (index_erase_type t)
-  | Trebind (h, x) -> Trebind (index_erase_type h, index_erase_type x)
-  | Tnamespace (r, inner) ->
-    ( match index_erase_type inner with
-    | Tany -> Tany
-    | t -> Tnamespace (r, t) )
-  | _ -> Tany
+  | Entity_application (r, (_ :: _ as tys), args) -> Entity_application (r, List.map index_erase_type_ir tys, args)
+  | Named (id, (_ :: _ as tys)) -> Named (id, List.map index_erase_type_ir tys)
+  | External (id, (_ :: _ as tys)) -> External (id, List.map index_erase_type_ir tys)
+  | Non_deduced t -> Non_deduced (index_erase_type_ir t)
+  | Rebind (h, x) -> Rebind (index_erase_type_ir h, index_erase_type_ir x)
+  | In_namespace (r, inner) -> (
+    match index_erase_type_ir inner with
+    | Any -> Any
+    | t -> In_namespace (r, t) )
+  | _ -> Any
+
+let index_erase_type ty =
+  Cpp_ir_to_legacy_minicpp.ty (index_erase_type_ir (Legacy_minicpp_to_cpp_ir.lower_type ty))
 
 (** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
     detect types that can't be fully resolved in monomorphized contexts

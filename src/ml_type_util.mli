@@ -250,6 +250,9 @@ val own_type_variables : n_outer:int -> Miniml.ml_type list -> bool
 (** Whether a C++ type is the unit type. *)
 val is_cpp_unit_type : Minicpp.cpp_type -> bool
 
+(** {!is_cpp_unit_type} over a CppIR type. *)
+val is_cpp_unit_type_ir : Cpp_ir.Lowered.Type.t -> bool
+
 (** Whether a MiniML type is unit or void. *)
 val ml_type_is_unit_or_void : Miniml.ml_type -> bool
 
@@ -448,6 +451,9 @@ val tvar_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
 (** Erase a type down to its outermost applied type constructors, boxing every
     leaf: [List<Nat>] becomes [List<std::any>], [Nat] becomes [std::any]. *)
 val index_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** {!index_erase_type} over a CppIR type. *)
+val index_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether a C++ type contains an unnamed type variable. *)
 val has_unnamed_tvar : Minicpp.cpp_type -> bool

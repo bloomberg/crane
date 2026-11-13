@@ -40,6 +40,15 @@ let promoted_var_binding var_id =
     declaration the argument is that parameter, which is what the [Tpromoted]
     fallback spells; a scope that knows no instance spells the file-scope
     alias, as it did before there was a parameter at all. *)
+let ind_promoted_type_args_ir g : Cpp_ir.Lowered.Type.t list =
+  List.map
+    (fun v ->
+      match promoted_var_binding v with
+      | Some t -> Legacy_minicpp_to_cpp_ir.lower_type t
+      | None -> Promoted_member v )
+    (Table.promoted_type_params g)
+
+(** {!ind_promoted_type_args_ir} in MiniCpp. *)
 let ind_promoted_type_args g =
   List.map
     (fun v ->
@@ -1369,11 +1378,15 @@ let boxed_shape_of = function
 let type_term_arg : (env -> ml_ast -> cpp_expr) ref =
   ref (fun _ _ -> CErrors.anomaly (Pp.str "Translation.type_term_arg: unset"))
 
-let rec convert_ml_type_to_cpp_type
+(** [cpp_ir_of_ml_type env ~ns tvars t] is the C++ type of the ML type [t],
+    a variable named as [tvars] names it; [ns] are the inductives whose
+    recursive occurrences, at a constructor's storage, are held behind a
+    pointer. *)
+let rec cpp_ir_of_ml_type
     env
     ?(ns : Ref.User.Set.t = Ref.User.Set.empty)
     (tvars : Id.t list)
-    (ml_t : ml_type) : cpp_type =
+    (ml_t : ml_type) : Cpp_ir.Lowered.Type.t =
   (* [ns] is the only source of recursive-storage wrapping.  Most callers
      omit it (defaulting to empty), so types like [List<tree>] stay value
      shaped in function signatures.  Struct-field storage conversion passes the
@@ -1387,40 +1400,40 @@ let rec convert_ml_type_to_cpp_type
        inside function types stay as value types instead of being wrapped in
        shared_ptr.  The outer field-position wrapping (shared_ptr for direct
        self-ref fields) is handled at the call site, not here. *)
-    let t1c = convert_ml_type_to_cpp_type env tvars t1 in
+    let t1c = cpp_ir_of_ml_type env tvars t1 in
     (* Reify monadic domain types: itree E R in parameter position becomes
        shared_ptr<ITree<R>> so the tree can be passed as a value. *)
-    let t1c = reify_monadic_param_type t1 t1c in
-    let t2c = convert_ml_type_to_cpp_type env tvars t2 in
+    let t1c = reify_monadic_param_type_ir t1 t1c in
+    let t2c = cpp_ir_of_ml_type env tvars t2 in
     (* Skip erased params: isTdummy catches direct Tdummy, is_cpp_dummy_type
        catches Tdummy wrapped in Tmeta (e.g., Tmeta{contents=Some(Tdummy Kprop)}
        which converts to dummy_prop glob). Do NOT use prints_as_any here as it
        also catches Tany (std::any), which is a valid type for universally
        quantified parameters — stripping it would incorrectly collapse (A -> IO)
        into just IO. *)
-    if erased_by_extraction t1 || is_cpp_dummy_type t1c then
+    if erased_by_extraction t1 || match t1c with Erased _ -> true | _ -> false then
       t2c
     else (
       (* Void-ify unit codomain: function types returning [unit] (directly
          or via monadic wrapper like [itree E unit]) should map to [void]
          to match void-ified function definitions. Check the ML type [t2]
          since the C++ type may still be a monad Tglob, not bare unit. *)
-      let voidify_cod c =
-        if is_cpp_unit_type c then Tvoid
-        else if ml_type_is_void_call t2 then Tvoid
+      let voidify_cod (c : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+        if is_cpp_unit_type_ir c then Void
+        else if ml_type_is_void_call t2 then Void
         else c
       in
       (* A result the arguments only pin down as a type index is not something
          a template parameter can stand for; erase it. *)
-      let voidify_cod c =
-        if result_is_index_only_tvar ml_t then Tany else voidify_cod c
+      let voidify_cod c : Cpp_ir.Lowered.Type.t =
+        if result_is_index_only_tvar ml_t then Any else voidify_cod c
       in
       match
         t2c
       with
-      | Tfun (l, t) -> Tfun (t1c :: l, voidify_cod t)
-      | _ -> Tfun (t1c :: [], voidify_cod t2c) )
-  | Tglob (g, _, _) when is_void g -> Tvoid
+      | Function (l, t) -> Function (t1c :: l, voidify_cod t)
+      | _ -> Function (t1c :: [], voidify_cod t2c) )
+  | Tglob (g, _, _) when is_void g -> Void
   (* PROMOTED TYPE VARIABLES: Handle references to record fields that were
      "promoted" from value-level fields to type-level parameters.
 
@@ -1445,28 +1458,28 @@ let rec convert_ml_type_to_cpp_type
     ( match Table.promoted_type_var_name g with
     | Some var_id ->
       ( match promoted_var_resolution g with
-      | Some resolved -> resolved
+      | Some resolved -> Legacy_minicpp_to_cpp_ir.lower_type resolved
       | None ->
         (* No resolution found.  When the constructor-expression flag is set,
            all promoted vars become [Tany] (= std::any) because module-level
            type aliases are always std::any and non-Type promoted vars (like
            [base_category]) have no alias at all.  Otherwise keep the marker
            for concept generation and signature printing. *)
-        if (!tctx).in_constructor_expr then Tany
-        else Tpromoted var_id )
-    | None -> Tany )
+        if (!tctx).in_constructor_expr then Any
+        else Promoted_member var_id )
+    | None -> Any )
   | Tglob (g, _, _) when Table.is_value_dep_type_scheme g ->
     (* Value-dependent type scheme (e.g. [sym_semty : sym -> Type]) applied to a
        runtime value — not representable as a C++ type, so erase to [std::any].
        This keeps erasure consistent: such values are already stored as
        [std::any], so the types that mention them are [std::any] too, and no
        [any_cast] guard is needed at use sites. *)
-    Tany
+    Any
   | Tglob (g, ts, args) when is_custom g ->
-    Tglob
+    Entity_application
       ( g,
-        List.map (convert_ml_type_to_cpp_type env ~ns tvars) ts,
-        List.map (!type_term_arg env) args )
+        List.map (cpp_ir_of_ml_type env ~ns tvars) ts,
+        List.map (fun a -> Legacy_minicpp_to_cpp_ir.lower_expr (!type_term_arg env a)) args )
   | Tglob (g, ts, _) ->
     (* For inductives, only keep type args that correspond to parameters (not
        indices). Parameters become template params in C++; indices are
@@ -1502,7 +1515,7 @@ let rec convert_ml_type_to_cpp_type
       if Ref.User.Set.mem g ns then ns else Ref.User.Set.empty
     in
     let converted_ts =
-      List.map (convert_ml_type_to_cpp_type env ~ns:ns_for_args tvars) filtered_ts
+      List.map (cpp_ir_of_ml_type env ~ns:ns_for_args tvars) filtered_ts
     in
     let converted_ts =
       match g with
@@ -1519,15 +1532,15 @@ let rec convert_ml_type_to_cpp_type
         let cutoff = first_ktype_idx 0 filtered_ts in
         if cutoff < max_int then
           List.mapi
-            (fun i t -> if i > cutoff then index_erase_type t else t)
+            (fun i t -> if i > cutoff then index_erase_type_ir t else t)
             converted_ts
         else
           converted_ts
       | _ -> converted_ts
     in
-    let converted_ts = apply_hkt_tyctors g converted_ts in
-    let converted_ts = ind_promoted_type_args g @ converted_ts in
-    let core = Tglob (g, converted_ts, []) in
+    let converted_ts = apply_hkt_tyctors_ir g converted_ts in
+    let converted_ts = ind_promoted_type_args_ir g @ converted_ts in
+    let core : Cpp_ir.Lowered.Type.t = Entity_application (g, converted_ts, []) in
     ( match g with
     | GlobRef.IndRef _ ->
       (* Enum inductives are value types - no shared_ptr wrapping *)
@@ -1536,7 +1549,7 @@ let rec convert_ml_type_to_cpp_type
         if is_local then
           core
         else
-          Tnamespace (g, core)
+          In_namespace (g, core)
       else
         (* Check if this inductive is in the explicit ns list or in
            local_inductives context *)
@@ -1569,8 +1582,8 @@ let rec convert_ml_type_to_cpp_type
             List.length converted_ts = List.length tvars
             && List.for_all2
                  (fun ty id ->
-                   match ty with
-                   | Tvar (Tv_index (_, Some id') | Tv_named id') -> Id.equal id id'
+                   match (ty : Cpp_ir.Lowered.Type.t) with
+                   | Variable (Index (_, Some id') | Named id') -> Id.equal id id'
                    | _ -> false)
                  converted_ts
                  tvars
@@ -1586,7 +1599,7 @@ let rec convert_ml_type_to_cpp_type
              ownership plus explicit clone is enough. (Arena mode rewrites this
              shared_ptr to a raw arena pointer at the field-declaration site in
              gen_decls, so that method return/parameter positions are unaffected.) *)
-          Tshared_ptr core
+          Shared_pointer core
         else if (is_self_ref || is_mutual_sibling) && Table.is_coinductive g
         then
           (* A coinductive value is already a handle on one shared node, so
@@ -1597,7 +1610,7 @@ let rec convert_ml_type_to_cpp_type
         else if is_self_ref || is_mutual_sibling then
           (* Non-uniform recursion uses shared_ptr rather than unique_ptr
              because destructor instantiation would diverge. *)
-          Tshared_ptr core
+          Shared_pointer core
         else if is_local then
           (* Local non-self inductive: value type, no pointer wrapping *)
           core
@@ -1606,42 +1619,47 @@ let rec convert_ml_type_to_cpp_type
           core
         else
           (* External inductive: value type, namespace-qualified *)
-          Tnamespace (g, core)
+          In_namespace (g, core)
     | _ -> core )
-  | Miniml.Tvar (_, i) -> Tvar (Tv_index (i, tvar_name_at tvars i))
+  | Miniml.Tvar (_, i) -> Variable (Index (i, tvar_name_at tvars i))
   (* A higher-kinded variable applied to arguments.  The head stays a type
      variable here; [Gen_decls.apply_hkt_resolutions] rewrites it to the
      instance's associated type, leaving [Tapply] to render the application. *)
   | Tapp (i, args) ->
-    let head = Tvar (Tv_index (i, tvar_name_at tvars i)) in
-    Tapply (head, List.map (convert_ml_type_to_cpp_type env ~ns tvars) args)
-  | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ~ns tvars t
+    let head : Cpp_ir.Lowered.Type.t = Variable (Index (i, tvar_name_at tvars i)) in
+    Apply (head, List.map (cpp_ir_of_ml_type env ~ns tvars) args)
+  | Tmeta {contents = Some t} -> cpp_ir_of_ml_type env ~ns tvars t
   | Tmeta {contents = None} | Topen _ ->
     (* Unresolved meta - use std::any for type erasure. This happens for
        existential type variables in indexed inductives. *)
-    Tany
+    Any
   (* Tdummy marks erased type/prop/implicit parameters in the ML AST. We convert
      them to Tglob(VarRef "dummy_*") as intermediate markers so that downstream
      filtering (is_cpp_dummy_type / prints_as_any / filter_erased_type_args in
      gen_expr, eta_fun, and gen_decl_for_pp) can detect and drop them. These
      markers should never survive to the C++ output — the filtering pipeline
      removes them from template argument lists and function signatures. *)
-  | Tdummy Ktype -> Terased Ek_type
-  | Tdummy Kprop -> Terased Ek_prop
-  | Tdummy (Kimplicit _) -> Terased Ek_implicit
+  | Tdummy Ktype -> Erased Type
+  | Tdummy Kprop -> Erased Proof
+  | Tdummy (Kimplicit _) -> Erased Implicit
   | Tstring ->
-    Tid_external ("std::string", [])
+    External ("std::string", [])
   (* Extraction gave up naming this type.  It prints as [std::any], but we
      know nothing about how the value is actually represented. *)
-  | Tunknown -> Topaque
+  | Tunknown -> Obligation Opaque_type
   (* A hole is ordinary data inside an instantiation, and a reader resolves
      it, leaves the parameter to deduction, or declines before converting:
      one reaching a C++ type is a reader that did none of these. *)
   | Thole hole ->
     Probe.violation "inference hole"
       Pp.(str "hole _" ++ int hole ++ str " reached a C++ type");
-    Topaque
-  | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string "axiom"), [], [])
+    Obligation Opaque_type
+  | Taxiom -> Entity_application (GlobRef.VarRef (Id.of_string "axiom"), [], [])
+
+(** {!cpp_ir_of_ml_type} in MiniCpp, for the translation that still
+    generates it. *)
+and convert_ml_type_to_cpp_type env ?ns tvars ml_t =
+  Cpp_ir_to_legacy_minicpp.ty (cpp_ir_of_ml_type env ?ns tvars ml_t)
 
 (** Convert ML type arguments to C++ template parameters, applying type
     simplification and handling out-of-scope type variables.
