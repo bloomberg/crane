@@ -1010,19 +1010,20 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
     callables, before anything is rendered.  [finish] is what becomes of the
     struct before it is written ([finish_instance_struct] in {!Cpp_ind}). *)
 let plan_instance_methods ~finish name body ty =
-  let rec methods = function
-    | Dstruct ds ->
-      List.filter_map (function Fmethod mf, _, _ -> Some mf | _ -> None) ds.ds_fields
-    | Dtemplate (_, _, d) -> methods d
+  let rec methods : Cpp_ir.Lowered.Decl.t -> _ = function
+    | Struct s ->
+      List.filter_map
+        (function (Cpp_ir.Field.Method m : Cpp_ir.Lowered.phase Cpp_ir.Field.t), _, _ -> Some m | _ -> None)
+        s.fields
+    | Template (_, _, d) -> methods d
     | _ -> []
   in
   match gen_instance_struct ~bodies:false name body ty with
   | Some decl, _, _, minted ->
-    let decl = Cpp_ir_to_legacy_minicpp.decl decl in
     List.map
-      (fun mf ->
-        ( mf.mf_name,
-          Callable_abi.of_instance_method ?minted:(List.assoc_opt mf.mf_name minted) ~instance:name mf ) )
+      (fun (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) ->
+        ( m.name,
+          Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:name m ) )
       (methods (finish decl))
   | None, _, _, _ -> []
 

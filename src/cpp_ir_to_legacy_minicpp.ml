@@ -461,3 +461,5 @@ let rec decl : l Decl.t -> cpp_decl = function
         dm_tparams = tparams m.type_params;
         dm_field = out_of_line m.member }
   | Enum e -> Denum {de_ref = e.ref_; de_ctors = e.ctors; de_ctor_rocq_names = e.rocq_names; de_tparams = tparams e.type_params}
+
+let template_parameters = tparams

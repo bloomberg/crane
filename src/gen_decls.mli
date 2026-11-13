@@ -175,7 +175,11 @@ val gen_instance_struct :
     name: the head {!gen_instance_struct} declares it with, after [finish],
     without generating its body. *)
 val plan_instance_methods :
-  finish:(cpp_decl -> cpp_decl) -> GlobRef.t -> ml_ast -> ml_type -> (Id.t * Callable_abi.t) list
+  finish:(Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t) ->
+  GlobRef.t ->
+  ml_ast ->
+  ml_type ->
+  (Id.t * Callable_abi.t) list
 
 (** [gen_type_alias r vars ot] is the [using] declaration for a type alias.
 
