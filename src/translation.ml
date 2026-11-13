@@ -3929,7 +3929,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some from
               when prints_as_any from
                    && not
-                        ( is_erased_pair_component inner
+                        ( reads_erased_pair_component env t
                         &&
                         match ty with
                         | Tglob (g, _, _) -> is_prod_global g

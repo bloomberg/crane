@@ -1361,14 +1361,6 @@ let boxed_shape_of = function
   | Tglob (g, (_ :: _ as args), ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
   | t -> t
 
-(** Whether [e] reads a component straight out of a pair recovered from a
-    [std::any].  Such a component is itself a box, so it needs no further
-    recovery here -- the site that consumes it does its own. *)
-let is_erased_pair_component = function
-  | CPPfun_call (_, _, {rev = [CPPany_cast (Tglob (g, (_ :: _ as args), _), _)]}) ->
-    is_prod_global g && List.for_all prints_as_any args
-  | _ -> false
-
 (** How a term argument of a custom type is generated: by {!gen_expr}, which
     fills this in once it is defined.  The one place type conversion calls
     back into expression generation -- a mapped type applied to a term, as a
@@ -2413,6 +2405,25 @@ let planned_position occ ~live =
     planned
   | None ->
     CErrors.anomaly Pp.(str ("a coercion" ^ owner () ^ " is in no position plan of the region it is lowered in"))
+
+(** [reads_erased_pair_component env t] -- whether the coerced term [t]
+    reads a component out of a pair recovered from a box, decided on Core:
+    a global call whose one value argument is a coercion from a box planned
+    at a product position, which lowering recovers at the erased shape
+    [pair<any, any>] ({!boxed_shape_of}).  Such a component is itself a
+    box. *)
+let reads_erased_pair_component env t =
+  match t with
+  | MLapp (MLglob _, args) -> (
+    match List.filter (function MLdummy _ -> false | _ -> true) args with
+    | [MLmagic (Mcoerce (from, _), _, occ)] -> (
+      prints_as_any (cpp_of_ml env from)
+      &&
+      match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
+      | Some (_, Some (Tglob (g, _ :: _, _))) -> is_prod_global g
+      | _ -> false )
+    | _ -> false )
+  | _ -> false
 
 (** [t] with every type variable named by the default spelling of its
     index ({!Minicpp.tvar_spelling}) written by the index alone: the two
