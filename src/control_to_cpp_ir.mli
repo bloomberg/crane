@@ -54,7 +54,7 @@
     loop's first variable; the parameters a jump or a re-entry leaves alone
     are read off the Core binders of the receiver and the parameters, and a
     loop tail modulo cons or a machine takes the calls its ControlIR
-    continues by ({!lower_methods}).  The parameters a loop varies are its
+    continues by ({!lower_struct_methods}).  The parameters a loop varies are its
     ControlIR's, and a loop with none is not lowered. *)
 
 (** [function_resumes r ~depth]: the points the function [r], its body
@@ -73,7 +73,7 @@ val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_ir.resumes opti
     made of the function [r] in the struct of [inductive], its receiver its
     parameter [receiver] (outermost first) and its body standing under
     [depth] of its binders, resumes at, where it is lowered as a machine
-    with a stack of frames ({!lower_methods}): one the recursion plan lowers
+    with a stack of frames ({!lower_struct_methods}): one the recursion plan lowers
     so, adopting nothing, whose turns each pass a receiver derived from the
     loop's parameters, of a function Loopify would loopify as a method; and
     whether it certainly is -- which of its struct's settings decides that,
@@ -139,7 +139,7 @@ val local_loop :
   Minicpp.cpp_lambda ->
   Minicpp.cpp_stmt option
 
-(** [lower_methods ~merged r vars fields] is [fields], members of the struct
+(** [lower_struct_methods ~merged r vars fields] is [fields], members of the struct
     of the inductive [r] of variables [vars], with each method made of a
     function the recursion plan lowers to a loop -- a tail loop, one tail
     modulo cons, or a machine with a stack -- and Loopify would loopify,
@@ -147,12 +147,12 @@ val local_loop :
     as Loopify lowers a method: its receiver the loop's first variable.
     [merged] says whether the struct is merged into its module's, whose
     members Loopify loopifies only where it loopifies everything. *)
-val lower_methods :
+val lower_struct_methods :
   merged:bool ->
   Names.GlobRef.t ->
   Names.Id.t list ->
-  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
-  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list
+  Cpp_ir.Lowered.phase Cpp_ir.Field.member list ->
+  Cpp_ir.Lowered.phase Cpp_ir.Field.member list
 
 (** [lower_lifted d] is the helper [d], lifted out of a body for the
     function of a local fixpoint ({!Lifted.fixpoint}), lowered as a

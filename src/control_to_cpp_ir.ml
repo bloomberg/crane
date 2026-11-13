@@ -157,7 +157,7 @@ let function_resumes r ~depth =
 let method_resumes r ~inductive ~receiver ~depth =
   (* Its struct's methods are loopified where everything is, if the struct
      is merged into its module's, and as its inductive says otherwise
-     ({!lower_methods}): which, the method is generated before it is told. *)
+     ({!lower_struct_methods}): which, the method is generated before it is told. *)
   let either = Table.loopify () || Table.loopifies_methods_of inductive in
   let both = Table.loopify () && Table.loopifies_methods_of inductive in
   match method_loop r with
@@ -809,10 +809,6 @@ let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name lam =
     let tparams = Legacy_minicpp_to_cpp_ir.lower_template_parameters tparams in
     Option.map Cpp_ir_to_legacy_minicpp.stmt (lower_local_loop ~owner ~function_ ~lifted ~member ~tparams ~name lam)
   | _ -> assert false
-
-let lower_methods ~merged inductive vars fields =
-  List.map Cpp_ir_to_legacy_minicpp.member
-    (lower_struct_methods ~merged inductive vars (List.map Legacy_minicpp_to_cpp_ir.lower_member fields))
 
 let lower_lifted d = Cpp_ir_to_legacy_minicpp.decl (lower_lifted_helper (Legacy_minicpp_to_cpp_ir.lower d))
 

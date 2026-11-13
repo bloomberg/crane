@@ -1012,18 +1012,20 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
 (** The methods made of [candidates] in the inductive [name], as its struct
     declares them ({!Borrow_projection.lend}), with their control lowered
     from their ControlIR where that is the bridge's to lower
-    ({!Control_to_cpp_ir.lower_methods}).  The struct is merged into
+    ({!Control_to_cpp_ir.lower_struct_methods}).  The struct is merged into
     its module's where it is the one the module is promoting, or [merged]
     says so. *)
 let gen_methods ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
   in
-  Control_to_cpp_ir.lower_methods ~merged name vars
-    (List.concat_map
-       (fun c ->
-         Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )
-       candidates )
+  List.map Cpp_ir_to_legacy_minicpp.member
+    (Control_to_cpp_ir.lower_struct_methods ~merged name vars
+       (List.concat_map
+          (fun c ->
+            List.map Legacy_minicpp_to_cpp_ir.lower_member
+              (Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c)) )
+          candidates ) )
 
 (** Does the ML type [ml_ty] contain [ind_ref] (or a mutual sibling) anywhere
     in its type arguments, but NOT at the top level?  Used to detect fields
