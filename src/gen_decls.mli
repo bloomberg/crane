@@ -134,7 +134,7 @@ val gen_ind_header_v2 :
   ml_type list array ->
   (GlobRef.t * ml_ast * ml_type * int) list ->
   record_field Core.Inductive.Kind.t ->
-  cpp_decl
+  Cpp_ir.Lowered.Decl.t
 
 (** Generate methods for eponymous records. For records merged into module
     structs, this generates instance methods from functions that take the record
@@ -148,7 +148,7 @@ val gen_record_methods :
   GlobRef.t ->
   variable list ->
   (GlobRef.t * ml_ast * ml_type * int) list ->
-  (cpp_field * cpp_visibility * section_tag) list
+  Cpp_ir.Lowered.phase Cpp_ir.Field.member list
 
 (** {2 Type Class Instance Generation} *)
 

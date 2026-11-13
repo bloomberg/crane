@@ -82,6 +82,9 @@ val unbox : cpp_type -> cpp_expr -> cpp_expr
     instantiates the surrounding template. *)
 val unbox_tolerant : cpp_type -> cpp_expr -> cpp_expr
 
+(** [unbox_ir ty e] is {!unbox} in CppIR. *)
+val unbox_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
+
 
 (** {2 The passes} *)
 

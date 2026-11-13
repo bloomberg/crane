@@ -493,7 +493,6 @@ let ind_header_decls scope kn ind =
               p.ip_types
               (List.rev methods)
               ind.ind_kind
-            |> Legacy_minicpp_to_cpp_ir.lower
             |> Plan_templates.deapply_plain_struct_tvars
           in
           (* Check if this inductive is being promoted into its module struct.
@@ -1429,7 +1428,7 @@ let modtype_concept ~module_ path ~params mt =
 (** The methods of each eponymous record, generated ahead of the files with
     the helpers lifted out of them, by the record. *)
 let record_methods_generated :
-    (ModPath.t * ((cpp_field * cpp_visibility * section_tag) list * cpp_decl list)) list
+    (ModPath.t * (Cpp_ir.Lowered.phase Cpp_ir.Field.member list * cpp_decl list)) list
     Ref.User.Tbl.t =
   Ref.User.Tbl.create 8
 
@@ -1493,7 +1492,7 @@ let generated_record_field_types () =
 let record_methods_decl r vars fields : Cpp_ir.Lowered.Decl.t =
   Merged_struct_members
     { ref_ = r;
-      fields = List.map Legacy_minicpp_to_cpp_ir.lower_member fields;
+      fields;
       type_params = Cpp_ir.Build.typenames vars;
       constraint_ = None;
       needs_shared_from_this = false }
