@@ -426,9 +426,6 @@ val is_skipped_ml_type : Miniml.ml_type -> bool
 
 (** {2 [any] and erasure detection} *)
 
-(** Whether a C++ type contains [any] anywhere within it. *)
-val has_tany_in_type : Minicpp.cpp_type -> bool
-
 (** Whether a C++ type contains an erased type anywhere within it. *)
 val has_erased_type_in_type_ir : Cpp_ir.Lowered.Type.t -> bool
 
@@ -446,17 +443,11 @@ val subst_tvars_type :
   (int * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
 
 (** Erase type variables within a C++ type. *)
-val tvar_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
-
-(** {!tvar_erase_type} in CppIR. *)
 val tvar_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Erase a type down to its outermost applied type constructors, boxing every
     leaf: [List<Nat>] becomes [List<std::any>], [Nat] becomes [std::any]. *)
 val index_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
-
-(** Whether a C++ type contains an unnamed type variable. *)
-val has_unnamed_tvar : Minicpp.cpp_type -> bool
 
 (** Whether a C++ type is erased. *)
 val type_is_erased_ir : Cpp_ir.Lowered.Type.t -> bool
@@ -575,7 +566,7 @@ end
 (** Whether a C++ type is trivially copyable: an enum, a custom-extracted
     scalar, or a type declared with [Crane TriviallyCopyable] whose arguments
     are themselves trivially copyable. *)
-val is_trivially_copyable_type : Minicpp.cpp_type -> bool
+val is_trivially_copyable_type_ir : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a MiniML type is a product type. *)
 val is_prod_ml_type : Miniml.ml_type -> bool
@@ -673,17 +664,17 @@ val type_arg_is_written : Names.GlobRef.t -> int -> bool
     [void], so a predicate over the result reads the type as it is spelled. *)
 val prune_unwritten_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
-(** {!is_tany_node} over a CppIR type. *)
+(** Whether a single type node erases to [std::any]. *)
 val is_tany_node_ir : Cpp_ir.Lowered.Type.t -> bool
 
-(** {!has_tany_in_type} over a CppIR type. *)
+(** Whether a C++ type contains [any] anywhere within it. *)
 val has_tany_in_type_ir : Cpp_ir.Lowered.Type.t -> bool
 
-(** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
+(** Like {!has_tany_in_type_ir}, but asking of the type as it is {e spelled}: an
     erased argument in a position nothing writes never reaches the C++. *)
 val has_tany_written_ir : Cpp_ir.Lowered.Type.t -> bool
 
-(** {!has_unnamed_tvar} over a CppIR type. *)
+(** Whether a C++ type contains an unnamed type variable. *)
 val has_unnamed_tvar_ir : Cpp_ir.Lowered.Type.t -> bool
 
 (** {!resolve_tvars_to_any} over a CppIR type. *)
@@ -882,12 +873,8 @@ val result_is_index_only_tvar : Miniml.ml_type -> bool
 (** The variable {!result_is_index_only_tvar} finds, [Some n] for [Tvar n]. *)
 val index_only_result_tvar : Miniml.ml_type -> int option
 
-(** [explicit_tvar_prefix ~force_required cty] is how many leading template
+(** [explicit_tvar_prefix_ir ~force_required cty] is how many leading template
     parameters of a signature of type [cty] a call must supply explicitly
     because the signature does not represent them. Only a leading run counts:
     C++ lets a call supply a prefix of the arguments and deduce the rest. *)
-val explicit_tvar_prefix :
-  ?force_required:IntSet.t -> Minicpp.cpp_type -> int
-
-(** {!explicit_tvar_prefix} over a CppIR type. *)
 val explicit_tvar_prefix_ir : ?force_required:IntSet.t -> Cpp_ir.Lowered.Type.t -> int

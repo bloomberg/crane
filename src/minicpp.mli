@@ -1205,14 +1205,6 @@ val strip_param_spelling : cpp_type -> cpp_type
     {!ctor_alias_tvar} sentinel); an erased head erases the application. *)
 val tapply : cpp_type -> cpp_type list -> cpp_type
 
-(** [rewrite_cpp_type f ty] replaces each node [f] answers for with its answer,
-    without descending into it, and rebuilds every other node from its
-    rewritten children as it was: no application is re-normalised, and a
-    [Ttyctor]'s head is reached like any other child.  Unlike
-    {!map_cpp_type}, a substitution written with it cannot rewrite what it
-    substituted. *)
-val rewrite_cpp_type : (cpp_type -> cpp_type option) -> cpp_type -> cpp_type
-
 (** [map_cpp_type f ty] applies [f] to every sub-type in [ty]. Use this to build
     type transformations: pass a function that handles your custom case and
     delegates to [map_cpp_type f] for the recursive case.

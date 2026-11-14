@@ -800,19 +800,6 @@ let is_skipped_ml_type = function
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
-(** Whether a single type node erases to [std::any]: [Tany] and [Topaque]
-    themselves, and an unnamed [Tvar], which {!tvar_erase_type} turns into
-    one. *)
-let is_tany_node = function
-  | Tany | Topaque -> true
-  | Tvar (Tv_index (_, None)) -> true
-  | _ -> false
-
-(** Whether a C++ type contains [std::any] anywhere.  Used to detect a
-    let-binding whose type annotation still holds unresolved carrier
-    projections, to be replaced by concrete types from the generated lambda. *)
-let has_tany_in_type = exists_cpp_type is_tany_node
-
 (** Check if an ML type contains any unresolved type variable or placeholder.
     Returns true for Tvar, unresolved Tmeta, and Tunknown. Used to
     guard Tvar substitution: we only substitute with fully concrete types. *)
@@ -891,13 +878,6 @@ let rec subst_tvars_type subst = function
 (** Replace all unnamed Tvars with Tany (for type erasure in indexed
     inductives). Used when a type has Tvars that don't correspond to any
     template parameters.  Named variables are kept. *)
-let tvar_erase_type =
-  rewrite_cpp_type (function
-    | Tvar (Tv_index (_, None)) -> Some Tany
-    | Tvar (Tv_index (_, Some _) | Tv_named _) as ty -> Some ty (* Named Tvars are kept *)
-    | _ -> None )
-
-(** {!tvar_erase_type} in CppIR. *)
 let tvar_erase_type_ir =
   Cpp_ir.Types.rewrite (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
@@ -932,13 +912,6 @@ let rec index_erase_type_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t
     | Any -> Any
     | t -> In_namespace (r, t) )
   | _ -> Any
-
-(** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
-    detect types that can't be fully resolved in monomorphized contexts
-    (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
-    List<T1>. *)
-let has_unnamed_tvar : cpp_type -> bool =
-  exists_cpp_type (function Tvar (Tv_index (_, None)) -> true | _ -> false)
 
 (** Extract return type from a function type, stripping all Tarr layers. *)
 let rec ml_return_type = function
@@ -1069,15 +1042,16 @@ let count_real_ml_args args =
     A type declared with [Crane TriviallyCopyable] qualifies only when its
     type arguments do -- copying a [std::pair] costs what copying its
     components costs. *)
-let rec is_trivially_copyable_type = function
-  | Tglob (g, ts, _) ->
+let rec is_trivially_copyable_type_ir (t : Cpp_ir.Lowered.Type.t) =
+  match t with
+  | Entity_application (g, ts, _) ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
     || Table.is_trivially_copyable_ref g
-       && List.for_all is_trivially_copyable_type ts
-  | Tnamespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
+       && List.for_all is_trivially_copyable_type_ir ts
+  | In_namespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
-(** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type}
+(** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type_ir}
     read off the ML type. *)
 let rec ml_is_trivially_copyable ty =
   match resolve_tmeta ty with
@@ -1303,20 +1277,24 @@ let prune_unwritten_args_ir =
 
 let lower_type = Legacy_minicpp_to_cpp_ir.lower_type
 
-(** {!is_tany_node} over a CppIR type. *)
+(** Whether a single type node erases to [std::any]: [Any] and the opaque
+    obligation themselves, and an unnamed variable, which
+    {!tvar_erase_type_ir} turns into one. *)
 let is_tany_node_ir (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Any | Obligation Opaque_type | Variable (Index (_, None)) -> true
   | _ -> false
 
-(** Like [has_tany_in_type] but also treats the [Terased] markers
+(** Like [has_tany_in_type_ir] but also treats the [Terased] markers
     ([dummy_type]/[dummy_prop]/[dummy_implicit]) as erased types.  Used for non-lambda let bindings where [auto]
     is the right fallback — but NOT for the Tfun+lambda case where we want to
     preserve the lambda's concrete return type. *)
 let has_erased_type_in_type_ir =
   Cpp_ir.Types.exists (fun t -> is_tany_node_ir t || is_cpp_dummy_type_ir t)
 
-(** {!has_tany_in_type} over a CppIR type. *)
+(** Whether a C++ type contains [std::any] anywhere.  Used to detect a
+    let-binding whose type annotation still holds unresolved carrier
+    projections, to be replaced by concrete types from the generated lambda. *)
 let has_tany_in_type_ir = Cpp_ir.Children.exists_type is_tany_node_ir
 
 let has_tany_written_ir t = has_tany_in_type_ir (prune_unwritten_args_ir t)
@@ -1326,7 +1304,10 @@ let rec type_is_erased_ir (ty : Cpp_ir.Lowered.Type.t) : bool =
   | Const inner | In_namespace (_, inner) -> type_is_erased_ir inner
   | t -> is_tany_node_ir t
 
-(** {!has_unnamed_tvar} over a CppIR type. *)
+(** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
+    detect types that can't be fully resolved in monomorphized contexts
+    (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
+    List<T1>. *)
 let has_unnamed_tvar_ir =
   Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with Variable (Index (_, None)) -> true | _ -> false )
@@ -1611,7 +1592,7 @@ let get_tvar_indices_ir t = List.map fst (get_tvars_indexed_ir t)
     Used by the function emitter (to choose between an [is_invocable_r_v]
     constraint and plain [TTtypename]), by {!Plan_templates.phantom_aware_temps}
     (to choose whether a template parameter needs a [void] default) and by the
-    call emitter ({!explicit_tvar_prefix}). *)
+    call emitter ({!explicit_tvar_prefix_ir}). *)
 let primary_tvar_indices_ir (dom : Cpp_ir.Lowered.Type.t list) cod =
   let add_rendered acc t =
     List.fold_left
@@ -1632,7 +1613,7 @@ let primary_tvar_indices_ir (dom : Cpp_ir.Lowered.Type.t list) cod =
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
-    {!Translation.convert_ml_type_to_cpp_type} but may be needed in function bodies
+    {!Translation.cpp_ir_of_ml_type} but may be needed in function bodies
     for [any_cast] when matching on type-indexed inductives with
     wholesale-erased fields.
 
@@ -2009,7 +1990,7 @@ let index_only_result_tvar ml_ty =
 
 let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml_ty)
 
-(** [explicit_tvar_prefix ~force_required cty] is how many of a signature's
+(** [explicit_tvar_prefix_ir ~force_required cty] is how many of a signature's
     leading template parameters the signature does not represent, and which a
     call therefore has to spell out instead of leaving to deduction.
 
@@ -2047,5 +2028,3 @@ let explicit_tvar_prefix_ir ?(force_required = IntSet.empty) (cty : Cpp_ir.Lower
     in
     count indexed
   | _ -> 0
-
-let explicit_tvar_prefix ?force_required cty = explicit_tvar_prefix_ir ?force_required (lower_type cty)

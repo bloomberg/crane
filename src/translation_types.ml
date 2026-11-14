@@ -1185,11 +1185,6 @@ let rec cpp_ir_of_ml_type
     Obligation Opaque_type
   | Taxiom -> Entity_application (GlobRef.VarRef (Id.of_string "axiom"), [], [])
 
-(** {!cpp_ir_of_ml_type} in MiniCpp, for the translation that still
-    generates it. *)
-and convert_ml_type_to_cpp_type env ?ns tvars ml_t =
-  Cpp_ir_to_legacy_minicpp.ty (cpp_ir_of_ml_type env ?ns tvars ml_t)
-
 (** Convert ML type arguments to C++ template parameters, applying type
     simplification and handling out-of-scope type variables.
 
@@ -1238,8 +1233,8 @@ let glob_is_nullary_function x =
   | None -> false
   | Some ml_ty ->
     thunk_reason x <> None
-    || ( match convert_ml_type_to_cpp_type (empty_env ()) [] ml_ty with
-       | Tfun _ -> true
+    || ( match cpp_ir_of_ml_type (empty_env ()) [] ml_ty with
+       | Function _ -> true
        | _ -> false )
 
 (** The global [x], spelled [cglob], applied to [args]: a call, except that a
@@ -1292,14 +1287,11 @@ let box_kind_of_cpp_type_ir t = if names_erased_alias_ir t then Family_box else 
 let slot_repr_of_cpp_type_ir t =
   if resolves_to_any_type_ir t then Boxed (box_kind_of_cpp_type_ir t) else Native
 
-(** [cpp_of_ml env t] converts an ML type in the type-variable scope that is
+(** [cpp_of_ml_ir env t] converts an ML type in the type-variable scope that is
     currently in effect.  Nearly every conversion inside expression generation
     wants this, and spelling out {!get_current_type_vars} at each one invites
     passing the wrong scope. *)
 let cpp_of_ml_ir env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
-
-(** {!cpp_of_ml_ir} in MiniCpp. *)
-let cpp_of_ml env t = Cpp_ir_to_legacy_minicpp.ty (cpp_of_ml_ir env t)
 
 (** [template_arg_of_ml_type_ir ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says
@@ -1307,7 +1299,7 @@ let cpp_of_ml env t = Cpp_ir_to_legacy_minicpp.ty (cpp_of_ml_ir env t)
 
     [Declared] for an argument that instantiates an {e inductive}'s
     parameter.  Such a parameter only names the type of a stored value, and the
-    value is spelled at the flat arity {!convert_ml_type_to_cpp_type} gives the
+    value is spelled at the flat arity {!cpp_ir_of_ml_type} gives the
     declaration; currying it would make the instantiation disagree with the
     type the declaration writes.  [Through_tvar] for a {e function}'s type
     parameter: the signature may mention it inside an arrow it writes out
@@ -1383,7 +1375,7 @@ let build_template_params_ir ~site env tvars tys =
     @return C++ expression applying custom syntax with type/value arguments *)
 
 (** [template_params_of_ml ~site:Through_tvar env tys] is {!build_template_params_ir} against the
-    type variables the enclosing scope has in hand; see {!cpp_of_ml}. *)
+    type variables the enclosing scope has in hand; see {!cpp_of_ml_ir}. *)
 let template_params_of_ml_ir ~site env tys = build_template_params_ir ~site env (get_current_type_vars ()) tys
 
 (** [param_expected_cpp_ty env param_tys i] is the C++ type the callee declares
@@ -1518,8 +1510,8 @@ let iife_closure_return_ir env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp
 let glob_declared_cod_erases r =
   match callee_ml_type r with
   | Some ty -> (
-    match convert_ml_type_to_cpp_type (empty_env ()) [] (type_simpl ty) with
-    | Tfun (_, cod) -> prints_as_any cod
+    match cpp_ir_of_ml_type (empty_env ()) [] (type_simpl ty) with
+    | Function (_, cod) -> Cpp_ir.Types.prints_as_any cod
     | _ -> false )
   | None -> false
 
@@ -1706,7 +1698,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
         ~writable:(fun t ->
           resolvable_here t
           && names_only_scoped_tvars_ir (cpp_of_ml_ir env t)
-          && not (Ml_type_util.has_tany_in_type (cpp_of_ml env t)) )
+          && not (Ml_type_util.has_tany_in_type_ir (cpp_of_ml_ir env t)) )
         typ candidate
   in
   let typ =
@@ -1958,7 +1950,7 @@ let reads_erased_pair_component env t =
   | MLapp (MLglob _, args) -> (
     match List.filter (function MLdummy _ -> false | _ -> true) args with
     | [MLmagic (Mcoerce (from, _), _, occ)] -> (
-      prints_as_any (cpp_of_ml env from)
+      Cpp_ir.Types.prints_as_any (cpp_of_ml_ir env from)
       &&
       match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
       | Some (_, Some (Cpp_ir.Type.Entity_application (g, _ :: _, _))) -> is_prod_global g
@@ -2146,7 +2138,7 @@ let rec normalize_erased_types_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type
   | t -> t
 
 (** How many of [id]'s leading template parameters no signature mentions,
-    counted by {!Ml_type_util.explicit_tvar_prefix} off its declared type: its
+    counted by {!Ml_type_util.explicit_tvar_prefix_ir} off its declared type: its
     leading phantoms.  Nothing deduces them, so a call writes them, and
     {!Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
     declaration emitter counts the same run and leaves those parameters
@@ -2156,10 +2148,10 @@ let leading_phantom_count id =
   | None -> 0
   | Some ml_ty ->
     let cty =
-      convert_ml_type_to_cpp_type (empty_env ()) [] (type_simpl ml_ty)
+      cpp_ir_of_ml_type (empty_env ()) [] (type_simpl ml_ty)
     in
     let force_required = collect_ml_type_index_tvars ml_ty in
-    explicit_tvar_prefix ~force_required cty
+    explicit_tvar_prefix_ir ~force_required cty
 
 (** The template name a written type [c] stands for at a higher-kinded
     variable: [c] itself as a constructor, unless applying it changes
@@ -2889,7 +2881,7 @@ let stores_erased_fn_ir ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t li
 let erased_fn_lambda env e =
   match strip_magic e with
   | MLlam (id, ty, body) ->
-    if Ml_type_util.has_tany_in_type (cpp_of_ml env ty) then
+    if Ml_type_util.has_tany_in_type_ir (cpp_of_ml_ir env ty) then
       MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
     else MLlam (id, Miniml.Tunknown, mark_own_param_for_pair_erasure 1 body)
   | _ -> e
@@ -3180,7 +3172,7 @@ let box_for_any_slot kind e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr
 let is_env_var_erased env tvars i =
   match get_env_type_opt i with
   | Some ml_ty ->
-    prints_as_any (convert_ml_type_to_cpp_type env tvars ml_ty)
+    Cpp_ir.Types.prints_as_any (cpp_ir_of_ml_type env tvars ml_ty)
   | None -> false
 
 (** Check whether an ML expression's C++ type is erased ([std::any]).
@@ -3204,7 +3196,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
       | None -> false )
   | MLglob {callee = r; _} ->
     ( match callee_ml_type r with
-      | Some ml_ty -> prints_as_any (cpp_of_ml env ml_ty)
+      | Some ml_ty -> Cpp_ir.Types.prints_as_any (cpp_of_ml_ir env ml_ty)
       | None -> false )
   | MLmagic (_, inner, _) -> ml_expr_is_erased env inner
   | MLcase (case_ty, _, _, _) ->
@@ -3484,13 +3476,13 @@ let custom_branch_binders env ~fix_a_fired ~scrut_ml_typ ~ml_typ r ids' =
   let ids' =
     if fix_a_fired then
       List.map (fun (x, ty) ->
-        let cpp_ty = cpp_of_ml env ty in
+        let cpp_ty = cpp_of_ml_ir env ty in
         match cpp_ty with
-        | Tglob (g, (_ :: _), _) when is_prod_global g ->
+        | Entity_application (g, (_ :: _), _) when is_prod_global g ->
           (x, Tdummy Ktype)
-        | Tglob (g, _, _) when is_list_global g ->
+        | Entity_application (g, _, _) when is_list_global g ->
           (x, ty)
-        | _ when prints_as_any cpp_ty ->
+        | _ when Cpp_ir.Types.prints_as_any cpp_ty ->
           (x, ty)
         | _ ->
           (x, Tdummy Ktype))

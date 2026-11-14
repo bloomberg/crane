@@ -12,7 +12,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 
 (** {1 Translation: MiniML to MiniCpp}
@@ -48,7 +47,7 @@ val with_method_ns_for_locals : ?base:Ref.User.Set.t -> (unit -> 'a) -> 'a
 val ml_codomain : Miniml.ml_type -> Miniml.ml_type
 
 (** {2 Type Conversion}
-    Convert Miniml types to Minicpp types. *)
+    Convert Miniml types to CppIR types. *)
 
 (** Convert an ML type to C++ type representation.
     @param env The current variable environment
@@ -57,10 +56,6 @@ val ml_codomain : Miniml.ml_type -> Miniml.ml_type
       wrapper). Defaults to empty; most callers omit it.
     @param tvars Type variable names for substitution
     @param ml_type The ML type to convert *)
-val convert_ml_type_to_cpp_type :
-  env -> ?ns:Ref.User.Set.t -> Id.t list -> ml_type -> cpp_type
-
-(** {!convert_ml_type_to_cpp_type} in CppIR. *)
 val cpp_ir_of_ml_type :
   env -> ?ns:Ref.User.Set.t -> Id.t list -> ml_type -> Cpp_ir.Lowered.Type.t
 

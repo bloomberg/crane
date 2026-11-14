@@ -11,7 +11,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Util

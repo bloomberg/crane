@@ -12,20 +12,15 @@ module IntMap = Map.Make (Int)
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Core_query
 
-(** A [CPPglob] for the global [r] at [tys], its custom extraction
+(** An [Entity] for the global [r] at [tys], its custom extraction
     ({!Table.inline_custom_text}) looked up once here.  [yields] is what
     the global evaluates to, and is worth passing whenever the caller has the
     global's instantiated type: for a [%result] block template in value
     position it is the only record of the type, since there is no call node to
     carry one. *)
-let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
-  CPPglob (r, tys, Some {ci_inline = Option.map inline_template (Table.inline_custom_text r); ci_yields = yields})
-
-(** {!mk_cppglob} in CppIR. *)
 let mk_cppglob_ir ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
   Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = yields})
 
@@ -153,7 +148,7 @@ type translation_ctx = {
      (prints as: typename _tcI0::m_carrier).
      Set ({!with_promoted_var_map}) when generating template functions and
      instances with typeclass parameters. Used by
-     {!Translation.convert_ml_type_to_cpp_type} to resolve [Tpromoted]
+     {!Translation.cpp_ir_of_ml_type} to resolve [Tpromoted]
      markers.  CppIR: type conversion reads it as it is. *)
   promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
   (* When true, we are inside a constructor expression (module-level static
