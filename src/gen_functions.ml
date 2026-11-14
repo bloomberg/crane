@@ -9,7 +9,7 @@
     over the expression translation in {!Translation}, re-exported through
     {!Gen_decls}.  The callable plan of each function ({!plan_function}) is
     made before any body is generated; generating the function reads it
-    back ({!planned_scope_head}). *)
+    back ({!planned_relaxations}, {!declare_planned}). *)
 
 open Common
 open Miniml
@@ -328,7 +328,7 @@ let sig_witness_expr name (ml_ty : ml_type) =
     with no monad leaves the mode alone.
 
     Must wrap type conversion as well as body generation: void-ification and
-    [reify_monadic_param_type] (called from [convert_ml_type_to_cpp_type]) both
+    {!Translation_support.reify_monadic_param_type_ir} both
     read the mode.  We detect reified by the monad template mentioning "ITree",
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
 let with_itree_mode_for ty f =
@@ -344,8 +344,8 @@ let with_itree_mode_for ty f =
 
     Returns the parameters with the class-typed ones renamed in place, so that
     de Bruijn indices still line up, together with what each takes as a template
-    parameter: its kind, its name, the class it instantiates, and the name the
-    Rocq binder had. *)
+    parameter: its kind (in CppIR), its name, the class it instantiates, and
+    the name the Rocq binder had. *)
 let promote_typeclass_params (params : (Id.t * ml_type) list) =
   let counter = ref 0 in
   let temps = ref [] in
@@ -365,7 +365,10 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
           let tt =
             match ty with
             | Miniml.Tglob _ as ty ->
-              Option.get (concept_constraint_of_class_type ty)
+              fst
+                (List.hd
+                   (Legacy_minicpp_to_cpp_ir.lower_template_parameters
+                      [(Option.get (concept_constraint_of_class_type ty), instance_name)] ))
             | _ ->
               (* Unreachable: [Table.is_typeclass_type] only holds of a
                  [Tglob]. *)
@@ -386,7 +389,8 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   (params, List.rev !temps)
 
 (** The value-parameter types, in declaration order, and the return type of
-    a function declaration, which keeps its parameters last first. *)
+    a generated function declaration, which keeps its parameters last first:
+    what [CRANE_CHECK_IR] holds to its plan ({!declare_planned}). *)
 let declared_signature =
   let lower = Legacy_minicpp_to_cpp_ir.lower_type in
   function
@@ -396,28 +400,18 @@ let declared_signature =
     Some {Callable_abi.params = List.rev_map (fun (_, t) -> lower t) params; ret = lower df_ret}
   | _ -> None
 
-(** The head [n] is declared with: [temps] relaxed against [signature]
-    ({!Plan_templates.relax_function_head}), as [n]'s callable plan and as a
-    template head, with what the relaxations decided, which carry them
-    through the declaration. *)
-let plan_function_head ?deduced_callables ?passing ~minted n ty temps signature =
-  let declared =
-    match declared_signature signature with
-    | Some declared -> declared
-    | None -> CErrors.anomaly Pp.(str "the head of " ++ GlobRef.print n ++ str " is planned from no function.")
-  in
-  let temps, signature, relaxations =
-    relax_function_head (Legacy_minicpp_to_cpp_ir.lower_template_parameters temps) declared
-  in
-  let signature = Some signature in
-  let abi =
-    Callable_abi.of_head ?deduced_callables ?passing ?signature ~relaxations ~minted
-      ~omitted:(Translation_support.type_arg_omission n)
-      ~phantom_prefix:(Translation_types.leading_phantom_count n)
-      ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
-      ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
-  in
-  (abi, Cpp_ir_to_legacy_minicpp.template_parameters temps, relaxations)
+(** The callable plan of [n], declared with the template head [temps] and
+    the signature [declared]: both relaxed together
+    ({!Plan_templates.relax_function_head}), the plan recording what the
+    relaxations decided, which carry them through the declaration. *)
+let plan_function_head ?deduced_callables ?passing ~minted n ty (temps : head_params)
+    (declared : Callable_abi.signature) =
+  let temps, signature, relaxations = relax_function_head temps declared in
+  Callable_abi.of_head ?deduced_callables ?passing ~signature ~relaxations ~minted
+    ~omitted:(Translation_support.type_arg_omission n)
+    ~phantom_prefix:(Translation_types.leading_phantom_count n)
+    ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
+    ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
 
 (** What a function's body is generated under, settled before the body:
     its return type, its parameters and the environment that names them, the
@@ -425,7 +419,7 @@ let plan_function_head ?deduced_callables ?passing ~minted n ty temps signature 
     ({!Normalize.eta_expand}), and the head before the relaxations
     ({!plan_function_head}). *)
 type body_scope = {
-  bs_cod : cpp_type;
+  bs_cod : Cpp_ir.Lowered.Type.t;
       (** The C++ return type: [unit] made [void], promoted variables
           resolved. *)
   bs_env : env;  (** Names every parameter, for de Bruijn lookup. *)
@@ -434,22 +428,22 @@ type body_scope = {
   bs_all_params : (ml_ident * ml_type) list;
       (** Every parameter as bound, innermost first: the eta-expansion ones,
           then the body's lambdas. *)
-  bs_ids : (Id.t * cpp_type) list;
+  bs_ids : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** The C++ value parameters, innermost first: dictionaries and erased
           binders left out, types wrapped by ownership. *)
   bs_missing : (ml_ident * ml_type) list;
       (** The parameters the body leaves to eta-expansion. *)
   bs_b : ml_ast;  (** The body, on the signature's type-variable numbering. *)
-  bs_typeclass_temps_basic : (template_type * Id.t) list;
+  bs_typeclass_temps_basic : head_params;
       (** The instance template parameters, constraints resolved. *)
-  bs_regular_temps : (template_type * Id.t) list;
+  bs_regular_temps : head_params;
       (** The type parameters and the callable ones: what [Tvar] index
           resolution reads. *)
-  bs_temps : (template_type * Id.t) list;
+  bs_temps : head_params;
       (** The template head before the relaxations. *)
   bs_minted : (Id.t * Callable_abi.minted) list;
       (** What the builders of {!bs_temps} recorded of each parameter. *)
-  bs_promoted_var_resolutions : (Id.t * cpp_type) list;
+  bs_promoted_var_resolutions : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** Each promoted type variable, qualified through the instance
           parameter that provides it. *)
   bs_owned_flags : bool list;  (** Whether the body owns each of {!bs_all_ids}. *)
@@ -492,9 +486,9 @@ type body_scope = {
                  inference)
     @param temps template type parameters, and [minted] what their builder
                  recorded of each ({!Callable_abi.minted}) *)
-let dfun_body_scope ~minted n b cty ty temps =
+let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_params) =
   let dom, cod =
-    match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
+    match cty with Function (d, c) -> (d, c) | t -> ([ (Void : Cpp_ir.Lowered.Type.t) ], t)
   in
   (* Suppress __attribute__((pure)) for functions whose ML return type is
      monadic — these perform side effects even though the C++ return type
@@ -509,8 +503,7 @@ let dfun_body_scope ~minted n b cty ty temps =
        so the C++ function literally returns void)
      - Reified mode: Tglob(itree, [E; Unit]) → Tglob(itree, [E; void])
        (printed as shared_ptr<ITree<void>> via monad template) *)
-  let unit_void = ml_type_is_void_call ty in
-  let cod = apply_unit_void unit_void cod in
+  let cod : Cpp_ir.Lowered.Type.t = if ml_type_is_void_call ty then Void else cod in
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
   let mldom = List.rev (Ml_type_util.ml_domains ty) in
   let ids, b = collect_typed_lams ty b in
@@ -728,11 +721,16 @@ let dfun_body_scope ~minted n b cty ty temps =
       (fun (_tt, tc_name, class_info, _) ->
         match class_info with
         | Some (class_ref, _) ->
-          promoted_resolutions class_ref (Tinstance (tc_name, class_ref))
+          List.map
+            (fun (v, t) -> (v, Legacy_minicpp_to_cpp_ir.lower_type t))
+            (promoted_resolutions class_ref (Tinstance (tc_name, class_ref)))
         | None -> [] )
       typeclass_temps
   in
   let hkt_tvar_resolutions = hkt_tvar_resolutions_of_type ty in
+  let hkt_tvar_resolutions_ir =
+    List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) hkt_tvar_resolutions
+  in
   (* Type annotations inside the body must name the same resolved types as the
      signature does. *)
   let gen_body_stmts env cw e =
@@ -741,10 +739,11 @@ let dfun_body_scope ~minted n b cty ty temps =
   (* Substitute promoted type var markers [Tpromoted name] with their
      qualified resolutions throughout a C++ type tree. *)
   let resolve_promoted_in_type =
-    rewrite_cpp_type (function
-      | Tvar (Tv_index (i, _)) when List.mem_assoc i hkt_tvar_resolutions ->
-        Some (List.assoc i hkt_tvar_resolutions)
-      | Tpromoted name as ty ->
+    Cpp_ir.Types.rewrite (fun (t : Cpp_ir.Lowered.Type.t) ->
+      match t with
+      | Variable (Index (i, _)) when List.mem_assoc i hkt_tvar_resolutions_ir ->
+        Some (List.assoc i hkt_tvar_resolutions_ir)
+      | Promoted_member name as ty ->
         Some
           ( match
               List.find_opt
@@ -819,14 +818,14 @@ let dfun_body_scope ~minted n b cty ty temps =
   let ids =
     List.map
       (fun (x, ty, owned) ->
-        let cpp_ty = convert_ml_type_to_cpp_type env [] ty in
+        let cpp_ty = cpp_ir_of_ml_type env [] ty in
         let cpp_ty =
           if has_type_resolutions then resolve_promoted_in_type cpp_ty
           else cpp_ty
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
-        let cpp_ty = reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
+        let cpp_ty = Translation_support.reify_monadic_param_type_ir ty cpp_ty in
+        let wrapped = wrap_param_by_ownership_ir ~is_owned:owned ~core:ty cpp_ty in
         (x, wrapped) )
       ids_with_owned
   in
@@ -869,27 +868,30 @@ let dfun_body_scope ~minted n b cty ty temps =
      is_invocable_v constraint) instead of TTfun, to avoid referencing template
      type parameters that were filtered out as phantom
      ({!Plan_templates.phantom_aware_temps}, via {!with_function_head}). *)
-  let primary = primary_tvar_indices dom cod in
-  let unwrap_fun_ty2 = function
-    | Tconst ((Tfun _ as f)) | Tref (Lvalue, Tconst (Tfun _ as f)) -> Some f
-    | Tfun _ as f -> Some f
+  let primary = primary_tvar_indices_ir dom cod in
+  let unwrap_fun_ty2 : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t option = function
+    | Const (Function _ as f) | Reference (Lvalue, Const (Function _ as f)) -> Some f
+    | Function _ as f -> Some f
     | _ -> None
+  in
+  let generalises_callable ~kept_as_fn ~primary f =
+    (not kept_as_fn) && not (IntSet.is_empty primary && is_fully_erased_fun_ty_ir f)
   in
   let fun_tys =
     List.filter_map
       (fun (x, ty, i) ->
         match unwrap_fun_ty2 ty with
-        | Some (Tfun (fdom, fcod) as f)
+        | Some (Function (fdom, fcod) as f)
           when generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
-          let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
+          let fun_idx = get_tvar_indices_ir f in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
           in
           if has_undeclared then
-            Some (x, TTtypename, fun_tparam_id i, i)
+            Some (x, Cpp_ir.Template.Parameter_kind.Typename, fun_tparam_id i, i)
           else
-            let fcod = if is_cpp_unit_type fcod then Tvoid else fcod in
-            Some (x, TTfun (fdom, fcod), fun_tparam_id i, i)
+            let fcod : Cpp_ir.Lowered.Type.t = if is_cpp_unit_type_ir fcod then Void else fcod in
+            Some (x, Cpp_ir.Template.Parameter_kind.Callable_declared (fdom, fcod), fun_tparam_id i, i)
         | _ -> None )
       (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids))
   in
@@ -914,10 +916,11 @@ let dfun_body_scope ~minted n b cty ty temps =
     List.mapi
       (fun i (x, ty) ->
         match unwrap_fun_ty2 ty with
-        | Some (Tfun _ as f)
+        | Some (Function _ as f)
           when generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
           ( x,
-            Tref (Forwarding, named_tvar (fun_tparam_id (List.length ids - i - 1))) )
+            (Reference (Forwarding, Variable (Named (fun_tparam_id (List.length ids - i - 1))))
+              : Cpp_ir.Lowered.Type.t) )
         | _ -> (x, ty) )
       ids
   in
@@ -937,11 +940,11 @@ let dfun_body_scope ~minted n b cty ty temps =
     (* A type constructor standing in for a template parameter: the alias is
        applied to something of kind [Set -> Set], so the alias itself takes a
        [template <typename> class] parameter -- the shape C++ cannot deduce. *)
-    let rec is_hk_arg a =
+    let rec is_hk_arg (a : Cpp_ir.Lowered.Type.t) =
       match a with
-      | Ttyctor _ -> true
-      | Tapply (Tvar _, _) -> true
-      | Tconst t | Tref (_, t) -> is_hk_arg t
+      | Type_constructor _ -> true
+      | Apply (Variable _, _) -> true
+      | Const t | Reference (_, t) -> is_hk_arg t
       | _ -> false
     in
     (* The alias stands for a callable.  A struct behind an alias deduces
@@ -950,8 +953,8 @@ let dfun_body_scope ~minted n b cty ty temps =
     let alias_rhs_is_fun kn =
       match Table.lookup_typedef_unchecked kn with
       | Some ml_ty -> (
-        match convert_ml_type_to_cpp_type env [] ml_ty with
-        | Tfun _ | Tconst (Tfun _) -> true
+        match cpp_ir_of_ml_type env [] ml_ty with
+        | Function _ | Const (Function _) -> true
         | _ -> false )
       | None -> false
     in
@@ -960,12 +963,12 @@ let dfun_body_scope ~minted n b cty ty temps =
        a lambda argument cannot be matched against it.  A call site reads the
        same parameter as no source of deduction ([deducible_tvars_of_glob]),
        so the two agree on what has to be written. *)
-    let rec alias_hides_fun ty =
+    let rec alias_hides_fun (ty : Cpp_ir.Lowered.Type.t) =
       match ty with
-      | Tconst t | Tref (_, t) -> alias_hides_fun t
-      | Tapply (Tglob (GlobRef.ConstRef kn, [], _), args)
-       |Tglob (GlobRef.ConstRef kn, (_ :: _ as args), _) ->
-        (List.exists is_hk_arg args || get_tvar_indices ty <> [])
+      | Const t | Reference (_, t) -> alias_hides_fun t
+      | Apply (Entity_application (GlobRef.ConstRef kn, [], _), args)
+       |Entity_application (GlobRef.ConstRef kn, (_ :: _ as args), _) ->
+        (List.exists is_hk_arg args || get_tvar_indices_ir ty <> [])
         && alias_rhs_is_fun kn
       | _ -> false
     in
@@ -978,18 +981,18 @@ let dfun_body_scope ~minted n b cty ty temps =
        so the same deduction failure as the alias above, for the same reason,
        and the same repair.  Where the type names no parameter there is
        nothing to deduce and nothing to shield. *)
-    let rec spelled_fun_is_deduced_against ty =
+    let rec spelled_fun_is_deduced_against (ty : Cpp_ir.Lowered.Type.t) =
       match ty with
-      | Tconst t | Tref (_, t) -> spelled_fun_is_deduced_against t
-      | Tfun _ -> get_tvar_indices ty <> []
+      | Const t | Reference (_, t) -> spelled_fun_is_deduced_against t
+      | Function _ -> get_tvar_indices_ir ty <> []
       | _ -> false
     in
     (* The wrapper the ownership pass put on stays where it is; only the type
        it wraps is taken out of deduction. *)
-    let rec at_core f ty =
+    let rec at_core f (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
       match ty with
-      | Tconst t -> Tconst (at_core f t)
-      | Tref (k, t) -> Tref (k, at_core f t)
+      | Const t -> Const (at_core f t)
+      | Reference (k, t) -> Reference (k, at_core f t)
       | t -> f t
     in
     List.map
@@ -997,7 +1000,7 @@ let dfun_body_scope ~minted n b cty ty temps =
         if alias_hides_fun ty || spelled_fun_is_deduced_against ty then
           ( x,
             at_core
-              (fun t -> Tnondeduced t)
+              (fun t : Cpp_ir.Lowered.Type.t -> Non_deduced t)
               ty )
         else (x, ty) )
       ids
@@ -1009,11 +1012,11 @@ let dfun_body_scope ~minted n b cty ty temps =
        spells the two promoted variables bare, and bare is the file-scope
        [std::any] rather than the [Params] instance standing beside it. *)
     List.map
-      (fun (tt, id, _, _) ->
-        let tt =
+      (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id, _, _) ->
+        let tt : _ Cpp_ir.Template.Parameter_kind.t =
           match tt with
-          | TTconcept (r, (_ :: _ as args)) when has_type_resolutions ->
-            TTconcept (r, List.map resolve_promoted_in_type args)
+          | Concept (r, (_ :: _ as args)) when has_type_resolutions ->
+            Concept (r, List.map resolve_promoted_in_type args)
           | tt -> tt
         in
         (tt, id) )
@@ -1029,11 +1032,11 @@ let dfun_body_scope ~minted n b cty ty temps =
      recursive argument always mentions the inductive, so deduction
      succeeds. *)
   let recurses_on_non_uniform_ind =
-    let rec mentions = function
-      | Tglob (r, args, _) | Tnamespace (r, Tglob (_, args, _)) ->
+    let rec mentions : Cpp_ir.Lowered.Type.t -> bool = function
+      | Entity_application (r, args, _) | In_namespace (r, Entity_application (_, args, _)) ->
         Table.is_non_uniform_inductive r || List.exists mentions args
-      | Tconst t | Tnamespace (_, t) | Tref (_, t) | Tshared_ptr t -> mentions t
-      | Tfun (d, c) -> List.exists mentions d || mentions c
+      | Const t | In_namespace (_, t) | Reference (_, t) | Shared_pointer t -> mentions t
+      | Function (d, c) -> List.exists mentions d || mentions c
       | _ -> false
     in
     List.exists (fun (_, ty) -> mentions ty) ids
@@ -1055,17 +1058,20 @@ let dfun_body_scope ~minted n b cty ty temps =
      those after it to deduction. *)
   let self_call_undeducible =
     if recurses_on_non_uniform_ind && not tvars_are_phantom then
-      let spelled = List.concat_map (fun (_, ty) -> get_rendered_tvar_indices ty) ids in
+      let spelled = List.concat_map (fun (_, ty) -> get_rendered_tvar_indices_ir ty) ids in
       let constrained =
-        get_tvar_indices cod
+        get_tvar_indices_ir cod
         @ List.concat_map
-            (function _, TTfun (dom, cod), _, _ -> get_tvar_indices (Tfun (dom, cod)) | _ -> [])
+            (function
+              | _, Cpp_ir.Template.Parameter_kind.Callable_declared (dom, cod), _, _ ->
+                get_tvar_indices_ir (Function (dom, cod))
+              | _ -> [])
             fun_tys
       in
       Some
         (fun id ->
           match List.find_opt (fun (_, id') -> Id.equal id id') temps with
-          | Some (TTtypename_default _, _) | None -> false
+          | Some (Typename_default _, _) | None -> false
           | Some _ -> (
             match List.assoc_opt id minted with
             | Some (Callable_abi.Scheme_param i) -> List.mem i constrained && not (List.mem i spelled)
@@ -1107,7 +1113,7 @@ let dfun_body_scope ~minted n b cty ty temps =
     bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
     bs_passing =
-      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> param_passing ~owned ty) ids ids_with_owned);
+      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> param_passing_ir ~owned ty) ids ids_with_owned);
     bs_self_call_undeducible = self_call_undeducible;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
@@ -1119,20 +1125,16 @@ let dfun_body_scope ~minted n b cty ty temps =
 let plan_scope_head n ty scope =
   with_type_vars [] (fun () ->
       plan_function_head ~deduced_callables:scope.bs_deduced_callables ~passing:scope.bs_passing
-        ~minted:scope.bs_minted n
-        ty scope.bs_temps
-        (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
+        ~minted:scope.bs_minted n ty scope.bs_temps
+        {Callable_abi.params = List.rev_map snd scope.bs_ids; ret = scope.bs_cod})
 
-(** The head the function [n] generated under [scope] is declared with, and
-    what its relaxations decided: its plan's, which was made before anything
-    was generated.  Under [CRANE_CHECK_IR] the head is decided again from
-    [scope] and checked against the plan. *)
-let planned_scope_head n ty scope =
-  let abi = Callable_abi.planned n in
-  if Probe.checking () then (
-    let decided, _, _ = plan_scope_head n ty scope in
-    Callable_abi.check decided );
-  (Cpp_ir_to_legacy_minicpp.template_parameters (Callable_abi.declared_head abi), Callable_abi.relaxations abi)
+(** What the relaxations of the function [n] generated under [scope]
+    decided: its plan's, which was made before anything was generated.
+    Under [CRANE_CHECK_IR] the head is decided again from [scope] and checked
+    against the plan. *)
+let planned_relaxations n ty scope =
+  if Probe.checking () then Callable_abi.check (plan_scope_head n ty scope);
+  Callable_abi.relaxations (Callable_abi.planned n)
 
 (** The reference a self-call of [n] in its own body is written with: every
     template parameter its plan lets a call write, at itself -- the call is
@@ -1170,38 +1172,47 @@ let self_call_reference n ~undeducible =
   in
   mk_cppglob n (List.map (fun (_, id) -> named_tvar id) written)
 
-(** The declaration of the function [n], [decl] as its body was generated,
-    with the value-parameter types and return type its plan's signature
-    gives ({!Callable_abi.signature}): the head a caller planned against is
-    the one declared.  Under [CRANE_CHECK_IR] the generated signature is
-    held to the plan's.  A top-level sequential [main] keeps its own: it is
-    declared to return [int] for the entry point, which no call of it
-    reads. *)
-let declare_planned_signature n decl =
+(** The declaration of the function [n] whose definition [decl] is, as its
+    body was generated: the head is a projection of [n]'s plan -- the
+    template head it declares ({!Callable_abi.declared_head}), and the
+    value-parameter types and return type of its signature
+    ({!Callable_abi.signature}) -- so the head a caller planned against is
+    the one declared; [decl] gives only the parameter names and the body.
+    Under [CRANE_CHECK_IR] the generated signature is held to the plan's.  A
+    top-level sequential [main] keeps its own signature: it is declared to
+    return [int] for the entry point, which no call of it reads. *)
+let declare_planned n decl =
+  let abi = Callable_abi.planned n in
   let is_entry_point =
     match (n, decl) with
     | GlobRef.ConstRef c, Dfun {df_ret = Tid_external ("int", []); _} ->
       String.equal (Label.to_string (Constant.label c)) "main"
     | _ -> false
   in
-  if is_entry_point then decl
-  else
-    let planned = Callable_abi.signature (Callable_abi.planned n) in
-    if Probe.checking () && not (Option.equal ( = ) planned (declared_signature decl)) then
-      Probe.violation "callable ABI"
-        Pp.(
-          str "the declaration of " ++ GlobRef.print n
-          ++ str " has another signature than its plan" );
-    let raised = Option.map (fun {Callable_abi.params; ret} ->
-        (List.map Cpp_ir_to_legacy_minicpp.ty params, Cpp_ir_to_legacy_minicpp.ty ret)) planned in
-    match (raised, decl) with
-    | Some (params, ret), Dfun ({df_shape = Ddef (ps, body); _} as f)
-      when List.compare_lengths params ps = 0 ->
-      Dfun {f with df_ret = ret; df_shape = Ddef (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params), body)}
-    | Some (params, ret), Dfun ({df_shape = Ddecl ps; _} as f)
-      when List.compare_lengths params ps = 0 ->
-      Dfun {f with df_ret = ret; df_shape = Ddecl (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params))}
-    | _ -> decl
+  let decl =
+    if is_entry_point then decl
+    else
+      let planned = Callable_abi.signature abi in
+      if Probe.checking () && not (Option.equal ( = ) planned (declared_signature decl)) then
+        Probe.violation "callable ABI"
+          Pp.(
+            str "the declaration of " ++ GlobRef.print n
+            ++ str " has another signature than its plan" );
+      match (planned, decl) with
+      | Some {Callable_abi.params; ret}, Dfun ({df_shape = Ddef (ps, body); _} as f)
+        when List.compare_lengths params ps = 0 ->
+        Dfun
+          { f with
+            df_ret = Cpp_ir_to_legacy_minicpp.ty ret;
+            df_shape =
+              Ddef (List.map2 (fun (id, _) t -> (id, Cpp_ir_to_legacy_minicpp.ty t)) ps (List.rev params), body) }
+      | _ ->
+        CErrors.anomaly
+          Pp.(str "the definition of " ++ GlobRef.print n ++ str " does not have its plan's parameters.")
+  in
+  match Callable_abi.declared_head abi with
+  | [] -> decl
+  | head -> Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters head, None, decl)
 
 (** Generate the C++ definition of the function [n] from its ML body [b]:
     its {!body_scope}, the head its plan declares, the body with every
@@ -1219,27 +1230,30 @@ let declare_planned_signature n decl =
                  recorded of each ({!Callable_abi.minted}) *)
 let gen_dfun ~minted n b cty ty temps =
   let scope = dfun_body_scope ~minted n b cty ty temps in
-  let temps, relaxations = planned_scope_head n ty scope in
+  let raise_ty = Cpp_ir_to_legacy_minicpp.ty in
+  let relaxations = planned_relaxations n ty scope in
   let rec_call = self_call_reference n ~undeducible:scope.bs_self_call_undeducible in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
-    bs_cod = cod;
     bs_env = env;
     bs_all_ids = all_ids;
     bs_all_params = all_params;
-    bs_ids = ids;
     bs_missing = missing;
     bs_b = b;
     bs_typeclass_temps_basic = typeclass_temps_basic;
     bs_regular_temps = regular_temps;
-    bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
+    _
   } =
     scope
   in
+  (* The body is still MiniCpp: what it reads of the head is raised once. *)
+  let cod = raise_ty scope.bs_cod in
+  let ids = List.map (fun (x, t) -> (x, raise_ty t)) scope.bs_ids in
+  let promoted_var_resolutions = List.map (fun (v, t) -> (v, raise_ty t)) scope.bs_promoted_var_resolutions in
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params — they are not ML type variables
@@ -1257,9 +1271,9 @@ let gen_dfun ~minted n b cty ty temps =
   let type_var_ids =
     let declared =
       List.filter_map
-        (fun (tt, id) ->
+        (fun ((tt : _ Cpp_ir.Template.Parameter_kind.t), id) ->
           match tt with
-          | TTtypename | TTtypename_default _ | TTtemplate _ -> Some id
+          | Typename | Typename_default _ | Template _ -> Some id
           | _ -> None )
         regular_temps
     in
@@ -1276,7 +1290,7 @@ let gen_dfun ~minted n b cty ty temps =
   (* The head itself, at the kinds it declares: see
      {!Translation_state.current_template_head}. *)
   let saved_template_head = get_current_template_head () in
-  set_current_template_head (typeclass_temps_basic @ regular_temps);
+  set_current_template_head (Cpp_ir_to_legacy_minicpp.template_parameters (typeclass_temps_basic @ regular_temps));
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
@@ -1545,78 +1559,7 @@ let gen_dfun ~minted n b cty ty temps =
   in
     (inner, env)
   in
-  let inner = declare_planned_signature n (Head_relaxation.apply_all relaxations inner) in
-  match temps with
-  | [] -> (inner, env)
-  | l -> (Dtemplate (l, None, inner), env)
-
-(** The C++ declaration (no body) of the function [n], for a header: its
-    parameters named from [b]'s lambdas and typed from [dom], returning
-    [cod], under the template parameters [temps]. *)
-let gen_sfun n b dom cod temps =
-  let all_params, b = collect_lams b in
-  let owned_flags = infer_owned_flags ~owner:n b all_params in
-  let ids, env =
-    push_vars'
-      (List.map
-         (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
-         all_params )
-      (empty_env ())
-  in
-  (* Zip with ownership flags, then filter out void params *)
-  let ids_with_owned =
-    List.map2 (fun (x, ty) owned -> (x, ty, owned)) ids owned_flags
-  in
-  let ids_with_owned =
-    List.filter (fun (_, ty, _) -> is_runtime_binder_type ty) ids_with_owned
-  in
-  (* Convert ML types to C++ types and wrap with const. Owned shared_ptr params:
-     pass by value; Borrowed: const ref *)
-  let ids =
-    List.map
-      (fun (x, ty, owned) ->
-        let cpp_ty = convert_ml_type_to_cpp_type env [] ty in
-        (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
-        let cpp_ty = reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
-        (Some x, wrapped) )
-      ids_with_owned
-  in
-  let dom = List.filter (fun ty -> ty != Tvoid) dom in
-  (* For already-converted C++ types in dom, wrap shared_ptr with const ref *)
-  let args =
-    (* Where [dom] has a type for each parameter, each is the C++ type of
-       the parameter's Core type. *)
-    let cores =
-      if List.compare_lengths dom ids_with_owned = 0 then List.map (fun (_, ty, _) -> Some ty) ids_with_owned
-      else List.map (fun _ -> None) dom
-    in
-    List.map2
-      (fun ty core ->
-        let wrapped = wrap_param_by_ownership ?core ty in
-        (None, wrapped) )
-      dom cores
-  in
-  (* Merge parameter names from [ids] (body lambdas) with resolved types
-     from [dom] (function signature).  [ids] carries the correct parameter
-     names but may have unresolved promoted type vars (e.g. bare [m_carrier]
-     instead of [typename _tcI0::m_carrier]).  [dom] carries fully-resolved
-     types from the outer gen_dfun but lacks parameter names.  When lengths
-     match, zip names from [ids] with types from [args] to get both. *)
-  let params =
-    if List.length args = List.length ids then
-      List.map2
-        (fun (name, _) (_, ty) -> (name, ty))
-        ids args
-    else if List.length args > List.length ids then
-      List.rev args
-    else
-      ids
-  in
-  let inner = Dfun (mk_dfun n ~ret:cod (Ddecl params)) in
-  match temps with
-  | [] -> (inner, env)
-  | l -> (Dtemplate (l, None, inner), env)
+  (declare_planned n (Head_relaxation.apply_all relaxations inner), env)
 
 (** Whether a recovered type names an associated type of the enclosing class,
     and so is worth writing back into the binder it came from.  Anything else
@@ -1696,9 +1639,9 @@ let gen_constant_value ?expected_ty b =
 (** The parameters a head declares for the type variables [cty] spells,
     and for the ML variables [extra] it does not, by the variable each
     stands for: the name {!Plan_templates.phantom_aware_temps} gives it. *)
-let scheme_params ?(extra = IntSet.empty) cty =
+let scheme_params ?(extra = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   let spelled =
-    List.filter (fun (i, _) -> i > 0) (Ml_type_util.get_tvars_indexed cty)
+    List.filter (fun (i, _) -> i > 0) (Ml_type_util.get_tvars_indexed_ir cty)
   in
   List.map (fun (i, id) -> (id, Callable_abi.Scheme_param i)) spelled
   @ List.filter_map
@@ -1707,8 +1650,15 @@ let scheme_params ?(extra = IntSet.empty) cty =
         else Some (Common.tvar_id i, Callable_abi.Scheme_param i) )
       (IntSet.elements extra)
 
-(** Generate the C++ declaration of [n] from its ML definition: a function
-    ({!gen_dfun}), a constant whose body only throws (as a zero-argument
+(** A function reaching a generator for what is not one: a function's head
+    is a projection of its plan ({!declare_planned}), and {!plan_function}
+    planned it only where {!gen_decl_for_pp} generates it. *)
+let function_without_plan n =
+  CErrors.anomaly
+    Pp.(str "the function " ++ GlobRef.print n ++ str " is generated as a constant, with no plan.")
+
+(** Generate the C++ declaration of [n], which is not a function, from its
+    ML definition: a constant whose body only throws (as a zero-argument
     function), or a constant initialised with its value.  Returns the
     declaration, its environment and the C++ type's variables. *)
 let gen_decl__inner n b ty =
@@ -1719,9 +1669,7 @@ let gen_decl__inner n b ty =
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match cty with
-    | Tfun _ ->
-      let f, env = gen_dfun ~minted:(scheme_params cty) n b cty ty temps in
-      (f, env, tvars)
+    | Tfun _ -> function_without_plan n
     | _ ->
     match b with
     | _ when thunk_reason n = Some Throws ->
@@ -1772,8 +1720,8 @@ let gen_decl n b ty =
     its template head, and the template parameters callers must see. *)
 type function_head = {
   fh_body : ml_ast;
-  fh_cty : cpp_type;
-  fh_temps : (template_type * Id.t) list;
+  fh_cty : Cpp_ir.Lowered.Type.t;
+  fh_temps : head_params;
   fh_minted : (Id.t * Callable_abi.minted) list;
       (** The variable each of {!fh_temps} is declared for. *)
   fh_tvars : Id.t list;
@@ -1791,9 +1739,8 @@ let with_function_head n b ty k =
   let b = recover_erased_body_types ty b in
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
-  let cty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let cty = Cpp_ir_to_legacy_minicpp.ty cty_ir in
-  let tvars = get_tvars cty in
+  let cty = cpp_ir_of_ml_type (empty_env ()) [] ty in
+  let tvars = List.map snd (Ml_type_util.get_tvars_indexed_ir cty) in
   let index_tvar_set = collect_ml_type_index_tvars ty in
   let extra_index_tvars =
     IntSet.fold (fun i acc ->
@@ -1805,9 +1752,8 @@ let with_function_head n b ty k =
   in
   let tvars = tvars @ extra_index_tvars in
   let temps =
-    Cpp_ir_to_legacy_minicpp.template_parameters
-      (phantom_aware_temps ~force_required:index_tvar_set
-         ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty_ir tvars)
+    phantom_aware_temps ~force_required:index_tvar_set
+      ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
   in
   let tc_param_ids =
     match ty with
@@ -1831,11 +1777,11 @@ let gen_function n ty h =
   let f, env = gen_dfun ~minted:h.fh_minted n h.fh_body h.fh_cty ty h.fh_temps in
   let callable_tparams =
     match h.fh_cty with
-    | Tfun (dom, _) ->
+    | Function (dom, _) ->
       List.filter_map
-        (fun (ty, i) ->
+        (fun ((ty : Cpp_ir.Lowered.Type.t), i) ->
           match ty with
-          | Tfun _ when not (Ml_type_util.is_fully_erased_fun_ty ty) ->
+          | Function _ when not (Ml_type_util.is_fully_erased_fun_ty_ir ty) ->
             Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
@@ -1851,7 +1797,7 @@ let plan_function ~fixpoint n b ty =
   Table.with_decl_ref n @@ fun () ->
   with_function_head n b ty @@ fun ty h ->
   let plan cty =
-    let abi, _, _ = plan_scope_head n ty (dfun_body_scope ~minted:h.fh_minted n h.fh_body cty ty h.fh_temps) in
+    let abi = plan_scope_head n ty (dfun_body_scope ~minted:h.fh_minted n h.fh_body cty ty h.fh_temps) in
     ( if Probe.checking () then
         match convert_ml_type_to_cpp_type (empty_env ()) [] ty with
         | live -> Translation_support.check_planned_arity abi live
@@ -1859,7 +1805,7 @@ let plan_function ~fixpoint n b ty =
     Some abi
   in
   match h.fh_cty with
-  | Tfun _ as cty -> plan cty
+  | Function _ as cty -> plan cty
   | cty when fixpoint -> plan cty
   | _ -> None
 
@@ -1870,16 +1816,18 @@ let plan_function ~fixpoint n b ty =
 let gen_decl_for_pp__inner n b ty =
   with_function_head n b ty @@ fun ty h ->
   match h.fh_cty with
-  | Tfun _ ->
+  | Function _ ->
     let f, env, tvars = gen_function n ty h in
     (Some f, env, tvars)
   | cty when thunk_reason n = Some Throws ->
     let body_expr = gen_expr (empty_env ()) h.fh_body in
-    let inner = Dfun (mk_dfun n ~ret:cty (Ddef ([], [Sreturn (Some body_expr)]))) in
+    let inner =
+      Dfun (mk_dfun n ~ret:(Cpp_ir_to_legacy_minicpp.ty cty) (Ddef ([], [Sreturn (Some body_expr)])))
+    in
     let ds =
       match h.fh_temps with
       | [] -> inner
-      | l -> Dtemplate (l, None, inner)
+      | l -> Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters l, None, inner)
     in
     (Some ds, empty_env (), h.fh_tvars)
   | _ -> (None, empty_env (), h.fh_tvars)
@@ -1896,24 +1844,21 @@ let gen_dfun_def__inner n b ty = with_function_head n b ty (gen_function n)
 let gen_dfun_def n b ty =
   Table.with_decl_ref n (fun () -> gen_dfun_def__inner n b ty)
 
-(** Generate the C++ specification of [n] for a header: a function's
-    declaration ({!gen_sfun}), a throwing constant's zero-argument
-    declaration, or a constant's initialised definition. *)
+(** Generate the C++ specification of [n], which is not a function, for a
+    header: a throwing constant's zero-argument declaration, or a constant's
+    initialised definition. *)
 let gen_spec__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
-  let unit_void = ml_type_is_void_call ty in
   with_method_ns_for_locals @@ fun () ->
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   let result =
     match ty with
-    | Tfun (dom, cod) ->
-      let cod = apply_unit_void unit_void cod in
-      gen_sfun n b dom cod temps
+    | Tfun _ -> function_without_plan n
     | _ ->
     match b with
     | _ when thunk_reason n = Some Throws ->

@@ -357,6 +357,9 @@ val classify_fun_erasure : Minicpp.cpp_type -> fun_erasure
     Stricter than [Fe_erased_domain None]. *)
 val is_fully_erased_fun_ty : Minicpp.cpp_type -> bool
 
+(** {!is_fully_erased_fun_ty} over a CppIR type. *)
+val is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
+
 (** True of a function type that erased its arguments but kept a concrete
     result, so a closure reaching it needs the [crane_erase_fn] adapter. *)
 val partially_erased_fun_ty : Minicpp.cpp_type -> bool
@@ -796,7 +799,7 @@ val get_tvars_indexed_ir : Cpp_ir.Lowered.Type.t -> (int * Names.Id.t) list
 val get_tvars : Minicpp.cpp_type -> Names.Id.t list
 
 (** The indices of the type variables in a C++ type, sorted. *)
-val get_tvar_indices : Minicpp.cpp_type -> int list
+val get_tvar_indices_ir : Cpp_ir.Lowered.Type.t -> int list
 
 (** The arity at which the rendered type applies each type variable, keyed
     by index, skipping the positions a spelling does not write
@@ -809,9 +812,6 @@ val rendered_tvar_arities_ir : Cpp_ir.Lowered.Type.t -> (int, int) Hashtbl.t
     positions a spelling does not write ({!written_type_args}): a phantom
     there, such as the [E] of [itree E R], is one C++ cannot deduce.
     Unsorted. *)
-val get_rendered_tvar_indices : Minicpp.cpp_type -> int list
-
-(** {!get_rendered_tvar_indices} over a CppIR type. *)
 val get_rendered_tvar_indices_ir : Cpp_ir.Lowered.Type.t -> int list
 
 (** [primary_tvar_indices dom cod] is the set of type-variable indices

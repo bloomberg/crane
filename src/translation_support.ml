@@ -954,12 +954,6 @@ let reify_monadic_param_type_ir ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.
   end
   else cpp_ty
 
-(** {!reify_monadic_param_type_ir} over a MiniCpp type. *)
-let reify_monadic_param_type ml_ty cpp_ty =
-  if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then
-    Cpp_ir_to_legacy_minicpp.ty (reify_monadic_param_type_ir ml_ty (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty))
-  else cpp_ty
-
 (** Check whether an ML expression already produces a reified monadic value
     (a [shared_ptr<ITree<R>>]).  A local whose type is monadic is one, and
     so is [MLapp(MLrel f, args)] where [f] is a local function whose return
@@ -2594,14 +2588,9 @@ let wrap_param_by_ownership_ir ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowere
   in
   if lent && not is_owned then Reference (Lvalue, Const cpp_ty) else cpp_ty
 
-(** How a parameter declared at [ty] -- after {!wrap_param_by_ownership},
+(** How a parameter declared at [t] -- after {!wrap_param_by_ownership_ir},
     or as the [F &&] a deduced callable is -- with ownership [owned], is
     passed. *)
-let param_passing ~owned = function
-  | Tref (Forwarding, _) -> Callable_abi.Forwarded
-  | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
-
-(** {!param_passing} over a CppIR type. *)
 let param_passing_ir ~owned (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Reference (Forwarding, _) -> Callable_abi.Forwarded

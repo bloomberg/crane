@@ -427,7 +427,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   (* The instances come first, as they do for a free function: a call site
      spells the same list in the same order. *)
   let template_params =
-    Legacy_minicpp_to_cpp_ir.lower_template_parameters (List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps)
+    List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
     @ extra_type_params
     @ fun_template_params
   in
