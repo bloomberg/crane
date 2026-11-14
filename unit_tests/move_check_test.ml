@@ -4,136 +4,137 @@
 
 open Names
 open Crane_plugin
-open Minicpp
+
+type ty = Cpp_ir.Lowered.Type.t
+type expr = Cpp_ir.Lowered.Expr.t
+type stmt = Cpp_ir.Lowered.Stmt.t
 
 let id = Id.of_string
-
-(* The checks read CppIR; the bodies are built in MiniCpp and lowered. *)
-let lower = List.map Legacy_minicpp_to_cpp_ir.lower_stmt
-let lower_params = List.map (fun (x, t) -> (x, Legacy_minicpp_to_cpp_ir.lower_type t))
-let v x = CPPvar (id x)
-let tree = Tglob (GlobRef.VarRef (id "tree"), [], [])
+let mk_call = Cpp_ir.Build.call
+let v x : expr = Local (id x)
+let tree : ty = Entity_application (GlobRef.VarRef (id "tree"), [], [])
 
 (* [tree::node_crane_reuse(args)], the token first. *)
-let reuse args = mk_call (CPPqualified_t (tree, Generated_name.companion (id "node") "reuse")) args
-
-(* [std::get<tree::Node>(t.v_mut()).f], a field of the alternative [t] holds. *)
-let field t f =
-  CPPaccess (Adot, CPPstd_get (Tqualified (tree, id "Node"), Some (mk_call (CPPaccess (Adot, v t, id "v_mut")) [])), id f)
+let reuse args = mk_call (Type_member (tree, Generated_name.companion (id "node") "reuse")) args
 
 (* [std::get<tree::Node>(t.v_mut())], the alternative [t] holds. *)
-let alternative t = CPPstd_get (Tqualified (tree, id "Node"), Some (mk_call (CPPaccess (Adot, v t, id "v_mut")) []))
+let alternative t : expr = Variant_get (Member (tree, id "Node"), Some (mk_call (Access (Dot, v t, id "v_mut")) []))
 
-(* [%a0.first] applied to [pair], instantiated ({!Minicpp.foreign}). *)
-let projection f pair =
-  CPPforeign
-    ( Foreign_call,
-      { fr_custom = GlobRef.VarRef (id f);
-        fr_types = [];
-        fr_values = [pair];
-        fr_yields = None;
-        fr_pieces = [Fp_value 0; Fp_text ("." ^ f)] } )
+(* [std::get<tree::Node>(t.v_mut()).f], a field of the alternative [t] holds. *)
+let field t f : expr = Access (Dot, alternative t, id f)
+
+(* [%a0.first] applied to [pair], instantiated (a foreign call). *)
+let projection f pair : expr =
+  Foreign
+    ( Call,
+      { custom = GlobRef.VarRef (id f);
+        types = [];
+        values = [pair];
+        yields = None;
+        pieces = [Value 0; Text ("." ^ f)] } )
 
 (* A frame pushed onto a stack, as a loop saving its continuation does. *)
-let push args = mk_call (CPPaccess (Adot, v "_stack", id "push_back")) [CPPbraced args]
+let push args = mk_call (Access (Dot, v "_stack", id "push_back")) [Braced args]
 
 (* A match on [t] whose one branch binds [fields] into it. *)
-let match_ t fields body =
-  let binding x = {fb_name = id x; fb_type = Tauto; fb_used = true; fb_binder = None} in
-  Smatch
-    ( {sc_expr = mk_call (CPPaccess (Adot, v t, id "v_mut")) []; sc_access = Adot; sc_owned = true; sc_flat = false},
-      [ { smb_ctor_type = Tqualified (tree, id "Node");
-          smb_var = None;
-          smb_field_bindings = List.map binding fields;
-          smb_extra_conds = [];
-          smb_body = body } ],
+let match_ t fields body : stmt =
+  let binding x : Cpp_ir.Lowered.phase Cpp_ir.Stmt.Match.field_binding =
+    {name = id x; type_ = Auto; used = true; binder = None}
+  in
+  Match
+    ( {expr = mk_call (Access (Dot, v t, id "v_mut")) []; access = Dot; owned = true; flat = false},
+      [ { ctor_type = Member (tree, id "Node");
+          var = None;
+          field_bindings = List.map binding fields;
+          extra_conditions = [];
+          body } ],
       None )
 
 let check name body expected =
-  let found = List.map Id.to_string (Move_check.moved_reads (lower body)) in
+  let found = List.map Id.to_string (Move_check.moved_reads body) in
   if found <> expected then (
     Printf.eprintf "move_check: %s: found [%s]\n" name (String.concat "; " found);
     exit 1 )
 
-let decl x e = Sasgn (id x, Declare (Tauto, None), e)
+let decl x e : stmt = Bind_variable (id x, Declare (Auto, None), e)
 
 let () =
   check "fields taken out, then the storage"
-    [ decl "l" (CPPmove (CPPderef (field "t" "a0")));
-      decl "k" (CPPmove (field "t" "a1"));
-      Sreturn (Some (reuse [CPPmove (v "t"); CPPmove (v "l"); v "k"])) ]
+    [ decl "l" (Move (Dereference (field "t" "a0")));
+      decl "k" (Move (field "t" "a1"));
+      Return (Some (reuse [Move (v "t"); Move (v "l"); v "k"])) ]
     [];
   check "the token consumed twice"
-    [ Sexpr (reuse [CPPmove (v "t"); v "k"]);
-      Sreturn (Some (reuse [CPPmove (v "t"); v "k"])) ]
+    [ Expression (reuse [Move (v "t"); v "k"]);
+      Return (Some (reuse [Move (v "t"); v "k"])) ]
     ["t"];
   check "the local read after its storage is rebuilt"
-    [ decl "n" (reuse [CPPmove (v "t"); v "k"]);
-      Sreturn (Some (mk_call (CPPaccess (Adot, v "t", id "v")) [])) ]
+    [ decl "n" (reuse [Move (v "t"); v "k"]);
+      Return (Some (mk_call (Access (Dot, v "t", id "v")) [])) ]
     ["t"];
   check "the local read beside its token"
-    [Sreturn (Some (reuse [CPPmove (v "t"); mk_call (CPPaccess (Adot, v "t", id "v")) []]))]
+    [Return (Some (reuse [Move (v "t"); mk_call (Access (Dot, v "t", id "v")) []]))]
     ["t"];
   check "a child cell handed over, then read"
-    [ decl "xs" (CPPmove (CPPderef (field "t" "a1")));
-      decl "n" (reuse [CPPmove (field "t" "a1"); v "xs"]);
-      Sreturn (Some (field "t" "a1")) ]
+    [ decl "xs" (Move (Dereference (field "t" "a1")));
+      decl "n" (reuse [Move (field "t" "a1"); v "xs"]);
+      Return (Some (field "t" "a1")) ]
     ["t"];
   check "a child cell handed over, a sibling field read"
-    [ decl "n" (reuse [CPPmove (field "t" "a1"); CPPmove (field "t" "a0")]);
-      Sreturn (Some (v "n")) ]
+    [ decl "n" (reuse [Move (field "t" "a1"); Move (field "t" "a0")]);
+      Return (Some (v "n")) ]
     [];
   check "the local assigned afresh after its storage is rebuilt"
-    [ decl "n" (reuse [CPPmove (v "t"); v "k"]);
-      Sasgn (id "t", Existing, v "n");
-      Sreturn (Some (v "t")) ]
+    [ decl "n" (reuse [Move (v "t"); v "k"]);
+      Bind_variable (id "t", Existing, v "n");
+      Return (Some (v "t")) ]
     [];
   check "a field read through a binding after its local is moved"
-    [ Sbind ([id "a0"; id "a1"], alternative "t");
-      Sexpr (push [CPPmove (v "t")]);
-      Sexpr (push [v "a0"]) ]
+    [ Structured_binding ([id "a0"; id "a1"], alternative "t");
+      Expression (push [Move (v "t")]);
+      Expression (push [v "a0"]) ]
     ["t"];
   check "a field read through a binding beside a move of its local"
-    [Sbind ([id "a0"], alternative "t"); Sexpr (push [CPPmove (v "t"); v "a0"])]
+    [Structured_binding ([id "a0"], alternative "t"); Expression (push [Move (v "t"); v "a0"])]
     ["t"];
   check "a local copied, then a field moved out of it, in one initialiser"
-    [Sbind ([id "a0"], alternative "t"); Sexpr (push [v "t"; CPPmove (v "a0")])]
+    [Structured_binding ([id "a0"], alternative "t"); Expression (push [v "t"; Move (v "a0")])]
     [];
   check "a local moved and a field read in a call's arguments"
-    [Sbind ([id "a0"], alternative "t"); Sexpr (mk_call (v "f") [v "t"; CPPmove (v "a0")])]
+    [Structured_binding ([id "a0"], alternative "t"); Expression (mk_call (v "f") [v "t"; Move (v "a0")])]
     ["t"];
   check "a field moved out through a binding, then the storage"
-    [ Sbind ([id "a0"; id "a1"], alternative "t");
-      decl "l" (CPPmove (v "a0"));
-      Sreturn (Some (reuse [CPPmove (v "t"); CPPmove (v "l")])) ]
+    [ Structured_binding ([id "a0"; id "a1"], alternative "t");
+      decl "l" (Move (v "a0"));
+      Return (Some (reuse [Move (v "t"); Move (v "l")])) ]
     [];
   check "a field handed over through a binding beside its storage"
-    [Sbind ([id "a0"], alternative "t"); Sreturn (Some (reuse [CPPmove (v "t"); CPPmove (v "a0")]))]
+    [Structured_binding ([id "a0"], alternative "t"); Return (Some (reuse [Move (v "t"); Move (v "a0")]))]
     ["t"];
   check "two bindings into one local, one moved and the other read"
-    [Sbind ([id "a0"; id "a1"], alternative "t"); Sexpr (push [CPPmove (v "a0")]); Sreturn (Some (v "a1"))]
+    [Structured_binding ([id "a0"; id "a1"], alternative "t"); Expression (push [Move (v "a0")]); Return (Some (v "a1"))]
     [];
   check "a binding into a computed value"
-    [ Sbind ([id "a0"], mk_call (v "f") [v "t"]);
-      Sexpr (push [CPPmove (v "t")]);
-      Sreturn (Some (v "a0")) ]
+    [ Structured_binding ([id "a0"], mk_call (v "f") [v "t"]);
+      Expression (push [Move (v "t")]);
+      Return (Some (v "a0")) ]
     [];
   check "a match's field read after its scrutinee is moved"
-    [match_ "t" ["a0"] [Sexpr (push [CPPmove (v "t")]); Sreturn (Some (v "a0"))]]
+    [match_ "t" ["a0"] [Expression (push [Move (v "t")]); Return (Some (v "a0"))]]
     ["t"];
   check "a match's field read after a binding of the same name"
-    [match_ "t" ["a0"] [Sbind ([id "a0"], mk_call (v "f") []); Sexpr (push [CPPmove (v "t")]); Sreturn (Some (v "a0"))]]
+    [match_ "t" ["a0"] [Structured_binding ([id "a0"], mk_call (v "f") []); Expression (push [Move (v "t")]); Return (Some (v "a0"))]]
     [];
   check "a reference declared to a field, read after its local is moved"
-    [ Sasgn (id "r", Declare (Tref (Lvalue, Tauto), None), field "t" "a0");
-      Sexpr (push [CPPmove (v "t")]);
-      Sreturn (Some (v "r")) ]
+    [ Bind_variable (id "r", Declare (Reference (Lvalue, Auto), None), field "t" "a0");
+      Expression (push [Move (v "t")]);
+      Return (Some (v "r")) ]
     ["t"];
   check "a copy of a field, read after its local is moved"
-    [decl "c" (field "t" "a0"); Sexpr (push [CPPmove (v "t")]); Sreturn (Some (v "c"))]
+    [decl "c" (field "t" "a0"); Expression (push [Move (v "t")]); Return (Some (v "c"))]
     [];
   check "each component taken out of a pair through its instantiated projection"
-    [Sexpr (push [projection "first" (CPPmove (v "p")); projection "second" (CPPmove (v "p"))])]
+    [Expression (push [projection "first" (Move (v "p")); projection "second" (Move (v "p"))])]
     []
 
 (* A callable's parameters and body against the convention its plan
@@ -141,20 +142,20 @@ let () =
 let () =
   let f = GlobRef.VarRef (id "f") in
   Callable_abi.install [Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []] [];
-  let cref = Tref (Lvalue, Tconst tree) in
+  let cref : ty = Reference (Lvalue, Const tree) in
   let convention name params body expected =
-    let found = Option.map List.length (Move_check.convention_violations f (lower_params params) (lower body)) in
+    let found = Option.map List.length (Move_check.convention_violations f params body) in
     if found <> Some expected then (
       Printf.eprintf "move_check: %s: %s violations, expected %d\n" name
         (match found with Some n -> string_of_int n | None -> "no plan's") expected;
       exit 1 )
   in
-  convention "as the plan has them" [(id "a", tree); (id "b", cref)] [Sreturn (Some (mk_call (v "g") [CPPmove (v "a"); v "b"]))] 0;
+  convention "as the plan has them" [(id "a", tree); (id "b", cref)] [Return (Some (mk_call (v "g") [Move (v "a"); v "b"]))] 0;
   convention "an owned parameter declared by reference" [(id "a", cref); (id "b", cref)] [] 1;
-  convention "a lent parameter moved out of" [(id "a", tree); (id "b", cref)] [Sreturn (Some (CPPmove (v "b")))] 1;
+  convention "a lent parameter moved out of" [(id "a", tree); (id "b", cref)] [Return (Some (Move (v "b")))] 1;
   convention "a lent parameter's name declared again and moved"
     [(id "a", tree); (id "b", cref)]
-    [decl "b" (v "a"); Sreturn (Some (CPPmove (v "b")))]
+    [decl "b" (v "a"); Return (Some (Move (v "b")))]
     0;
   convention "a parameter the plan does not pass" [(id "a", tree)] [] 1;
   if Move_check.convention_violations (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
@@ -167,22 +168,22 @@ let () =
    names the new value. *)
 let () =
   let stale name body expected =
-    let found = List.map (fun (a, b) -> Id.to_string a ^ "@" ^ Id.to_string b) (Move_check.stale_references (lower body)) in
+    let found = List.map (fun (a, b) -> Id.to_string a ^ "@" ^ Id.to_string b) (Move_check.stale_references body) in
     if found <> expected then (
       Printf.eprintf "move_check: %s: stale [%s]\n" name (String.concat "; " found);
       exit 1 )
   in
   let next = mk_call (v "next") [] in
   stale "read after the local is assigned"
-    [match_ "t" ["a0"] [Sasgn (id "t", Existing, next); Sreturn (Some (v "a0"))]]
+    [match_ "t" ["a0"] [Bind_variable (id "t", Existing, next); Return (Some (v "a0"))]]
     ["a0@t"];
   stale "read before it is not"
-    [match_ "t" ["a0"] [decl "x" (v "a0"); Sasgn (id "t", Existing, next); Sreturn (Some (v "x"))]]
+    [match_ "t" ["a0"] [decl "x" (v "a0"); Bind_variable (id "t", Existing, next); Return (Some (v "x"))]]
     [];
   stale "nor read through a pointer given a new value"
-    [ Sasgn (id "t", Declare (Tptr tree, None), CPPunop (Uaddr, v "u"));
-      match_ "t" ["a0"] [Sasgn (id "t", Existing, next); Sreturn (Some (v "a0"))] ]
+    [ Bind_variable (id "t", Declare (Pointer tree, None), Unary (Address_of, v "u"));
+      match_ "t" ["a0"] [Bind_variable (id "t", Existing, next); Return (Some (v "a0"))] ]
     [];
   stale "nor bound again after it"
-    [ match_ "t" ["a0"] [Sasgn (id "t", Existing, next); match_ "t" ["a0"] [Sreturn (Some (v "a0"))]] ]
+    [ match_ "t" ["a0"] [Bind_variable (id "t", Existing, next); match_ "t" ["a0"] [Return (Some (v "a0"))]] ]
     []
