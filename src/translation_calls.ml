@@ -178,11 +178,11 @@ let written_at_variables_ir id (by_var : (int * Cpp_ir.Lowered.Type.t) list) =
 type lowered_call = {
   lc_callee : GlobRef.t;
   lc_plan : call_plan;
-  lc_callee_type : cpp_type;
+  lc_callee_type : Cpp_ir.Lowered.Type.t;
   lc_written : Mlutil.Var_types.t;
   lc_abi : Callable_abi.t;
   lc_application : Template_application.t;
-  lc_written_by_var : (Scheme.Var.t * cpp_type) list;
+  lc_written_by_var : (Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
 }
 
 (** [call_type_args ~caller ?expected_ty env id plan args] -- the type
@@ -228,8 +228,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     | Some {Ml_schema.role = Ml_schema.Erased Miniml.Ktype; _} -> true
     | _ -> false
   in
-  let ty = fn_ml_ty_subst in
-  let ty = cpp_of_ml env ty in
+  let ty = cpp_of_ml_ir env fn_ml_ty_subst in
   (* Combine: instance types first, then regular type args. If any regular
      type arg is Tany or a dummy type glob (from erased params), drop ALL
      regular type args via filter_erased_type_args and let the compiler deduce
@@ -783,7 +782,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
         | refilled -> refilled
   in
   let application = apply regular in
-  let all_type_args = List.map Cpp_ir_to_legacy_minicpp.ty (Template_application.to_list application) in
+  let all_type_args = Template_application.to_list application in
 
   (* An argument written as an erased placeholder at a variable the use
      wrote nothing for, and nothing resolved since, is a guess: such a
@@ -794,10 +793,10 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
          (fun k p ->
            match (p.Callable_abi.origin, List.nth_opt all_type_args k) with
            | Callable_abi.From_scheme v, Some a
-             when prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
+             when Cpp_ir.Types.prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
              [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
                  (Scheme.Var.ordinal v)
-                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] a)) ]
+                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] (Cpp_ir_to_legacy_minicpp.ty a))) ]
            | _ -> [] )
          (Callable_abi.template_head abi) )
   in
@@ -825,7 +824,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     let dictionaries =
       List.filteri
         (fun j _ -> j >= List.length instance_args - List.length carriers)
-        (List.map Cpp_ir_to_legacy_minicpp.ty instance_args)
+        instance_args
     in
     List.combine
       (List.filteri (fun j _ -> j < List.length dictionaries) carriers)

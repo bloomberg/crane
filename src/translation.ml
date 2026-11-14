@@ -4501,8 +4501,6 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
   let slot = {slot with eta_keep_moves = false} in
   match f with
   | MLglob ({callee = id; _} as use) ->
-    (* The expected type as the expressions built below spell it. *)
-    let expected_spelled = Option.map Cpp_ir_to_legacy_minicpp.ty expected_ty in
     let lowered =
       lower_call ~caller:!Table.current_decl_ref ~slot ?expected_ty env use args
     in
@@ -4537,7 +4535,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       with_promoted_var_map (instance_promoted_map @ (!tctx).promoted_var_map)
         (fun () -> gen_call_args ~slot ?expected_ty env id plan)
     in
-    let ty = lowered.lc_callee_type
+    let ty = Cpp_ir_to_legacy_minicpp.ty lowered.lc_callee_type
     and tys = lowered.lc_written
     and all_type_args = List.map Cpp_ir_to_legacy_minicpp.ty (Template_application.to_list lowered.lc_application)
     and written_tvar_args = lowered.lc_written_by_var in
@@ -4553,9 +4551,9 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       else
         Option.map
           (fun t ->
-            let live = cpp_of_ml env t in
-            check_installed_arity id live;
-            Minicpp.subst_cpp_tvars subst live)
+            let live = cpp_of_ml_ir env t in
+            if Probe.checking () then check_installed_arity id (Cpp_ir_to_legacy_minicpp.ty live);
+            Cpp_ir.Types.substitute subst live)
           (callee_ml_type id)
     in
     (* Each argument read at its parameter as the call writes it
@@ -4566,17 +4564,20 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        not at type arguments the call writes. *)
     let args =
       match written_fn_ty with
-      | Some (Tfun (doms, _))
+      | Some (Cpp_ir.Type.Function (doms, _))
         when Cpp_names.lookup_method_this_pos id = None
              && List.length doms >= List.length args
              && List.length regular_ml_args = List.length args
              && not (List.exists (function MLdummy _ -> true | _ -> false) regular_ml_args)
-             && not (List.exists (fun t -> Ml_type_util.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t) doms) ->
+             && not
+                  (List.exists
+                     (fun t ->
+                       Ml_type_util.is_typeclass_type_cpp_ir t || is_cpp_dummy_type_ir t || is_skipped_cpp_type_ir t )
+                     doms ) ->
         List.map2
           (fun (ml_arg, a) into ->
-            (* [into] is read off the written callee type, still MiniCpp. *)
             let crossed = function
-              | Some from -> regroup_crossing ~from:(Cpp_ir_to_legacy_minicpp.ty from) ~into a
+              | Some from -> regroup_crossing ~from ~into a
               | None -> a
             in
             (* What the crossing writes depends on the source only through
@@ -4737,10 +4738,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
           match
             Option.map
-              (fun t -> Minicpp.subst_cpp_tvars subst (cpp_of_ml env t))
+              (fun t -> Cpp_ir.Types.substitute subst (cpp_of_ml_ir env t))
               (callee_ml_type id)
           with
-          | Some (Tfun (_, c)) -> Some c
+          | Some (Cpp_ir.Type.Function (_, c)) -> Some c
           | _ -> None
         in
         (* A group the written type returns boxed, with the rest of the chain
@@ -4752,7 +4753,8 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
            says [T1].  The chain's value is then read at the expected type. *)
         let boxed_group_target rest_ml =
           match (written_cod, expected_ty) with
-          | Some (Tfun (_, c)), Some exp when prints_as_any c && not (Cpp_ir.Types.prints_as_any exp) ->
+          | Some (Cpp_ir.Type.Function (_, c)), Some exp
+            when Cpp_ir.Types.prints_as_any c && not (Cpp_ir.Types.prints_as_any exp) ->
             let arg_ty a =
               match a with
               | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
@@ -4870,7 +4872,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             let excess = erase_params_into_boxes excess in
             let n_first =
               match written_cod with
-              | Some (Tfun (dom, _)) -> List.length dom
+              | Some (Cpp_ir.Type.Function (dom, _)) -> List.length dom
               | _ -> List.length excess
             in
             match
@@ -4882,15 +4884,15 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               let here = List.filteri (fun i _ -> i < n_first) excess in
               let rest = List.filteri (fun i _ -> i >= n_first) excess in
               let r = mk_call (unbox_value (Cpp_ir_to_legacy_minicpp.ty target) (mk_call base here)) rest in
-              ( match expected_spelled with
-              | Some exp -> CPPconvert (exp, r)
+              ( match expected_ty with
+              | Some exp -> CPPconvert (Cpp_ir_to_legacy_minicpp.ty exp, r)
               | None -> r )
             | None ->
             let r = chain_excess base cod_inst excess in
-            match (Option.map resolve_tmeta cod_inst, expected_spelled) with
+            match (Option.map resolve_tmeta cod_inst, expected_ty) with
             | Some (Miniml.Tdummy Miniml.Ktype), Some t
-              when not (prints_as_any t) ->
-              Cpp_erasure.unbox_tolerant t r
+              when not (Cpp_ir.Types.prints_as_any t) ->
+              Cpp_erasure.unbox_tolerant (Cpp_ir_to_legacy_minicpp.ty t) r
             | _ -> r
         else
           CPPabort ("untranslatable curried proof term", abort_ty expected_ty) )
@@ -5069,8 +5071,8 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                and applied it is the erased type ([void<std::any>] is none). *)
             let subst i =
               match Scheme.Var.assoc_tvar i written_tvar_args with
-              | Some Tvoid -> Some Tany
-              | t -> t
+              | Some Cpp_ir.Type.Void -> Some Tany
+              | t -> Option.map Cpp_ir_to_legacy_minicpp.ty t
             in
             let collapse_erased_heads =
               map_cpp_type (function Tapply (h, args) -> Minicpp.tapply h args | t -> t)
@@ -5479,8 +5481,8 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        two differ only in how their arrows are grouped
        ({!regroup_crossing}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
        [list (A -> B -> R)]. *)
-    ( match (written_fn_ty, expected_spelled) with
-    | Some (Tfun (doms, written_cod)), Some into
+    ( match (written_fn_ty, expected_ty) with
+    | Some (Cpp_ir.Type.Function (doms, written_cod)), Some into
       when excess_args = [] && List.length doms = List.length args ->
       regroup_crossing ~from:written_cod ~into result
     | _ -> result )

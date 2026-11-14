@@ -820,6 +820,17 @@ let rec is_typeclass_type_cpp = function
     is_typeclass_type_cpp t
   | _ -> false
 
+(** {!is_skipped_cpp_type} in CppIR. *)
+let is_skipped_cpp_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Entity_application (r, _, _) -> Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+  | _ -> false
+
+(** {!is_typeclass_type_cpp} in CppIR. *)
+let rec is_typeclass_type_cpp_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Entity_application (r, _, _) -> Table.is_typeclass r
+  | Const t | Reference ((Lvalue | Forwarding), t) | Shared_pointer t -> is_typeclass_type_cpp_ir t
+  | _ -> false
+
 (** Check if an ML type is a skipped type (inline custom with empty string).
     Same semantics as [is_skipped_cpp_type] but operates on the ML AST.
     Used to filter out parameters whose type was [Crane Extract Skip]-ped

@@ -3228,14 +3228,13 @@ let coerce_ir ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lower
     another arity).  A function value itself is not this: it reaches a slot
     through the adapter {!Translation_calls.curry_value_to_expected} writes,
     whose type is the slot's. *)
-let regroup_crossing ~from ~into expr =
-  let bare t = strip_cpp_ref_const t in
-  let from = bare from and into = bare into in
+let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) expr =
+  let from = strip_cpp_ref_const_ir from and into = strip_cpp_ref_const_ir into in
   match (from, into) with
-  | Tfun _, _ | _, Tfun _ -> expr
-  | _ when from = into || not (same_arrows from into) -> expr
-  | _ when prints_as_any from || prints_as_any into -> expr
-  | _ -> CPPconvert (into, expr)
+  | Function _, _ | _, Function _ -> expr
+  | _ when from = into || not (Cpp_ir.Types.same_arrows from into) -> expr
+  | _ when Cpp_ir.Types.prints_as_any from || Cpp_ir.Types.prints_as_any into -> expr
+  | _ -> CPPconvert (Cpp_ir_to_legacy_minicpp.ty into, expr)
 
 (** The C++ type the value [e] has where that is known without generating
     it: a variable's binder type as planned, a global value's declared type.
