@@ -57,11 +57,11 @@ let factory_name_of_ctor ?fallback_idx cref =
   else lc
 
 (** The type a never-returning expression is spelled with, given whatever type
-    the slot it sits in called for.  {!Tany} is what an erased slot asks for,
+    the slot it sits in called for, held in CppIR.  {!Tany} is what an erased slot asks for,
     and the only thing left to say when the slot named no type; nothing here
     guesses past that. *)
-let abort_ty : cpp_type option -> cpp_type = function
-  | Some ty -> ty
+let abort_ty : Cpp_ir.Lowered.Type.t option -> cpp_type = function
+  | Some ty -> Cpp_ir_to_legacy_minicpp.ty ty
   | None -> Tany
 
 (** {2 Named Constructor Fields}
@@ -317,7 +317,7 @@ let collect_typeclass_param_ids ty =
     instance parameter: [htp_tvar] stands for [typename <htp_instance>::<htp_field>]. *)
 type hkt_tvar_position = {
   htp_tvar : int;  (** the MiniML type variable's index *)
-  htp_instance : Minicpp.cpp_type;  (** always a {!Minicpp.Tinstance} *)
+  htp_instance : Cpp_ir.Lowered.Type.t;  (** always an {!Cpp_ir.Type.Instance} *)
   htp_field : Id.t;  (** the class's type parameter the variable fills *)
 }
 
@@ -348,7 +348,7 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
                 Some var_name ) ->
               { htp_tvar = j;
                 htp_instance =
-                  Minicpp.Tinstance (tc_instance_id (number i), class_ref);
+                  Cpp_ir.Type.Instance (tc_instance_id (number i), class_ref);
                 htp_field = var_name }
               :: acc
             | _ -> acc )
@@ -1339,7 +1339,7 @@ let with_escape_analysis f =
     function's return type leaks into the IIFE body and its tail expression is
     cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
     caller then projects with [.first.first]. *)
-let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
+let with_iife_return_type (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_cpp_return_type_ir expected_ty f
 
 (** Whether a body owns a parameter the head declares at [declared]: when
     it declares it by value, which it does for one the ownership summary
@@ -2883,7 +2883,7 @@ type slot = {
       (** The slot holds a single-use partial application whose closure may
           capture by reference and keep its [CPPmove] wrappers.  Read once, by
           the {!Translation.eta_fun} that builds that closure. *)
-  call_result : cpp_type option;
+  call_result : Cpp_ir.Lowered.Type.t option;
       (** The type the call this slot is an argument of is expected to
           produce.  An instance passed as a value -- [MonadIter_itree] as
           [interp]'s dictionary, whose own slot erases with the class's
@@ -2909,14 +2909,14 @@ type slot = {
 type call_plan = {
   cp_instantiated : Elaborated_call.instantiated;
       (** The call's semantic half, decided before any of the C++ below. *)
-  cp_expected_result : cpp_type option;
+  cp_expected_result : Cpp_ir.Lowered.Type.t option;
       (** The C++ type the call is expected to produce: the position's, with
           a family it erased refined from what the arguments state, or, where
           the position states none, the arguments' or the enclosing
           function's return type. *)
   cp_instance_type_args : Cpp_ir.Lowered.Type.t option list;
       (** The template argument each class-instance argument is passed as. *)
-  cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
+  cp_instance_families : (Cpp_ir.Lowered.Type.t * Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) list;
       (** The families the call's instances were found to have
           ({!Translation_calls.instance_family_binding}); the slots their
           arguments are generated against erase them the same way. *)

@@ -1096,10 +1096,6 @@ let rec spell_arrows site ty =
       Tfun (outer, spell_arrows Through_tvar (Tfun (inner, cod)))
     | _ -> ty )
 
-let respell_arrows site ty =
-  let spelled = spell_arrows site ty in
-  if spelled = ty then None else Some spelled
-
 let same_arrows a b = spell_arrows Through_tvar a = spell_arrows Through_tvar b
 
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (Tv_index (i, _))] in [ty] by

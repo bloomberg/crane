@@ -112,7 +112,7 @@ type slot = {
   eta_keep_moves : bool;
       (** The slot holds a single-use partial application whose closure may
           capture by reference and keep its [CPPmove] wrappers. *)
-  call_result : cpp_type option;
+  call_result : Cpp_ir.Lowered.Type.t option;
       (** The type the call this slot is an argument of is expected to
           produce, where an instance passed as a value reads back the carrier
           argument extraction erased. *)
@@ -135,11 +135,7 @@ val empty_slot : slot
     the instance returns, supplies an instance argument extraction erased.
     [None] for skipped infrastructure, which has no struct. *)
 val ml_arg_to_template_type :
-  ?expected:cpp_type -> env -> ml_ast -> cpp_type option
-
-(** {!ml_arg_to_template_type} in CppIR. *)
-val ml_arg_to_template_type_ir :
-  ?expected:cpp_type -> env -> ml_ast -> Cpp_ir.Lowered.Type.t option
+  ?expected:Cpp_ir.Lowered.Type.t -> env -> ml_ast -> Cpp_ir.Lowered.Type.t option
 
 (** Whether a C++ type names a class field the current scope does not
     resolve, so that it would print through the field's file-scope erased
@@ -147,7 +143,7 @@ val ml_arg_to_template_type_ir :
 val mentions_unresolved_promoted : Minicpp.cpp_type -> bool
 
 (** Generate a C++ expression from an ML AST. *)
-val gen_expr : ?expected_ty:cpp_type -> ?slot:slot -> env -> ml_ast -> cpp_expr
+val gen_expr : ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:slot -> env -> ml_ast -> cpp_expr
 
 (** [recover_boxed_component into e] opens the box when [e] is evidently a
     component read out of a pair that was itself recovered from a box, and so
@@ -183,7 +179,7 @@ val gen_stmts :
     application. *)
 val eta_fun :
   ?slot:slot ->
-  ?expected_ty:Minicpp.cpp_type ->
+  ?expected_ty:Cpp_ir.Lowered.Type.t ->
   env -> ml_ast -> ml_ast list -> cpp_expr
 (** [slot] is {!gen_expr}'s, carried into the argument expressions. *)
 
@@ -213,7 +209,7 @@ val collect_typeclass_param_ids : ml_type -> Id.t list
     [typename <htp_instance>::<htp_field>]. *)
 type hkt_tvar_position = {
   htp_tvar : int;
-  htp_instance : Minicpp.cpp_type;  (** always a {!Minicpp.Tinstance} *)
+  htp_instance : Cpp_ir.Lowered.Type.t;  (** always an {!Cpp_ir.Type.Instance} *)
   htp_field : Id.t;
 }
 

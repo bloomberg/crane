@@ -726,9 +726,6 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       typeclass_temps
   in
   let hkt_tvar_resolutions = hkt_tvar_resolutions_of_type ty in
-  let hkt_tvar_resolutions_ir =
-    List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) hkt_tvar_resolutions
-  in
   (* Type annotations inside the body must name the same resolved types as the
      signature does. *)
   let gen_body_stmts env cw e =
@@ -739,8 +736,8 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   let resolve_promoted_in_type =
     Cpp_ir.Types.rewrite (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
-      | Variable (Index (i, _)) when List.mem_assoc i hkt_tvar_resolutions_ir ->
-        Some (List.assoc i hkt_tvar_resolutions_ir)
+      | Variable (Index (i, _)) when List.mem_assoc i hkt_tvar_resolutions ->
+        Some (List.assoc i hkt_tvar_resolutions)
       | Promoted_member name as ty ->
         Some
           ( match
@@ -1288,7 +1285,7 @@ let gen_dfun ~minted n b cty ty temps =
   (* The head itself, at the kinds it declares: see
      {!Translation_state.current_template_head}. *)
   let saved_template_head = get_current_template_head () in
-  set_current_template_head (Cpp_ir_to_legacy_minicpp.template_parameters (typeclass_temps_basic @ regular_temps));
+  set_current_template_head (typeclass_temps_basic @ regular_temps);
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
@@ -1853,7 +1850,8 @@ let gen_spec__inner n b ty =
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   with_method_ns_for_locals @@ fun () ->
-  let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
+  let ty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
+  let ty = Cpp_ir_to_legacy_minicpp.ty ty_ir in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   let result =
@@ -1872,7 +1870,7 @@ let gen_spec__inner n b ty =
          erased template type args (see try_recover_erased_return_type). Without
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
-      with_cpp_return_type (Some ty) @@ fun () ->
+      with_cpp_return_type_ir (Some ty_ir) @@ fun () ->
       (* Strip MLmagic wrapper and track whether a type coercion from std::any
          is needed.  MLmagic wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
@@ -1899,7 +1897,7 @@ let gen_spec__inner n b ty =
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
-      let b_expr = with_region inner_body (fun () -> gen_constant_value ~expected_ty:ty inner_body) in
+      let b_expr = with_region inner_body (fun () -> gen_constant_value ~expected_ty:ty_ir inner_body) in
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
          (a) MLmagic — the extraction explicitly flagged a type coercion.

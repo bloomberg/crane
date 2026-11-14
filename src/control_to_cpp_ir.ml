@@ -814,7 +814,6 @@ let lower_group_members decls =
 let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name lam =
   match Legacy_minicpp_to_cpp_ir.lower_expr (Minicpp.CPPlambda lam) with
   | Lambda lam ->
-    let tparams = Legacy_minicpp_to_cpp_ir.lower_template_parameters tparams in
     Option.map Cpp_ir_to_legacy_minicpp.stmt (lower_local_loop ~owner ~function_ ~lifted ~member ~tparams ~name lam)
   | _ -> assert false
 

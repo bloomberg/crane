@@ -530,7 +530,7 @@ let promoted_resolutions_of_body ?r ?ty b =
            && leading <> [] && spellable d (strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (ml_arg_to_template_type_ir (env_at d) (strip_magic e));
+        (ml_arg_to_template_type (env_at d) (strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
@@ -554,7 +554,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | MLapp (MLglob {callee = r; _}, args)
       when instance_class r <> None && closed (strip_magic e) ->
       Option.iter (add r)
-        (ml_arg_to_template_type_ir (empty_env ()) (strip_magic e));
+        (ml_arg_to_template_type (empty_env ()) (strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -598,7 +598,7 @@ let promoted_resolutions_of_body ?r ?ty b =
             MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> fresh_rel (n - i)))
           in
           Option.iter (add_at class_ref inst)
-            (ml_arg_to_template_type_ir
+            (ml_arg_to_template_type
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )
@@ -643,17 +643,19 @@ let with_body_resolutions r b f =
     instance, not a template parameter.  Left as a free template parameter it
     would be undeducible: nothing in the signature determines it.  The
     positions come from {!Translation_support.hkt_tvar_positions_of_type}. *)
-let hkt_tvar_resolutions_of_type ?source_order ty =
+let hkt_tvar_resolutions_of_type ?source_order ty : (int * Cpp_ir.Lowered.Type.t) list =
   List.map
     (fun { htp_tvar; htp_instance; htp_field } ->
-      (htp_tvar, Tqualified (htp_instance, htp_field)) )
+      (htp_tvar, Cpp_ir.Type.Member (htp_instance, htp_field)) )
     (hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
-    {!hkt_tvar_resolutions_of_type}) throughout a MiniCpp type. *)
+    {!hkt_tvar_resolutions_of_type}) throughout a MiniCpp type, the
+    resolutions raised to MiniCpp first. *)
 let apply_hkt_resolutions resolutions ty =
   if resolutions = [] then ty
   else
+    let resolutions = List.map (fun (i, t) -> (i, Cpp_ir_to_legacy_minicpp.ty t)) resolutions in
     Minicpp.subst_cpp_tvars (fun i -> List.assoc_opt i resolutions) ty
 
 (** Rewrite those type variables throughout the statements of a function
@@ -666,15 +668,13 @@ let apply_hkt_resolutions_stmts resolutions stmts =
     and fs s = Minicpp.map_stmt fe fs ft s in
     List.map fs stmts
 
-(** Rewrite those type variables throughout a whole CppIR declaration, the
-    resolutions lowered first: an instance
+(** Rewrite those type variables throughout a whole CppIR declaration: an instance
     struct resolves its carrier the same way a function does, but it has no
     single signature to rewrite -- the variable turns up in its [using]
     aliases, in every method's signature and in every method's body. *)
 let apply_hkt_resolutions_decl resolutions (decl : Cpp_ir.Lowered.Decl.t) =
   if resolutions = [] then decl
   else
-    let resolutions = List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) resolutions in
     let ft = Cpp_ir.Types.substitute (fun i -> List.assoc_opt i resolutions) in
     let rec fe e = Cpp_ir.Map.expr (rw ()) e
     and fs s = Cpp_ir.Map.stmt (rw ()) s

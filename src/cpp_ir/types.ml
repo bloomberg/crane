@@ -201,3 +201,53 @@ let rec spell_arrows : type p. arrow_site -> p Type.t -> p Type.t =
       let inner = List.filteri (fun i _ -> i >= n) dom in
       Function (outer, spell_arrows Through_tvar (Function (inner, cod)))
     | _ -> t )
+
+(** Whether [p] holds of [t] or of a type inside it.  Unlike {!map}, this
+    looks inside a [Type_constructor]: only its head is printed, but the head
+    is printed, so it mentions whatever names it. *)
+let rec exists : type p. (p Type.t -> bool) -> p Type.t -> bool =
+ fun p t ->
+  p t
+  ||
+  match t with
+  | Entity_application (_, tys, _) | Named (_, tys) | External (_, tys) | Variant (_, tys) -> List.exists (exists p) tys
+  | Foreign fr -> List.exists (exists p) fr.types
+  | Function (dom, cod) -> List.exists (exists p) dom || exists p cod
+  | Const t | Shared_pointer t | Reference (_, t) | Pointer t | In_namespace (_, t) | Member (t, _) | Decay t
+  | Non_deduced t | Type_constructor t ->
+    exists p t
+  | Type_of _ | Decltype_auto -> false
+  | Rebind (h, x) -> exists p h || exists p x
+  | Apply (t, ts) -> exists p t || List.exists (exists p) ts
+  | Variable _ | Instance _ | Promoted_member _ | Void | Any | Auto | Carrier_parameter | Erased _ | Obligation _ ->
+    false
+
+(** Whether [a] and [b] are one type once every arrow chain in each is spelled
+    curried, as a type variable spells it. *)
+let same_arrows a b = spell_arrows Through_tvar a = spell_arrows Through_tvar b
+
+(** [t] respelled as [site] spells its arrows, or [None] where that
+    changes nothing. *)
+let respell_arrows site t =
+  let spelled = spell_arrows site t in
+  if spelled = t then None else Some spelled
+
+(** Every type variable [t] names, under the name each is written. *)
+let variable_names t =
+  let acc = ref Names.Id.Set.empty in
+  ignore
+    (exists
+       (fun t ->
+         (match t with
+          | Variable (Index (_, Some n) | Named n) -> acc := Names.Id.Set.add n !acc
+          | Variable (Index (i, None)) -> acc := Names.Id.Set.add (Core.Positional.id i) !acc
+          | _ -> ());
+         false )
+       t );
+  !acc
+
+(** [t] without the spelling a parameter declaration adds: a reference,
+    [const], or [std::type_identity_t]. *)
+let rec strip_param_spelling : type p. p Type.t -> p Type.t = function
+  | Non_deduced t | Const t | Reference (_, t) -> strip_param_spelling t
+  | t -> t

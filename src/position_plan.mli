@@ -24,4 +24,4 @@ val region :
   outer:Lexenv.t ->
   reads:(Miniml.Occurrence.t * Translation_state.planned_read) list ->
   Miniml.ml_ast ->
-  (Miniml.Occurrence.t * Minicpp.cpp_type option) list
+  (Miniml.Occurrence.t * Cpp_ir.Lowered.Type.t option) list
