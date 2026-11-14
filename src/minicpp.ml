@@ -1096,8 +1096,6 @@ let rec spell_arrows site ty =
       Tfun (outer, spell_arrows Through_tvar (Tfun (inner, cod)))
     | _ -> ty )
 
-let same_arrows a b = spell_arrows Through_tvar a = spell_arrows Through_tvar b
-
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (Tv_index (i, _))] in [ty] by
     [sub i], leaving the substituted type alone.
 
