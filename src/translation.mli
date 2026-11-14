@@ -249,10 +249,6 @@ val gen_type_conversion_expr :
   ?skip:(GlobRef.t -> bool) -> src_ty:cpp_type -> dst_ty:cpp_type ->
   cpp_expr -> cpp_expr
 
-(** Reify a parameter's ML type into its monadic-aware C++ form (e.g.
-    voidifying [Unit] results inside [ITree] callbacks). *)
-val reify_monadic_param_type : ml_type -> cpp_type -> cpp_type
-
 (** Collect [Tvar] indices referenced by an ML type, added to the accumulator
     list. *)
 val collect_tvars : int list -> ml_type -> int list

@@ -969,12 +969,6 @@ let reify_monadic_param_type_ir ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.
   end
   else cpp_ty
 
-(** {!reify_monadic_param_type_ir} over a MiniCpp type. *)
-let reify_monadic_param_type ml_ty cpp_ty =
-  if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then
-    Cpp_ir_to_legacy_minicpp.ty (reify_monadic_param_type_ir ml_ty (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty))
-  else cpp_ty
-
 (** Check whether an ML expression already produces a reified monadic value
     (a [shared_ptr<ITree<R>>]).  A local whose type is monadic is one, and
     so is [MLapp(MLrel f, args)] where [f] is a local function whose return

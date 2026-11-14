@@ -328,7 +328,7 @@ let sig_witness_expr name (ml_ty : ml_type) =
     with no monad leaves the mode alone.
 
     Must wrap type conversion as well as body generation: void-ification and
-    [reify_monadic_param_type] (called from [convert_ml_type_to_cpp_type]) both
+    {!Translation_support.reify_monadic_param_type_ir} both
     read the mode.  We detect reified by the monad template mentioning "ITree",
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
 let with_itree_mode_for ty f =
@@ -1561,74 +1561,6 @@ let gen_dfun ~minted n b cty ty temps =
   in
   (declare_planned n (Head_relaxation.apply_all relaxations inner), env)
 
-(** The C++ declaration (no body) of the function [n], for a header: its
-    parameters named from [b]'s lambdas and typed from [dom], returning
-    [cod], under the template parameters [temps]. *)
-let gen_sfun n b dom cod temps =
-  let all_params, b = collect_lams b in
-  let owned_flags = infer_owned_flags ~owner:n b all_params in
-  let ids, env =
-    push_vars'
-      (List.map
-         (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
-         all_params )
-      (empty_env ())
-  in
-  (* Zip with ownership flags, then filter out void params *)
-  let ids_with_owned =
-    List.map2 (fun (x, ty) owned -> (x, ty, owned)) ids owned_flags
-  in
-  let ids_with_owned =
-    List.filter (fun (_, ty, _) -> is_runtime_binder_type ty) ids_with_owned
-  in
-  (* Convert ML types to C++ types and wrap with const. Owned shared_ptr params:
-     pass by value; Borrowed: const ref *)
-  let ids =
-    List.map
-      (fun (x, ty, owned) ->
-        let cpp_ty = convert_ml_type_to_cpp_type env [] ty in
-        (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
-        let cpp_ty = reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
-        (Some x, wrapped) )
-      ids_with_owned
-  in
-  let dom = List.filter (fun ty -> ty != Tvoid) dom in
-  (* For already-converted C++ types in dom, wrap shared_ptr with const ref *)
-  let args =
-    (* Where [dom] has a type for each parameter, each is the C++ type of
-       the parameter's Core type. *)
-    let cores =
-      if List.compare_lengths dom ids_with_owned = 0 then List.map (fun (_, ty, _) -> Some ty) ids_with_owned
-      else List.map (fun _ -> None) dom
-    in
-    List.map2
-      (fun ty core ->
-        let wrapped = wrap_param_by_ownership ?core ty in
-        (None, wrapped) )
-      dom cores
-  in
-  (* Merge parameter names from [ids] (body lambdas) with resolved types
-     from [dom] (function signature).  [ids] carries the correct parameter
-     names but may have unresolved promoted type vars (e.g. bare [m_carrier]
-     instead of [typename _tcI0::m_carrier]).  [dom] carries fully-resolved
-     types from the outer gen_dfun but lacks parameter names.  When lengths
-     match, zip names from [ids] with types from [args] to get both. *)
-  let params =
-    if List.length args = List.length ids then
-      List.map2
-        (fun (name, _) (_, ty) -> (name, ty))
-        ids args
-    else if List.length args > List.length ids then
-      List.rev args
-    else
-      ids
-  in
-  let inner = Dfun (mk_dfun n ~ret:cod (Ddecl params)) in
-  match temps with
-  | [] -> (inner, env)
-  | l -> (Dtemplate (l, None, inner), env)
-
 (** Whether a recovered type names an associated type of the enclosing class,
     and so is worth writing back into the binder it came from.  Anything else
     in a body already has a pass that reads it from somewhere better than the
@@ -1718,23 +1650,26 @@ let scheme_params ?(extra = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
         else Some (Common.tvar_id i, Callable_abi.Scheme_param i) )
       (IntSet.elements extra)
 
-(** Generate the C++ declaration of [n] from its ML definition: a function
-    ({!gen_dfun}), a constant whose body only throws (as a zero-argument
+(** A function reaching a generator for what is not one: a function's head
+    is a projection of its plan ({!declare_planned}), and {!plan_function}
+    planned it only where {!gen_decl_for_pp} generates it. *)
+let function_without_plan n =
+  CErrors.anomaly
+    Pp.(str "the function " ++ GlobRef.print n ++ str " is generated as a constant, with no plan.")
+
+(** Generate the C++ declaration of [n], which is not a function, from its
+    ML definition: a constant whose body only throws (as a zero-argument
     function), or a constant initialised with its value.  Returns the
     declaration, its environment and the C++ type's variables. *)
 let gen_decl__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
-  let cty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let cty = Cpp_ir_to_legacy_minicpp.ty cty_ir in
+  let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
-  match cty_ir with
-    | Function _ ->
-      let head = List.map (fun id -> (Cpp_ir.Template.Parameter_kind.Typename, id)) tvars in
-      let f, env = gen_dfun ~minted:(scheme_params cty_ir) n b cty_ir ty head in
-      (f, env, tvars)
+  match cty with
+    | Tfun _ -> function_without_plan n
     | _ ->
     match b with
     | _ when thunk_reason n = Some Throws ->
@@ -1909,24 +1844,21 @@ let gen_dfun_def__inner n b ty = with_function_head n b ty (gen_function n)
 let gen_dfun_def n b ty =
   Table.with_decl_ref n (fun () -> gen_dfun_def__inner n b ty)
 
-(** Generate the C++ specification of [n] for a header: a function's
-    declaration ({!gen_sfun}), a throwing constant's zero-argument
-    declaration, or a constant's initialised definition. *)
+(** Generate the C++ specification of [n], which is not a function, for a
+    header: a throwing constant's zero-argument declaration, or a constant's
+    initialised definition. *)
 let gen_spec__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
-  let unit_void = ml_type_is_void_call ty in
   with_method_ns_for_locals @@ fun () ->
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   let result =
     match ty with
-    | Tfun (dom, cod) ->
-      let cod = apply_unit_void unit_void cod in
-      gen_sfun n b dom cod temps
+    | Tfun _ -> function_without_plan n
     | _ ->
     match b with
     | _ when thunk_reason n = Some Throws ->
