@@ -29,10 +29,6 @@ let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
 let mk_cppglob_ir ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
   Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = yields})
 
-(** A [CPPglob] for a local variable ([VarRef]): no custom extraction applies. *)
-let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
-  CPPglob (r, tys, None)
-
 (** [callee_ml_type r] -- the ML type of the callable [r] as the unit's plan
     of it records it ({!Callable_abi.ml_type}): the signature call
     translation rebuilds a C++ head from.  While the plans are being made a
@@ -440,11 +436,6 @@ let spells_bare r = List.exists (GlobRef.CanOrd.equal r) (local_inductives_in_sc
 
 (** The type of the inductive [r] at [args] as generation spells it: bare
     where it is local, qualified by its namespace elsewhere. *)
-let inductive_type r args es =
-  let t = Tglob (r, args, es) in
-  if spells_bare r then t else Tnamespace (r, t)
-
-(** {!inductive_type} in CppIR. *)
 let inductive_type_ir r args es : Cpp_ir.Lowered.Type.t =
   let t : Cpp_ir.Lowered.Type.t = Entity_application (r, args, es) in
   if spells_bare r then t else In_namespace (r, t)

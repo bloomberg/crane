@@ -64,10 +64,6 @@ val convert_ml_type_to_cpp_type :
 val cpp_ir_of_ml_type :
   env -> ?ns:Ref.User.Set.t -> Id.t list -> ml_type -> Cpp_ir.Lowered.Type.t
 
-(** Check if a C++ type is erased to std::any (for indexed inductive methods).
-    Returns true if the type is Tany or contains an unnamed Tvar. *)
-val type_is_erased : cpp_type -> bool
-
 (** [push_binders env ids] is {!Translation_state.push_env_types} plus the C++
     type assignment: each binder's C++ type is decided once, here, at the
     point it is bound.  [?cpp] overrides the conversion for binders whose type
@@ -136,11 +132,6 @@ val empty_slot : slot
     [None] for skipped infrastructure, which has no struct. *)
 val ml_arg_to_template_type :
   ?expected:Cpp_ir.Lowered.Type.t -> env -> ml_ast -> Cpp_ir.Lowered.Type.t option
-
-(** Whether a C++ type names a class field the current scope does not
-    resolve, so that it would print through the field's file-scope erased
-    alias. *)
-val mentions_unresolved_promoted : Minicpp.cpp_type -> bool
 
 (** Generate a C++ expression from an ML AST. *)
 val gen_expr : ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:slot -> env -> ml_ast -> Cpp_ir.Lowered.Expr.t
@@ -221,24 +212,10 @@ val hkt_tvar_positions_of_type : ?source_order:bool -> ml_type -> hkt_tvar_posit
     the monad is not a reified one, whose trees are values. *)
 val ml_type_is_void_call : ml_type -> bool
 
-(** Apply unit-to-void conversion on a C++ type. *)
-val apply_unit_void : bool -> cpp_type -> cpp_type
-
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor). *)
 val mk_tt_expr : unit -> Cpp_ir.Lowered.Expr.t
 
 
-
-(** [guard_compare n params body]: [body] under [n]'s [Crane Guard Compare],
-    if it has one -- the guard's constructor where the first two parameters of
-    one type are the same value (the same word for a shared variant, the same
-    object otherwise), [body] in its [else].  A parametric guard constructor
-    (e.g. [Compare<T>::eq()]) is instantiated with a compared parameter's own
-    type, taken from the parameter list rather than from the enclosing
-    function's return type: the latter loses any functor-parameter-dependent
-    module qualification that the parameter types retain. *)
-val guard_compare :
-  GlobRef.t -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
 (** Generate a C++ expression converting [expr] from [src_ty] to [dst_ty],
     inserting [make_shared]/dereference/etc. as needed. *)
@@ -309,7 +286,7 @@ val collect_typed_lams : ml_type -> ml_ast -> (ml_ident * ml_type) list * ml_ast
     [kept_as_fn] (in {!ungeneralised_callable_params}' set), or [f] erased
     throughout in a signature deducing no type variable ([primary] empty). *)
 val generalises_callable :
-  kept_as_fn:bool -> primary:Escape.IntSet.t -> cpp_type -> bool
+  kept_as_fn:bool -> primary:Escape.IntSet.t -> Cpp_ir.Lowered.Type.t -> bool
 
 (** Which of [params], innermost first, the function whose [body] stands
     under them owns (passes by value and may move): as {!Ownership} settled
@@ -317,13 +294,6 @@ val generalises_callable :
     {!Ownership.read_off} reads [body] otherwise. *)
 val infer_owned_flags :
   ?owner:Names.GlobRef.t -> ml_ast -> ('a * ml_type) list -> bool list
-
-(** Wrap a C++ parameter type with const/ref based on ownership semantics:
-    owned, by value; lent, by const reference where a copy costs a clone or
-    a retain.  Which types those are is read off [core], the parameter's
-    Core type, where it says, and off the C++ type otherwise; under
-    [CRANE_CHECK_IR] the two readings must agree. *)
-val wrap_param_by_ownership : ?is_owned:bool -> ?core:Miniml.ml_type -> cpp_type -> cpp_type
 
 (** {!wrap_param_by_ownership} over a CppIR type. *)
 val wrap_param_by_ownership_ir :
@@ -333,11 +303,6 @@ val wrap_param_by_ownership_ir :
     or as the [F &&] a deduced callable is -- owned or not, is passed. *)
 val param_passing_ir : owned:bool -> Cpp_ir.Lowered.Type.t -> Callable_abi.passing
 
-(** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
-    [std::any], following erased-type constants and alias chains. *)
-val resolves_to_any_type : cpp_type -> bool
-
-
 (** [classify_erasure ty] — the erasure status of one side of a value
     boundary; see the layering note at the top of [ml_type_util.mli].  Prefer
     this to assembling an answer out of the structural predicates: [`Unknown]
@@ -346,20 +311,6 @@ val resolves_to_any_type : cpp_type -> bool
     and [`Concrete] are each easy to reach for by mistake. *)
 val classify_erasure :
   Cpp_ir.Lowered.Type.t option -> [`Unknown | `Boxed | `Opaque | `Concrete of Cpp_ir.Lowered.Type.t]
-
-(** [erase_returned_fn_values ret_ty body] wraps closures returned directly
-    from a function whose return type erases to [std::any] in the
-    [crane_erase_fn] adapter, so the application site's [any_cast] finds the
-    canonical representation. *)
-val erase_returned_fn_values : cpp_type -> cpp_stmt list -> cpp_stmt list
-
-(** The representation a value takes in a slot of the given C++ type: the
-    one classifier a slot's {!Ml_type_util.slot_repr} is decided by. *)
-val slot_repr_of_cpp_type : cpp_type -> Ml_type_util.slot_repr
-
-(** The {!Ml_type_util.box_kind} of a slot of the given C++ type already known
-    to be boxed. *)
-val box_kind_of_cpp_type : cpp_type -> Ml_type_util.box_kind
 
 (** [box_for_any_slot kind e expr] adapts [expr], generated from [e], to the
     shape a boxed slot of kind [kind] is read back at: a function value in
@@ -375,11 +326,6 @@ val ml_body_returns_erased_field : ml_ast -> bool
     variables introduced beyond an inductive's own [num_ind_vars]. *)
 val make_subst_extra_tvars_ir :
   int -> (int * Id.t) list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
-
-(** A body whose returned lambdas hold copies, as Core made them: under
-    [CRANE_CHECK_IR] one holding references is a violation, and is made a
-    closure all the same ({!Translation_support.return_captures_by_value}). *)
-val return_captures_by_value : cpp_stmt list -> cpp_stmt list
 
 (** Unify the (possibly polymorphic) declared type [ty] against the concrete
     types occurring in body [b], substituting resolved type variables so

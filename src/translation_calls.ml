@@ -155,7 +155,7 @@ let curry_to_expected env ?expected_ty use cglob =
   let callee_site =
     let live = Option.map (cpp_of_ml_ir env) decl_ty in
     if Probe.checking () then
-      Option.iter (fun t -> check_installed_arity use.callee (Cpp_ir_to_legacy_minicpp.ty t)) live;
+      Option.iter (fun t -> check_installed_arity_ir use.callee t) live;
     match live with
     | Some (Function (dom, _)) -> Declared_at (List.length dom)
     | _ -> Declared
@@ -1218,17 +1218,17 @@ let assumed_deduced_callables r b ty =
   let ids, _ = collect_typed_lams ty b in
   let binder_tys = List.rev_map snd ids in
   let ungeneralised = ungeneralised_callables_of_definition r ty b in
-  let declared t = convert_ml_type_to_cpp_type (Common.empty_env ()) [] (type_simpl t) in
+  let declared t = cpp_ir_of_ml_type (Common.empty_env ()) [] (type_simpl t) in
   match find_type_opt r with
   | None -> []
   | Some fn_ml_ty -> (
     match declared fn_ml_ty with
-    | Tfun (dom, cod) ->
-      let primary = primary_tvar_indices dom cod in
+    | Function (dom, cod) ->
+      let primary = primary_tvar_indices_ir dom cod in
       List.filter_map
         (fun (pos, pt) ->
           match (declared pt, Param_pos.source_index binder_tys pos) with
-          | (Tfun _ as f), Some i
+          | (Function _ as f), Some i
             when generalises_callable ~kept_as_fn:(Escape.IntSet.mem i ungeneralised) ~primary f ->
             Some pos
           | _ -> None )

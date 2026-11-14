@@ -12,7 +12,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Table
@@ -27,9 +26,6 @@ include Translation_support
 include Translation_types
 include Translation_calls
 include Translation_constructors
-
-(* The CppIR twins below are unused until their callers build CppIR. *)
-[@@@warning "-32"]
 
 (* How a match branch reads a field of the constructor it matched: as the
    structured binding has it; through the pointer the field is stored behind
@@ -2308,7 +2304,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     let cglob =
       mk_cppglob_ir ?yields x (written_at_variables_ir x (filter_erased_keyed_ir by_var))
     in
-    if naming_calls ~cpp_of:(cpp_of_ml env) x then
+    if naming_calls ~cpp_of:(cpp_of_ml_ir env) x then
       (* A function of no parameters named is called, a call made of this
          use. *)
       made_of (Global_use.occurrence use) (Cpp_ir.Build.call cglob [])
@@ -5424,8 +5420,8 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               let is_pair_accessor =
                 match Table.find_custom_opt r with
                 | Some s -> (
-                  match inline_shape_of_text s with
-                  | Inline_pair_projection _ -> true
+                  match Cpp_ir.Foreign.shape_of_text s with
+                  | Pair_projection _ -> true
                   | _ -> false )
                 | None -> false
               in
@@ -8889,24 +8885,6 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
   in
   with_method_self_ns full_ns f
 
-(** Adapt closures returned from a function whose return type is the erased
-    [std::any] (e.g. the [nat -> nat] branch of a dependent
-    [if b then nat else nat -> nat]).  Like {!box_for_any_slot} at
-    argument and value-declaration positions, the callable must be stored in
-    the canonical [std::function<std::any(std::any...)>] form that the
-    application site recovers with an [any_cast].  Nested lambda bodies are
-    left alone: their returns answer to their own return type. *)
-let erase_returned_fn_values (ret_ty : cpp_type) (body : cpp_stmt list) =
-  if not (resolves_to_any_type ret_ty) then body
-  else
-    let rec fix_stmt s =
-      match s with
-      | Sreturn (Some (CPPlambda _ as e)) ->
-        Sreturn (Some (CPPerase_fn (Boxed_whole, e)))
-      | _ -> map_stmt Fun.id fix_stmt Fun.id s
-    in
-    List.map fix_stmt body
-
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
     on an inductive whose kept parameters are [param_vars], has no C++ spelling
     and must be rendered as [std::any].
@@ -8915,5 +8893,4 @@ let erase_returned_fn_values (ret_ty : cpp_type) (body : cpp_stmt list) =
     because it is a question about C++ types, and the registry is deliberately
     kept below the type translation. *)
 let return_type_is_erased (param_vars : Id.t list) (ret : ml_type) : bool =
-  type_is_erased
-    (convert_ml_type_to_cpp_type (empty_env ()) param_vars ret)
+  type_is_erased_ir (cpp_ir_of_ml_type (empty_env ()) param_vars ret)

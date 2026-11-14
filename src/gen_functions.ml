@@ -256,10 +256,13 @@ let dead_unit_returns_to_abort_ir (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.L
   and fix_map ret_ty = Cpp_ir.Map.make ~expr:(fix_expr ret_ty) ~stmt:(fix_stmt ret_ty) ~type_:Fun.id () in
   fix_stmts (Some cod) body
 
-(** {!Translation.erase_returned_fn_values} in CppIR: a closure [body]
-    returns where its result [ret_ty] is the erased box is stored in the
-    canonical form its caller reads.  Nested lambda bodies are left alone:
-    their returns answer to their own return type. *)
+(** Adapt closures returned from a function whose return type is the erased
+    [std::any] (e.g. the [nat -> nat] branch of a dependent
+    [if b then nat else nat -> nat]).  Like {!box_for_any_slot} at
+    argument and value-declaration positions, the callable must be stored in
+    the canonical [std::function<std::any(std::any...)>] form that the
+    application site recovers with an [any_cast].  Nested lambda bodies are
+    left alone: their returns answer to their own return type. *)
 let erase_returned_fn_values_ir (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
   if not (Translation_types.resolves_to_any_type_ir ret_ty) then body
   else
@@ -915,9 +918,6 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     | Const (Function _ as f) | Reference (Lvalue, Const (Function _ as f)) -> Some f
     | Function _ as f -> Some f
     | _ -> None
-  in
-  let generalises_callable ~kept_as_fn ~primary f =
-    (not kept_as_fn) && not (IntSet.is_empty primary && is_fully_erased_fun_ty_ir f)
   in
   let fun_tys =
     List.filter_map
@@ -1845,8 +1845,8 @@ let plan_function ~fixpoint n b ty =
   let plan cty =
     let abi = plan_scope_head n ty (dfun_body_scope ~minted:h.fh_minted n h.fh_body cty ty h.fh_temps) in
     ( if Probe.checking () then
-        match convert_ml_type_to_cpp_type (empty_env ()) [] ty with
-        | live -> Translation_support.check_planned_arity abi live
+        match cpp_ir_of_ml_type (empty_env ()) [] ty with
+        | live -> Translation_support.check_planned_arity_ir abi live
         | exception e when CErrors.noncritical e -> () );
     Some abi
   in
