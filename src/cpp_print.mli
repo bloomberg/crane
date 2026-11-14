@@ -86,14 +86,14 @@ val pp_cpp_field :
     the position [ctx]. *)
 val pp_type : Cpp_state.render_ctx -> ty -> Pp.t
 
-(** [pp_cpp_type par vl t] renders a MiniCpp type no finished declaration
-    holds, converted to CppIR, at the start of the header, where nothing may
+(** [pp_cpp_type par vl t] renders a lowered type no finished declaration
+    holds at the start of the header, where nothing may
     be named, for a diagnostic of a type that names nothing; [par] asks for
     parentheses where precedence needs them, [vl] names the type variables
     by index.  [~lead:false] drops the leading [typename] of a dependent name
     about to be embedded in a longer one.  An opaque type is written as the
     erased type. *)
-val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> Minicpp.cpp_type -> Pp.t
+val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> Cpp_ir.Lowered.Type.t -> Pp.t
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t

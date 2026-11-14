@@ -5,7 +5,6 @@
 
 open Names
 open Miniml
-open Minicpp
 
 module Ir = Cpp_ir.Resolved
 
@@ -49,13 +48,15 @@ type t =
 (* A type translation writes for a concept, in CppIR: a concept is generated
    after its module type is settled, so every type it writes has a C++
    spelling. *)
-let ir_type = Legacy_minicpp_to_cpp_ir.type_exn
+let resolved what resolve x =
+  match resolve x with
+  | x -> x
+  | exception Cpp_ir.Resolve.Owed form ->
+    CErrors.anomaly
+      Pp.(str "Crane: " ++ str what ++ str ": " ++ str form ++ str ", which only a lowered declaration may hold, survived resolution")
 
-let ir_expr e =
-  match Legacy_minicpp_to_cpp_ir.expr e with
-  | Ok e -> e
-  | Error f ->
-    CErrors.anomaly Pp.(str "Crane: a value in a module type's concept: " ++ str (Legacy_minicpp_to_cpp_ir.describe f))
+let ir_type = resolved "a type written outside every finished declaration" Cpp_ir.Resolve.type_
+let ir_expr = resolved "a value in a module type's concept" Cpp_ir.Resolve.expr
 
 (* Whether [mp] is [base] or a module path inside it. *)
 let rec is_under base mp =
@@ -84,16 +85,16 @@ let is_member_ref signature r =
 (* The translated type [ty] as the requirements of the concept of the
    signature at [signature] spell it: [M]'s members, the functor's
    parameters and custom mappings told apart. *)
-let rec concept_type signature ty =
+let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
   let args = List.map (concept_type signature) in
   match ty with
-  | Tglob (r, tys, _) when (not (Table.is_custom r)) && is_member_ref signature r ->
+  | Entity_application (r, tys, _) when (not (Table.is_custom r)) && is_member_ref signature r ->
     Member {member = r; enum = Cpp_names.is_enum_cached r; arguments = args tys}
-  | Tglob (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
-  | Tglob (r, tys, _) -> (
+  | Entity_application (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
+  | Entity_application (r, tys, _) -> (
     match Table.find_custom_opt r with
     | Some text ->
-      let pieces = Cpp_erasure.type_pieces r text (List.map Legacy_minicpp_to_cpp_ir.lower_type tys) in
+      let pieces = Cpp_erasure.type_pieces r text tys in
       (* A type argument the text names and the use does not supply is
          erased, as the seam writes one ({!Cpp_erasure.supply_template_args}). *)
       let arity =
@@ -105,11 +106,12 @@ let rec concept_type signature ty =
       let erased = List.init (max 0 (arity - List.length supplied)) (fun _ -> Plain Any) in
       Foreign {custom = r; pieces; arguments = supplied @ erased}
     | None -> Global (r, args tys) )
-  | Tshared_ptr ty -> Shared_pointer (concept_type signature ty)
-  | Tvariant (storage, tys) -> Variant ((match storage with Inline_variant -> Inline | Shared_variant -> Shared), args tys)
-  | Tnamespace (r, Tglob (r', tys, e)) when not (is_member_ref signature r) -> Namespaced (r, r', List.map ir_expr e, args tys)
-  | Tnamespace (r, ty') when is_member_ref signature r -> concept_type signature ty'
-  | Tfun (dom, cod) -> Function (args dom, concept_type signature cod)
+  | Shared_pointer ty -> Shared_pointer (concept_type signature ty)
+  | Variant (storage, tys) -> Variant (storage, args tys)
+  | In_namespace (r, Entity_application (r', tys, e)) when not (is_member_ref signature r) ->
+    Namespaced (r, r', List.map ir_expr e, args tys)
+  | In_namespace (r, ty') when is_member_ref signature r -> concept_type signature ty'
+  | Function (dom, cod) -> Function (args dom, concept_type signature cod)
   | ty -> Plain (ir_type ty)
 
 (* The domains and codomain of an ML arrow type. *)
@@ -120,7 +122,7 @@ let rec arrows = function
   | ret -> ([], ret)
 
 (* An ML type as translation converts it, outside any function. *)
-let convert t = Translation_types.convert_ml_type_to_cpp_type (Common.empty_env ()) [] t
+let convert t = Translation_types.cpp_ir_of_ml_type (Common.empty_env ()) [] t
 
 (* The requirements one specification of the signature at [signature]
    asks of [M]; none for an inline custom, whose mapping stands in for the
@@ -187,7 +189,7 @@ let rec base_concept = function
    innermost first. *)
 let refinements mt =
   let rec go acc = function
-    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, Legacy_minicpp_to_cpp_ir.instantiated_type_exn Cpp_erasure.instantiate_type (convert typ)) :: acc) inner
+    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, ir_type (Cpp_erasure.instantiate_type (convert typ))) :: acc) inner
     | MTwith (inner, ML_With_module _) -> go acc inner
     | _ -> acc
   in

@@ -36,7 +36,6 @@ open ModPath
 open Table
 open Miniml
 open Common
-open Minicpp
 open Translation
 open Gen_decls
 open Cpp_state
@@ -2416,13 +2415,13 @@ let plan_accessors s =
       match ty with
       | Tglob (m, _, _) when is_monad m -> false
       | _ -> (
-        match convert_ml_type_to_cpp_type (empty_env ()) [] ty with
-        | Tfun _ -> false
+        match cpp_ir_of_ml_type (empty_env ()) [] ty with
+        | Function _ -> false
         | _ when thunk_reason r = Some Throws -> false
         | cty ->
           in_template
           || in_struct
-             && (Ml_type_util.get_tvars cty <> [] || Common.get_force_cross_file_qualification ()) )
+             && (Ml_type_util.get_tvars_ir cty <> [] || Common.get_force_cross_file_qualification ()) )
   in
   let rec elems ~in_struct ~in_template sel =
     List.concat_map

@@ -373,11 +373,6 @@ let with_cpp_return_type_ir (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a)
     ({!translation_ctx.current_cpp_return_type}). *)
 let current_cpp_return_type_ir () : Cpp_ir.Lowered.Type.t option = (!tctx).current_cpp_return_type
 
-(** {!current_cpp_return_type_ir} raised to MiniCpp, for a reader that builds
-    MiniCpp from it. *)
-let current_cpp_return_type () : cpp_type option =
-  Option.map Cpp_ir_to_legacy_minicpp.ty (!tctx).current_cpp_return_type
-
 (** Whether the enclosing function returns [void]. *)
 let returns_void () =
   match (!tctx).current_cpp_return_type with Some Cpp_ir.Type.Void -> true | _ -> false

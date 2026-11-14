@@ -96,8 +96,7 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Ml_type_util.has_no_cpp_spelling
-             (Translation.convert_ml_type_to_cpp_type (empty_env ()) l t) )
+        || Ml_type_util.has_no_cpp_spelling_ir (Translation.cpp_ir_of_ml_type (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds r l t)] else []
 
@@ -925,7 +924,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Ml_type_util.has_no_cpp_spelling (Translation.convert_ml_type_to_cpp_type (empty_env ()) l t)) )
+      not (Ml_type_util.has_no_cpp_spelling_ir (Translation.cpp_ir_of_ml_type (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the MiniML declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
@@ -1456,8 +1455,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
 (** [record_field_types r vars fields] is the C++ type of each of the fields
     [fields] of the eponymous record [r], of variables [vars], as the header
     writes them in the struct [r] is merged into: converted and instantiated
-    ({!Cpp_erasure.instantiate_type}) ahead of the files, in CppIR
-    ({!Legacy_minicpp_to_cpp_ir.instantiated_type_exn}), and taken from there by the header
+    ({!Cpp_erasure.instantiate_type}) and resolved ahead of the files, and
+    taken from there by the header
     ({!ahead_once}) -- so what plans from them reads the types the header
     writes. *)
 let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
@@ -1469,8 +1468,11 @@ let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
     (fun () ->
       List.map
         (fun (_, ty) ->
-          Legacy_minicpp_to_cpp_ir.instantiated_type_exn Cpp_erasure.instantiate_type
-            (Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty) )
+          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation.cpp_ir_of_ml_type (empty_env ()) vars ty)) with
+          | t -> t
+          | exception Cpp_ir.Resolve.Owed form ->
+            CErrors.anomaly
+              Pp.(str "Crane: a record field type " ++ str form ++ str ", which only a lowered declaration may hold, survived resolution") )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)
