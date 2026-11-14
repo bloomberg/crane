@@ -39,7 +39,7 @@ let rec replace_return_this_expr inner_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.L
   | Lambda l -> Lambda {l with body = List.map (replace_return_this_stmt inner_ty) l.body}
   | Call (_, f, args) ->
     Call
-      ( Loopify_analysis.call_opaque,
+      ( Cpp_ir.Build.signature ~nargs:(List.length args) (),
         replace_return_this_expr inner_ty f,
         List.map (replace_return_this_expr inner_ty) args )
   | e -> e
@@ -772,12 +772,12 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
           None
         else
           let name = List.nth extended_vars (remapped - 1) in
-          Some (named_tvar name) )
+          Some (Cpp_ir.Build.named_variable name) )
       all_tvars
   in
   let stmts =
     if all_method_type_args <> [] then
-      let self_call_with_tys = Legacy_minicpp_to_cpp_ir.lower_expr (mk_cppglob func_ref all_method_type_args) in
+      let self_call_with_tys = entity_reference func_ref all_method_type_args in
       List.map (glob_subst_stmt_ir func_ref self_call_with_tys) stmts
     else
       stmts
@@ -809,7 +809,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     Entity_application (name, List.map Cpp_ir.Build.named_variable vars, [])
   in
   let stmts =
-    if Loopify_analysis.contains_shared_ptr ret_cpp_ir then
+    if Cpp_ir.Types.exists (function Shared_pointer _ -> true | _ -> false) ret_cpp_ir then
       List.map (replace_return_this_stmt self_type) stmts
     else stmts
   in

@@ -21,15 +21,15 @@ open Names
 
 (** Generate C++ declaration for a term definition. Returns (decl, env,
     type_variables). *)
-val gen_decl : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env * variable list
+val gen_decl : GlobRef.t -> ml_ast -> ml_type -> Cpp_ir.Lowered.Decl.t * env * variable list
 
 (** Similar to {!gen_decl} but returns [None] for a term whose C++ type is
     not a function's, which the caller declares some other way. *)
 val gen_decl_for_pp :
-  GlobRef.t -> ml_ast -> ml_type -> cpp_decl option * env * variable list
+  GlobRef.t -> ml_ast -> ml_type -> Cpp_ir.Lowered.Decl.t option * env * variable list
 
 (** Generate C++ function specification (declaration without body). *)
-val gen_spec : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env
+val gen_spec : GlobRef.t -> ml_ast -> ml_type -> Cpp_ir.Lowered.Decl.t * env
 
 (** Where a function's definition is written: a template's in the header,
     anything else's in the implementation file. *)
@@ -39,8 +39,8 @@ type definition_file = Header | Implementation
     definition, finalized into its views by {!Function_entity}, or a
     declaration with no definition anywhere. *)
 type generated_entity =
-  | Defined of cpp_decl * definition_file
-  | Declared of cpp_decl
+  | Defined of Cpp_ir.Lowered.Decl.t * definition_file
+  | Declared of Cpp_ir.Lowered.Decl.t
 
 (** A generated function, with the environment its names were allocated in and
     the helpers lifted out of its body. *)
@@ -52,7 +52,7 @@ type generated_fun = {
 
 (** [defined d tvars] is the definition [d] of a function or constant whose
     template parameters are [tvars], filed by {!definition_file}'s rule. *)
-val defined : cpp_decl -> variable list -> generated_entity
+val defined : Cpp_ir.Lowered.Decl.t -> variable list -> generated_entity
 
 (** Generate each function of a mutually recursive group, translating each
     body once. *)
@@ -186,7 +186,7 @@ val plan_instance_methods :
     [ot] is [None] for a signature entry that names a type without defining
     it; an axiom and a custom extraction each get the right-hand side they
     need, expressed in the IR rather than as rendered text. *)
-val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Minicpp.cpp_decl
+val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Cpp_ir.Lowered.Decl.t
 
 (** [type_alias_kinds r vars t] is the kinds of the parameters [vars] of the
     type alias [r], whose body is [t], as {!gen_type_alias} declares them --

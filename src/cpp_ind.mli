@@ -128,7 +128,7 @@ val record_methods_id : Names.GlobRef.t -> Unit_program.id
 type ahead = {
   entities : Unit_program.entity list;
       (** What was generated, as the entities a file records taking it. *)
-  functions : Minicpp.cpp_decl list;
+  functions : Cpp_ir.Lowered.Decl.t list;
       (** The function definitions generated, registered with Loopify
           before any function of the unit is finished. *)
   finishing : Unit_program.job list;
@@ -366,14 +366,14 @@ val finished_concept : Names.GlobRef.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolv
     definition that the generated function [g] is, [fallback] the entity it
     falls back to ({!funs_entities}). *)
 val finished_declared :
-  fallback:Names.GlobRef.t -> Gen_decls.generated_fun -> Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
+  fallback:Names.GlobRef.t -> Gen_decls.generated_fun -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** A generated function, finished: a definition, with the file holding it
     and its entity, made of the definition as the unit's program has it; or
     a declaration with no definition anywhere. *)
 type finished_fun =
   | Finished_definition of Gen_decls.definition_file * Function_entity.t
-  | Finished_declaration of Minicpp.cpp_decl
+  | Finished_declaration of Cpp_ir.Lowered.Decl.t
 
 (** [finalized ~fallback funs] pairs each generated function with what it
     finishes as.  [fallback] is the entity a function falls back to

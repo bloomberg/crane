@@ -785,7 +785,7 @@ let lower_lifted_helper d =
     lower_locals ~unlowered d
   | None -> lower_locals d
 
-let lower_group_members decls =
+let lower_group decls =
   let loopified d = match Cpp_ir.Globrefs.declared d with Some r -> Option.has_some (planned_loop r) | None -> false in
   List.map
     (fun d ->
@@ -818,9 +818,6 @@ let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name lam =
   | _ -> assert false
 
 let lower_lifted d = Cpp_ir_to_legacy_minicpp.decl (lower_lifted_helper (Legacy_minicpp_to_cpp_ir.lower d))
-
-let lower_group ds =
-  List.map Cpp_ir_to_legacy_minicpp.decl (lower_group_members (List.map Legacy_minicpp_to_cpp_ir.lower ds))
 
 (** {1 The control check, over the finished declaration} *)
 

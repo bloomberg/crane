@@ -975,7 +975,7 @@ let generate scope ~module_ d =
       Nothing
     | t ->
       Header_only
-        (fun () -> declarations_only [(empty_env (), Legacy_minicpp_to_cpp_ir.lower (gen_type_alias r l (Some t)))]) )
+        (fun () -> declarations_only [(empty_env (), gen_type_alias r l (Some t))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
     group [{fd_ref = r; fd_body = a; fd_type = t}]
   | Dterm (r, a, t) when is_typeclass_instance t -> Instance (r, a, t)
@@ -1037,7 +1037,7 @@ let function_decl (g : Gen_decls.generated_fun) = match g.gf_entity with Defined
 
 (** The source entity the generated function [g] is: what its declaration is
     about, [fallback] where it says none. *)
-let function_ref ~fallback g = Option.default fallback (decl_globref (function_decl g))
+let function_ref ~fallback g = Option.default fallback (Cpp_ir.Globrefs.declared (function_decl g))
 
 (** The id of the generated function [g] in the unit's program: its
     entity's ({!function_ref}) only declaration. *)
@@ -1110,7 +1110,7 @@ let finished_concept r d = finished_of ~what:"a class concept" (concept_id r) d
     among them, then every declaration. *)
 let functions_finishing elements =
   let funs = List.concat_map (fun (fallback, gs) -> List.map (fun g -> (fallback, g)) gs) elements in
-  let job (fallback, g) = Unit_program.legacy_job (function_id ~fallback g) (function_decl g) in
+  let job (fallback, g) = Unit_program.job (function_id ~fallback g) (function_decl g) in
   List.filter_map
     (fun ((_, (g : Gen_decls.generated_fun)) as f) ->
       match g.gf_entity with Defined _ -> Some (job f) | Declared _ -> None )
@@ -1122,7 +1122,7 @@ let functions_finishing elements =
 
 type finished_fun =
   | Finished_definition of Gen_decls.definition_file * Function_entity.t
-  | Finished_declaration of Minicpp.cpp_decl
+  | Finished_declaration of Cpp_ir.Lowered.Decl.t
 
 let finalized ~fallback (funs : Gen_decls.generated_fun list) =
   List.map
@@ -1130,10 +1130,10 @@ let finalized ~fallback (funs : Gen_decls.generated_fun list) =
       match g.gf_entity with
       | Declared d -> (g, Finished_declaration d)
       | Defined (d, file) ->
-        (g, Finished_definition (file, entity_of ~what:"a function" (function_id ~fallback g) (Cpp_pipeline.lower d))) )
+        (g, Finished_definition (file, entity_of ~what:"a function" (function_id ~fallback g) d)) )
     funs
 
-let finished_declared ~fallback g d = finished_of ~what:"a declaration" (function_id ~fallback g) (Cpp_pipeline.lower d)
+let finished_declared ~fallback g d = finished_of ~what:"a declaration" (function_id ~fallback g) d
 
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
@@ -1556,7 +1556,7 @@ let generate_in_scope ~module_ d k = k (generate (planned_header_scope module_) 
 
 type ahead = {
   entities : Unit_program.entity list;
-  functions : cpp_decl list;
+  functions : Cpp_ir.Lowered.Decl.t list;
   finishing : Unit_program.job list;
   helpers : cpp_decl list;
   handed_on : Unit_program.job list;

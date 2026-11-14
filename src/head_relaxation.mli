@@ -50,9 +50,9 @@ val deapplied_lowered :
 val rebind_plain_var_lowered :
   in_scope:Names.Id.t list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t
 
-(** [apply r d] -- the MiniCpp declaration [d] rewritten as [r] decided.
-    A declaration of a kind [r] does not concern is returned unchanged. *)
-val apply : t -> Minicpp.cpp_decl -> Minicpp.cpp_decl
+(** [apply r d] -- the declaration [d] rewritten as [r] decided.  A
+    declaration of a kind [r] does not concern is returned unchanged. *)
+val apply : t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
 
 (** [apply_signature r ~params ~ret] -- a signature, its value parameters'
     types [params] and its return type [ret], rewritten as [r] decided: what
@@ -64,7 +64,7 @@ val apply_signature :
   Cpp_ir.Lowered.Type.t list * Cpp_ir.Lowered.Type.t
 
 (** Each relaxation applied in turn by {!apply}, the first first. *)
-val apply_all : t list -> Minicpp.cpp_decl -> Minicpp.cpp_decl
+val apply_all : t list -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
 
 (** [deapply_struct ~plain ~in_scope d] -- {!Deapplied}'s rewrite of a
     generated struct [d] in CppIR: its members, their bodies, and its

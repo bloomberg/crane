@@ -5,9 +5,11 @@
     and body, declarations, and the generated-entity record a function's
     file views come from.
 
-    Part of the MiniML to MiniCpp translation: the declaration-level layer
-    over the expression translation in {!Translation}, re-exported through
-    {!Gen_decls}.  The callable plan of each function ({!plan_function}) is
+    Part of declaration generation (MiniML to CppIR): the declaration-level
+    layer over the expression translation in {!Translation}, re-exported
+    through {!Gen_decls}.  Translation still generates MiniCpp; a body is
+    lowered into CppIR as it comes back, and every declaration here is
+    CppIR.  The callable plan of each function ({!plan_function}) is
     made before any body is generated; generating the function reads it
     back ({!planned_relaxations}, {!declare_planned}). *)
 
@@ -32,7 +34,7 @@ module IntSet = Escape.IntSet
     that names a type without defining it.  The three irregular right-hand
     sides -- a custom extraction's verbatim spelling, an axiom's [std::any]
     placeholder, and an absent definition -- are all expressed as
-    {!Minicpp.dusing} fields rather than as a rendered string handed to the
+    {!Cpp_ir.Decl.Type_alias} fields rather than as a rendered string handed to the
     printer. *)
 let type_alias_rhs r vars ot =
   with_method_ns_for_locals @@ fun () ->
@@ -89,41 +91,7 @@ let gen_type_alias r vars ot =
         | t -> t ))
       du_rhs
   in
-  Dusing
-    { du_tparams = Cpp_ir_to_legacy_minicpp.template_parameters du_tparams;
-      du_name = r;
-      du_rhs = Option.map Cpp_ir_to_legacy_minicpp.ty du_rhs;
-      du_note }
-
-(** Substitute [CPPglob id] with [repl] in expressions and statements. Uses
-    generic AST visitors for structural recursion.
-
-    Identity here is the {i user} name, not the canonical one
-    {!Common.globref_equal} compares.  Every caller substitutes a declaration's own reference for a
-    self-call, and what makes an occurrence a self-call is that it is printed at
-    the name being declared -- a property of the user name, since that is the
-    one the C++ spelling comes from.  Two references can share a canonical name
-    and still be different C++ names: [Include M] inside a functor re-exports
-    [M]'s fields as constants of the including module, so the forwarder's body
-    and the forwarder itself agree canonically and differ in exactly the
-    qualifier that keeps the call from being a call to itself.
-
-    A call made of one of the Core uses [spare] names keeps its head: the
-    use was written at another instance than the declaration's own
-    ({!other_instance_self_calls}), and its template arguments are that
-    instance's. *)
-let rec glob_subst_expr ?(spare = []) (id : GlobRef.t) (repl : cpp_expr) (e : cpp_expr) =
-  match e with
-  | CPPglob (id', _, _) when GlobRef.UserOrd.equal id id' ->
-    repl
-  | CPPfun_call (({cs_occurrence = Some o; _} as cs), (CPPglob (id', _, _) as head), args)
-    when GlobRef.UserOrd.equal id id' && List.exists (Miniml.Occurrence.equal o) spare ->
-    CPPfun_call (cs, head, of_reversed (List.map (glob_subst_expr ~spare id repl) (to_reversed args)))
-  | _ -> map_expr (glob_subst_expr ~spare id repl) (glob_subst_stmt ~spare id repl) Fun.id e
-
-(** Statement-level case of {!glob_subst_expr}. *)
-and glob_subst_stmt ?(spare = []) (id : GlobRef.t) (repl : cpp_expr) (s : cpp_stmt) =
-  map_stmt (glob_subst_expr ~spare id repl) (glob_subst_stmt ~spare id repl) Fun.id s
+  (Type_alias {type_params = du_tparams; name = r; rhs = du_rhs; note = du_note} : Cpp_ir.Lowered.Decl.t)
 
 (** The occurrences of the uses of [n] in [b] written at another instance
     than [n]'s own: a use that solves one of [n]'s variables to a ground
@@ -156,78 +124,22 @@ let other_instance_self_calls n b =
   walk b;
   !found
 
-(** [is_unit_cpp_type ty] is [true] for the C++ rendering of Rocq's [unit]
-    (which [Shared.v] maps to [std::monostate]) and for [void]. *)
-let is_unit_cpp_type = function
-  | Tvoid -> true
-  | Tglob (r, _, _) | Tnamespace (r, _) -> Table.is_unit_type r
-  | _ -> false
+(** Substitute the global [id] with [repl] in expressions and statements.
 
-(** [dead_unit_returns_to_abort cod body] rewrites [return tt;] into a throw
-    when the enclosing function does not return [unit].
+    Identity here is the {i user} name, not the canonical one
+    {!Common.globref_equal} compares.  Every caller substitutes a declaration's own reference for a
+    self-call, and what makes an occurrence a self-call is that it is printed at
+    the name being declared -- a property of the user name, since that is the
+    one the C++ spelling comes from.  Two references can share a canonical name
+    and still be different C++ names: [Include M] inside a functor re-exports
+    [M]'s fields as constants of the including module, so the forwarder's body
+    and the forwarder itself agree canonically and differ in exactly the
+    qualifier that keeps the call from being a call to itself.
 
-    A dependent match can have branches that are impossible by typing, e.g.
-
-    {v
-      match v in vec _ m return match m with O => unit | S _ => nat end with
-      | vnil => tt
-      | vcons _ x _ => x
-      end
-    v}
-
-    Extraction erases the dependency, so the [vnil] branch survives as a plain
-    [tt] sitting in a function whose C++ return type is [uint64_t] — which does
-    not compile.  The branch is unreachable, so emit the same throw used for
-    other absurd cases.
-
-    A nested lambda is traversed under its own declared return type, since a
-    [tt] returned from a lambda that really does return [unit] is well-typed.
-    So is one returned where the result is the box: a type a type-level
-    function computes ([tuple (nats n)], [unit] at [0]) erases to it, and its
-    [unit] branch is as reachable as any other. *)
-let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
-  (* A [tt] can also reach the return as the head of a call, when the branch's
-     type is a function type and eta-expansion pushed the invented argument
-     inside the match: the impossible branch then returns [tt(x)].  Applying a
-     value that carries no information is no more reachable than returning
-     one, and is the same branch seen one step later. *)
-  let rec is_tt = function
-    | CPPglob (r, _, _) -> Table.is_tt_constructor r
-    | CPPfun_call (_, f, _) -> is_tt f
-    | _ -> false
-  in
-  (* [ret_ty] is [None] inside a lambda with a deduced return type: there is no
-     declared type to contradict, so leave those bodies alone. *)
-  let rec fix_stmts ret_ty stmts =
-    match ret_ty with
-    | Some t when not (is_unit_cpp_type t || Translation_types.resolves_to_any_type t) ->
-      List.map (fix_stmt ret_ty) stmts
-    | _ -> List.map (fix_stmt None) stmts
-  and fix_stmt ret_ty s =
-    match s with
-    | Sreturn (Some e) when ret_ty <> None && is_tt e ->
-      Sreturn
-        (Some
-           (CPPabort
-              ( Minicpp.dead_branch_message,
-                (match ret_ty with Some t -> t | None -> Tany) )))
-    | _ -> map_stmt (fix_expr ret_ty) (fix_stmt ret_ty) (fun t -> t) s
-  and fix_expr ret_ty e =
-    match e with
-    | CPPlambda l ->
-      CPPlambda {l with cl_body = fix_stmts l.cl_ret l.cl_body}
-    | _ -> map_expr (fix_expr ret_ty) (fix_stmt ret_ty) (fun t -> t) e
-  in
-  fix_stmts (Some cod) body
-
-(** The rewrites every generated function body takes at its C++ result type
-    [cod], a free function's and a method's alike: a [tt] returned where the
-    result is not [unit] is dead ({!dead_unit_returns_to_abort}), and a
-    closure returned where the result erased is stored in the canonical form
-    its caller reads ({!Translation.erase_returned_fn_values}). *)
-let finish_fn_body cod body = dead_unit_returns_to_abort cod (erase_returned_fn_values cod body)
-
-(** {!glob_subst_expr} in CppIR. *)
+    A call made of one of the Core uses [spare] names keeps its head: the
+    use was written at another instance than the declaration's own
+    ({!other_instance_self_calls}), and its template arguments are that
+    instance's. *)
 let rec glob_subst_expr_ir ?(spare = []) (id : GlobRef.t) (repl : Cpp_ir.Lowered.Expr.t)
     (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match e with
@@ -295,7 +207,28 @@ let tvar_subst_stmt_ir (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.
   and m () = Cpp_ir.Map.make ~expr ~stmt ~type_ () in
   stmt s
 
-(** {!dead_unit_returns_to_abort} in CppIR. *)
+(** [dead_unit_returns_to_abort_ir cod body] rewrites [return tt;] into a throw
+    when the enclosing function does not return [unit].
+
+    A dependent match can have branches that are impossible by typing, e.g.
+
+    {v
+      match v in vec _ m return match m with O => unit | S _ => nat end with
+      | vnil => tt
+      | vcons _ x _ => x
+      end
+    v}
+
+    Extraction erases the dependency, so the [vnil] branch survives as a plain
+    [tt] sitting in a function whose C++ return type is [uint64_t] — which does
+    not compile.  The branch is unreachable, so emit the same throw used for
+    other absurd cases.
+
+    A nested lambda is traversed under its own declared return type, since a
+    [tt] returned from a lambda that really does return [unit] is well-typed.
+    So is one returned where the result is the box: a type a type-level
+    function computes ([tuple (nats n)], [unit] at [0]) erases to it, and its
+    [unit] branch is as reachable as any other. *)
 let dead_unit_returns_to_abort_ir (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
   let is_unit : Cpp_ir.Lowered.Type.t -> bool = function
     | Void -> true
@@ -338,7 +271,11 @@ let erase_returned_fn_values_ir (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.
     in
     List.map fix_stmt body
 
-(** {!finish_fn_body} in CppIR. *)
+(** The rewrites every generated function body takes at its C++ result type
+    [cod], a free function's and a method's alike: a [tt] returned where the
+    result is not [unit] is dead ({!dead_unit_returns_to_abort_ir}), and a
+    closure returned where the result erased is stored in the canonical form
+    its caller reads ({!erase_returned_fn_values_ir}). *)
 let finish_fn_body_ir cod body = dead_unit_returns_to_abort_ir cod (erase_returned_fn_values_ir cod body)
 
 (** {!Translation.return_captures_by_value} in CppIR. *)
@@ -502,15 +439,13 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   (params, List.rev !temps)
 
 (** The value-parameter types, in declaration order, and the return type of
-    a generated function declaration, which keeps its parameters last first:
-    what [CRANE_CHECK_IR] holds to its plan ({!declare_planned}). *)
-let declared_signature =
-  let lower = Legacy_minicpp_to_cpp_ir.lower_type in
-  function
-  | Dfun {df_ret; df_shape = Ddef (params, _); _} ->
-    Some {Callable_abi.params = List.rev_map (fun (_, t) -> lower t) params; ret = lower df_ret}
-  | Dfun {df_ret; df_shape = Ddecl params; _} ->
-    Some {Callable_abi.params = List.rev_map (fun (_, t) -> lower t) params; ret = lower df_ret}
+    a generated function declaration: what [CRANE_CHECK_IR] holds to its plan
+    ({!declare_planned}). *)
+let declared_signature : Cpp_ir.Lowered.Decl.t -> _ = function
+  | Function {return_type; shape = Definition (params, _); _} ->
+    Some {Callable_abi.params = List.map snd params; ret = return_type}
+  | Function {return_type; shape = Declaration params; _} ->
+    Some {Callable_abi.params = List.map snd params; ret = return_type}
   | _ -> None
 
 (** The callable plan of [n], declared with the template head [temps] and
@@ -1244,6 +1179,11 @@ let planned_relaxations n ty scope =
   if Probe.checking () then Callable_abi.check (plan_scope_head n ty scope);
   Callable_abi.relaxations (Callable_abi.planned n)
 
+(** The global [r] at the type arguments [tys], with what its custom
+    extraction inlines, if anything. *)
+let entity_reference r tys : Cpp_ir.Lowered.Expr.t =
+  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = None})
+
 (** The reference a self-call of [n] in its own body is written with: every
     template parameter its plan lets a call write, at itself -- the call is
     at the declaration's own instantiation, so each is in scope and exact.
@@ -1278,7 +1218,7 @@ let self_call_reference n ~undeducible =
       in
       dicts @ CList.firstn k rest
   in
-  mk_cppglob n (List.map (fun (_, id) -> named_tvar id) written)
+  entity_reference n (List.map (fun (_, id) -> Cpp_ir.Build.named_variable id) written)
 
 (** The declaration of the function [n] whose definition [decl] is, as its
     body was generated: the head is a projection of [n]'s plan -- the
@@ -1292,8 +1232,8 @@ let self_call_reference n ~undeducible =
 let declare_planned n decl =
   let abi = Callable_abi.planned n in
   let is_entry_point =
-    match (n, decl) with
-    | GlobRef.ConstRef c, Dfun {df_ret = Tid_external ("int", []); _} ->
+    match (n, (decl : Cpp_ir.Lowered.Decl.t)) with
+    | GlobRef.ConstRef c, Function {return_type = External ("int", []); _} ->
       String.equal (Label.to_string (Constant.label c)) "main"
     | _ -> false
   in
@@ -1307,20 +1247,16 @@ let declare_planned n decl =
             str "the declaration of " ++ GlobRef.print n
             ++ str " has another signature than its plan" );
       match (planned, decl) with
-      | Some {Callable_abi.params; ret}, Dfun ({df_shape = Ddef (ps, body); _} as f)
+      | Some {Callable_abi.params; ret}, Function ({shape = Definition (ps, body); _} as f)
         when List.compare_lengths params ps = 0 ->
-        Dfun
-          { f with
-            df_ret = Cpp_ir_to_legacy_minicpp.ty ret;
-            df_shape =
-              Ddef (List.map2 (fun (id, _) t -> (id, Cpp_ir_to_legacy_minicpp.ty t)) ps (List.rev params), body) }
+        Function {f with return_type = ret; shape = Definition (List.map2 (fun (id, _) t -> (id, t)) ps params, body)}
       | _ ->
         CErrors.anomaly
           Pp.(str "the definition of " ++ GlobRef.print n ++ str " does not have its plan's parameters.")
   in
   match Callable_abi.declared_head abi with
   | [] -> decl
-  | head -> Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters head, None, decl)
+  | head -> Template (head, None, decl)
 
 (** Generate the C++ definition of the function [n] from its ML body [b]:
     its {!body_scope}, the head its plan declares, the body with every
@@ -1341,6 +1277,7 @@ let gen_dfun ~minted n b cty ty temps =
   let raise_ty = Cpp_ir_to_legacy_minicpp.ty in
   let relaxations = planned_relaxations n ty scope in
   let rec_call = self_call_reference n ~undeducible:scope.bs_self_call_undeducible in
+  let lower_stmts = List.map Legacy_minicpp_to_cpp_ir.lower_stmt in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
@@ -1358,10 +1295,10 @@ let gen_dfun ~minted n b cty ty temps =
   } =
     scope
   in
-  (* The body is still MiniCpp: what it reads of the head is raised once. *)
+  (* Translation still generates MiniCpp: what its continuation and the
+     guard read of the head is raised once. *)
   let cod = raise_ty scope.bs_cod in
   let ids = List.map (fun (x, t) -> (x, raise_ty t)) scope.bs_ids in
-  let promoted_var_resolutions = List.map (fun (v, t) -> (v, raise_ty t)) scope.bs_promoted_var_resolutions in
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params — they are not ML type variables
@@ -1413,9 +1350,7 @@ let gen_dfun ~minted n b cty ty temps =
      the instance perfectly well. *)
   tctx :=
     { !tctx with
-      promoted_var_map =
-        List.map (fun (v, t) -> (v, Legacy_minicpp_to_cpp_ir.lower_type t)) promoted_var_resolutions
-        @ saved_promoted_var_map };
+      promoted_var_map = scope.bs_promoted_var_resolutions @ saved_promoted_var_map };
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
@@ -1493,9 +1428,9 @@ let gen_dfun ~minted n b cty ty temps =
             with
             | Table.AssertExpr template ->
               ( match subst_placeholders param_idx template with
-              | Ok expr_str -> Some (Sassert (Pchecked expr_str))
-              | Error comment -> Some (Sassert (Pstated comment)) )
-            | Table.AssertComment comment -> Some (Sassert (Pstated comment)) )
+              | Ok expr_str -> Some (Cpp_ir.Stmt.Assert (Checked expr_str) : Cpp_ir.Lowered.Stmt.t)
+              | Error comment -> Some (Assert (Stated comment)) )
+            | Table.AssertComment comment -> Some (Assert (Stated comment)) )
         assertions
   in
   begin_body ~owner:n ~function_:true ();
@@ -1506,16 +1441,16 @@ let gen_dfun ~minted n b cty ty temps =
   let owned_params =
     Translation_support.owned_parameters (List.length owned_flags)
       ~owned:(fun i ->
-        Translation_support.declared_by_value
-          (List.assoc_opt (fst (List.nth all_ids i)) ids)
-          ~summary:(List.nth owned_flags i) )
+        match List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids with
+        | Some ty -> not (Translation_support.declared_by_reference_ir ty)
+        | None -> List.nth owned_flags i )
       ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids)
       ~ty:(fun i -> snd (List.nth all_params i))
   in
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
   let saved_return_type = (!tctx).current_cpp_return_type in
-  tctx := { !tctx with current_cpp_return_type = Some (Legacy_minicpp_to_cpp_ir.lower_type cod) };
+  tctx := { !tctx with current_cpp_return_type = Some scope.bs_cod };
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default CPPabort throw. *)
@@ -1523,8 +1458,8 @@ let gen_dfun ~minted n b cty ty temps =
     match b with
     | MLaxiom _ when is_custom n && not (to_inline n) ->
       let custom_name = find_custom n in
-      let param_vars = List.map (fun (id, _) -> CPPvar id) ids in
-      Some [Sreturn (Some (mk_call (CPPraw custom_name) param_vars))]
+      let param_vars = List.map (fun (id, _) : Cpp_ir.Lowered.Expr.t -> Local id) scope.bs_ids in
+      Some [(Return (Some (Cpp_ir.Build.call (Foreign_text custom_name) param_vars)) : Cpp_ir.Lowered.Stmt.t)]
     | _ -> None
   in
   (* A self-call written at another instance keeps the template arguments
@@ -1533,6 +1468,25 @@ let gen_dfun ~minted n b cty ty temps =
   (* method_self_ns is extended by the caller ([gen_decl__inner], or
      {!with_function_head} for the others, through [with_method_ns_for_locals])
      before computing cty, so it's already active here. *)
+  (* The guard of [Crane Guard Compare], spliced in front of the body: built
+     by translation, which still generates MiniCpp. *)
+  let guarded body : Cpp_ir.Lowered.Stmt.t list =
+    match guard_compare n ids [] with
+    | [] -> body
+    | [Sif (same, then_, [])] ->
+      [If {condition = Legacy_minicpp_to_cpp_ir.lower_expr same; then_ = lower_stmts then_; else_ = body}]
+    | _ -> CErrors.anomaly Pp.(str "the guard of " ++ GlobRef.print n ++ str " is not a conditional.")
+  in
+  let definition body : Cpp_ir.Lowered.Decl.t =
+    Function
+      { path = {outer = (n, []); inner = []};
+        return_type = scope.bs_cod;
+        no_pure;
+        constexpr = Undecided;
+        shape = Definition (List.rev scope.bs_ids, finish_fn_body_ir scope.bs_cod (guarded (sigma_asserts @ body)));
+        binders = parameter_binders env ids;
+        loop = None }
+  in
   let inner =
     if missing == [] then (
       let b =
@@ -1540,18 +1494,14 @@ let gen_dfun ~minted n b cty ty temps =
         | Some stmts -> stmts
         | None ->
           let b =
-            List.map (glob_subst_stmt ~spare n rec_call)
-              (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
+            List.map (glob_subst_stmt_ir ~spare n rec_call)
+              (lower_stmts (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b)))
           in
-          return_captures_by_value b
+          return_captures_by_value_ir b
       in
       clear_current_type_vars ();
       set_current_parameters [];
-      Dfun
-        (mk_dfun n ~ret:cod ~no_pure ~binders:(parameter_binders env ids)
-           (Ddef
-              ( ids,
-                finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) ) )
+      definition b )
     else
       (* An axiom or exception body, which always throws, is the one that
          binds fewer parameters than the head declares
@@ -1562,20 +1512,16 @@ let gen_dfun ~minted n b cty ty temps =
         | None ->
         match b with
         | MLaxiom _ | MLexn _ ->
-          List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts env cofix_wrap b)
+          List.map (glob_subst_stmt_ir ~spare n rec_call) (lower_stmts (gen_stmts env cofix_wrap b))
         | _ ->
           List.map
-            (glob_subst_stmt ~spare n rec_call)
-            (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
+            (glob_subst_stmt_ir ~spare n rec_call)
+            (lower_stmts (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b)))
       in
-      let b = return_captures_by_value b in
+      let b = return_captures_by_value_ir b in
       clear_current_type_vars ();
       set_current_parameters [];
-      Dfun
-        (mk_dfun n ~ret:cod ~no_pure ~binders:(parameter_binders env ids)
-           (Ddef
-              ( ids,
-                finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) )
+      definition b
   in
   tctx := { !tctx with current_cpp_return_type = saved_return_type };
   Table.current_decl_ref := saved_decl_ref;
@@ -1630,29 +1576,23 @@ let gen_dfun ~minted n b cty ty temps =
           (* Case 2: top-level sequential — emit [int main()] directly.
              Replace [Tvoid] return type with [int] and every [Sreturn None]
              with [Sreturn (Some (CPPint 0))]. *)
-          let int_ty = Tid_external ("int", []) in
-          let rec void_return_to_zero = function
-            | Sreturn None -> Sreturn (Some (CPPint 0))
-            | Sif (c, t, e) ->
-              Sif (c, List.map void_return_to_zero t,
-                      List.map void_return_to_zero e)
-            | Sblock ss -> Sblock (List.map void_return_to_zero ss)
-            | Smatch (scrut, branches, default) ->
-              Smatch
+          let int_ty : Cpp_ir.Lowered.Type.t = External ("int", []) in
+          let rec void_return_to_zero : Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t = function
+            | Return None -> Return (Some (Literal (Int 0)))
+            | If i -> If {i with then_ = List.map void_return_to_zero i.then_; else_ = List.map void_return_to_zero i.else_}
+            | Block ss -> Block (List.map void_return_to_zero ss)
+            | Match (scrut, branches, default) ->
+              Match
                 ( scrut,
                   List.map
-                    (fun br ->
-                      { br with smb_body = List.map void_return_to_zero br.smb_body })
+                    (fun (br : _ Cpp_ir.Stmt.Match.branch) -> {br with body = List.map void_return_to_zero br.body})
                     branches,
                   Option.map (List.map void_return_to_zero) default )
             | s -> s
           in
           ( match inner with
-          | Dfun ({df_shape = Ddef (params, body); _} as f) ->
-            Dfun
-              { f with
-                df_ret = int_ty;
-                df_shape = Ddef (params, List.map void_return_to_zero body) }
+          | Function ({shape = Definition (params, body); _} as f) ->
+            Function {f with return_type = int_ty; shape = Definition (params, List.map void_return_to_zero body)}
           | d -> d )
         | None, true ->
           (* Case 3: top-level reified — rename to [_main], register for
@@ -1661,7 +1601,7 @@ let gen_dfun ~minted n b cty ty temps =
           let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
           Table.set_main_function (Id.of_string "_main") (ml_codomain ty) None needs_run;
           ( match inner with
-          | Dfun f -> Dfun {f with df_path = dfun_path (new_n, [])}
+          | Function f -> Function {f with path = {outer = (new_n, []); inner = []}}
           | d -> d )
       end else
         inner
@@ -1767,6 +1707,23 @@ let function_without_plan n =
   CErrors.anomaly
     Pp.(str "the function " ++ GlobRef.print n ++ str " is generated as a constant, with no plan.")
 
+(** The function of no parameters [n] returning [body], the value of C++
+    type [ret] translation generated, which a call computes. *)
+let thunk n ret body : Cpp_ir.Lowered.Decl.t =
+  Function
+    { path = {outer = (n, []); inner = []};
+      return_type = ret;
+      no_pure = false;
+      constexpr = Undecided;
+      shape = Definition ([], [Return (Some (Legacy_minicpp_to_cpp_ir.lower_expr body))]);
+      binders = [];
+      loop = None }
+
+(** The constant [n] of C++ type [ty], initialised with [init], the value
+    translation generated. *)
+let variable n ty init : Cpp_ir.Lowered.Decl.t =
+  Variable {ref_ = n; type_ = ty; init = Legacy_minicpp_to_cpp_ir.lower_expr init; constexpr = Undecided}
+
 (** Generate the C++ declaration of [n], which is not a function, from its
     ML definition: a constant whose body only throws (as a zero-argument
     function), or a constant initialised with its value.  Returns the
@@ -1777,8 +1734,9 @@ let gen_decl__inner n b ty =
   with_method_ns_for_locals @@ fun () ->
   let cty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
   let cty = Cpp_ir_to_legacy_minicpp.ty cty_ir in
-  let tvars = get_tvars cty in
-  let temps = List.map (fun id -> (TTtypename, id)) tvars in
+  let tvars = get_tvars_ir cty_ir in
+  let temps = Cpp_ir.Build.typenames tvars in
+  let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
   match cty with
     | Tfun _ -> function_without_plan n
     | _ ->
@@ -1788,10 +1746,7 @@ let gen_decl__inner n b ty =
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
       let body_expr = with_region b (fun () -> gen_expr (empty_env ()) b) in
-      let inner = Dfun (mk_dfun n ~ret:cty (Ddef ([], [Sreturn (Some body_expr)]))) in
-      ( match temps with
-      | [] -> (inner, empty_env (), tvars)
-      | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
+      (templated (thunk n cty_ir body_expr), empty_env (), tvars)
     | _ ->
       begin_body ~owner:n ();
       let body_expr =
@@ -1815,12 +1770,7 @@ let gen_decl__inner n b ty =
         | Boxed kind -> box_for_any_slot kind b body_expr
         | Native -> body_expr
       in
-      let inner =
-        deapply_plain_tvars (Legacy_minicpp_to_cpp_ir.lower_template_parameters temps) (mk_dasgn n cty body_expr)
-      in
-      ( match temps with
-      | [] -> (inner, empty_env (), tvars)
-      | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
+      (templated (deapply_plain_tvars temps (variable n cty_ir body_expr)), empty_env (), tvars)
 
 (** {!gen_decl__inner} with [n] as the declaration being generated. *)
 let gen_decl n b ty =
@@ -1932,14 +1882,8 @@ let gen_decl_for_pp__inner n b ty =
     (Some f, env, tvars)
   | cty when thunk_reason n = Some Throws ->
     let body_expr = gen_expr (empty_env ()) h.fh_body in
-    let inner =
-      Dfun (mk_dfun n ~ret:(Cpp_ir_to_legacy_minicpp.ty cty) (Ddef ([], [Sreturn (Some body_expr)])))
-    in
-    let ds =
-      match h.fh_temps with
-      | [] -> inner
-      | l -> Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters l, None, inner)
-    in
+    let inner = thunk n cty body_expr in
+    let ds = match h.fh_temps with [] -> inner | l -> Template (l, None, inner) in
     (Some ds, empty_env (), h.fh_tvars)
   | _ -> (None, empty_env (), h.fh_tvars)
 
@@ -1966,8 +1910,8 @@ let gen_spec__inner n b ty =
   with_method_ns_for_locals @@ fun () ->
   let ty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
   let ty = Cpp_ir_to_legacy_minicpp.ty ty_ir in
-  let tvars = get_tvars ty in
-  let temps = List.map (fun id -> (TTtypename, id)) tvars in
+  let temps = Cpp_ir.Build.typenames (get_tvars_ir ty_ir) in
+  let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
   let result =
     match ty with
     | Tfun _ -> function_without_plan n
@@ -1975,10 +1919,17 @@ let gen_spec__inner n b ty =
     match b with
     | _ when thunk_reason n = Some Throws ->
       (* Throws when called, so: a zero-arg function declaration. *)
-      let inner = Dfun (mk_dfun n ~ret:ty (Ddef ([], []))) in
-      ( match temps with
-      | [] -> (inner, empty_env ())
-      | l -> (Dtemplate (l, None, inner), empty_env ()) )
+      let inner : Cpp_ir.Lowered.Decl.t =
+        Function
+          { path = {outer = (n, []); inner = []};
+            return_type = ty_ir;
+            no_pure = false;
+            constexpr = Undecided;
+            shape = Definition ([], []);
+            binders = [];
+            loop = None }
+      in
+      (templated inner, empty_env ())
     | _ ->
       (* Expose the constant's C++ type so that inner call sites can recover
          erased template type args (see try_recover_erased_return_type). Without
@@ -2059,15 +2010,10 @@ let gen_spec__inner n b ty =
          through the instance the term names -- has the real type: [run :=
          @int_to_ptr natIPtr (@PIV natIPtr) ...] is an [EOU<pair<Nat, bool>>],
          not an [EOU<crane::obj>].  The initialiser says it. *)
-      let ty = if mentions_unresolved_promoted ty then Tauto else ty in
+      let ty_ir : Cpp_ir.Lowered.Type.t = if Translation_types.mentions_unresolved_promoted_ir ty_ir then Auto else ty_ir in
       (* A polymorphic constant's family parameter is plain, as a
          function's is, and written applied until deapplied. *)
-      let inner =
-        deapply_plain_tvars (Legacy_minicpp_to_cpp_ir.lower_template_parameters temps) (mk_dasgn n (Tconst ty) b_expr)
-      in
-      ( match temps with
-      | [] -> (inner, empty_env ())
-      | l -> (Dtemplate (l, None, inner), empty_env ()) )
+      (templated (deapply_plain_tvars temps (variable n (Const ty_ir) b_expr)), empty_env ())
   in
   result
 
@@ -2081,9 +2027,9 @@ type definition_file = Header | Implementation
 
 (** What generating a top-level term produced. *)
 type generated_entity =
-  | Defined of cpp_decl * definition_file
+  | Defined of Cpp_ir.Lowered.Decl.t * definition_file
       (** a definition, and the file it is written in *)
-  | Declared of cpp_decl  (** a declaration with no definition anywhere *)
+  | Declared of Cpp_ir.Lowered.Decl.t  (** a declaration with no definition anywhere *)
 
 (** A generated function, and what its file views are built from. *)
 type generated_fun = {

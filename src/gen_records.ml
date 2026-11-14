@@ -232,7 +232,7 @@ let gen_typeclass_cpp name fields =
      respelled, in CppIR. *)
   let converted ml_ty =
     subst_promoted_in_cpp_type
-      (Legacy_minicpp_to_cpp_ir.lower_type (convert_ml_type_to_cpp_type (empty_env ()) prefixed_ip_vars ml_ty))
+      (cpp_ir_of_ml_type (empty_env ()) prefixed_ip_vars ml_ty)
   in
   let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
     Scope (Local inst_id, Id.of_string method_name, type_args)
