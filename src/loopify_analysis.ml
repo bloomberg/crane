@@ -305,8 +305,8 @@ and is_trivially_copyable_named s ts =
   && List.for_all is_trivially_copyable_type ts
 
 (** Whether a value of type [t] is worth a [std::move]
-    ({!Ownership_ir.worth_moving_ir}). *)
-let worthwhile_move_type (t : ty) = Ownership_ir.worth_moving_ir t
+    ({!Ownership_ir.worth_moving_cpp}). *)
+let worthwhile_move_type (t : ty) = Ownership_ir.worth_moving_cpp t
 
 (** Whether a value of the C++ type [t] is copied as cheaply as it is moved:
     trivially copyable, and not worth a move -- a template type variable is

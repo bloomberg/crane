@@ -96,7 +96,7 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Ml_type_util.has_no_cpp_spelling_ir (Translation.cpp_ir_of_ml_type (empty_env ()) l t) )
+        || Ml_type_util.has_no_cpp_spelling (Translation.cpp_ir_of_ml_type (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds r l t)] else []
 
@@ -924,7 +924,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Ml_type_util.has_no_cpp_spelling_ir (Translation.cpp_ir_of_ml_type (empty_env ()) l t)) )
+      not (Ml_type_util.has_no_cpp_spelling (Translation.cpp_ir_of_ml_type (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the MiniML declaration [d], an
     element of [module_] written in the header scope [scope], generates, for

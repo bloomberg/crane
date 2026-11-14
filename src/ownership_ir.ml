@@ -150,19 +150,19 @@ let rec worth_moving = function
   | Tmeta {contents = Some t} -> worth_moving t
   | _ -> false
 
-let rec worth_moving_ir : type p. p Cpp_ir.Type.t -> bool = function
-  | Entity_application (r, tparams, _) -> worth_moving_ref worth_moving_ir r tparams
-  | Foreign {custom; types; _} -> worth_moving_ref worth_moving_ir custom types
+let rec worth_moving_cpp : type p. p Cpp_ir.Type.t -> bool = function
+  | Entity_application (r, tparams, _) -> worth_moving_ref worth_moving_cpp r tparams
+  | Foreign {custom; types; _} -> worth_moving_ref worth_moving_cpp custom types
   | Shared_pointer _ | Function _ | Erased _ -> true
-  | Variant (_, ts) | Named (_, ts) | External (_, ts) -> List.exists worth_moving_ir ts
-  | Non_deduced t -> worth_moving_ir t
-  | Rebind (h, x) -> worth_moving_ir h || worth_moving_ir x
+  | Variant (_, ts) | Named (_, ts) | External (_, ts) -> List.exists worth_moving_cpp ts
+  | Non_deduced t -> worth_moving_cpp t
+  | Rebind (h, x) -> worth_moving_cpp h || worth_moving_cpp x
   | Carrier_parameter -> false
-  | Reference (Forwarding, t) -> worth_moving_ir t
+  | Reference (Forwarding, t) -> worth_moving_cpp t
   | Type_of _ | Decltype_auto -> false
-  | Const t | In_namespace (_, t) | Member (t, _) | Apply (t, _) | Reference (Lvalue, t) -> worth_moving_ir t
+  | Const t | In_namespace (_, t) | Member (t, _) | Apply (t, _) | Reference (Lvalue, t) -> worth_moving_cpp t
   | Variable _ | Instance _ | Promoted_member _ -> true
-  | Decay t -> worth_moving_ir t
+  | Decay t -> worth_moving_cpp t
   | Type_constructor _ | Pointer _ | Void | Auto | Any | Obligation _ -> false
 
 (* A value of the global type [r] is a handle on a counted block: a
@@ -225,14 +225,14 @@ let rec copy_of_cpp : type p. p Cpp_ir.Type.t -> copy =
       match copy_of_type (Tglob (r, [], [])) with
       | Some Retain -> Retain
       | Some c when args = [] -> c
-      | Some _ | None -> if worth_moving_ir ty then Duplicate else Bits ) )
+      | Some _ | None -> if worth_moving_cpp ty then Duplicate else Bits ) )
   | Entity_application (r, args, _) ->
     if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) r args then Duplicate else Bits
   | Foreign {custom; types; _} -> if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) custom types then Duplicate else Bits
   (* A box holds a value of its own, which a copy copies. *)
   | Any | Obligation Opaque_type -> Duplicate
   | Const t | In_namespace (_, t) | Reference (_, t) | Non_deduced t -> copy_of_cpp t
-  | _ -> if worth_moving_ir ty then Duplicate else Bits
+  | _ -> if worth_moving_cpp ty then Duplicate else Bits
 
 (* A variable is named by its de Bruijn level in the region: the number of
    binders around its binding site, counted from the region's root, so that

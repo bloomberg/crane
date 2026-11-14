@@ -21,7 +21,7 @@ open Core_query
     global's instantiated type: for a [%result] block template in value
     position it is the only record of the type, since there is no call node to
     carry one. *)
-let mk_cppglob_ir ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
+let mk_cppglob ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
   Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = yields})
 
 (** [callee_ml_type r] -- the ML type of the callable [r] as the unit's plan
@@ -95,9 +95,9 @@ type translation_ctx = {
      body pushes shifts a parameter's index. *)
   current_parameters : Core_binder.t list;
   (* C++ return type of the enclosing function, set by the function and
-     instance generators ({!with_cpp_return_type_ir}). Used to recover erased
+     instance generators ({!with_cpp_return_type}). Used to recover erased
      template type args at call sites where C++ can't deduce them from lambda
-     arguments ({!current_cpp_return_type_ir}). *)
+     arguments ({!current_cpp_return_type}). *)
   current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
   (* De Bruijn environment: each variable's binder, with its ML type and
      role. *)
@@ -355,9 +355,9 @@ let current_scope_type_names () =
 let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =
   with_field (fun c -> c.current_type_vars) set_current_type_vars tvars f
 
-(** [with_cpp_return_type_ir ty f] runs [f] with [ty] as the enclosing
+(** [with_cpp_return_type ty f] runs [f] with [ty] as the enclosing
     function's C++ return type -- the type a tail expression is cast to. *)
-let with_cpp_return_type_ir (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a) : 'a =
+let with_cpp_return_type (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.current_cpp_return_type)
     (fun t -> tctx := { !tctx with current_cpp_return_type = t })
@@ -365,7 +365,7 @@ let with_cpp_return_type_ir (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a)
 
 (** The enclosing function's C++ return type
     ({!translation_ctx.current_cpp_return_type}). *)
-let current_cpp_return_type_ir () : Cpp_ir.Lowered.Type.t option = (!tctx).current_cpp_return_type
+let current_cpp_return_type () : Cpp_ir.Lowered.Type.t option = (!tctx).current_cpp_return_type
 
 (** Whether the enclosing function returns [void]. *)
 let returns_void () =
@@ -425,7 +425,7 @@ let spells_bare r = List.exists (GlobRef.CanOrd.equal r) (local_inductives_in_sc
 
 (** The type of the inductive [r] at [args] as generation spells it: bare
     where it is local, qualified by its namespace elsewhere. *)
-let inductive_type_ir r args es : Cpp_ir.Lowered.Type.t =
+let inductive_type r args es : Cpp_ir.Lowered.Type.t =
   let t : Cpp_ir.Lowered.Type.t = Entity_application (r, args, es) in
   if spells_bare r then t else In_namespace (r, t)
 

@@ -5,7 +5,7 @@
     it was written in, and how to do that is not always knowable where the cast
     is built.  This module owns that decision, and with it the single answer to
     "is this type spelled [std::any]".  Translation builds boxes and casts in
-    CppIR ({!converting_ctor_ir}, {!unbox_ir}); everything after the seam
+    CppIR ({!converting_ctor}, {!unbox}); everything after the seam
     ({!materialise}) rewrites the lowered declaration in CppIR. *)
 
 open Names
@@ -27,16 +27,16 @@ val is_axiom_type_ref : GlobRef.t -> bool
 (** Names introduced by [using X = std::any;], accumulated in emission order. *)
 val any_type_aliases : Id.Set.t ref
 
-(** [is_any_shaped_ir ty] — [ty] is spelled [std::any] in the generated
+(** [is_any_shaped ty] — [ty] is spelled [std::any] in the generated
     code, whether directly, through a type modifier, through a [using] alias,
     or because it is an axiom type. *)
-val is_any_shaped_ir : 'p Cpp_ir.Type.t -> bool
+val is_any_shaped : 'p Cpp_ir.Type.t -> bool
 
 (** [erase_type_to_any ty] is [ty] with each leaf erased and the containers
     it is made of kept: the cast target of an erased container field. *)
 val erase_type_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
-(** [erased_list_shape_ir ty] is the shape a value of list type [ty]
+(** [erased_list_shape ty] is the shape a value of list type [ty]
     physically has once it has been through a [std::any]: its elements were
     boxed one at a time, so the container holds [std::any] however concrete
     [ty]'s element type is.  Returns the list's global alongside the shape,
@@ -46,7 +46,7 @@ val erase_type_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
     [None] for anything that is not a list, and for a list whose elements are
     erased already. *)
-val erased_list_shape_ir : Cpp_ir.Lowered.Type.t -> (Names.GlobRef.t * Cpp_ir.Lowered.Type.t) option
+val erased_list_shape : Cpp_ir.Lowered.Type.t -> (Names.GlobRef.t * Cpp_ir.Lowered.Type.t) option
 
 (** {2 Building and reading boxes}
 
@@ -55,36 +55,36 @@ val erased_list_shape_ir : Cpp_ir.Lowered.Type.t -> (Names.GlobRef.t * Cpp_ir.Lo
     identity on the term that would have been wrong, so none of the three
     arises. *)
 
-(** [converting_ctor_ir ty args] is the converting constructor [ty(args)].
+(** [converting_ctor ty args] is the converting constructor [ty(args)].
     When [ty] is erased and there is one argument, that is a box.
 
     A box built around a box is two sites each believing they owned the
     boundary; the inner value is then unreachable, because the consumer casts
     once.  So boxing a box re-boxes what was inside it instead. *)
-val converting_ctor_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t list -> Cpp_ir.Lowered.Expr.t
+val converting_ctor : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t list -> Cpp_ir.Lowered.Expr.t
 
-(** [empty_box_ir] is the value an erased argument is passed as:
+(** [empty_box] is the value an erased argument is passed as:
     [std::any{}].
 
     An argument extraction erased still occupies the slot of a parameter
     declared at the erased type, and that slot is evaluated, so it cannot hold
     the [Abort] a genuinely unreachable erased position gets. *)
-val empty_box_ir : Cpp_ir.Lowered.Expr.t
+val empty_box : Cpp_ir.Lowered.Expr.t
 
-(** [unbox_ir ty e] reads [e] back out of its box at type [ty].
+(** [unbox ty e] reads [e] back out of its box at type [ty].
 
     Two readings are no reading at all, and neither is built.  [any_cast] to
     an erased type does not unwrap the box -- it asks whether the box holds a
     {e further} box, and throws when it does not -- so an erased [ty] gives
     [e] itself.  A cast applied straight to a freshly built box is dead work,
     so it gives back what was boxed. *)
-val unbox_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
+val unbox : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
 
-(** [unbox_tolerant_ir ty e] is {!unbox_ir} through the [crane_any_cast]
+(** [unbox_tolerant ty e] is {!unbox} through the [crane_any_cast]
     runtime helper, which recovers a value component by component and passes
     through anything that was never boxed.  For a shape that is only knowable
     once C++ instantiates the surrounding template. *)
-val unbox_tolerant_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
+val unbox_tolerant : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** {2 The passes} *)
 

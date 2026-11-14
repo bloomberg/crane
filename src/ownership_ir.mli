@@ -47,7 +47,7 @@ val empty : t
 
 (** Whether a body owning a value of ML type [ty] moves it at its last use:
     one a copy of which costs more than a move.  This is the reading
-    {!worth_moving_ir} makes, made of the ML type: an inductive that is not
+    {!worth_moving_cpp} makes, made of the ML type: an inductive that is not
     an enum or coinductive, a closure, a type variable or one applied to
     arguments, a type nothing determined (held in the box), and a mapped type unless it is a scalar or declared trivially
     copyable with arguments that are too. *)
@@ -57,7 +57,7 @@ val worth_moving : Miniml.ml_type -> bool
     reference count to bump, an inductive to clone, an erased box, or a type
     parameter that may be either.  What the backend asks of the locals and
     frame fields it declares itself. *)
-val worth_moving_ir : 'p Cpp_ir.Type.t -> bool
+val worth_moving_cpp : 'p Cpp_ir.Type.t -> bool
 
 (** What both ask of the global type [r] applied to [args], [worth] judging
     an argument: an inductive unless an enum or coinductive, a mapped type

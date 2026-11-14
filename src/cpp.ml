@@ -545,7 +545,7 @@ let file_local_inductives (analysis : Structure_analysis.t) =
     std::any;], which names nothing. *)
 let is_erased_alias (_, (d : Cpp_ir.Resolved.Decl.t)) =
   match d with
-  | Type_alias {rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped_ir rhs
+  | Type_alias {rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
   | _ -> false
 
 (** What writing a structure element gives: its text, written where it is,
@@ -2421,7 +2421,7 @@ let plan_accessors s =
         | cty ->
           in_template
           || in_struct
-             && (Ml_type_util.get_tvars_ir cty <> [] || Common.get_force_cross_file_qualification ()) )
+             && (Ml_type_util.get_tvars cty <> [] || Common.get_force_cross_file_qualification ()) )
   in
   let rec elems ~in_struct ~in_template sel =
     List.concat_map

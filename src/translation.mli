@@ -290,13 +290,14 @@ val generalises_callable :
 val infer_owned_flags :
   ?owner:Names.GlobRef.t -> ml_ast -> ('a * ml_type) list -> bool list
 
-(** {!wrap_param_by_ownership} over a CppIR type. *)
-val wrap_param_by_ownership_ir :
+(** A C++ parameter type wrapped with const/ref as ownership says: by value
+    where owned, by const reference where borrowed and lent by reference. *)
+val wrap_param_by_ownership :
   ?is_owned:bool -> ?core:Miniml.ml_type -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
-(** How a parameter declared at a type -- after {!wrap_param_by_ownership_ir},
+(** How a parameter declared at a type -- after {!wrap_param_by_ownership},
     or as the [F &&] a deduced callable is -- owned or not, is passed. *)
-val param_passing_ir : owned:bool -> Cpp_ir.Lowered.Type.t -> Callable_abi.passing
+val param_passing : owned:bool -> Cpp_ir.Lowered.Type.t -> Callable_abi.passing
 
 (** [classify_erasure ty] — the erasure status of one side of a value
     boundary; see the layering note at the top of [ml_type_util.mli].  Prefer
@@ -319,7 +320,7 @@ val ml_body_returns_erased_field : ml_ast -> bool
 
 (** Build a [Tvar i -> concrete_type] substitution mapping for extra type
     variables introduced beyond an inductive's own [num_ind_vars]. *)
-val make_subst_extra_tvars_ir :
+val make_subst_extra_tvars :
   int -> (int * Id.t) list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Unify the (possibly polymorphic) declared type [ty] against the concrete
