@@ -747,9 +747,9 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
               GlobRef.CanOrd.equal g name
               || Table.same_mutual_block g name
               || spells_bare g )
-            ~src_ty:(deapply_families name vars (at vars))
-            ~dst_ty:(deapply_families name u_var_names (at u_var_names))
-            (CPPvar field_id) )
+            ~src_ty:(Legacy_minicpp_to_cpp_ir.lower_type (deapply_families name vars (at vars)))
+            ~dst_ty:(Legacy_minicpp_to_cpp_ir.lower_type (deapply_families name u_var_names (at u_var_names)))
+            (Local field_id) )
         fields
     in
     (* The source instantiation is the same template as the destination, so its
@@ -764,7 +764,6 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
           (tt, u) )
         u_var_names
     in
-    let lower_expr = Legacy_minicpp_to_cpp_ir.lower_expr in
     let method_ : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
       { name = Id.of_string "operator_at_other_instantiation";
         globref = None;
@@ -776,7 +775,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
               @ List.map Cpp_ir.Build.named_variable u_var_names,
               [] );
         params = [];
-        body = [Return (Some (Braced (List.map lower_expr converted)))];
+        body = [Return (Some (Braced converted))];
         receiver = Instance {this_position = 0; is_const = true; ref_qualifier = Any; returns_field = false};
         is_inline = false;
         no_pure = true;

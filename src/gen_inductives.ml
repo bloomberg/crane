@@ -2836,43 +2836,37 @@ let gen_ind_header_v2
                   let call_args =
                     List.mapi
                       (fun k (_storage_arg, api_arg) ->
-                        let arg_var =
-                          CPPvar (Id.of_string ("x" ^ string_of_int k))
-                        in
-                        if _storage_arg = api_arg then
-                          arg_var
+                        let arg_var : Cpp_ir.Lowered.Expr.t = Local (Id.of_string ("x" ^ string_of_int k)) in
+                        if _storage_arg = api_arg then arg_var
                         else
-                          gen_type_conversion_expr
-                            ~src_ty:_storage_arg ~dst_ty:api_arg
+                          gen_type_conversion_expr ~src_ty:(lower_type _storage_arg) ~dst_ty:(lower_type api_arg)
                             arg_var )
                       (List.combine storage_args api_args)
                   in
-                  let call = mk_call var call_args in
+                  let call = B.call (lower_expr var) call_args in
                   let ret =
-                    if storage_ret = api_ret then
-                      call
-                    else
-                      gen_type_conversion_expr
-                        ~src_ty:api_ret ~dst_ty:storage_ret
-                        call
+                    if storage_ret = api_ret then call
+                    else gen_type_conversion_expr ~src_ty:(lower_type api_ret) ~dst_ty:(lower_type storage_ret) call
                   in
                   (* The lambda's result is the storage-side type by
                      construction -- [ret] is the call converted into it.  Say
                      so, rather than leaving a later pass to read it back off
                      the body. *)
                   lambda lambda_params (Some (lower_type storage_ret))
-                    [S.Return (Some (lower_expr ret))] ~capture:Stored
+                    [S.Return (Some ret)] ~capture:Stored
                 | _ when storage_ty = api_ty -> E.Move local
                 | _ ->
                   lower_expr
                     (sink_converted api_ty var
-                       (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var))
+                       (Cpp_ir_to_legacy_minicpp.expr
+                       (gen_type_conversion_expr ~src_ty:(lower_type api_ty) ~dst_ty:(lower_type storage_ty)
+                          (lower_expr var))))
               end
               | Tshared_ptr inner ->
                 let arg = if is_coinductive then var else CPPmove var in
                 let converted =
-                  if inner = api_ty then arg
-                  else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
+                  if inner = api_ty then lower_expr arg
+                  else gen_type_conversion_expr ~src_ty:(lower_type api_ty) ~dst_ty:(lower_type inner) (lower_expr arg)
                 in
                 (* A single factory call.  For arena-eligible types this is
                    the runtime-arena-aware factory ([Arena_scoped]:
@@ -2881,16 +2875,17 @@ let gen_ind_header_v2
                    exactly make_shared/make_rc; NoArena / coinductive / mutual
                    types keep the plain factory. *)
                 if arena_runtime_ok then
-                  B.call (E.Allocate (Arena_scoped, lower_type inner)) [lower_expr converted]
-                else
-                  B.call (E.Allocate (Heap, lower_type inner)) [lower_expr converted]
+                  B.call (E.Allocate (Arena_scoped, lower_type inner)) [converted]
+                else B.call (E.Allocate (Heap, lower_type inner)) [converted]
               | _ when storage_ty = api_ty ->
                 if is_trivially_copyable_type api_ty then local
                 else E.Move local
               | _ ->
                 lower_expr
                   (sink_converted api_ty var
-                     (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)) )
+                     (Cpp_ir_to_legacy_minicpp.expr
+                       (gen_type_conversion_expr ~src_ty:(lower_type api_ty) ~dst_ty:(lower_type storage_ty)
+                          (lower_expr var)))) )
             cpp_tys
         in
         (* Under [Crane NonAtomicRc], a field holding the inductive itself
@@ -3183,7 +3178,7 @@ let gen_ind_header_v2
                       in
                       (* A translation result, converted where the branch
                          takes it. *)
-                      lower_expr @@ gen_type_conversion_expr
+                      gen_type_conversion_expr
 
                         (* Every inductive generated into this same scope --
                            the type itself, its mutual siblings, and any other
@@ -3193,8 +3188,8 @@ let gen_ind_header_v2
                           GlobRef.CanOrd.equal g name
                           || Table.same_mutual_block g name
                           || spells_bare g)
-                        ~src_ty:src_fty ~dst_ty:dst_fty
-                        src_expr)
+                        ~src_ty:(lower_type src_fty) ~dst_ty:(lower_type dst_fty)
+                        (lower_expr src_expr))
                     field_info
                 in
                 (cname_id, field_info, converted)

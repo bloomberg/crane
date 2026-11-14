@@ -297,6 +297,9 @@ val is_prod_global : Names.GlobRef.t -> bool
     [Tnamespace] and comparing indexed type variables by index alone. *)
 val cpp_ty_eq : Minicpp.cpp_type -> Minicpp.cpp_type -> bool
 
+(** {!cpp_ty_eq} in CppIR. *)
+val cpp_ty_eq_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> bool
+
 (** Whether a global reference is the standard library's [list], by
     identity. *)
 val is_list_global : Names.GlobRef.t -> bool
@@ -394,6 +397,9 @@ val erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
     {!Minicpp.Topaque} prints as [std::any] but claims nothing about the
     representation, and is excluded. *)
 val is_boxed_type : Minicpp.cpp_type -> bool
+
+(** {!is_boxed_type} in CppIR. *)
+val is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool
 
 
 (** Replace every {!Minicpp.Topaque} in a type with {!Minicpp.Tany}.  Apply at

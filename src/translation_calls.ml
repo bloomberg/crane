@@ -90,7 +90,7 @@ let curry_value_to_expected env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(
           decl_dom
     in
     let params = adapter_params ~prefix:"_ec" decl_dom in
-    let call = apply_at_site callee_site cglob (List.map adapter_arg params) in
+    let call = apply_at_site callee_site cglob (List.map (fun p -> Cpp_ir_to_legacy_minicpp.expr (adapter_arg p)) params) in
     (* One lambda per group of arguments the slot takes at a time, as deep as
        it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C]. *)
     let rec nest params (expected : Cpp_ir.Lowered.Type.t option) =
@@ -1165,7 +1165,7 @@ let erase_fn_arg_for_param env param_ml_ty e expr =
       | _ -> None )
   in
   match erased_fn_param with
-  | Some shape when ml_expr_is_function_value e -> wrap_crane_erase_fn shape expr
+  | Some shape when ml_expr_is_function_value e -> CPPerase_fn (shape, expr)
   | _ -> convert_carrier_arg param_ml_ty param_cpp_ty e expr
 
 (** Whether the global [id] takes the callable it declares at [pos] as a

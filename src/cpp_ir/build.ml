@@ -30,3 +30,22 @@ let named_variable x : 'p Type.t = Variable (Named x)
 
 (** [typenames xs] declares each of [xs] a plain [typename] parameter. *)
 let typenames xs : 'p Template.parameters = List.map (fun x -> (Parameter_kind.Typename, x)) xs
+
+(** [lambda params ret body ~capture] is a lambda with no template parameters
+    of its own, whose [params] are in source order.
+
+    A trailing return type is a by-value return, so a top-level [const] on it
+    says nothing and [-Wignored-qualifiers] rejects it; it is dropped here.
+    A nullary lambda whose body only throws produces no value, so it is an
+    [Abort] instead, at [ret] or, where none was named, at [std::any]. *)
+let lambda params (ret : 'p Type.t option) body ~(capture : 'p Capture.t) : 'p Expr.t =
+  let return_type = match ret with Some (Const t) -> Some t | r -> r in
+  match (params, body) with
+  | [], [Stmt.Throw msg] -> Abort (msg, Option.default Type.Any return_type)
+  | _ ->
+    Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; fixpoint = None}
+
+(** [iife ret body] evaluates [body] in place: a nullary lambda capturing by
+    reference, invoked immediately.  A body that only throws is the [Abort]
+    {!lambda} makes of it. *)
+let iife ret body = call (lambda [] ret body ~capture:Runs_in_place) []
