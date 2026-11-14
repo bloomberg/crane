@@ -69,12 +69,12 @@ val pp_id : id -> Pp.t
 type helper = {
   helper_id : Generated_entity_id.t;
       (** The helper's identity, made from its {!Lifted.t}. *)
-  helper_decl : Minicpp.cpp_decl;
+  helper_decl : Cpp_ir.Lowered.Decl.t;
       (** The declaration that defines it. *)
 }
 
 (** [helper d] is the helper [d] declares, if [d] is a lifted helper. *)
-val helper : Minicpp.cpp_decl -> helper option
+val helper : Cpp_ir.Lowered.Decl.t -> helper option
 
 (** [helper_declaration h] is the id of [h]'s declaration: the only one of
     its own generation. *)
@@ -94,9 +94,9 @@ type entity = {
           entity's. *)
 }
 
-(** The globals [decls] name ({!Minicpp.iter_globrefs}): what has to be
+(** The globals [decls] name ({!Cpp_ir.Globrefs.iter}): what has to be
     declared before them. *)
-val dependencies : Minicpp.cpp_decl list -> Entity_id.Set.t
+val dependencies : Cpp_ir.Lowered.Decl.t list -> Entity_id.Set.t
 
 (** {2 The program} *)
 
@@ -106,9 +106,6 @@ type job
 (** [job id d] is [d], to finish as the declaration [id]. *)
 val job : id -> Cpp_ir.Lowered.Decl.t -> job
 
-(** [legacy_job id d] is {!job} of [d], a declaration a generator still
-    builds in MiniCpp, lowered ({!Cpp_pipeline.lower}). *)
-val legacy_job : id -> Minicpp.cpp_decl -> job
 
 (** A finished declaration of a program. *)
 type declaration = {
@@ -153,7 +150,7 @@ val record_ahead : entity -> unit
     [CRANE_CHECK_IR] a helper is lifted by one generation: a second
     declaration of one already recorded is a violation, the same declaration
     handed on to another generation is not. *)
-val record_lifted_ahead : Minicpp.cpp_decl list -> unit
+val record_lifted_ahead : Cpp_ir.Lowered.Decl.t list -> unit
 
 (** [finish jobs] is the unit's program with [jobs] finished, each once, in
     order: a job whose {!id} an earlier one finished already is that

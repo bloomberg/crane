@@ -35,7 +35,6 @@ open Names
 open Table
 open Miniml
 open Common
-open Minicpp
 open Gen_decls
 open Cpp_state
 open Cpp_names
@@ -694,7 +693,7 @@ type generation =
 (** Where the helpers lifted out of generated functions are written. *)
 and lifted_placement =
   | Inline  (** The header writes each function's helpers in front of it. *)
-  | By_element of cpp_decl list
+  | By_element of Cpp_ir.Lowered.Decl.t list
       (** The element places them, as a constant's or a function's are. *)
   | Unwritten  (** A fixpoint inside a template struct writes none. *)
 
@@ -853,14 +852,14 @@ let start_render ~file =
 (** [newly_placed placed d] is whether [d] is a helper no element counted in
     [placed] places, counting it placed by this one. *)
 let newly_placed placed d =
-  match decl_globref d with
+  match Cpp_ir.Globrefs.declared d with
   | None -> true
   | Some r ->
     (not (List.exists (globref_equal r) !placed)) && (placed := r :: !placed; true)
 
 (** The helpers each generation the header takes places, by the physical
     identity of the generation. *)
-let header_claims : cpp_decl list Node_table.t = Node_table.create 64
+let header_claims : Cpp_ir.Lowered.Decl.t list Node_table.t = Node_table.create 64
 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset header_claims)
 
@@ -888,11 +887,11 @@ let header_claim key lifted =
         Probe.violation "header claims"
           Pp.(str "the header places other helpers at a generation than planned: "
               ++ prlist_with_sep (fun () -> str ", ")
-                   (fun d -> Option.cata GlobRef.print (str "?") (decl_globref d))
+                   (fun d -> Option.cata GlobRef.print (str "?") (Cpp_ir.Globrefs.declared d))
                    claimed
               ++ str " where the plan says "
               ++ prlist_with_sep (fun () -> str ", ")
-                   (fun d -> Option.cata GlobRef.print (str "?") (decl_globref d))
+                   (fun d -> Option.cata GlobRef.print (str "?") (Cpp_ir.Globrefs.declared d))
                    planned )
     end;
     planned
@@ -1073,7 +1072,7 @@ let finished_placed (id, d) = finished_of ~what:"a lifted declaration" id d
 
 (** The lifted helper [d], a MiniCpp declaration, under its {!helper_id}, in
     CppIR. *)
-let helper_placed d = (helper_id d, Cpp_pipeline.lower d)
+let helper_placed d = (helper_id d, d)
 
 let finished_helper d = finished_placed (helper_placed d)
 
@@ -1229,14 +1228,14 @@ let record_funs ~fallback funs =
     out of it that the element places. *)
 type element = {
   rendered : rendered;
-  helpers : cpp_decl list;
+  helpers : Cpp_ir.Lowered.Decl.t list;
   member_defs : rendered;
 }
 
 (** What was generated ahead of the header for each instance, by the
     physical node of its body, with the module it was generated in: its
     declarations, and the helpers lifted out of its methods. *)
-let instances_generated : (ModPath.t * (generated * cpp_decl list)) list Node_table.t =
+let instances_generated : (ModPath.t * (generated * Cpp_ir.Lowered.Decl.t list)) list Node_table.t =
   Node_table.create 16
 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset instances_generated)
@@ -1426,7 +1425,7 @@ let modtype_concept ~module_ path ~params mt =
 (** The methods of each eponymous record, generated ahead of the files with
     the helpers lifted out of them, by the record. *)
 let record_methods_generated :
-    (ModPath.t * (Cpp_ir.Lowered.phase Cpp_ir.Field.member list * cpp_decl list)) list
+    (ModPath.t * (Cpp_ir.Lowered.phase Cpp_ir.Field.member list * Cpp_ir.Lowered.Decl.t list)) list
     Ref.User.Tbl.t =
   Ref.User.Tbl.create 8
 
@@ -1507,7 +1506,7 @@ let finished_record_methods r vars fields =
 (** What was generated ahead of the header for each declaration it writes
     alone, by the declaration's physical node, with the module it was
     generated in: its generation, and the helpers lifted out of it. *)
-let headers_generated : (ModPath.t * (header_generation * cpp_decl list)) list Node_table.t =
+let headers_generated : (ModPath.t * (header_generation * Cpp_ir.Lowered.Decl.t list)) list Node_table.t =
   Node_table.create 64
 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset headers_generated)
@@ -1558,7 +1557,7 @@ type ahead = {
   entities : Unit_program.entity list;
   functions : Cpp_ir.Lowered.Decl.t list;
   finishing : Unit_program.job list;
-  helpers : cpp_decl list;
+  helpers : Cpp_ir.Lowered.Decl.t list;
   handed_on : Unit_program.job list;
 }
 
@@ -1597,8 +1596,8 @@ let generate_ahead ~module_ d =
 let regenerate_ahead ~module_ d =
   regenerating @@ fun () ->
   generate_in_scope ~module_ d @@ function
-  | Instance (r, a, t) -> ignore (instance_entity ~module_ r a t : generated * cpp_decl list)
-  | Header_only gen -> ignore (header_entity ~module_ d gen : header_generation * cpp_decl list)
+  | Instance (r, a, t) -> ignore (instance_entity ~module_ r a t : generated * Cpp_ir.Lowered.Decl.t list)
+  | Header_only gen -> ignore (header_entity ~module_ d gen : header_generation * Cpp_ir.Lowered.Decl.t list)
   | Functions _ | Nothing -> ()
 
 (* What the header ([is_header]) or the implementation writes for [d] at

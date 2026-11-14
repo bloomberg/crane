@@ -73,3 +73,9 @@ val apply_all : t list -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
     ({!Minicpp.settle_lambda_tparams}). *)
 val deapply_struct :
   plain:Names.Id.t list -> in_scope:Names.Id.t list -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
+
+(** [settle_lowered_lambda l] is [l] without the template parameters none of
+    its parameters names, each use of them erased
+    ({!Minicpp.settle_lambda_tparams} in CppIR). *)
+val settle_lowered_lambda :
+  Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t -> Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t

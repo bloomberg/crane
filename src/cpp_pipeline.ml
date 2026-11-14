@@ -286,17 +286,6 @@ let check_settled obligations (decl : Cpp_erasure.settled) =
         | Some r -> str " in " ++ Table.safe_pr_global r
         | None -> mt () )
 
-(** [lower d] is [d] in CppIR.  Under [CRANE_CHECK_IR] it fails unless
-    converting it back gives [d] again. *)
-let lower d =
-  let ir = Legacy_minicpp_to_cpp_ir.lower d in
-  if Probe.checking () && compare (Cpp_ir_to_legacy_minicpp.decl ir) d <> 0 then
-    CErrors.anomaly
-      Pp.(
-        str "Crane: a declaration does not convert back from CppIR to the MiniCpp it was lowered from"
-        ++ match Minicpp.decl_globref d with Some r -> str " in " ++ Table.safe_pr_global r | None -> mt () );
-  ir
-
 (** [resolved d] is [d], which owes the printer nothing, at the phase that
     says so. *)
 let resolved (d : Cpp_erasure.settled) =

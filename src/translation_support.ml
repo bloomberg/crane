@@ -64,6 +64,29 @@ let abort_ty : Cpp_ir.Lowered.Type.t option -> cpp_type = function
   | Some ty -> Cpp_ir_to_legacy_minicpp.ty ty
   | None -> Tany
 
+(** [mk_lambda_ir ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
+    with template parameters of its own, [tparams], less those none of its
+    [params] (source order) deduces ({!Head_relaxation.settle_lowered_lambda}):
+    {!Minicpp.mk_lambda} in CppIR. *)
+let mk_lambda_ir ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) body ~capture : Cpp_ir.Lowered.Expr.t =
+  match tparams with
+  | [] -> Cpp_ir.Build.lambda params ret body ~capture
+  | _ ->
+    let l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t =
+      Head_relaxation.settle_lowered_lambda
+        { params;
+          type_params = tparams;
+          return_type = (match ret with Some (Const t) -> Some t | r -> r);
+          body;
+          capture;
+          moved = [];
+          binders = [];
+          fixpoint = None }
+    in
+    ( match (params, body) with
+    | [], [Throw msg] -> Abort (msg, Option.default (Any : Cpp_ir.Lowered.Type.t) l.return_type)
+    | _ -> Lambda l )
+
 (** {!abort_ty} in CppIR. *)
 let abort_ty_ir : Cpp_ir.Lowered.Type.t option -> Cpp_ir.Lowered.Type.t = function
   | Some ty -> ty
@@ -3000,6 +3023,17 @@ let rec clean_self_ns t =
   | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
   | Tref (k, t) -> Tref (k, clean_self_ns t)
   | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
+  | t -> t
+
+(** {!clean_self_ns} in CppIR. *)
+let rec clean_self_ns_ir (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  match t with
+  | In_namespace (ns_r, Entity_application (g_r, args, gns)) when GlobRef.CanOrd.equal ns_r g_r ->
+    clean_self_ns_ir (Entity_application (g_r, args, gns))
+  | In_namespace (ns_r, inner) -> In_namespace (ns_r, clean_self_ns_ir inner)
+  | Entity_application (gr, args, ns) -> Entity_application (gr, List.map clean_self_ns_ir args, ns)
+  | Reference (k, t) -> Reference (k, clean_self_ns_ir t)
+  | Shared_pointer t -> Shared_pointer (clean_self_ns_ir t)
   | t -> t
 
 (** One function of a local fixpoint block, as its Y-combinator form names

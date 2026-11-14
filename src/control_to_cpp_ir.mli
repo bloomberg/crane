@@ -136,8 +136,8 @@ val local_loop :
   member:Miniml.Occurrence.t * int ->
   tparams:Cpp_ir.Lowered.phase Cpp_ir.Template.parameters ->
   name:Names.Id.t ->
-  Minicpp.cpp_lambda ->
-  Minicpp.cpp_stmt option
+  Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t ->
+  Cpp_ir.Lowered.Stmt.t option
 
 (** [lower_struct_methods ~merged r vars fields] is [fields], members of the struct
     of the inductive [r] of variables [vars], with each method made of a
@@ -163,7 +163,7 @@ val lower_struct_methods :
     no loop is made has the local fixpoints in its body lowered as Loopify
     lowers them ({!Loopify.lower_function_locals}): those translation left
     for the helper's machine to adopt. *)
-val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
+val lower_lifted : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
 
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above

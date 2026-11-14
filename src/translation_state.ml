@@ -183,7 +183,7 @@ type translation_ctx = {
      ({!Ownership_ir.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
      instead of the normal factory.  The plan names at most one on any path,
      so nothing here tracks whether it has been taken. *)
-  reuse_token : cpp_expr option;
+  reuse_token : Cpp_ir.Lowered.Expr.t option;
   (* When generating a method body, holds the set of self-references
      (the inductive type(s) this method belongs to). Merged into the ns
      argument of convert_ml_type_to_cpp_type so that self-refs inside
@@ -559,7 +559,7 @@ let takes_reuse_token e =
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the Perceus reuse token
     of the arm it generates. *)
-let with_reuse_token (tok : cpp_expr option) (f : unit -> 'a) : 'a
+let with_reuse_token (tok : Cpp_ir.Lowered.Expr.t option) (f : unit -> 'a) : 'a
     =
   with_field
     (fun c -> c.reuse_token)
@@ -575,7 +575,7 @@ let set_current_parameters (bs : Core_binder.t list) =
     one.  Not a field of {!tctx}: a helper belongs to the generation it was
     lifted in, whatever scope inside that generation lifted it, so no scope
     restores it. *)
-let lifted_so_far : cpp_decl list option ref = ref None
+let lifted_so_far : Cpp_ir.Lowered.Decl.t list option ref = ref None
 
 (** Lift a declaration out of the body being generated, to the generation
     collecting its helpers ({!collecting_lifted}).
@@ -584,14 +584,14 @@ let lifted_so_far : cpp_decl list option ref = ref None
     was bound to there ({!Lifted}), so a generation lifting one identity
     twice lifts one helper and keeps the first.  That is sound only where
     both are the same declaration, which [CRANE_CHECK_IR] holds it to. *)
-let add_lifted_decl (d : cpp_decl) =
+let add_lifted_decl (d : Cpp_ir.Lowered.Decl.t) =
   match !lifted_so_far with
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: a helper was lifted outside every generation that places one.")
   | Some ds -> (
     let same_helper d' =
-      match (decl_globref d, decl_globref d') with
+      match (Cpp_ir.Globrefs.declared d, Cpp_ir.Globrefs.declared d') with
       | Some r, Some r' -> globref_equal r r'
       | _ -> false
     in
@@ -602,7 +602,7 @@ let add_lifted_decl (d : cpp_decl) =
         Probe.violation "lifted helpers"
           Pp.(
             str "one generation lifted two different helpers as "
-            ++ Option.cata GlobRef.print (mt ()) (decl_globref d)) )
+            ++ Option.cata GlobRef.print (mt ()) (Cpp_ir.Globrefs.declared d)) )
 
 (** [collecting_lifted f] runs [f] and returns, with its result, the helpers
     lifted out of the bodies it generated, in the order they were lifted: a

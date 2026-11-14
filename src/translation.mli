@@ -415,12 +415,12 @@ val compute_and_register_field_names :
     Every helper is lifted inside one: a generation's helpers are part of
     what it generates, for whoever records the generation to place, and a
     helper lifted outside every collection is an anomaly. *)
-val collecting_lifted : (unit -> 'a) -> 'a * cpp_decl list
+val collecting_lifted : (unit -> 'a) -> 'a * Cpp_ir.Lowered.Decl.t list
 
 (** [relift ds] lifts [ds] again, to the generation collecting the current
     body's helpers: a generation that takes another's output takes the
     helpers lifted out of it along with it. *)
-val relift : cpp_decl list -> unit
+val relift : Cpp_ir.Lowered.Decl.t list -> unit
 
 
 (** [is_list_global g] returns true iff [g] is the Coq list inductive.

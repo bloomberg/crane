@@ -929,7 +929,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     of, with the struct and variables it was generated for, and the helpers
     lifted out of its body. *)
 let methods_ahead :
-    ((GlobRef.t * Id.t list) * (Cpp_ir.Lowered.phase Cpp_ir.Field.member * cpp_decl list)) list
+    ((GlobRef.t * Id.t list) * (Cpp_ir.Lowered.phase Cpp_ir.Field.member * Cpp_ir.Lowered.Decl.t list)) list
     Ref.User.Tbl.t =
   Ref.User.Tbl.create 16
 

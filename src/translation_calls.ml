@@ -1858,10 +1858,10 @@ let glob_yields env x instantiate =
     let is_result_block =
       Table.to_inline x
       && match Table.find_custom_opt x with
-         | Some tmpl -> (Minicpp.inline_template tmpl).it_form = Block_iife
+         | Some tmpl -> (Cpp_ir.Foreign.template_of_text tmpl).form = Block
          | None -> false
     in
     let inst = instantiate ml_ty in
     let value_ty = if is_result_block then ml_codomain inst else inst in
-    try Some (cpp_of_ml env value_ty)
+    try Some (cpp_of_ml_ir env value_ty)
     with e when CErrors.noncritical e -> None )

@@ -15,7 +15,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Table
@@ -2019,7 +2018,7 @@ type generated_entity =
 type generated_fun = {
   gf_entity : generated_entity;
   gf_env : env;  (** the environment its parameters were named in *)
-  gf_lifted : cpp_decl list;  (** the helpers lifted out of its body *)
+  gf_lifted : Cpp_ir.Lowered.Decl.t list;  (** the helpers lifted out of its body *)
 }
 
 (** A template's definition goes in the header, anything else's in the

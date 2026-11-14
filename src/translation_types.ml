@@ -3060,7 +3060,7 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
     match (bare_cpp_ty, stored_cpp_ty) with
     | Entity_application (g1, [], _), Shared_pointer (Entity_application (g2, [], _))
       when globref_equal g1 g2 && Table.is_coinductive g2 ->
-      Some (id, CPPderef (CPPvar id))
+      Some (id, (Dereference (Local id) : Cpp_ir.Lowered.Expr.t))
     | _ -> None
   in
   let param_cpp_ty : Cpp_ir.Lowered.Type.t =

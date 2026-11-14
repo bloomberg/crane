@@ -143,10 +143,9 @@ let module_struct mp = plain_struct (Module_struct (Cpp_ast.declared_module mp))
     keeps an ordinary [Dfun] whose reference happens to be a [VarRef] -- a
     record field accessor, a [make] factory -- from being taken for a
     helper. *)
-let rec lifted_decl_key = function
-  | Dtemplate (_, _, inner) -> lifted_decl_key inner
-  | Dfun {df_path = {dp_outer = r, []; dp_inner = []}; _} ->
-    Option.map Lifted.name (Lifted.of_ref r)
+let rec lifted_decl_key : Cpp_ir.Lowered.Decl.t -> _ = function
+  | Template (_, _, inner) -> lifted_decl_key inner
+  | Function {path = {outer = r, []; inner = []}; _} -> Option.map Lifted.name (Lifted.of_ref r)
   | _ -> None
 
 (** Whether a rendering writes a qualifier into a struct or a template
@@ -413,7 +412,7 @@ let file_layout : file_layout ref =
     to the qualifier that caused it. *)
 let dbg_lifted =
   let on = lazy (Sys.getenv_opt "CRANE_DBG_LIFTED" <> None) in
-  fun ~site ~module_ ?(extra = "") (d : cpp_decl) ->
+  fun ~site ~module_ ?(extra = "") (d : Cpp_ir.Lowered.Decl.t) ->
     if Lazy.force on then
       let name =
         match lifted_decl_key d with
@@ -465,7 +464,7 @@ let record_method_entities r fields lifted =
       match f with
       | Method {globref = Some m; _} ->
         let own d =
-          match Option.bind (decl_globref d) Lifted.of_ref with
+          match Option.bind (Cpp_ir.Globrefs.declared d) Lifted.of_ref with
           | Some h -> Option.equal Names.GlobRef.UserOrd.equal (Lifted.origin h) (Some m)
           | None -> false
         in
@@ -1681,7 +1680,7 @@ let finishing (aheads : Cpp_ind.ahead list) =
   List.concat_map (fun (a : Cpp_ind.ahead) -> a.finishing) aheads
   @ List.concat_map
       (fun (a : Cpp_ind.ahead) ->
-        List.map (fun d -> Unit_program.legacy_job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
+        List.map (fun d -> Unit_program.job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
       aheads
 
 (** Record the unit's program ({!Unit_program.record_ahead}) and finish
@@ -1883,7 +1882,7 @@ let generate_ahead s =
           match wrapper_element ~module_ se with
           | Wrapper_functions (_, generate) -> ignore (generate () : Gen_decls.generated_fun list)
           | Wrapper_instance (r, a, t) ->
-            ignore (Cpp_ind.instance_entity ~module_ r a t : Cpp_ind.generated * cpp_decl list)
+            ignore (Cpp_ind.instance_entity ~module_ r a t : Cpp_ind.generated * Cpp_ir.Lowered.Decl.t list)
           | Wrapper_nothing -> () )
         | SEdecl d -> Cpp_ind.regenerate_ahead ~module_ d
         | _ -> ())
