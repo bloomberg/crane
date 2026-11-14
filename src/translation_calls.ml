@@ -47,7 +47,8 @@ open Core_query
     time ([Declared_at n]).
 
     Returns [cglob] unchanged when the declaration is already a value. *)
-let curry_value_to_expected env ?expected_ty ?(callee_site = Declared) ?(exact = false) ml_ty cglob =
+let curry_value_to_expected env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Declared) ?(exact = false) ml_ty
+    cglob =
   let decl_dom =
     match Option.map (cpp_of_ml env) ml_ty with
     | Some (Tfun (dom, _)) -> dom
@@ -59,7 +60,7 @@ let curry_value_to_expected env ?expected_ty ?(callee_site = Declared) ?(exact =
      generic. *)
   let n_outer =
     match expected_ty with
-    | Some (Tfun (exp_dom, _))
+    | Some (Function (exp_dom, _))
       when exp_dom <> [] && List.length decl_dom > List.length exp_dom ->
       Some (List.length exp_dom)
     | _ when List.exists (function Tfun _ -> true | _ -> false) decl_dom ->
@@ -92,10 +93,10 @@ let curry_value_to_expected env ?expected_ty ?(callee_site = Declared) ?(exact =
     let call = apply_at_site callee_site cglob (List.map adapter_arg params) in
     (* One lambda per group of arguments the slot takes at a time, as deep as
        it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C]. *)
-    let rec nest params expected =
+    let rec nest params (expected : Cpp_ir.Lowered.Type.t option) =
       match expected with
-      | Some (Tconst t | Tref (_, t)) -> nest params (Some t)
-      | Some (Tfun (dom, cod)) when dom <> [] && List.length params > List.length dom ->
+      | Some (Const t | Reference (_, t)) -> nest params (Some t)
+      | Some (Function (dom, cod)) when dom <> [] && List.length params > List.length dom ->
         let k = List.length dom in
         mk_lambda
           (List.filteri (fun i _ -> i < k) params)
@@ -163,13 +164,17 @@ let callee_abi ~instances id =
 (** The explicit template arguments of a reference to [id] that is given a
     value for some of its variables, [by_var] pairing each variable with its
     C++ type: planned against [id]'s head, no dictionary among them. *)
+let written_at_variables_ir id (by_var : (int * Cpp_ir.Lowered.Type.t) list) =
+  Template_application.to_list
+    (Template_application.plan (callee_abi ~instances:0 id)
+       ~instance:(fun _ -> None)
+       ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
+
+(** {!written_at_variables_ir} for variables given in MiniCpp, the arguments
+    written in MiniCpp. *)
 let written_at_variables id by_var =
   List.map Cpp_ir_to_legacy_minicpp.ty
-    (Template_application.to_list
-       (Template_application.plan (callee_abi ~instances:0 id)
-          ~instance:(fun _ -> None)
-          ~scheme:(fun v ->
-            Option.map Legacy_minicpp_to_cpp_ir.lower_type (List.assoc_opt (Scheme.Var.ordinal v) by_var) ) ) )
+    (written_at_variables_ir id (List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) by_var))
 
 (** A call lowered against its callee's plan: the plan its arguments are
     lowered by, the callee's C++ type at the call, the written type arguments by
@@ -194,7 +199,7 @@ type lowered_call = {
     left nothing.  Also the callee's instantiated C++ type and the
     instantiation the type arguments were read from, which the assembly
     needs. *)
-let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
+let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
     cp_instantiated =
@@ -742,7 +747,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
          rather than merely miss.  Where it cannot be read off the value
          argument, name it -- the carrier is the callee's first variable. *)
       match
-        hkt_carrier_type_args env tvars ?result:(Option.map Legacy_minicpp_to_cpp_ir.lower_type expected_ty) id tys
+        hkt_carrier_type_args env tvars ?result:expected_ty id tys
       with
       | Some [carrier] -> carrier_first carrier
       | _ -> (
@@ -1228,6 +1233,17 @@ let deduce_erased_domains = function
         cod )
   | t -> t
 
+(** {!deduce_erased_domains} in CppIR. *)
+let deduce_erased_domains_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | Function (doms, cod) ->
+    Function
+      ( List.map
+          (fun d ->
+            if Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any d then Cpp_ir.Type.Reference (Lvalue, Const Auto) else d )
+          doms,
+        cod )
+  | t -> t
+
 (** [record_call_sig env callee_ty e] records what the callee's ML type says
     about [e], when [e] is a call nothing has been recorded on yet.
 
@@ -1304,7 +1320,7 @@ let binding_results_of id compute =
     dictionaries are expected at, and what those say of the callee's
     variables.  Read by {!gen_call_args} and by the assembly in {!eta_fun}.
     Nothing here changes the instantiation. *)
-let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
+let plan_call ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Elaborated_call.instantiated) =
   let {
     Elaborated_call.call =
       {
@@ -1350,13 +1366,13 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
           | Miniml.Tarr (a, b) -> Miniml.Tarr (subst a, subst b)
           | t -> t
         in
-        let t = cpp_of_ml env (subst (ml_codomain (callee_ml_type_exn id))) in
-        spell_in_scope t
+        let t = cpp_of_ml_ir env (subst (ml_codomain (callee_ml_type_exn id))) in
+        spell_in_scope_ir t
     in
     match expected_result with
-    | Some e when exists_cpp_type prints_as_any e -> (
+    | Some e when Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any e -> (
       match from_args () with
-      | Some a -> Some (Ml_type_util.refine_erased_by ~expected:a e)
+      | Some a -> Some (Ml_type_util.refine_erased_by_ir ~expected:a e)
       | None -> expected_result )
     (* With no expected type of its own the call may not be the enclosing
        function's result at all -- a let-bound computation over another
@@ -1364,13 +1380,12 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
     | None -> (
       match from_args () with
       | Some _ as a -> a
-      | None -> current_cpp_return_type () )
+      | None -> current_cpp_return_type_ir () )
     | _ -> expected_result
   in
-  let expected_result_ir = Option.map Legacy_minicpp_to_cpp_ir.lower_type expected_result in
   let typeclass_type_args =
     List.map
-      (ml_arg_to_template_type ?expected:expected_result_ir env)
+      (ml_arg_to_template_type ?expected:expected_result env)
       typeclass_ml_args
   in
   (* The families the call's instances were found to have: the slots their
@@ -1381,7 +1396,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
         match strip_magic a with
         | MLglob ({callee = r; _} as use) ->
           instance_family_binding env r (Mlutil.written_type_args use)
-            expected_result_ir
+            expected_result
         | _ -> None )
       typeclass_ml_args
   in
@@ -1452,7 +1467,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
            callee_result_bindings env id
              ~explicit:(expected_ty <> None)
              ( match expected_ty with
-             | Some t -> Some (Legacy_minicpp_to_cpp_ir.lower_type t)
+             | Some _ -> expected_ty
              | None -> current_cpp_return_type_ir () ) ) )
   in
   {
@@ -1474,12 +1489,12 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
 type argument_position = {
   ap_index : Param_pos.orig Param_pos.pos;
   ap_param : ml_type option;
-  ap_expected : cpp_type option;
-  ap_ret : cpp_type option;
+  ap_expected : Cpp_ir.Lowered.Type.t option;
+  ap_ret : Cpp_ir.Lowered.Type.t option;
   ap_tvar_erased : bool;
   ap_written_by_call : bool;
   ap_deduced_callable : bool;
-  ap_expected_subst : cpp_type option;
+  ap_expected_subst : Cpp_ir.Lowered.Type.t option;
 }
 
 (** Whether the variable [j], read at [occ], holds a function, by the C++
@@ -1556,8 +1571,8 @@ let argument_position ~local_callable env id plan i ml_arg =
   let param_expected_at params pos =
     match Param_pos.nth params pos with
     | Some ml_ty ->
-      let cpp_ty = cpp_of_ml env ml_ty in
-      if prints_as_any cpp_ty then None else Some cpp_ty
+      let cpp_ty = cpp_of_ml_ir env ml_ty in
+      if Cpp_ir.Types.prints_as_any cpp_ty then None else Some cpp_ty
     | None -> None
   in
   (* The concrete types come from the substituted parameter type, but its
@@ -1580,7 +1595,7 @@ let argument_position ~local_callable env id plan i ml_arg =
     match Param_pos.nth fn_param_ml_tys_orig param_index with
     | Some orig ->
       Option.bind (param_expected_subst ())
-        (respell_arrows (Declared_at (count_ml_value_arrows orig)))
+        (Cpp_ir.Types.respell_arrows (Declared_at (count_ml_value_arrows orig)))
     | None -> None
   in
   let param_expected_at_declared_arity () =
@@ -1680,20 +1695,21 @@ let argument_position ~local_callable env id plan i ml_arg =
     with
     | (result_names, (_ :: _ as m)), Some pt -> (
       let d =
-        convert_ml_type_to_cpp_type env result_names (type_simpl pt)
-        |> deapply_families
-        |> map_cpp_type (function
-             | Tvar (Tv_index (_, Some v) | Tv_named v) as t -> (
-               match List.find_opt (fun (v', _) -> Id.equal v v') m with
-               | Some (_, t') -> Cpp_ir_to_legacy_minicpp.ty t'
-               | None -> t )
-             | t -> t )
+        cpp_ir_of_ml_type env result_names (type_simpl pt)
+        |> deapply_families_ir
+        |> Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) ->
+               match t with
+               | Variable (Index (_, Some v) | Named v) -> (
+                 match List.find_opt (fun (v', _) -> Id.equal v v') m with
+                 | Some (_, t') -> t'
+                 | None -> t )
+               | t -> t )
       in
       match arg_expected_ty with
       (* No slot at all: the declaration's type is the slot, where it is
          one this scope can write. *)
-      | None | Some Tany ->
-        ( match spell_in_scope d with
+      | None | Some Any ->
+        ( match spell_in_scope_ir d with
         | Some _ as t -> t
         | None -> arg_expected_ty )
       (* A slot erased inside: each erased part is filled from the
@@ -1702,15 +1718,16 @@ let argument_position ~local_callable env id plan i ml_arg =
       | Some slot ->
         let scope = current_scope_type_names () in
         let d =
-          map_cpp_type
-            (function
-              | Tvar tv as t ->
-                let id = tvar_spelled tv in
-                if List.exists (Id.equal id) scope then t else Tany
+          Cpp_ir.Types.map
+            (fun (t : Cpp_ir.Lowered.Type.t) ->
+              match t with
+              | Variable tv ->
+                let id = Cpp_ir.Type.variable_spelled tv in
+                if List.exists (Id.equal id) scope then t else Any
               | t -> t )
             d
         in
-        Some (Ml_type_util.refine_erased_by ~expected:d slot) )
+        Some (Ml_type_util.refine_erased_by_ir ~expected:d slot) )
     | _ -> arg_expected_ty
   in
   (* Only a parameter the carrier reaches: one that mentions a
@@ -1730,9 +1747,7 @@ let argument_position ~local_callable env id plan i ml_arg =
     else
       List.fold_left
         (fun t b ->
-          Option.map
-            (fun t -> Cpp_ir_to_legacy_minicpp.ty (refine_by_instance_family b (Legacy_minicpp_to_cpp_ir.lower_type t)))
-            t )
+          Option.map (refine_by_instance_family b) t )
         arg_expected_ty instance_families
   in
   (* A callable the callee deduces is called at the callee's instantiation,
@@ -1746,7 +1761,7 @@ let argument_position ~local_callable env id plan i ml_arg =
   let arg_expected_ty =
     match ml_arg with
     | (MLlam _ | MLmagic (_, MLlam _, _)) when deduced_callable ->
-      Option.map deduce_erased_domains arg_expected_ty
+      Option.map deduce_erased_domains_ir arg_expected_ty
     | _ -> arg_expected_ty
   in
   (* When the callee's declared parameter type is value-dependent and
@@ -1771,7 +1786,7 @@ let argument_position ~local_callable env id plan i ml_arg =
     | None -> false
   in
   let ret =
-    if param_resolves_to_any then Some Tany
+    if param_resolves_to_any then Some (Any : Cpp_ir.Lowered.Type.t)
     (* An argument is not a tail position, so the enclosing function's
        return type does not describe it -- and what the parameter says
        does.  Left to {!position_cpp_ty}'s fallback, a match in argument
@@ -1786,8 +1801,8 @@ let argument_position ~local_callable env id plan i ml_arg =
        that answers in text no compiler takes has not answered. *)
     else
       match arg_expected_ty with
-      | Some t when Ml_type_util.has_no_cpp_spelling t ->
-        current_cpp_return_type ()
+      | Some t when Ml_type_util.has_no_cpp_spelling_ir t ->
+        current_cpp_return_type_ir ()
       | t -> t
   in
   { ap_index = param_index;
@@ -1807,7 +1822,7 @@ let argument_position ~local_callable env id plan i ml_arg =
     template application planned and validated against the callee's ABI
     ({!call_type_args}).  Generating the arguments reads the result and
     decides neither. *)
-let lower_call ~caller ~slot ?expected_ty env use args =
+let lower_call ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env use args =
   let id = use.callee in
   let lex = current_lexenv () in
   let inst =

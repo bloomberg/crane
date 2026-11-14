@@ -9,7 +9,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Util
 open Translation_state
@@ -17,6 +16,7 @@ open Ml_type_util
 open Translation_support
 open Translation_types
 open Core_query
+open Cpp_ir.Type
 
 (** [slot], noting that a constructor built here goes straight into an erased
     ([std::any]) result -- the enclosing function's C++ return type is opaque,
@@ -27,7 +27,7 @@ open Core_query
     erased field or parameter, and it holds for a mapped constructor
     ([std::make_optional<std::any>]) as for one of Crane's own. *)
 let into_erased_return slot =
-  match Option.map slot_repr_of_cpp_type (current_cpp_return_type ()) with
+  match Option.map slot_repr_of_cpp_type_ir (current_cpp_return_type_ir ()) with
   | Some (Boxed kind) -> into_box kind slot
   | Some Native | None -> slot
 
@@ -63,7 +63,7 @@ let refined_by_slot slot (ty : ml_type) =
     other constructor's, unchanged. *)
 let list_propagated_args (ty : ml_type) ts =
   match ty with
-  | Tglob (n, tys_orig, schema_opt) ->
+  | Miniml.Tglob (n, tys_orig, schema_opt) ->
     (* Only run type propagation for list constructors *)
     let is_list =
       try String.equal (Common.pp_global_name Type n) "list"
@@ -169,8 +169,8 @@ let list_propagated_args (ty : ml_type) ts =
    it expands to: the position names [List<entry<T1>>] where the
    annotation has the pair behind it, and the name is what the
    declaration wrote. *)
-let temps_from_slot env ~expected_ty ind temps =
-  let erased_anywhere = exists_cpp_type prints_as_any in
+let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps : Cpp_ir.Lowered.Type.t list) =
+  let erased_anywhere = Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any in
   (* With no slot of its own, a constructor is the value the enclosing
      function returns, as Step 2b below reads it -- [go (RetF x)] in
      [trigger]'s continuation, whose family its annotation erased --
@@ -179,16 +179,16 @@ let temps_from_slot env ~expected_ty ind temps =
     match expected_ty with
     | Some _ -> expected_ty
     | None -> (
-      match current_cpp_return_type () with
-      | Some (Tshared_ptr t) -> Some t
+      match current_cpp_return_type_ir () with
+      | Some (Shared_pointer t) -> Some t
       | t -> t )
   in
   match
     Option.map
-      (fun t -> unfold_cpp_typedef env (Ml_type_util.unqualify_ty t))
+      (fun t -> unfold_cpp_typedef_ir env (Ml_type_util.unqualify_ty_ir t))
       slot_ty
   with
-  | Some (Tglob (ind', args, _))
+  | Some (Entity_application (ind', args, _))
     when globref_equal ind' ind && List.length args = List.length temps ->
     List.map2
       (fun local outer ->
@@ -198,15 +198,15 @@ let temps_from_slot env ~expected_ty ind temps =
            carries the namespace the declaration is read in. *)
         let rec expand t =
           let t' =
-            match unfold_cpp_typedef env t with
-            | Tnamespace (_, inner) -> inner
+            match unfold_cpp_typedef_ir env t with
+            | In_namespace (_, inner) -> inner
             | t' -> t'
           in
           if t' = t then t else expand t'
         in
-        let norm t = map_cpp_type expand t in
+        let norm t = Cpp_ir.Types.map expand t in
         let same_type a b =
-          same_arrows (norm a) (norm b)
+          Cpp_ir.Types.same_arrows (norm a) (norm b)
         in
         if
           erased_anywhere local || erased_anywhere outer
@@ -236,7 +236,7 @@ let erase_past_type_arg ts_updated temps =
     | _ :: rest -> first_ktype_dummy (i + 1) rest
   in
   let cutoff = first_ktype_dummy 0 ts_updated in
-  List.mapi (fun i t -> if i > cutoff then index_erase_type t else t) temps
+  List.mapi (fun i t -> if i > cutoff then index_erase_type_ir t else t) temps
 
 (** A constructor of an inductive that is neither a record nor custom, as
     it is built: its annotation, refined by its slot ([rc_ty]); its
@@ -249,23 +249,23 @@ type regular = {
   rc_ty : ml_type;
   rc_args : ml_ast list;
   rc_ty_ml_tparams : ml_type list;
-  rc_ctor_temps : cpp_type list;
+  rc_ctor_temps : Cpp_ir.Lowered.Type.t list;
   rc_field_types : ml_type list;
 }
 
 (** [regular env ~expected_ty ty r ts] -- the constructor [r] of annotation
     [ty] ({!refined_by_slot}) applied to [ts], built at [expected_ty] under
     the return type in force. *)
-let regular env ~expected_ty (ty : ml_type) r ts =
+let regular env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : ml_type) r ts =
   let ts_updated = list_propagated_args ty ts in
   let temps_from_slot = temps_from_slot env ~expected_ty in
   let erase_past_type_arg = erase_past_type_arg ts_updated in
   let ty_ml_tparams = match resolve_tmeta ty with
-    | Tglob (_, tys_orig, _) -> tys_orig
+    | Miniml.Tglob (_, tys_orig, _) -> tys_orig
     | _ -> []
   in
   let ctor_temps = match ty with
-    | Tglob (n, tys_orig, _) ->
+    | Miniml.Tglob (n, tys_orig, _) ->
       let tys_filt = match n with
         | GlobRef.IndRef (kn, _) ->
           ( match Table.get_ind_num_param_vars_opt kn with
@@ -281,26 +281,26 @@ let regular env ~expected_ty (ty : ml_type) r ts =
          printed with, so a position the call erases is erased here too. *)
       let temps =
         erase_past_type_arg
-          (temps_from_slot n (template_params_of_ml ~site:Declared env tys_filt))
+          (temps_from_slot n (template_params_of_ml_ir ~site:Declared env tys_filt))
       in
       if Table.has_dependent_params n then
         let expected_temps =
-          expected_type_args_from_return env ?slot:expected_ty n
+          expected_type_args_from_return_ir env ?slot:expected_ty n
             ~arity:(List.length temps)
         in
         match expected_temps with
         | Some exp_tys ->
           List.mapi (fun i t ->
-            let exp_t = normalize_erased_types (List.nth exp_tys i) in
+            let exp_t = normalize_erased_types_ir (List.nth exp_tys i) in
             let is_fully_erased_fun = match exp_t with
-              | Tfun (ps, r) ->
-                List.for_all (fun p -> p = Tany) ps && r = Tany
+              | Function (ps, r) ->
+                List.for_all (fun p -> p = Any) ps && r = Any
               | _ -> false
             in
-            if t <> exp_t && (prints_as_any exp_t || is_fully_erased_fun)
-            then Tany
+            if t <> exp_t && (Cpp_ir.Types.prints_as_any exp_t || is_fully_erased_fun)
+            then Any
             else if t <> exp_t then exp_t
-            else if is_fully_erased_fun then Tany
+            else if is_fully_erased_fun then Any
             else t
           ) temps
         | None -> temps
@@ -336,9 +336,9 @@ let regular_field env ~is_boxed c ~slot i e =
      arguments substituted in — the [P] of [sigT A P] becomes the
      concrete C++ type the field holds at this call site. *)
   let instantiated_field_cpp_ty ft =
-    subst_cpp_tvars
+    Cpp_ir.Types.substitute
       (fun i -> if i >= 1 then List.nth_opt ctor_temps (i - 1) else None)
-      (cpp_of_ml env ft)
+      (cpp_of_ml_ir env ft)
   in
   let expected_for_arg =
     match ft_opt with
@@ -351,21 +351,21 @@ let regular_field env ~is_boxed c ~slot i e =
       in
       ( match ft with
       | (Miniml.Tvar (_, _))
-        when (match unfold_cpp_typedef env (instantiated_field_cpp_ty ft) with
-              | Tglob (_, args, _) ->
-                args <> [] && List.exists has_tany_in_type args
+        when (match unfold_cpp_typedef_ir env (instantiated_field_cpp_ty ft) with
+              | Entity_application (_, args, _) ->
+                args <> [] && List.exists has_tany_in_type_ir args
               | _ -> false) ->
         (* An element type the slot has already erased.  A nested
            constructor has to be built at that same instantiation --
            [SigT<any, any>], not [SigT<any, Nat>] -- or the value it
            produces does not convert into the container holding it. *)
-        Some (unfold_cpp_typedef env (instantiated_field_cpp_ty ft))
+        Some (unfold_cpp_typedef_ir env (instantiated_field_cpp_ty ft))
       (* A boxed variable at a type-parameter field -- [Ret x] with [x]
          the erased existential of the continuation it is in -- is
          recovered at the field's instantiation. *)
       | Miniml.Tvar (_, _)
         when is_erased_rel
-             && not (prints_as_any (instantiated_field_cpp_ty ft)) ->
+             && not (Cpp_ir.Types.prints_as_any (instantiated_field_cpp_ty ft)) ->
         Some (instantiated_field_cpp_ty ft)
       (* A value constructed straight into a type-parameter field --
          [retf ((m, (ls, g')), r)] -- is spelled here for the first
@@ -375,7 +375,7 @@ let regular_field env ~is_boxed c ~slot i e =
       | Miniml.Tvar (_, _)
         when (match strip_magic e with MLcons _ -> true | _ -> false)
              && (let ct = instantiated_field_cpp_ty ft in
-                 (not (has_tany_in_type ct)) && names_only_scoped_tvars ct) ->
+                 (not (has_tany_in_type_ir ct)) && names_only_scoped_tvars_ir ct) ->
         Some (instantiated_field_cpp_ty ft)
       | Miniml.Tvar (_, _) -> None
       | Miniml.Tapp _ ->
@@ -386,11 +386,11 @@ let regular_field env ~is_boxed c ~slot i e =
            arguments.  The substitution is done on the ML type: only
            there does applying [option] to [nat] reduce, since the C++
            side of a custom-extracted [option] is a template string. *)
-        let ct = cpp_of_ml env (Mlutil.type_subst_list ty_ml_tparams ft) in
-        if prints_as_any ct || has_tany_in_type ct then None else Some ct
+        let ct = cpp_of_ml_ir env (Mlutil.type_subst_list ty_ml_tparams ft) in
+        if Cpp_ir.Types.prints_as_any ct || has_tany_in_type_ir ct then None else Some ct
       | _ when is_erased_rel ->
-        let ct = cpp_of_ml env ft in
-        if prints_as_any ct then None else Some ct
+        let ct = cpp_of_ml_ir env ft in
+        if Cpp_ir.Types.prints_as_any ct then None else Some ct
       | Miniml.Tglob (g, _, _)
         when (match resolve_tmeta ty with
              | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
@@ -413,40 +413,40 @@ let regular_field env ~is_boxed c ~slot i e =
            with. *)
         let rec erased_outside_family_apps t =
           match t with
-          | Tapply (Tvar _, _) -> false
+          | Apply (Variable _, _) -> false
           (* A family position holds the family's own struct, written
              at an erased index ([Sum1<AE, BE, std::any>]) by the same
              convention: only the family itself erased counts. *)
-          | Tglob (fg, args, _) ->
+          | Entity_application (fg, args, _) ->
             List.exists Fun.id
               (List.mapi
                  (fun i a ->
-                   if Table.is_family_ind_param fg i then prints_as_any a
+                   if Table.is_family_ind_param fg i then Cpp_ir.Types.prints_as_any a
                    else erased_outside_family_apps a)
                  args)
-          | Tapply (_, args) ->
+          | Apply (_, args) ->
             List.exists erased_outside_family_apps args
-          | Tfun (ps, r) ->
+          | Function (ps, r) ->
             List.exists erased_outside_family_apps (r :: ps)
-          | Tshared_ptr t | Tconst t | Tref (_, t) | Tnamespace (_, t) ->
+          | Shared_pointer t | Const t | Reference (_, t) | In_namespace (_, t) ->
             erased_outside_family_apps t
-          | t -> prints_as_any t
+          | t -> Cpp_ir.Types.prints_as_any t
         in
         (* A family position written as a family variable applied at
            the erased index ([T1<std::any>]) holds the variable itself,
            as the declaration spells it. *)
         let rec plain_families t =
           match t with
-          | Tnamespace (n, t) -> Tnamespace (n, plain_families t)
-          | Tglob (fg, args, ns) ->
-            Tglob
+          | In_namespace (n, t) -> In_namespace (n, plain_families t)
+          | Entity_application (fg, args, ns) ->
+            Entity_application
               ( fg,
                 List.mapi
                   (fun i a ->
                     if Table.is_family_ind_param fg i then
                       let rec unapply = function
-                        | Tapply (h, _) -> unapply h
-                        | Tnamespace (n, t) -> Tnamespace (n, unapply t)
+                        | Apply (h, _) -> unapply h
+                        | In_namespace (n, t) -> In_namespace (n, unapply t)
                         | t -> t
                       in
                       unapply a
@@ -461,7 +461,7 @@ let regular_field env ~is_boxed c ~slot i e =
           | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
           | _ -> false
         in
-        if (if spine then has_tany_in_type ct
+        if (if spine then has_tany_in_type_ir ct
             else erased_outside_family_apps ct)
         then None
         else Some ct
@@ -473,13 +473,13 @@ let regular_field env ~is_boxed c ~slot i e =
            which does not convert to [std::function<F(F)>]. *)
         let ct = instantiated_field_cpp_ty ft in
         ( match (ft, ct) with
-        | _, Tfun (_, Tfun _) when not (prints_as_any ct) -> Some ct
+        | _, Function (_, Function _) when not (Cpp_ir.Types.prints_as_any ct) -> Some ct
         (* A lambda built into a function-typed field -- [VisF]'s
            continuation -- is written against the field: its result
            is what the body's constructors are built at. *)
-        | _, Tfun (_, cod)
+        | _, Function (_, cod)
           when (match strip_magic e with MLlam _ -> true | _ -> false)
-               && not (prints_as_any cod) ->
+               && not (Cpp_ir.Types.prints_as_any cod) ->
           Some ct
         | _ -> (
           (* The same rule the bare-parameter case above states, for a
@@ -487,11 +487,11 @@ let regular_field env ~is_boxed c ~slot i e =
              spelling erases some of its arguments and keeps others,
              that spelling is the only statement of which are which,
              and the value has to be built at it. *)
-          let u = unfold_cpp_typedef env ct in
+          let u = unfold_cpp_typedef_ir env ct in
           match u with
-          | Tglob (_, (_ :: _ as args), _)
-            when List.exists prints_as_any args
-                 && not (List.for_all prints_as_any args) ->
+          | Entity_application (_, (_ :: _ as args), _)
+            when List.exists Cpp_ir.Types.prints_as_any args
+                 && not (List.for_all Cpp_ir.Types.prints_as_any args) ->
             Some u
           | _ -> None ) ) )
     | None -> None
@@ -544,7 +544,7 @@ let regular_field env ~is_boxed c ~slot i e =
   in
   let slot = { slot with expected_ml_ty = expected_ml_for_arg } in
   ( expected_for_arg,
-    if field_stores_erased_fn_value ~field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt) field_types i e
+    if field_stores_erased_fn_value_ir ~field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt) field_types i e
     then into_box Var_box slot
     else slot )
 
@@ -556,7 +556,7 @@ let regular_field env ~is_boxed c ~slot i e =
     parameters of the struct ({!ind_promoted_type_args}), spelled resolved. *)
 let record_promoted_map (ty : ml_type) =
   let mentioned =
-    match ty with Tglob (n, _, _) -> Table.promoted_type_params n | _ -> []
+    match ty with Miniml.Tglob (n, _, _) -> Table.promoted_type_params n | _ -> []
   in
   List.filter (fun (v, _) -> List.exists (Id.equal v) mentioned) (!tctx).promoted_var_map
 
@@ -579,14 +579,14 @@ let record_field_types r =
 let record_declared_field_cpp_ty env (ty : ml_type) ft =
   let tvars = get_current_type_vars () in
   match ty with
-  | Tglob ((GlobRef.IndRef (kn, _) as n), _, _) ->
+  | Miniml.Tglob ((GlobRef.IndRef (kn, _) as n), _, _) ->
     let t =
-      convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton n) tvars ft
+      cpp_ir_of_ml_type env ~ns:(Ref.User.Set.singleton n) tvars ft
     in
     if Table.get_ind_num_param_vars_opt kn = Some 0 then
-      Ml_type_util.tvar_erase_type t
+      Ml_type_util.tvar_erase_type_ir t
     else t
-  | _ -> cpp_of_ml env ft
+  | _ -> cpp_of_ml_ir env ft
 
 (** [record_field env ~is_boxed ty r ~slot i e]: the C++ type the [i]th
     field [e] of the record constructor [r] of annotation [ty], built into
@@ -615,8 +615,8 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
       ( match ft with
       | Miniml.Tvar (_, _) -> None
       | _ when is_erased_rel ->
-        let ct = cpp_of_ml env ft in
-        if prints_as_any ct then None else Some ct
+        let ct = cpp_of_ml_ir env ft in
+        if Cpp_ir.Types.prints_as_any ct then None else Some ct
       (* A lambda is split by the field's type, as one passed to a
          parameter is by the parameter's, where that type returns a
          function -- [nat -> pred nat] is the curried
@@ -625,19 +625,19 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
          binder into one lambda, which does not convert to it. *)
       | _ when (match strip_magic e with MLlam _ -> true | _ -> false) -> (
         let rec codomain = function
-          | Tconst t | Tref (_, t) -> codomain t
-          | Tfun (_, cod) -> Some cod
+          | Const t | Reference (_, t) -> codomain t
+          | Function (_, cod) -> Some cod
           | t -> (
-            match unfold_cpp_typedef env t with
-            | Tfun _ as f when f <> t -> codomain f
+            match unfold_cpp_typedef_ir env t with
+            | Function _ as f when f <> t -> codomain f
             | _ -> None )
         in
         match ty with
         | Miniml.Tglob (_, tys, _) -> (
-          let ct = cpp_of_ml env (Mlutil.type_subst_list tys ft) in
+          let ct = cpp_of_ml_ir env (Mlutil.type_subst_list tys ft) in
           match codomain ct with
           | Some cod
-            when Option.has_some (codomain cod) && (not (prints_as_any ct)) && names_only_scoped_tvars ct ->
+            when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct)) && names_only_scoped_tvars_ir ct ->
             Some ct
           | _ -> None )
         | _ -> None )
@@ -649,8 +649,8 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
       | _ when (match strip_magic e with MLapp _ -> true | _ -> false) -> (
         match ty with
         | Miniml.Tglob (_, tys, _) ->
-          let ct = cpp_of_ml env (Mlutil.type_subst_list tys ft) in
-          if prints_as_any ct || not (names_only_scoped_tvars ct) then None
+          let ct = cpp_of_ml_ir env (Mlutil.type_subst_list tys ft) in
+          if Cpp_ir.Types.prints_as_any ct || not (names_only_scoped_tvars_ir ct) then None
           else Some ct
         | _ -> None )
       | _ -> None )
@@ -671,22 +671,22 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
          erased at its own one argument and is not -- the [std::pair] it
          stands for keeps a concrete second component. *)
       match
-        Ml_type_util.unqualify_ty
-          (unfold_cpp_typedef env (declared_field_cpp_ty ft))
+        Ml_type_util.unqualify_ty_ir
+          (unfold_cpp_typedef_ir env (declared_field_cpp_ty ft))
       with
-      | Tglob (_, (_ :: _ as args), _) as d
+      | Entity_application (_, (_ :: _ as args), _) as d
         when List.for_all
                (fun a ->
-                 prints_as_any a || Ml_type_util.is_cpp_dummy_type a )
+                 Cpp_ir.Types.prints_as_any a || Ml_type_util.is_cpp_dummy_type_ir a )
                args
-             && List.exists prints_as_any args ->
+             && List.exists Cpp_ir.Types.prints_as_any args ->
         Some d
       | _ -> None )
     | None -> None
   in
   let arg_slot = {slot with in_ctor_arg = true} in
   ( (match expected_for_field i e with Some _ as t -> t | None -> field_declared_erased i),
-    if field_stores_erased_fn_value ~field_cpp_ty:None field_types_rec i e then into_box Var_box arg_slot
+    if field_stores_erased_fn_value_ir ~field_cpp_ty:None field_types_rec i e then into_box Var_box arg_slot
     else arg_slot )
 
 (** [custom_refined_annotation env ~expected_ty ~slot ty r ts]: the
@@ -694,7 +694,7 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
     [expected_ty] into [slot], its type arguments recovered from the
     arguments, the slot and the position where the annotation leaves them
     unknown. *)
-let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
+let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type) r ts =
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
@@ -717,11 +717,11 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
               [any_cast] throw. *)
            && (not
                  ( match expected_ty with
-                 | Some t -> has_tany_in_type (unfold_cpp_typedef env t)
+                 | Some t -> has_tany_in_type_ir (unfold_cpp_typedef_ir env t)
                  | None -> false ))
            && not
-                ( match current_cpp_return_type () with
-                | Some t -> resolves_to_any_type t
+                ( match current_cpp_return_type_ir () with
+                | Some t -> resolves_to_any_type_ir t
                 | None -> false ) ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
@@ -763,7 +763,7 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
           | Miniml.Tarr (a, b) -> is_writable a && is_writable b
           | Miniml.Tmeta {contents = Some t} -> is_writable t
           | Miniml.Tvar (_, _) as t ->
-            names_only_scoped_tvars (cpp_of_ml env t)
+            names_only_scoped_tvars_ir (cpp_of_ml_ir env t)
           | Miniml.Tapp _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _ ->
             false
           | _ -> true
@@ -788,7 +788,7 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
     if
       boxed slot
       || ( match expected_ty with
-         | Some t -> has_tany_in_type (unfold_cpp_typedef env t)
+         | Some t -> has_tany_in_type_ir (unfold_cpp_typedef_ir env t)
          | None -> false )
     then ty
     else
@@ -796,7 +796,7 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
       | None -> ty
       | Some want ->
         Ml_type_util.refine_erased
-          ~writable:(fun t -> names_only_scoped_tvars (cpp_of_ml env t))
+          ~writable:(fun t -> names_only_scoped_tvars_ir (cpp_of_ml_ir env t))
           ty want
   in
   (* A position the term leaves unknown that the expected C++ type states as
@@ -810,10 +810,10 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
     let expected =
       match expected_ty with
       | Some _ -> expected_ty
-      | None -> current_cpp_return_type ()
+      | None -> current_cpp_return_type_ir ()
     in
-    match (ty, Option.map (fun t -> Ml_type_util.unqualify_ty (unfold_cpp_typedef env t)) expected) with
-    | Miniml.Tglob (n, tys, sc), Some (Tglob (n', etys, _))
+    match (ty, Option.map (fun t -> Ml_type_util.unqualify_ty_ir (unfold_cpp_typedef_ir env t)) expected) with
+    | Miniml.Tglob (n, tys, sc), Some (Entity_application (n', etys, _))
       when GlobRef.CanOrd.equal n n' && List.length tys = List.length etys
            && (not (boxed slot)) ->
       Miniml.Tglob
@@ -822,8 +822,8 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
             (fun t e ->
               match (resolve_tmeta t, e) with
               | (Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _),
-                Tvar (Tv_index (i, _))
-                when names_only_scoped_tvars e ->
+                Variable (Index (i, _))
+                when names_only_scoped_tvars_ir e ->
                 Miniml.Tvar (Miniml.Schematic, i)
               | _ -> t )
             tys etys,
@@ -844,7 +844,7 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
 type custom = {
   cc_ty_args_for_expected : ml_type list;
   cc_field_types : ml_type list;
-  cc_temps_at_slot : cpp_type list;
+  cc_temps_at_slot : Cpp_ir.Lowered.Type.t list;
   cc_states_unboxed : int -> bool;
   cc_list_cons : bool;
   cc_deeply_erased : bool;
@@ -854,7 +854,7 @@ type custom = {
 (** [custom env ~expected_ty ~slot ty r]: the custom constructor [r] of
     annotation [ty] ({!custom_refined_annotation}), built at [expected_ty]
     into [slot] under the return type in force. *)
-let custom env ~expected_ty ~slot (ty : ml_type) r =
+let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type) r =
   (* Generate args with expected type hints: pass the i-th type arg of the constructor's inductive type before generating
      the i-th value arg.  This allows gen_ctor_call to recover concrete element
      types for nil lists whose ML annotation has unresolved metas (Tmeta{None}).
@@ -924,8 +924,8 @@ let custom env ~expected_ty ~slot (ty : ml_type) r =
     | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
     | None -> [] in
   let draft_ctor_temps_for_wrap =
-    ctor_draft_temps env ~promoted_active:((!tctx).promoted_var_map <> [])
-      ~return:(current_cpp_return_type ()) ty
+    ctor_draft_temps_ir env ~promoted_active:((!tctx).promoted_var_map <> [])
+      ~return:(current_cpp_return_type_ir ()) ty
   in
   (* The same slots, read off the destination instead of off this
      constructor's own annotation.  A locally concrete value can be built into
@@ -947,19 +947,19 @@ let custom env ~expected_ty ~slot (ty : ml_type) r =
   let ctor_temps_at_slot =
     match (expected_ty, r) with
     | Some exp, GlobRef.ConstructRef ((kn, i), _) -> (
-      match unfold_cpp_typedef env exp with
-      | Tglob (en, eargs, _)
+      match unfold_cpp_typedef_ir env exp with
+      | Entity_application (en, eargs, _)
         when GlobRef.CanOrd.equal en (GlobRef.IndRef (kn, i))
              && List.length eargs = List.length draft_ctor_temps_for_wrap ->
         List.map2
           (fun local slot ->
-            if slot = Tany then Tany
-            else if prints_as_any local then slot
+            if slot = Any then Any
+            else if Cpp_ir.Types.prints_as_any local then slot
             (* Erased only in part -- [pair<std::any, ...>] where a field's
                class variable had no instance in scope -- the destination
                fills the part it knows, [St<ptr>]. *)
-            else if Ml_type_util.has_tany_written local then
-              Ml_type_util.refine_erased_by ~expected:slot local
+            else if Ml_type_util.has_tany_written_ir local then
+              Ml_type_util.refine_erased_by_ir ~expected:slot local
             else local )
           draft_ctor_temps_for_wrap eargs
       | _ -> draft_ctor_temps_for_wrap )
@@ -974,15 +974,15 @@ let custom env ~expected_ty ~slot (ty : ml_type) r =
   let slot_states_unboxed j =
     match (expected_ty, r) with
     | Some exp, GlobRef.ConstructRef ((kn, i), _) -> (
-      match unfold_cpp_typedef env exp with
+      match unfold_cpp_typedef_ir env exp with
       (* A statement is a spelling that boxes some positions and not others;
          one that boxes none is this value's own type, which the deep
          erasure asked for by its destination overrides. *)
-      | Tglob (en, eargs, _)
+      | Entity_application (en, eargs, _)
         when GlobRef.CanOrd.equal en (GlobRef.IndRef (kn, i))
-             && List.exists prints_as_any eargs -> (
+             && List.exists Cpp_ir.Types.prints_as_any eargs -> (
         match List.nth_opt eargs j with
-        | Some t -> not (prints_as_any t)
+        | Some t -> not (Cpp_ir.Types.prints_as_any t)
         | None -> false )
       | _ -> false )
     | _ -> false
@@ -1027,14 +1027,14 @@ let custom env ~expected_ty ~slot (ty : ml_type) r =
        field the annotation erased and the destination writes is not
        erased. *)
     List.exists
-      (fun j -> List.nth_opt ctor_temps_at_slot (j - 1) = Some Tany)
+      (fun j -> List.nth_opt ctor_temps_at_slot (j - 1) = Some Any)
       occupied
   in
   let slot_is_deeply_erased =
     erased_arg_under_a_field
     || ((not is_list_cons_ctor)
-        && match current_cpp_return_type () with
-           | Some t -> resolves_to_any_type t
+        && match current_cpp_return_type_ir () with
+           | Some t -> resolves_to_any_type_ir t
            | None -> false)
   in
   { cc_ty_args_for_expected = ty_args_for_expected; cc_field_types = field_types_for_wrap;
@@ -1048,11 +1048,11 @@ let custom env ~expected_ty ~slot (ty : ml_type) r =
     against the C++ type [ca_expected]; [ca_erased_fn_slot] is the slot's
     own signature where it erased only its domain. *)
 type custom_arg = {
-  ca_ret : cpp_type option;
+  ca_ret : Cpp_ir.Lowered.Type.t option;
   ca_term : ml_ast;
   ca_expected_ml : ml_type option;
-  ca_erased_fn_slot : cpp_type option;
-  ca_expected : cpp_type option;
+  ca_erased_fn_slot : Cpp_ir.Lowered.Type.t option;
+  ca_expected : Cpp_ir.Lowered.Type.t option;
   ca_slot : slot;
 }
 
@@ -1062,7 +1062,7 @@ type custom_arg = {
 let custom_field ?var env c ~slot r i e =
   let ty_args_for_expected = c.cc_ty_args_for_expected and field_types_for_wrap = c.cc_field_types in
   let ctor_temps_at_slot = c.cc_temps_at_slot and is_passthrough_ctor_arg = c.cc_passthrough in
-  let saved_ret = current_cpp_return_type () in
+  let saved_ret = current_cpp_return_type_ir () in
   let new_expected =
     match List.nth_opt field_types_for_wrap i with
     | Some (Miniml.Tvar (_, j) as ft) -> (
@@ -1113,13 +1113,13 @@ let custom_field ?var env c ~slot r i e =
     (not is_list_cons_ctor_for_flow_pre)
     &&
     match saved_ret with
-    | Some t -> resolves_to_any_type t
+    | Some t -> resolves_to_any_type_ir t
     | None -> false
   in
   let expected_cpp_ty =
     match new_expected with
     | Some ml_ty ->
-      let cpp_ty = cpp_of_ml env ml_ty in
+      let cpp_ty = cpp_of_ml_ir env ml_ty in
       (* A field at a type parameter is the constructor's instantiation
          there, as the destination refined it: the annotation's own
          spelling erases a class variable with no instance in scope
@@ -1127,21 +1127,21 @@ let custom_field ?var env c ~slot r i e =
          and a nested constructor built at the erased one boxes it. *)
       let cpp_ty =
         match List.nth_opt field_types_for_wrap i with
-        | Some (Miniml.Tvar (_, j)) when Ml_type_util.has_tany_written cpp_ty -> (
+        | Some (Miniml.Tvar (_, j)) when Ml_type_util.has_tany_written_ir cpp_ty -> (
           match List.nth_opt ctor_temps_at_slot (j - 1) with
-          | Some t when not (prints_as_any t) ->
-            Ml_type_util.refine_erased_by ~expected:t cpp_ty
+          | Some t when not (Cpp_ir.Types.prints_as_any t) ->
+            Ml_type_util.refine_erased_by_ir ~expected:t cpp_ty
           | _ -> cpp_ty )
         | _ -> cpp_ty
       in
-      if prints_as_any cpp_ty then None
+      if Cpp_ir.Types.prints_as_any cpp_ty then None
       else (match cpp_ty with
-        | Tglob (g, _, _) when is_list_global g -> None
+        | Entity_application (g, _, _) when is_list_global g -> None
         | _ -> Some cpp_ty)
     | None -> None
   in
   let e =
-    if stores_erased_fn ?var env r ~field_tys:field_types_for_wrap ~temps:ctor_temps_at_slot i e then
+    if stores_erased_fn_ir ?var env r ~field_tys:field_types_for_wrap ~temps:ctor_temps_at_slot i e then
       erased_fn_lambda env e
     else e
   in
@@ -1155,14 +1155,14 @@ let custom_field ?var env c ~slot r i e =
       match List.nth_opt field_types_for_wrap i with
       | Some (Miniml.Tvar (_, j)) -> (
         match
-          Option.map Ml_type_util.tvar_erase_type
+          Option.map Ml_type_util.tvar_erase_type_ir
             (List.nth_opt ctor_temps_at_slot (j - 1))
         with
-        | Some t when partially_erased_fun_ty t -> Some t
+        | Some t when partially_erased_fun_ty_ir t -> Some t
         | _ -> None )
       | _ -> None
   in
-  { ca_ret = (if propagate_erased_ctx then Some Tany else None);
+  { ca_ret = (if propagate_erased_ctx then Some Any else None);
     ca_term = e;
     ca_expected_ml = new_expected;
     ca_erased_fn_slot = erased_fn_slot;

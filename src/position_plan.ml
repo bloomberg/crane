@@ -5,12 +5,12 @@
     from Core.  See [position_plan.mli]. *)
 
 open Miniml
-open Minicpp
 open Translation_state
 open Ml_type_util
 open Translation_support
 open Translation_types
 open Core_query
+open Cpp_ir.Type
 
 let push ids lex =
   Lexenv.push
@@ -20,11 +20,11 @@ let push ids lex =
 (* The return type a let's right-hand side is generated under
    ({!Translation.gen_stmts}' [MLletin]): the binder's own type where it
    says one, else the one in force. *)
-let let_result env ~ret t =
-  let c = cpp_of_ml env t in
-  if prints_as_any c then Some c
+let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
+  let c = cpp_of_ml_ir env t in
+  if Cpp_ir.Types.prints_as_any c then Some c
   else if ml_type_contains_erased t then ret
-  else match spell_in_scope c with Some _ as t -> t | None -> ret
+  else match spell_in_scope_ir c with Some _ as t -> t | None -> ret
 
 (* An environment naming the binders of [lex] as they are bound, for the
    conversions that look a binder's name up (an instance passed as a
@@ -35,12 +35,12 @@ let named_env (lex : Lexenv.t) : Common.env = (List.map (fun (b : Lexenv.binder)
    ({!Translation.gen_expr}'s [MLmagic]): boxed where it crosses from a
    type that is not a box into one that is, unless the position states a
    type that is not one. *)
-let coerced_slot env ~pos slot = function
+let coerced_slot env ~(pos : Cpp_ir.Lowered.Type.t option) slot = function
   | Mcoerce (from, into)
-    when (match pos with Some t -> prints_as_any t | None -> true)
-         && prints_as_any (cpp_of_ml env into)
-         && not (prints_as_any (cpp_of_ml env from)) ->
-    into_box (box_kind_of_cpp_type (cpp_of_ml env into)) slot
+    when (match pos with Some t -> Cpp_ir.Types.prints_as_any t | None -> true)
+         && Cpp_ir.Types.prints_as_any (cpp_of_ml_ir env into)
+         && not (Cpp_ir.Types.prints_as_any (cpp_of_ml_ir env from)) ->
+    into_box (box_kind_of_cpp_type_ir (cpp_of_ml_ir env into)) slot
   | Mcoerce _ | Mboxed | Mbarrier -> slot
 
 let region ~outer ~reads body =
@@ -49,15 +49,15 @@ let region ~outer ~reads body =
   let is_boxed _ occ = match List.assq_opt occ reads with Some r -> r.rd_boxed | None -> false in
   (* [expr ~pos ~ret ~slot lex e]: [e] generated as an expression against
      [pos], into [slot], with [ret] the return type in force. *)
-  let rec expr ~pos ~ret ?(slot = empty_slot) lex e =
+  let rec expr ~(pos : Cpp_ir.Lowered.Type.t option) ~(ret : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) lex e =
     match e with
     | MLmagic (m, t, occ) ->
       found := (occ, pos) :: !found;
       let env = named_env lex in
       expr ~pos:(match t with MLlam _ -> pos | _ -> None) ~ret ~slot:(coerced_slot env ~pos slot m) lex t
-    | MLcons (ty, r, ts, _) when Table.is_custom r -> with_cpp_return_type ret (fun () -> custom ~pos ~slot lex ty r ts)
+    | MLcons (ty, r, ts, _) when Table.is_custom r -> with_cpp_return_type_ir ret (fun () -> custom ~pos ~slot lex ty r ts)
     | MLcons (_, _, [], _) -> ()
-    | MLcons (ty, r, ts, _) -> with_cpp_return_type ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)
+    | MLcons (ty, r, ts, _) -> with_cpp_return_type_ir ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)
     (* Only the returned value is generated, at no position. *)
     | MLapp (MLglob use, (_ :: _ as args)) when is_effect Core_effects.Return use ->
       expr ~pos:None ~ret lex (Common.last args)
@@ -75,14 +75,14 @@ let region ~outer ~reads body =
       | Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
       | Match_kind.Custom ->
         let rty = match Array.to_list branches with (_, rty, _, _) :: _ -> rty | [] -> typ in
-        let r = cpp_of_ml env rty in
-        let ret = if is_cpp_unit_type r || ml_type_is_void_call rty then Some Tvoid else ret in
+        let r = cpp_of_ml_ir env rty in
+        let ret = if is_cpp_unit_type_ir r || ml_type_is_void_call rty then Some Void else ret in
         Array.iter (branch ~ret lex) branches
       | Match_kind.Variant ->
         let is_enum =
-          match typ with Tglob ((Names.GlobRef.IndRef _ as r), _, _) -> Table.is_enum_inductive r | _ -> false
+          match typ with Miniml.Tglob ((Names.GlobRef.IndRef _ as r), _, _) -> Table.is_enum_inductive r | _ -> false
         in
-        let ret = if is_enum && iife_void_return env typ branches = Some Tvoid then Some Tvoid else ret in
+        let ret = if is_enum && iife_void_return_ir env typ branches = Some Void then Some Void else ret in
         Array.iter (branch ~ret lex) branches )
     (* A lambda's body is a region of its own, planned where it begins. *)
     | MLlam _ -> ()
@@ -106,7 +106,7 @@ let region ~outer ~reads body =
       List.iteri
         (fun i e ->
           let p, s =
-            with_cpp_return_type None (fun () -> Translation_constructors.regular_field env ~is_boxed c ~slot i e)
+            with_cpp_return_type_ir None (fun () -> Translation_constructors.regular_field env ~is_boxed c ~slot i e)
           in
           stored ~pos:p ~ret:None ~slot:s lex e )
         c.rc_args
@@ -129,7 +129,7 @@ let region ~outer ~reads body =
     List.iteri
       (fun i e ->
         let a = Translation_constructors.custom_field ~var env c ~slot r i e in
-        with_cpp_return_type a.ca_ret (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
+        with_cpp_return_type_ir a.ca_ret (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
       ts
   and branch ~ret ?slot lex (ids, _, _, body) = stmts ~ret ?slot (push (List.rev ids) lex) body
   (* [stmts ~ret ~slot lex e]: [e] generated as statements whose tail is
@@ -161,7 +161,7 @@ let region ~outer ~reads body =
       else expr ~pos:None ~ret lex e
     | MLapp (MLglob use, (_ :: _ as args)) when is_effect Core_effects.Return use ->
       if is_sequential_effect Core_effects.Return use then (
-        if ret <> Some Tvoid then expr ~pos:ret ~ret lex (Common.last args) )
+        if ret <> Some Void then expr ~pos:ret ~ret lex (Common.last args) )
       else expr ~pos:None ~ret lex e
     | e -> expr ~pos:ret ~ret ~slot lex e
   (* A global call's arguments, each against the parameter it is passed at
@@ -172,7 +172,8 @@ let region ~outer ~reads body =
     | None -> List.iter (expr ~pos:None ~ret lex) args
     | Some inst ->
       let plan =
-        with_cpp_return_type ret (fun () -> Translation_calls.plan_call ~lex ?expected_ty:pos (named_env lex) inst)
+        with_cpp_return_type_ir ret (fun () ->
+            Translation_calls.plan_call ~lex ?expected_ty:pos (named_env lex) inst )
       in
       let regular_index a =
         let rec go i = function [] -> None | r :: rest -> if r == a then Some i else go (i + 1) rest in
@@ -186,7 +187,7 @@ let region ~outer ~reads body =
             (* Whether a local read is a callable decides only the position
                of that read, which holds no coercion. *)
             let ap =
-              with_cpp_return_type ret (fun () ->
+              with_cpp_return_type_ir ret (fun () ->
                   Translation_calls.argument_position ~local_callable:(fun _ _ -> false) (named_env lex) use.callee plan i a )
             in
             let slot =
@@ -201,6 +202,6 @@ let region ~outer ~reads body =
   in
   (* A walk that fails leaves the coercions it did not reach unplanned,
      which lowering reports. *)
-  (try stmts ~ret:(current_cpp_return_type ()) outer body
+  (try stmts ~ret:(current_cpp_return_type_ir ()) outer body
    with e when CErrors.noncritical e -> Probe.hit "magic-pos-walk" (fun () -> Printexc.to_string e));
   !found

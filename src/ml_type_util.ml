@@ -523,6 +523,10 @@ let rec ml_codomain_after n = function
 let contains_tvar =
   exists_cpp_type (function Tvar _ | Tauto -> true | _ -> false)
 
+(** {!contains_tvar} in CppIR. *)
+let contains_tvar_ir =
+  Cpp_ir.Types.exists (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Variable _ | Auto -> true | _ -> false)
+
 (** Whether a C++ type mentions a type variable not among [bound_names].  An
     unnamed [Tvar] and [Tauto] always count: neither can be matched against the
     bound set. *)
@@ -578,6 +582,9 @@ let list_ctor_struct_names (g : GlobRef.t) : string * string =
   | _ -> ("Nil", "Cons")
 
 let is_cpp_dummy_type = Minicpp.is_cpp_dummy_type
+
+(** {!is_cpp_dummy_type} in CppIR. *)
+let is_cpp_dummy_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Erased _ -> true | _ -> false
 
 (** The type under any module or namespace qualification.  Questions about
     what a type {i is} -- which inductive, at which instantiation -- are about
@@ -642,6 +649,11 @@ let names_erased_alias = function
   | Minicpp.Tglob (g, _, _) -> Table.is_erased_type_const g
   | _ -> false
 
+(** {!names_erased_alias} in CppIR. *)
+let names_erased_alias_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Entity_application (g, _, _) -> Table.is_erased_type_const g
+  | _ -> false
+
 (** Classify a C++ type by {!fun_erasure}.  This is the one place a function
     type's domain is tested for erasure; the predicates below are named
     shorthands for its answers and cannot drift from it. *)
@@ -683,6 +695,13 @@ let partially_erased_fun_ty t =
   | Fe_erased_domain (Some _) -> true
   | _ -> false
 
+(** {!partially_erased_fun_ty} in CppIR. *)
+let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Function (dom, cod) ->
+    let erased t = Cpp_ir.Types.prints_as_any t || names_erased_alias_ir t in
+    List.exists erased dom && not (Cpp_ir.Types.prints_as_any cod)
+  | _ -> false
+
 (** [erased_domain_fun_ty t] -- true of a function type that erased at least one
     of its arguments, whichever way its result went.  This is the condition
     under which a closure written at the concrete domain needs the
@@ -693,6 +712,12 @@ let partially_erased_fun_ty t =
 let erased_domain_fun_ty t =
   match classify_fun_erasure t with
   | Fe_erased_domain _ -> true
+  | _ -> false
+
+(** {!erased_domain_fun_ty} in CppIR. *)
+let erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Function (dom, _) ->
+    List.exists (fun t -> Cpp_ir.Types.prints_as_any t || names_erased_alias_ir t) dom
   | _ -> false
 
 (** [is_boxed_type t] — true if a value of type [t] is known to be physically
@@ -715,6 +740,10 @@ let is_boxed_type t = t = Minicpp.Tany || is_cpp_dummy_type t
     inferred type of an expression, never in a declaration. *)
 let materialise_opaque (ty : cpp_type) : cpp_type =
   map_cpp_type (function Topaque -> Tany | t -> t) ty
+
+(** {!materialise_opaque} in CppIR. *)
+let materialise_opaque_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  Cpp_ir.Types.map (function Obligation Opaque_type -> Any | t -> t) ty
 
 (** [is_all_erased t] — true iff [t] is directly erased OR all of its type
     arguments are recursively all-erased.  Ground types without arguments
@@ -1006,6 +1035,14 @@ let tvar_erase_type =
     | Tvar (Tv_index (_, Some _) | Tv_named _) as ty -> Some ty (* Named Tvars are kept *)
     | _ -> None )
 
+(** {!tvar_erase_type} in CppIR. *)
+let tvar_erase_type_ir =
+  Cpp_ir.Types.rewrite (fun (t : Cpp_ir.Lowered.Type.t) ->
+      match t with
+      | Variable (Index (_, None)) -> Some Any
+      | Variable (Index (_, Some _) | Named _) as ty -> Some ty
+      | _ -> None )
+
 (** Erase a type argument down to its outermost applied type constructors,
     boxing every leaf: [List<Nat>] becomes [List<std::any>] and a bare [Nat]
     becomes [std::any].
@@ -1113,6 +1150,20 @@ let has_no_cpp_spelling ty =
     (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
     as_printed
 
+(** {!has_no_cpp_spelling} in CppIR. *)
+let has_no_cpp_spelling_ir (ty : Cpp_ir.Lowered.Type.t) =
+  let as_printed =
+    Cpp_ir.Types.map
+      (fun (t : Cpp_ir.Lowered.Type.t) ->
+        match t with
+        | Apply (Entity_application (r, _, _), [arg]) when ref_has_no_cpp_name r -> arg
+        | t -> t )
+      ty
+  in
+  Cpp_ir.Types.exists
+    (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Entity_application (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
+    as_printed
+
 (** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
     whose class extraction records as a [ConstRef] mapped to the empty string,
     so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
@@ -1155,6 +1206,12 @@ let rec strip_tarr_n n ty =
 let strip_cpp_ref_const = function
   | Tref (Lvalue, t) | Tconst t -> t
   | Tref (Forwarding, t) -> Tref (Lvalue, t)
+  | t -> t
+
+(** {!strip_cpp_ref_const} in CppIR. *)
+let strip_cpp_ref_const_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | Reference (Lvalue, t) | Const t -> t
+  | Reference (Forwarding, t) -> Reference (Lvalue, t)
   | t -> t
 
 (** Count non-erased arguments in an ML application.
@@ -1429,6 +1486,10 @@ let is_tany_node_ir (t : Cpp_ir.Lowered.Type.t) =
   | Any | Obligation Opaque_type | Variable (Index (_, None)) -> true
   | _ -> false
 
+(** {!has_erased_type_in_type} in CppIR. *)
+let has_erased_type_in_type_ir =
+  Cpp_ir.Types.exists (fun t -> is_tany_node_ir t || is_cpp_dummy_type_ir t)
+
 (** {!has_tany_in_type} over a CppIR type. *)
 let has_tany_in_type_ir = Cpp_ir.Children.exists_type is_tany_node_ir
 
@@ -1667,6 +1728,9 @@ let rendered_tvar_arities_ir (t : Cpp_ir.Lowered.Type.t) =
 
 (** Tvar names, sorted by index *)
 let get_tvars t = List.map snd (get_tvars_indexed t)
+
+(** {!get_tvars} in CppIR. *)
+let get_tvars_ir t = List.map snd (get_tvars_indexed_ir t)
 
 (** Tvar indices only, sorted *)
 let get_tvar_indices_ir t = List.map fst (get_tvars_indexed_ir t)
