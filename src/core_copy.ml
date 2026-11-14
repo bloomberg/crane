@@ -70,7 +70,7 @@ let call ~ty use body args =
     let parameter_type annotated declared =
       match annotated with
       | Topen _ -> declared
-      | t -> Translation_support.reconcile_parameter_type t declared
+      | t -> Core_query.reconcile_parameter_type t declared
     in
     (* A parameter passed a variable, or an erased value, is read as it:
        bound by a let, it would be a copy of what the call passes. *)

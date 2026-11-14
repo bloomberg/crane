@@ -8,10 +8,8 @@
 open Miniml
 open Names
 open Util
-open Translation_state
 open Ml_type_util
-open Translation_support
-open Translation_types
+open Core_query
 open Table
 
 (** [classify ~lex id written] -- the role each argument the call of [id]
@@ -332,7 +330,7 @@ type site =
     planned where the walk met it ({!instantiate}), if that succeeded,
     whether it builds a closed instance ({!builds_closed_instance}),
     whether it calls a class field as a static member of an instance
-    ({!Translation_types.static_projection}), whether its head is closed
+    ({!Core_query.static_projection}), whether its head is closed
     ({!closed_head}), and whether it calls a kept instance's member template
     ({!member_template_projection}). *)
 type entry = {
@@ -417,7 +415,7 @@ let closed_head ~lex use (call : Elaborated_call.t) =
 
 (* Whether the call [call], standing in [lex], projects a class field
    through its one dictionary argument where that instance was kept
-   ({!Translation_types.kept_instance_of_projection}) and its class declares
+   ({!Core_query.kept_instance_of_projection}) and its class declares
    the field as a member template: the instance's own method can then be
    called in place of the field's dispatcher. *)
 let member_template_projection ~lex (call : Elaborated_call.t) =
@@ -600,7 +598,7 @@ let rec walk w ?(position = no_position) lex e =
     List.iter (fun (_, ty) -> walk_type w lex ty) ids;
     go ~position:(lambda_body_position ~n:(List.length ids) position) (push Lexenv.Value ids lex) body
   (* An alias of a polymorphic function is not bound but put in place of its
-     uses ({!Translation_support.let_lambda}), and its calls are those of
+     uses ({!Core_query.let_lambda}), and its calls are those of
      what it abbreviates, at the arguments each use gives it.  A lambda that
      is bound is generated as a function of its own, at no position. *)
   | MLletin (x, ty, (MLlam _ as a), body, _) -> (
@@ -678,9 +676,9 @@ and walk_type w lex ty =
 let head_variables ty = Mlutil.IntSet.fold max (Mlutil.ml_tvars ty) 0
 
 (* A declaration's own parameters are bound as its parameters, at the types
-   its body is generated with ({!Translation_support.reconcile_parameter_type}):
+   its body is generated with ({!Core_query.reconcile_parameter_type}):
    the class-typed ones are its dictionaries
-   ({!Translation_state.parameter_role}).  Translation unifies a parameter's
+   ({!Core_query.parameter_role}).  Translation unifies a parameter's
    annotation with the declaration's type when it generates the head; an
    annotation that is still a bare metavariable is solved to the declared
    type there, so that is the type read here, without solving anything.  The
@@ -702,10 +700,10 @@ let declaration_scope ty body =
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
    every let-bound lambda as translation generates it
-   ({!Translation_support.let_lambda}): an alias it inlines put in place of
+   ({!Core_query.let_lambda}): an alias it inlines put in place of
    its uses, one used at a single instance bound at it, and one bound as a
    value given a binder for every value arrow of its type
-   ({!Translation_support.eta_bound_lambda}). *)
+   ({!Core_query.eta_bound_lambda}). *)
 let rec inline_aliases ~n_outer lex e =
   let go = inline_aliases ~n_outer in
   let under ids body = go (push Lexenv.Value ids lex) body in
@@ -716,7 +714,7 @@ let rec inline_aliases ~n_outer lex e =
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
       go lex (MLletin (x, subst ty, Mlutil.ast_map_types subst a, body, occ))
-    | Bound -> MLletin (x, ty, go lex (Translation_support.eta_bound_lambda ty a), under [(x, ty)] body, occ)
+    | Bound -> MLletin (x, ty, go lex (Core_query.eta_bound_lambda ty a), under [(x, ty)] body, occ)
     | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ) )
   | MLletin (x, ty, a, body, occ) -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ)
   | MLlam (x, ty, body) -> MLlam (x, ty, under [(x, ty)] body)

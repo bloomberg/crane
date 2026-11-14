@@ -352,7 +352,7 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   let params =
     List.map
       (fun (id, ty) ->
-        match parameter_role ty with
+        match Core_query.parameter_role ty with
         | Value -> (id, ty)
         | Dictionary ->
           let i = !counter in
@@ -530,7 +530,7 @@ let dfun_body_scope ~minted n b cty ty temps =
   let ids =
     if List.length ids = List.length sig_types_for_ids then
       List.map2
-        (fun (id, body_ty) sig_ty -> (id, Translation_support.reconcile_parameter_type body_ty sig_ty))
+        (fun (id, body_ty) sig_ty -> (id, Core_query.reconcile_parameter_type body_ty sig_ty))
         ids sig_types_for_ids
     else ids
   in

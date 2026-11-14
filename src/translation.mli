@@ -76,7 +76,7 @@ val push_binders :
   ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
 
 (** {!push_binders} for a declaration's parameters, whose class-typed ones are
-    its dictionaries ({!Translation_state.parameter_role}). *)
+    its dictionaries ({!Core_query.parameter_role}). *)
 val push_parameters :
   ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
 

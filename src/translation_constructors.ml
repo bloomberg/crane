@@ -16,6 +16,7 @@ open Translation_state
 open Ml_type_util
 open Translation_support
 open Translation_types
+open Core_query
 
 (** [slot], noting that a constructor built here goes straight into an erased
     ([std::any]) result -- the enclosing function's C++ return type is opaque,

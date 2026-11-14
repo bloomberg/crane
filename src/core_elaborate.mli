@@ -85,10 +85,10 @@ val declaration_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_
 
 (** [generated_definition ty body] is the definition [body] of type [ty],
     eta-expanded ({!Normalize.eta_expand}), with every let-bound lambda in
-    it as it is generated ({!Translation_support.let_lambda}): an alias of a
+    it as it is generated ({!Core_query.let_lambda}): an alias of a
     polymorphic function put in place of its uses, one used at a single
     instance bound at it, and one bound as a value given a binder for each
-    value arrow of its type ({!Translation_support.eta_bound_lambda}).  An
+    value arrow of its type ({!Core_query.eta_bound_lambda}).  An
     inlined alias binds nothing, so a binder after one is a level shallower
     than in the body as written. *)
 val generated_definition : Miniml.ml_type -> Miniml.ml_ast -> Miniml.ml_ast
@@ -161,7 +161,7 @@ val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast li
     calls a class field as a static member of the instance it projects
     through: which argument that instance is, the member's value
     parameters, and the operands the call leaves out
-    ({!Translation_types.static_projection}), as the walk decided it where
+    ({!Core_query.static_projection}), as the walk decided it where
     it met the application, from the call and the binders of its own
     environment.  Where the walk made no single decision there, or is not
     installed yet, it is decided from the call and [lex]; under
@@ -182,7 +182,7 @@ val closed_head_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -
 
 (** [member_template_call ~lex use args] -- whether the call [use args]
     projects a class field through its one dictionary argument, an instance
-    Crane kept ({!Translation_types.kept_instance_of_projection}), whose class
+    Crane kept ({!Core_query.kept_instance_of_projection}), whose class
     declares the field as a member template, so the instance's own method can
     stand for the field's dispatcher.  Decided, and checked, as
     {!closed_head_call} is. *)

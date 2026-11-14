@@ -15,6 +15,7 @@ open Translation_state
 open Ml_type_util
 open Translation_support
 open Translation_types
+open Core_query
 
 (** Make a global named in value position into an expression a caller can
     invoke, by eta-expanding it into a lambda that calls it.

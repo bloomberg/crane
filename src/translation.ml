@@ -22,6 +22,7 @@ open Util
    translation.mli). *)
 include Translation_state
 include Ml_type_util
+include Core_query
 include Translation_support
 include Translation_types
 include Translation_calls

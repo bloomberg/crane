@@ -10,6 +10,7 @@ open Translation_state
 open Ml_type_util
 open Translation_support
 open Translation_types
+open Core_query
 
 let push ids lex =
   Lexenv.push
