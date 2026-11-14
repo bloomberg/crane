@@ -5950,7 +5950,8 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     @param scrut    the value being matched, shared by every branch
     @param site     the match and this branch, binding [ids] *)
 and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
-    match_i (scrut : smatch_scrutinee) ~scrut_db ~site =
+    match_i (scrut : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.scrutinee) ~scrut_db ~site :
+    Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.branch =
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
@@ -6019,7 +6020,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
               (fun i _ ->
                 Representation_plan.check ~site ~field:i ~live:(binder_is_boxed (n_pat_vars - i)) () )
               rev_ids;
-          gen_stmts env_for_body (fun x -> Sreturn (Some x)) body ))
+          gen_stmts_ir env_for_body (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ))
   in
   let tvars = get_current_type_vars () in
 (* A non-self-referential field in a type-indexed inductive (no template
@@ -6029,8 +6030,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
      uniformly — fst, snd, or any other function — because the cast is
      applied at the binding site, not at individual use sites. *)
   let scrut_template_args_lazy = lazy (
-    let scrut_cpp_ty = cpp_of_ml env typ in
-    extract_template_args scrut_cpp_ty
+    let scrut_cpp_ty = cpp_of_ml_ir env typ in
+    extract_template_args_ir scrut_cpp_ty
   ) in
   let field_is_wholesale_erased =
     let num_pv = Table.get_ctor_num_param_vars cname in
@@ -6040,13 +6041,13 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       && (match List.nth_opt non_erased_def_site_field_tys i with
           | Some def_ty when num_pv = 0 ->
             let cpp_ty =
-              convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton ind_ref) [] def_ty
+              cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton ind_ref) [] def_ty
             in
-            has_unnamed_tvar cpp_ty
+            has_unnamed_tvar_ir cpp_ty
           | Some (Miniml.Tvar (_, k)) ->
             let scrut_targs = Lazy.force scrut_template_args_lazy in
             (match List.nth_opt scrut_targs (k - 1) with
-             | Some t -> resolves_to_any_type t
+             | Some t -> resolves_to_any_type_ir t
              | None -> false)
           | _ -> false)
   in
@@ -6075,10 +6076,10 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
            [shared_ptr<T>].  Loopify uses this metadata to infer frame field
            types for expressions like [d_a0.get()] and [*d_a0]. *)
         let bare_field_cpp_ty =
-          cpp_of_ml env ml_ty
+          cpp_of_ml_ir env ml_ty
         in
         let storage_field_cpp_ty =
-          convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton ind_ref)
+          cpp_ir_of_ml_type env ~ns:(Ref.User.Set.singleton ind_ref)
             tvars
             ml_ty
         in
@@ -6120,9 +6121,9 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           (not is_sptr_self_ref) && is_param_boxed_at_def i
           && (not (Table.is_coinductive ind_ref))
           && (not (field_is_wholesale_erased i))
-          && bare_field_cpp_ty <> Tany
+          && bare_field_cpp_ty <> Cpp_ir.Type.Any
         in
-        let field_cpp_ty =
+        let field_cpp_ty : Cpp_ir.Lowered.Type.t =
           if is_sptr_self_ref then
             (* All self/mutual refs (direct or nested-in-custom): struct field
                is shared_ptr<bare>.  After deref, the binding has type bare_ty
@@ -6131,7 +6132,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                self-refs as shared_ptr<T> inside the custom container, but
                there is no element-wise converter from List<shared_ptr<T>> to
                List<T>, so we must keep elements as bare values. *)
-            Tshared_ptr bare_field_cpp_ty
+            Shared_pointer bare_field_cpp_ty
           else if is_param_boxed then
             (* The struct stores [crane::field<T>], but the binding is
                [auto] and every read of it goes through [crane::unbox]: as
@@ -6155,7 +6156,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             if non_erased_def_site_field_tys <> []
                && not (field_is_self_or_mutual_ref_at_def i)
                && not (field_has_nested_self_ref_at_def i)
-               && contains_shared_ptr storage_field_cpp_ty
+               && contains_shared_ptr_ir storage_field_cpp_ty
             then bare_field_cpp_ty
             else storage_field_cpp_ty
         in
@@ -6169,56 +6170,61 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       rev_ids
   in
   let field_bindings_arr = Array.of_list field_bindings in
-  let rec expr_has_lambda = function
-    | CPPfun_call (_, CPPlambda {cl_body = body; _}, _) ->
+  let rec expr_has_lambda (e : Cpp_ir.Lowered.Expr.t) =
+    match e with
+    | Call (_, Lambda {body = body; _}, _) ->
       (* IIFE: lambda is invoked immediately, so reference captures are safe.
          Only check the lambda body for nested non-IIFE lambdas. *)
       List.exists stmt_has_lambda body
-    | CPPlambda {cl_capture = Closure; _} ->
+    | Lambda {capture = Stored; _} ->
       (* [=] value-capture: non-coinductive self-ref fields (shared_ptr) need
          pre-extraction into a value binding before the lambda is entered. *)
       true
-    | CPPlambda {cl_body = body; cl_capture = Immediate; _} ->
+    | Lambda {body = body; capture = Runs_in_place; _} ->
       (* [&] ref-capture: shared_ptr fields are captured by reference — fine.
          Check the body for nested [=] lambdas that would need pre-extraction. *)
       List.exists stmt_has_lambda body
+    (* Only a requires expression's constrained expressions, not the
+       constraints on them. *)
+    | Requires r -> List.exists (fun (e', _) -> expr_has_lambda e') r.constraints
     | e ->
       let found = ref false in
-      iter_expr_children
-        ~on_expr:(fun e' -> if expr_has_lambda e' then found := true)
-        ~on_stmts:(fun stmts ->
-          if List.exists stmt_has_lambda stmts then found := true)
+      Cpp_ir.Children.expr
+        { expr = (fun e' -> if expr_has_lambda e' then found := true);
+          stmt = (fun s -> if stmt_has_lambda s then found := true);
+          type_ = ignore }
         e;
       !found
-  and stmt_has_lambda = function
-    | Sreturn (Some e) | Sexpr e -> expr_has_lambda e
-    | Sasgn (_, _, e) -> expr_has_lambda e
-    | Sif (c, t, f) ->
+  and stmt_has_lambda (s : Cpp_ir.Lowered.Stmt.t) =
+    match s with
+    | Return (Some e) | Expression e -> expr_has_lambda e
+    | Bind_variable (_, _, e) -> expr_has_lambda e
+    | If {condition = c; then_ = t; else_ = f} ->
       expr_has_lambda c || List.exists stmt_has_lambda t
       || List.exists stmt_has_lambda f
-    | Sswitch (scrut, _, branches, default) ->
+    | Switch {scrutinee = scrut; branches = branches; default = default; _} ->
       expr_has_lambda scrut
       || List.exists (fun (_, body) -> List.exists stmt_has_lambda body) branches
       || (match default with
           | Some body -> List.exists stmt_has_lambda body
           | None -> false)
-    | Smatch (scrut, branches, default) ->
-      expr_has_lambda scrut.sc_expr
+    | Match (scrut, branches, default) ->
+      expr_has_lambda scrut.expr
       || List.exists
-        (fun br -> List.exists stmt_has_lambda br.smb_body)
+        (fun (br : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.branch) -> List.exists stmt_has_lambda br.body)
         branches
       || (match default with
           | Some body -> List.exists stmt_has_lambda body
           | None -> false)
-    | Scustom_case (_, scrut, _, branches, _) ->
-      expr_has_lambda scrut
+    | Custom_match m ->
+      expr_has_lambda m.scrutinee
       || List.exists
-           (fun (_, _, body) -> List.exists stmt_has_lambda body)
-           branches
-    | Sassign_expr (obj, e) -> expr_has_lambda obj || expr_has_lambda e
-    | Swhile (c, body) -> expr_has_lambda c || List.exists stmt_has_lambda body
-    | Sblock body -> List.exists stmt_has_lambda body
-    | Sblock_custom (_, _, _, _, args, _, _) -> List.exists expr_has_lambda args
+           (fun (b : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.branch) -> List.exists stmt_has_lambda b.body)
+           m.branches
+    | Assign (obj, e) -> expr_has_lambda obj || expr_has_lambda e
+    | While (c, body) -> expr_has_lambda c || List.exists stmt_has_lambda body
+    | Block body -> List.exists stmt_has_lambda body
+    | Foreign_block b -> List.exists expr_has_lambda b.values
     | _ -> false
   in
   let branch_has_lambda = List.exists stmt_has_lambda body_stmts in
@@ -6230,8 +6236,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
      This flag triggers pre-extraction even when [branch_has_lambda] is
      false (because the lambda is added externally by [inline_iife]). *)
   let return_type_is_coinductive =
-    match current_cpp_return_type () with
-    | Some (Tglob (r, _, _)) -> Table.is_coinductive r
+    match current_cpp_return_type_ir () with
+    | Some (Entity_application (r, _, _)) -> Table.is_coinductive r
     | _ -> false
   in
   let branch_needs_sptr_preextract =
@@ -6247,7 +6253,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       (fun stmts (i, (var_name, _ml_ty)) ->
         if dummies_arr.(i) then
           let (binding_name, field_ty, read, _, _) = field_bindings_arr.(i) in
-          let bare_ty = cpp_of_ml env _ml_ty in
+          let bare_ty = cpp_of_ml_ir env _ml_ty in
           (* Pre-extract fields stored as shared_ptr when the branch body
              contains a lambda (or the return type is coinductive), so the
              lambda captures the value type rather than the shared_ptr.
@@ -6256,28 +6262,26 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
              (coinductive or generic container fields) is copyable and can
              be captured directly. *)
           let is_uptr_field = read = Read_through_pointer in
-          let subst_expr =
+          let subst_expr : Cpp_ir.Lowered.Expr.t =
             if read = Read_unboxed then
-              mk_call (CPPrt Crane_rt.Unbox_field) [CPPvar binding_name]
+              Cpp_ir.Build.call (Runtime Crane_rt.Unbox_field) [Local binding_name]
             else if is_uptr_field && branch_needs_sptr_preextract then
-              CPPvar (Id.of_string (Id.to_string binding_name ^ "_value"))
+              Local (Id.of_string (Id.to_string binding_name ^ "_value"))
             else if is_uptr_field then
               (* field_ty = Tshared_ptr storage_inner.  Deref the outer
                  shared_ptr, then convert storage_inner → bare_ty if they
                  differ (e.g. optional<shared_ptr<T>> → optional<T>). *)
-              let deref = CPPderef (CPPvar binding_name) in
+              let deref : Cpp_ir.Lowered.Expr.t = Dereference (Local binding_name) in
               (match field_ty with
-               | Tshared_ptr storage_inner when storage_inner <> bare_ty ->
-                 Cpp_ir_to_legacy_minicpp.expr
-                   (gen_type_conversion_expr ~src_ty:(Legacy_minicpp_to_cpp_ir.lower_type storage_inner) ~dst_ty:(Legacy_minicpp_to_cpp_ir.lower_type bare_ty) (Legacy_minicpp_to_cpp_ir.lower_expr deref))
+               | Shared_pointer storage_inner when storage_inner <> bare_ty ->
+                 gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
                | _ -> deref)
             else if field_ty <> bare_ty
-                    && contains_shared_ptr field_ty then
-              Cpp_ir_to_legacy_minicpp.expr
-                (gen_type_conversion_expr ~src_ty:(Legacy_minicpp_to_cpp_ir.lower_type field_ty) ~dst_ty:(Legacy_minicpp_to_cpp_ir.lower_type bare_ty)
-                   (Cpp_ir.Expr.Local binding_name))
+                    && contains_shared_ptr_ir field_ty then
+              gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
+                (Cpp_ir.Expr.Local binding_name)
             else if field_is_wholesale_erased i
-                    && not (resolves_to_any_type bare_ty) then
+                    && not (resolves_to_any_type_ir bare_ty) then
               (* [resolves_to_any_type] (not just [prints_as_any]) so that a
                  field whose declared type is itself an erased alias (e.g.
                  [symbol_semty = std::any]) is NOT wrapped in a spurious
@@ -6285,27 +6289,33 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                  value directly, and casting a [std::any] holding a container to
                  [std::any] would throw at runtime.  Only genuinely concrete
                  target types are unwrapped here. *)
-              (match strip_ns_tglob bare_ty with
-               | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
-                 let list_any_ty =
+              (match strip_ns_tglob_ir bare_ty with
+               | Entity_application (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
+                 let list_any_ty : Cpp_ir.Lowered.Type.t =
                    match bare_ty with
-                   | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
-                   | _ -> Tglob (g, [Tany], [])
+                   | In_namespace (ns_g, _) -> In_namespace (ns_g, Entity_application (g, [Any], []))
+                   | _ -> Entity_application (g, [Any], [])
                  in
-                 Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type bare_ty) [Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type list_any_ty) (Cpp_ir.Expr.Local binding_name)])
-               | Tglob (g, [elem_ty], _) when Ml_type_util.is_custom_list_global g ->
+                 Cpp_erasure.converting_ctor_ir bare_ty [Cpp_erasure.unbox_ir list_any_ty (Cpp_ir.Expr.Local binding_name)]
+               | Entity_application (g, [elem_ty], _) when Ml_type_util.is_custom_list_global g ->
+                 (* Each leaf erased, the containers kept. *)
+                 let rec erase_type_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+                   | Entity_application (g, args, ns) when args <> [] ->
+                     Entity_application (g, List.map erase_type_to_any args, ns)
+                   | In_namespace (ns_g, inner) -> In_namespace (ns_g, erase_type_to_any inner)
+                   | _ -> Any
+                 in
                  let erased_elem = erase_type_to_any elem_ty in
-                 let cast_ty =
-                   if erased_elem = Tany then bare_ty
-                   else Tglob (g, [erased_elem], [])
+                 let cast_ty : Cpp_ir.Lowered.Type.t =
+                   if erased_elem = Any then bare_ty
+                   else Entity_application (g, [erased_elem], [])
                  in
-                 Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type cast_ty) (Cpp_ir.Expr.Local binding_name))
-               | _ -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type bare_ty) (Cpp_ir.Expr.Local binding_name)))
+                 Cpp_erasure.unbox_ir cast_ty (Cpp_ir.Expr.Local binding_name)
+               | _ -> Cpp_erasure.unbox_ir bare_ty (Cpp_ir.Expr.Local binding_name))
             else
-              CPPvar binding_name
+              Local binding_name
           in
-          let repl = Legacy_minicpp_to_cpp_ir.lower_expr subst_expr in
-          List.map (fun st -> Cpp_ir_to_legacy_minicpp.stmt (local_var_subst_stmt ~keep_cast:true var_name repl (Legacy_minicpp_to_cpp_ir.lower_stmt st))) stmts
+          List.map (fun st -> local_var_subst_stmt ~keep_cast:true var_name subst_expr st) stmts
         else
           stmts )
       body_stmts
@@ -6321,7 +6331,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           let is_uptr_field = read = Read_through_pointer in
           if is_uptr_field && branch_needs_sptr_preextract then
             let bare_ty =
-              cpp_of_ml env ml_ty
+              cpp_of_ml_ir env ml_ty
             in
             let value_id =
               Id.of_string (Id.to_string binding_name ^ "_value")
@@ -6333,22 +6343,21 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                inside non-escaping lambda scopes.
                When the stored type (storage_inner) differs from bare_ty,
                apply a conversion (e.g. optional<shared_ptr<T>> → optional<T>). *)
-            let deref = CPPderef (CPPvar binding_name) in
+            let deref : Cpp_ir.Lowered.Expr.t = Dereference (Local binding_name) in
             let (_, field_ty', _, _, binder) = field_bindings_arr.(i) in
             let rhs =
               match field_ty' with
-              | Tshared_ptr storage_inner when storage_inner <> bare_ty ->
-                Cpp_ir_to_legacy_minicpp.expr
-                  (gen_type_conversion_expr ~src_ty:(Legacy_minicpp_to_cpp_ir.lower_type storage_inner) ~dst_ty:(Legacy_minicpp_to_cpp_ir.lower_type bare_ty) (Legacy_minicpp_to_cpp_ir.lower_expr deref))
+              | Shared_pointer storage_inner when storage_inner <> bare_ty ->
+                gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
               | _ -> deref
             in
             (* The value is what the branch body reads for the pattern
                variable, so it stands for that variable's binder. *)
             Some
-              (Sasgn
+              (Bind_variable
                  ( value_id,
-                   Declare (Tref (Lvalue, Tconst bare_ty), binder),
-                   rhs ))
+                   Declare (Reference (Lvalue, Const bare_ty), binder),
+                   rhs ) : Cpp_ir.Lowered.Stmt.t)
           else None
         else None)
       (List.mapi (fun i x -> (i, x)) rev_ids)
@@ -6357,17 +6366,17 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)
   let has_used_fields = List.exists Fun.id dummies in
-  { smb_ctor_type = Cpp_ir_to_legacy_minicpp.ty ctor_type;
-    smb_var = (if has_used_fields then Some sname else None);
-    smb_field_bindings =
+  { ctor_type = ctor_type;
+    var = (if has_used_fields then Some sname else None);
+    field_bindings =
       (if has_used_fields then
          List.map
-           (fun (n, ty, _read, used, binder) ->
-             {fb_name = n; fb_type = ty; fb_used = used; fb_binder = binder})
+           (fun (n, ty, _read, used, binder) : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.field_binding ->
+             {name = n; type_ = ty; used = used; binder = binder})
            field_bindings
        else []);
-    smb_extra_conds = [];
-    smb_body = body_stmts }
+    extra_conditions = [];
+    body = body_stmts }
 
 (** Generate C++ pattern matching for an [MLcase].
 
@@ -6381,7 +6390,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     {b Type resolution.}  When the match type contains unresolved [Tvar]s,
     attempts to resolve them from [env_types] so that field types and
     constructor type parameters are concrete for code generation. *)
-and gen_cpp_case (typ : ml_type) t env pv case_occ =
+and gen_cpp_case_ir (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
   let typ =
     let var_type i = try Some (get_env_type i) with _ -> None in
     let at bt = match_scrutinee_type env typ t pv ~var_type ~var_cpp_type:(fun _ -> bt) in
@@ -6414,7 +6423,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
         CErrors.anomaly (Pp.str "gen_case_cpp: enum type expected to be Tglob")
     in
     let scrutinee =
-      Cpp_ir_to_legacy_minicpp.expr (recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ (Legacy_minicpp_to_cpp_ir.lower_expr (gen_expr env t)))
+      recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ (gen_expr_ir env t)
     in
     let rec gen_enum_branches = function
       | [] -> []
@@ -6436,7 +6445,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
                    (Table.safe_basename_of_global r))
         in
         let body_stmts =
-          with_binders env ids' (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body)
+          with_binders env ids' (fun () -> gen_stmts_ir env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body)
         in
         (ctor_name, body_stmts) :: gen_enum_branches cs
       | Pwild | Prel _ | Ptuple _ -> gen_enum_branches cs
@@ -6446,7 +6455,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
         Array.to_list pv
         |> List.find_opt (fun (_, _, p, _) -> match p with Pwild -> true | _ -> false)
       in
-      Option.map (fun (_, _, _, body) -> gen_stmts env (fun x -> Sreturn (Some x)) body) wild_br
+      Option.map (fun (_, _, _, body) -> gen_stmts_ir env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) wild_br
     in
     let void_ret = iife_void_return_ir env typ pv in
     let branches, default =
@@ -6459,13 +6468,17 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
           let branches = gen_enum_branches (Array.to_list pv) in
           (branches, gen_default_stmts ()) )
     in
-    let body = [Sswitch (scrutinee, ind_ref, branches, default)] in
+    let body : Cpp_ir.Lowered.Stmt.t list =
+      [Switch {scrutinee = scrutinee; enum = ind_ref; branches = branches; default = default}]
+    in
     let iife_ret_opt =
       match void_ret with
-      | Some _ -> Some Tvoid
-      | None -> iife_closure_return env typ pv body
+      | Some _ -> Some Cpp_ir.Type.Void
+      | None ->
+        Option.map Legacy_minicpp_to_cpp_ir.lower_type
+          (iife_closure_return env typ pv (List.map Cpp_ir_to_legacy_minicpp.stmt body))
     in
-    mk_iife iife_ret_opt body
+    Cpp_ir.Build.iife iife_ret_opt body
   else
     (* Generate if/else-if pattern matching using [std::holds_alternative]
        and [std::get].  Produces an {!Smatch} node wrapped in an IIFE. *)
@@ -6482,9 +6495,9 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
     in
     (* The scrutinee is referenced across all branches, so the plan has a
        read of it as one in place, never moved ({!Ownership_ir.Inspected}). *)
-    let scrut_expr = gen_expr env t in
+    let scrut_expr = gen_expr_ir env t in
     let scrut_expr =
-      Cpp_ir_to_legacy_minicpp.expr (recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ (Legacy_minicpp_to_cpp_ir.lower_expr scrut_expr))
+      recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ scrut_expr
     in
     (* A shared variant is matched by reading: a field taken out of it is a
        count bump, while decomposing it through [v_mut()] would first copy a
@@ -6502,21 +6515,21 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
        [this] is always a pointer, so method bodies use [this->v()].
        For flat types (no variant wrapper), use the scrutinee directly. *)
     let scrut_is_ptr =
-      match scrut_expr with CPPthis -> true | _ -> false
+      match scrut_expr with This -> true | _ -> false
     in
-    let scrut_v =
+    let scrut_v : Cpp_ir.Lowered.Expr.t =
       if is_flat_match then
         scrut_expr
       else if scrut_is_ptr then
-        CPPaccess_call (Aarrow, scrut_expr, Id.of_string "v", [])
+        Access_call (Arrow, scrut_expr, Id.of_string "v", [])
       else
-        mk_call (CPPaccess (Adot, scrut_expr, Id.of_string "v")) []
+        Cpp_ir.Build.call (Access (Dot, scrut_expr, Id.of_string "v")) []
     in
-    let scrut =
-      { sc_expr = scrut_v;
-        sc_access = Adot;
-        sc_owned = scrut_is_owned;
-        sc_flat = is_flat_match }
+    let scrut : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.scrutinee =
+      { expr = scrut_v;
+        access = Dot;
+        owned = scrut_is_owned;
+        flat = is_flat_match }
     in
     (* Push renamed pattern variables into the environment, register their
        types in [env_types], and compute a dummies mask (true = non-Dummy).
@@ -6556,7 +6569,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
         (br :: rest, wild)
       | Pwild | Prel _ ->
         let body_stmts =
-          gen_stmts env (fun x -> Sreturn (Some x)) body
+          gen_stmts_ir env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body
         in
         ([], Some body_stmts)
       | Ptuple _ -> gen_branches (i + 1) cs
@@ -6564,9 +6577,10 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
     let branches, wildcard = gen_branches 0 (Array.to_list pv) in
     let iife_ret_opt =
       match iife_void_return_ir env typ pv with
-      | Some _ -> Some Tvoid
+      | Some _ -> Some Cpp_ir.Type.Void
       | None ->
-        iife_closure_return env typ pv [Smatch (scrut, branches, wildcard)]
+        Option.map Legacy_minicpp_to_cpp_ir.lower_type
+          (iife_closure_return env typ pv [Cpp_ir_to_legacy_minicpp.stmt (Match (scrut, branches, wildcard))])
     in
     (* Perceus reuse (Crane Reuse): rebuild a same-inductive constructor in
        a cell the match frees instead of allocating, via the [<ctor>__reuse]
@@ -6586,7 +6600,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
          && (not is_flat_match) && (not is_enum)
          && (match typ with Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
       then
-        let scrut_cpp_ty = cpp_of_ml env typ in
+        let scrut_cpp_ty = cpp_of_ml_ir env typ in
         (* The recycled cell is a [crane::rc] over the *scrutinee's* inductive
            instance, so it can only be handed to a [__reuse] factory that
            rebuilds that same instance.  A type-changing function such as
@@ -6596,8 +6610,8 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
            the branch to reconstruct exactly the scrutinee's type. *)
         let branch_rebuilds_scrut_ty branch_idx =
           let _ids, rty, _pat, _body = pv.(branch_idx) in
-          Ml_type_util.cpp_ty_eq scrut_cpp_ty
-            (cpp_of_ml env rty)
+          Ml_type_util.cpp_ty_eq_ir scrut_cpp_ty
+            (cpp_of_ml_ir env rty)
         in
         (* The arm moves the scrutinee's fields out and recycles its child's
            cell, so a body that reads the scrutinee whole -- an association
@@ -6711,11 +6725,11 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
                   Representation_plan.check ~as_bound:true ~site:(Branch (case_occ, branch_idx)) ~field:i
                     ~live:(binder_is_boxed (List.length ids' - i)) () )
                 rev_ids';
-            let scrut_vmut =
+            let scrut_vmut : Cpp_ir.Lowered.Expr.t =
               if scrut_is_ptr then
-                CPPaccess_call (Aarrow, scrut_expr, Id.of_string "v_mut", [])
+                Access_call (Arrow, scrut_expr, Id.of_string "v_mut", [])
               else
-                mk_call (CPPaccess (Adot, scrut_expr, Id.of_string "v_mut")) []
+                Cpp_ir.Build.call (Access (Dot, scrut_expr, Id.of_string "v_mut")) []
             in
             (* Name the alternative rather than number it: the branch index
                and the variant position coincide, but [std::get<typename
@@ -6725,10 +6739,10 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
             in
             (* The field by the name the constructor's struct gives it --
                [l] for [list]'s tail, not the positional [a1]. *)
-            let rf i =
-              CPPaccess
-                ( Adot,
-                  CPPstd_get (Tqualified (scrut_cpp_ty, matched_alt), Some scrut_vmut),
+            let rf i : Cpp_ir.Lowered.Expr.t =
+              Access
+                ( Dot,
+                  Variant_get (Member (scrut_cpp_ty, matched_alt), Some scrut_vmut),
                   Common.lookup_ctor_field_name ~owner:matched_ctor
                     (ctor_struct_name_of_ref matched_ctor) i )
             in
@@ -6744,38 +6758,40 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
                 (List.map2
                    (fun (i, (var_name, ml_ty)) read ->
                      let binder = local_binder ~site:(Branch (case_occ, branch_idx)) env' var_name in
-                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty, binder), e)] in
+                     let bind e : Cpp_ir.Lowered.Stmt.t list =
+                       [Bind_variable (var_name, Declare (cpp_of_ml_ir env ml_ty, binder), e)]
+                     in
                      match read with
                      | Some `Unused | None -> []
                      (* The token: its value is moved out, owned, so the
                         recursion propagates reuse; the cell stays behind as
                         the token. *)
-                     | Some `Child when moved_child i -> bind (CPPmove (CPPderef (rf i)))
-                     | Some (`Child | `Deref) -> bind (CPPderef (rf i))
-                     | Some `Unbox -> bind (mk_call (CPPrt Crane_rt.Unbox_field) [rf i])
-                     | Some `Move -> bind (CPPmove (rf i)) )
+                     | Some `Child when moved_child i -> bind (Move (Dereference (rf i)))
+                     | Some (`Child | `Deref) -> bind (Dereference (rf i))
+                     | Some `Unbox -> bind (Cpp_ir.Build.call (Runtime Crane_rt.Unbox_field) [rf i])
+                     | Some `Move -> bind (Move (rf i)) )
                    (List.mapi (fun i x -> (i, x)) rev_ids')
                    reads)
             in
-            let tok, unique_cond =
+            let tok, (unique_cond : Cpp_ir.Lowered.Expr.t) =
               match reused_cell with
               | `Block ->
-                (scrut_expr, mk_call (CPPaccess (Adot, scrut_v, Id.of_string "unique")) [])
+                (scrut_expr, Cpp_ir.Build.call (Access (Dot, scrut_v, Id.of_string "unique")) [])
               | `Child_cell k ->
                 ( rf k,
-                  CPPbinop
-                    ( Beq,
-                      mk_call (CPPaccess (Adot, rf k, Id.of_string "use_count")) [],
-                      CPPint 1 ) )
+                  Binary
+                    ( Equal,
+                      Cpp_ir.Build.call (Access (Dot, rf k, Id.of_string "use_count")) [],
+                      Literal (Int 1) ) )
             in
             (* Every field the arm binds is a local of its own, owned: the
                plan of the arm says so. *)
             let body_stmts =
-              with_reuse_token (Some tok) (fun () ->
+              with_reuse_token (Some (Cpp_ir_to_legacy_minicpp.expr tok)) (fun () ->
                   with_plan
                     (Ownership_ir.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx
                        ~constructor:tail_ctor)
-                    (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body) )
+                    (fun () -> gen_stmts_ir env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) )
             in
             restore_env_types saved_env_types;
             Some (branch_idx, extract @ body_stmts, unique_cond)
@@ -6789,21 +6805,24 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
     in
     ( match reuse_stmts_opt with
     | Some (branch_idx, reuse_body, use_count_cond) ->
-      let index_cond =
-        CPPbinop
-          ( Beq,
-            mk_call (CPPaccess (Adot, scrut_v, Id.of_string "index")) [],
-            CPPint branch_idx )
+      let index_cond : Cpp_ir.Lowered.Expr.t =
+        Binary
+          ( Equal,
+            Cpp_ir.Build.call (Access (Dot, scrut_v, Id.of_string "index")) [],
+            Literal (Int branch_idx) )
       in
-      let normal = [Smatch (scrut, branches, wildcard)] in
-      mk_iife iife_ret_opt
-        [Sif (index_cond, [Sif (use_count_cond, reuse_body, normal)], normal)]
+      let normal : Cpp_ir.Lowered.Stmt.t list = [Match (scrut, branches, wildcard)] in
+      Cpp_ir.Build.iife iife_ret_opt
+        [ If
+            { condition = index_cond;
+              then_ = [If {condition = use_count_cond; then_ = reuse_body; else_ = normal}];
+              else_ = normal } ]
     | None ->
-      mk_iife iife_ret_opt [Smatch (scrut, branches, wildcard)] )
+      Cpp_ir.Build.iife iife_ret_opt [Match (scrut, branches, wildcard)] )
 
-and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
+and gen_cpp_custom_body env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) rty ids body scrut_ind_opt ~site =
   let tvars = get_current_type_vars () in
-  let ret = cpp_of_ml env rty in
+  let ret = cpp_of_ml_ir env rty in
   let n_pat_vars = List.length ids in
   let ids =
     List.mapi
@@ -6835,26 +6854,27 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
             else Ref.User.Set.singleton g_scrut
           | _ -> Ref.User.Set.empty
         in
-        { cp_name = x;
-          cp_type = convert_ml_type_to_cpp_type env ~ns tvars ty;
-          cp_binder = core_binder ~site env (n_pat_vars - j) } )
+        ( { name = x;
+            type_ = cpp_ir_of_ml_type env ~ns tvars ty;
+            binder = core_binder ~site env (n_pat_vars - j) }
+          : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.param ) )
       (List.rev ids)
   in
   (* Wrap erased variables with any_cast when returned as a template parameter. *)
   let k =
     match ret with
-    | Tvar _ ->
+    | Variable _ ->
       let body_is_erased =
         match body with
         | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ), _) ->
           not (read_is_boxed i occ) && is_env_var_erased env tvars i
         | _ -> false
       in
-      if body_is_erased then (fun e -> k (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type ret) (Legacy_minicpp_to_cpp_ir.lower_expr e))))
+      if body_is_erased then (fun e -> k (Cpp_erasure.unbox_ir ret e))
       else k
     | _ -> k
   in
-  let body = gen_stmts env k body in
+  let body = gen_stmts_ir env k body in
   (ids, ret, body)
 
 (** Generate a custom case expression using user-provided extraction syntax.
@@ -6862,7 +6882,8 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
     Returns a [cpp_stmt list]: when the scrutinee is non-trivial and the
     template uses [%scrut] more than once, a cache declaration
     [auto _cs = expr;] is prepended before the [Scustom_case] node. *)
-and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
+and gen_custom_cpp_case_ir env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (typ : ml_type) t pv case_occ :
+    Cpp_ir.Lowered.Stmt.t list =
   (* Save the ML type for temps computation after fix_a_fired is known. *)
   let ml_typ = typ in
   let cs = custom_match_scrutinee env typ t pv ~var_boxed:read_is_boxed ~var_type:get_env_type_opt in
@@ -6908,7 +6929,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   let t =
     let saved_ret = (!tctx).current_cpp_return_type in
     tctx := { !tctx with current_cpp_return_type = Some typ_ir };
-    let t = gen_expr ?expected_ty:scrut_expected env t in
+    let t = gen_expr_ir ?expected_ty:scrut_expected env t in
     tctx := { !tctx with current_cpp_return_type = saved_ret };
     t
   in
@@ -6929,7 +6950,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
     let needs_pair_any_cast = cs.cs_pair_any_cast in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
-      (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tglob (g, [Tany; Tany], []))) (Legacy_minicpp_to_cpp_ir.lower_expr t)), true, None)
+      (Cpp_erasure.unbox_ir (Entity_application (g, [Any; Any], [])) t, true, None)
     end
     else if (scrut_is_mlmagic || (scrut_is_magic && Cpp_ir.Types.prints_as_any typ)
              || scrut_is_cpp_erased)
@@ -6956,7 +6977,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
           Entity_application (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
-      (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir cast_ty (Legacy_minicpp_to_cpp_ir.lower_expr t)), false, Some cast_ty)
+      (Cpp_erasure.unbox_ir cast_ty t, false, Some cast_ty)
     else
       (t, false, None)
   in
@@ -6982,22 +7003,22 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   let temps =
     match ml_typ with
     | Tglob (_, tys, _) ->
-      let raw = template_params_of_ml ~site:Declared env tys in
-      List.map (fun ty ->
-        if fix_a_fired || has_tany_in_type ty then Tauto else ty) raw
+      let raw = template_params_of_ml_ir ~site:Declared env tys in
+      List.map (fun ty : Cpp_ir.Lowered.Type.t ->
+        if fix_a_fired || has_tany_in_type_ir ty then Auto else ty) raw
     | _ -> []
   in
   (* When the template uses %scrut more than once and the scrutinee is a
      non-trivial expression (function call, constructor, etc.), cache it in
      a temporary to avoid double evaluation. *)
   let scrut, cache_prefix =
-    if scrut_uses > 1 && not (is_trivial_scrut t) then begin
+    if scrut_uses > 1 && not (is_trivial_scrut (Cpp_ir_to_legacy_minicpp.expr t)) then begin
       let n = (!tctx).cs_counter in
       tctx := { !tctx with cs_counter = n + 1 };
       let cache_id = Common.scrutinee_cache_id n in
-      match lift_iife_assignment cache_id None t with
-      | Some stmts -> (CPPvar cache_id, stmts)
-      | None -> (CPPvar cache_id, [Sasgn (cache_id, Declare (Tauto, None), t)])
+      match lift_iife_assignment cache_id None (Cpp_ir_to_legacy_minicpp.expr t) with
+      | Some stmts -> (Cpp_ir.Expr.Local cache_id, List.map Legacy_minicpp_to_cpp_ir.lower_stmt stmts)
+      | None -> (Cpp_ir.Expr.Local cache_id, [(Bind_variable (cache_id, Declare (Auto, None), t) : Cpp_ir.Lowered.Stmt.t)])
     end else begin
       (t, [])
     end
@@ -7112,38 +7133,37 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
       let br_stmts =
         if fix_a_fired then
           List.fold_left
-            (fun stmts {cp_name = name; cp_type = cpp_ty; _} ->
-               if not (prints_as_any cpp_ty) then
-                 let stripped = strip_ns_tglob cpp_ty in
-                 let cast_expr =
+            (fun stmts ({name = name; type_ = cpp_ty; _} : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.param) ->
+               if not (Cpp_ir.Types.prints_as_any cpp_ty) then
+                 let stripped = strip_ns_tglob_ir cpp_ty in
+                 let cast_expr : Cpp_ir.Lowered.Expr.t =
                    match stripped with
-                   | Tglob (g, _, _) when is_prod_global g ->
-                     Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tglob (g, [Tany; Tany], []))) (Cpp_ir.Expr.Local name))
-                   | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
+                   | Entity_application (g, _, _) when is_prod_global g ->
+                     Cpp_erasure.unbox_ir (Entity_application (g, [Any; Any], [])) (Cpp_ir.Expr.Local name)
+                   | Entity_application (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
                         so each element is any_cast'd correctly.
                         Preserve any Tnamespace wrapper for correct rendering. *)
-                     let list_any_ty =
+                     let list_any_ty : Cpp_ir.Lowered.Type.t =
                        match cpp_ty with
-                       | Tnamespace (ns_g, _) ->
-                         Tnamespace (ns_g, Tglob (g, [Tany], []))
-                       | _ -> Tglob (g, [Tany], [])
+                       | In_namespace (ns_g, _) ->
+                         In_namespace (ns_g, Entity_application (g, [Any], []))
+                       | _ -> Entity_application (g, [Any], [])
                      in
-                     Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) [Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type list_any_ty) (Cpp_ir.Expr.Local name)])
-                   | Tglob (g, [_], _) when Ml_type_util.is_custom_list_global g ->
-                     CPPvar name
-                   | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
+                     Cpp_erasure.converting_ctor_ir cpp_ty [Cpp_erasure.unbox_ir list_any_ty (Cpp_ir.Expr.Local name)]
+                   | Entity_application (g, [_], _) when Ml_type_util.is_custom_list_global g ->
+                     Local name
+                   | Member _ | Entity_application (GlobRef.ConstRef _, _, _) ->
                      (* Opaque type alias (e.g. nt_semty = std::any) or
                         qualified member type (e.g. typename Ty::sym_semty):
                         the stored value IS the concrete payload, NOT a std::any
                         wrapping it. any_cast<std::any>(any(V)) throws; pass
                         the std::any value as-is. *)
-                     CPPvar name
-                   | _ -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) (Cpp_ir.Expr.Local name))
+                     Local name
+                   | _ -> Cpp_erasure.unbox_ir cpp_ty (Cpp_ir.Expr.Local name)
                  in
-                 let repl = Legacy_minicpp_to_cpp_ir.lower_expr cast_expr in
-                 List.map (fun st -> Cpp_ir_to_legacy_minicpp.stmt (local_var_subst_stmt ~keep_cast:true name repl (Legacy_minicpp_to_cpp_ir.lower_stmt st))) stmts
+                 List.map (fun st -> local_var_subst_stmt ~keep_cast:true name cast_expr st) stmts
                else stmts)
             br_stmts
             br_ids
@@ -7158,15 +7178,16 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
       let br_stmts =
         let tany_pat_var_names =
           if not fix_a_fired then
-            List.fold_left (fun acc p ->
-              if has_tany_in_type p.cp_type then Id.Set.add p.cp_name acc else acc)
+            List.fold_left (fun acc (p : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.param) ->
+              if has_tany_in_type_ir p.type_ then Id.Set.add p.name acc else acc)
               Id.Set.empty br_ids
           else Id.Set.empty
         in
         let should_strip args =
-          List.exists (function
-            | CPPany_cast (ty, _) -> has_tany_in_type ty
-            | CPPvar name -> Id.Set.mem name tany_pat_var_names
+          List.exists (fun (a : Cpp_ir.Lowered.Expr.t) ->
+            match a with
+            | Any_cast (ty, _) -> has_tany_in_type_ir ty
+            | Local name -> Id.Set.mem name tany_pat_var_names
             | _ -> false) args
         in
         if fix_a_fired || not (Id.Set.is_empty tany_pat_var_names) then
@@ -7179,7 +7200,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
              that reads through the alias to its body and answers with the
              wrong constructor. *)
           let recovered_carrier tys =
-            List.exists (function Ttyctor _ -> true | _ -> false) tys
+            List.exists (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Type_constructor _ -> true | _ -> false) tys
           in
           (* Nor can it recover a class instance, which no argument's type
              states -- it is named for that reason -- or a type variable no
@@ -7187,9 +7208,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
              are positional, so only the trailing run deduction can recover is
              given up: the instances that lead the list, and every argument up
              to the last one deduction cannot supply, stay. *)
-          let is_instance_arg = function
-            | Tvar (Tv_index (_, Some id) | Tv_named id) -> Common.is_tc_instance_id id
-            | Tglob (g, _, _) -> ref_is_instance g
+          let is_instance_arg (t : Cpp_ir.Lowered.Type.t) =
+            match t with
+            | Variable (Index (_, Some id) | Named id) -> Common.is_tc_instance_id id
+            | Entity_application (g, _, _) -> ref_is_instance g
             | _ -> false
           in
           let rec instance_prefix = function
@@ -7231,31 +7253,33 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
               let n = last_needed 0 0 flags in
               insts @ List.filteri (fun i _ -> i < n) regular
           in
-          let rec fix_expr e = match e with
-            | CPPfun_call (res, CPPglob (r, (_ :: _ as tys), ci), args)
-              when (not (recovered_carrier tys)) && should_strip (to_reversed args) ->
-              CPPfun_call
-                (res, CPPglob (r, kept_by_deduction r tys, ci), map_args fix_expr args)
-            | _ -> map_expr fix_expr fix_stmt Fun.id e
-          and fix_stmt s = map_stmt fix_expr fix_stmt Fun.id s in
+          (* The arguments are rewritten last first, as {!Cpp_ir.Map} does. *)
+          let rec fix_expr (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t = match e with
+            | Call (res, Entity (r, (_ :: _ as tys), ci), args)
+              when (not (recovered_carrier tys)) && should_strip (List.rev args) ->
+              Call
+                (res, Entity (r, kept_by_deduction r tys, ci), List.rev (List.map fix_expr (List.rev args)))
+            | _ -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:fix_expr ~stmt:fix_stmt ~type_:Fun.id ()) e
+          and fix_stmt s = Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:fix_expr ~stmt:fix_stmt ~type_:Fun.id ()) s in
           List.map fix_stmt br_stmts
         else br_stmts
       in
       (* Wrap erased pattern variables with any_cast when returned as a template parameter. *)
       let br_stmts =
         match br_ret with
-        | Tvar _ ->
+        | Variable _ ->
           let erased_pat_vars =
-            List.fold_left (fun acc p ->
-              if prints_as_any p.cp_type then Id.Set.add p.cp_name acc else acc)
+            List.fold_left (fun acc (p : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.param) ->
+              if Cpp_ir.Types.prints_as_any p.type_ then Id.Set.add p.name acc else acc)
               Id.Set.empty br_ids
           in
           if Id.Set.is_empty erased_pat_vars then br_stmts
           else
-            List.map (function
-              | Sreturn (Some (CPPvar name))
+            List.map (fun (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t ->
+              match s with
+              | Return (Some (Local name))
                 when Id.Set.mem name erased_pat_vars ->
-                Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type br_ret) (Cpp_ir.Expr.Local name))))
+                Return (Some (Cpp_erasure.unbox_ir br_ret (Cpp_ir.Expr.Local name)))
               | s -> s)
               br_stmts
         | _ -> br_stmts
@@ -7265,15 +7289,19 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   in
   let cases = gen_cases 0 (Array.to_list pv) in
   cache_prefix @
-  [ Scustom_case
-      ( Cpp_ir_to_legacy_minicpp.ty case_typ,
-        scrut,
-        temps,
-        cases,
-        { cm_template = cmatch;
-          cm_inductive = Table.indref_of_match pv;
-          cm_scrutinee = (if pair_by_value then Scrut_owned else Scrut_borrowed);
-          cm_pieces = None } ) ]
+  [ Custom_match
+      { return_type = case_typ;
+        scrutinee = scrut;
+        type_args = temps;
+        branches =
+          List.map
+            (fun (params, type_, body) : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Custom_match.branch ->
+              {params = params; type_ = type_; body = body})
+            cases;
+        template = cmatch;
+        inductive = Table.indref_of_match pv;
+        hold = (if pair_by_value then Owned else Borrowed);
+        pieces = Uninstantiated } ]
 
 (** {2 IIFE Inlining}
 
@@ -7307,17 +7335,17 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
    taken apart into three fields made three calls per level.  The temporary
    is read for nothing else, so each field is moved out of it.  Returns what
    the fields are read out of, and the statements evaluating it. *)
-and record_read_once env ~is_typeclass t =
-  let scrut = gen_expr env t in
-  if is_typeclass || is_trivial_scrut scrut then (scrut, [])
+and record_read_once_ir env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
+  let scrut = gen_expr_ir env t in
+  if is_typeclass || is_trivial_scrut (Cpp_ir_to_legacy_minicpp.expr scrut) then (scrut, [])
   else
     let n = (!tctx).cs_counter in
     tctx := { !tctx with cs_counter = n + 1 };
     let cache_id = Common.scrutinee_cache_id n in
-    ( CPPmove (CPPvar cache_id),
-      match lift_iife_assignment cache_id None scrut with
-      | Some stmts -> stmts
-      | None -> [Sasgn (cache_id, Declare (Tauto, None), scrut)] )
+    ( Move (Local cache_id),
+      match lift_iife_assignment cache_id None (Cpp_ir_to_legacy_minicpp.expr scrut) with
+      | Some stmts -> List.map Legacy_minicpp_to_cpp_ir.lower_stmt stmts
+      | None -> [Bind_variable (cache_id, Declare (Auto, None), scrut)] )
 
 and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   (* Statements open a position of their own and state no type for it: the
@@ -8881,18 +8909,16 @@ and project_through_instance_ir env use args projection : Cpp_ir.Lowered.Expr.t 
 (* {!eta_fun} in CppIR. *)
 and eta_fun_ir ?slot ?expected_ty env f args : Cpp_ir.Lowered.Expr.t = Legacy_minicpp_to_cpp_ir.lower_expr (eta_fun ?slot ?expected_ty env f args)
 
-(* {!gen_cpp_case} in CppIR. *)
-and gen_cpp_case_ir typ t env pv case_occ : Cpp_ir.Lowered.Expr.t = Legacy_minicpp_to_cpp_ir.lower_expr (gen_cpp_case typ t env pv case_occ)
+(* {!gen_cpp_case_ir} in MiniCpp. *)
+and gen_cpp_case typ t env pv case_occ = Cpp_ir_to_legacy_minicpp.expr (gen_cpp_case_ir typ t env pv case_occ)
 
-(* {!gen_custom_cpp_case} in CppIR. *)
-and gen_custom_cpp_case_ir env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) typ t pv case_occ :
-    Cpp_ir.Lowered.Stmt.t list =
-  List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_custom_cpp_case env (fun e -> Cpp_ir_to_legacy_minicpp.stmt (k (Legacy_minicpp_to_cpp_ir.lower_expr e))) typ t pv case_occ)
+(* {!gen_custom_cpp_case_ir} in MiniCpp. *)
+and gen_custom_cpp_case env k typ t pv case_occ = List.map Cpp_ir_to_legacy_minicpp.stmt (gen_custom_cpp_case_ir env (fun e -> Legacy_minicpp_to_cpp_ir.lower_stmt (k (Cpp_ir_to_legacy_minicpp.expr e))) typ t pv case_occ)
 
-(* {!record_read_once} in CppIR. *)
-and record_read_once_ir env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
-  let e, ss = record_read_once env ~is_typeclass t in
-  (Legacy_minicpp_to_cpp_ir.lower_expr e, List.map Legacy_minicpp_to_cpp_ir.lower_stmt ss)
+(* {!record_read_once_ir} in MiniCpp. *)
+and record_read_once env ~is_typeclass t =
+  let e, ss = record_read_once_ir env ~is_typeclass t in
+  (Cpp_ir_to_legacy_minicpp.expr e, List.map Cpp_ir_to_legacy_minicpp.stmt ss)
 
 (* {!gen_stmts} in CppIR. *)
 and gen_stmts_ir ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast : Cpp_ir.Lowered.Stmt.t list =
