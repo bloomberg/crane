@@ -14,19 +14,17 @@
     Which methods are projections is not read off their C++ bodies: it is
     decided from the Core function each method is made of
     ({!Escape.returns_receiver_field}), and recorded on its receiver
-    ([returns_field] of {!Minicpp.receiver}).  Under [CRANE_CHECK_IR]
+    ([returns_field] of {!Cpp_ir.Field.Receiver.t}).  Under [CRANE_CHECK_IR]
     the body is checked to agree.
 
     The split is made where the method is generated, so every pass after
     that sees the overloads the struct declares. *)
 
 (** [lend ~coinductive field] is the struct field [field] as declared: a
-    projection of a coinductive, still {!Minicpp.Rq_any}, as its two
+    projection of a coinductive, still callable on [Any] receiver, as its two
     overloads; any other field as it is. *)
 val lend :
-  coinductive:bool ->
-  Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag ->
-  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list
+  coinductive:bool -> Cpp_ir.Lowered.phase Cpp_ir.Field.member -> Cpp_ir.Lowered.phase Cpp_ir.Field.member list
 
 (** [check_decl d] -- a {!Probe.violation} for each projection of a
     coinductive [d] declares unsplit.  Run on each finished declaration

@@ -1031,8 +1031,8 @@ let gen_methods ?(merged = false) name vars candidates =
   Control_to_cpp_ir.lower_struct_methods ~merged name vars
     (List.concat_map
        (fun c ->
-         List.map Legacy_minicpp_to_cpp_ir.lower_member
-           (Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c)) )
+         Borrow_projection.lend ~coinductive:(Table.is_coinductive name)
+           (Legacy_minicpp_to_cpp_ir.lower_member (gen_single_method name vars c)) )
        candidates )
 
 (** Does the ML type [ml_ty] contain [ind_ref] (or a mutual sibling) anywhere
