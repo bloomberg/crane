@@ -9,7 +9,7 @@
     over the expression translation in {!Translation}, re-exported through
     {!Gen_decls}.  The callable plan of each function ({!plan_function}) is
     made before any body is generated; generating the function reads it
-    back ({!planned_scope_head}). *)
+    back ({!planned_relaxations}, {!declare_planned}). *)
 
 open Common
 open Miniml
@@ -390,7 +390,7 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
 
 (** The value-parameter types, in declaration order, and the return type of
     a generated function declaration, which keeps its parameters last first:
-    what [CRANE_CHECK_IR] holds to its plan ({!declare_planned_signature}). *)
+    what [CRANE_CHECK_IR] holds to its plan ({!declare_planned}). *)
 let declared_signature =
   let lower = Legacy_minicpp_to_cpp_ir.lower_type in
   function
@@ -1128,14 +1128,13 @@ let plan_scope_head n ty scope =
         ~minted:scope.bs_minted n ty scope.bs_temps
         {Callable_abi.params = List.rev_map snd scope.bs_ids; ret = scope.bs_cod})
 
-(** The head the function [n] generated under [scope] is declared with, and
-    what its relaxations decided: its plan's, which was made before anything
-    was generated.  Under [CRANE_CHECK_IR] the head is decided again from
-    [scope] and checked against the plan. *)
-let planned_scope_head n ty scope =
-  let abi = Callable_abi.planned n in
+(** What the relaxations of the function [n] generated under [scope]
+    decided: its plan's, which was made before anything was generated.
+    Under [CRANE_CHECK_IR] the head is decided again from [scope] and checked
+    against the plan. *)
+let planned_relaxations n ty scope =
   if Probe.checking () then Callable_abi.check (plan_scope_head n ty scope);
-  (Cpp_ir_to_legacy_minicpp.template_parameters (Callable_abi.declared_head abi), Callable_abi.relaxations abi)
+  Callable_abi.relaxations (Callable_abi.planned n)
 
 (** The reference a self-call of [n] in its own body is written with: every
     template parameter its plan lets a call write, at itself -- the call is
@@ -1173,38 +1172,47 @@ let self_call_reference n ~undeducible =
   in
   mk_cppglob n (List.map (fun (_, id) -> named_tvar id) written)
 
-(** The declaration of the function [n], [decl] as its body was generated,
-    with the value-parameter types and return type its plan's signature
-    gives ({!Callable_abi.signature}): the head a caller planned against is
-    the one declared.  Under [CRANE_CHECK_IR] the generated signature is
-    held to the plan's.  A top-level sequential [main] keeps its own: it is
-    declared to return [int] for the entry point, which no call of it
-    reads. *)
-let declare_planned_signature n decl =
+(** The declaration of the function [n] whose definition [decl] is, as its
+    body was generated: the head is a projection of [n]'s plan -- the
+    template head it declares ({!Callable_abi.declared_head}), and the
+    value-parameter types and return type of its signature
+    ({!Callable_abi.signature}) -- so the head a caller planned against is
+    the one declared; [decl] gives only the parameter names and the body.
+    Under [CRANE_CHECK_IR] the generated signature is held to the plan's.  A
+    top-level sequential [main] keeps its own signature: it is declared to
+    return [int] for the entry point, which no call of it reads. *)
+let declare_planned n decl =
+  let abi = Callable_abi.planned n in
   let is_entry_point =
     match (n, decl) with
     | GlobRef.ConstRef c, Dfun {df_ret = Tid_external ("int", []); _} ->
       String.equal (Label.to_string (Constant.label c)) "main"
     | _ -> false
   in
-  if is_entry_point then decl
-  else
-    let planned = Callable_abi.signature (Callable_abi.planned n) in
-    if Probe.checking () && not (Option.equal ( = ) planned (declared_signature decl)) then
-      Probe.violation "callable ABI"
-        Pp.(
-          str "the declaration of " ++ GlobRef.print n
-          ++ str " has another signature than its plan" );
-    let raised = Option.map (fun {Callable_abi.params; ret} ->
-        (List.map Cpp_ir_to_legacy_minicpp.ty params, Cpp_ir_to_legacy_minicpp.ty ret)) planned in
-    match (raised, decl) with
-    | Some (params, ret), Dfun ({df_shape = Ddef (ps, body); _} as f)
-      when List.compare_lengths params ps = 0 ->
-      Dfun {f with df_ret = ret; df_shape = Ddef (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params), body)}
-    | Some (params, ret), Dfun ({df_shape = Ddecl ps; _} as f)
-      when List.compare_lengths params ps = 0 ->
-      Dfun {f with df_ret = ret; df_shape = Ddecl (List.map2 (fun (id, _) t -> (id, t)) ps (List.rev params))}
-    | _ -> decl
+  let decl =
+    if is_entry_point then decl
+    else
+      let planned = Callable_abi.signature abi in
+      if Probe.checking () && not (Option.equal ( = ) planned (declared_signature decl)) then
+        Probe.violation "callable ABI"
+          Pp.(
+            str "the declaration of " ++ GlobRef.print n
+            ++ str " has another signature than its plan" );
+      match (planned, decl) with
+      | Some {Callable_abi.params; ret}, Dfun ({df_shape = Ddef (ps, body); _} as f)
+        when List.compare_lengths params ps = 0 ->
+        Dfun
+          { f with
+            df_ret = Cpp_ir_to_legacy_minicpp.ty ret;
+            df_shape =
+              Ddef (List.map2 (fun (id, _) t -> (id, Cpp_ir_to_legacy_minicpp.ty t)) ps (List.rev params), body) }
+      | _ ->
+        CErrors.anomaly
+          Pp.(str "the definition of " ++ GlobRef.print n ++ str " does not have its plan's parameters.")
+  in
+  match Callable_abi.declared_head abi with
+  | [] -> decl
+  | head -> Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters head, None, decl)
 
 (** Generate the C++ definition of the function [n] from its ML body [b]:
     its {!body_scope}, the head its plan declares, the body with every
@@ -1223,7 +1231,7 @@ let declare_planned_signature n decl =
 let gen_dfun ~minted n b cty ty temps =
   let scope = dfun_body_scope ~minted n b cty ty temps in
   let raise_ty = Cpp_ir_to_legacy_minicpp.ty in
-  let temps, relaxations = planned_scope_head n ty scope in
+  let relaxations = planned_relaxations n ty scope in
   let rec_call = self_call_reference n ~undeducible:scope.bs_self_call_undeducible in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
@@ -1551,10 +1559,7 @@ let gen_dfun ~minted n b cty ty temps =
   in
     (inner, env)
   in
-  let inner = declare_planned_signature n (Head_relaxation.apply_all relaxations inner) in
-  match temps with
-  | [] -> (inner, env)
-  | l -> (Dtemplate (l, None, inner), env)
+  (declare_planned n (Head_relaxation.apply_all relaxations inner), env)
 
 (** The C++ declaration (no body) of the function [n], for a header: its
     parameters named from [b]'s lambdas and typed from [dom], returning
