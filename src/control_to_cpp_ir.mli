@@ -171,7 +171,7 @@ val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
     member Loopify loopifies of which no loop is made has the local
     fixpoints in its body lowered as {!lower_lifted} lowers a
     helper's. *)
-val lower_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list
+val lower_group : Cpp_ir.Lowered.Decl.t list -> Cpp_ir.Lowered.Decl.t list
 
 (** [check_lowered d] checks, under [CRANE_CHECK_IR], the finished
     declaration [d] against what control lowering recorded deciding of its

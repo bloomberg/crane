@@ -116,8 +116,8 @@ let gen_record_cpp name fields ind =
     : Cpp_ir.Lowered.Decl.t )
 
 (** The concept constraint an instance parameter of type [ty] carries, as a
-    MiniCpp template-parameter kind ([TTconcept]); [None] when [ty] is not
-    an applied global.
+    template-parameter kind ([Concept]); [None] when [ty] is not an applied
+    global.
 
     Three things go into the argument list, and the only reason this is a
     function is that two call sites -- {!Gen_instances.instance_layers} for an
@@ -133,17 +133,17 @@ let gen_record_cpp name fields ind =
       written as the bare names the class spells, so the pass that resolves a
       bare promoted name against the instance owning it reaches them the way it
       reaches every other position in the signature.}} *)
-let concept_constraint_of_class_type ty =
+let concept_constraint_of_class_type ty : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t option =
   match ty with
   | Miniml.Tglob (class_ref, type_args, _) ->
     let kept =
       if Table.get_ind_nb_tparams class_ref = 0 then []
-      else
-        List.map
-          (convert_ml_type_to_cpp_type (empty_env ()) [])
-          (Table.drop_hkt_args class_ref type_args)
+      else List.map (cpp_ir_of_ml_type (empty_env ()) []) (Table.drop_hkt_args class_ref type_args)
     in
-    Some (TTconcept (class_ref, kept @ mentioned_promoted_args class_ref))
+    let mentioned =
+      List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Table.promoted_type_params class_ref)
+    in
+    Some (Concept (class_ref, kept @ mentioned))
   | _ -> None
 
 (** Generate a C++ concept from a type class.
@@ -232,7 +232,7 @@ let gen_typeclass_cpp name fields =
      respelled, in CppIR. *)
   let converted ml_ty =
     subst_promoted_in_cpp_type
-      (Legacy_minicpp_to_cpp_ir.lower_type (convert_ml_type_to_cpp_type (empty_env ()) prefixed_ip_vars ml_ty))
+      (cpp_ir_of_ml_type (empty_env ()) prefixed_ip_vars ml_ty)
   in
   let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
     Scope (Local inst_id, Id.of_string method_name, type_args)
@@ -441,6 +441,6 @@ type binder_kind = [`Value | `Instance | `Erased]
 type method_binder = {
   mb_name : Id.t;
   mb_ml_ty : ml_type;
-  mb_cpp_ty : cpp_type;
+  mb_cpp_ty : Cpp_ir.Lowered.Type.t;
   mb_kind : binder_kind;
 }
