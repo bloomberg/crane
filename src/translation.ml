@@ -139,24 +139,28 @@ let declaring_ir id b stmts =
    self-parameters [selves], and the wrappers.  The loop is the impl lambda
    without the self-parameter, its body, the one of [funs_with_params],
    calling the fixpoint by its own name ({!self_call_rewriter}). *)
-let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
+let local_fix_stmts selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowered.Stmt.t list) funs_with_params =
   match (selves, binders, impl_stmts, funs_with_params) with
-  | [{fix_id; _}], [((_, member, _, _) as binder)], [Sasgn (_, _, CPPlambda impl)], [(_, body)] -> (
+  | [{fix_id; _}], [((_, member, _, _) as binder)], [Bind_variable (_, _, Lambda impl)], [(_, body)] -> (
     let self_ids = List.map (fun s -> Some s.self_id) selves in
     let _, flat = self_call_rewriter ~passing:false selves in
-    let flat st = Cpp_ir_to_legacy_minicpp.stmt (flat (Legacy_minicpp_to_cpp_ir.lower_stmt st)) in
-    let lam =
+    let lam : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t =
       { impl with
-        cl_params = of_reversed (List.filter (fun (_, x) -> not (List.mem x self_ids)) (to_reversed impl.cl_params));
-        cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Lowered binder;
-        cl_body = List.map flat body }
+        params = List.filter (fun (_, x) -> not (List.mem x self_ids)) impl.params;
+        fixpoint = local_fixpoint_ir ~name:fix_id ~encoding:Lowered binder;
+        body = List.map flat body }
+    in
+    let lam =
+      match Cpp_ir_to_legacy_minicpp.expr (Lambda lam) with
+      | CPPlambda l -> l
+      | _ -> assert false
     in
     match
       Control_to_cpp_ir.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
         ~lifted:(!tctx).lifted_fixpoints ~member
         ~tparams:(get_current_template_head ()) ~name:fix_id lam
     with
-    | Some loop -> [loop]
+    | Some loop -> [Legacy_minicpp_to_cpp_ir.lower_stmt loop]
     | None -> self_passing () )
   | _ -> self_passing ()
 
@@ -249,17 +253,17 @@ let record_local_captures ~binders captures =
    takes, innermost first, as its parameters are listed. *)
 let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.filter_map Fun.id passing)
 
-let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_params =
+let gen_local_fix_ycomb_ir env ~binders ~passing ~captures renamed_ids funs_with_params =
   (* The lambdas take every parameter by value, as [passing], a group of
      closures', says. *)
   record_local_passing ~binders passing;
   record_local_captures ~binders captures;
   let moved = List.map (moved_names env) captures in
-  let ret_ty ty =
-    match cpp_of_ml env ty with
-    | Tfun (_, t) ->
+  let ret_ty ty : Cpp_ir.Lowered.Type.t option =
+    match cpp_of_ml_ir env ty with
+    | Function (_, t) ->
       ( match t with
-      | Minicpp.Tvar (Tv_index (_, None)) -> None
+      | Variable (Index (_, None)) -> None
       | _ -> Some t )
     | _ -> None
   in
@@ -271,35 +275,32 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
-  let rewrite_expr, rewrite_stmt =
-    let rewrite_expr, rewrite_stmt = self_call_rewriter selves in
-    ((fun e -> Cpp_ir_to_legacy_minicpp.expr (rewrite_expr (Legacy_minicpp_to_cpp_ir.lower_expr e))), fun st -> Cpp_ir_to_legacy_minicpp.stmt (rewrite_stmt (Legacy_minicpp_to_cpp_ir.lower_stmt st)))
-  in
+  let _, rewrite_stmt = self_call_rewriter selves in
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
   let impl_stmts =
     List.map2
-      (fun (((fix_id, fty), impl_id), binder) (args, body) ->
-        let self_params =
-          List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
+      (fun (((fix_id, fty), impl_id), binder) (args, body) : Cpp_ir.Lowered.Stmt.t ->
+        let self_params : (Cpp_ir.Lowered.Type.t * Id.t option) list =
+          List.rev_map (fun sid -> ((Reference (Lvalue, Auto) : Cpp_ir.Lowered.Type.t), Some sid)) self_ids
         in
         let orig_params =
           List.map
             (fun (id, ty) ->
-              (cpp_of_ml env ty, Some id))
+              (cpp_of_ml_ir env ty, Some id))
             args
         in
-        Sasgn
+        Bind_variable
           ( impl_id,
-            Declare (Tauto, None),
-            CPPlambda
-              { cl_tparams = [];
-                cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
-                cl_binders = fixpoint_parameters binder;
-                cl_moved = [];
-                cl_params = of_reversed (orig_params @ self_params);
-                cl_ret = ret_ty fty;
-                cl_body = List.map rewrite_stmt body;
-                cl_capture = Closure } ))
+            Declare (Auto, None),
+            Lambda
+              { type_params = [];
+                fixpoint = local_fixpoint_ir ~name:fix_id ~encoding:(Self_passing self_ids) binder;
+                binders = fixpoint_parameters binder;
+                moved = [];
+                params = List.rev (orig_params @ self_params);
+                return_type = ret_ty fty;
+                body = List.map rewrite_stmt body;
+                capture = Stored } ))
       (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
@@ -309,8 +310,8 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
      impls' C++ captures must agree. *)
   let impl_stmts =
     if Probe.checking () then begin
-      let captures = function
-        | Sasgn (_, _, (CPPlambda _ as l)) -> free_vars_expr l
+      let captures : Cpp_ir.Lowered.Stmt.t -> Id.t list = function
+        | Bind_variable (_, _, (Lambda _ as l)) -> Cpp_ir.Variables.free_in_expr l
         | _ -> []
       in
       let everything = List.sort_uniq Id.compare (List.concat moved) in
@@ -327,55 +328,55 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
           (Pp.str "a local fixpoint's closures take by move other variables than their C++ captures give them")
     end;
     List.map2
-      (fun s ts ->
+      (fun (s : Cpp_ir.Lowered.Stmt.t) ts : Cpp_ir.Lowered.Stmt.t ->
         match s with
-        | Sasgn (id, d, CPPlambda l) when ts <> [] -> Sasgn (id, d, CPPlambda {l with cl_moved = ts})
+        | Bind_variable (id, d, Lambda l) when ts <> [] -> Bind_variable (id, d, Lambda {l with moved = ts})
         | _ -> s )
       impl_stmts moved
   in
   (* Generate wrapper lambdas: forward to impl with all impl_ids prepended. *)
-  let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
+  let impl_vars_rev = List.rev_map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) impl_ids in
   let wrapper_stmts =
     List.map2
-      (fun (((fix_id, fty), impl_id), binder) (args, _body) ->
+      (fun (((fix_id, fty), impl_id), binder) (args, _body) : Cpp_ir.Lowered.Stmt.t ->
         let orig_params =
           List.map
             (fun (id, ty) ->
-              (cpp_of_ml env ty, Some id))
+              (cpp_of_ml_ir env ty, Some id))
             args
         in
         (* The wrapper reads each parameter once, to forward it. *)
         let fwd_args =
-          List.map (fun (id, ty) -> forwarded ~by_value:true ty (CPPvar id)) args @ impl_vars_rev
+          List.map (fun (id, ty) -> forwarded_ir ~by_value:true ty (Local id)) args @ impl_vars_rev
         in
         let rty = ret_ty fty in
-        let call = CPPfun_call (call_opaque, CPPvar impl_id, of_reversed fwd_args) in
-        let wrapper_body =
+        let call : Cpp_ir.Lowered.Expr.t = Call (Cpp_ir.Build.signature ~nargs:0 (), Local impl_id, List.rev fwd_args) in
+        let wrapper_body : Cpp_ir.Lowered.Stmt.t list =
           match rty with
-          | None -> [Sexpr call]
-          | _ -> [Sreturn (Some call)]
+          | None -> [Expression call]
+          | _ -> [Return (Some call)]
         in
-        Sasgn
+        Bind_variable
           ( fix_id,
-            Declare (Tauto, None),
-            CPPlambda
-              { cl_params = of_reversed orig_params;
-              cl_tparams = [];
-              cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
-              cl_binders = fixpoint_parameters binder;
-              cl_moved = [];
-                cl_ret = rty;
-                cl_body = wrapper_body;
-                cl_capture = Closure } ))
+            Declare (Auto, None),
+            Lambda
+              { params = List.rev orig_params;
+              type_params = [];
+              fixpoint = local_fixpoint_ir ~name:fix_id ~encoding:Knot binder;
+              binders = fixpoint_parameters binder;
+              moved = [];
+                return_type = rty;
+                body = wrapper_body;
+                capture = Stored } ))
       (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
   (* The wrappers are the impls' only readers, and each captures them all:
      the last one made takes them. *)
   let wrapper_stmts =
-    match List.rev wrapper_stmts with
-    | Sasgn (id, d, CPPlambda l) :: rest ->
-      List.rev (Sasgn (id, d, CPPlambda {l with cl_moved = List.sort Id.compare impl_ids}) :: rest)
+    match List.rev (wrapper_stmts : Cpp_ir.Lowered.Stmt.t list) with
+    | Bind_variable (id, d, Lambda l) :: rest ->
+      List.rev ((Bind_variable (id, d, Lambda {l with moved = List.sort Id.compare impl_ids}) : Cpp_ir.Lowered.Stmt.t) :: rest)
     | _ -> wrapper_stmts
   in
   let deref_subst stmts = stmts in
@@ -406,15 +407,15 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
 
     @return [(decls, defs)] — declaration and definition statement lists.
     @see gen_local_fix_ycomb for the escaping-fixpoint alternative. *)
-let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_params =
+let gen_local_fix_by_ref_ir env ~binders ~passing ~captures renamed_ids funs_with_params =
   record_local_passing ~binders passing;
   record_local_captures ~binders captures;
   let owned_flags_per_fun = List.map owned_flags passing in
-  let ret_ty ty =
-    match cpp_of_ml env ty with
-    | Tfun (_, t) ->
+  let ret_ty ty : Cpp_ir.Lowered.Type.t option =
+    match cpp_of_ml_ir env ty with
+    | Function (_, t) ->
       ( match t with
-      | Minicpp.Tvar (Tv_index (_, None)) -> None
+      | Variable (Index (_, None)) -> None
       | _ -> Some t )
     | _ -> None
   in
@@ -425,81 +426,78 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
-  let rewrite_expr, rewrite_stmt =
-    let rewrite_expr, rewrite_stmt = self_call_rewriter selves in
-    ((fun e -> Cpp_ir_to_legacy_minicpp.expr (rewrite_expr (Legacy_minicpp_to_cpp_ir.lower_expr e))), fun st -> Cpp_ir_to_legacy_minicpp.stmt (rewrite_stmt (Legacy_minicpp_to_cpp_ir.lower_stmt st)))
-  in
+  let _, rewrite_stmt = self_call_rewriter selves in
   let impl_stmts =
     List.map2
-      (fun ((((fix_id, fty), impl_id), binder), owned_flags) (args, body) ->
-        let self_params =
-          List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
+      (fun ((((fix_id, fty), impl_id), binder), owned_flags) (args, body) : Cpp_ir.Lowered.Stmt.t ->
+        let self_params : (Cpp_ir.Lowered.Type.t * Id.t option) list =
+          List.rev_map (fun sid -> ((Reference (Lvalue, Auto) : Cpp_ir.Lowered.Type.t), Some sid)) self_ids
         in
         let orig_params =
           List.map2
             (fun (id, ty) owned ->
               let cpp_ty =
-                cpp_of_ml env ty
+                cpp_of_ml_ir env ty
               in
-              ( wrap_param_by_ownership ~is_owned:owned cpp_ty,
+              ( wrap_param_by_ownership_ir ~is_owned:owned cpp_ty,
                 Some id ))
             args owned_flags
         in
-        Sasgn
+        Bind_variable
           ( impl_id,
-            Declare (Tauto, None),
-            CPPlambda
-              { cl_params = of_reversed (orig_params @ self_params);
-              cl_tparams = [];
-              cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
-              cl_binders = fixpoint_parameters binder;
-              cl_moved = [];
-                cl_ret = ret_ty fty;
-                cl_body = List.map rewrite_stmt body;
-                cl_capture = Immediate } ))
+            Declare (Auto, None),
+            Lambda
+              { params = List.rev (orig_params @ self_params);
+              type_params = [];
+              fixpoint = local_fixpoint_ir ~name:fix_id ~encoding:(Self_passing self_ids) binder;
+              binders = fixpoint_parameters binder;
+              moved = [];
+                return_type = ret_ty fty;
+                body = List.map rewrite_stmt body;
+                capture = Runs_in_place } ))
       (List.combine (List.combine (List.combine renamed_ids impl_ids) binders) owned_flags_per_fun)
       funs_with_params
   in
-  let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
+  let impl_vars_rev = List.rev_map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) impl_ids in
   let wrapper_stmts =
     List.map2
-      (fun ((((fix_id, fty), _impl_id), binder), owned_flags) (args, _body) ->
+      (fun ((((fix_id, fty), _impl_id), binder), owned_flags) (args, _body) : Cpp_ir.Lowered.Stmt.t ->
         let orig_params =
           List.map2
             (fun (id, ty) owned ->
               let cpp_ty =
-                cpp_of_ml env ty
+                cpp_of_ml_ir env ty
               in
-              ( wrap_param_by_ownership ~is_owned:owned cpp_ty,
+              ( wrap_param_by_ownership_ir ~is_owned:owned cpp_ty,
                 Some id ))
             args owned_flags
         in
         let fwd_args =
           List.map2
             (fun (id, ty) (param_ty, _) ->
-              forwarded ~by_value:(not (declared_by_reference param_ty)) ty (CPPvar id) )
+              forwarded_ir ~by_value:(not (declared_by_reference_ir param_ty)) ty (Local id) )
             args orig_params
           @ impl_vars_rev
         in
         let rty = ret_ty fty in
-        let call = CPPfun_call (call_opaque, CPPvar _impl_id, of_reversed fwd_args) in
-        let wrapper_body =
+        let call : Cpp_ir.Lowered.Expr.t = Call (Cpp_ir.Build.signature ~nargs:0 (), Local _impl_id, List.rev fwd_args) in
+        let wrapper_body : Cpp_ir.Lowered.Stmt.t list =
           match rty with
-          | None -> [Sexpr call]
-          | _ -> [Sreturn (Some call)]
+          | None -> [Expression call]
+          | _ -> [Return (Some call)]
         in
-        Sasgn
+        Bind_variable
           ( fix_id,
-            Declare (Tauto, None),
-            CPPlambda
-              { cl_params = of_reversed orig_params;
-              cl_tparams = [];
-              cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
-              cl_binders = fixpoint_parameters binder;
-              cl_moved = [];
-                cl_ret = rty;
-                cl_body = wrapper_body;
-                cl_capture = Immediate } ))
+            Declare (Auto, None),
+            Lambda
+              { params = List.rev orig_params;
+              type_params = [];
+              fixpoint = local_fixpoint_ir ~name:fix_id ~encoding:Knot binder;
+              binders = fixpoint_parameters binder;
+              moved = [];
+                return_type = rty;
+                body = wrapper_body;
+                capture = Runs_in_place } ))
       (List.combine (List.combine (List.combine renamed_ids impl_ids) binders) owned_flags_per_fun)
       funs_with_params
   in
@@ -510,21 +508,21 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
 (* How the lambda of each function of the local fixpoint [fix] holds each
    variable it captures, generated as closures or else [in_place]
    ({!Ownership_ir.captures_by_member}). *)
-(* {!gen_local_fix_ycomb} in CppIR. *)
-let gen_local_fix_ycomb_ir env ~binders ~passing ~captures renamed_ids funs_with_params =
+(* {!gen_local_fix_ycomb_ir} in MiniCpp. *)
+let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_params =
   let stmts, defs, subst =
-    gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids
-      (List.map (fun (ps, body) -> (ps, List.map Cpp_ir_to_legacy_minicpp.stmt body)) funs_with_params)
+    gen_local_fix_ycomb_ir env ~binders ~passing ~captures renamed_ids
+      (List.map (fun (ps, body) -> (ps, List.map Legacy_minicpp_to_cpp_ir.lower_stmt body)) funs_with_params)
   in
-  (List.map Legacy_minicpp_to_cpp_ir.lower_stmt stmts, defs, subst)
+  (List.map Cpp_ir_to_legacy_minicpp.stmt stmts, defs, subst)
 
-(* {!gen_local_fix_by_ref} in CppIR. *)
-let gen_local_fix_by_ref_ir env ~binders ~passing ~captures renamed_ids funs_with_params =
+(* {!gen_local_fix_by_ref_ir} in MiniCpp. *)
+let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_params =
   let stmts, defs =
-    gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids
-      (List.map (fun (ps, body) -> (ps, List.map Cpp_ir_to_legacy_minicpp.stmt body)) funs_with_params)
+    gen_local_fix_by_ref_ir env ~binders ~passing ~captures renamed_ids
+      (List.map (fun (ps, body) -> (ps, List.map Legacy_minicpp_to_cpp_ir.lower_stmt body)) funs_with_params)
   in
-  (List.map Legacy_minicpp_to_cpp_ir.lower_stmt stmts, defs)
+  (List.map Cpp_ir_to_legacy_minicpp.stmt stmts, defs)
 
 let fix_captures ~in_place fix = Ownership_ir.captures_by_member ~in_place (!tctx).move_plan fix
 
@@ -8801,17 +8799,17 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     takes, not the throw a dead position gets, since the constructor runs as
     the value is built; a call returning [unit] is the value its void call
     stands for. *)
-and gen_stored_value ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e =
+and gen_stored_value_ir ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e : Cpp_ir.Lowered.Expr.t =
   match e with
-  | MLdummy _ -> Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir
-  | e when ml_value_is_void_call e -> Cpp_ir_to_legacy_minicpp.expr (wrap_void_call_as_value (Legacy_minicpp_to_cpp_ir.lower_expr (gen_expr ~slot env e)))
-  | _ -> gen_expr ?expected_ty ~slot env e
+  | MLdummy _ -> Cpp_erasure.empty_box_ir
+  | e when ml_value_is_void_call e -> wrap_void_call_as_value (gen_expr_ir ~slot env e)
+  | _ -> gen_expr_ir ?expected_ty ~slot env e
 
 
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual
     fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
-and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx (n, ty) f =
+and gen_fix_ir env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
   let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
@@ -8889,7 +8887,7 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     ( (renamed_n, ty),
       ids,
       with_cpp_return_type_ir fix_return_type (fun () ->
-          with_region ~owned:owned_params ?resumes ?certain f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
+          with_region ~owned:owned_params ?resumes ?certain f (fun () -> gen_stmts_ir env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) f) ),
       parameter_binders env ids )
   in
   restore_env_types saved_env_types;
@@ -8924,14 +8922,13 @@ and record_read_once env ~is_typeclass t =
 and gen_stmts_ir ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast : Cpp_ir.Lowered.Stmt.t list =
   List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_stmts ?slot env (fun e -> Cpp_ir_to_legacy_minicpp.stmt (k (Legacy_minicpp_to_cpp_ir.lower_expr e))) ast)
 
-(* {!gen_stored_value} in CppIR. *)
-and gen_stored_value_ir ?expected_ty ~slot env e : Cpp_ir.Lowered.Expr.t =
-  Legacy_minicpp_to_cpp_ir.lower_expr (gen_stored_value ?expected_ty ~slot env e)
+(* {!gen_stored_value_ir} in MiniCpp. *)
+and gen_stored_value ?expected_ty ~slot env e = Cpp_ir_to_legacy_minicpp.expr (gen_stored_value_ir ?expected_ty ~slot env e)
 
-(* {!gen_fix} in CppIR. *)
-and gen_fix_ir env ?all_fix_ids ?by_value ?local ?lifted ~fix_idx nty f =
-  let n, ids, body, binders = gen_fix env ?all_fix_ids ?by_value ?local ?lifted ~fix_idx nty f in
-  (n, ids, List.map Legacy_minicpp_to_cpp_ir.lower_stmt body, binders)
+(* {!gen_fix_ir} in MiniCpp. *)
+and gen_fix env ?all_fix_ids ?by_value ?local ?lifted ~fix_idx nty f =
+  let n, ids, body, binders = gen_fix_ir env ?all_fix_ids ?by_value ?local ?lifted ~fix_idx nty f in
+  (n, ids, List.map Cpp_ir_to_legacy_minicpp.stmt body, binders)
 
 let () = type_term_arg := fun env a -> gen_expr env a
 let () = plan_representation := Representation_plan.region

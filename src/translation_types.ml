@@ -230,6 +230,74 @@ let inline_iife (k : cpp_expr -> cpp_stmt) = function
     | None -> [k (mk_iife ret_ty body)] )
   | expr -> [k expr]
 
+(** {!inline_iife} in CppIR. *)
+let inline_iife_ir (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (e : Cpp_ir.Lowered.Expr.t) :
+    Cpp_ir.Lowered.Stmt.t list =
+  match e with
+  | Call (_, Lambda {params = []; return_type = ret_ty; body; _}, []) when body <> [] ->
+    let k_is_return =
+      match k (Literal (Int 0)) with Return _ -> true | _ -> false
+    in
+    if not k_is_return then
+      [k (Cpp_ir.Build.iife ret_ty body)]
+    else
+    let map_all_or_none transform branches =
+      let results = List.map transform branches in
+      if List.for_all (fun x -> x <> None) results then
+        Some (List.filter_map Fun.id results)
+      else None
+    in
+    let rec replace_last_return : Cpp_ir.Lowered.Stmt.t list -> Cpp_ir.Lowered.Stmt.t list option = function
+      | [Return (Some v)] -> Some [k v]
+      | [Return None] -> None
+      | [Throw _] as stmts -> Some stmts
+      | [If i] ->
+        ( match (replace_last_return i.then_, replace_last_return i.else_) with
+        | Some then_br', Some else_br' -> Some [If {condition = i.condition; then_ = then_br'; else_ = else_br'}]
+        | _ -> None )
+      | [Switch w] ->
+        let default' =
+          match w.default with
+          | Some stmts -> Option.map (fun s -> Some s) (replace_last_return stmts)
+          | None -> Some None
+        in
+        ( match (map_all_or_none
+            (fun (id, stmts) ->
+              Option.map (fun stmts' -> (id, stmts')) (replace_last_return stmts))
+            w.branches, default')
+        with
+        | Some branches', Some default' -> Some [Switch {w with branches = branches'; default = default'}]
+        | _ -> None )
+      | [Custom_match m] ->
+        Option.map
+          (fun branches' -> [(Custom_match {m with branches = branches'} : Cpp_ir.Lowered.Stmt.t)])
+          (map_all_or_none
+            (fun (b : Cpp_ir.Lowered.phase Cpp_ir.Stmt.Custom_match.branch) ->
+              Option.map (fun stmts' -> {b with body = stmts'}) (replace_last_return b.body))
+            m.branches)
+      | [Match (scrut, branches, default)] ->
+        let default' =
+          match default with
+          | Some stmts -> Option.map (fun s -> Some s) (replace_last_return stmts)
+          | None -> Some None
+        in
+        ( match (map_all_or_none
+            (fun (br : Cpp_ir.Lowered.phase Cpp_ir.Stmt.Match.branch) ->
+              Option.map (fun body' -> { br with body = body' }) (replace_last_return br.body))
+            branches, default')
+        with
+        | Some branches', Some default' ->
+          Some [Match (scrut, branches', default')]
+        | _ -> None )
+      | stmt :: rest when rest <> [] ->
+        Option.map (fun rest' -> stmt :: rest') (replace_last_return rest)
+      | _ -> None
+    in
+    ( match replace_last_return body with
+    | Some stmts -> stmts
+    | None -> [k (Cpp_ir.Build.iife ret_ty body)] )
+  | expr -> [k expr]
+
 (** The C++ type a position is being generated into: what it states
     ([expected], a generator's [?expected_ty]), and where it states nothing,
     the enclosing function's return type -- which a tail position lands in.
@@ -347,6 +415,12 @@ let rec is_trivial_scrut = function
   | CPPget (e, _) | CPPget' (e, _, _) | CPPaccess (_, e, _) | CPPderef e -> is_trivial_scrut e
   | _ -> false
 
+(** {!is_trivial_scrut} in CppIR. *)
+let rec is_trivial_scrut_ir : Cpp_ir.Lowered.Expr.t -> bool = function
+  | Local _ | Scope _ | Type_member _ | Enum_value _ | Entity _ -> true
+  | Member (e, _) | Project (e, _, _) | Access (_, e, _) | Dereference e -> is_trivial_scrut_ir e
+  | _ -> false
+
 (** The C++ type a pattern match pinned down for the binder at de Bruijn index
     [i], if this branch pinned one.  A binding-site assignment is not an
     answer here: it says what the binder's ML type converts to, which for a
@@ -386,6 +460,20 @@ let extract_block_template = function
     match ci.ci_inline with
     | Some {it_form = Block_iife; it_text = tmpl; _} ->
       Some (ref, tmpl, call_args args, tys)
+    | _ -> None
+    end
+  | _ -> None
+
+(** {!extract_block_template} in CppIR. *)
+let extract_block_template_ir : Cpp_ir.Lowered.Expr.t -> _ = function
+  | Entity (ref, tys, Some ci) -> begin
+    match ci.inline with
+    | Some {form = Block; text = tmpl; _} -> Some (ref, tmpl, [], tys)
+    | _ -> None
+    end
+  | Call (_, Entity (ref, tys, Some ci), args) -> begin
+    match ci.inline with
+    | Some {form = Block; text = tmpl; _} -> Some (ref, tmpl, args, tys)
     | _ -> None
     end
   | _ -> None
@@ -449,6 +537,49 @@ let fixpoint_escapes_in_stmts target_id stmts =
     let on_expr e = if not !found then found := check_expr e in
     let on_stmts ss = if not !found then found := check_stmts ss in
     Minicpp.iter_stmt_children ~on_expr ~on_stmts s;
+    !found
+  and check_stmts ss = List.exists check_stmt ss
+  in
+  check_stmts stmts
+
+(** {!fixpoint_escapes_in_stmts} in CppIR. *)
+let fixpoint_escapes_in_stmts_ir target_id (stmts : Cpp_ir.Lowered.Stmt.t list) =
+  let rec check_expr (e : Cpp_ir.Lowered.Expr.t) =
+    match e with
+    | Call (_, Local id, args) when Id.equal id target_id ->
+      List.exists check_expr (List.rev args)
+    | Local id when Id.equal id target_id -> true
+    | Lambda {body; capture = Runs_in_place; _} -> check_stmts body
+    | Lambda {body; capture = Stored; _} ->
+      let rec has_var_in_expr (e : Cpp_ir.Lowered.Expr.t) =
+        match e with
+        | Local id when Id.equal id target_id -> true
+        | _ ->
+          let found = ref false in
+          let fe e' = if not !found then found := has_var_in_expr e'; e' in
+          let fs s' = if not !found then found := has_var_in_stmt s'; s' in
+          ignore (Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id ()) e);
+          !found
+      and has_var_in_stmt s =
+        let found = ref false in
+        let on_expr e = if not !found then found := has_var_in_expr e in
+        let on_stmts ss =
+          if not !found then found := List.exists has_var_in_stmt ss
+        in
+        Cpp_ir.Subterms.stmt ~expr:on_expr ~stmts:on_stmts s;
+        !found
+      in
+      List.exists has_var_in_stmt body
+    | _ ->
+      let found = ref false in
+      let fe e = if not !found then found := check_expr e; e in
+      ignore (Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:fe ~stmt:Fun.id ~type_:Fun.id ()) e);
+      !found
+  and check_stmt s =
+    let found = ref false in
+    let on_expr e = if not !found then found := check_expr e in
+    let on_stmts ss = if not !found then found := check_stmts ss in
+    Cpp_ir.Subterms.stmt ~expr:on_expr ~stmts:on_stmts s;
     !found
   and check_stmts ss = List.exists check_stmt ss
   in
@@ -598,6 +729,13 @@ let fix_escapes_in_own_bodies renamed_ids funs_with_params =
   List.exists
     (fun (id, _) ->
       List.exists (fun (_, body) -> fixpoint_escapes_in_stmts id body) funs_with_params )
+    renamed_ids
+
+(** {!fix_escapes_in_own_bodies} of CppIR bodies. *)
+let fix_escapes_in_own_bodies_ir renamed_ids funs_with_params =
+  List.exists
+    (fun (id, _) ->
+      List.exists (fun (_, body) -> fixpoint_escapes_in_stmts_ir id body) funs_with_params )
     renamed_ids
 
 (** The inclusive range of a fixed-width C++ integer type, or [None] when the
@@ -1536,6 +1674,35 @@ let result_cpp_via_receiver env callee_ty args =
     | _ -> None )
   | _ -> None
 
+(** {!result_cpp_via_receiver} in CppIR. *)
+let result_cpp_via_receiver_ir env callee_ty args : Cpp_ir.Lowered.Type.t option =
+  let var_index t = match resolve_tmeta t with Miniml.Tvar (_, j) -> Some j | _ -> None in
+  let position_of j formals =
+    let rec find i = function
+      | [] -> None
+      | f :: rest -> if var_index f = Some j then Some i else find (i + 1) rest
+    in
+    find 0 formals
+  in
+  (* {!Ml_type_util.template_args} in CppIR. *)
+  let rec template_args_ir t =
+    match unqualify_ty_ir t with
+    | Reference (_, t) | Pointer t | Shared_pointer t -> template_args_ir t
+    | Entity_application (_, args, _) | Named (_, args) | External (_, args) | Apply (_, args) -> Some args
+    | _ -> None
+  in
+  match (var_index (ml_codomain callee_ty), ml_value_domains callee_ty, args) with
+  | Some j, dom0 :: _, arg :: _ -> (
+    match (resolve_tmeta dom0, Option.map resolve_tmeta (infer_ml_body_type arg)) with
+    | Miniml.Tglob (g1, formals, _), Some (Miniml.Tglob (g2, actuals, _) as recv)
+      when Common.globref_equal g1 g2 -> (
+      match (position_of j formals, template_args_ir (cpp_of_ml_ir env recv)) with
+      | Some i, Some cpp_args when List.length actuals = List.length cpp_args ->
+        List.nth_opt cpp_args i
+      | _ -> None )
+    | _ -> None )
+  | _ -> None
+
 (** [iife_void_return env typ pv] is [Some Tvoid] when the match's branches
     produce nothing: a lambda that may fall off its end has to say [-> void]
     explicitly. *)
@@ -1598,6 +1765,41 @@ let iife_closure_return env typ pv stmts =
       match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
     in
     match cpp_of_ml env branch_rty with Tfun _ as r -> Some r | _ -> None
+
+(** {!iife_closure_return} of CppIR statements. *)
+let iife_closure_return_ir env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
+  let found = ref false in
+  let rec is_arrow = function
+    | Miniml.Tarr _ -> true
+    | Miniml.Tmeta {contents = Some t} -> is_arrow t
+    | _ -> false
+  in
+  let binder_is_fun id =
+    match env_type_of_id id with
+    | Some ty -> is_arrow ty
+    | None -> false
+  in
+  let scan_expr (e : Cpp_ir.Lowered.Expr.t) =
+    match e with
+    | Lambda _ -> found := true
+    | Local id when binder_is_fun id -> found := true
+    | _ -> ()
+  in
+  let rec scan_stmt (s : Cpp_ir.Lowered.Stmt.t) =
+    match s with
+    | Return (Some e) -> scan_expr e
+    | _ ->
+      Cpp_ir.Subterms.stmt
+        ~expr:(fun _ -> ())
+        ~stmts:(List.iter scan_stmt) s
+  in
+  List.iter scan_stmt stmts;
+  if not !found then None
+  else
+    let branch_rty =
+      match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
+    in
+    match cpp_of_ml_ir env branch_rty with Function _ as r -> Some r | _ -> None
 
 (** [glob_declared_cod_erases r] -- whether the declaration of [r] returns a
     box.  A declaration is converted from the global's own ML type with no
@@ -2443,6 +2645,67 @@ let lifted_call_type_args
       in
       List.map snd (strip (List.combine in_head_order args))
 
+(** {!lifted_call_type_args} in CppIR: [class_args] and the result are CppIR
+    types. *)
+let lifted_call_type_args_ir
+    ~(class_args : Cpp_ir.Lowered.Type.t list) ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_ml_tys :
+    Cpp_ir.Lowered.Type.t list =
+  let in_head id = List.exists (Id.equal id) head in
+  let outer_tvars = List.filter in_head outer_tvars in
+  let all_tvar_names = List.filter in_head all_tvar_names in
+  let in_head_order = List.filter (fun id -> List.exists (Id.equal id) all_tvar_names) head in
+  class_args
+  @
+  let extra_tvar_names =
+    List.filter
+      (fun id -> not (List.exists (Id.equal id) outer_tvars))
+      in_head_order
+  in
+  if extra_tvar_names = [] then
+    List.map (fun id -> Cpp_ir.Build.named_variable id) outer_tvars
+  else
+    let tmpl_cod : Cpp_ir.Lowered.Type.t =
+      match cpp_ir_of_ml_type env all_tvar_names binder_ty with
+      | Function (_, cod) -> cod
+      | t -> t
+    in
+    let tvar_map =
+      match current_cpp_return_type_ir () with
+      | Some conc_ret -> extract_tvar_map_ir tmpl_cod conc_ret
+      | None -> []
+    in
+    let args =
+      List.map (fun id -> Cpp_ir.Build.named_variable id) outer_tvars
+      @ List.map
+          (fun tvar_name ->
+            match
+              List.find_opt (fun (id, _) -> Id.equal id tvar_name) tvar_map
+            with
+            | Some (_, ty) -> ty
+            | None -> (
+              match current_cpp_return_type_ir () with
+              | Some ret_ty -> ret_ty
+              | None -> Cpp_ir.Build.named_variable tvar_name ) )
+          extra_tvar_names
+    in
+    let deducible =
+      List.concat_map
+        (fun ml_ty ->
+          get_tvars_ir (cpp_ir_of_ml_type env all_tvar_names ml_ty) )
+        param_ml_tys
+    in
+    if List.length in_head_order <> List.length args then
+      args
+    else
+      let rec strip = function
+        | [] -> []
+        | (id, ty) :: rest -> (
+          match strip rest with
+          | [] when List.exists (Id.equal id) deducible -> []
+          | rest -> (id, ty) :: rest )
+      in
+      List.map snd (strip (List.combine in_head_order args))
+
 (** The carrier of a higher-kinded class parameter, read off the {e dictionary}
     the call passes for that class.
 
@@ -3250,6 +3513,13 @@ let absurd_coercion from into =
   && into <> Tvoid
   && not (resolves_to_any_type into)
 
+(** {!absurd_coercion} into a CppIR type. *)
+let absurd_coercion_ir from (into : Cpp_ir.Lowered.Type.t) =
+  Ml_type_util.ml_type_is_unit from
+  && (not (is_cpp_unit_type_ir into))
+  && into <> Void
+  && not (resolves_to_any_type_ir into)
+
 (** A list computed at a concrete element type (a call's result, a variable)
     going into a [Family_box] slot ([den t]): the family's generic consumers
     read it with every level boxed in turn -- its elements, and their
@@ -3349,6 +3619,29 @@ let record_field_cpp_ty env typ fld =
       try
         Some
           (convert_ml_type_to_cpp_type env ~ns:(Ref.User.Set.singleton r)
+             (get_current_type_vars ())
+             (Mlutil.type_subst_list args ml_ty))
+      with e when CErrors.noncritical e -> None )
+    | None -> None )
+  | _ -> None
+
+(** {!record_field_cpp_ty} in CppIR. *)
+let record_field_cpp_ty_ir env typ fld : Cpp_ir.Lowered.Type.t option =
+  match resolve_tmeta typ with
+  | Miniml.Tglob (r, args, _) -> (
+    let declared =
+      List.find_map
+        (fun (f, ty) ->
+          match f with
+          | Some f when GlobRef.CanOrd.equal f fld -> Some ty
+          | _ -> None )
+        (Table.record_field_bindings_of_type typ)
+    in
+    match declared with
+    | Some ml_ty -> (
+      try
+        Some
+          (cpp_ir_of_ml_type env ~ns:(Ref.User.Set.singleton r)
              (get_current_type_vars ())
              (Mlutil.type_subst_list args ml_ty))
       with e when CErrors.noncritical e -> None )
