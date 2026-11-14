@@ -4013,7 +4013,7 @@ and project_through_instance env use args (projection : Elaborated_call.static_p
      without it an operand that spells its type for the first time, a match
      whose branches have to agree on one return type, is built at whatever
      the enclosing declaration returns.  An argument is not a tail position,
-     so that is never the right answer; see {!position_cpp_ty}.
+     so that is never the right answer; see {!position_cpp_ty_ir}.
 
      Only a suffix as long as the operand list is safe to read. *)
   let operand_ml_tys =
@@ -6849,7 +6849,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   in
   (* A scrutinee is not a tail position: whatever the enclosing function
      returns says nothing about the value being matched on.  Naming the
-     match's own type here keeps {!position_cpp_ty}'s fallback from recovering a
+     match's own type here keeps {!position_cpp_ty_ir}'s fallback from recovering a
      boxed scrutinee at the return type -- [any_cast<step_result>] on what is
      a [bool]. *)
   let t =
@@ -7282,7 +7282,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      value a [return] here carries goes to the enclosing function, not to the
      position the caller's expression was being built for.  What a tail
      statement lands in is {!with_cpp_return_type}, which
-     {!position_cpp_ty} falls back to. *)
+     {!position_cpp_ty_ir} falls back to. *)
   match ast with
   | MLletin (_, let_ty, (MLfix (x, ids, funs, cofix, occ) as fix_term), b, let_occ) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)

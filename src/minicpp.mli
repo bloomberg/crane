@@ -1260,11 +1260,6 @@ type arrow_site = Cpp_ir.Types.arrow_site =
     spells it.  The only place a chain of arrows is regrouped. *)
 val spell_arrows : arrow_site -> cpp_type -> cpp_type
 
-(** [respell_arrows site ty] is [spell_arrows site ty] where that differs
-    from [ty], and [None] where the site leaves it alone -- for sites that
-    want the slot's word on the grouping and nothing else. *)
-val respell_arrows : arrow_site -> cpp_type -> cpp_type option
-
 (** Whether two function types have the same arrows, however grouped. *)
 val same_arrows : cpp_type -> cpp_type -> bool
 

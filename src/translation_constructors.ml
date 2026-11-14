@@ -806,7 +806,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
   let ty =
     (* With no slot of its own, a constructor in a tail statement lands in
        the enclosing function's result ({!with_cpp_return_type}, as
-       {!position_cpp_ty} reads it). *)
+       {!position_cpp_ty_ir} reads it). *)
     let expected =
       match expected_ty with
       | Some _ -> expected_ty

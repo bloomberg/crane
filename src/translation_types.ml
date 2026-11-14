@@ -240,12 +240,6 @@ let inline_iife (k : cpp_expr -> cpp_stmt) = function
     The one place that precedence is written down, so that "the type this
     position expects" cannot mean the position at one site and the enclosing
     return type at another. *)
-let position_cpp_ty (expected : cpp_type option) =
-  match expected with
-  | Some _ as t -> t
-  | None -> current_cpp_return_type ()
-
-(** {!position_cpp_ty} in CppIR. *)
 let position_cpp_ty_ir (expected : Cpp_ir.Lowered.Type.t option) =
   match expected with
   | Some _ as t -> t
@@ -484,17 +478,13 @@ let names_only_scoped_tvars ty =
   let scope = current_scope_type_names () in
   List.for_all (fun id -> List.exists (Id.equal id) scope) (get_tvars ty)
 
-(** [ty], where this scope can write it: every variable it names is in scope,
-    and it is not erased. *)
-let spell_in_scope ty =
-  if names_only_scoped_tvars ty && not (prints_as_any ty) then Some ty else None
-
 (** {!names_only_scoped_tvars} in CppIR. *)
 let names_only_scoped_tvars_ir ty =
   let scope = current_scope_type_names () in
   List.for_all (fun id -> List.exists (Id.equal id) scope) (get_tvars_ir ty)
 
-(** {!spell_in_scope} in CppIR. *)
+(** [ty], where this scope can write it: every variable it names is in scope,
+    and it is not erased. *)
 let spell_in_scope_ir ty =
   if names_only_scoped_tvars_ir ty && not (Cpp_ir.Types.prints_as_any ty) then Some ty else None
 
@@ -898,7 +888,7 @@ let rec mark_own_param_for_pair_erasure n body =
   | MLmagic (m, a, mocc) -> MLmagic (m, mark_own_param_for_pair_erasure n a, mocc)
   | other -> other
 
-(** [field_stores_erased_fn_value ~field_cpp_ty field_types i e] — true when
+(** [field_stores_erased_fn_value_ir ~field_cpp_ty field_types i e] — true when
     constructor field [i] has an abstract type-variable (schema) type — a
     value-dependent field such as the predicate [P] of [sigT A P] — and the
     argument [e] is either a lambda function value or any value landing in a
@@ -915,50 +905,6 @@ let rec mark_own_param_for_pair_erasure n body =
     concrete element type (e.g. [deque<Prod<Nat,Nat>>]) while the matching
     "nil" production erases to [deque<Prod<any,any>>], and reading the value
     back out of the [std::any] throws [std::bad_any_cast]. *)
-let field_stores_erased_fn_value ~field_cpp_ty field_types i e =
-  match List.nth_opt field_types i with
-  | Some ft ->
-    (* The (schema) field type must be an abstract type VARIABLE — e.g. the
-       predicate parameter [P] of [sigT A P], instantiated here to a function
-       type whose codomain is value-dependent and erased ([unit -> semty s]
-       ↦ [std::function<std::any(Unit)>]).  A lambda stored into such an
-       erased field has its result boxed into a single [std::any] at runtime,
-       so its body's list/pair/record producers must deep-erase to a canonical
-       C++ representation shared with every other producer of the same Coq
-       type — otherwise a concretely-typed "cons" production
-       ([deque<Prod<Nat,Nat>>]) and the erased "nil" production
-       ([deque<Prod<any,any>>]) disagree and [std::any_cast] throws. *)
-    let field_is_abstract_var =
-      match ft with Miniml.Tvar (_, _) -> true | _ -> false
-    in
-    (* A non-function value needs the same canonical erasure whenever the
-       slot it lands in is REALLY [std::any] here — e.g. the [list nat]
-       payload of [sigT (fun b => if b then nat else list nat)], which a
-       consumer reads back as the element-erased [List<std::any>].  When the
-       abstract field instead instantiates to a concrete type (an ordinary
-       polymorphic container such as [Sig<List<nat>>]), the value must keep
-       its concrete element type. *)
-    let slot_is_erased =
-      match field_cpp_ty with Some ct -> prints_as_any ct | None -> false
-    in
-    (* A lambda's result is boxed only where the field's instantiation erases
-       it: a [list (nat -> option nat)] element keeps its [std::optional<
-       uint64_t>] result, and its body builds that, not the erased shape. *)
-    (* A field whose instantiation the caller cannot state -- a record
-       field, whose type is spelled once for every instance -- is taken to box
-       a lambda's result, the shape every instance can read. *)
-    let result_is_erased =
-      match field_cpp_ty with
-      | Some (Tfun (_, cod)) -> exists_cpp_type prints_as_any cod
-      | Some ct -> prints_as_any ct
-      | None -> true
-    in
-    field_is_abstract_var
-    && (slot_is_erased
-       || (result_is_erased && match strip_magic e with MLlam _ -> true | _ -> false))
-  | None -> false
-
-(** {!field_stores_erased_fn_value} in CppIR. *)
 let field_stores_erased_fn_value_ir ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) field_types i e =
   match List.nth_opt field_types i with
   | Some ft ->
@@ -2340,38 +2286,6 @@ let push_parameters ?(cpp = []) env (ids : (Id.t * ml_type) list) =
     where that expectation is recorded.  Namespace and [shared_ptr] wrappers
     are seen through, as are typedefs, which may name [ind] only indirectly.
     [None] when the return type says nothing about [ind]. *)
-let expected_type_args_from_return env ?slot ind ~arity =
-  let rec go cpp_ty =
-    match cpp_ty with
-    | Tglob (r, tys, _)
-      when Names.GlobRef.CanOrd.equal ind r && List.length tys = arity ->
-      Some tys
-    | Tnamespace (_, inner) | Tshared_ptr inner -> go inner
-    (* An element type counts: a value can be built into a slot the return
-       type only mentions inside a container ([list {T : Type & T}]), and the
-       arguments the container was declared with are what the element has to
-       agree with. *)
-    | Tglob (_, tys, _) when List.exists (fun t -> go t <> None) tys ->
-      List.find_map go tys
-    | Tglob (GlobRef.ConstRef kn, _, _) -> (
-      match Table.lookup_typedef_unchecked kn with
-      | Some ml_ty ->
-        go (cpp_of_ml env ml_ty)
-      | None -> None )
-    | _ -> None
-  in
-  (* The slot the value is being built into is the closer answer, and the
-     only one available inside a constructor argument -- generating those
-     clears the enclosing return type. *)
-  let r = match slot with
-  | Some t when go t <> None -> go t
-  | _ -> (
-    match current_cpp_return_type () with
-    | Some rt -> go rt
-    | None -> None ) in
-  r
-
-(** {!expected_type_args_from_return} in CppIR. *)
 let expected_type_args_from_return_ir env ?slot ind ~arity =
   let rec go (cpp_ty : Cpp_ir.Lowered.Type.t) =
     match cpp_ty with
@@ -2399,13 +2313,6 @@ let expected_type_args_from_return_ir env ?slot ind ~arity =
     resolves to [std::any], and, structurally, a function type's arguments and
     result.  Lets an expected type argument be compared against a computed one
     on equal terms, the computed side already being erased. *)
-let rec normalize_erased_types = function
-  | t when resolves_to_any_type t -> Tany
-  | Tfun (ps, r) ->
-    Tfun (List.map normalize_erased_types ps, normalize_erased_types r)
-  | t -> t
-
-(** {!normalize_erased_types} in CppIR. *)
 let rec normalize_erased_types_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | t when resolves_to_any_type_ir t -> Any
   | Function (ps, r) ->
@@ -3680,22 +3587,6 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     Tqualified (inductive_type r temps [], ctor_name)
   | _ -> Tid (ctor_name, [])
 
-(** [recover_boxed_result ~boxed ~expected expr] casts the result of a call
-    back into the type the position expects -- see {!position_cpp_ty} -- when
-    [boxed]
-    says the callee hands back a [std::any] whatever its ML type claims,
-    because its codomain erases or because it was itself recovered from a box
-    and so goes through the canonical [std::function<std::any(std::any...)>]
-    adapter.
-
-    [boxed] is a statement about the callee, not a guess, so the recovery is
-    unconditional: unlike {!unbox_into} it casts at a template parameter too,
-    which inside a template is the one name the result has. *)
-let recover_boxed_result ~boxed ~expected expr =
-  match position_cpp_ty expected with
-  | Some into when boxed -> coerce ~from:Tany ~into expr
-  | _ -> expr
-
 (** [unbox_value into e] recovers [e], a value known to come out of a box, at
     [into]: {!coerce} from [std::any]. *)
 let unbox_value into e = coerce ~from:Tany ~into e
@@ -3707,7 +3598,17 @@ let unbox_into into e =
   | Some into when states_unboxed_target into -> coerce ~from:Tany ~into e
   | _ -> e
 
-(** {!recover_boxed_result} at an expected type held in CppIR. *)
+(** [recover_boxed_result_ir ~boxed ~expected expr] casts the result of a call
+    back into the type the position expects -- see {!position_cpp_ty_ir} -- when
+    [boxed]
+    says the callee hands back a [std::any] whatever its ML type claims,
+    because its codomain erases or because it was itself recovered from a box
+    and so goes through the canonical [std::function<std::any(std::any...)>]
+    adapter.
+
+    [boxed] is a statement about the callee, not a guess, so the recovery is
+    unconditional: unlike {!unbox_into} it casts at a template parameter too,
+    which inside a template is the one name the result has. *)
 let recover_boxed_result_ir ~boxed ~expected expr =
   match position_cpp_ty_ir expected with
   | Some into when boxed -> coerce_ir ~from:Any ~into expr

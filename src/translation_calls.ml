@@ -1789,7 +1789,7 @@ let argument_position ~local_callable env id plan i ml_arg =
     if param_resolves_to_any then Some (Any : Cpp_ir.Lowered.Type.t)
     (* An argument is not a tail position, so the enclosing function's
        return type does not describe it -- and what the parameter says
-       does.  Left to {!position_cpp_ty}'s fallback, a match in argument
+       does.  Left to {!position_cpp_ty_ir}'s fallback, a match in argument
        position builds its branches at the type the {e call} returns.
 
        Only where the parameter's type can be written, though: installed
