@@ -167,7 +167,7 @@ val gen_instance_struct :
   ml_type ->
   Cpp_ir.Lowered.Decl.t option
   * GlobRef.t option
-  * cpp_type list
+  * Cpp_ir.Lowered.Type.t list
   * (Id.t * (Id.t * Callable_abi.minted) list) list
 
 (** [plan_instance_methods ~finish r b ty] is the callable plan of each

@@ -364,11 +364,7 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
              declared. *)
           let tt =
             match ty with
-            | Miniml.Tglob _ as ty ->
-              fst
-                (List.hd
-                   (Legacy_minicpp_to_cpp_ir.lower_template_parameters
-                      [(Option.get (concept_constraint_of_class_type ty), instance_name)] ))
+            | Miniml.Tglob _ as ty -> Option.get (concept_constraint_of_class_type ty)
             | _ ->
               (* Unreachable: [Table.is_typeclass_type] only holds of a
                  [Tglob]. *)

@@ -671,8 +671,7 @@ let instance_decls r a t =
   let static_assert_decl : generated =
     match class_ref_opt with
     | Some class_ref when not is_template ->
-      let args = List.map Legacy_minicpp_to_cpp_ir.lower_type concept_args in
-      [(empty_env (), Static_assert (Concept_application (class_ref, r, args), None))]
+      [(empty_env (), Static_assert (Concept_application (class_ref, r, concept_args), None))]
     | _ -> []
   in
   struct_decl @ static_assert_decl

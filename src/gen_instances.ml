@@ -36,9 +36,9 @@ let instance_layers ty body =
      args so a [requires C<_tcI0, T1>] clause can be emitted at the use site
      instead of silently degrading to an unconstrained [typename] (CWE-693 /
      CWE-345). *)
-  let constraint_of = function
-    | Miniml.Tglob _ as arg_ty -> Option.default TTtypename (concept_constraint_of_class_type arg_ty)
-    | _ -> TTtypename
+  let constraint_of : ml_type -> Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t = function
+    | Miniml.Tglob _ as arg_ty -> Option.default Cpp_ir.Template.Parameter_kind.Typename (concept_constraint_of_class_type arg_ty)
+    | _ -> Typename
   in
   (inner_ty, inner_body, List.map (fun (id, arg_ty) -> (constraint_of arg_ty, id)) dictionaries, lam_params)
 
@@ -82,12 +82,18 @@ let instance_promoted_types name body ty =
     arguments ({!Callable_abi.minted}).  [~bodies:false] generates the
     methods' heads alone. *)
 let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
-    Cpp_ir.Lowered.Decl.t option * GlobRef.t option * cpp_type list * (Id.t * (Id.t * Callable_abi.minted) list) list =
+    Cpp_ir.Lowered.Decl.t option
+    * GlobRef.t option
+    * Cpp_ir.Lowered.Type.t list
+    * (Id.t * (Id.t * Callable_abi.minted) list) list =
   let instance_ref = name in
   (* Without bodies the methods are their heads alone: what planning reads
      ({!plan_instance_methods}), decided by the very code that generates
      them. *)
-  let gen_stmts env k e = if bodies then gen_stmts env k e else [] in
+  let gen_body env e =
+    if bodies then List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_stmts env (fun x -> Sreturn (Some x)) e)
+    else []
+  in
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers ty body in
   (* Collect type variables from the inner return type's type args. For
      parameterized instances like numOption : Numeric (option A), the return
@@ -95,7 +101,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
      need to become template typename parameters (T1, T2, etc.). *)
   let instance_tvars = Instance_methods.instance_tvars ty inner_ty in
   let tv_temps =
-    List.mapi (fun i _ -> (TTtypename, tvar_id (i + 1))) instance_tvars
+    List.mapi (fun i _ -> (Cpp_ir.Template.Parameter_kind.Typename, tvar_id (i + 1))) instance_tvars
   in
   (* The declared parameters are dense -- the first one written is [T1] -- but
      the variables they stand for need not be.  [Monad_stateT] binds [m] before
@@ -134,9 +140,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
   let promoted_var_resolutions =
     List.concat_map
       (fun (tt, inst_id) ->
-        match tt with
-        | TTconcept (class_ref, _) ->
-          promoted_resolutions class_ref (Instance (inst_id, class_ref))
+        match (tt : _ Cpp_ir.Template.Parameter_kind.t) with
+        | Concept (class_ref, _) -> promoted_resolutions class_ref (Instance (inst_id, class_ref))
         | _ -> [] )
       tc_temps
   in
@@ -149,8 +154,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       ~own_instances:
         (List.filter_map
            (fun (tt, inst_id) ->
-             match tt with
-             | TTconcept (class_ref, _) -> Some (Cpp_ir.Type.Instance (inst_id, class_ref))
+             match (tt : _ Cpp_ir.Template.Parameter_kind.t) with
+             | Concept (class_ref, _) -> Some (Cpp_ir.Type.Instance (inst_id, class_ref))
              | _ -> None )
            tc_temps )
       name
@@ -161,19 +166,19 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
      and the mentioned ones are resolved against this instance rather than
      left bare, because bare at namespace scope is the file-scope
      [using ptr = std::any;] and not the instance standing beside it. *)
-  let resolve_mentioned t =
+  let resolve_mentioned (t : Cpp_ir.Lowered.Type.t) =
     match t with
-    | Tpromoted v -> (
-      match
-        List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).promoted_var_map
-      with
-      | Some (_, r) -> Cpp_ir_to_legacy_minicpp.ty r
+    | Promoted_member v -> (
+      match List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).promoted_var_map with
+      | Some (_, r) -> r
       | None -> t )
     | t -> t
   in
   let concept_args class_ref args =
-    List.map (convert_ml_type_to_cpp_type (empty_env ()) []) args
-    @ List.map resolve_mentioned (mentioned_promoted_args class_ref)
+    List.map (cpp_ir_of_ml_type (empty_env ()) []) args
+    @ List.map
+        (fun v -> resolve_mentioned (Promoted_member v))
+        (Table.promoted_type_params class_ref)
   in
   with_promoted_var_map
     ( promoted_var_resolutions @ specialised_arg_resolutions
@@ -183,7 +188,14 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
      parameters' constraints -- [requires PI<_tcI2, ptr>] -- and they resolve
      through the parameters beside them the same way: [ptr] is
      [typename _tcI1::ptr], not the file-scope [std::any]. *)
-  let template_params = Minicpp.map_tparams resolve_mentioned template_params in
+  let template_params =
+    List.map
+      (fun ((k : _ Cpp_ir.Template.Parameter_kind.t), id) ->
+        match k with
+        | Concept (r, tys) -> (Cpp_ir.Template.Parameter_kind.Concept (r, List.map resolve_mentioned tys), id)
+        | k -> (k, id) )
+      template_params
+  in
   (* Now inner_ty should be Tglob(class_ref, type_args, _) and inner_body should
      be MLcons(...) *)
   match inner_ty with
@@ -244,7 +256,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
          parameters (e.g., the typeclass dictionary) via MLrel indices. We push
          lam_params into the env so these references resolve correctly. *)
       let outer_binders, base_env = push_vars' (List.rev lam_params) (empty_env ()) in
-      (* Collect type var names for convert_ml_type_to_cpp_type *)
+      (* Collect type var names for cpp_ir_of_ml_type *)
       let type_var_names = tv_names_by_index in
       (* Set up type variable context for fixpoint lifting. Without this,
          fixpoints inside methods get lifted with wrong names and missing
@@ -352,8 +364,14 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
               Ml_type_util.refine_erased
                 ~writable:(fun t ->
                   not
-                    (Ml_type_util.has_unbound_tvar type_var_names
-                       (convert_ml_type_to_cpp_type base_env type_var_names t)) )
+                    (Cpp_ir.Types.exists
+                       (fun (t : Cpp_ir.Lowered.Type.t) ->
+                         match t with
+                         | Variable (Index (_, Some name) | Named name) ->
+                           not (List.exists (Id.equal name) type_var_names)
+                         | Variable (Index (_, None)) | Auto -> true
+                         | _ -> false )
+                       (cpp_ir_of_ml_type base_env type_var_names t) ) )
                 have want
           in
           let declared_arg_arities =
@@ -366,13 +384,13 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
              at ([Declared_at]): the arrows substitution moved into the
              callable's parameter list go back where the signature had them. *)
           let param_cpp_ty n ml_ty =
-            let ty = convert_ml_type_to_cpp_type base_env type_var_names ml_ty in
+            let ty = cpp_ir_of_ml_type base_env type_var_names ml_ty in
             match
               (if n < Array.length declared_arg_arities then
                  declared_arg_arities.(n)
                else None)
             with
-            | Some k when k > 0 -> Minicpp.spell_arrows (Declared_at k) ty
+            | Some k when k > 0 -> Cpp_ir.Types.spell_arrows (Declared_at k) ty
             | _ -> ty
           in
           (* A class-typed argument is not a value in C++: the class is a
@@ -385,7 +403,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
               List.fold_left_map
                 (fun n {Instance_methods.binder = id; binder_ty = ty; erased} ->
                   if erased then
-                    (n, {mb_name = id_of_mlid id; mb_ml_ty = ty; mb_cpp_ty = Tany; mb_kind = `Erased})
+                    (n, {mb_name = id_of_mlid id; mb_ml_ty = ty; mb_cpp_ty = Any; mb_kind = `Erased})
                   else
                     let resolved_ty =
                       let have = subst_promoted_tvars ty in
@@ -405,7 +423,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
           in
           (* Determine return type: if type_subst resolved everything, use the
              substituted type. Otherwise, infer from the lambda binders. *)
-          let method_ret_ty =
+          let method_ret_ty : Cpp_ir.Lowered.Type.t =
             let ret = snd (method_args_and_ret ()) in
             (* A variable the substitution put there -- [B := A] for
                [Instance : Conv (wrap A) A] -- is one of the instance's own
@@ -421,14 +439,14 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                  instance's, so a bare type variable in the return type is
                  already meaningful -- no need to guess it from the last
                  binder. *)
-              convert_ml_type_to_cpp_type base_env type_var_names ret
+              cpp_ir_of_ml_type base_env type_var_names ret
             | (Miniml.Tvar (_, _)) when binders <> [] ->
               (* Unsubstituted Tvar — infer from the last lambda binder's type.
                  For op : A -> A -> A with body MLlam(x, nat, MLlam(y, nat,
                  ...)), the return type is the same as the parameter type
                  (nat). *)
               let last_param_ty = (List.hd (List.rev binders)).mb_ml_ty in
-              convert_ml_type_to_cpp_type
+              cpp_ir_of_ml_type
                 base_env
                 type_var_names
                 last_param_ty
@@ -436,9 +454,9 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
               (* No lambda binders to infer from — try to use the field type's
                  arg types. For a non-function field like m_id : carrier, the
                  whole type is Tvar, so look at the body's type. *)
-              Tany
+              Any
             | _ ->
-              convert_ml_type_to_cpp_type
+              cpp_ir_of_ml_type
                 base_env
                 type_var_names
                 ret
@@ -458,7 +476,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type_ir (Some (Legacy_minicpp_to_cpp_ir.lower_type method_ret_ty)) @@ fun () ->
+            with_cpp_return_type_ir (Some method_ret_ty) @@ fun () ->
             if bodies then begin_body ~owner:name ();
             if List.for_all (fun b -> b.mb_kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
@@ -472,7 +490,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                 let stmts =
                   with_method_env_types ~outer:outer_binders base_env [] (fun () ->
                       with_region inner_body (fun () ->
-                          gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body ) )
+                          gen_body base_env inner_body ) )
                 in
                 ([], method_ret_ty, stmts, [])
               | Some (eta_params, call_expr) ->
@@ -484,11 +502,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                          slot down as [std::any] is what makes the value
                          boxed, so a [Topaque] here becomes known-boxed. *)
                       let cpp_ty =
-                        materialise_opaque
-                          (convert_ml_type_to_cpp_type
-                             base_env
-                             type_var_names
-                             arg_ty)
+                        materialise_opaque_ir (cpp_ir_of_ml_type base_env type_var_names arg_ty)
                       in
                       (name, arg_ty, cpp_ty) )
                     eta_params
@@ -530,9 +544,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     match body_arg_types with
                     | Some bargs ->
                       let body_ty = List.nth bargs i in
-                      let body_cpp = convert_ml_type_to_cpp_type
-                        base_env type_var_names body_ty in
-                      if is_boxed_type sig_cpp && not (prints_as_any body_cpp)
+                      let body_cpp = cpp_ir_of_ml_type base_env type_var_names body_ty in
+                      let is_boxed : Cpp_ir.Lowered.Type.t -> bool = function
+                        | Any | Erased _ -> true
+                        | _ -> false
+                      in
+                      if is_boxed sig_cpp && not (Cpp_ir.Types.prints_as_any body_cpp)
                       then
                         Some (name, body_ty, body_cpp)
                       else None
@@ -554,21 +571,22 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     ~owned:(fun i ->
                       let name, _, cpp_ty = params_db.(i) in
                       List.exists (fun (n, _, _) -> Id.equal n name) cast_info
-                      || not (declared_by_reference cpp_ty) )
-                    ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty))
+                      || not (Translation_support.declared_by_reference_ir cpp_ty) )
+                    ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some cpp_ty)
                     ~ty:(fun i -> snd (List.nth ml_vars i))
                 in
                 let stmts =
                   with_method_env_types ~outer:outer_binders env renamed_eta (fun () ->
                     with_region ~owned call_expr (fun () ->
-                        gen_stmts env (fun x -> Sreturn (Some x)) call_expr ) )
+                        gen_body env call_expr ) )
                 in
                 let stmts =
                   List.fold_left (fun acc (name, _body_ty, body_cpp) ->
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
-                    Sasgn (name, Declare (body_cpp, None),
-                           Cpp_erasure.unbox body_cpp (CPPvar param_name))
+                    (Cpp_ir.Stmt.Bind_variable
+                       (name, Declare (body_cpp, None), Cpp_erasure.unbox_ir body_cpp (Local param_name))
+                      : Cpp_ir.Lowered.Stmt.t)
                     :: acc
                   ) stmts (List.rev cast_info)
                 in
@@ -638,7 +656,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                    re-deriving them from ML types substitution has since
                    given extra arrows.  Same order as [renamed_ml]. *)
                 with_method_env_types ~outer:outer_binders
-                  ~cpp:(List.rev_map (fun b -> Some (Legacy_minicpp_to_cpp_ir.lower_type b.mb_cpp_ty)) binders)
+                  ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
                   env renamed_ml
                   (fun () ->
                     let binders_db = Array.of_list (List.rev binders) in
@@ -646,12 +664,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                       Translation_support.owned_parameters (Array.length binders_db)
                         ~owned:(fun i ->
                           binders_db.(i).mb_kind = `Value
-                          && not (declared_by_reference binders_db.(i).mb_cpp_ty) )
-                        ~declared:(fun i -> Some (Legacy_minicpp_to_cpp_ir.lower_type binders_db.(i).mb_cpp_ty))
+                          && not (Translation_support.declared_by_reference_ir binders_db.(i).mb_cpp_ty) )
+                        ~declared:(fun i -> Some binders_db.(i).mb_cpp_ty)
                         ~ty:(fun i -> binders_db.(i).mb_ml_ty)
                     in
                     with_region ~owned inner_body (fun () ->
-                        gen_stmts env (fun x -> Sreturn (Some x)) inner_body ) )
+                        gen_body env inner_body ) )
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
           in
@@ -677,9 +695,9 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                  left unconstrained, so that the probe can instantiate the
                  declaration at [std::any] without satisfying the class. *)
               type_params = Cpp_ir.Build.typenames (method_tvars @ tc_tparams);
-              return_type = Legacy_minicpp_to_cpp_ir.lower_type ret_ty;
-              params = List.map (fun (x, t) -> (x, Legacy_minicpp_to_cpp_ir.lower_type t)) cpp_params;
-              body = List.map Legacy_minicpp_to_cpp_ir.lower_stmt body_stmts;
+              return_type = ret_ty;
+              params = cpp_params;
+              body = body_stmts;
               receiver = Static;
               is_inline = false;
               no_pure = false;
@@ -852,8 +870,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       let forwarded_usings =
         List.concat_map
           (fun (tt, tc_name) ->
-            match tt with
-            | TTconcept (class_ref_tc, _) ->
+            match (tt : _ Cpp_ir.Template.Parameter_kind.t) with
+            | Concept (class_ref_tc, _) ->
               (* Direct associated types only: the nested ones are added below,
                  keyed off the using names this produces. *)
               List.map
@@ -901,11 +919,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
               List.nth promoted_concrete_types i
             in
             let concrete_cpp_ty =
-              Legacy_minicpp_to_cpp_ir.lower_type
-                (convert_ml_type_to_cpp_type
-                   base_env
-                   (alias_tvar_names @ alias_params)
-                   concrete_ml_ty)
+              cpp_ir_of_ml_type base_env (alias_tvar_names @ alias_params) concrete_ml_ty
             in
             (var_name, alias_params, concrete_cpp_ty) )
         |> List.filter_map (fun (var_name, alias_params, concrete_cpp_ty) ->
@@ -984,7 +998,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
           Struct
             { ref_ = name;
               fields = all_usings @ methods;
-              type_params = Legacy_minicpp_to_cpp_ir.lower_template_parameters template_params;
+              type_params = template_params;
               constraint_ = None;
               needs_shared_from_this = false }
         in
