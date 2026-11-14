@@ -8,8 +8,7 @@
    templates, static projections, closed instances, singleton dictionaries,
    shared constants, match kinds), canonical spines, numeral folding where
    nothing is registered, and match-kind classification.  Every input is a
-   Core term, an ML type or a table entry; no MiniCpp or CppIR value is
-   built. *)
+   Core term, an ML type or a table entry; no CppIR value is built. *)
 
 open Crane_plugin
 open Names

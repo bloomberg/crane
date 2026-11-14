@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Escape analysis over MiniML terms, feeding parameter ownership and cell
-    reuse.  It runs before translation to MiniCpp; {!Ownership} settles its
+    reuse.  It runs before translation to CppIR; {!Ownership} settles its
     per-parameter answers for the whole program, and translation reads them.
 
     Two-phase optimization strategy:

@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** MiniML to MiniCpp translation: converts ML-style AST to C++-oriented AST.
+(** MiniML to CppIR translation: converts ML-style AST to C++-oriented AST.
 
     The recursive core here -- {!gen_expr}, {!gen_stmts}, {!eta_fun}, the
     call, match and fixpoint generators -- builds on three layers it
@@ -3920,7 +3920,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
           coerce ~from:Any ~into:(erase_top_args ty) inner
         else if ml_expr_is_erased env t then
           (* Extraction's oracle reads a type-class method's [M A] as erased,
-             but the binder it is bound to was assigned {!Minicpp.Topaque} --
+             but the binder it is bound to was assigned an opaque type --
              an admission that the shape could not be resolved, not a box.
              Say so rather than assert [Tany]: {!coerce} recovers from a box
              and must not invent one. *)
@@ -5305,7 +5305,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
 
              Binding it is all that is decided here.  Whether it survives as a
              [template <typename>] of the lambda or is erased away is
-             {!Minicpp.lambda}'s call, and it turns on whether a parameter
+             {!Translation_support.mk_lambda_ir}'s call, and it turns on whether a parameter
              deduces it -- which is exactly the difference between an index
              the event type still carries ([memM<T2>]) and one erasure took
              out of it (a [LocalE] that is a plain enum). *)

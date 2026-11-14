@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Shared mutable state for the MiniML -> MiniCpp translation.
+(** Shared mutable state for the MiniML -> CppIR translation.
 
     Holds the per-declaration translation context ([tctx]) and its accessors,
     so that the translation core ({!Translation}) and the declaration
@@ -97,8 +97,7 @@ type translation_ctx = {
   (* C++ return type of the enclosing function, set by the function and
      instance generators ({!with_cpp_return_type_ir}). Used to recover erased
      template type args at call sites where C++ can't deduce them from lambda
-     arguments.  CppIR: planning reads it as it is, and a reader still
-     building MiniCpp raises it ({!current_cpp_return_type}). *)
+     arguments ({!current_cpp_return_type_ir}). *)
   current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
   (* De Bruijn environment: each variable's binder, with its ML type and
      role. *)

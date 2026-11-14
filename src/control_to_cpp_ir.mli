@@ -5,9 +5,7 @@
     the CppIR loop the passes after it read ({!Cpp_ir.Lowered}): the bridge
     from ControlIR to the loop shapes Loopify's transforms build.  Every loop
     of the program is made here, from the plan; {!Cpp_pipeline.finish} runs
-    no loop transform of its own.  Translation still generates MiniCpp: the
-    entry points below that take it convert it to CppIR on the way in and
-    back on the way out.
+    no loop transform of its own.
 
     It lowers the loop of direct tail recursion of a top-level
     function ({!Control_ir.Loop.Function}) that the configuration loopifies

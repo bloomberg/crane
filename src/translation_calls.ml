@@ -76,7 +76,7 @@ let stored_adapter params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
     takes the callee's ML type rather than its name.
 
     [callee_site] is the arrow site the callee is spelled at
-    ({!Minicpp.arrow_site}), where [ml_ty] is an instantiation of it: an
+    ({!Cpp_ir.Types.arrow_site}), where [ml_ty] is an instantiation of it: an
     instantiation can push arrows into the codomain ([idf {A} : A -> A] at
     [A := nat -> nat] reads as two arguments), and the declaration takes only
     the arguments it wrote, the rest going to what the call returns one at a
@@ -1848,7 +1848,7 @@ let lower_call ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env u
     is the global's body {e run}, so the reference evaluates to the result,
     and the lambda has to be given that as its return type.
 
-    A call node carries its result in its {!Minicpp.call_sig}; a bare
+    A call node carries its result in its call signature ([Cpp_ir.Expr.Call.signature]); a bare
     reference has no call node, so the answer is recorded on the global
     itself.  Consumers must not re-derive it -- doing so means reading the
     uninstantiated scheme back out of the front-end table, answering

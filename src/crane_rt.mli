@@ -146,10 +146,10 @@ val counting_ptr : string
 
 val make_counting : string  (** [crane::make_counting<T>] *)
 
-(** {2 Helpers a MiniCpp expression may name} *)
+(** {2 Helpers a CppIR expression may name} *)
 
 (** The runtime helpers that appear in the IR rather than only in the
-    printer.  A {!Minicpp.CPPrt} carries one of these instead of the helper's
+    printer.  A [Cpp_ir.Expr.Runtime] carries one of these instead of the helper's
     spelling, so a call into the runtime cannot be built out of a string that
     no runtime header defines. *)
 type helper =

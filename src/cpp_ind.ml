@@ -1069,8 +1069,7 @@ let entity_of ~what id d = Function_entity.of_finished (finished_of ~what id d)
 
 let finished_placed (id, d) = finished_of ~what:"a lifted declaration" id d
 
-(** The lifted helper [d], a MiniCpp declaration, under its {!helper_id}, in
-    CppIR. *)
+(** The lifted helper [d] under its {!helper_id}. *)
 let helper_placed d = (helper_id d, d)
 
 let finished_helper d = finished_placed (helper_placed d)

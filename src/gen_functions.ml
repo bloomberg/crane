@@ -7,9 +7,8 @@
 
     Part of declaration generation (MiniML to CppIR): the declaration-level
     layer over the expression translation in {!Translation}, re-exported
-    through {!Gen_decls}.  Translation still generates MiniCpp; a body is
-    lowered into CppIR as it comes back, and every declaration here is
-    CppIR.  The callable plan of each function ({!plan_function}) is
+    through {!Gen_decls}.  Every body and declaration here is CppIR.  The
+    callable plan of each function ({!plan_function}) is
     made before any body is generated; generating the function reads it
     back ({!planned_relaxations}, {!declare_planned}). *)
 

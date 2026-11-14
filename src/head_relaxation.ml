@@ -22,7 +22,7 @@ let equal = ( = )
 
 module L = Cpp_ir.Lowered
 
-(* {!Minicpp.tvar_is}: a variable answers to its parameter's name and to the
+(* A variable answers to its parameter's name and to the
    spelling of its index. *)
 let lowered_tvar_is id : L.Type.t -> bool = function
   | Variable (Named n) -> Id.equal n id
@@ -30,13 +30,13 @@ let lowered_tvar_is id : L.Type.t -> bool = function
     (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Common.tvar_id i) id
   | _ -> false
 
-(* {!Minicpp.tvar_name}. *)
+(* The name a type variable is spelled with. *)
 let lowered_tvar_name : L.Type.t -> Id.t option = function
   | Variable (Index (_, Some n) | Named n) -> Some n
   | Variable (Index (i, None)) -> Some (Common.tvar_id i)
   | _ -> None
 
-(* {!Minicpp.rebind_plain_var}. *)
+(* The variable [head], declared a plain [typename], applied to [args]. *)
 let rebind_plain_var_lowered ~in_scope (head : L.Type.t) (args : L.Type.t list) : L.Type.t =
   match args with
   | [a] when not (Cpp_ir.Types.prints_as_any a) ->
@@ -78,7 +78,7 @@ let lowered_deep ?(fe = Fun.id) (ft : L.Type.t -> L.Type.t) =
   and stmt s = Cpp_ir.Map.stmt (m ()) s in
   m ()
 
-(* {!Minicpp.settle_lambda_tparams}: [l] without the template parameters
+(* [l] without the template parameters
    none of its parameters names, each use of them erased. *)
 let settle_lowered_lambda (l : L.phase Cpp_ir.Expr.Lambda.t) =
   let names id t = Cpp_ir.Children.exists_type (lowered_tvar_is id) t in

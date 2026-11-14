@@ -75,8 +75,7 @@ let inactive_field_message =
 
 (** [mk_lambda_ir ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
     with template parameters of its own, [tparams], less those none of its
-    [params] (source order) deduces ({!Head_relaxation.settle_lowered_lambda}):
-    {!Minicpp.mk_lambda} in CppIR. *)
+    [params] (source order) deduces ({!Head_relaxation.settle_lowered_lambda}). *)
 let mk_lambda_ir ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) body ~capture : Cpp_ir.Lowered.Expr.t =
   match tparams with
   | [] -> Cpp_ir.Build.lambda params ret body ~capture
@@ -1351,7 +1350,7 @@ let with_escape_analysis f =
     caller then projects with [.first.first]. *)
 let with_iife_return_type (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_cpp_return_type_ir expected_ty f
 
-(** {!Minicpp.declared_by_reference} in CppIR: whether a parameter declared
+(** Whether a parameter declared
     at [ty] is a reference the body does not own. *)
 let rec declared_by_reference_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Reference _ | Const _ -> true
@@ -2893,7 +2892,7 @@ let into_box kind slot = if boxed slot then slot else { slot with repr = Boxed k
 
 (** [abstract_cpp_type_ir ~over ty] is [ty] with every occurrence of [over]
     -- a type variable compared by its index -- replaced by the carrier
-    parameter (printed as the {!Minicpp.ctor_alias_tvar} sentinel): the type
+    parameter (printed as the {!Cpp_print.ctor_alias_tvar} sentinel): the type
     constructor whose application to [over] is [ty], or [None] where [over]
     does not occur, so that there is no such constructor to name. *)
 let abstract_cpp_type_ir ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Type.t) =

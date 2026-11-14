@@ -9,7 +9,7 @@
     until C++ instantiates the instance.  [crane_any_cast] in
     [theories/cpp/crane_fn.h] handles both by deferring to [if constexpr].
 
-    Translation builds boxes and casts in MiniCpp ({!converting_ctor},
+    Translation builds boxes and casts ({!converting_ctor},
     {!unbox}); which caster a cast is written with is decided once, after the
     seam, over CppIR ({!resolve_casts}), so the printer only spells out what
     the program already says.
@@ -1281,7 +1281,7 @@ let tvar_spellings (ty : ty) =
     generated against the ML type, which still carries the definition's own
     [forall].  Where the two disagree the body wins nothing -- it names [T2]
     under a head declaring [T1], and a name nothing declares does not compile.
-    Erasing the use is the same repair {!Minicpp.drop_tparams} makes for a
+    Erasing the use is the same repair {!Head_relaxation.settle_lowered_lambda} makes for a
     lambda, one level up, and for the same reason: half a quantifier is worth
     less than none.
 

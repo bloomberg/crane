@@ -336,12 +336,13 @@ val erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a value of this type is known to live inside a [std::any], and so
     may be boxed into and [any_cast] out of.  Narrower than {!prints_as_any}:
-    {!Minicpp.Topaque} prints as [std::any] but claims nothing about the
+    an opaque type ({!Representation_obligation.Opaque_type}) prints as [std::any] but claims nothing about the
     representation, and is excluded. *)
 val is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool
 
 
-(** Replace every {!Minicpp.Topaque} in a type with {!Minicpp.Tany}.  Apply at
+(** Replace every opaque type ({!Representation_obligation.Opaque_type}) in a
+    type with [Any].  Apply at
     any position where the type is written down (field, parameter, return type,
     template argument): spelling [std::any] in a declaration is what makes the
     value boxed, so no [Topaque] may survive into the generated header. *)

@@ -28,7 +28,7 @@ type t =
       in_scope : Names.Id.t list;
     }
       (** An application of a variable declared a plain [typename] is taken
-          back off it ({!Minicpp.rebind_plain_var}), [in_scope] being the
+          back off it ({!rebind_plain_var_lowered}), [in_scope] being the
           head's parameters. *)
   | Unmentioned of Names.Id.t list
       (** The variables the head defaults because the signature no longer
@@ -44,8 +44,7 @@ val equal : t -> t -> bool
 val deapplied_lowered :
   plain:Names.Id.t list -> in_scope:Names.Id.t list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
-(** [rebind_plain_var_lowered ~in_scope head args] -- {!Minicpp.rebind_plain_var}
-    over CppIR types: the variable [head], declared a plain [typename],
+(** [rebind_plain_var_lowered ~in_scope head args] -- the variable [head], declared a plain [typename],
     applied to [args]. *)
 val rebind_plain_var_lowered :
   in_scope:Names.Id.t list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t
@@ -70,12 +69,11 @@ val apply_all : t list -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
     generated struct [d] in CppIR: its members, their bodies, and its
     template parameters, a lambda whose parameter deduced a template
     parameter only through an application taken off settled again
-    ({!Minicpp.settle_lambda_tparams}). *)
+    ({!settle_lowered_lambda}). *)
 val deapply_struct :
   plain:Names.Id.t list -> in_scope:Names.Id.t list -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
 
 (** [settle_lowered_lambda l] is [l] without the template parameters none of
-    its parameters names, each use of them erased
-    ({!Minicpp.settle_lambda_tparams} in CppIR). *)
+    its parameters names, each use of them erased. *)
 val settle_lowered_lambda :
   Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t -> Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t

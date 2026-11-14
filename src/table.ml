@@ -899,8 +899,8 @@ let (_, add_flat_inductive, is_flat_inductive_registered) =
 (** {2 Higher-kinded inductive parameters} *)
 
 (* What each template parameter of a generated inductive or alias is lives in
-   {!Tparam_kinds}, below this module so that {!Minicpp} can read it; these
-   are its entry points for the rest of the plugin. *)
+   {!Tparam_kinds}, below this module so that {!Cpp_leaf_plan} can read it;
+   these are its entry points for the rest of the plugin. *)
 let () = on_reset Tparam_kinds.reset
 
 let () =

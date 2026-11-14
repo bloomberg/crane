@@ -24,7 +24,7 @@
 
     It is a top-level module rather than a member of a [src/cpp_ir/]
     directory on purpose: a directory is one node of the dependency graph,
-    and this module reaches the whole MiniCpp pipeline ({!Cpp_pipeline},
+    and this module reaches the whole finishing pipeline ({!Cpp_pipeline},
     {!Cpp_erasure}), so as a member it would keep every pass from ever
     naming [Cpp_ir]. *)
 

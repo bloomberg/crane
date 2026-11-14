@@ -225,7 +225,7 @@ let position_cpp_ty_ir (expected : Cpp_ir.Lowered.Type.t option) =
     spelled, so it can never agree with the same type variable as deduced
     from another argument -- [f (nat -> nat) S []], where the list argument
     settles the variable on [std::function<uint64_t(uint64_t)>].
-    {!Minicpp.CPPfn_value} gives the closure that very type, deduced from it.
+    [Cpp_ir.Expr.Function_value] gives the closure that very type, deduced from it.
 
     The parameter type must be the callee's own, before this call site's
     instantiation is substituted into it: it is the template parameter that
@@ -1294,7 +1294,7 @@ let cpp_of_ml_ir env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
 
 (** [template_arg_of_ml_type_ir ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says
-    ({!Minicpp.arrow_site}).
+    ({!Cpp_ir.Types.arrow_site}).
 
     [Declared] for an argument that instantiates an {e inductive}'s
     parameter.  Such a parameter only names the type of a stored value, and the
@@ -1310,7 +1310,7 @@ let template_arg_of_ml_type_ir ~site env tvars ty =
      constructor fields with an explicit storage namespace. *)
   Cpp_ir.Types.spell_arrows site (cpp_ir_of_ml_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
 
-(** The site a callee's {e result} is spelled at ({!Minicpp.arrow_site}): a
+(** The site a callee's {e result} is spelled at ({!Cpp_ir.Types.arrow_site}): a
     codomain that is a type variable takes its C++ shape from the template
     argument instantiating it, so it is curried; one the declaration writes
     out is flat there. *)
@@ -1561,7 +1561,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     | _ ->
       cpp_of_ml_ir env typ
   in
-  (* Whether a {!Minicpp.Topaque} among the scrutinee's template arguments is
+  (* Whether an opaque type among the scrutinee's template arguments is
      a box.  [Topaque] only admits that the argument could not be resolved --
      but for an inductive Crane generates, the field that names it is written
      out, and {!Cpp_erasure.materialise} spells that declaration [std::any], so
@@ -2069,7 +2069,7 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
     yields [Topaque] means the scope could not resolve the binder at all, and
     a dummy stands for a value that is not there; recording either would turn
     ignorance into the assertion "this binder holds a box", which is the one
-    thing {!Minicpp.Topaque} exists to refuse.  Such binders keep no entry, so
+    thing an opaque type exists to refuse.  Such binders keep no entry, so
     a reader still falls through to whatever it does today.  Conversion
     failures are skipped for the same reason, and so that a binder Crane
     cannot currently type does not become a new way for extraction to fail. *)
@@ -3076,7 +3076,7 @@ let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowe
 
 (** [regroup_crossing ~from ~into expr]: [expr], whose C++ type is [from],
     read at [into] where the two differ only in how their arrows are grouped
-    ({!Minicpp.arrow_site}) -- a value spelled where it was declared reaching
+    ({!Cpp_ir.Types.arrow_site}) -- a value spelled where it was declared reaching
     a slot a type argument spells curried, or back.  [crane_convert] regroups
     every function the value holds ([crane_cast_to] for [crane::fn] of
     another arity).  A function value itself is not this: it reaches a slot
@@ -3117,7 +3117,7 @@ let value_cpp_type ~agree env e =
 
     The mirror is {!Gen_functions.dead_unit_returns_to_abort}, which catches the
     same branch where extraction recorded no coercion at all and a bare [tt]
-    reaches a [return]; both throw {!Minicpp.dead_branch_message}. *)
+    reaches a [return]; both throw {!Translation_support.dead_branch_message}. *)
 let absurd_coercion_ir from (into : Cpp_ir.Lowered.Type.t) =
   Ml_type_util.ml_type_is_unit from
   && (not (is_cpp_unit_type_ir into))

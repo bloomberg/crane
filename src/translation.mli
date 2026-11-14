@@ -14,14 +14,14 @@ open Common
 open Miniml
 open Names
 
-(** {1 Translation: MiniML to MiniCpp}
+(** {1 Translation: MiniML to CppIR}
 
     Expression-level lowering from the extracted {!Miniml} AST to the
-    C++-oriented {!Minicpp} AST. This is the second stage of the pipeline
-    ({v Rocq PCUIC --> MiniML --> MiniCpp --> C++ v}), sitting below the
+    C++-oriented {!Cpp_ir} AST. This is the second stage of the pipeline
+    ({v Rocq PCUIC --> MiniML --> CppIR --> C++ v}), sitting below the
     declaration-level generators in {!Gen_decls} (which call into {!gen_expr},
     {!gen_stmts}, and the type-conversion helpers here) and above {!Cpp_print},
-    which renders the resulting MiniCpp.
+    which renders the resulting CppIR.
 
     Besides the core expression/statement/type generators, this module exposes
     a family of pure analysis helpers — ownership and escape inference, type

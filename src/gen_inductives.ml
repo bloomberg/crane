@@ -1245,7 +1245,7 @@ let rec qualify_inductives_lowered ~skip (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lo
   | Member (base, id) -> Member (go base, id)
   | t -> t
 
-(** {!Minicpp.mk_lambda} in CppIR, for a lambda with no template parameters
+(** A CppIR lambda, for a lambda with no template parameters
     of its own: a [const] on the return type is dropped, and a nullary
     lambda whose body only throws is that abort. *)
 let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_ir.Lowered.Expr.t =

@@ -597,14 +597,14 @@ let erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
 
 (** [is_boxed_type t] — true if a value of type [t] is known to be physically
     inside a [std::any], and may therefore be boxed into and [any_cast] out of.
-    Deliberately narrower than {!prints_as_any}: {!Minicpp.Topaque} spells
+    Deliberately narrower than {!prints_as_any}: an opaque type ({!Representation_obligation.Opaque_type}) spells
     itself [std::any] but makes no claim about the representation, so it is
     excluded. *)
 let is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Any | Erased _ -> true | _ -> false
 
 
-(** [materialise_opaque ty] — replace every {!Minicpp.Topaque} in [ty] with
-    {!Minicpp.Tany}.
+(** [materialise_opaque ty] — replace every opaque type
+    ({!Representation_obligation.Opaque_type}) in [ty] with [Any].
 
     Apply this wherever [ty] is about to be {e written down} — a field, a
     parameter, a return type, a template argument in the generated header.

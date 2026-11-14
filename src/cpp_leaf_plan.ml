@@ -233,8 +233,7 @@ let prints_as_any (t : ty) = match t with Any | Erased _ -> true | _ -> false
 (** [map_type f t] applies [f] to every type in [t], outermost first, not
     entering a type constructor or a [decltype]: an application whose head
     becomes erased is erased, and one whose head becomes an instantiated
-    template is that template read at the argument, as
-    {!Minicpp.map_cpp_type} normalises them. *)
+    template is that template read at the argument. *)
 let rec map_type f (t : ty) : ty =
   let go = map_type f in
   let t : ty = f t in
@@ -270,7 +269,7 @@ let rec map_type f (t : ty) : ty =
   | Carrier_parameter | Erased _ ->
     t
 
-(* The CppIR counterpart of {!Minicpp.rebind_applied_head}: [h], an
+(* [h], an
    instantiated carrier standing for a family written applied, read at
    [args]. *)
 and rebind_applied_head (h : ty) (args : ty list) : ty =
