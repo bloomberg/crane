@@ -6,10 +6,8 @@
     Transforms recursive C++ functions and methods ({!Cpp_ir.Lowered}) into iterative equivalents
     using while loops and explicit stacks. This eliminates C++ stack recursion,
     enabling safe execution of deeply recursive algorithms extracted from Coq.
-    It runs on CppIR between translation and the finish pipeline: translation
-    reaches it through four entry points that convert MiniCpp to CppIR and
-    back, and ControlIR lowering ({!Control_to_cpp_ir}) calls the exported
-    transforms directly.
+    It runs on CppIR between translation and the finish pipeline: ControlIR
+    lowering ({!Control_to_cpp_ir}) calls the exported transforms directly.
 
     {2 Motivation}
 

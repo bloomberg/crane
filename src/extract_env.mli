@@ -14,7 +14,7 @@
 
     Top-level entry points for the [Crane Extraction] vernacular commands.
     Coordinates the full extraction pipeline:
-    {v Rocq source  -->  MiniML  -->  MiniCpp  -->  C++ files v}
+    {v Rocq source  -->  MiniML  -->  CppIR  -->  C++ files v}
 
     Also handles dependency resolution, file I/O, and extraction-test
     coordination.

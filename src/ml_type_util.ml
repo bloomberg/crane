@@ -77,19 +77,19 @@ let rec expand_ml_fun_alias ty =
     @param tmpl  the template type (may contain [Tvar] holes)
     @param conc  the concrete type to unify against
     @return association list of type variable bindings *)
-let rec extract_tvar_map_ir (tmpl : Cpp_ir.Lowered.Type.t) (conc : Cpp_ir.Lowered.Type.t) :
+let rec extract_tvar_map (tmpl : Cpp_ir.Lowered.Type.t) (conc : Cpp_ir.Lowered.Type.t) :
     (Names.Id.t * Cpp_ir.Lowered.Type.t) list =
   match (tmpl, conc) with
   | Variable (Index (_, Some id) | Named id), _ -> [(id, conc)]
   | Entity_application (g1, tys1, _), Entity_application (g2, tys2, _)
     when globref_equal g1 g2 && List.length tys1 = List.length tys2 ->
-    List.concat (List.map2 extract_tvar_map_ir tys1 tys2)
+    List.concat (List.map2 extract_tvar_map tys1 tys2)
   | Function (args1, ret1), Function (args2, ret2) when List.length args1 = List.length args2 ->
-    List.concat (List.map2 extract_tvar_map_ir args1 args2) @ extract_tvar_map_ir ret1 ret2
-  | Reference (k1, t1), Reference (k2, t2) when k1 = k2 -> extract_tvar_map_ir t1 t2
-  | Const t1, Const t2 -> extract_tvar_map_ir t1 t2
-  | In_namespace (_, t1), In_namespace (_, t2) -> extract_tvar_map_ir t1 t2
-  | In_namespace (_, t1), t2 | t1, In_namespace (_, t2) -> extract_tvar_map_ir t1 t2
+    List.concat (List.map2 extract_tvar_map args1 args2) @ extract_tvar_map ret1 ret2
+  | Reference (k1, t1), Reference (k2, t2) when k1 = k2 -> extract_tvar_map t1 t2
+  | Const t1, Const t2 -> extract_tvar_map t1 t2
+  | In_namespace (_, t1), In_namespace (_, t2) -> extract_tvar_map t1 t2
+  | In_namespace (_, t1), t2 | t1, In_namespace (_, t2) -> extract_tvar_map t1 t2
   | _ -> []
 
 (** Search an ML type for the first self-referential or mutually-recursive
@@ -430,7 +430,7 @@ let ml_type_is_unit (ty : ml_type) : bool =
 let own_type_variables ~n_outer tys =
   List.exists (fun ty -> Mlutil.IntSet.exists (fun i -> i > n_outer) (Mlutil.ml_tvars ty)) tys
 
-let is_cpp_unit_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application ((GlobRef.IndRef _ as r), _, _) -> Table.is_unit_type r
   | In_namespace (r, _) -> Table.is_unit_type r
   | _ -> false
@@ -489,7 +489,7 @@ let rec ml_codomain_after n = function
 (** Return [true] if the C++ type contains any unresolved type variable
     ([Tvar] or [Tauto]): such a type has no spelling of its own at the use, so
     it cannot serve as a cast target or a concrete expected type. *)
-let contains_tvar_ir =
+let contains_tvar =
   Cpp_ir.Types.exists (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Variable _ | Auto -> true | _ -> false)
 
 (** Whether [g] is the standard library's [prod], by identity: a user's
@@ -499,21 +499,21 @@ let is_prod_global g = Rocqlib.check_ref "core.prod.type" g
 (** Structural equality on C++ types, ignoring [Tconst] and [Tnamespace]
     wrappers and [Tvar] name annotations.  Used to match the state parameter type
     against the state component of a [pair<S,R>] return type. *)
-let rec cpp_ty_eq_ir (t1 : Cpp_ir.Lowered.Type.t) (t2 : Cpp_ir.Lowered.Type.t) =
+let rec cpp_ty_eq (t1 : Cpp_ir.Lowered.Type.t) (t2 : Cpp_ir.Lowered.Type.t) =
   let rec strip : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
     | Const t | In_namespace (_, t) -> strip t
     | t -> t
   in
   match (strip t1, strip t2) with
   | Entity_application (g1, ts1, _), Entity_application (g2, ts2, _) ->
-    GlobRef.CanOrd.equal g1 g2 && List.length ts1 = List.length ts2 && List.for_all2 cpp_ty_eq_ir ts1 ts2
+    GlobRef.CanOrd.equal g1 g2 && List.length ts1 = List.length ts2 && List.for_all2 cpp_ty_eq ts1 ts2
   | Variable (Index (i1, _)), Variable (Index (i2, _)) -> i1 = i2
   | Variable (Named x1), Variable (Named x2) -> Id.equal x1 x2
   | Reference (Lvalue, t1'), Reference (Lvalue, t2') | Reference (Forwarding, t1'), Reference (Forwarding, t2') ->
-    cpp_ty_eq_ir t1' t2'
-  | Shared_pointer t1', Shared_pointer t2' -> cpp_ty_eq_ir t1' t2'
+    cpp_ty_eq t1' t2'
+  | Shared_pointer t1', Shared_pointer t2' -> cpp_ty_eq t1' t2'
   | Function (d1, c1), Function (d2, c2) ->
-    List.length d1 = List.length d2 && List.for_all2 cpp_ty_eq_ir d1 d2 && cpp_ty_eq_ir c1 c2
+    List.length d1 = List.length d2 && List.for_all2 cpp_ty_eq d1 d2 && cpp_ty_eq c1 c2
   | Void, Void | Auto, Auto | Any, Any -> true
   | _ -> false
 
@@ -535,14 +535,14 @@ let list_ctor_struct_names (g : GlobRef.t) : string * string =
       ctor_struct_name_of_ref cons_ref )
   | _ -> ("Nil", "Cons")
 
-(** {!is_cpp_dummy_type} in CppIR. *)
-let is_cpp_dummy_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Erased _ -> true | _ -> false
+(** Whether a C++ type is an erased placeholder. *)
+let is_cpp_dummy_type : Cpp_ir.Lowered.Type.t -> bool = function Erased _ -> true | _ -> false
 
 (** The type under any module or namespace qualification.  Questions about
     what a type {i is} -- which inductive, at which instantiation -- are about
     the type inside the qualification, not the wrapper. *)
-let rec unqualify_ty_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-  | Const t | In_namespace (_, t) -> unqualify_ty_ir t
+let rec unqualify_ty : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | Const t | In_namespace (_, t) -> unqualify_ty t
   | t -> t
 
 (** How a value is represented in the slot it is built into.  [Native]: at its
@@ -562,24 +562,24 @@ and box_kind = Var_box | Family_box
     erased, spelled through its alias [using memCType = std::any]: a
     type-level function of a value ([memCType c]), or a class field with no
     instance behind it. *)
-let names_erased_alias_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let names_erased_alias : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application (g, _, _) -> Table.is_erased_type_const g
   | _ -> false
 
-let is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let is_fully_erased_fun_ty : Cpp_ir.Lowered.Type.t -> bool = function
   | Function (dom, cod) ->
     dom <> [] && List.for_all Cpp_ir.Types.prints_as_any dom && Cpp_ir.Types.prints_as_any cod
   | _ -> false
 
-(** [partially_erased_fun_ty_ir t] -- true of a function type that erased only its
+(** [partially_erased_fun_ty t] -- true of a function type that erased only its
     arguments and kept a concrete result, as
     [std::function<uint64_t(std::any)>] has.  A closure landing in such a slot
     was written at the concrete domain, so it reaches the slot through the
     [crane_erase_fn] adapter -- taken at the slot's own result type, since
     erasing that too would box the result twice. *)
-let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let partially_erased_fun_ty : Cpp_ir.Lowered.Type.t -> bool = function
   | Function (dom, cod) ->
-    let erased t = Cpp_ir.Types.prints_as_any t || names_erased_alias_ir t in
+    let erased t = Cpp_ir.Types.prints_as_any t || names_erased_alias t in
     List.exists erased dom && not (Cpp_ir.Types.prints_as_any cod)
   | _ -> false
 
@@ -588,23 +588,23 @@ let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     under which a closure written at the concrete domain needs the
     [crane_erase_fn] adapter: nothing converts to such a signature on its own.
 
-    Strictly weaker than {!partially_erased_fun_ty_ir}, and neither implies nor is
-    implied by {!is_fully_erased_fun_ty_ir}. *)
-let erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
+    Strictly weaker than {!partially_erased_fun_ty}, and neither implies nor is
+    implied by {!is_fully_erased_fun_ty}. *)
+let erased_domain_fun_ty : Cpp_ir.Lowered.Type.t -> bool = function
   | Function (dom, _) ->
-    List.exists (fun t -> Cpp_ir.Types.prints_as_any t || names_erased_alias_ir t) dom
+    List.exists (fun t -> Cpp_ir.Types.prints_as_any t || names_erased_alias t) dom
   | _ -> false
 
 (** [is_boxed_type t] — true if a value of type [t] is known to be physically
     inside a [std::any], and may therefore be boxed into and [any_cast] out of.
-    Deliberately narrower than {!prints_as_any}: {!Minicpp.Topaque} spells
+    Deliberately narrower than {!prints_as_any}: an opaque type ({!Representation_obligation.Opaque_type}) spells
     itself [std::any] but makes no claim about the representation, so it is
     excluded. *)
-let is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Any | Erased _ -> true | _ -> false
+let is_boxed_type : Cpp_ir.Lowered.Type.t -> bool = function Any | Erased _ -> true | _ -> false
 
 
-(** [materialise_opaque ty] — replace every {!Minicpp.Topaque} in [ty] with
-    {!Minicpp.Tany}.
+(** [materialise_opaque ty] — replace every opaque type
+    ({!Representation_obligation.Opaque_type}) in [ty] with [Any].
 
     Apply this wherever [ty] is about to be {e written down} — a field, a
     parameter, a return type, a template argument in the generated header.
@@ -613,7 +613,7 @@ let is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Any | Erased _ -
     on the value really is boxed, and downstream code is entitled to box into
     and [any_cast] out of the slot.  [Topaque] therefore survives only in the
     inferred type of an expression, never in a declaration. *)
-let materialise_opaque_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let materialise_opaque (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   Cpp_ir.Types.map (function Obligation Opaque_type -> Any | t -> t) ty
 
 (** [is_all_erased t] — true iff [t] is directly erased OR all of its type
@@ -635,10 +635,10 @@ let rec is_all_erased : Cpp_ir.Lowered.Type.t -> bool = function
     Returns [\[\]] if no [Tglob] is found.
 
     For example, [Tnamespace(ns, Tglob(g, \[T1; T2\], _))] returns [\[T1; T2\]]. *)
-let rec extract_template_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list = function
+let rec extract_template_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list = function
   | Entity_application (_, args, _) -> args
-  | In_namespace (_, inner) -> extract_template_args_ir inner
-  | Shared_pointer inner -> extract_template_args_ir inner
+  | In_namespace (_, inner) -> extract_template_args inner
+  | Shared_pointer inner -> extract_template_args inner
   | _ -> []
 
 (** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
@@ -655,15 +655,15 @@ and is_ml_erased_ty = function
 (** Check if a C++ type is a skipped type (inline custom with empty string).
     Such types arise from [Crane Extract Skip] and represent infrastructure
     (e.g. ReSum) that should be completely erased. *)
-let is_skipped_cpp_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let is_skipped_cpp_type : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application (r, _, _) -> Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
 (** Whether a C++ type is a type class's, under [const], a reference or a
     [shared_ptr]. *)
-let rec is_typeclass_type_cpp_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let rec is_typeclass_type_cpp : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application (r, _, _) -> Table.is_typeclass r
-  | Const t | Reference ((Lvalue | Forwarding), t) | Shared_pointer t -> is_typeclass_type_cpp_ir t
+  | Const t | Reference ((Lvalue | Forwarding), t) | Shared_pointer t -> is_typeclass_type_cpp t
   | _ -> false
 
 (** Check if an ML type is a skipped type (inline custom with empty string).
@@ -753,7 +753,7 @@ let rec subst_tvars_type subst = function
 (** Replace all unnamed Tvars with Tany (for type erasure in indexed
     inductives). Used when a type has Tvars that don't correspond to any
     template parameters.  Named variables are kept. *)
-let tvar_erase_type_ir =
+let tvar_erase_type =
   Cpp_ir.Types.rewrite (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
       | Variable (Index (_, None)) -> Some Any
@@ -775,15 +775,15 @@ let tvar_erase_type_ir =
     A leaf is collapsed rather than recursed into so that a namespaced [Tglob]
     like [Nat] yields plain [std::any], not the malformed
     [typename Nat::std::any]. *)
-let rec index_erase_type_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let rec index_erase_type (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   match ty with
-  | Entity_application (r, (_ :: _ as tys), args) -> Entity_application (r, List.map index_erase_type_ir tys, args)
-  | Named (id, (_ :: _ as tys)) -> Named (id, List.map index_erase_type_ir tys)
-  | External (id, (_ :: _ as tys)) -> External (id, List.map index_erase_type_ir tys)
-  | Non_deduced t -> Non_deduced (index_erase_type_ir t)
-  | Rebind (h, x) -> Rebind (index_erase_type_ir h, index_erase_type_ir x)
+  | Entity_application (r, (_ :: _ as tys), args) -> Entity_application (r, List.map index_erase_type tys, args)
+  | Named (id, (_ :: _ as tys)) -> Named (id, List.map index_erase_type tys)
+  | External (id, (_ :: _ as tys)) -> External (id, List.map index_erase_type tys)
+  | Non_deduced t -> Non_deduced (index_erase_type t)
+  | Rebind (h, x) -> Rebind (index_erase_type h, index_erase_type x)
   | In_namespace (r, inner) -> (
-    match index_erase_type_ir inner with
+    match index_erase_type inner with
     | Any -> Any
     | t -> In_namespace (r, t) )
   | _ -> Any
@@ -834,7 +834,7 @@ let ref_has_no_cpp_name r =
 
     Asked before writing a type into a position that has an alternative to
     writing it. *)
-let has_no_cpp_spelling_ir (ty : Cpp_ir.Lowered.Type.t) =
+let has_no_cpp_spelling (ty : Cpp_ir.Lowered.Type.t) =
   let as_printed =
     Cpp_ir.Types.map
       (fun (t : Cpp_ir.Lowered.Type.t) ->
@@ -886,7 +886,7 @@ let rec strip_tarr_n n ty =
     Normalises lambda parameter types before building [Tfun] wrappers.
     Unlike [Loopify_tail.strip_ref_and_const_type] this is intentionally
     non-recursive: a forwarding reference [T&&] becomes [T&]. *)
-let strip_cpp_ref_const_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+let strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Reference (Lvalue, t) | Const t -> t
   | Reference (Forwarding, t) -> Reference (Lvalue, t)
   | t -> t
@@ -904,16 +904,16 @@ let count_real_ml_args args =
     A type declared with [Crane TriviallyCopyable] qualifies only when its
     type arguments do -- copying a [std::pair] costs what copying its
     components costs. *)
-let rec is_trivially_copyable_type_ir (t : Cpp_ir.Lowered.Type.t) =
+let rec is_trivially_copyable_type (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Entity_application (g, ts, _) ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
     || Table.is_trivially_copyable_ref g
-       && List.for_all is_trivially_copyable_type_ir ts
+       && List.for_all is_trivially_copyable_type ts
   | In_namespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
-(** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type_ir}
+(** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type}
     read off the ML type. *)
 let rec ml_is_trivially_copyable ty =
   match resolve_tmeta ty with
@@ -1091,7 +1091,7 @@ let written_type_args g tys =
 
 (** Replace every unwritten type argument (see {!written_type_args}) by
     [Tvoid], so a predicate over the result reads the type as it is spelled. *)
-let prune_unwritten_args_ir =
+let prune_unwritten_args =
   Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
       match t with
       | Entity_application (g, tys, es) ->
@@ -1101,41 +1101,41 @@ let prune_unwritten_args_ir =
 
 (** Whether a single type node erases to [std::any]: [Any] and the opaque
     obligation themselves, and an unnamed variable, which
-    {!tvar_erase_type_ir} turns into one. *)
-let is_tany_node_ir (t : Cpp_ir.Lowered.Type.t) =
+    {!tvar_erase_type} turns into one. *)
+let is_tany_node (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Any | Obligation Opaque_type | Variable (Index (_, None)) -> true
   | _ -> false
 
-(** Like [has_tany_in_type_ir] but also treats the [Terased] markers
+(** Like [has_tany_in_type] but also treats the [Terased] markers
     ([dummy_type]/[dummy_prop]/[dummy_implicit]) as erased types.  Used for non-lambda let bindings where [auto]
     is the right fallback — but NOT for the Tfun+lambda case where we want to
     preserve the lambda's concrete return type. *)
-let has_erased_type_in_type_ir =
-  Cpp_ir.Types.exists (fun t -> is_tany_node_ir t || is_cpp_dummy_type_ir t)
+let has_erased_type_in_type =
+  Cpp_ir.Types.exists (fun t -> is_tany_node t || is_cpp_dummy_type t)
 
 (** Whether a C++ type contains [std::any] anywhere.  Used to detect a
     let-binding whose type annotation still holds unresolved carrier
     projections, to be replaced by concrete types from the generated lambda. *)
-let has_tany_in_type_ir = Cpp_ir.Children.exists_type is_tany_node_ir
+let has_tany_in_type = Cpp_ir.Children.exists_type is_tany_node
 
-let has_tany_written_ir t = has_tany_in_type_ir (prune_unwritten_args_ir t)
+let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
 
-let rec type_is_erased_ir (ty : Cpp_ir.Lowered.Type.t) : bool =
+let rec type_is_erased (ty : Cpp_ir.Lowered.Type.t) : bool =
   match ty with
-  | Const inner | In_namespace (_, inner) -> type_is_erased_ir inner
-  | t -> is_tany_node_ir t
+  | Const inner | In_namespace (_, inner) -> type_is_erased inner
+  | t -> is_tany_node t
 
 (** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
     detect types that can't be fully resolved in monomorphized contexts
     (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
     List<T1>. *)
-let has_unnamed_tvar_ir =
+let has_unnamed_tvar =
   Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with Variable (Index (_, None)) -> true | _ -> false )
 
-(** {!resolve_tvars_to_any} over a CppIR type. *)
-let resolve_tvars_to_any_ir =
+(** Every unresolved type variable replaced with [Any]. *)
+let resolve_tvars_to_any =
   Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
       match t with Variable (Index (_, None)) -> Any | t -> t )
 
@@ -1190,7 +1190,7 @@ let resolve_tvars_to_any_ir =
     @param pairs  keyed C++ types (template arguments)
     @return the filtered list: either all concrete types or empty, unless
       [preserve_positions] *)
-let filter_erased_keyed_ir ?(preserve_positions = false) (pairs : ('k * Cpp_ir.Lowered.Type.t) list) =
+let filter_erased_keyed ?(preserve_positions = false) (pairs : ('k * Cpp_ir.Lowered.Type.t) list) =
   let all = pairs in
   let pairs =
     List.filter (fun (_, (t : Cpp_ir.Lowered.Type.t)) -> match t with Erased Proof -> false | _ -> true) pairs
@@ -1204,8 +1204,8 @@ let filter_erased_keyed_ir ?(preserve_positions = false) (pairs : ('k * Cpp_ir.L
     [] )
   else pairs
 
-let filter_erased_type_args_ir ?preserve_positions tys =
-  List.map snd (filter_erased_keyed_ir ?preserve_positions (List.map (fun t -> ((), t)) tys))
+let filter_erased_type_args ?preserve_positions tys =
+  List.map snd (filter_erased_keyed ?preserve_positions (List.map (fun t -> ((), t)) tys))
 
 (** [refine_erased_by ~expected actual] takes, at every position where
     [actual] erased and [expected] did not, the spelling [expected] gives.
@@ -1219,12 +1219,12 @@ let filter_erased_type_args_ir ?preserve_positions tys =
 
     Only erasure is refined: a position where both are concrete keeps the
     producer's, and a shape mismatch is left alone entirely. *)
-let rec refine_erased_by_ir ~(expected : Cpp_ir.Lowered.Type.t) (actual : Cpp_ir.Lowered.Type.t) :
+let rec refine_erased_by ~(expected : Cpp_ir.Lowered.Type.t) (actual : Cpp_ir.Lowered.Type.t) :
     Cpp_ir.Lowered.Type.t =
   let erased t = Cpp_ir.Types.prints_as_any t in
   if erased actual && not (erased expected) then expected
   else
-    let go e a = refine_erased_by_ir ~expected:e a in
+    let go e a = refine_erased_by ~expected:e a in
     match (expected, actual) with
     | Entity_application (g, ea, _), Entity_application (g', aa, x)
       when globref_equal g g' && List.length ea = List.length aa ->
@@ -1235,8 +1235,8 @@ let rec refine_erased_by_ir ~(expected : Cpp_ir.Lowered.Type.t) (actual : Cpp_ir
     | Reference (ke, e), Reference (ka, a) when ke = ka -> Reference (ka, go e a)
     | Pointer e, Pointer a -> Pointer (go e a)
     | Shared_pointer e, Shared_pointer a -> Shared_pointer (go e a)
-    | _, In_namespace (ns, a) -> In_namespace (ns, refine_erased_by_ir ~expected a)
-    | In_namespace (_, e), _ -> refine_erased_by_ir ~expected:e actual
+    | _, In_namespace (ns, a) -> In_namespace (ns, refine_erased_by ~expected a)
+    | In_namespace (_, e), _ -> refine_erased_by ~expected:e actual
     | _ -> actual
 
 (* What [fills] filled the hole [o] with, if anything. *)
@@ -1284,7 +1284,7 @@ let rec fill_holes_type fills t =
 let fill_holes fills e =
   match fills with [] -> e | _ -> Mlutil.ast_map_types (fill_holes_type fills) e
 
-let refine_param_from_slot_ir ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
+let refine_param_from_slot ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
   let name_of (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Variable (Index (_, Some n) | Named n) -> Some n
@@ -1302,17 +1302,17 @@ let refine_param_from_slot_ir ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
   let says_something =
     let normalise =
       Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
-          if is_tany_node_ir t || is_cpp_dummy_type_ir t then Any
+          if is_tany_node t || is_cpp_dummy_type t then Any
           else match t with Variable (Index (_, Some n) | Named n) -> Variable (Named n) | t -> t )
     in
     normalise erased <> normalise bare
   in
-  if says_something && keeps_names && has_erased_type_in_type_ir bare && has_erased_type_in_type_ir erased then erased
+  if says_something && keeps_names && has_erased_type_in_type bare && has_erased_type_in_type erased then erased
   else bare
 
 (** Collect (index, name) pairs for all Tvar occurrences, sorted by index; a
     variable known only by name stands at index [0], ahead of the others. *)
-let get_tvars_indexed_ir (t : Cpp_ir.Lowered.Type.t) =
+let get_tvars_indexed (t : Cpp_ir.Lowered.Type.t) =
   let get_name i n =
     match n with
     | None -> tvar_id i
@@ -1347,13 +1347,13 @@ let get_tvars_indexed_ir (t : Cpp_ir.Lowered.Type.t) =
   in
   List.sort (fun (x, _) (y, _) -> Int.compare x y) (aux [] t)
 
-(** Like [get_tvar_indices_ir] but only collects tvars that will actually
+(** Like [get_tvar_indices] but only collects tvars that will actually
     appear in the rendered C++ type.  For custom types with a template
     (e.g. [std::shared_ptr<ITree<%t1>>]), only type-arg positions
     referenced by the template are visited.  Unreferenced positions hold
     phantom tvars (e.g. E in [itree E R] where the template only uses
     [%t1] = R) that the C++ compiler cannot deduce. *)
-let get_rendered_tvar_indices_ir (t : Cpp_ir.Lowered.Type.t) =
+let get_rendered_tvar_indices (t : Cpp_ir.Lowered.Type.t) =
   let rec aux l : Cpp_ir.Lowered.Type.t -> _ = function
     | Promoted_member _ -> l
     | Variable (Index (i, _)) ->
@@ -1384,7 +1384,7 @@ let get_rendered_tvar_indices_ir (t : Cpp_ir.Lowered.Type.t) =
     hands it to declared [typename e], which is the mismatch.  What the
     rendered type does with the variable is what its users have to agree
     with. *)
-let rendered_tvar_arities_ir (t : Cpp_ir.Lowered.Type.t) =
+let rendered_tvar_arities (t : Cpp_ir.Lowered.Type.t) =
   let arities = Hashtbl.create 4 in
   let rec aux : Cpp_ir.Lowered.Type.t -> unit = function
     | Apply (Variable (Index (i, _)), tys) ->
@@ -1401,10 +1401,10 @@ let rendered_tvar_arities_ir (t : Cpp_ir.Lowered.Type.t) =
   arities
 
 (** Tvar names, sorted by index *)
-let get_tvars_ir t = List.map snd (get_tvars_indexed_ir t)
+let get_tvars t = List.map snd (get_tvars_indexed t)
 
 (** Tvar indices only, sorted *)
-let get_tvar_indices_ir t = List.map fst (get_tvars_indexed_ir t)
+let get_tvar_indices t = List.map fst (get_tvars_indexed t)
 
 (** Collect tvar indices that are represented concretely in the generated C++
     signature.
@@ -1420,13 +1420,13 @@ let get_tvar_indices_ir t = List.map fst (get_tvars_indexed_ir t)
     Used by the function emitter (to choose between an [is_invocable_r_v]
     constraint and plain [TTtypename]), by {!Plan_templates.phantom_aware_temps}
     (to choose whether a template parameter needs a [void] default) and by the
-    call emitter ({!explicit_tvar_prefix_ir}). *)
-let primary_tvar_indices_ir (dom : Cpp_ir.Lowered.Type.t list) cod =
+    call emitter ({!explicit_tvar_prefix}). *)
+let primary_tvar_indices (dom : Cpp_ir.Lowered.Type.t list) cod =
   let add_rendered acc t =
     List.fold_left
       (fun acc i -> IntSet.add i acc)
       acc
-      (get_rendered_tvar_indices_ir t)
+      (get_rendered_tvar_indices t)
   in
   let concrete, clean_fun =
     List.fold_left
@@ -1818,7 +1818,7 @@ let index_only_result_tvar ml_ty =
 
 let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml_ty)
 
-(** [explicit_tvar_prefix_ir ~force_required cty] is how many of a signature's
+(** [explicit_tvar_prefix ~force_required cty] is how many of a signature's
     leading template parameters the signature does not represent, and which a
     call therefore has to spell out instead of leaving to deduction.
 
@@ -1833,19 +1833,19 @@ let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml
 
     @param force_required  as in {!Plan_templates.phantom_aware_temps}: indices that
       count as represented even though they do not appear in [cty]. *)
-let explicit_tvar_prefix_ir ?(force_required = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
+let explicit_tvar_prefix ?(force_required = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   match cty with
   | Function (dom, cod) ->
     let primary =
-      IntSet.union (primary_tvar_indices_ir dom cod) force_required
+      IntSet.union (primary_tvar_indices dom cod) force_required
     in
     let indexed =
       List.sort
         (fun (x, _) (y, _) -> Int.compare x y)
-        ( get_tvars_indexed_ir cty
+        ( get_tvars_indexed cty
         @ IntSet.fold
             (fun i acc ->
-              if List.exists (fun (j, _) -> j = i) (get_tvars_indexed_ir cty) then
+              if List.exists (fun (j, _) -> j = i) (get_tvars_indexed cty) then
                 acc
               else (i, tvar_id i) :: acc )
             force_required [] )

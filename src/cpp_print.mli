@@ -211,7 +211,7 @@ val identifier_tokens : string -> string list
 val foreign_text : Cpp_ir.Resolved.phase Cpp_ir.Foreign.t -> string
 
 (** The type variable a synthesised alias template abstracts over
-    ({!Minicpp.ctor_alias_tvar}). *)
+    ([Cpp_ir.Type.Carrier_parameter]). *)
 val ctor_alias_tvar : string
 
 (** Under [CRANE_CHECK_IR], start recording the templates the file about

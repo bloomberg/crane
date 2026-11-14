@@ -9,13 +9,13 @@
     until C++ instantiates the instance.  [crane_any_cast] in
     [theories/cpp/crane_fn.h] handles both by deferring to [if constexpr].
 
-    Translation builds boxes and casts in MiniCpp ({!converting_ctor},
+    Translation builds boxes and casts ({!converting_ctor},
     {!unbox}); which caster a cast is written with is decided once, after the
     seam, over CppIR ({!resolve_casts}), so the printer only spells out what
     the program already says.
 
     This module is also the single home for the question "is this type spelled
-    [std::any]" ({!is_any_shaped_ir}). *)
+    [std::any]" ({!is_any_shaped}). *)
 
 open Names
 
@@ -65,12 +65,12 @@ let alias_name = function
   | GlobRef.ConstRef c -> Some (Label.to_id (Constant.label c))
   | _ -> None
 
-(** [is_any_shaped_ir ty] — [ty] is spelled [std::any] in the generated code,
+(** [is_any_shaped ty] — [ty] is spelled [std::any] in the generated code,
     whether directly, through a type modifier, through an alias introduced by a
     [using] declaration, or because it is an axiom type. *)
-let rec is_any_shaped_ir : type p. p Cpp_ir.Type.t -> bool = function
+let rec is_any_shaped : type p. p Cpp_ir.Type.t -> bool = function
   | Any | Erased _ | Obligation Opaque_type -> true
-  | Const inner | Reference (_, inner) | In_namespace (_, inner) -> is_any_shaped_ir inner
+  | Const inner | Reference (_, inner) | In_namespace (_, inner) -> is_any_shaped inner
   | Named (id, []) -> Id.Set.mem id !any_type_aliases
   | Entity_application (g, _, _)
     when Table.is_erased_type_const g
@@ -86,8 +86,6 @@ let rec is_any_shaped_ir : type p. p Cpp_ir.Type.t -> bool = function
          with Not_found -> false )
   | _ -> false
 
-let is_any_shaped = is_any_shaped_ir
-
 (** Each unresolved type variable in [ty] spelled [std::any], so that a cast
     target has a C++ spelling. *)
 let resolve_tvars_to_any (ty : ty) = Types.map (function Variable (Index (_, None)) -> Any | t -> t) ty
@@ -99,8 +97,8 @@ let rec erase_type_to_any : ty -> ty = function
   | In_namespace (ns_g, inner) -> In_namespace (ns_g, erase_type_to_any inner)
   | _ -> Any
 
-(** [erased_list_shape_ir ty] -- see [cpp_erasure.mli]. *)
-let erased_list_shape_ir (ty : ty) =
+(** [erased_list_shape ty] -- see [cpp_erasure.mli]. *)
+let erased_list_shape (ty : ty) =
   let rec go : ty -> (GlobRef.t * ty) option = function
     | In_namespace (ns_g, t) -> (
       match go t with Some (g, t') -> Some (g, In_namespace (ns_g, t')) | None -> None )
@@ -221,8 +219,8 @@ let rec boxed_var boxed : expr -> bool = function
   | Move e -> boxed_var boxed e
   | _ -> false
 
-(** [converting_ctor_ir ty args] -- see [cpp_erasure.mli]. *)
-let converting_ctor_ir (ty : ty) (args : expr list) : expr =
+(** [converting_ctor ty args] -- see [cpp_erasure.mli]. *)
+let converting_ctor (ty : ty) (args : expr list) : expr =
   match args with
   | [inner] when Types.prints_as_any ty ->
     (* Boxing a box is two sites each believing they owned the boundary; the
@@ -232,11 +230,11 @@ let converting_ctor_ir (ty : ty) (args : expr list) : expr =
     Box (ty, inner)
   | _ -> Converting_construct (ty, args)
 
-(** [empty_box_ir] -- see [cpp_erasure.mli]. *)
-let empty_box_ir : expr = converting_ctor_ir Any []
+(** [empty_box] -- see [cpp_erasure.mli]. *)
+let empty_box : expr = converting_ctor Any []
 
-(** [unbox_ir ty e] -- see [cpp_erasure.mli]. *)
-let unbox_ir (ty : ty) (e : expr) : expr =
+(** [unbox ty e] -- see [cpp_erasure.mli]. *)
+let unbox (ty : ty) (e : expr) : expr =
   match e with
   (* [any_cast] to an erased type does not unwrap the box: it asks whether the
      box holds a *further* box, and throws when it does not. *)
@@ -249,8 +247,8 @@ let unbox_ir (ty : ty) (e : expr) : expr =
   | Lambda _ -> e
   | _ -> Any_cast (ty, e)
 
-(** [unbox_tolerant_ir ty e] -- see [cpp_erasure.mli]. *)
-let unbox_tolerant_ir (ty : ty) (e : expr) : expr =
+(** [unbox_tolerant ty e] -- see [cpp_erasure.mli]. *)
+let unbox_tolerant (ty : ty) (e : expr) : expr =
   match e with Box (_, inner) -> inner | Lambda _ -> e | _ -> Tolerant_any_cast (ty, e)
 
 (* [boxed] is the set of binders in scope whose declared type is [std::any].
@@ -345,7 +343,7 @@ let rec resolve_casts (d : settled) : settled =
      declared type; saying it in the program means the cast goes through the
      normalisation above like every other one. *)
   | Variable ({type_ = ty; init = e; _} as a) when returns_a_box e && castable_to ty ->
-    Variable {a with init = resolve_expr (unbox_ir (resolve_tvars_to_any ty) e)}
+    Variable {a with init = resolve_expr (unbox (resolve_tvars_to_any ty) e)}
   | _ -> Map.decl resolving d
 
 (** {2 Reading boxed values}
@@ -388,7 +386,7 @@ let read_as r original (e : expr) expected : expr =
 (* A use of a binder holding a value of type [ty] in a box. *)
 let read_stored id (ty : ty) : expr =
   let resolved = resolve_tvars_to_any ty in
-  match erased_list_shape_ir resolved with
+  match erased_list_shape resolved with
   | Some (g, flat) ->
     (* A custom list's erased shape is a deque of bare boxes; a converting
        read would re-box it.  Another list converts from its flat form. *)
@@ -1281,7 +1279,7 @@ let tvar_spellings (ty : ty) =
     generated against the ML type, which still carries the definition's own
     [forall].  Where the two disagree the body wins nothing -- it names [T2]
     under a head declaring [T1], and a name nothing declares does not compile.
-    Erasing the use is the same repair {!Minicpp.drop_tparams} makes for a
+    Erasing the use is the same repair {!Head_relaxation.settle_lowered_lambda} makes for a
     lambda, one level up, and for the same reason: half a quantifier is worth
     less than none.
 

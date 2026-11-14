@@ -40,7 +40,7 @@ let promoted_var_binding var_id =
     declaration the argument is that parameter, which is what the [Tpromoted]
     fallback spells; a scope that knows no instance spells the file-scope
     alias, as it did before there was a parameter at all. *)
-let ind_promoted_type_args_ir g : Cpp_ir.Lowered.Type.t list =
+let ind_promoted_type_args g : Cpp_ir.Lowered.Type.t list =
   List.map
     (fun v ->
       match promoted_var_binding v with
@@ -125,7 +125,7 @@ let adapter_arg (_, id) : Cpp_ir.Lowered.Expr.t = Local (Option.get id)
     A slot spelled [std::any] wants the box as it stands, and one still spelled
     as a template parameter has not been stated at all: an [any_cast] there
     would be a guess about an instantiation this site cannot see. *)
-let states_unboxed_target_ir into = not (Cpp_ir.Types.prints_as_any into || contains_tvar_ir into)
+let states_unboxed_target into = not (Cpp_ir.Types.prints_as_any into || contains_tvar into)
 
 (** [inline_iife k expr] checks whether [expr] is an IIFE
     ([CPPfun_call(CPPlambda
@@ -142,7 +142,7 @@ let states_unboxed_target_ir into = not (Cpp_ir.Types.prints_as_any into || cont
 
     @param k     the statement-level continuation (e.g. [Sreturn], [Sasgn])
     @param expr  the expression produced by [gen_expr] *)
-let inline_iife_ir (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (e : Cpp_ir.Lowered.Expr.t) :
+let inline_iife (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (e : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Stmt.t list =
   match e with
   | Call (_, Lambda {params = []; return_type = ret_ty; body; _}, []) when body <> [] ->
@@ -215,17 +215,17 @@ let inline_iife_ir (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (e : Cpp
     The one place that precedence is written down, so that "the type this
     position expects" cannot mean the position at one site and the enclosing
     return type at another. *)
-let position_cpp_ty_ir (expected : Cpp_ir.Lowered.Type.t option) =
+let position_cpp_ty (expected : Cpp_ir.Lowered.Type.t option) =
   match expected with
   | Some _ as t -> t
-  | None -> current_cpp_return_type_ir ()
+  | None -> current_cpp_return_type ()
 
 (** A callable handed to a parameter the callee declared at one of its own
     type variables has to arrive under a name: a closure's type cannot be
     spelled, so it can never agree with the same type variable as deduced
     from another argument -- [f (nat -> nat) S []], where the list argument
     settles the variable on [std::function<uint64_t(uint64_t)>].
-    {!Minicpp.CPPfn_value} gives the closure that very type, deduced from it.
+    [Cpp_ir.Expr.Function_value] gives the closure that very type, deduced from it.
 
     The parameter type must be the callee's own, before this call site's
     instantiation is substituted into it: it is the template parameter that
@@ -321,9 +321,9 @@ and scrutinee_head_is_callable h =
     cached in a temporary when the custom match template uses [%scrut] more
     than once.  A member access or dereference is trivial only as far as the
     object it reads is: [mk(n).sub] calls [mk] at every mention. *)
-let rec is_trivial_scrut_ir : Cpp_ir.Lowered.Expr.t -> bool = function
+let rec is_trivial_scrut : Cpp_ir.Lowered.Expr.t -> bool = function
   | Local _ | Scope _ | Type_member _ | Enum_value _ | Entity _ -> true
-  | Member (e, _) | Project (e, _, _) | Access (_, e, _) | Dereference e -> is_trivial_scrut_ir e
+  | Member (e, _) | Project (e, _, _) | Access (_, e, _) | Dereference e -> is_trivial_scrut e
   | _ -> false
 
 (** The C++ type a pattern match pinned down for the binder at de Bruijn index
@@ -342,19 +342,19 @@ let pattern_binder_type i : Cpp_ir.Lowered.Type.t option =
     Normalize those to [Topaque]: the variable was quantified somewhere we
     cannot see, so [std::any] is the only spelling available, but nothing here
     establishes that the value is actually boxed. *)
-let rec erase_unresolved_tvars_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+let rec erase_unresolved_tvars : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Variable (Index (_, None)) -> Obligation Opaque_type
-  | Entity_application (g, ts, es) -> Entity_application (g, List.map erase_unresolved_tvars_ir ts, es)
+  | Entity_application (g, ts, es) -> Entity_application (g, List.map erase_unresolved_tvars ts, es)
   | Function (dom, cod) ->
-    Function (List.map erase_unresolved_tvars_ir dom, erase_unresolved_tvars_ir cod)
-  | Shared_pointer t -> Shared_pointer (erase_unresolved_tvars_ir t)
-  | Reference (k, t) -> Reference (k, erase_unresolved_tvars_ir t)
+    Function (List.map erase_unresolved_tvars dom, erase_unresolved_tvars cod)
+  | Shared_pointer t -> Shared_pointer (erase_unresolved_tvars t)
+  | Reference (k, t) -> Reference (k, erase_unresolved_tvars t)
   | t -> t
 
 (** Extract block template info from an inline custom expression.
     Returns [Some(ref, template, args, tyargs)] if the expression is
     an inline custom whose template contains [%result]. *)
-let extract_block_template_ir : Cpp_ir.Lowered.Expr.t -> _ = function
+let extract_block_template : Cpp_ir.Lowered.Expr.t -> _ = function
   | Entity (ref, tys, Some ci) -> begin
     match ci.inline with
     | Some {form = Block; text = tmpl; _} -> Some (ref, tmpl, [], tys)
@@ -379,7 +379,7 @@ let stmts_yield_boxed : Cpp_ir.Lowered.Stmt.t list -> bool = function
     [CPPfun_call (CPPvar target_id, args)], or names it at all inside a
     {!Closure}.  Core decides this ({!Analyze_closures}); the generated code
     is only the oracle [CRANE_CHECK_IR] checks it against. *)
-let fixpoint_escapes_in_stmts_ir target_id (stmts : Cpp_ir.Lowered.Stmt.t list) =
+let fixpoint_escapes_in_stmts target_id (stmts : Cpp_ir.Lowered.Stmt.t list) =
   let rec check_expr (e : Cpp_ir.Lowered.Expr.t) =
     match e with
     | Call (_, Local id, args) when Id.equal id target_id ->
@@ -425,14 +425,14 @@ let fixpoint_escapes_in_stmts_ir target_id (stmts : Cpp_ir.Lowered.Stmt.t list) 
     one this scope declares.  A slot type read off a callee's signature is
     written in the callee's type variables, which name nothing here, so such a
     type cannot be used as the type a use site wants. *)
-let names_only_scoped_tvars_ir ty =
+let names_only_scoped_tvars ty =
   let scope = current_scope_type_names () in
-  List.for_all (fun id -> List.exists (Id.equal id) scope) (get_tvars_ir ty)
+  List.for_all (fun id -> List.exists (Id.equal id) scope) (get_tvars ty)
 
 (** [ty], where this scope can write it: every variable it names is in scope,
     and it is not erased. *)
-let spell_in_scope_ir ty =
-  if names_only_scoped_tvars_ir ty && not (Cpp_ir.Types.prints_as_any ty) then Some ty else None
+let spell_in_scope ty =
+  if names_only_scoped_tvars ty && not (Cpp_ir.Types.prints_as_any ty) then Some ty else None
 
 (** The variable {!Plan_templates.relax_tt_applied_return} takes out of [id]'s
     template head, if any: the higher-kinded head of an applied codomain that
@@ -556,10 +556,10 @@ let mk_arity_call ?(params : Cpp_ir.Lowered.Type.t list option)
 (** Whether the generated bodies [funs_with_params] of a local fixpoint
     group let a member of [renamed_ids] escape ({!fixpoint_escapes_in_stmts}):
     the oracle of {!Analyze_closures} for a group's own bodies. *)
-let fix_escapes_in_own_bodies_ir renamed_ids funs_with_params =
+let fix_escapes_in_own_bodies renamed_ids funs_with_params =
   List.exists
     (fun (id, _) ->
-      List.exists (fun (_, body) -> fixpoint_escapes_in_stmts_ir id body) funs_with_params )
+      List.exists (fun (_, body) -> fixpoint_escapes_in_stmts id body) funs_with_params )
     renamed_ids
 
 (** The inclusive range of a fixed-width C++ integer type, or [None] when the
@@ -754,7 +754,7 @@ let promoted_var_resolution g =
 (** Whether [ty] names a class field the current scope does not resolve, so
     that it would print through the field's file-scope [std::any] alias: a
     type read off another declaration, whose own instance resolved it. *)
-let mentions_unresolved_promoted_ir (ty : Cpp_ir.Lowered.Type.t) =
+let mentions_unresolved_promoted (ty : Cpp_ir.Lowered.Type.t) =
   Cpp_ir.Types.exists
     (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
@@ -773,7 +773,7 @@ let mentions_unresolved_promoted_ir (ty : Cpp_ir.Lowered.Type.t) =
 let apply_erased_curried ?(box = false) (callee : Cpp_ir.Lowered.Expr.t) arg_exprs : Cpp_ir.Lowered.Expr.t =
   List.fold_left
     (fun (f : Cpp_ir.Lowered.Expr.t) a ->
-      let a = if box then Cpp_erasure.converting_ctor_ir Any [a] else a in
+      let a = if box then Cpp_erasure.converting_ctor Any [a] else a in
       match f with
       (* A callable boxed right here never lost its type: recovering it would
          be a cast straight back to what it already was. *)
@@ -799,7 +799,7 @@ let restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
     so they can be read as the arguments of an [n]-ary type.  Erased entries
     are dropped, since a promoted variable that resolves to [std::any] says no
     more than the erased annotation it would replace. *)
-let promoted_tys_of_arity_ir n =
+let promoted_tys_of_arity n =
   match List.filter_map (fun (_, t) -> if Cpp_ir.Types.prints_as_any t then None else Some t)
           (!tctx).promoted_var_map
   with
@@ -828,7 +828,7 @@ let rec mark_own_param_for_pair_erasure n body =
   | MLmagic (m, a, mocc) -> MLmagic (m, mark_own_param_for_pair_erasure n a, mocc)
   | other -> other
 
-(** [field_stores_erased_fn_value_ir ~field_cpp_ty field_types i e] — true when
+(** [field_stores_erased_fn_value ~field_cpp_ty field_types i e] — true when
     constructor field [i] has an abstract type-variable (schema) type — a
     value-dependent field such as the predicate [P] of [sigT A P] — and the
     argument [e] is either a lambda function value or any value landing in a
@@ -845,7 +845,7 @@ let rec mark_own_param_for_pair_erasure n body =
     concrete element type (e.g. [deque<Prod<Nat,Nat>>]) while the matching
     "nil" production erases to [deque<Prod<any,any>>], and reading the value
     back out of the [std::any] throws [std::bad_any_cast]. *)
-let field_stores_erased_fn_value_ir ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) field_types i e =
+let field_stores_erased_fn_value ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) field_types i e =
   match List.nth_opt field_types i with
   | Some ft ->
     let field_is_abstract_var =
@@ -877,7 +877,7 @@ let field_stores_erased_fn_value_ir ~(field_cpp_ty : Cpp_ir.Lowered.Type.t optio
     [returns_a_lambda], having spelled the remaining arguments out itself. *)
 let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~ml_arity ~returns_a_lambda ~arity
     (f : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  match Option.map strip_cpp_ref_const_ir expected_ty with
+  match Option.map strip_cpp_ref_const expected_ty with
   | Some (Function (dom, _)) when arity > 0 && ml_arity > arity && List.length dom > arity && not returns_a_lambda ->
     let params = adapter_params ~prefix:"_ee" dom in
     let taken = List.filteri (fun i _ -> i < arity) params in
@@ -894,7 +894,7 @@ let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~ml_ari
     component is itself only a box.  This is the type an [any_cast] reading
     such a value back has to name, whatever concrete type the context has in
     mind for it. *)
-let boxed_shape_of_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+let boxed_shape_of : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Entity_application (g, (_ :: _ as args), ns) -> Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)
   | t -> t
 
@@ -931,7 +931,7 @@ let rec cpp_ir_of_ml_type
     let t1c = cpp_ir_of_ml_type env tvars t1 in
     (* Reify monadic domain types: itree E R in parameter position becomes
        shared_ptr<ITree<R>> so the tree can be passed as a value. *)
-    let t1c = reify_monadic_param_type_ir t1 t1c in
+    let t1c = reify_monadic_param_type t1 t1c in
     let t2c = cpp_ir_of_ml_type env tvars t2 in
     (* Skip erased params: isTdummy catches direct Tdummy, is_cpp_dummy_type
        catches Tdummy wrapped in Tmeta (e.g., Tmeta{contents=Some(Tdummy Kprop)}
@@ -947,7 +947,7 @@ let rec cpp_ir_of_ml_type
          to match void-ified function definitions. Check the ML type [t2]
          since the C++ type may still be a monad Tglob, not bare unit. *)
       let voidify_cod (c : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-        if is_cpp_unit_type_ir c then Void
+        if is_cpp_unit_type c then Void
         else if ml_type_is_void_call t2 then Void
         else c
       in
@@ -1060,14 +1060,14 @@ let rec cpp_ir_of_ml_type
         let cutoff = first_ktype_idx 0 filtered_ts in
         if cutoff < max_int then
           List.mapi
-            (fun i t -> if i > cutoff then index_erase_type_ir t else t)
+            (fun i t -> if i > cutoff then index_erase_type t else t)
             converted_ts
         else
           converted_ts
       | _ -> converted_ts
     in
-    let converted_ts = apply_hkt_tyctors_ir g converted_ts in
-    let converted_ts = ind_promoted_type_args_ir g @ converted_ts in
+    let converted_ts = apply_hkt_tyctors g converted_ts in
+    let converted_ts = ind_promoted_type_args g @ converted_ts in
     let core : Cpp_ir.Lowered.Type.t = Entity_application (g, converted_ts, []) in
     ( match g with
     | GlobRef.IndRef _ ->
@@ -1247,7 +1247,7 @@ let apply_global x (cglob : Cpp_ir.Lowered.Expr.t) args =
     aliases that expand to an erased type.  Used to decide whether a
     scrutinee's template argument makes a constructor field store its
     value as [std::any] at runtime. *)
-let rec resolves_to_any_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let rec resolves_to_any_type : Cpp_ir.Lowered.Type.t -> bool = function
   | Any | Obligation Opaque_type -> true
   | Erased _ -> false
   | Entity_application (g, [], _) when Table.is_erased_type_const g -> true
@@ -1268,33 +1268,33 @@ let rec resolves_to_any_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
          | _ -> None)
     in
     (match via_ml_ty with
-     | Some cvt -> resolves_to_any_type_ir cvt
+     | Some cvt -> resolves_to_any_type cvt
      | None -> false)
   | t when Cpp_ir.Types.prints_as_any t -> true
   | _ -> false
 
 (** How a slot of C++ type [t] already known to be boxed boxes its value
-    ({!slot_repr_of_cpp_type_ir}). *)
-let box_kind_of_cpp_type_ir t = if names_erased_alias_ir t then Family_box else Var_box
+    ({!slot_repr_of_cpp_type}). *)
+let box_kind_of_cpp_type t = if names_erased_alias t then Family_box else Var_box
 
 (** The representation a value takes in a slot of C++ type [t]: the one
     classifier a slot's {!Ml_type_util.slot_repr} is decided by.  A type that
     resolves to [std::any] is boxed, as a [Family_box] where it names a
     declaration whose body erased, spelled through its alias -- a
     value-indexed family -- and as a [Var_box] otherwise
-    ({!box_kind_of_cpp_type_ir}, for a slot already known to be boxed). *)
-let slot_repr_of_cpp_type_ir t =
-  if resolves_to_any_type_ir t then Boxed (box_kind_of_cpp_type_ir t) else Native
+    ({!box_kind_of_cpp_type}, for a slot already known to be boxed). *)
+let slot_repr_of_cpp_type t =
+  if resolves_to_any_type t then Boxed (box_kind_of_cpp_type t) else Native
 
-(** [cpp_of_ml_ir env t] converts an ML type in the type-variable scope that is
+(** [cpp_of_ml env t] converts an ML type in the type-variable scope that is
     currently in effect.  Nearly every conversion inside expression generation
     wants this, and spelling out {!get_current_type_vars} at each one invites
     passing the wrong scope. *)
-let cpp_of_ml_ir env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
+let cpp_of_ml env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
 
-(** [template_arg_of_ml_type_ir ~site env tvars ty] converts [ty] for a template
+(** [template_arg_of_ml_type ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says
-    ({!Minicpp.arrow_site}).
+    ({!Cpp_ir.Types.arrow_site}).
 
     [Declared] for an argument that instantiates an {e inductive}'s
     parameter.  Such a parameter only names the type of a stored value, and the
@@ -1304,13 +1304,13 @@ let cpp_of_ml_ir env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
     parameter: the signature may mention it inside an arrow it writes out
     itself (as [ap : F (A -> B) -> ...] does), and there the currying is what
     makes the argument match. *)
-let template_arg_of_ml_type_ir ~site env tvars ty =
+let template_arg_of_ml_type ~site env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
   Cpp_ir.Types.spell_arrows site (cpp_ir_of_ml_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
 
-(** The site a callee's {e result} is spelled at ({!Minicpp.arrow_site}): a
+(** The site a callee's {e result} is spelled at ({!Cpp_ir.Types.arrow_site}): a
     codomain that is a type variable takes its C++ shape from the template
     argument instantiating it, so it is curried; one the declaration writes
     out is flat there. *)
@@ -1323,10 +1323,10 @@ let call_result_site id : Cpp_ir.Types.arrow_site =
   if is_inline_custom id then Declared
   else match find_type_opt id with Some ml_ty -> codomain_site ml_ty | None -> Declared
 
-let build_template_params_ir ~site env tvars tys =
+let build_template_params ~site env tvars tys =
   List.map
     (fun ty ->
-      let t = template_arg_of_ml_type_ir ~site env tvars ty in
+      let t = template_arg_of_ml_type ~site env tvars ty in
       (* Check for unbound type variables *)
       match t with
       | Variable (Index (_, None)) when tvars <> [] ->
@@ -1373,19 +1373,19 @@ let build_template_params_ir ~site env tvars tys =
     @param ts  ML expression arguments (converted to C++ recursively)
     @return C++ expression applying custom syntax with type/value arguments *)
 
-(** [template_params_of_ml ~site:Through_tvar env tys] is {!build_template_params_ir} against the
-    type variables the enclosing scope has in hand; see {!cpp_of_ml_ir}. *)
-let template_params_of_ml_ir ~site env tys = build_template_params_ir ~site env (get_current_type_vars ()) tys
+(** [template_params_of_ml ~site:Through_tvar env tys] is {!build_template_params} against the
+    type variables the enclosing scope has in hand; see {!cpp_of_ml}. *)
+let template_params_of_ml ~site env tys = build_template_params ~site env (get_current_type_vars ()) tys
 
 (** [param_expected_cpp_ty env param_tys i] is the C++ type the callee declares
     for its [i]th parameter, and so the type an argument generated for that
     position should aim at.  [None] when the position says nothing useful:
     either the callee has fewer parameters, or the declared type is erased and
     naming [std::any] as the expectation would only invite a spurious box. *)
-let param_expected_cpp_ty_ir env param_tys i =
+let param_expected_cpp_ty env param_tys i =
   match List.nth_opt param_tys i with
   | Some ml_ty ->
-    let cpp_ty = cpp_of_ml_ir env ml_ty in
+    let cpp_ty = cpp_of_ml env ml_ty in
     if Cpp_ir.Types.prints_as_any cpp_ty then None else Some cpp_ty
   | None -> None
 
@@ -1394,7 +1394,7 @@ let param_expected_cpp_ty_ir env param_tys i =
     [syms_semty xs], or a type variable this scope leaves unresolved, is only
     revealed as a box once converted, and a [Type]-valued definition hides one
     behind a [using] alias that {!resolves_to_any_type} follows. *)
-let ml_erases_to_box env t = resolves_to_any_type_ir (cpp_of_ml_ir env t)
+let ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
 
 (** [result_cpp_via_receiver env callee_ty args] is the C++ type a call's
     result really has, where the callee's declared codomain is one of the type
@@ -1409,7 +1409,7 @@ let ml_erases_to_box env t = resolves_to_any_type_ir (cpp_of_ml_ir env t)
     [None] means the call is not of this shape, or that the two spellings of
     the receiver disagree on how many arguments it has -- the position would
     then name the wrong one. *)
-let result_cpp_via_receiver_ir env callee_ty args : Cpp_ir.Lowered.Type.t option =
+let result_cpp_via_receiver env callee_ty args : Cpp_ir.Lowered.Type.t option =
   let var_index t = match resolve_tmeta t with Miniml.Tvar (_, j) -> Some j | _ -> None in
   let position_of j formals =
     let rec find i = function
@@ -1418,9 +1418,9 @@ let result_cpp_via_receiver_ir env callee_ty args : Cpp_ir.Lowered.Type.t option
     in
     find 0 formals
   in
-  (* {!Ml_type_util.template_args} in CppIR. *)
+  (* The template arguments of [t], through references and pointers. *)
   let rec template_args_ir t =
-    match unqualify_ty_ir t with
+    match unqualify_ty t with
     | Reference (_, t) | Pointer t | Shared_pointer t -> template_args_ir t
     | Entity_application (_, args, _) | Named (_, args) | External (_, args) | Apply (_, args) -> Some args
     | _ -> None
@@ -1430,7 +1430,7 @@ let result_cpp_via_receiver_ir env callee_ty args : Cpp_ir.Lowered.Type.t option
     match (resolve_tmeta dom0, Option.map resolve_tmeta (infer_ml_body_type arg)) with
     | Miniml.Tglob (g1, formals, _), Some (Miniml.Tglob (g2, actuals, _) as recv)
       when Common.globref_equal g1 g2 -> (
-      match (position_of j formals, template_args_ir (cpp_of_ml_ir env recv)) with
+      match (position_of j formals, template_args_ir (cpp_of_ml env recv)) with
       | Some i, Some cpp_args when List.length actuals = List.length cpp_args ->
         List.nth_opt cpp_args i
       | _ -> None )
@@ -1440,12 +1440,12 @@ let result_cpp_via_receiver_ir env callee_ty args : Cpp_ir.Lowered.Type.t option
 (** [iife_void_return env typ pv] is [Some Tvoid] when the match's branches
     produce nothing: a lambda that may fall off its end has to say [-> void]
     explicitly. *)
-let iife_void_return_ir env typ pv : Cpp_ir.Lowered.Type.t option =
+let iife_void_return env typ pv : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
     match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
   in
-  let r = cpp_of_ml_ir env branch_rty in
-  if is_cpp_unit_type_ir r || ml_type_is_void_call branch_rty then
+  let r = cpp_of_ml env branch_rty in
+  if is_cpp_unit_type r || ml_type_is_void_call branch_rty then
     Some Void
   else None
 
@@ -1466,7 +1466,7 @@ let iife_void_return_ir env typ pv : Cpp_ir.Lowered.Type.t option =
     parameter is a deduced template parameter of its own -- [f] and [g] of the
     same Rocq type are still two C++ types, and two branches returning one
     each deduce nothing. *)
-let iife_closure_return_ir env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
+let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
   let found = ref false in
   let rec is_arrow = function
     | Miniml.Tarr _ -> true
@@ -1498,7 +1498,7 @@ let iife_closure_return_ir env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp
     let branch_rty =
       match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
     in
-    match cpp_of_ml_ir env branch_rty with Function _ as r -> Some r | _ -> None
+    match cpp_of_ml env branch_rty with Function _ as r -> Some r | _ -> None
 
 (** [glob_declared_cod_erases r] -- whether the declaration of [r] returns a
     box.  A declaration is converted from the global's own ML type with no
@@ -1525,7 +1525,7 @@ let record_binder_type i (t : Cpp_ir.Lowered.Type.t) =
   let boxed_by_pattern =
     match IntMap.find_opt i (!tctx).cpp_binder_types with
     | Some (Obligation Opaque_type, Bpattern) -> false
-    | Some (t', Bpattern) -> resolves_to_any_type_ir t'
+    | Some (t', Bpattern) -> resolves_to_any_type t'
     | _ -> false
   in
   if not boxed_by_pattern then
@@ -1557,11 +1557,11 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
        [pair<any,any>], which its ML type (a bare type variable) does not.
        Prefer that over re-deriving from the ML type. *)
     match scrut_pinned with
-    | Some t when not (resolves_to_any_type_ir t) -> t
+    | Some t when not (resolves_to_any_type t) -> t
     | _ ->
-      cpp_of_ml_ir env typ
+      cpp_of_ml env typ
   in
-  (* Whether a {!Minicpp.Topaque} among the scrutinee's template arguments is
+  (* Whether an opaque type among the scrutinee's template arguments is
      a box.  [Topaque] only admits that the argument could not be resolved --
      but for an inductive Crane generates, the field that names it is written
      out, and {!Cpp_erasure.materialise} spells that declaration [std::any], so
@@ -1584,10 +1584,10 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
      [std::any] does not settle it, and it is decided above rather than
      re-decided at each site. *)
   let arg_is_a_box (t : Cpp_ir.Lowered.Type.t) =
-    match t with Obligation Opaque_type -> opaque_arg_is_a_box | t -> resolves_to_any_type_ir t
+    match t with Obligation Opaque_type -> opaque_arg_is_a_box | t -> resolves_to_any_type t
   in
   let scrut_template_args =
-    let args = extract_template_args_ir scrut_cpp_ty in
+    let args = extract_template_args scrut_cpp_ty in
     (* One boxed argument means the whole instantiation was erased, so every
        argument is boxed -- the same rule the type-index cutoff applies to a
        [Tdummy Ktype] index, here for an argument erased because it mentions a
@@ -1602,7 +1602,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
          written down that way in the field, and reading it back as a flat
          [any] would lose the components the producer boxed individually. *)
       List.map
-        (fun a -> if has_tany_in_type_ir a then a else index_erase_type_ir a)
+        (fun a -> if has_tany_in_type a then a else index_erase_type a)
         args
     else args
   in
@@ -1630,7 +1630,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
         let cpp_ty =
           cpp_ir_of_ml_type (empty_env ()) ~ns:Ref.User.Set.empty [] def_ty
         in
-        has_unnamed_tvar_ir cpp_ty
+        has_unnamed_tvar cpp_ty
       | None -> false
     else
       match field_arg field_i with
@@ -1696,8 +1696,8 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
       Ml_type_util.refine_erased
         ~writable:(fun t ->
           resolvable_here t
-          && names_only_scoped_tvars_ir (cpp_of_ml_ir env t)
-          && not (Ml_type_util.has_tany_in_type_ir (cpp_of_ml_ir env t)) )
+          && names_only_scoped_tvars (cpp_of_ml env t)
+          && not (Ml_type_util.has_tany_in_type (cpp_of_ml env t)) )
         typ candidate
   in
   let typ =
@@ -1730,7 +1730,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
          [Sum1<BE, cE, std::any>] inside [Sum1<AE, _, X>], whose ML type
          says [X] -- the match spells it erased too. *)
       let rec erase_as ml (cpp : Cpp_ir.Lowered.Type.t) =
-        match (resolve_tmeta ml, Ml_type_util.unqualify_ty_ir cpp) with
+        match (resolve_tmeta ml, Ml_type_util.unqualify_ty cpp) with
         | Miniml.Tglob (g, mas, x), Entity_application (g', cas, _)
           when GlobRef.CanOrd.equal g g' && List.length mas = List.length cas ->
           Miniml.Tglob
@@ -1745,7 +1745,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
         | m, _ -> m
       in
       ( match var_cpp_type i with
-      | Some bt -> erase_as typ (strip_cpp_ref_const_ir bt)
+      | Some bt -> erase_as typ (strip_cpp_ref_const bt)
       | None -> typ )
     | _ ->
       (* Anything else: the scrutinee's own structure says what it produces,
@@ -1787,13 +1787,13 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
     alias hides the arguments its right-hand side was written with, and those
     arguments are exactly what a value built into such a slot has to agree
     with.  Returns the type unchanged when it is not an alias. *)
-let rec unfold_cpp_typedef_ir env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let rec unfold_cpp_typedef env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   match cpp_ty with
-  | In_namespace (_, inner) -> unfold_cpp_typedef_ir env inner
+  | In_namespace (_, inner) -> unfold_cpp_typedef env inner
   | Entity_application (GlobRef.ConstRef kn, args, _) -> (
     match Table.lookup_typedef_unchecked kn with
     | Some ml_ty ->
-      let body = cpp_of_ml_ir env ml_ty in
+      let body = cpp_of_ml env ml_ty in
       let n_promoted =
         let n = List.length (Table.promoted_type_params (GlobRef.ConstRef kn)) in
         if List.length args >= n + Mlutil.type_maxvar ml_ty then n else 0
@@ -1814,7 +1814,7 @@ let binder_is_boxed i =
      distinction is {!coerce}'s, and a binder's answer has to draw it too. *)
   match binder_cpp_type i with
   | Some (Obligation Opaque_type) | None -> false
-  | Some t -> resolves_to_any_type_ir t
+  | Some t -> resolves_to_any_type t
 
 (* How a binder kind is named in probe output. *)
 let binder_kind_name = function
@@ -1868,31 +1868,31 @@ let read_is_boxed i occ =
     the decision [use] names the same answer.  A read the plan has no answer
     for is an anomaly. *)
 (* A C++ type, written compactly for a probe or a violation report. *)
-let rec type_shape_ir : Cpp_ir.Lowered.Type.t -> string = function
-  | Function (dom, cod) -> "fn(" ^ String.concat "," (List.map type_shape_ir dom) ^ ")->" ^ type_shape_ir cod
+let rec type_shape : Cpp_ir.Lowered.Type.t -> string = function
+  | Function (dom, cod) -> "fn(" ^ String.concat "," (List.map type_shape dom) ^ ")->" ^ type_shape cod
   | Any -> "any"
   | Auto -> "auto"
   | Obligation Opaque_type -> "opaque"
-  | Const t -> "const " ^ type_shape_ir t
-  | Reference (_, t) -> "ref " ^ type_shape_ir t
-  | Entity_application (g, args, _) -> Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape_ir args) ^ ">"
+  | Const t -> "const " ^ type_shape t
+  | Reference (_, t) -> "ref " ^ type_shape t
+  | Entity_application (g, args, _) -> Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
   | Variable (Index (i, Some id)) -> "T" ^ string_of_int i ^ ":" ^ Id.to_string id
   | Variable (Index (i, None)) -> "T" ^ string_of_int i
   | Variable (Named id) -> "N:" ^ Id.to_string id
-  | Shared_pointer t -> "sp " ^ type_shape_ir t
+  | Shared_pointer t -> "sp " ^ type_shape t
   | Variant _ -> "variant"
-  | Member (t, id) -> type_shape_ir t ^ "::" ^ Id.to_string id
-  | Named (id, args) -> "id:" ^ Id.to_string id ^ "<" ^ String.concat "," (List.map type_shape_ir args) ^ ">"
+  | Member (t, id) -> type_shape t ^ "::" ^ Id.to_string id
+  | Named (id, args) -> "id:" ^ Id.to_string id ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
   | External (n, _) -> "ext:" ^ n
   | Promoted_member id -> "prom:" ^ Id.to_string id
   | Instance (id, _) -> "inst:" ^ Id.to_string id
   | Erased _ -> "erased"
-  | Apply (h, args) -> "app(" ^ type_shape_ir h ^ ")<" ^ String.concat "," (List.map type_shape_ir args) ^ ">"
-  | In_namespace (_, t) -> "ns " ^ type_shape_ir t
+  | Apply (h, args) -> "app(" ^ type_shape h ^ ")<" ^ String.concat "," (List.map type_shape args) ^ ">"
+  | In_namespace (_, t) -> "ns " ^ type_shape t
   | _ -> "other"
 
 let planned_binder_type ~use ~agree i occ =
-  let show = function Some t -> type_shape_ir t | None -> "none" in
+  let show = function Some t -> type_shape t | None -> "none" in
   match List.assq_opt occ (!tctx).planned_reads with
   | Some {rd_type; rd_kind; _} ->
     ( if Probe.checking () then
@@ -1923,7 +1923,7 @@ let planned_binder_type ~use ~agree i occ =
     [live], the type lowering threaded there.  A coercion the plan of the
     region it is lowered in does not reach is an anomaly. *)
 let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
-  let show = function Some t -> type_shape_ir t | None -> "none" in
+  let show = function Some t -> type_shape t | None -> "none" in
   let owner () = match (!tctx).body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
   match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
   | Some (_, planned) ->
@@ -1942,14 +1942,14 @@ let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
     reads a component out of a pair recovered from a box, decided on Core:
     a global call whose one value argument is a coercion from a box planned
     at a product position, which lowering recovers at the erased shape
-    [pair<any, any>] ({!boxed_shape_of_ir}).  Such a component is itself a
+    [pair<any, any>] ({!boxed_shape_of}).  Such a component is itself a
     box. *)
 let reads_erased_pair_component env t =
   match t with
   | MLapp (MLglob _, args) -> (
     match List.filter (function MLdummy _ -> false | _ -> true) args with
     | [MLmagic (Mcoerce (from, _), _, occ)] -> (
-      Cpp_ir.Types.prints_as_any (cpp_of_ml_ir env from)
+      Cpp_ir.Types.prints_as_any (cpp_of_ml env from)
       &&
       match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
       | Some (_, Some (Cpp_ir.Type.Entity_application (g, _ :: _, _))) -> is_prod_global g
@@ -1978,7 +1978,7 @@ let default_tvar_names (t : Cpp_ir.Lowered.Type.t) =
     [agree], to the same derivation from the type lowering recorded for the
     binder ({!binder_cpp_type}). *)
 let planned_binder_type_or_derive ~use ~agree env i occ =
-  let derive = function Some _ as t -> t | None -> Option.map (cpp_of_ml_ir env) (get_env_type_opt i) in
+  let derive = function Some _ as t -> t | None -> Option.map (cpp_of_ml env) (get_env_type_opt i) in
   derive (planned_binder_type ~use ~agree:(fun p l -> agree (derive p) (derive l)) i occ)
 
 (** Whether an application reads its result out of a value that carries
@@ -1993,7 +1993,7 @@ let planned_binder_type_or_derive ~use ~agree env i occ =
     planned at, or the term's own ML type. *)
 let app_reads_erased_value env args =
   let carries t =
-    Ml_type_util.has_erased_type_in_type_ir (unfold_cpp_typedef_ir env t)
+    Ml_type_util.has_erased_type_in_type (unfold_cpp_typedef env t)
   in
   (* A typeclass dictionary is not one of the values the result is read out
      of: it is how the call states its type arguments, and C++ resolves the
@@ -2012,13 +2012,13 @@ let app_reads_erased_value env args =
       else
       match strip_magic a with
       | MLrel (i, occ) -> (
-        let carried = Option.map (fun t -> carries (strip_cpp_ref_const_ir t)) in
+        let carried = Option.map (fun t -> carries (strip_cpp_ref_const t)) in
         match planned_binder_type_or_derive ~use:"erased argument" ~agree:(fun p l -> carried p = carried l) env i occ with
-        | Some t -> carries (strip_cpp_ref_const_ir t)
+        | Some t -> carries (strip_cpp_ref_const t)
         | None -> false )
       | a -> (
         match infer_ml_body_type a with
-        | Some ty -> carries (cpp_of_ml_ir env ty)
+        | Some ty -> carries (cpp_of_ml env ty)
         | None -> false ) )
     args
 
@@ -2036,11 +2036,11 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
       let assigned : Cpp_ir.Lowered.Type.t option =
         match List.nth_opt cpp j with
         | Some (Some t) -> Some (strip_param_wrappers t)
-        | _ -> (try Some (cpp_of_ml_ir env ml_ty) with _ -> None)
+        | _ -> (try Some (cpp_of_ml env ml_ty) with _ -> None)
       in
       match assigned with
       | Some t
-        when t <> Obligation Opaque_type && not (is_cpp_dummy_type_ir t)
+        when t <> Obligation Opaque_type && not (is_cpp_dummy_type t)
              && not (pinned_by_pattern (j + 1)) ->
         tctx :=
           { !tctx with
@@ -2069,7 +2069,7 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
     yields [Topaque] means the scope could not resolve the binder at all, and
     a dummy stands for a value that is not there; recording either would turn
     ignorance into the assertion "this binder holds a box", which is the one
-    thing {!Minicpp.Topaque} exists to refuse.  Such binders keep no entry, so
+    thing an opaque type exists to refuse.  Such binders keep no entry, so
     a reader still falls through to whatever it does today.  Conversion
     failures are skipped for the same reason, and so that a binder Crane
     cannot currently type does not become a new way for extraction to fail. *)
@@ -2103,7 +2103,7 @@ let push_parameters ?(cpp = []) env (ids : (Id.t * ml_type) list) =
     where that expectation is recorded.  Namespace and [shared_ptr] wrappers
     are seen through, as are typedefs, which may name [ind] only indirectly.
     [None] when the return type says nothing about [ind]. *)
-let expected_type_args_from_return_ir env ?slot ind ~arity =
+let expected_type_args_from_return env ?slot ind ~arity =
   let rec go (cpp_ty : Cpp_ir.Lowered.Type.t) =
     match cpp_ty with
     | Entity_application (r, tys, _)
@@ -2115,14 +2115,14 @@ let expected_type_args_from_return_ir env ?slot ind ~arity =
     | Entity_application (GlobRef.ConstRef kn, _, _) -> (
       match Table.lookup_typedef_unchecked kn with
       | Some ml_ty ->
-        go (cpp_of_ml_ir env ml_ty)
+        go (cpp_of_ml env ml_ty)
       | None -> None )
     | _ -> None
   in
   match slot with
   | Some t when go t <> None -> go t
   | _ -> (
-    match current_cpp_return_type_ir () with
+    match current_cpp_return_type () with
     | Some rt -> go rt
     | None -> None )
 
@@ -2130,14 +2130,14 @@ let expected_type_args_from_return_ir env ?slot ind ~arity =
     resolves to [std::any], and, structurally, a function type's arguments and
     result.  Lets an expected type argument be compared against a computed one
     on equal terms, the computed side already being erased. *)
-let rec normalize_erased_types_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-  | t when resolves_to_any_type_ir t -> Any
+let rec normalize_erased_types : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | t when resolves_to_any_type t -> Any
   | Function (ps, r) ->
-    Function (List.map normalize_erased_types_ir ps, normalize_erased_types_ir r)
+    Function (List.map normalize_erased_types ps, normalize_erased_types r)
   | t -> t
 
 (** How many of [id]'s leading template parameters no signature mentions,
-    counted by {!Ml_type_util.explicit_tvar_prefix_ir} off its declared type: its
+    counted by {!Ml_type_util.explicit_tvar_prefix} off its declared type: its
     leading phantoms.  Nothing deduces them, so a call writes them, and
     {!Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
     declaration emitter counts the same run and leaves those parameters
@@ -2150,14 +2150,14 @@ let leading_phantom_count id =
       cpp_ir_of_ml_type (empty_env ()) [] (type_simpl ml_ty)
     in
     let force_required = collect_ml_type_index_tvars ml_ty in
-    explicit_tvar_prefix_ir ~force_required cty
+    explicit_tvar_prefix ~force_required cty
 
 (** The template name a written type [c] stands for at a higher-kinded
     variable: [c] itself as a constructor, unless applying it changes
     nothing -- [fun T => list nat], which extraction writes as its body
     [list nat] -- when it is the constant one, [crane::constant_tc<c>::c]. *)
 let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
-  let carrier = template_arg_of_ml_type_ir ~site:Through_tvar env tvars c in
+  let carrier = template_arg_of_ml_type ~site:Through_tvar env tvars c in
   let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
   Type_constructor
     (if constant then Member (External (Crane_rt.constant_tc, [carrier]), Id.of_string "c") else carrier)
@@ -2177,7 +2177,7 @@ let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
     The callee returns [Tapp (p, [Tvar v])] -- the carrier at position [p]
     applied to the variable at position [v] -- so abstracting the expected
     result over whatever [v] was instantiated to inverts that application.
-    {!abstract_cpp_type_ir} writes the sentinel the printer mints an
+    {!abstract_cpp_type} writes the sentinel the printer mints an
     alias template for, and only position [p] is written: the rest deduce
     through the alias, which is transparent.
 
@@ -2219,11 +2219,11 @@ let hkt_carrier_type_args env tvars ?result id tys =
   let* v_ml = Mlutil.Var_types.find_tvar tys v in
   let* result =
     match result with
-    | None -> current_cpp_return_type_ir ()
+    | None -> current_cpp_return_type ()
     | r -> r
   in
-  let over = template_arg_of_ml_type_ir ~site:Through_tvar env tvars v_ml in
-  let* carrier = abstract_cpp_type_ir ~over result in
+  let over = template_arg_of_ml_type ~site:Through_tvar env tvars v_ml in
+  let* carrier = abstract_cpp_type ~over result in
   (* A carrier that is one template applied to the argument is left to
      deduction, which reads it off the value argument and gets it right.  Only
      a carrier with no head to read -- a composite, or a partial application --
@@ -2258,7 +2258,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
     the type and the parameters come from.  [all_tvar_names] is in index
     order, as type conversion reads it; the arguments follow the order of the
     [head], the type parameters the lifted template declares. *)
-let lifted_call_type_args_ir
+let lifted_call_type_args
     ~(class_args : Cpp_ir.Lowered.Type.t list) ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_ml_tys :
     Cpp_ir.Lowered.Type.t list =
   let in_head id = List.exists (Id.equal id) head in
@@ -2281,8 +2281,8 @@ let lifted_call_type_args_ir
       | t -> t
     in
     let tvar_map =
-      match current_cpp_return_type_ir () with
-      | Some conc_ret -> extract_tvar_map_ir tmpl_cod conc_ret
+      match current_cpp_return_type () with
+      | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
       | None -> []
     in
     let args =
@@ -2294,7 +2294,7 @@ let lifted_call_type_args_ir
             with
             | Some (_, ty) -> ty
             | None -> (
-              match current_cpp_return_type_ir () with
+              match current_cpp_return_type () with
               | Some ret_ty -> ret_ty
               | None -> Cpp_ir.Build.named_variable tvar_name ) )
           extra_tvar_names
@@ -2302,7 +2302,7 @@ let lifted_call_type_args_ir
     let deducible =
       List.concat_map
         (fun ml_ty ->
-          get_tvars_ir (cpp_ir_of_ml_type env all_tvar_names ml_ty) )
+          get_tvars (cpp_ir_of_ml_type env all_tvar_names ml_ty) )
         param_ml_tys
     in
     if List.length in_head_order <> List.length args then
@@ -2353,7 +2353,7 @@ let dict_carrier_type_args env tvars id args =
   let* cod =
     dict_carrier_ml_type ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref id args
   in
-  (* Abstracted over the traversed type, as {!apply_hkt_tyctors_ir} does: the
+  (* Abstracted over the traversed type, as {!apply_hkt_tyctors} does: the
      class applies its carrier to it and this idiom writes it first, so the two
      agree on one body and the printer mints one alias for both.
 
@@ -2416,10 +2416,10 @@ let dict_carrier_type_args env tvars id args =
     | Miniml.Tglob (_, (t0 :: _ as targs), _)
     | Miniml.Tapp (_, (t0 :: _ as targs)) ->
       let whole = if List.exists unrecovered targs then t0 else traversed cod in
-      Some (template_arg_of_ml_type_ir ~site:Through_tvar env tvars whole)
+      Some (template_arg_of_ml_type ~site:Through_tvar env tvars whole)
     | _ -> None
   in
-  let* carrier = abstract_cpp_type_ir ~over (template_arg_of_ml_type_ir ~site:Through_tvar env tvars cod) in
+  let* carrier = abstract_cpp_type ~over (template_arg_of_ml_type ~site:Through_tvar env tvars cod) in
   Some [(Type_constructor carrier : Cpp_ir.Lowered.Type.t)]
 
 (** Whether [e] denotes a value whose ML type is a function (at least one value
@@ -2498,7 +2498,7 @@ let rec has_open_meta t =
 let slot_refined_lambda env ~expected_ml_ty args body =
   let rec erase_unscoped t =
     match resolve_tmeta t with
-    | Miniml.Tvar _ as v when not (names_only_scoped_tvars_ir (cpp_of_ml_ir env v)) -> Miniml.Tunknown
+    | Miniml.Tvar _ as v when not (names_only_scoped_tvars (cpp_of_ml env v)) -> Miniml.Tunknown
     | Miniml.Tarr (a, b) -> Miniml.Tarr (erase_unscoped a, erase_unscoped b)
     | Miniml.Tglob (g, ts, l) -> Miniml.Tglob (g, List.map erase_unscoped ts, l)
     | t -> t
@@ -2520,7 +2520,7 @@ let slot_refined_lambda env ~expected_ml_ty args body =
           else
             let d = doms.(n - 1 - i) in
             let d = if has_open_meta ty then erase_unscoped d else d in
-            (x, Ml_type_util.refine_erased ~fills ~writable:(fun t -> names_only_scoped_tvars_ir (cpp_of_ml_ir env t)) ty d) )
+            (x, Ml_type_util.refine_erased ~fills ~writable:(fun t -> names_only_scoped_tvars (cpp_of_ml env t)) ty d) )
         args
     | None -> args
   in
@@ -2597,7 +2597,7 @@ let binder_matched_at body =
     [forall T] -- and unused it is erased like a dummy.  The count of binders
     the term writes and the parameter list it is written with are both read
     off this, so they cannot disagree. *)
-let lambda_binder_emitted_ir env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~body binders i ty =
+let lambda_binder_emitted env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~body binders i ty =
   let slot_value_doms =
     let rec alias_ref (t : Cpp_ir.Lowered.Type.t) =
       match Cpp_ir.Types.strip_param_spelling t with
@@ -2618,7 +2618,7 @@ let lambda_binder_emitted_ir env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~
     | None -> []
   in
   let slot_doms_cpp =
-    match Option.map (unfold_cpp_typedef_ir env) expected_ty with
+    match Option.map (unfold_cpp_typedef env) expected_ty with
     | Some (Function (doms, _)) -> doms
     | _ -> []
   in
@@ -2661,7 +2661,7 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
     | _ -> None
   in
   let bare_cpp_ty =
-    cpp_of_ml_ir env ty
+    cpp_of_ml env ty
   in
   let stored_cpp_ty =
     cpp_ir_of_ml_type env ~ns
@@ -2688,13 +2688,13 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
        scope, so it would fall back to the file-scope [std::any].  The slot
        writes the definition by name, which its own declaration resolved. *)
     | None
-      when mentions_unresolved_promoted_ir bare_cpp_ty
+      when mentions_unresolved_promoted bare_cpp_ty
            && Option.has_some slot_param_cpp_ty ->
-      wrap_param_by_ownership_ir ~is_owned:owned
+      wrap_param_by_ownership ~is_owned:owned
         (Option.get slot_param_cpp_ty)
     | None
       when rank2_carrier <> None
-           && has_tany_in_type_ir bare_cpp_ty
+           && has_tany_in_type bare_cpp_ty
            && not (Rank2.is_bare_box bare_cpp_ty) ->
       Reference (Lvalue, Const (at_carrier bare_cpp_ty))
     | None
@@ -2710,10 +2710,10 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          the concrete type the constructor needs.  Written [std::any] instead,
          the parameter is a claim the body cannot keep, and the error lands
          inside the lambda at the use. *)
-      wrap_param_by_ownership_ir ~is_owned:owned
+      wrap_param_by_ownership ~is_owned:owned
         (Option.get slot_param_cpp_ty)
     | None
-      when Ml_type_util.has_tany_written_ir bare_cpp_ty
+      when Ml_type_util.has_tany_written bare_cpp_ty
            && n_params = 1
            && (body_reads_members_of_binder body || binder_matched_at body <> None) ->
       (* A pattern lambda: the body decomposes this parameter with a
@@ -2742,13 +2742,13 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          type, uncast. *)
       let refined =
         match (binder_matched_at body, slot_dom) with
-        | Some t, _ -> cpp_of_ml_ir env t
+        | Some t, _ -> cpp_of_ml env t
         | None, Some slot ->
-          Ml_type_util.refine_param_from_slot_ir ~tvars ~slot
+          Ml_type_util.refine_param_from_slot ~tvars ~slot
             bare_cpp_ty
         | None, None -> bare_cpp_ty
       in
-      wrap_param_by_ownership_ir ~is_owned:owned refined
+      wrap_param_by_ownership ~is_owned:owned refined
     | None
       when reified && ml_type_is_unit ty ->
       (* A reified tree's continuation is typed [unit -> itree ...] in ML, but
@@ -2761,7 +2761,7 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          an erased tree.  The slot is still emitted; see the parameter filter
          in {!Translation.gen_expr}. *)
       Reference (Lvalue, Const Auto)
-    | None when Ml_type_util.has_tany_written_ir bare_cpp_ty ->
+    | None when Ml_type_util.has_tany_written bare_cpp_ty ->
       (* The type is spelled with erased positions (std::any).  Use
          [const auto&] so the C++ compiler deduces the concrete type at the
          call site -- explicit std::any in the param type would block valid
@@ -2780,11 +2780,11 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          flatten to -- [esc : A -> cont R B], with [cont R B] an alias for a
          function type -- is curried where the slot says ([Declared_at]). *)
       let declared_arity =
-        match Option.map (unfold_cpp_typedef_ir env) slot_dom with
+        match Option.map (unfold_cpp_typedef env) slot_dom with
         | Some (Function (doms, _)) -> List.length doms
         | _ -> 0
       in
-      wrap_param_by_ownership_ir ~is_owned:owned
+      wrap_param_by_ownership ~is_owned:owned
         (if declared_arity > 0 then Cpp_ir.Types.spell_arrows (Declared_at declared_arity) bare_cpp_ty
          else bare_cpp_ty)
   in
@@ -2825,7 +2825,7 @@ let ctor_arg_is_passthrough r i =
     promoted types of [promoted_active]'s arity or, failing that, [return]'s
     arguments when it is the same inductive; an unresolved one written down as
     a box ({!Ml_type_util.materialise_opaque}). *)
-let ctor_draft_temps_ir env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : ml_type) =
+let ctor_draft_temps env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : ml_type) =
   let temps =
     match ty with
     | Miniml.Tglob (cn, raw_tys, _) ->
@@ -2837,9 +2837,9 @@ let ctor_draft_temps_ir env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t op
           | None -> raw_tys )
         | _ -> raw_tys
       in
-      let temps = template_params_of_ml_ir ~site:Through_tvar env tys in
+      let temps = template_params_of_ml ~site:Through_tvar env tys in
       if List.for_all Cpp_ir.Types.prints_as_any temps && promoted_active then
-        match promoted_tys_of_arity_ir (List.length tys) with
+        match promoted_tys_of_arity (List.length tys) with
         | Some promoted_tys -> promoted_tys
         | None -> temps
       else if List.for_all Cpp_ir.Types.prints_as_any temps then
@@ -2853,23 +2853,23 @@ let ctor_draft_temps_ir env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t op
       else temps
     | _ -> []
   in
-  List.map materialise_opaque_ir temps
+  List.map materialise_opaque temps
 
 (** Whether argument [e], at index [i] of constructor [r], is a function
     stored via [crane_erase_fn] into an erased field: the field is at a type
     parameter of the inductive ([field_tys], dummies dropped) whose template
     argument ([temps]) prints as [std::any], and the constructor's template
     does not forward the argument as it is. *)
-let stores_erased_fn_ir ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list) i e =
+let stores_erased_fn ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list) i e =
   match List.nth_opt field_tys i with
   | Some (Miniml.Tvar (_, j)) -> (
     match List.nth_opt temps (j - 1) with
     | _ when ctor_arg_is_passthrough r i -> false
-    | Some t when Cpp_ir.Types.prints_as_any (unfold_cpp_typedef_ir env t) -> ml_expr_is_function_value ?var e
+    | Some t when Cpp_ir.Types.prints_as_any (unfold_cpp_typedef env t) -> ml_expr_is_function_value ?var e
     | _ -> false )
   | _ -> false
 
-(** [e], a constructor argument {!stores_erased_fn_ir} says is stored via
+(** [e], a constructor argument {!stores_erased_fn} says is stored via
     [crane_erase_fn], as lowering generates it: a lambda is only ever invoked
     with its whole argument boxed as one [std::any] holding the fully erased
     representation ([pair<any,any>] for a pair domain), so a custom match on
@@ -2880,7 +2880,7 @@ let stores_erased_fn_ir ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t li
 let erased_fn_lambda env e =
   match strip_magic e with
   | MLlam (id, ty, body) ->
-    if Ml_type_util.has_tany_in_type_ir (cpp_of_ml_ir env ty) then
+    if Ml_type_util.has_tany_in_type (cpp_of_ml env ty) then
       MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
     else MLlam (id, Miniml.Tunknown, mark_own_param_for_pair_erasure 1 body)
   | _ -> e
@@ -2889,18 +2889,18 @@ let erased_fn_lambda env e =
     physically inside a [std::any], and so may be read back out with an
     [any_cast].
 
-    {!Ml_type_util.is_boxed_type_ir} answers this structurally, which misses a
+    {!Ml_type_util.is_boxed_type} answers this structurally, which misses a
     named alias for the box: a [Type]-valued definition is emitted as
     [using sel = std::any], and only following the alias chain reveals that a
     parameter of type [sel] is a box.  An opaque type is deliberately
     excluded -- it prints as [std::any] without promising one, so nothing may
     be cast out of it. *)
 let is_boxed_source (t : Cpp_ir.Lowered.Type.t) =
-  is_boxed_type_ir t
+  is_boxed_type t
   ||
   match t with
   | Obligation Opaque_type -> false
-  | Entity_application _ -> resolves_to_any_type_ir t
+  | Entity_application _ -> resolves_to_any_type t
   | _ -> false
 
 (** [classify_erasure ty] -- the erasure status of one side of a value
@@ -2931,10 +2931,10 @@ let classify_erasure : Cpp_ir.Lowered.Type.t option -> _ = function
   | Some f when Cpp_ir.Types.prints_as_any f -> `Opaque
   | Some f -> `Concrete f
 
-(** [spells_as_any_ir t] -- whether [t] is written [std::any] in the
+(** [spells_as_any t] -- whether [t] is written [std::any] in the
     generated code, following the alias chains that
     {!Cpp_ir.Types.prints_as_any}, being structural, cannot see through. *)
-let spells_as_any_ir t = Cpp_ir.Types.prints_as_any t || resolves_to_any_type_ir t
+let spells_as_any t = Cpp_ir.Types.prints_as_any t || resolves_to_any_type t
 
 (** [coerce ?term ?from ~into expr] adapts [expr] across a representation
     boundary: it is the single place that decides between boxing, [any_cast],
@@ -2942,7 +2942,7 @@ let spells_as_any_ir t = Cpp_ir.Types.prints_as_any t || resolves_to_any_type_ir
 
     It first classifies the source side as boxed, opaque, concrete or unknown,
     and then reads the answer off that.  The classification rests on
-    {!Ml_type_util.is_boxed_type_ir}, not on {!Cpp_ir.Types.prints_as_any}:
+    {!Ml_type_util.is_boxed_type}, not on {!Cpp_ir.Types.prints_as_any}:
     an opaque type also prints as [std::any], but it is an admission that
     the representation is unknown, and nothing may be boxed or cast on the
     strength of it.  A boundary with an opaque type on either side is therefore
@@ -2964,20 +2964,20 @@ let spells_as_any_ir t = Cpp_ir.Types.prints_as_any t || resolves_to_any_type_ir
 let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   let source = classify_erasure from in
-  let same_type = match from with Some f -> cpp_ty_eq_ir f into | None -> false in
+  let same_type = match from with Some f -> cpp_ty_eq f into | None -> false in
   if same_type || into = Void then expr
   else
     match source with
     (* Casting a box to a name that is itself the box is not a recovery but
        an [any_cast<std::any>], which only succeeds on a doubly-boxed value
        and otherwise throws. *)
-    | `Boxed when spells_as_any_ir into -> expr
+    | `Boxed when spells_as_any into -> expr
     (* A closure built here is not a box, whatever its erased type says: what
        is boxed is what it returns -- [@id lit] eta-expanded, with [id : ID]
        erased to [std::any id(std::any)], read at [Endo<lit>].  Its returns
        are recovered at the codomain instead. *)
     | `Boxed when (match expr with Lambda _ -> true | _ -> false) -> (
-      match (expr, unfold_cpp_typedef_ir (empty_env ()) into) with
+      match (expr, unfold_cpp_typedef (empty_env ()) into) with
       | Lambda l, Function (_, cod) ->
         let rec at_returns : Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t = function
           | Return (Some e) -> Return (Some (coerce ~from:Any ~into:cod e))
@@ -2997,12 +2997,12 @@ let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowe
         (* A list went into the box with its elements boxed, so that is the
            shape the cast has to name however concrete the context's element
            type is; the converting constructor then recovers each element. *)
-        match Cpp_erasure.erased_list_shape_ir into with
+        match Cpp_erasure.erased_list_shape into with
         (* A custom list has no converting constructor to unbox its elements
            with, so it stays at the flat shape until a consumer converts it. *)
-        | Some (g, shape) when Table.is_custom g -> Cpp_erasure.unbox_ir shape expr
-        | Some (_, shape) -> Cpp_erasure.converting_ctor_ir into [Cpp_erasure.unbox_ir shape expr]
-        | None -> Cpp_erasure.unbox_ir into expr ) )
+        | Some (g, shape) when Table.is_custom g -> Cpp_erasure.unbox shape expr
+        | Some (_, shape) -> Cpp_erasure.converting_ctor into [Cpp_erasure.unbox shape expr]
+        | None -> Cpp_erasure.unbox into expr ) )
     (* Nothing may be boxed or cast on the strength of an admission that the
        representation is unknown. *)
     | `Opaque -> expr
@@ -3013,7 +3013,7 @@ let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowe
         | `Concrete _ -> false
         | `Unknown -> ( match term with Some t -> ml_expr_is_function_value t | None -> false )
       in
-      if is_boxed_type_ir into then
+      if is_boxed_type into then
         (* Boxing is not idempotent: [std::any] holding a [std::any] is a box
            no consumer opens twice. *)
         match expr with
@@ -3029,7 +3029,7 @@ let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowe
           let adapted =
             if is_function_value then wrap_crane_erase_fn Boxed_whole (erased_fn_instantiation expr) else expr
           in
-          Cpp_erasure.converting_ctor_ir Any [adapted]
+          Cpp_erasure.converting_ctor Any [adapted]
       else
         match into with
         (* A slot that erased its domain -- a record field whose Rocq type is
@@ -3039,7 +3039,7 @@ let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowe
            signature to convert from).  It takes one through the same
            [crane_erase_fn] adapter an erased parameter uses, whether or not the
            result erased along with the arguments. *)
-        | Function (_, cod) when is_function_value && erased_domain_fun_ty_ir into ->
+        | Function (_, cod) when is_function_value && erased_domain_fun_ty into ->
           wrap_crane_erase_fn (At_signature cod) expr
         (* The mirror image: a callable whose result erased -- a constant
            whose Rocq type hides its quantifier behind a type alias, or whose
@@ -3076,7 +3076,7 @@ let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowe
 
 (** [regroup_crossing ~from ~into expr]: [expr], whose C++ type is [from],
     read at [into] where the two differ only in how their arrows are grouped
-    ({!Minicpp.arrow_site}) -- a value spelled where it was declared reaching
+    ({!Cpp_ir.Types.arrow_site}) -- a value spelled where it was declared reaching
     a slot a type argument spells curried, or back.  [crane_convert] regroups
     every function the value holds ([crane_cast_to] for [crane::fn] of
     another arity).  A function value itself is not this: it reaches a slot
@@ -3084,7 +3084,7 @@ let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowe
     whose type is the slot's. *)
 let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
-  let from = strip_cpp_ref_const_ir from and into = strip_cpp_ref_const_ir into in
+  let from = strip_cpp_ref_const from and into = strip_cpp_ref_const into in
   match (from, into) with
   | Function _, _ | _, Function _ -> expr
   | _ when from = into || not (Cpp_ir.Types.same_arrows from into) -> expr
@@ -3100,7 +3100,7 @@ let value_cpp_type ~agree env e =
   match strip_magic e with
   | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
   | MLglob ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
-    Option.map (cpp_of_ml_ir env) (callee_ml_type r)
+    Option.map (cpp_of_ml env) (callee_ml_type r)
   | _ -> None
 
 (** Whether a coercion is one the Rocq indices rule out, rather than one C++
@@ -3117,12 +3117,12 @@ let value_cpp_type ~agree env e =
 
     The mirror is {!Gen_functions.dead_unit_returns_to_abort}, which catches the
     same branch where extraction recorded no coercion at all and a bare [tt]
-    reaches a [return]; both throw {!Minicpp.dead_branch_message}. *)
-let absurd_coercion_ir from (into : Cpp_ir.Lowered.Type.t) =
+    reaches a [return]; both throw {!Translation_support.dead_branch_message}. *)
+let absurd_coercion from (into : Cpp_ir.Lowered.Type.t) =
   Ml_type_util.ml_type_is_unit from
-  && (not (is_cpp_unit_type_ir into))
+  && (not (is_cpp_unit_type into))
   && into <> Void
-  && not (resolves_to_any_type_ir into)
+  && not (resolves_to_any_type into)
 
 (** A list computed at a concrete element type (a call's result, a variable)
     going into a [Family_box] slot ([den t]): the family's generic consumers
@@ -3136,7 +3136,7 @@ let deep_box_list e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   | MLcons _ -> expr
   | e -> (
     match
-      Option.bind (infer_ml_body_type e) (fun t -> Cpp_erasure.erased_list_shape_ir (cpp_of_ml_ir (empty_env ()) t))
+      Option.bind (infer_ml_body_type e) (fun t -> Cpp_erasure.erased_list_shape (cpp_of_ml (empty_env ()) t))
     with
     | Some _ -> Cpp_ir.Build.call (Runtime Crane_rt.Deep_box) [expr]
     | None -> expr )
@@ -3195,7 +3195,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
       | None -> false )
   | MLglob {callee = r; _} ->
     ( match callee_ml_type r with
-      | Some ml_ty -> Cpp_ir.Types.prints_as_any (cpp_of_ml_ir env ml_ty)
+      | Some ml_ty -> Cpp_ir.Types.prints_as_any (cpp_of_ml env ml_ty)
       | None -> false )
   | MLmagic (_, inner, _) -> ml_expr_is_erased env inner
   | MLcase (case_ty, _, _, _) ->
@@ -3207,7 +3207,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
 (** The C++ type a read of record field [fld] has, out of a value of ML type
     [typ]: the field's declared type at the record's instantiation, stored as
     the record stores it.  [None] where [typ] is not a record naming [fld]. *)
-let record_field_cpp_ty_ir env typ fld : Cpp_ir.Lowered.Type.t option =
+let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
   match resolve_tmeta typ with
   | Miniml.Tglob (r, args, _) -> (
     let declared =
@@ -3261,8 +3261,8 @@ let magic_is_boxed env = function
 let recover_erased_scrutinee env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   if not is_magic then expr
   else
-    let cpp_ty = cpp_of_ml_ir env typ in
-    if Cpp_ir.Types.prints_as_any cpp_ty then expr else Cpp_erasure.unbox_ir cpp_ty expr
+    let cpp_ty = cpp_of_ml env typ in
+    if Cpp_ir.Types.prints_as_any cpp_ty then expr else Cpp_erasure.unbox cpp_ty expr
 
 (** Build the qualified constructor struct type for a pattern match branch.
 
@@ -3296,20 +3296,20 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : Cpp_ir.Lowered.
     (* The constructor struct is nested in the instantiation, so it has to be
        qualified by the same one the declaration spells: an inductive's
        argument at the flat arity a stored value has (see
-       {!template_arg_of_ml_type_ir}). *)
+       {!template_arg_of_ml_type}). *)
     let temps =
-      ind_promoted_type_args_ir r
-      @ apply_hkt_tyctors_ir r (template_params_of_ml_ir ~site:Declared env tys)
+      ind_promoted_type_args r
+      @ apply_hkt_tyctors r (template_params_of_ml ~site:Declared env tys)
     in
-    Member (inductive_type_ir r temps [], ctor_name)
+    Member (inductive_type r temps [], ctor_name)
   | _ -> Named (ctor_name, [])
 
 (** [unbox_value into e] recovers [e], a value known to come out of a box, at
     [into]: {!coerce} from [std::any]. *)
 let unbox_value into (e : Cpp_ir.Lowered.Expr.t) = coerce ~from:Any ~into e
 
-(** [recover_boxed_result_ir ~boxed ~expected expr] casts the result of a call
-    back into the type the position expects -- see {!position_cpp_ty_ir} -- when
+(** [recover_boxed_result ~boxed ~expected expr] casts the result of a call
+    back into the type the position expects -- see {!position_cpp_ty} -- when
     [boxed]
     says the callee hands back a [std::any] whatever its ML type claims,
     because its codomain erases or because it was itself recovered from a box
@@ -3317,18 +3317,18 @@ let unbox_value into (e : Cpp_ir.Lowered.Expr.t) = coerce ~from:Any ~into e
     adapter.
 
     [boxed] is a statement about the callee, not a guess, so the recovery is
-    unconditional: unlike {!unbox_into_ir} it casts at a template parameter too,
+    unconditional: unlike {!unbox_into} it casts at a template parameter too,
     which inside a template is the one name the result has. *)
-let recover_boxed_result_ir ~boxed ~expected expr =
-  match position_cpp_ty_ir expected with
+let recover_boxed_result ~boxed ~expected expr =
+  match position_cpp_ty expected with
   | Some into when boxed -> coerce ~from:Any ~into expr
   | _ -> expr
 
-(** [unbox_into_ir into e] recovers [e] from its box at [into], where the
+(** [unbox_into into e] recovers [e] from its box at [into], where the
     position stated a type to recover it at, and leaves it boxed otherwise. *)
-let unbox_into_ir into e =
+let unbox_into into e =
   match into with
-  | Some into when states_unboxed_target_ir into -> coerce ~from:Any ~into e
+  | Some into when states_unboxed_target into -> coerce ~from:Any ~into e
   | _ -> e
 
 (** What a custom match over [t], annotated [typ], with branches [pv], knows
@@ -3404,19 +3404,19 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
              [prints_as_any] catches the codomain a callee left as an erased
              type argument, which converts to a dummy glob rather than to
              [Tany]. *)
-          let rty_cpp = cpp_of_ml_ir env rty in
-          spells_as_any_ir rty_cpp
+          let rty_cpp = cpp_of_ml env rty in
+          spells_as_any rty_cpp
         | None -> false )
       | None -> false )
     | _ -> false
   in
-  let typ = cpp_of_ml_ir env typ in
+  let typ = cpp_of_ml env typ in
   (* [concrete_match_type]: when [typ] is erased ([std::any]), recover the
      actual inductive type from the first branch's pattern constructor and
      its field types.  Used for non-pair matches (e.g. option, variant) where
      we need to emit [any_cast<ConcreteType>(scrut)]. *)
   let concrete_match_type : Cpp_ir.Lowered.Type.t =
-    if spells_as_any_ir typ || scrut_callee_ret_erased then
+    if spells_as_any typ || scrut_callee_ret_erased then
       try
         let _, _, pat0, _ = pv.(0) in
         let ind_ref = match pat0 with
@@ -3426,7 +3426,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
         in
         let ids0, _, _, _ = pv.(0) in
         let tyargs = List.rev_map (fun (_, ty) ->
-          erase_unresolved_tvars_ir (cpp_of_ml_ir env ty)
+          erase_unresolved_tvars (cpp_of_ml env ty)
         ) ids0 in
         Entity_application (ind_ref, tyargs, [])
       with _ -> typ
@@ -3448,10 +3448,10 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
          is boxed exactly when its binder is ([scrut_is_magic]), and one
          declared [pair<std::any, exp<std::any>>] holds that pair. *)
       || (not scrut_is_trivial_ml)
-         && (is_all_erased typ || resolves_to_any_type_ir typ) &&
-         ( Ml_type_util.has_tany_in_type_ir concrete_match_type
+         && (is_all_erased typ || resolves_to_any_type typ) &&
+         ( Ml_type_util.has_tany_in_type concrete_match_type
            || (match concrete_match_type with
-               | Entity_application (_, args, _) -> List.exists resolves_to_any_type_ir args
+               | Entity_application (_, args, _) -> List.exists resolves_to_any_type args
                | _ -> false) ) )
   in
   {
@@ -3475,7 +3475,7 @@ let custom_branch_binders env ~fix_a_fired ~scrut_ml_typ ~ml_typ r ids' =
   let ids' =
     if fix_a_fired then
       List.map (fun (x, ty) ->
-        let cpp_ty = cpp_of_ml_ir env ty in
+        let cpp_ty = cpp_of_ml env ty in
         match cpp_ty with
         | Entity_application (g, (_ :: _), _) when is_prod_global g ->
           (x, Tdummy Ktype)

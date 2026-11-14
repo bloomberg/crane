@@ -14,7 +14,7 @@
     use_count() == 1 can reuse the existing allocation by mutating fields
     in-place rather than allocating a new object.
 
-    The analysis runs on the MiniML AST before translation to MiniCpp.  It
+    The analysis runs on the MiniML AST before translation to CppIR.  It
     attaches nothing to the tree: it answers per-parameter queries, which
     {!Ownership} settles for the whole program and translation reads back
     when it chooses parameter passing and the reuse path of a match. *)

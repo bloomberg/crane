@@ -12,7 +12,7 @@
 
 (** Pretty-printing utilities, name resolution, and renaming for extracted code.
 
-    Shared by every stage after extraction: translation (MiniML to MiniCpp)
+    Shared by every stage after extraction: translation (MiniML to CppIR)
     and the printer both name globals, modules and locals through the tables
     here.  The unit's names are decided while it is planned ({!Plan}) and read
     back while it is emitted ({!Emit}); {!end_planning} separates the two.

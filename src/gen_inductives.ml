@@ -282,7 +282,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let extra_tvars = List.map snd extra_remap in
   let extra_tvar_names = List.mapi (fun i _ -> tvar_id (i + 1)) extra_tvars in
   let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
-  let subst_extra_tvars = make_subst_extra_tvars_ir num_ind_vars extra_tvar_map in
+  let subst_extra_tvars = make_subst_extra_tvars num_ind_vars extra_tvar_map in
 
   (* For type conversion in method contexts, use ns = {name} so that
      self-references INSIDE container types get shared_ptr wrapping
@@ -392,7 +392,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
       (fun (id, (cpp_ty : Cpp_ir.Lowered.Type.t), i, _, generalised) ->
         match cpp_ty with
         | Function (dom, cod) when generalised ->
-          let cod = if is_cpp_unit_type_ir cod then (Void : Cpp_ir.Lowered.Type.t) else cod in
+          let cod = if is_cpp_unit_type cod then (Void : Cpp_ir.Lowered.Type.t) else cod in
           Some (id, (Callable_declared (dom, cod) : Callable_abi.kind), fun_tparam_id i)
         | _ -> None )
       params_with_idx
@@ -435,13 +435,13 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
         let wrapped : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
           | Function _ when generalised -> Reference (Forwarding, Variable (Named (fun_tparam_id i)))
-          | _ -> wrap_param_by_ownership_ir ~is_owned:owned ~core cpp_ty
+          | _ -> wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
         in
         (id, wrapped) )
       params_with_idx param_ids_with_pos
   in
   let passing =
-    List.map2 (fun (_, ty) (_, _, _, owned, _) -> param_passing_ir ~owned ty) params params_with_idx
+    List.map2 (fun (_, ty) (_, _, _, owned, _) -> param_passing ~owned ty) params params_with_idx
   in
 
   {
@@ -478,7 +478,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   }
 
 (** Whether a type mentions the template parameter [name] anywhere. *)
-let cpp_type_has_tvar_ir name =
+let cpp_type_has_tvar name =
   Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
       | Variable (Index (_, Some n) | Named n) -> Id.equal n name
@@ -555,7 +555,7 @@ let method_head vars s =
         (fun (_, (tt : Callable_abi.kind), _) -> match tt with Callable_declared (d, c) -> c :: d | _ -> [])
         fun_params
     in
-    fun name -> List.exists (cpp_type_has_tvar_ir name) (constraints @ annotations)
+    fun name -> List.exists (cpp_type_has_tvar name) (constraints @ annotations)
   in
   (* An extra tvar the return type is alone in mentioning is a dead letter.
      Nothing deduces it -- the receiver carries only the inductive's own
@@ -569,8 +569,8 @@ let method_head vars s =
       (fun (_tt, tname) ->
         if
           Id.Set.mem tname extra_tvar_name_set
-          && cpp_type_has_tvar_ir tname ret_cpp
-          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar_ir tname pty) params))
+          && cpp_type_has_tvar tname ret_cpp
+          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params))
           && not (body_names tname)
         then Some tname
         else None )
@@ -594,8 +594,8 @@ let method_head vars s =
       if not (Id.Set.mem tname extra_tvar_name_set) then true
       else if Id.Set.mem tname return_only_set then false
       else
-        cpp_type_has_tvar_ir tname ret_cpp
-        || List.exists (fun (_, pty) -> cpp_type_has_tvar_ir tname pty) params
+        cpp_type_has_tvar tname ret_cpp
+        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
         || body_names tname)
     template_params
   in
@@ -710,7 +710,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         (not (this_arg_id <> None && i = method_n_params - 1 - this_pos))
         &&
         match List.assoc_opt (Common.get_db_name (i + 1) env) params with
-        | Some ty -> not (Translation_support.declared_by_reference_ir ty)
+        | Some ty -> not (Translation_support.declared_by_reference ty)
         | None -> List.nth method_owned_flags i )
       ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
@@ -734,7 +734,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type_ir (Some ret_cpp) @@ fun () ->
+    with_cpp_return_type (Some ret_cpp) @@ fun () ->
     with_type_vars (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or
@@ -774,7 +774,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let stmts =
     if all_method_type_args <> [] then
       let self_call_with_tys = entity_reference func_ref all_method_type_args in
-      List.map (glob_subst_stmt_ir func_ref self_call_with_tys) stmts
+      List.map (glob_subst_stmt func_ref self_call_with_tys) stmts
     else
       stmts
   in
@@ -789,7 +789,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
           Dereference This
         else This
       in
-      List.map (var_subst_stmt_ir id this_expr) stmts
+      List.map (var_subst_stmt id this_expr) stmts
     | None -> stmts
   in
   (* Replace [CPPthis] with [CPPshared_from_this] in return expressions.  When a
@@ -814,18 +814,18 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      When a method returns a closure that captures [this], the raw pointer
      would dangle once the receiver is gone; the closure holding its own copy
      keeps the value alive. *)
-  let stmts = return_captures_by_value_ir stmts in
+  let stmts = return_captures_by_value stmts in
   let stmts = replace_this_in_lambdas ?receiver:this_arg_id self_type stmts in
   (* Apply tvar_subst_stmt with the extended vars list (defined above).
      extended_vars covers positions 1..num_ind_vars (inductive vars) and
-     num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt_ir can
+     num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt can
      name them all correctly. *)
   (* A [tt] the method returns is dead where its result is not [unit] -- with
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
-    finish_fn_body_ir
+    finish_fn_body
       (if ml_type_is_void_call ty then Void else ret_cpp)
-      (List.map (tvar_subst_stmt_ir extended_vars) stmts)
+      (List.map (tvar_subst_stmt extended_vars) stmts)
   in
 
 
@@ -842,7 +842,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       lazy
         { expr = on_expr;
           stmt = (fun s -> Cpp_ir.Children.stmt (Lazy.force visitor) s);
-          type_ = (fun t -> if cpp_type_has_tvar_ir name t then found := true) }
+          type_ = (fun t -> if cpp_type_has_tvar name t then found := true) }
     and on_expr (e : Cpp_ir.Lowered.Expr.t) =
       match e with
       | Entity (_, _, Some {inline = Some _; _}) -> ()
@@ -1113,8 +1113,8 @@ let constructor_field_storage ~name ~is_coinductive var_names ty =
 let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   if vars = [] then
     match cpp_ty with
-    | Shared_pointer _ -> tvar_erase_type_ir cpp_ty
-    | _ when has_unnamed_tvar_ir cpp_ty -> Any
+    | Shared_pointer _ -> tvar_erase_type cpp_ty
+    | _ when has_unnamed_tvar cpp_ty -> Any
     | _ -> cpp_ty
   else cpp_ty
 
@@ -1217,8 +1217,7 @@ let accessor ?(is_const = true) ?(is_inline = false) ?(section = F.Section.Acces
 let constructor ?(tparams = []) ?(explicit = true) params inits : Cpp_ir.Lowered.phase F.member =
   (Constructor {type_params = tparams; params; inits; body = []; explicit; noexcept = false}, Public, Creators)
 
-(** {!Translation_support.qualify_inductives} in CppIR: each inductive [t]
-    names wrapped in its namespace, those [skip] answers for and inline
+(** [t] with each inductive it names wrapped in its namespace, those [skip] answers for and inline
     mappings excepted. *)
 let rec qualify_inductives_lowered ~skip (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   let go = qualify_inductives_lowered ~skip in
@@ -1245,7 +1244,7 @@ let rec qualify_inductives_lowered ~skip (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lo
   | Member (base, id) -> Member (go base, id)
   | t -> t
 
-(** {!Minicpp.mk_lambda} in CppIR, for a lambda with no template parameters
+(** A CppIR lambda, for a lambda with no template parameters
     of its own: a [const] on the return type is dropped, and a nullary
     lambda whose body only throws is that abort. *)
 let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_ir.Lowered.Expr.t =
@@ -1396,8 +1395,8 @@ let gen_ind_header_v2
         let erase_if_needed (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
           if vars = [] then
             match cpp_ty with
-            | Shared_pointer _ -> tvar_erase_type_ir cpp_ty
-            | _ when has_unnamed_tvar_ir cpp_ty -> Any
+            | Shared_pointer _ -> tvar_erase_type cpp_ty
+            | _ when has_unnamed_tvar cpp_ty -> Any
             | _ -> cpp_ty
           else cpp_ty
         in
@@ -1435,7 +1434,7 @@ let gen_ind_header_v2
           List.map2 (fun (param_name, cpp_ty) ty : Cpp_ir.Lowered.Expr.t ->
             if boxes_field ty then
               B.call (E.Allocate (Heap, cpp_ty)) [E.Move (E.Local param_name)]
-            else if is_trivially_copyable_type_ir cpp_ty then E.Local param_name
+            else if is_trivially_copyable_type cpp_ty then E.Local param_name
             else E.Move (E.Local param_name)
           ) factory_params tys_list
         in
@@ -2626,11 +2625,11 @@ let gen_ind_header_v2
                         Id.of_string "v_mut", []))
                     :: partner_drains; else_ = []}]
                 in
-                [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox_ir (T.Shared_pointer partner_ty)
+                [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer partner_ty)
                     (E.Unary (Address_of, E.Local _cur_id)); then_ = partner_body; else_ = inner}]
             in
             let loop_body_stmts =
-              [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox_ir (T.Shared_pointer self_ty)
+              [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer self_ty)
                   (E.Unary (Address_of, E.Local _cur_id)); then_ = self_branch_body; else_ = build_if_chain partner_branches}]
             in
             let body =
@@ -2713,8 +2712,8 @@ let gen_ind_header_v2
                 if vars = [] then
                   match api_ty with
                   | Shared_pointer _ ->
-                    tvar_erase_type_ir api_ty
-                  | _ when has_unnamed_tvar_ir api_ty -> Any
+                    tvar_erase_type api_ty
+                  | _ when has_unnamed_tvar api_ty -> Any
                   | _ -> api_ty
                 else api_ty
               in
@@ -2773,7 +2772,7 @@ let gen_ind_header_v2
               (fun n s -> fold Cpp_ir.Subterms.stmt ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight) n s)
               n ss
           in
-          if is_trivially_copyable_type_ir api_ty || reads ~weight:1 0 e <> 1 then e
+          if is_trivially_copyable_type api_ty || reads ~weight:1 0 e <> 1 then e
           else
             let rec moved (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
               match e with
@@ -2843,7 +2842,7 @@ let gen_ind_header_v2
                   B.call (E.Allocate (Arena_scoped, inner)) [converted]
                 else B.call (E.Allocate (Heap, inner)) [converted]
               | _ when storage_ty = api_ty ->
-                if is_trivially_copyable_type_ir api_ty then local
+                if is_trivially_copyable_type api_ty then local
                 else E.Move local
               | _ ->
                 sink_converted api_ty var
@@ -2995,7 +2994,7 @@ let gen_ind_header_v2
                       injected-class-name, so class template argument
                       deduction is not available. *)
                    (fun i cname args : Cpp_ir.Lowered.Expr.t ->
-                     let self = mk_cppglob_ir name (List.map B.named_variable vars) in
+                     let self = mk_cppglob name (List.map B.named_variable vars) in
                      if is_coinductive then
                        B.call self
                          [B.call lazy_cell (E.In_place :: E.In_place_index i :: args)]
@@ -3022,7 +3021,7 @@ let gen_ind_header_v2
               [E.Forward (B.named_variable f, E.Local thunk)]
           in
           let body =
-            [S.Return (Some (B.call (mk_cppglob_ir name (List.map B.named_variable vars)) [delegate]))]
+            [S.Return (Some (B.call (mk_cppglob name (List.map B.named_variable vars)) [delegate]))]
           in
           let m =
             { (static_method ~name:(Id.of_string "lazy_") ~ret:self_ty

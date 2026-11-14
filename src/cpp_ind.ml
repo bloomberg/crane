@@ -96,7 +96,7 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Ml_type_util.has_no_cpp_spelling_ir (Translation.cpp_ir_of_ml_type (empty_env ()) l t) )
+        || Ml_type_util.has_no_cpp_spelling (Translation.cpp_ir_of_ml_type (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds r l t)] else []
 
@@ -924,7 +924,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Ml_type_util.has_no_cpp_spelling_ir (Translation.cpp_ir_of_ml_type (empty_env ()) l t)) )
+      not (Ml_type_util.has_no_cpp_spelling (Translation.cpp_ir_of_ml_type (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the MiniML declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
@@ -1069,8 +1069,7 @@ let entity_of ~what id d = Function_entity.of_finished (finished_of ~what id d)
 
 let finished_placed (id, d) = finished_of ~what:"a lifted declaration" id d
 
-(** The lifted helper [d], a MiniCpp declaration, under its {!helper_id}, in
-    CppIR. *)
+(** The lifted helper [d] under its {!helper_id}. *)
 let helper_placed d = (helper_id d, d)
 
 let finished_helper d = finished_placed (helper_placed d)

@@ -20,7 +20,7 @@
     picking the wrong one silently yields [false] rather than an error.  They
     sit at three layers, and the layer is the thing to choose by:
 
-    - {b Structural} (this module): {!prints_as_any}, {!is_boxed_type_ir},
+    - {b Structural} (this module): {!prints_as_any}, {!is_boxed_type},
       {!is_cpp_dummy_type}, {!has_tany_in_type}, {!has_erased_type_in_type}.
       These look only at the type node in front of them.  They cannot see
       through a [using] alias, so a caller holding a type that {e might} be
@@ -63,7 +63,7 @@ val expand_ml_fun_alias : Miniml.ml_type -> Miniml.ml_type
 
 (** Build the substitution mapping type variables of one C++ type to the
     corresponding sub-types of another. *)
-val extract_tvar_map_ir :
+val extract_tvar_map :
   Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> (Names.variable * Cpp_ir.Lowered.Type.t) list
 
 (** Find the arguments of a self- or mutually-recursive occurrence in a type. *)
@@ -247,7 +247,7 @@ val ml_type_is_unit : Miniml.ml_type -> bool
 val own_type_variables : n_outer:int -> Miniml.ml_type list -> bool
 
 (** Whether a C++ type is the unit type. *)
-val is_cpp_unit_type_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a MiniML type is unit or void. *)
 val ml_type_is_unit_or_void : Miniml.ml_type -> bool
@@ -271,7 +271,7 @@ val ml_codomain_after : int -> Miniml.ml_type -> Miniml.ml_type option
 (** {2 Type variables in C++ types} *)
 
 (** Whether a C++ type contains a type variable. *)
-val contains_tvar_ir : Cpp_ir.Lowered.Type.t -> bool
+val contains_tvar : Cpp_ir.Lowered.Type.t -> bool
 
 (** {2 Well-known global references} *)
 
@@ -281,7 +281,7 @@ val is_prod_global : Names.GlobRef.t -> bool
 
 (** Structural equality of two C++ types, seen through [Tconst] and
     [Tnamespace] and comparing indexed type variables by index alone. *)
-val cpp_ty_eq_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> bool
+val cpp_ty_eq : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a global reference is the standard library's [list], by
     identity. *)
@@ -297,17 +297,17 @@ val list_ctor_struct_names : Names.GlobRef.t -> string * string
 (** {2 Dummy and erased C++ types} *)
 
 (** Whether a C++ type is the dummy type. *)
-val is_cpp_dummy_type_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_cpp_dummy_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** The type under any module or namespace qualification.  Questions about
     what a type {i is} -- which inductive, at which instantiation -- are about
     the type inside the qualification, not the wrapper. *)
-val unqualify_ty_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val unqualify_ty : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** How a value is represented in the slot it is built into: [Native], at its
     own type, or [Boxed] inside a [std::any] at the canonical erased shape,
     whose depth the {!box_kind} says.  Decided once per slot
-    ({!Translation_types.slot_repr_of_cpp_type_ir}) and carried in the slot. *)
+    ({!Translation_types.slot_repr_of_cpp_type}) and carried in the slot. *)
 type slot_repr = Native | Boxed of box_kind
 
 (** What a boxed slot stands for: [Var_box], a type variable (an erased field,
@@ -318,40 +318,41 @@ and box_kind = Var_box | Family_box
 
 (** [names_erased_alias t] -- [t] names a type-level declaration whose body
     erased, spelled through its alias [using X = std::any]. *)
-val names_erased_alias_ir : Cpp_ir.Lowered.Type.t -> bool
+val names_erased_alias : Cpp_ir.Lowered.Type.t -> bool
 
 (** True of a function type whose whole signature erased to [std::any].
     Stricter than a function type whose domain alone erased. *)
-val is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_fully_erased_fun_ty : Cpp_ir.Lowered.Type.t -> bool
 
 (** True of a function type that erased its arguments but kept a concrete
     result, so a closure reaching it needs the [crane_erase_fn] adapter. *)
-val partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
+val partially_erased_fun_ty : Cpp_ir.Lowered.Type.t -> bool
 
 (** True of a function type that erased at least one argument, whichever way its
     result went: the condition under which a closure needs the [crane_erase_fn]
     adapter to reach the slot.  Strictly weaker than
-    {!partially_erased_fun_ty_ir}, and independent of {!is_fully_erased_fun_ty_ir}. *)
-val erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
+    {!partially_erased_fun_ty}, and independent of {!is_fully_erased_fun_ty}. *)
+val erased_domain_fun_ty : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a value of this type is known to live inside a [std::any], and so
     may be boxed into and [any_cast] out of.  Narrower than {!prints_as_any}:
-    {!Minicpp.Topaque} prints as [std::any] but claims nothing about the
+    an opaque type ({!Representation_obligation.Opaque_type}) prints as [std::any] but claims nothing about the
     representation, and is excluded. *)
-val is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_boxed_type : Cpp_ir.Lowered.Type.t -> bool
 
 
-(** Replace every {!Minicpp.Topaque} in a type with {!Minicpp.Tany}.  Apply at
+(** Replace every opaque type ({!Representation_obligation.Opaque_type}) in a
+    type with [Any].  Apply at
     any position where the type is written down (field, parameter, return type,
     template argument): spelling [std::any] in a declaration is what makes the
     value boxed, so no [Topaque] may survive into the generated header. *)
-val materialise_opaque_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val materialise_opaque : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether every component of a C++ type is erased. *)
 val is_all_erased : Cpp_ir.Lowered.Type.t -> bool
 
 (** The template arguments of a C++ type. *)
-val extract_template_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list
+val extract_template_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list
 
 (** Whether a MiniML type stands at an erased position, [std::any] in C++: a
     type variable, [Tunknown], an unresolved [Tmeta] or a [Topen] hole.
@@ -361,11 +362,11 @@ val is_ml_erased_ty : Miniml.ml_type -> bool
 (** {2 Skipped types} *)
 
 (** Whether a C++ type should be skipped during extraction. *)
-val is_skipped_cpp_type_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_skipped_cpp_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a C++ type is a type class's, under [const], a reference or a
     [shared_ptr]. *)
-val is_typeclass_type_cpp_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_typeclass_type_cpp : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a MiniML type should be skipped during extraction. *)
 val is_skipped_ml_type : Miniml.ml_type -> bool
@@ -373,7 +374,7 @@ val is_skipped_ml_type : Miniml.ml_type -> bool
 (** {2 [any] and erasure detection} *)
 
 (** Whether a C++ type contains an erased type anywhere within it. *)
-val has_erased_type_in_type_ir : Cpp_ir.Lowered.Type.t -> bool
+val has_erased_type_in_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** {2 Type-variable presence, substitution, and erasure} *)
 
@@ -389,14 +390,14 @@ val subst_tvars_type :
   (int * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
 
 (** Erase type variables within a C++ type. *)
-val tvar_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val tvar_erase_type : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Erase a type down to its outermost applied type constructors, boxing every
     leaf: [List<Nat>] becomes [List<std::any>], [Nat] becomes [std::any]. *)
-val index_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val index_erase_type : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether a C++ type is erased. *)
-val type_is_erased_ir : Cpp_ir.Lowered.Type.t -> bool
+val type_is_erased : Cpp_ir.Lowered.Type.t -> bool
 
 (** {2 Function argument and return decomposition} *)
 
@@ -422,7 +423,7 @@ val ref_has_no_cpp_name : Names.GlobRef.t -> bool
     constructor prints as its argument, so that constructor alone does not
     count.  Asked before writing a type into a position that has an
     alternative to writing it. *)
-val has_no_cpp_spelling_ir : Cpp_ir.Lowered.Type.t -> bool
+val has_no_cpp_spelling : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether an ML type's result is a skipped type, such as a [ReSum]
     instance. *)
@@ -443,7 +444,7 @@ val get_args_and_ret :
 val strip_tarr_n : int -> Miniml.ml_type -> Miniml.ml_type option
 
 (** Strip reference and const qualifiers from a C++ type. *)
-val strip_cpp_ref_const_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Count the real (non-erased) arguments among a list of MiniML AST nodes. *)
 val count_real_ml_args : Miniml.ml_ast list -> int
@@ -509,7 +510,7 @@ end
 (** Whether a C++ type is trivially copyable: an enum, a custom-extracted
     scalar, or a type declared with [Crane TriviallyCopyable] whose arguments
     are themselves trivially copyable. *)
-val is_trivially_copyable_type_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_trivially_copyable_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a MiniML type is a product type. *)
 val is_prod_ml_type : Miniml.ml_type -> bool
@@ -591,40 +592,40 @@ val type_arg_is_written : Names.GlobRef.t -> int -> bool
 
 (** Replace every unwritten type argument (see {!written_type_args}) by
     [void], so a predicate over the result reads the type as it is spelled. *)
-val prune_unwritten_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val prune_unwritten_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether a single type node erases to [std::any]. *)
-val is_tany_node_ir : Cpp_ir.Lowered.Type.t -> bool
+val is_tany_node : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a C++ type contains [any] anywhere within it. *)
-val has_tany_in_type_ir : Cpp_ir.Lowered.Type.t -> bool
+val has_tany_in_type : Cpp_ir.Lowered.Type.t -> bool
 
-(** Like {!has_tany_in_type_ir}, but asking of the type as it is {e spelled}: an
+(** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
     erased argument in a position nothing writes never reaches the C++. *)
-val has_tany_written_ir : Cpp_ir.Lowered.Type.t -> bool
+val has_tany_written : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a C++ type contains an unnamed type variable. *)
-val has_unnamed_tvar_ir : Cpp_ir.Lowered.Type.t -> bool
+val has_unnamed_tvar : Cpp_ir.Lowered.Type.t -> bool
 
 (** [resolve_tvars_to_any ty] replaces every unresolved type variable in [ty]
     with [Tany], so an [any_cast] target has a C++ spelling. *)
-val resolve_tvars_to_any_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val resolve_tvars_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
-(** {!filter_erased_type_args_ir} over arguments each carrying a key -- the
+(** {!filter_erased_type_args} over arguments each carrying a key -- the
     scheme variable it stands for -- which survives with it. *)
-val filter_erased_keyed_ir :
+val filter_erased_keyed :
   ?preserve_positions:bool -> ('k * Cpp_ir.Lowered.Type.t) list -> ('k * Cpp_ir.Lowered.Type.t) list
 
 (** Filter erased type arguments out of a C++ type-argument list, optionally
     preserving positions. *)
-val filter_erased_type_args_ir : ?preserve_positions:bool -> Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t list
+val filter_erased_type_args : ?preserve_positions:bool -> Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t list
 
 (** [refine_erased_by ~expected actual] takes, at every position where
     [actual] erased and [expected] did not, the spelling [expected] gives: the
     slot has already written the type down, and that is what every producer for
     it has to agree on.  A position where both are concrete keeps [actual]'s
     spelling, and a shape mismatch is left alone. *)
-val refine_erased_by_ir : expected:Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+val refine_erased_by : expected:Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** [refine_erased ~writable have want] is [have] with each of its erased
     nodes replaced by whatever [want] states in the same position, at any
@@ -703,39 +704,39 @@ val fill_holes : (Miniml.Open.t * Miniml.ml_type) list -> Miniml.ml_ast -> Minim
     Both ends ask {!has_erased_type_in_type}, which is the widest of the three
     erasure predicates and deliberately so.  The question is whether the type
     {e is} erased, not whether the erasure is visible in the spelling
-    ({!has_tany_written_ir} says no for [std::optional<std::any>], which writes no
+    ({!has_tany_written} says no for [std::optional<std::any>], which writes no
     type argument) nor whether it has reached [std::any] yet
     ({!has_tany_in_type} says no while the position still holds a
     [dummy_type] marker). *)
-val refine_param_from_slot_ir :
+val refine_param_from_slot :
   tvars:Names.Id.t list -> slot:Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** [(index, name)] of every type variable in a C++ type, sorted by index. *)
-val get_tvars_indexed_ir : Cpp_ir.Lowered.Type.t -> (int * Names.Id.t) list
+val get_tvars_indexed : Cpp_ir.Lowered.Type.t -> (int * Names.Id.t) list
 
 (** The names of the type variables in a C++ type, sorted by index. *)
-val get_tvars_ir : Cpp_ir.Lowered.Type.t -> Names.Id.t list
+val get_tvars : Cpp_ir.Lowered.Type.t -> Names.Id.t list
 
 (** The indices of the type variables in a C++ type, sorted. *)
-val get_tvar_indices_ir : Cpp_ir.Lowered.Type.t -> int list
+val get_tvar_indices : Cpp_ir.Lowered.Type.t -> int list
 
 (** The arity at which the rendered type applies each type variable, keyed
     by index, skipping the positions a spelling does not write
     ({!written_type_args}).  Erasure can leave an application in the ML type
     that the C++ type never spells, so where a rendered type is available its
     arities are the ones its users must agree with. *)
-val rendered_tvar_arities_ir : Cpp_ir.Lowered.Type.t -> (int, int) Hashtbl.t
+val rendered_tvar_arities : Cpp_ir.Lowered.Type.t -> (int, int) Hashtbl.t
 
 (** The type-variable indices a C++ type actually renders, skipping the
     positions a spelling does not write ({!written_type_args}): a phantom
     there, such as the [E] of [itree E R], is one C++ cannot deduce.
     Unsorted. *)
-val get_rendered_tvar_indices_ir : Cpp_ir.Lowered.Type.t -> int list
+val get_rendered_tvar_indices : Cpp_ir.Lowered.Type.t -> int list
 
 (** [primary_tvar_indices dom cod] is the set of type-variable indices
     represented concretely in a generated signature, and so deducible from a
     call. The rest are phantom: a caller must spell them out. *)
-val primary_tvar_indices_ir : Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t -> IntSet.t
+val primary_tvar_indices : Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t -> IntSet.t
 
 (** The type-variable indices appearing in type INDEX positions of inductives
     in an ML type. [convert_ml_type_to_cpp_type] strips these from the C++
@@ -801,8 +802,8 @@ val result_is_index_only_tvar : Miniml.ml_type -> bool
 (** The variable {!result_is_index_only_tvar} finds, [Some n] for [Tvar n]. *)
 val index_only_result_tvar : Miniml.ml_type -> int option
 
-(** [explicit_tvar_prefix_ir ~force_required cty] is how many leading template
+(** [explicit_tvar_prefix ~force_required cty] is how many leading template
     parameters of a signature of type [cty] a call must supply explicitly
     because the signature does not represent them. Only a leading run counts:
     C++ lets a call supply a prefix of the arguments and deduce the rest. *)
-val explicit_tvar_prefix_ir : ?force_required:IntSet.t -> Cpp_ir.Lowered.Type.t -> int
+val explicit_tvar_prefix : ?force_required:IntSet.t -> Cpp_ir.Lowered.Type.t -> int

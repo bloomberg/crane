@@ -7,9 +7,8 @@
 
     Part of declaration generation (MiniML to CppIR): the declaration-level
     layer over the expression translation in {!Translation}, re-exported
-    through {!Gen_decls}.  Translation still generates MiniCpp; a body is
-    lowered into CppIR as it comes back, and every declaration here is
-    CppIR.  The callable plan of each function ({!plan_function}) is
+    through {!Gen_decls}.  Every body and declaration here is CppIR.  The
+    callable plan of each function ({!plan_function}) is
     made before any body is generated; generating the function reads it
     back ({!planned_relaxations}, {!declare_planned}). *)
 
@@ -139,21 +138,21 @@ let other_instance_self_calls n b =
     use was written at another instance than the declaration's own
     ({!other_instance_self_calls}), and its template arguments are that
     instance's. *)
-let rec glob_subst_expr_ir ?(spare = []) (id : GlobRef.t) (repl : Cpp_ir.Lowered.Expr.t)
+let rec glob_subst_expr ?(spare = []) (id : GlobRef.t) (repl : Cpp_ir.Lowered.Expr.t)
     (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match e with
   | Entity (id', _, _) when GlobRef.UserOrd.equal id id' -> repl
   | Call (({occurrence = Some o; _} as cs), (Entity (id', _, _) as head), args)
     when GlobRef.UserOrd.equal id id' && List.exists (Miniml.Occurrence.equal o) spare ->
-    Call (cs, head, List.map (glob_subst_expr_ir ~spare id repl) args)
+    Call (cs, head, List.map (glob_subst_expr ~spare id repl) args)
   | _ -> Cpp_ir.Map.expr (glob_subst_map ~spare id repl) e
 
-(** Statement-level case of {!glob_subst_expr_ir}. *)
-and glob_subst_stmt_ir ?(spare = []) id repl (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+(** Statement-level case of {!glob_subst_expr}. *)
+and glob_subst_stmt ?(spare = []) id repl (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
   Cpp_ir.Map.stmt (glob_subst_map ~spare id repl) s
 
 and glob_subst_map ~spare id repl =
-  Cpp_ir.Map.make ~expr:(glob_subst_expr_ir ~spare id repl) ~stmt:(glob_subst_stmt_ir ~spare id repl)
+  Cpp_ir.Map.make ~expr:(glob_subst_expr ~spare id repl) ~stmt:(glob_subst_stmt ~spare id repl)
     ~type_:Fun.id ()
 
 (** Substitute the local [id] with [repl] in expressions and statements.
@@ -162,7 +161,7 @@ and glob_subst_map ~spare id repl =
     the closure captures a copy of the object, which
     {!Gen_inductives.replace_this_in_lambdas} names.  Replaced by anything
     else, it captures nothing of that name. *)
-let rec var_subst_expr_ir (id : Id.t) (repl : Cpp_ir.Lowered.Expr.t) (e : Cpp_ir.Lowered.Expr.t) :
+let rec var_subst_expr (id : Id.t) (repl : Cpp_ir.Lowered.Expr.t) (e : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   match e with
   | Local id' when Id.equal id id' -> repl
@@ -182,18 +181,18 @@ let rec var_subst_expr_ir (id : Id.t) (repl : Cpp_ir.Lowered.Expr.t) (e : Cpp_ir
     Cpp_ir.Map.expr (var_subst_map id repl) (Lambda {l with moved})
   | _ -> Cpp_ir.Map.expr (var_subst_map id repl) e
 
-(** Statement-level case of {!var_subst_expr_ir}. *)
-and var_subst_stmt_ir id repl (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+(** Statement-level case of {!var_subst_expr}. *)
+and var_subst_stmt id repl (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
   Cpp_ir.Map.stmt (var_subst_map id repl) s
 
 and var_subst_map id repl =
-  Cpp_ir.Map.make ~expr:(var_subst_expr_ir id repl) ~stmt:(var_subst_stmt_ir id repl) ~type_:Fun.id ()
+  Cpp_ir.Map.make ~expr:(var_subst_expr id repl) ~stmt:(var_subst_stmt id repl) ~type_:Fun.id ()
 
 (** Substitute unnamed type variables with named ones based on a variable
     list: each unnamed variable [Ti] in [s] is named by the [i]th of
     [tvars].  Used when generating methods, to name [T1], [T2], ... by the
     struct's template parameters. *)
-let tvar_subst_stmt_ir (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+let tvar_subst_stmt (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
   let type_ =
     Cpp_ir.Types.map (fun (ty : Cpp_ir.Lowered.Type.t) ->
         match ty with
@@ -206,7 +205,7 @@ let tvar_subst_stmt_ir (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.
   and m () = Cpp_ir.Map.make ~expr ~stmt ~type_ () in
   stmt s
 
-(** [dead_unit_returns_to_abort_ir cod body] rewrites [return tt;] into a throw
+(** [dead_unit_returns_to_abort cod body] rewrites [return tt;] into a throw
     when the enclosing function does not return [unit].
 
     A dependent match can have branches that are impossible by typing, e.g.
@@ -228,7 +227,7 @@ let tvar_subst_stmt_ir (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.
     So is one returned where the result is the box: a type a type-level
     function computes ([tuple (nats n)], [unit] at [0]) erases to it, and its
     [unit] branch is as reachable as any other. *)
-let dead_unit_returns_to_abort_ir (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
+let dead_unit_returns_to_abort (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
   let is_unit : Cpp_ir.Lowered.Type.t -> bool = function
     | Void -> true
     | Entity_application (r, _, _) | In_namespace (r, _) -> Table.is_unit_type r
@@ -241,7 +240,7 @@ let dead_unit_returns_to_abort_ir (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.L
   in
   let rec fix_stmts ret_ty stmts =
     match ret_ty with
-    | Some t when not (is_unit t || Translation_types.resolves_to_any_type_ir t) ->
+    | Some t when not (is_unit t || Translation_types.resolves_to_any_type t) ->
       List.map (fix_stmt ret_ty) stmts
     | _ -> List.map (fix_stmt None) stmts
   and fix_stmt ret_ty (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
@@ -263,8 +262,8 @@ let dead_unit_returns_to_abort_ir (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.L
     the canonical [std::function<std::any(std::any...)>] form that the
     application site recovers with an [any_cast].  Nested lambda bodies are
     left alone: their returns answer to their own return type. *)
-let erase_returned_fn_values_ir (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
-  if not (Translation_types.resolves_to_any_type_ir ret_ty) then body
+let erase_returned_fn_values (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
+  if not (Translation_types.resolves_to_any_type ret_ty) then body
   else
     let rec fix_stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
       match s with
@@ -275,13 +274,14 @@ let erase_returned_fn_values_ir (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.
 
 (** The rewrites every generated function body takes at its C++ result type
     [cod], a free function's and a method's alike: a [tt] returned where the
-    result is not [unit] is dead ({!dead_unit_returns_to_abort_ir}), and a
+    result is not [unit] is dead ({!dead_unit_returns_to_abort}), and a
     closure returned where the result erased is stored in the canonical form
-    its caller reads ({!erase_returned_fn_values_ir}). *)
-let finish_fn_body_ir cod body = dead_unit_returns_to_abort_ir cod (erase_returned_fn_values_ir cod body)
+    its caller reads ({!erase_returned_fn_values}). *)
+let finish_fn_body cod body = dead_unit_returns_to_abort cod (erase_returned_fn_values cod body)
 
-(** {!Translation.return_captures_by_value} in CppIR. *)
-let return_captures_by_value_ir (stmts : Cpp_ir.Lowered.Stmt.t list) =
+(** {!Translation_support.return_captures_by_value} for a function's body;
+    it visits a call's arguments first to last. *)
+let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) =
   let closure (l : _ Cpp_ir.Expr.Lambda.t) : _ Cpp_ir.Expr.Lambda.t =
     match l.capture with
     | Runs_in_place ->
@@ -384,7 +384,7 @@ let sig_witness_expr name (ml_ty : ml_type) =
     with no monad leaves the mode alone.
 
     Must wrap type conversion as well as body generation: void-ification and
-    {!Translation_support.reify_monadic_param_type_ir} both
+    {!Translation_support.reify_monadic_param_type} both
     read the mode.  We detect reified by the monad template mentioning "ITree",
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
 let with_itree_mode_for ty f =
@@ -869,8 +869,8 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
           else cpp_ty
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
-        let cpp_ty = Translation_support.reify_monadic_param_type_ir ty cpp_ty in
-        let wrapped = wrap_param_by_ownership_ir ~is_owned:owned ~core:ty cpp_ty in
+        let cpp_ty = Translation_support.reify_monadic_param_type ty cpp_ty in
+        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
         (x, wrapped) )
       ids_with_owned
   in
@@ -913,7 +913,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      is_invocable_v constraint) instead of TTfun, to avoid referencing template
      type parameters that were filtered out as phantom
      ({!Plan_templates.phantom_aware_temps}, via {!with_function_head}). *)
-  let primary = primary_tvar_indices_ir dom cod in
+  let primary = primary_tvar_indices dom cod in
   let unwrap_fun_ty2 : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t option = function
     | Const (Function _ as f) | Reference (Lvalue, Const (Function _ as f)) -> Some f
     | Function _ as f -> Some f
@@ -925,14 +925,14 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
         match unwrap_fun_ty2 ty with
         | Some (Function (fdom, fcod) as f)
           when generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
-          let fun_idx = get_tvar_indices_ir f in
+          let fun_idx = get_tvar_indices f in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
           in
           if has_undeclared then
             Some (x, Cpp_ir.Template.Parameter_kind.Typename, fun_tparam_id i, i)
           else
-            let fcod : Cpp_ir.Lowered.Type.t = if is_cpp_unit_type_ir fcod then Void else fcod in
+            let fcod : Cpp_ir.Lowered.Type.t = if is_cpp_unit_type fcod then Void else fcod in
             Some (x, Cpp_ir.Template.Parameter_kind.Callable_declared (fdom, fcod), fun_tparam_id i, i)
         | _ -> None )
       (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids))
@@ -1010,7 +1010,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       | Const t | Reference (_, t) -> alias_hides_fun t
       | Apply (Entity_application (GlobRef.ConstRef kn, [], _), args)
        |Entity_application (GlobRef.ConstRef kn, (_ :: _ as args), _) ->
-        (List.exists is_hk_arg args || get_tvar_indices_ir ty <> [])
+        (List.exists is_hk_arg args || get_tvar_indices ty <> [])
         && alias_rhs_is_fun kn
       | _ -> false
     in
@@ -1026,7 +1026,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     let rec spelled_fun_is_deduced_against (ty : Cpp_ir.Lowered.Type.t) =
       match ty with
       | Const t | Reference (_, t) -> spelled_fun_is_deduced_against t
-      | Function _ -> get_tvar_indices_ir ty <> []
+      | Function _ -> get_tvar_indices ty <> []
       | _ -> false
     in
     (* The wrapper the ownership pass put on stays where it is; only the type
@@ -1100,13 +1100,13 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      those after it to deduction. *)
   let self_call_undeducible =
     if recurses_on_non_uniform_ind && not tvars_are_phantom then
-      let spelled = List.concat_map (fun (_, ty) -> get_rendered_tvar_indices_ir ty) ids in
+      let spelled = List.concat_map (fun (_, ty) -> get_rendered_tvar_indices ty) ids in
       let constrained =
-        get_tvar_indices_ir cod
+        get_tvar_indices cod
         @ List.concat_map
             (function
               | _, Cpp_ir.Template.Parameter_kind.Callable_declared (dom, cod), _, _ ->
-                get_tvar_indices_ir (Function (dom, cod))
+                get_tvar_indices (Function (dom, cod))
               | _ -> [])
             fun_tys
       in
@@ -1155,7 +1155,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
     bs_passing =
-      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> param_passing_ir ~owned ty) ids ids_with_owned);
+      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> param_passing ~owned ty) ids ids_with_owned);
     bs_self_call_undeducible = self_call_undeducible;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
@@ -1436,7 +1436,7 @@ let gen_dfun ~minted n b cty ty temps =
     Translation_support.owned_parameters (List.length owned_flags)
       ~owned:(fun i ->
         match List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids with
-        | Some ty -> not (Translation_support.declared_by_reference_ir ty)
+        | Some ty -> not (Translation_support.declared_by_reference ty)
         | None -> List.nth owned_flags i )
       ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids)
       ~ty:(fun i -> snd (List.nth all_params i))
@@ -1463,14 +1463,14 @@ let gen_dfun ~minted n b cty ty temps =
      {!with_function_head} for the others, through [with_method_ns_for_locals])
      before computing cty, so it's already active here. *)
   (* The guard of [Crane Guard Compare], in front of the body. *)
-  let guarded body = Translation_support.guard_compare_ir n scope.bs_ids body in
+  let guarded body = Translation_support.guard_compare n scope.bs_ids body in
   let definition body : Cpp_ir.Lowered.Decl.t =
     Function
       { path = {outer = (n, []); inner = []};
         return_type = scope.bs_cod;
         no_pure;
         constexpr = Undecided;
-        shape = Definition (List.rev scope.bs_ids, finish_fn_body_ir scope.bs_cod (guarded (sigma_asserts @ body)));
+        shape = Definition (List.rev scope.bs_ids, finish_fn_body scope.bs_cod (guarded (sigma_asserts @ body)));
         binders = parameter_binders env scope.bs_ids;
         loop = None }
   in
@@ -1481,10 +1481,10 @@ let gen_dfun ~minted n b cty ty temps =
         | Some stmts -> stmts
         | None ->
           let b =
-            List.map (glob_subst_stmt_ir ~spare n rec_call)
+            List.map (glob_subst_stmt ~spare n rec_call)
               (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
           in
-          return_captures_by_value_ir b
+          return_captures_by_value b
       in
       clear_current_type_vars ();
       set_current_parameters [];
@@ -1499,13 +1499,13 @@ let gen_dfun ~minted n b cty ty temps =
         | None ->
         match b with
         | MLaxiom _ | MLexn _ ->
-          List.map (glob_subst_stmt_ir ~spare n rec_call) (gen_stmts env cofix_wrap b)
+          List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts env cofix_wrap b)
         | _ ->
           List.map
-            (glob_subst_stmt_ir ~spare n rec_call)
+            (glob_subst_stmt ~spare n rec_call)
             (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
       in
-      let b = return_captures_by_value_ir b in
+      let b = return_captures_by_value b in
       clear_current_type_vars ();
       set_current_parameters [];
       definition b
@@ -1670,7 +1670,7 @@ let recover_erased_body_types ty b =
     initialisation. *)
 let gen_constant_value ?expected_ty b =
   match b with
-  | MLdummy _ -> Cpp_erasure.empty_box_ir
+  | MLdummy _ -> Cpp_erasure.empty_box
   | _ -> gen_expr ?expected_ty (empty_env ()) b
 
 (** The parameters a head declares for the type variables [cty] spells,
@@ -1678,7 +1678,7 @@ let gen_constant_value ?expected_ty b =
     stands for: the name {!Plan_templates.phantom_aware_temps} gives it. *)
 let scheme_params ?(extra = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   let spelled =
-    List.filter (fun (i, _) -> i > 0) (Ml_type_util.get_tvars_indexed_ir cty)
+    List.filter (fun (i, _) -> i > 0) (Ml_type_util.get_tvars_indexed cty)
   in
   List.map (fun (i, id) -> (id, Callable_abi.Scheme_param i)) spelled
   @ List.filter_map
@@ -1720,7 +1720,7 @@ let gen_decl__inner n b ty =
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
   let cty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let tvars = get_tvars_ir cty_ir in
+  let tvars = get_tvars cty_ir in
   let temps = Cpp_ir.Build.typenames tvars in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
   match cty_ir with
@@ -1736,13 +1736,13 @@ let gen_decl__inner n b ty =
     | _ ->
       begin_body ~owner:n ();
       let body_expr =
-        with_cpp_return_type_ir (Some cty_ir) (fun () -> with_region b (fun () -> gen_constant_value b))
+        with_cpp_return_type (Some cty_ir) (fun () -> with_region b (fun () -> gen_constant_value b))
       in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
          body for side effects and returns Unit::e_TT. *)
       let body_expr =
-        if is_cpp_unit_type_ir cty_ir then
+        if is_cpp_unit_type cty_ir then
           match body_expr with
           | Enum_value _ -> body_expr  (* already a literal *)
           | Entity (_, _, Some ci) when ci.inline <> None ->
@@ -1751,7 +1751,7 @@ let gen_decl__inner n b ty =
         else body_expr
       in
       let body_expr =
-        match Translation_types.slot_repr_of_cpp_type_ir cty_ir with
+        match Translation_types.slot_repr_of_cpp_type cty_ir with
         | Boxed kind -> box_for_any_slot kind b body_expr
         | Native -> body_expr
       in
@@ -1786,7 +1786,7 @@ let with_function_head n b ty k =
   let b = resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let tvars = List.map snd (Ml_type_util.get_tvars_indexed_ir cty) in
+  let tvars = List.map snd (Ml_type_util.get_tvars_indexed cty) in
   let index_tvar_set = collect_ml_type_index_tvars ty in
   let extra_index_tvars =
     IntSet.fold (fun i acc ->
@@ -1827,7 +1827,7 @@ let gen_function n ty h =
       List.filter_map
         (fun ((ty : Cpp_ir.Lowered.Type.t), i) ->
           match ty with
-          | Function _ when not (Ml_type_util.is_fully_erased_fun_ty_ir ty) ->
+          | Function _ when not (Ml_type_util.is_fully_erased_fun_ty ty) ->
             Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
@@ -1846,7 +1846,7 @@ let plan_function ~fixpoint n b ty =
     let abi = plan_scope_head n ty (dfun_body_scope ~minted:h.fh_minted n h.fh_body cty ty h.fh_temps) in
     ( if Probe.checking () then
         match cpp_ir_of_ml_type (empty_env ()) [] ty with
-        | live -> Translation_support.check_planned_arity_ir abi live
+        | live -> Translation_support.check_planned_arity abi live
         | exception e when CErrors.noncritical e -> () );
     Some abi
   in
@@ -1894,7 +1894,7 @@ let gen_spec__inner n b ty =
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   with_method_ns_for_locals @@ fun () ->
   let ty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let temps = Cpp_ir.Build.typenames (get_tvars_ir ty_ir) in
+  let temps = Cpp_ir.Build.typenames (get_tvars ty_ir) in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
   let result =
     match ty_ir with
@@ -1919,7 +1919,7 @@ let gen_spec__inner n b ty =
          erased template type args (see try_recover_erased_return_type). Without
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
-      with_cpp_return_type_ir (Some ty_ir) @@ fun () ->
+      with_cpp_return_type (Some ty_ir) @@ fun () ->
       (* Strip MLmagic wrapper and track whether a type coercion from std::any
          is needed.  MLmagic wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
@@ -1957,7 +1957,7 @@ let gen_spec__inner n b ty =
         match ty_ir with
         | Any | Variable _ | Obligation Unresolved_type | Void | Auto -> false
         | Entity_application (g, _, _) when Table.is_erased_type_const g -> false
-        | _ -> not (type_is_erased_ir ty_ir)
+        | _ -> not (type_is_erased ty_ir)
       in
       let needs_any_cast =
         is_concrete_target
@@ -1976,7 +1976,7 @@ let gen_spec__inner n b ty =
          wrap in an IIFE that executes the body for side effects and
          returns Unit::e_TT.  Pure enum literals need no wrapping. *)
       let b_expr =
-        if is_cpp_unit_type_ir ty_ir && ml_type_is_unit ml_ty then
+        if is_cpp_unit_type ty_ir && ml_type_is_unit ml_ty then
           match b_expr with
           | Enum_value _ -> b_expr
           | Entity (_, _, Some ci) when ci.inline <> None -> b_expr
@@ -1984,7 +1984,7 @@ let gen_spec__inner n b ty =
         else b_expr
       in
       let b_expr =
-        match Translation_types.slot_repr_of_cpp_type_ir ty_ir with
+        match Translation_types.slot_repr_of_cpp_type ty_ir with
         | Boxed kind -> box_for_any_slot kind inner_body b_expr
         | Native -> b_expr
       in
@@ -1993,7 +1993,7 @@ let gen_spec__inner n b ty =
          through the instance the term names -- has the real type: [run :=
          @int_to_ptr natIPtr (@PIV natIPtr) ...] is an [EOU<pair<Nat, bool>>],
          not an [EOU<crane::obj>].  The initialiser says it. *)
-      let ty_ir : Cpp_ir.Lowered.Type.t = if Translation_types.mentions_unresolved_promoted_ir ty_ir then Auto else ty_ir in
+      let ty_ir : Cpp_ir.Lowered.Type.t = if Translation_types.mentions_unresolved_promoted ty_ir then Auto else ty_ir in
       (* A polymorphic constant's family parameter is plain, as a
          function's is, and written applied until deapplied. *)
       (templated (deapply_plain_tvars temps (variable n (Const ty_ir) b_expr)), empty_env ())

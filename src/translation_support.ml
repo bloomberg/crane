@@ -73,11 +73,10 @@ let dead_branch_message = "unreachable: impossible dependent match branch"
 let inactive_field_message =
   "unreachable: inactive constructor field at this instantiation"
 
-(** [mk_lambda_ir ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
+(** [mk_lambda ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
     with template parameters of its own, [tparams], less those none of its
-    [params] (source order) deduces ({!Head_relaxation.settle_lowered_lambda}):
-    {!Minicpp.mk_lambda} in CppIR. *)
-let mk_lambda_ir ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) body ~capture : Cpp_ir.Lowered.Expr.t =
+    [params] (source order) deduces ({!Head_relaxation.settle_lowered_lambda}). *)
+let mk_lambda ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) body ~capture : Cpp_ir.Lowered.Expr.t =
   match tparams with
   | [] -> Cpp_ir.Build.lambda params ret body ~capture
   | _ ->
@@ -100,7 +99,7 @@ let mk_lambda_ir ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) bod
     the slot it sits in called for, held in CppIR.  {!Tany} is what an erased slot asks for,
     and the only thing left to say when the slot named no type; nothing here
     guesses past that. *)
-let abort_ty_ir : Cpp_ir.Lowered.Type.t option -> Cpp_ir.Lowered.Type.t = function
+let abort_ty : Cpp_ir.Lowered.Type.t option -> Cpp_ir.Lowered.Type.t = function
   | Some ty -> ty
   | None -> Any
 
@@ -404,13 +403,13 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
 (** Apply unit-to-void conversion on a C++ type.  [unit_void] comes from
     {!ml_type_is_void_call}, which already declines for a reified monad, so
     there is one outcome left: the whole type is [void]. *)
-let apply_unit_void_ir unit_void (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t = if unit_void then Void else ty
+let apply_unit_void unit_void (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t = if unit_void then Void else ty
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor).
     Does NOT call [gen_expr] — it checks the extraction table directly. *)
 let mk_tt_expr () : Cpp_ir.Lowered.Expr.t =
   match Table.resolve_tt_ctor () with
-  | Some tt_ref when Table.is_custom tt_ref -> mk_cppglob_ir tt_ref []
+  | Some tt_ref when Table.is_custom tt_ref -> mk_cppglob tt_ref []
   | Some tt_ref ->
     let ind_ref, ctor_name =
       match tt_ref with
@@ -531,19 +530,19 @@ let extract_itree_result_ml (ml_ty : ml_type) : ml_type =
   | _ -> Miniml.Tunknown
 
 (** Build the C++ type [std::shared_ptr<ITree<r_cpp>>]. *)
-let mk_itree_type_ir (r_cpp : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let mk_itree_type (r_cpp : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   Shared_pointer (External (Crane_rt.itree, [r_cpp]))
 
 (** Recursively wrap each inductive application in its namespace so that
     the type printer produces fully-qualified names.  The [~skip]
     predicate controls which references are left unwrapped:
-    [qualify_inductives_ir] wraps all inductives, while
-    [qualify_inductives_ir ~skip:(Ref.User.Set.mem g set)] leaves members of
+    [qualify_inductives] wraps all inductives, while
+    [qualify_inductives ~skip:(Ref.User.Set.mem g set)] leaves members of
     [set] bare.  Used when the rendered type will appear in
     a context where inductives may not be in scope (e.g. [clone_as_value]
     template arguments in standalone free functions). *)
-let rec qualify_inductives_ir ?(skip = fun _ -> false) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-  let go = qualify_inductives_ir ~skip in
+let rec qualify_inductives ?(skip = fun _ -> false) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  let go = qualify_inductives ~skip in
   match t with
   | Entity_application (g, ts, es) -> (
     let core : Cpp_ir.Lowered.Type.t = Entity_application (g, List.map go ts, es) in
@@ -583,7 +582,7 @@ let is_methodified r = Cpp_names.lookup_method_this_pos r <> None
     turns the [return] into an assignment still skips it.  The same value is
     the same word for a shared variant -- one block, or one constructor with
     no fields -- and the same object otherwise. *)
-let guard_compare_ir n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_ir.Lowered.Stmt.t list) :
+let guard_compare n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_ir.Lowered.Stmt.t list) :
     Cpp_ir.Lowered.Stmt.t list =
   match Table.find_guard_compare n with
   | None -> body
@@ -600,7 +599,7 @@ let guard_compare_ir n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_i
         let base1 = strip_wrappers ty1 in
         ( match
             List.find_opt
-              (fun (_, ty2) -> cpp_ty_eq_ir base1 (strip_wrappers ty2))
+              (fun (_, ty2) -> cpp_ty_eq base1 (strip_wrappers ty2))
               rest
           with
         | Some (id2, _) -> Some (id1, id2)
@@ -611,7 +610,7 @@ let guard_compare_ir n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_i
     | Some (p1, p2) ->
       let ctor_expr : Cpp_ir.Lowered.Expr.t =
         match ctor_ref with
-        | _ when Table.is_custom ctor_ref -> mk_cppglob_ir ctor_ref []
+        | _ when Table.is_custom ctor_ref -> mk_cppglob ctor_ref []
         | GlobRef.ConstructRef ((kn, i), cidx)
           when Table.is_enum_inductive (GlobRef.IndRef (kn, i)) ->
           let ctor_name = Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) in
@@ -623,7 +622,7 @@ let guard_compare_ir n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_i
           Cpp_ir.Build.call
             (Type_member (Entity_application (ind, [p1_ty], []), Id.of_string fname))
             []
-        | _ -> mk_cppglob_ir ctor_ref []
+        | _ -> mk_cppglob ctor_ref []
       in
       let same : Cpp_ir.Lowered.Expr.t =
         match strip_wrappers (snd (List.find (fun (i, _) -> i = p1) ids)) with
@@ -636,7 +635,7 @@ let guard_compare_ir n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_i
     | None -> body )
 
 (** Whether [ty] mentions a [std::shared_ptr] anywhere, however deeply. *)
-let contains_shared_ptr_ir : Cpp_ir.Lowered.Type.t -> bool =
+let contains_shared_ptr : Cpp_ir.Lowered.Type.t -> bool =
   Cpp_ir.Types.exists (function Shared_pointer _ -> true | _ -> false)
 
 (** [is_access_path e] -- [e] is a chain of variable reads, dereferences,
@@ -665,7 +664,7 @@ let rec is_access_path : Cpp_ir.Lowered.Expr.t -> bool = function
     Returns [Some stmts] on success, [None] if [expr] is not a liftable IIFE.
     [target_ty] is [None] where the declaration has no type of its own to
     impose, and the lambda's return type is used instead. *)
-let lift_iife_assignment_ir target_var (target_ty : Cpp_ir.Lowered.Type.t option) (expr : Cpp_ir.Lowered.Expr.t) :
+let lift_iife_assignment target_var (target_ty : Cpp_ir.Lowered.Type.t option) (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Stmt.t list option =
   match expr with
   | Call
@@ -812,7 +811,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
      constructor, a [make_shared<...>] argument), so it must be spelled exactly
      as the printer spells the same type in the surrounding generated code:
      each one is handed to the printer as a type node ([Convert], [Allocate],
-     {!Cpp_erasure.converting_ctor_ir}), never rendered here. *)
+     {!Cpp_erasure.converting_ctor}), never rendered here. *)
   (* Strip a single namespace wrapper when it matches the inner application.
      [convert_ml_type_to_cpp_type] wraps external inductives as
      [In_namespace (g, Entity_application (g, ...))] for qualified rendering,
@@ -880,7 +879,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
          name. *)
       let inner = strip_ns inner in
       let derefed : Cpp_ir.Lowered.Expr.t = Dereference expr in
-      if inner = dst_ty then derefed else Cpp_erasure.converting_ctor_ir orig_dst_ty [derefed]
+      if inner = dst_ty then derefed else Cpp_erasure.converting_ctor orig_dst_ty [derefed]
     | _, Shared_pointer inner -> Cpp_ir.Build.call (Allocate (Heap, inner)) [expr]
     | Entity_application (g1, src_ts, _), Entity_application (g2, dst_ts, _)
       when GlobRef.CanOrd.equal g1 g2 && src_ts <> dst_ts && not (Table.is_inline_custom g1) ->
@@ -903,7 +902,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
          [U] may be [std::any], and [pair<K,V>] has no constructor from one --
          nor from [pair<any,any>], which is how a pair's components are boxed
          one at a time.  Dispatch at compile time instead. *)
-      if not (is_access_path expr) then Cpp_erasure.converting_ctor_ir orig_dst_ty [expr]
+      if not (is_access_path expr) then Cpp_erasure.converting_ctor orig_dst_ty [expr]
       else
         (* Which way [U] is read at [A] -- unboxed, converted, or taken apart
            component by component -- cannot be decided until C++ substitutes
@@ -911,7 +910,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
            than restate a part of it here.  The one question left is whether
            there is any route at all: where there is none the field belongs to
            a constructor this instantiation never holds. *)
-        let dst = qualify_inductives_ir ~skip orig_dst_ty in
+        let dst = qualify_inductives ~skip orig_dst_ty in
         Cpp_ir.Build.iife (Some dst)
           [ If_constexpr
               { test = Convertible (dst, Reference (Lvalue, Const src_ty));
@@ -931,13 +930,13 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
     | _, (Entity_application (g, [elem_ty], _) | In_namespace (_, Entity_application (g, [elem_ty], _)))
       when Ml_type_util.is_custom_list_global g && elem_ty <> Any && elem_ty <> Auto -> (
       match src_ty with
-      | Any -> Cpp_erasure.unbox_ir (Entity_application (g, [Any], [])) expr
+      | Any -> Cpp_erasure.unbox (Entity_application (g, [Any], [])) expr
       | _ -> expr )
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never shared_ptr)
          because nested self-references are wrapped at the field level. *)
-      Cpp_erasure.converting_ctor_ir orig_dst_ty [expr]
+      Cpp_erasure.converting_ctor orig_dst_ty [expr]
 
 (** Build a call of [ITree<R>::ret(...)].
     When [r_cpp] is [void], generates [ITree<void>::ret()]. *)
@@ -962,7 +961,7 @@ let mk_itree_ret_for_value (r_cpp : Cpp_ir.Lowered.Type.t) r_ml v =
     monad erasure is just [R].  This function wraps it back into
     [shared_ptr<ITree<R>>] so the tree can be passed as a first-class value.
     Does nothing in sequential mode or when [ml_ty] is not monadic. *)
-let reify_monadic_param_type_ir ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let reify_monadic_param_type ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then begin
     let r_ty : Cpp_ir.Lowered.Type.t =
       match cpp_ty with
@@ -1117,7 +1116,7 @@ let rec is_reified_monadic_expr ml_expr =
     Under [CRANE_CHECK_IR], a returned lambda holding references is a
     violation.  It is made a closure all the same, so that no build returns
     references into a frame that is gone. *)
-let return_captures_by_value_ir (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Stmt.t list =
+let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Stmt.t list =
   let closure (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t =
     match l.capture with
     | Runs_in_place ->
@@ -1321,7 +1320,7 @@ let with_escape_analysis f =
      outer function returns void, gen_stmts generates bare 'return;' for tt,
      but IIFE bodies return their own type (e.g. monostate), not void. *)
   let inner_return_type =
-    match current_cpp_return_type_ir () with
+    match current_cpp_return_type () with
     | Some Cpp_ir.Type.Void -> None
     | rt -> rt
   in
@@ -1349,26 +1348,26 @@ let with_escape_analysis f =
     function's return type leaks into the IIFE body and its tail expression is
     cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
     caller then projects with [.first.first]. *)
-let with_iife_return_type (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_cpp_return_type_ir expected_ty f
+let with_iife_return_type (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_cpp_return_type expected_ty f
 
-(** {!Minicpp.declared_by_reference} in CppIR: whether a parameter declared
+(** Whether a parameter declared
     at [ty] is a reference the body does not own. *)
-let rec declared_by_reference_ir : Cpp_ir.Lowered.Type.t -> bool = function
+let rec declared_by_reference : Cpp_ir.Lowered.Type.t -> bool = function
   | Reference _ | Const _ -> true
-  | In_namespace (_, t) -> declared_by_reference_ir t
+  | In_namespace (_, t) -> declared_by_reference t
   | _ -> false
 
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type worth moving.  That is one
     {!Ownership_ir.worth_moving} accepts as reading [ty]; but an erased ML
     type says nothing of how the value is held, and there the type the head
-    [declared] it at is read instead ({!Ownership_ir.worth_moving_ir}):
+    [declared] it at is read instead ({!Ownership_ir.worth_moving_cpp}):
     [x] in an instance's [fun (A : Type) (x : A) => Some x] is a boxed
     [crane::obj]. *)
 let owned_parameters ?(declared : int -> Cpp_ir.Lowered.Type.t option = fun _ -> None) n ~owned ~ty =
   let worth i =
     match (resolve_tmeta (ty i), declared i) with
-    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_ir.worth_moving_ir cty
+    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_ir.worth_moving_cpp cty
     | ty, _ -> Ownership_ir.worth_moving ty
   in
   List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)
@@ -1404,7 +1403,7 @@ let type_arg_omission r =
 
 (** [ty] with every family variable written applied taken back to the bare
     variable: a plain family is declared without its index. *)
-let deapply_families_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t =
+let deapply_family_variables : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t =
   Cpp_ir.Types.map (function Apply ((Variable _ as v), _) -> v | t -> t)
 
 (** The number of type parameters [g] is written with in C++: the promoted
@@ -1427,7 +1426,7 @@ let written_arity g =
     its head ([fun T => list (box T)] as a bare [list]), or an alias carrier
     ([texp]) passed as its name.  At a plain position that is no type at
     all. *)
-let under_applied_ind_ir (t : Cpp_ir.Lowered.Type.t) =
+let under_applied_ind (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Entity_application (g, args, _) | In_namespace (_, Entity_application (g, args, _)) -> (
     match written_arity g with
@@ -1435,9 +1434,9 @@ let under_applied_ind_ir (t : Cpp_ir.Lowered.Type.t) =
     | None -> false )
   | _ -> false
 
-(** [t], a type {!under_applied_ind_ir} says is short of arguments, applied
+(** [t], a type {!under_applied_ind} says is short of arguments, applied
     at [std::any] for each one missing: a family at an erased index. *)
-let saturate_at_any_ir (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let saturate_at_any (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   let pad g args =
     match written_arity g with
     | Some n -> args @ List.init (n - List.length args) (fun _ : Cpp_ir.Lowered.Type.t -> Any)
@@ -1604,7 +1603,7 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = []) (target : I
   let sub = local_var_subst_expr ~keep_cast ~extra_args target repl in
   match e with
   | Any_cast (ty, Local id) when keep_cast && Id.equal id target ->
-    Cpp_erasure.unbox_ir ty (match repl with Any_cast (_, inner) -> inner | r -> r)
+    Cpp_erasure.unbox ty (match repl with Any_cast (_, inner) -> inner | r -> r)
   | Call (o, Local id, args) when extra_args <> [] && Id.equal id target -> Call (o, repl, List.map sub args @ extra_args)
   | Local id when Id.equal id target -> repl
   | _ ->
@@ -1648,7 +1647,7 @@ and local_var_subst_stmt ?(keep_cast = false) ?(extra_args = []) (target : Id.t)
     s
 
 (** Check whether a variable [target] is referenced in a list of C++ stmts. *)
-let stmts_reference_var_ir (target : Id.t) (stmts : Cpp_ir.Lowered.Stmt.t list) : bool =
+let stmts_reference_var (target : Id.t) (stmts : Cpp_ir.Lowered.Stmt.t list) : bool =
   let exception Found in
   let rec visit_expr (e : Cpp_ir.Lowered.Expr.t) =
     ( match e with
@@ -1737,7 +1736,7 @@ let lifted_member_refs occ ids =
     group captures.  A member reaches its partners as it reaches itself. *)
 let subst_lifted_members ?(extra_args = []) renamed refs targs (body : Cpp_ir.Lowered.Stmt.t list) =
   List.fold_left2
-    (fun body id r -> List.map (local_var_subst_stmt ~extra_args id (mk_cppglob_ir r targs)) body)
+    (fun body id r -> List.map (local_var_subst_stmt ~extra_args id (mk_cppglob r targs)) body)
     body renamed (Array.to_list refs)
 
 (* Walk an ML AST and collect source-order parameter indices that are NOT
@@ -2175,7 +2174,7 @@ let ungeneralised_callables_of_definition r ty b =
     template it forces costs the definition its use as a value of the type
     its Rocq signature names ([church]). *)
 let generalises_callable ~kept_as_fn ~primary f =
-  (not kept_as_fn) && not (IntSet.is_empty primary && is_fully_erased_fun_ty_ir f)
+  (not kept_as_fn) && not (IntSet.is_empty primary && is_fully_erased_fun_ty f)
 
 (** Convert ML params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params, except
@@ -2189,7 +2188,7 @@ let generalises_callable ~kept_as_fn ~primary f =
       [convert_ml_type_to_cpp_type env tvar_names])
     @param base_temps  the template parameters the callable params are appended to
     @return [(cpp_params, all_temps_with_funs)] *)
-let build_lifted_cpp_params_ir ?(non_fwd_source_indices = []) (convert_fn : _ -> Cpp_ir.Lowered.Type.t)
+let build_lifted_cpp_params ?(non_fwd_source_indices = []) (convert_fn : _ -> Cpp_ir.Lowered.Type.t)
     (base_temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters) params =
   let n_total = List.length params in
   let is_non_fwd_source j = List.mem j non_fwd_source_indices in
@@ -2213,7 +2212,7 @@ let build_lifted_cpp_params_ir ?(non_fwd_source_indices = []) (convert_fn : _ ->
       (fun (x, ty, j) ->
         match unwrap_fun_ty ty with
         | Some (Function (dom, cod_f)) when not (is_non_fwd_source j) ->
-          let cod_f : Cpp_ir.Lowered.Type.t = if is_cpp_unit_type_ir cod_f then Void else cod_f in
+          let cod_f : Cpp_ir.Lowered.Type.t = if is_cpp_unit_type cod_f then Void else cod_f in
           Some (x, (Callable_declared (dom, cod_f) : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t), fun_tparam_id j)
         | _ -> None )
       (List.mapi (fun j (x, ty) -> (x, ty, j)) (List.rev cpp_params))
@@ -2246,7 +2245,7 @@ let build_lifted_cpp_params_ir ?(non_fwd_source_indices = []) (convert_fn : _ ->
     Sound only where call sites name no type argument of their own beyond a
     leading prefix they always name, since a positional explicit argument list
     would be renumbered by the drop. *)
-let generalize_lambda_only_tparams_ir (temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters)
+let generalize_lambda_only_tparams (temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters)
     (params : (_ * Cpp_ir.Lowered.Type.t) list) (ret : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
   let tvar_named id ty = Cpp_ir.Types.exists (Cpp_ir.Type.is_variable_named id) ty in
   let candidates =
@@ -2309,7 +2308,7 @@ let generalize_lambda_only_tparams_ir (temps : Cpp_ir.Lowered.phase Cpp_ir.Templ
 
     @param num_ind_vars    number of type vars of the containing inductive/record
     @param extra_tvar_map  mapping from Tvar index to the name of an extra type var *)
-let make_subst_extra_tvars_ir num_ind_vars extra_tvar_map =
+let make_subst_extra_tvars num_ind_vars extra_tvar_map =
   let rec subst (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     match t with
     | Variable (Index (i, None)) when List.mem_assoc i extra_tvar_map -> Variable (Named (List.assoc i extra_tvar_map))
@@ -2430,7 +2429,7 @@ let infer_owned_flags ?owner body params =
     abbreviation: [Definition t elt := list (key * elt)] declares [t<T2>] an
     alias of [List<std::pair<key, T2>>], a value copied whole as surely as one
     named [List] is. *)
-let rec names_value_inductive_ir (cpp_ty : Cpp_ir.Lowered.Type.t) =
+let rec names_value_inductive (cpp_ty : Cpp_ir.Lowered.Type.t) =
   ( match cpp_ty with
   | Entity_application ((GlobRef.IndRef _ as g), _, _) | In_namespace ((GlobRef.IndRef _ as g), _) ->
     (not (Table.is_enum_inductive g)) && (not (Table.is_coinductive g)) && not (Table.is_custom_scalar_ref g)
@@ -2439,23 +2438,23 @@ let rec names_value_inductive_ir (cpp_ty : Cpp_ir.Lowered.Type.t) =
   match cpp_ty with
   | Entity_application ((GlobRef.ConstRef kn as r), args, _) when not (Table.is_custom r) -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some body -> abbreviates_value_inductive_ir args body
+    | Some body -> abbreviates_value_inductive args body
     | None -> false )
   | _ -> false
 
 (* Whether the body [body] of a type abbreviation applied to the C++ types
-   [args] is a value inductive ({!names_value_inductive_ir}): a variable of the
+   [args] is a value inductive ({!names_value_inductive}): a variable of the
    abbreviation stands for the argument written for it. *)
-and abbreviates_value_inductive_ir args body =
+and abbreviates_value_inductive args body =
   match resolve_tmeta body with
   | Miniml.Tglob ((GlobRef.IndRef _ as r), _, _) ->
     (not (Table.is_enum_inductive r)) && (not (Table.is_coinductive r)) && not (Table.is_custom_scalar_ref r)
   | Miniml.Tglob ((GlobRef.ConstRef kn as r), inner, _) when not (Table.is_custom r) -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some body -> abbreviates_value_inductive_ir args (Mlutil.type_subst_list inner body)
+    | Some body -> abbreviates_value_inductive args (Mlutil.type_subst_list inner body)
     | None -> false )
   | Miniml.Tvar (_, j) when j >= 1 -> (
-    match List.nth_opt args (j - 1) with Some t -> names_value_inductive_ir t | None -> false )
+    match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
   | _ -> false
 
 (** Whether a parameter of C++ type [cpp_ty] that its function does not own
@@ -2468,7 +2467,7 @@ and abbreviates_value_inductive_ir args body =
     [shared_ptr] is: copying one in is a retain, and dropping it at the end
     of the call a release.  Borrowed, they too are passed by const
     reference. *)
-let cpp_lent_by_reference_ir (cpp_ty : Cpp_ir.Lowered.Type.t) =
+let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
   let rec shared_block (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Function _ -> true
@@ -2479,7 +2478,7 @@ let cpp_lent_by_reference_ir (cpp_ty : Cpp_ir.Lowered.Type.t) =
   match cpp_ty with
   | Shared_pointer _ -> true
   | _ when shared_block cpp_ty -> true
-  | _ when names_value_inductive_ir cpp_ty -> true
+  | _ when names_value_inductive cpp_ty -> true
   | Variable _ | Member _ -> true
   | _ -> false
 
@@ -2523,8 +2522,8 @@ let rec core_lent_by_reference ty =
     ({!core_lent_by_reference} of its Core type [core] where that says,
     {!cpp_lent_by_reference} otherwise), and by value otherwise.  Under
     [CRANE_CHECK_IR] the two readings are checked against each other. *)
-let wrap_param_by_ownership_ir ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-  let by_cpp = cpp_lent_by_reference_ir cpp_ty in
+let wrap_param_by_ownership ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  let by_cpp = cpp_lent_by_reference cpp_ty in
   let lent =
     match Option.bind core core_lent_by_reference with
     | Some by_core ->
@@ -2539,10 +2538,10 @@ let wrap_param_by_ownership_ir ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowere
   in
   if lent && not is_owned then Reference (Lvalue, Const cpp_ty) else cpp_ty
 
-(** How a parameter declared at [t] -- after {!wrap_param_by_ownership_ir},
+(** How a parameter declared at [t] -- after {!wrap_param_by_ownership},
     or as the [F &&] a deduced callable is -- with ownership [owned], is
     passed. *)
-let param_passing_ir ~owned (t : Cpp_ir.Lowered.Type.t) =
+let param_passing ~owned (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Reference (Forwarding, _) -> Callable_abi.Forwarded
   | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
@@ -2633,21 +2632,21 @@ let rec ml_body_returns_erased_field = function
     [shared_ptr]).  No-op when the types match or neither involves smart
     pointers. *)
 let wrap_storage_expr ~(storage_ty : Cpp_ir.Lowered.Type.t) ~api_ty expr =
-  if storage_ty <> api_ty && contains_shared_ptr_ir storage_ty then
+  if storage_ty <> api_ty && contains_shared_ptr storage_ty then
     gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty expr
   else expr
 
 (** Like {!wrap_storage_expr} but converts from storage form to API form
     (e.g. [shared_ptr] → bare value). *)
 let wrap_api_expr ~(storage_ty : Cpp_ir.Lowered.Type.t) ~api_ty expr =
-  if storage_ty <> api_ty && contains_shared_ptr_ir storage_ty then
+  if storage_ty <> api_ty && contains_shared_ptr storage_ty then
     gen_type_conversion_expr ~src_ty:storage_ty ~dst_ty:api_ty expr
   else expr
 
 (** Strip a single [Tnamespace] wrapper off a namespaced [Tglob], leaving any
     other type untouched. Used to see through the namespace qualifier when
     classifying list-like globals. *)
-let strip_ns_tglob_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+let strip_ns_tglob : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | In_namespace (_, (Entity_application _ as inner)) -> inner
   | t -> t
 
@@ -2661,14 +2660,14 @@ type binder_env = (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t
     [Tnamespace (g, Tglob (g, ...))], which renders as the bogus
     [typename G::G<...>].  Unwrapping those leaves a well-formed type; every
     other namespace qualifier is preserved. *)
-let rec clean_self_ns_ir (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let rec clean_self_ns (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   match t with
   | In_namespace (ns_r, Entity_application (g_r, args, gns)) when GlobRef.CanOrd.equal ns_r g_r ->
-    clean_self_ns_ir (Entity_application (g_r, args, gns))
-  | In_namespace (ns_r, inner) -> In_namespace (ns_r, clean_self_ns_ir inner)
-  | Entity_application (gr, args, ns) -> Entity_application (gr, List.map clean_self_ns_ir args, ns)
-  | Reference (k, t) -> Reference (k, clean_self_ns_ir t)
-  | Shared_pointer t -> Shared_pointer (clean_self_ns_ir t)
+    clean_self_ns (Entity_application (g_r, args, gns))
+  | In_namespace (ns_r, inner) -> In_namespace (ns_r, clean_self_ns inner)
+  | Entity_application (gr, args, ns) -> Entity_application (gr, List.map clean_self_ns args, ns)
+  | Reference (k, t) -> Reference (k, clean_self_ns t)
+  | Shared_pointer t -> Shared_pointer (clean_self_ns t)
   | t -> t
 
 (** One function of a local fixpoint block, as its Y-combinator form names
@@ -2891,12 +2890,12 @@ let boxed slot = match slot.repr with Boxed _ -> true | Native -> false
     the slot already carries is kept, being the outer and earlier one. *)
 let into_box kind slot = if boxed slot then slot else { slot with repr = Boxed kind }
 
-(** [abstract_cpp_type_ir ~over ty] is [ty] with every occurrence of [over]
+(** [abstract_cpp_type ~over ty] is [ty] with every occurrence of [over]
     -- a type variable compared by its index -- replaced by the carrier
-    parameter (printed as the {!Minicpp.ctor_alias_tvar} sentinel): the type
+    parameter (printed as the {!Cpp_print.ctor_alias_tvar} sentinel): the type
     constructor whose application to [over] is [ty], or [None] where [over]
     does not occur, so that there is no such constructor to name. *)
-let abstract_cpp_type_ir ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Type.t) =
+let abstract_cpp_type ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Type.t) =
   let fired = ref false in
   (* Never descending into a [decltype]: comparing two expressions raises on
      the closures one can hold. *)
@@ -2923,7 +2922,7 @@ let abstract_cpp_type_ir ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Ty
     ([wrapped<List, uint64_t>]), never an instantiation, so every site that
     spells an instantiation of [g] -- its type, its factory calls, and the
     constructor structs a match qualifies -- has to agree on this. *)
-let apply_hkt_tyctors_ir g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Type.t list =
+let apply_hkt_tyctors g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Type.t list =
   (* A template-template position takes a {e unary} constructor, and what
      reaches it may be an application of more than one argument: Rocq's
      [TFunctor (fun T => two T (FnBody T))] normalises to [two] applied to
@@ -2932,7 +2931,7 @@ let apply_hkt_tyctors_ir g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered
 
      Putting the binder back is what the position wants, and the printer
      already mints an alias template for a body carrying the sentinel
-     ({!abstract_cpp_type_ir}).  The argument the position varies in is
+     ({!abstract_cpp_type}).  The argument the position varies in is
      the leading one -- the class applies its carrier to the traversed type,
      and this idiom writes that type first.
 
@@ -2990,7 +2989,7 @@ let apply_hkt_tyctors_ir g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered
       match hole with
       | Some k when k > 0 -> with_sentinel_at k
       | _ -> (
-        match abstract_cpp_type_ir ~over t with Some b -> b | None -> t ) )
+        match abstract_cpp_type ~over t with Some b -> b | None -> t ) )
     | _ -> t
   in
   List.mapi
@@ -3033,14 +3032,14 @@ let tvar_name_at tvars i =
     not compared: the declaration spells its parameters after its head's
     relaxations, through its instances' associated types and with aliases
     expanded, so they differ from the type rebuilt here by design. *)
-let check_planned_arity_ir abi (live : Cpp_ir.Lowered.Type.t) =
+let check_planned_arity abi (live : Cpp_ir.Lowered.Type.t) =
   if Probe.checking () then
     match Callable_abi.signature abi with
     | None -> ()
     | Some {Callable_abi.params; _} ->
       let doms = match live with Function (d, _) -> d | _ -> [] in
-      let dicts, values = List.partition Ml_type_util.is_typeclass_type_cpp_ir doms in
-      let values = List.filter (fun t -> not (is_skipped_cpp_type_ir t)) values in
+      let dicts, values = List.partition Ml_type_util.is_typeclass_type_cpp doms in
+      let values = List.filter (fun t -> not (is_skipped_cpp_type t)) values in
       let instances =
         List.length
           (List.filter
@@ -3056,5 +3055,5 @@ let check_planned_arity_ir abi (live : Cpp_ir.Lowered.Type.t) =
             ++ str (Printf.sprintf " where its type has %d and %d" (List.length values) (List.length dicts)) )
 
 (** {!check_planned_arity} for the installed plan of [id], where it has one. *)
-let check_installed_arity_ir id live =
-  if Probe.checking () then Option.iter (fun abi -> check_planned_arity_ir abi live) (Callable_abi.lookup id)
+let check_installed_arity id live =
+  if Probe.checking () then Option.iter (fun abi -> check_planned_arity abi live) (Callable_abi.lookup id)

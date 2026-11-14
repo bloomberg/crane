@@ -475,7 +475,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type_ir (Some method_ret_ty) @@ fun () ->
+            with_cpp_return_type (Some method_ret_ty) @@ fun () ->
             if bodies then begin_body ~owner:name ();
             if List.for_all (fun b -> b.mb_kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
@@ -501,7 +501,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                          slot down as [std::any] is what makes the value
                          boxed, so a [Topaque] here becomes known-boxed. *)
                       let cpp_ty =
-                        materialise_opaque_ir (cpp_ir_of_ml_type base_env type_var_names arg_ty)
+                        materialise_opaque (cpp_ir_of_ml_type base_env type_var_names arg_ty)
                       in
                       (name, arg_ty, cpp_ty) )
                     eta_params
@@ -570,7 +570,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     ~owned:(fun i ->
                       let name, _, cpp_ty = params_db.(i) in
                       List.exists (fun (n, _, _) -> Id.equal n name) cast_info
-                      || not (Translation_support.declared_by_reference_ir cpp_ty) )
+                      || not (Translation_support.declared_by_reference cpp_ty) )
                     ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some cpp_ty)
                     ~ty:(fun i -> snd (List.nth ml_vars i))
                 in
@@ -584,7 +584,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
                     (Cpp_ir.Stmt.Bind_variable
-                       (name, Declare (body_cpp, None), Cpp_erasure.unbox_ir body_cpp (Local param_name))
+                       (name, Declare (body_cpp, None), Cpp_erasure.unbox body_cpp (Local param_name))
                       : Cpp_ir.Lowered.Stmt.t)
                     :: acc
                   ) stmts (List.rev cast_info)
@@ -663,7 +663,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                       Translation_support.owned_parameters (Array.length binders_db)
                         ~owned:(fun i ->
                           binders_db.(i).mb_kind = `Value
-                          && not (Translation_support.declared_by_reference_ir binders_db.(i).mb_cpp_ty) )
+                          && not (Translation_support.declared_by_reference binders_db.(i).mb_cpp_ty) )
                         ~declared:(fun i -> Some binders_db.(i).mb_cpp_ty)
                         ~ty:(fun i -> binders_db.(i).mb_ml_ty)
                     in

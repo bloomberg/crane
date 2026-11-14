@@ -133,7 +133,7 @@ let template_kinds ?(applied : head_type option) vars tys =
   (* Read from the rendered type where there is one: the ML body still applies
      a variable that erasure removed, and the parameter list has to agree with
      what the users of this name can see.  See
-     {!Ml_type_util.rendered_tvar_arities_ir}. *)
+     {!Ml_type_util.rendered_tvar_arities}. *)
   let arities =
     match applied with
     | Some a ->
@@ -141,7 +141,7 @@ let template_kinds ?(applied : head_type option) vars tys =
          payloads below: applied only at erased or variable arguments --
          [IFun E F := forall T, E T -> F T], whose [T] erases -- is a family,
          and a family is a plain parameter. *)
-      let arities = Ml_type_util.rendered_tvar_arities_ir a in
+      let arities = Ml_type_util.rendered_tvar_arities a in
       let demanded = Hashtbl.create 4 in
       let rec scan : head_type -> unit = function
         | Apply (Variable (Index (i, _)), tys) ->
@@ -201,7 +201,7 @@ let template_kinds ?(applied : head_type option) vars tys =
      template of every use site for a position that holds nothing.  It is a
      plain parameter defaulted to [void], and {!Table.is_phantom_type_param}
      is what makes the use sites agree. *)
-  let rendered = Option.map Ml_type_util.get_rendered_tvar_indices_ir applied in
+  let rendered = Option.map Ml_type_util.get_rendered_tvar_indices applied in
   let rendered_in_cpp i =
     match rendered with None -> true | Some l -> List.mem i l
   in
@@ -239,7 +239,7 @@ let template_kinds ?(applied : head_type option) vars tys =
   (* Applied in the definition and still plain: a family position. *)
   let applied_at_all =
     match applied with
-    | Some a -> Ml_type_util.rendered_tvar_arities_ir a
+    | Some a -> Ml_type_util.rendered_tvar_arities a
     | None -> Ml_type_util.applied_ml_tvar_arities tys
   in
   ( temps,
@@ -650,7 +650,7 @@ let default_unmentioned_temps (temps : head_params) (signature : Callable_abi.si
   in
   (* Only the arguments a type actually writes count: an argument in a
      position nothing writes is no more deducible than one that is not there. *)
-  let prune = Ml_type_util.prune_unwritten_args_ir in
+  let prune = Ml_type_util.prune_unwritten_args in
   let has_tvar id ty = head_type_exists (is_tvar id) (prune ty) in
   let mentions id =
     let has = has_tvar id in
@@ -760,13 +760,13 @@ let phantom_aware_temps
         | _ -> (tt, id) )
       temps
   in
-  undefault (explicit_tvar_prefix_ir ~force_required cty)
+  undefault (explicit_tvar_prefix ~force_required cty)
   @@ with_applied_tvars ?ml_ty cty
   @@
   match cty with
   | Function (dom, cod) ->
-    let tvars_indexed = get_tvars_indexed_ir cty in
-    let primary = primary_tvar_indices_ir dom cod in
+    let tvars_indexed = get_tvars_indexed cty in
+    let primary = primary_tvar_indices dom cod in
     let primary = IntSet.union primary force_required in
     (* [also_declared] is every variable the ML type has, which is not every
        variable the C++ type spells: an erased one is written nowhere in the

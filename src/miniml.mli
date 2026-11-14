@@ -15,7 +15,7 @@
     MiniML is the language-agnostic functional intermediate representation at
     the heart of the extractor.  The pipeline is
 
-    {[ Rocq PCUIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
+    {[ Rocq PCUIC --[extraction.ml]--> MiniML --[translation.ml]--> CppIR
        --[cpp.ml]--> C++ ]}
 
     Extraction from Rocq's PCUIC first erases everything with no computational
@@ -26,7 +26,7 @@
     {!ml_decl} / {!ml_specif} for whole definitions and module components.
     ML-level optimisations (inlining, dead-code elimination, currying fixes)
     run over these trees before {!Translation} lowers them to the C++-shaped
-    {!Minicpp} IR.
+    {!Cpp_ir}.
 
     This module is inherited largely unchanged from Rocq's own extraction
     plugin; Crane extends it (notably {!ml_ind_packet}'s [ip_consarg_names])
