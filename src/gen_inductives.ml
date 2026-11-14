@@ -679,20 +679,18 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     ms_params = params;
     _
   } = s in
-  let ret_cpp_ir = ret_cpp in
-  let ret_cpp = Cpp_ir_to_legacy_minicpp.ty ret_cpp in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method =
     Translation_support.suspends_whole func_ref ret_ty (snd (collect_lams body))
   in
-  let method_k x =
+  let method_k x : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_method then
       suspend_whole
-        ~cpp_of:(convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
+        ~cpp_of:(cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
         ~cod:ret_cpp ret_ty x
     else
-      Sreturn (Some x)
+      Return (Some x)
   in
   (* Generate the method body, owning its owned parameters.  The de Bruijn
      environment has parameters in reverse order: ids_normal_order has
@@ -738,7 +736,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type_ir (Some ret_cpp_ir) @@ fun () ->
+    with_cpp_return_type_ir (Some ret_cpp) @@ fun () ->
     with_type_vars (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or
@@ -747,7 +745,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
             with_region ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
-                List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_stmts env method_k inner_body) ) ) )
+                gen_stmts env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
@@ -809,7 +807,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     Entity_application (name, List.map Cpp_ir.Build.named_variable vars, [])
   in
   let stmts =
-    if Cpp_ir.Types.exists (function Shared_pointer _ -> true | _ -> false) ret_cpp_ir then
+    if Cpp_ir.Types.exists (function Shared_pointer _ -> true | _ -> false) ret_cpp then
       List.map (replace_return_this_stmt self_type) stmts
     else stmts
   in
@@ -828,7 +826,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
     finish_fn_body_ir
-      (if ml_type_is_void_call ty then Void else ret_cpp_ir)
+      (if ml_type_is_void_call ty then Void else ret_cpp)
       (List.map (tvar_subst_stmt_ir extended_vars) stmts)
   in
 

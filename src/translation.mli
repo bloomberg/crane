@@ -143,7 +143,7 @@ val ml_arg_to_template_type :
 val mentions_unresolved_promoted : Minicpp.cpp_type -> bool
 
 (** Generate a C++ expression from an ML AST. *)
-val gen_expr : ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:slot -> env -> ml_ast -> cpp_expr
+val gen_expr : ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:slot -> env -> ml_ast -> Cpp_ir.Lowered.Expr.t
 
 (** [recover_boxed_component into e] opens the box when [e] is evidently a
     component read out of a pair that was itself recovered from a box, and so
@@ -158,7 +158,7 @@ val unbox_value : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lower
     the scrutinee's variant, wrapped in an immediately-invoked lambda.  The
     occurrence is the match's, the site of the binders its patterns bind
     ({!Core_binder.Branch}). *)
-val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> Occurrence.t -> cpp_expr
+val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> Occurrence.t -> Cpp_ir.Lowered.Expr.t
 
 (** The Core binders of the parameters of a function whose body is generated
     under [env], by name ({!Core_binder}): [env] gives no two binders in
@@ -172,7 +172,7 @@ val parameter_binders : env -> (Names.Id.t * 'a) list -> (Names.Id.t * Core_bind
     [slot] is {!gen_expr}'s, carried into the tail positions of these
     statements. *)
 val gen_stmts :
-  ?slot:slot -> env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
+  ?slot:slot -> env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> ml_ast -> Cpp_ir.Lowered.Stmt.t list
 
 (** Try eta-expanding/applying [f] to [args] when a call is under-applied or
     involves a type-erased higher-order callback. Falls back to a plain
@@ -180,7 +180,7 @@ val gen_stmts :
 val eta_fun :
   ?slot:slot ->
   ?expected_ty:Cpp_ir.Lowered.Type.t ->
-  env -> ml_ast -> ml_ast list -> cpp_expr
+  env -> ml_ast -> ml_ast list -> Cpp_ir.Lowered.Expr.t
 (** [slot] is {!gen_expr}'s, carried into the argument expressions. *)
 
 (** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion

@@ -650,22 +650,15 @@ let hkt_tvar_resolutions_of_type ?source_order ty : (int * Cpp_ir.Lowered.Type.t
     (hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
-    {!hkt_tvar_resolutions_of_type}) throughout a MiniCpp type, the
-    resolutions raised to MiniCpp first. *)
-let apply_hkt_resolutions resolutions ty =
-  if resolutions = [] then ty
-  else
-    let resolutions = List.map (fun (i, t) -> (i, Cpp_ir_to_legacy_minicpp.ty t)) resolutions in
-    Minicpp.subst_cpp_tvars (fun i -> List.assoc_opt i resolutions) ty
-
-(** Rewrite those type variables throughout the statements of a function
+    {!hkt_tvar_resolutions_of_type}) throughout the statements of a function
     body, so type annotations there agree with the resolved signature. *)
-let apply_hkt_resolutions_stmts resolutions stmts =
+let apply_hkt_resolutions_stmts resolutions (stmts : Cpp_ir.Lowered.Stmt.t list) =
   if resolutions = [] then stmts
   else
-    let ft = apply_hkt_resolutions resolutions in
-    let rec fe e = Minicpp.map_expr fe fs ft e
-    and fs s = Minicpp.map_stmt fe fs ft s in
+    let ft = Cpp_ir.Types.substitute (fun i -> List.assoc_opt i resolutions) in
+    let rec fe e = Cpp_ir.Map.expr (rw ()) e
+    and fs s = Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
     List.map fs stmts
 
 (** Rewrite those type variables throughout a whole CppIR declaration: an instance

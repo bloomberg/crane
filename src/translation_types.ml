@@ -1092,7 +1092,7 @@ let boxed_shape_of_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = functio
     back into expression generation -- a mapped type applied to a term, as a
     fixed-size array is to its length -- so it is the edge the two are
     separated at. *)
-let type_term_arg : (env -> ml_ast -> cpp_expr) ref =
+let type_term_arg : (env -> ml_ast -> Cpp_ir.Lowered.Expr.t) ref =
   ref (fun _ _ -> CErrors.anomaly (Pp.str "Translation.type_term_arg: unset"))
 
 (** [cpp_ir_of_ml_type env ~ns tvars t] is the C++ type of the ML type [t],
@@ -1196,7 +1196,7 @@ let rec cpp_ir_of_ml_type
     Entity_application
       ( g,
         List.map (cpp_ir_of_ml_type env ~ns tvars) ts,
-        List.map (fun a -> Legacy_minicpp_to_cpp_ir.lower_expr (!type_term_arg env a)) args )
+        List.map (fun a -> !type_term_arg env a) args )
   | Tglob (g, ts, _) ->
     (* For inductives, only keep type args that correspond to parameters (not
        indices). Parameters become template params in C++; indices are

@@ -1527,6 +1527,12 @@ let has_tany_in_type_ir = Cpp_ir.Children.exists_type is_tany_node_ir
 (** {!has_tany_written} over a CppIR type. *)
 let has_tany_written_ir t = has_tany_in_type_ir (prune_unwritten_args_ir t)
 
+(** {!type_is_erased} over a CppIR type. *)
+let rec type_is_erased_ir (ty : Cpp_ir.Lowered.Type.t) : bool =
+  match ty with
+  | Const inner | In_namespace (_, inner) -> type_is_erased_ir inner
+  | t -> is_tany_node_ir t
+
 (** {!has_unnamed_tvar} over a CppIR type. *)
 let has_unnamed_tvar_ir =
   Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->

@@ -342,14 +342,14 @@ let return_captures_by_value_ir (stmts : Cpp_ir.Lowered.Stmt.t list) =
 (** [return ty::lazy_([=]() -> cod { return x; })]: the body's result [x], of
     C++ type [cod], suspended whole as the coinductive [ml_ret], whose type
     arguments [cpp_of] spells. *)
-let suspend_whole ~cpp_of ~cod ml_ret x =
+let suspend_whole ~cpp_of ~cod ml_ret x : Cpp_ir.Lowered.Stmt.t =
   match ml_ret with
   | Miniml.Tglob (r, args, _) ->
-    Sreturn
+    Return
       (Some
-         (CPPsuspend
-            ( Tglob (r, List.map cpp_of args, []),
-              mk_lambda [] (Some cod) [Sreturn (Some x)] ~capture:Closure )))
+         (Suspend
+            ( Entity_application (r, List.map cpp_of args, []),
+              Cpp_ir.Build.lambda [] (Some cod) [Return (Some x)] ~capture:Stored )))
   | _ -> CErrors.anomaly (Pp.str "suspend_whole: a coinductive result is a Tglob")
 
 (** The C++ expression stating the witness held by a [sig]-typed parameter
@@ -501,7 +501,7 @@ type body_scope = {
       (** Under polymorphic recursion, the parameters a self-call has to
           write although the call is not at the declaration's own
           instantiation ({!self_call_reference}); [None] where it is. *)
-  bs_gen_body_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list;
+  bs_gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> ml_ast -> Cpp_ir.Lowered.Stmt.t list;
       (** Generates body statements with the signature's higher-kinded
           resolutions applied. *)
   bs_no_pure : bool;
@@ -1274,10 +1274,8 @@ let declare_planned n decl =
                  recorded of each ({!Callable_abi.minted}) *)
 let gen_dfun ~minted n b cty ty temps =
   let scope = dfun_body_scope ~minted n b cty ty temps in
-  let raise_ty = Cpp_ir_to_legacy_minicpp.ty in
   let relaxations = planned_relaxations n ty scope in
   let rec_call = self_call_reference n ~undeducible:scope.bs_self_call_undeducible in
-  let lower_stmts = List.map Legacy_minicpp_to_cpp_ir.lower_stmt in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
@@ -1295,10 +1293,7 @@ let gen_dfun ~minted n b cty ty temps =
   } =
     scope
   in
-  (* Translation still generates MiniCpp: what its continuation and the
-     guard read of the head is raised once. *)
-  let cod = raise_ty scope.bs_cod in
-  let ids = List.map (fun (x, t) -> (x, raise_ty t)) scope.bs_ids in
+  let cod = scope.bs_cod in
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params — they are not ML type variables
@@ -1361,22 +1356,22 @@ let gen_dfun ~minted n b cty ty temps =
      only up to unfolding -- is suspended whole. *)
   let ml_ret = ml_return_type ty in
   let is_cofix_return = Translation_support.suspends_whole n ml_ret b in
-  let cofix_wrap x =
+  let cofix_wrap (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_return then
-      suspend_whole ~cpp_of:(convert_ml_type_to_cpp_type env type_var_ids) ~cod ml_ret x
-    else if cod = Tvoid then
+      suspend_whole ~cpp_of:(cpp_ir_of_ml_type env type_var_ids) ~cod ml_ret x
+    else if cod = Void then
       (* void function: execute expression for side effects, then return.
          Some tail expressions (like writeTVar) have side effects that must
          not be discarded. Skip pure expressions (variables, enum values,
          inline-custom literals like std::monostate{}) to avoid dead-code
          warnings. *)
       ( match x with
-      | CPPenum_val _ | CPPvar _ | CPPint _ | CPPfloat _ | CPPraw _ ->
-        Sreturn None
-      | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> Sreturn None
-      | _ -> Sblock [Sexpr x; Sreturn None] )
+      | Enum_value _ | Local _ | Literal (Int _) | Literal (Float _) | Foreign_text _ ->
+        Return None
+      | Entity (_, _, Some ci) when ci.inline <> None -> Return None
+      | _ -> Block [Expression x; Return None] )
     else
-      Sreturn (Some x)
+      Return (Some x)
   in
   (* Generate sigma type precondition assertions *)
   let sigma_asserts =
@@ -1468,15 +1463,8 @@ let gen_dfun ~minted n b cty ty temps =
   (* method_self_ns is extended by the caller ([gen_decl__inner], or
      {!with_function_head} for the others, through [with_method_ns_for_locals])
      before computing cty, so it's already active here. *)
-  (* The guard of [Crane Guard Compare], spliced in front of the body: built
-     by translation, which still generates MiniCpp. *)
-  let guarded body : Cpp_ir.Lowered.Stmt.t list =
-    match guard_compare n ids [] with
-    | [] -> body
-    | [Sif (same, then_, [])] ->
-      [If {condition = Legacy_minicpp_to_cpp_ir.lower_expr same; then_ = lower_stmts then_; else_ = body}]
-    | _ -> CErrors.anomaly Pp.(str "the guard of " ++ GlobRef.print n ++ str " is not a conditional.")
-  in
+  (* The guard of [Crane Guard Compare], in front of the body. *)
+  let guarded body = Translation_support.guard_compare_ir n scope.bs_ids body in
   let definition body : Cpp_ir.Lowered.Decl.t =
     Function
       { path = {outer = (n, []); inner = []};
@@ -1484,7 +1472,7 @@ let gen_dfun ~minted n b cty ty temps =
         no_pure;
         constexpr = Undecided;
         shape = Definition (List.rev scope.bs_ids, finish_fn_body_ir scope.bs_cod (guarded (sigma_asserts @ body)));
-        binders = parameter_binders env ids;
+        binders = parameter_binders env scope.bs_ids;
         loop = None }
   in
   let inner =
@@ -1495,7 +1483,7 @@ let gen_dfun ~minted n b cty ty temps =
         | None ->
           let b =
             List.map (glob_subst_stmt_ir ~spare n rec_call)
-              (lower_stmts (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b)))
+              (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
           in
           return_captures_by_value_ir b
       in
@@ -1512,11 +1500,11 @@ let gen_dfun ~minted n b cty ty temps =
         | None ->
         match b with
         | MLaxiom _ | MLexn _ ->
-          List.map (glob_subst_stmt_ir ~spare n rec_call) (lower_stmts (gen_stmts env cofix_wrap b))
+          List.map (glob_subst_stmt_ir ~spare n rec_call) (gen_stmts env cofix_wrap b)
         | _ ->
           List.map
             (glob_subst_stmt_ir ~spare n rec_call)
-            (lower_stmts (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b)))
+            (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
       in
       let b = return_captures_by_value_ir b in
       clear_current_type_vars ();
@@ -1683,7 +1671,7 @@ let recover_erased_body_types ty b =
     initialisation. *)
 let gen_constant_value ?expected_ty b =
   match b with
-  | MLdummy _ -> Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir
+  | MLdummy _ -> Cpp_erasure.empty_box_ir
   | _ -> gen_expr ?expected_ty (empty_env ()) b
 
 (** The parameters a head declares for the type variables [cty] spells,
@@ -1715,14 +1703,14 @@ let thunk n ret body : Cpp_ir.Lowered.Decl.t =
       return_type = ret;
       no_pure = false;
       constexpr = Undecided;
-      shape = Definition ([], [Return (Some (Legacy_minicpp_to_cpp_ir.lower_expr body))]);
+      shape = Definition ([], [Return (Some body)]);
       binders = [];
       loop = None }
 
 (** The constant [n] of C++ type [ty], initialised with [init], the value
     translation generated. *)
 let variable n ty init : Cpp_ir.Lowered.Decl.t =
-  Variable {ref_ = n; type_ = ty; init = Legacy_minicpp_to_cpp_ir.lower_expr init; constexpr = Undecided}
+  Variable {ref_ = n; type_ = ty; init; constexpr = Undecided}
 
 (** Generate the C++ declaration of [n], which is not a function, from its
     ML definition: a constant whose body only throws (as a zero-argument
@@ -1733,12 +1721,11 @@ let gen_decl__inner n b ty =
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
   let cty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let cty = Cpp_ir_to_legacy_minicpp.ty cty_ir in
   let tvars = get_tvars_ir cty_ir in
   let temps = Cpp_ir.Build.typenames tvars in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
-  match cty with
-    | Tfun _ -> function_without_plan n
+  match cty_ir with
+    | Function _ -> function_without_plan n
     | _ ->
     match b with
     | _ when thunk_reason n = Some Throws ->
@@ -1756,18 +1743,17 @@ let gen_decl__inner n b ty =
          the call produces no value.  Wrap in an IIFE that executes the
          body for side effects and returns Unit::e_TT. *)
       let body_expr =
-        if is_cpp_unit_type cty then
+        if is_cpp_unit_type_ir cty_ir then
           match body_expr with
-          | CPPenum_val _ -> body_expr  (* already a literal *)
-          | CPPglob (_, _, Some ci) when ci.ci_inline <> None ->
+          | Enum_value _ -> body_expr  (* already a literal *)
+          | Entity (_, _, Some ci) when ci.inline <> None ->
             body_expr  (* inline custom literal (e.g. std::monostate{}) *)
-          | _ ->
-            mk_iife None [Sexpr body_expr; Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ())))]
+          | _ -> Cpp_ir.Build.iife None [Expression body_expr; Return (Some (mk_tt_expr ()))]
         else body_expr
       in
       let body_expr =
-        match slot_repr_of_cpp_type cty with
-        | Boxed kind -> Cpp_ir_to_legacy_minicpp.expr (box_for_any_slot kind b (Legacy_minicpp_to_cpp_ir.lower_expr body_expr))
+        match Translation_types.slot_repr_of_cpp_type_ir cty_ir with
+        | Boxed kind -> box_for_any_slot kind b body_expr
         | Native -> body_expr
       in
       (templated (deapply_plain_tvars temps (variable n cty_ir body_expr)), empty_env (), tvars)
@@ -1909,12 +1895,11 @@ let gen_spec__inner n b ty =
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   with_method_ns_for_locals @@ fun () ->
   let ty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let ty = Cpp_ir_to_legacy_minicpp.ty ty_ir in
   let temps = Cpp_ir.Build.typenames (get_tvars_ir ty_ir) in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
   let result =
-    match ty with
-    | Tfun _ -> function_without_plan n
+    match ty_ir with
+    | Function _ -> function_without_plan n
     | _ ->
     match b with
     | _ when thunk_reason n = Some Throws ->
@@ -1970,39 +1955,38 @@ let gen_spec__inner n b ty =
              type var (erased to std::any) but Coq's type system sees the
              concrete type, so no MLmagic is generated. *)
       let is_concrete_target =
-        match ty with
-        | Tany | Tvar _ | Tunresolved | Tvoid | Tauto -> false
-        | Tglob (g, _, _) when Table.is_erased_type_const g -> false
-        | _ -> not (type_is_erased ty)
+        match ty_ir with
+        | Any | Variable _ | Obligation Unresolved_type | Void | Auto -> false
+        | Entity_application (g, _, _) when Table.is_erased_type_const g -> false
+        | _ -> not (type_is_erased_ir ty_ir)
       in
       let needs_any_cast =
         is_concrete_target
         && (has_magic || ml_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then Cpp_ir_to_legacy_minicpp.expr (unbox_value (Legacy_minicpp_to_cpp_ir.lower_type ty) (Legacy_minicpp_to_cpp_ir.lower_expr b_expr))
+        if needs_any_cast then unbox_value ty_ir b_expr
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
              [std::any] whatever its ML type says, and neither (a) nor (b)
              sees that. *)
-          Cpp_ir_to_legacy_minicpp.expr (recover_boxed_component (Legacy_minicpp_to_cpp_ir.lower_type ty) (Legacy_minicpp_to_cpp_ir.lower_expr b_expr))
+          recover_boxed_component ty_ir b_expr
       in
       (* When a unit-typed constant's body may call a void-ified function,
          wrap in an IIFE that executes the body for side effects and
          returns Unit::e_TT.  Pure enum literals need no wrapping. *)
       let b_expr =
-        if is_cpp_unit_type ty && ml_type_is_unit ml_ty then
+        if is_cpp_unit_type_ir ty_ir && ml_type_is_unit ml_ty then
           match b_expr with
-          | CPPenum_val _ -> b_expr
-          | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> b_expr
-          | _ ->
-            mk_iife None [Sexpr b_expr; Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ())))]
+          | Enum_value _ -> b_expr
+          | Entity (_, _, Some ci) when ci.inline <> None -> b_expr
+          | _ -> Cpp_ir.Build.iife None [Expression b_expr; Return (Some (mk_tt_expr ()))]
         else b_expr
       in
       let b_expr =
-        match slot_repr_of_cpp_type ty with
-        | Boxed kind -> Cpp_ir_to_legacy_minicpp.expr (box_for_any_slot kind inner_body (Legacy_minicpp_to_cpp_ir.lower_expr b_expr))
+        match Translation_types.slot_repr_of_cpp_type_ir ty_ir with
+        | Boxed kind -> box_for_any_slot kind inner_body b_expr
         | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell

@@ -504,6 +504,9 @@ val has_unnamed_tvar : Minicpp.cpp_type -> bool
 (** Whether a C++ type is erased. *)
 val type_is_erased : Minicpp.cpp_type -> bool
 
+(** {!type_is_erased} over a CppIR type. *)
+val type_is_erased_ir : Cpp_ir.Lowered.Type.t -> bool
+
 (** {2 Function argument and return decomposition} *)
 
 (** The final return type of a MiniML type. *)
