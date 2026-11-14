@@ -198,20 +198,20 @@ type translation_ctx = {
       A binder is typed once, where it is bound ({!Bbinding}, written by
       [push_binders]); a pattern match that pins a field down more precisely
       than its definition-site type says -- matching [SigT<Tag,
-      std::function<any(any)>>] records [Tfun (\[Tany\], Tany)] for the
+      std::function<any(any)>>] records [Function (\[Any\], Any)] for the
       function field -- overrides it ({!Bpattern}, written by
       [populate_erased_field_env]).  Whether a binder is boxed is read off
       this map rather than tracked beside it, so the two answers cannot drift
       apart.
 
       Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
-  cpp_binder_types : (cpp_type * binder_origin) IntMap.t;
+  cpp_binder_types : (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t;
   (* The C++ types a declaration's head declares its innermost parameters
      at, innermost first, beside the depth of the binder stack they were
      pushed at: what a region generated directly in that scope plans those
      binders at ({!Representation_plan.region}).  [None] where the head
      declares none beyond the conversion of their ML types. *)
-  declared_outer : (int * cpp_type option list) option;
+  declared_outer : (int * Cpp_ir.Lowered.Type.t option list) option;
 }
 
 (** A pattern binder's representation as {!Representation_plan} plans it:
@@ -230,7 +230,7 @@ and planned_repr = {
 and planned_read = {
   rd_boxed : bool;
   rd_kind : binder_kind;
-  rd_type : cpp_type option;
+  rd_type : Cpp_ir.Lowered.Type.t option;
 }
 
 and binder_kind =

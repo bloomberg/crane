@@ -73,16 +73,16 @@ val type_is_erased : cpp_type -> bool
     point it is bound.  [?cpp] overrides the conversion for binders whose type
     the caller knows better than their ML type says. *)
 val push_binders :
-  ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
+  ?cpp:Cpp_ir.Lowered.Type.t option list -> env -> (Id.t * ml_type) list -> unit
 
 (** {!push_binders} for a declaration's parameters, whose class-typed ones are
     its dictionaries ({!Core_query.parameter_role}). *)
 val push_parameters :
-  ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
+  ?cpp:Cpp_ir.Lowered.Type.t option list -> env -> (Id.t * ml_type) list -> unit
 
 (** Binder-type state: every binder's C++ type, tagged with what decided it. *)
 type binder_env =
-  (cpp_type * Translation_state.binder_origin) Translation_state.IntMap.t
+  (Cpp_ir.Lowered.Type.t * Translation_state.binder_origin) Translation_state.IntMap.t
 
 (** Save the current binder-type state. *)
 val save_erased_env : unit -> binder_env

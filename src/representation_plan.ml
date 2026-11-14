@@ -24,21 +24,22 @@ type origin =
    first, beside the binder's ML type in {!Lexenv}. *)
 type scope = {
   lex : Lexenv.t;
-  planned : (cpp_type * origin) option list;
+  planned : (Cpp_ir.Lowered.Type.t * origin) option list;
   kinds : binder_kind list;
 }
 
 (* Whether a planned type is a box. *)
-let boxed = function
-  | Some (Topaque, _) | None -> false
-  | Some (t, _) -> resolves_to_any_type t
+let boxed : (Cpp_ir.Lowered.Type.t * origin) option -> bool = function
+  | Some (Obligation Opaque_type, _) | None -> false
+  | Some (t, _) -> resolves_to_any_type_ir t
 
 (* The type a binder of ML type [ty] is given where it is bound
    ({!Translation_types.assign_binder_types}): none where the conversion is
    [Topaque], a dummy, or fails. *)
 let at_binding ty =
-  match cpp_of_ml (Common.empty_env ()) ty with
-  | t when t <> Topaque && not (is_cpp_dummy_type t) -> Some (t, Binding)
+  match cpp_of_ml_ir (Common.empty_env ()) ty with
+  | Obligation Opaque_type -> None
+  | t when not (is_cpp_dummy_type_ir t) -> Some (t, Binding)
   | _ -> None
   | exception _ -> None
 
@@ -51,13 +52,13 @@ let push kind ids scope =
 
 (* The domains a slot of C++ type [t] declares, where it declares a
    signature ({!Translation.gen_expr}'s [MLlam]). *)
-let rec slot_domains t =
+let rec slot_domains (t : Cpp_ir.Lowered.Type.t) =
   match t with
-  | Tnondeduced t | Tconst t | Tref (Lvalue, t) -> slot_domains t
-  | Tfun (doms, _) -> Some doms
+  | Non_deduced t | Const t | Reference (Lvalue, t) -> slot_domains t
+  | Function (doms, _) -> Some doms
   | t -> (
-    match unfold_cpp_typedef (Common.empty_env ()) t with
-    | Tfun (doms, _) as f when f <> t -> Some doms
+    match unfold_cpp_typedef_ir (Common.empty_env ()) t with
+    | Function (doms, _) as f when f <> t -> Some doms
     | _ -> None )
 
 (* What a lambda's parameters [ids] (innermost first, over [body]) are read
@@ -70,7 +71,7 @@ let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
   let scope = push Kparameter ids scope in
   let n = List.length ids in
   let slot = Option.bind slot_ty slot_domains in
-  let emitted i ty = lambda_binder_emitted (Common.empty_env ()) ~expected_ty:slot_ty ~body ids i ty in
+  let emitted i ty = lambda_binder_emitted_ir (Common.empty_env ()) ~expected_ty:slot_ty ~body ids i ty in
   let emitted_ids = List.filteri (fun i (_, ty) -> emitted i ty) ids in
   let n_emitted = List.length emitted_ids in
   let rank2_carrier =
@@ -95,7 +96,8 @@ let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
           with
           | decl, _ -> (
             match strip_param_wrappers (lambda_param_assigned ~slot_dom ty decl) with
-            | t when t <> Topaque && not (is_cpp_dummy_type t) -> Some (t, Binding)
+            | Obligation Opaque_type -> None
+            | t when not (is_cpp_dummy_type_ir t) -> Some (t, Binding)
             | _ -> None )
           | exception _ -> at_binding ty )
       ids
@@ -122,9 +124,10 @@ and head_is_callable lex h =
 
 (* {!Translation_types.record_binder_type}: a match pins [t] down for a
    binder planned [cur], unless a match already pinned a box there. *)
-let pin cur t =
+let pin cur (t : Cpp_ir.Lowered.Type.t) =
   match cur with
-  | Some (t', Pattern) when t' <> Topaque && resolves_to_any_type t' -> cur
+  | Some (Cpp_ir.Type.Obligation Opaque_type, Pattern) -> Some (t, Pattern)
+  | Some (t', Pattern) when resolves_to_any_type_ir t' -> cur
   | _ -> Some (t, Pattern)
 
 let scrutinee_pinned scope scrut =
@@ -142,7 +145,7 @@ let pinned_fields scope ~typ ~scrut cname planned =
   in
   List.map2
     (fun p (stored_as_any, arg) ->
-      let p = if stored_as_any then pin p Tany else p in
+      let p = if stored_as_any then pin p Any else p in
       match arg with Some t -> pin p t | None -> p )
     planned pins
 
@@ -168,7 +171,7 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
       (List.rev_map (fun (x, ty) -> (Mlutil.id_of_mlid x, ty)) ids)
   in
   let planned = List.rev_map (fun (_, ty) -> at_binding ty) bound in
-  let planned = if fix_a_fired then List.map (fun p -> pin p Tany) planned else planned in
+  let planned = if fix_a_fired then List.map (fun p -> pin p Any) planned else planned in
   let planned = pinned_fields scope ~typ:ty ~scrut cname planned in
   let elems_are_any =
     (cs.cs_mlmagic || cs.cs_magic)
@@ -180,7 +183,7 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
       (fun i p ->
         match List.nth_opt def_tys i with
         | Some (Tglob (g, _, _)) when is_list_global g -> p
-        | _ -> pin p Tany )
+        | _ -> pin p Any )
       planned
   else planned
 
@@ -212,7 +215,7 @@ let region ~outer body =
   let found = ref [] in
   let reads = ref [] in
   let promoted_active = (!tctx).promoted_var_map <> [] in
-  let return = current_cpp_return_type () in
+  let return = current_cpp_return_type_ir () in
   let type_vars = (!tctx).current_type_vars in
   let ns = (!tctx).method_self_ns in
   let reified = (!tctx).itree_mode = Reified in
@@ -226,7 +229,7 @@ let region ~outer body =
     let slot_ty =
       match (slot, field_ty) with
       | Some s, _ -> s
-      | None, Some t -> ( try Some (cpp_of_ml (Common.empty_env ()) t) with _ -> None )
+      | None, Some t -> ( try Some (cpp_of_ml_ir (Common.empty_env ()) t) with _ -> None )
       | None, None -> None
     in
     walk (parameters ?slot_ty ~body ids scope) body
@@ -299,11 +302,11 @@ let region ~outer body =
         | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
         | None -> []
       in
-      let temps = ctor_draft_temps env ~promoted_active ~return ty in
+      let temps = ctor_draft_temps_ir env ~promoted_active ~return ty in
       List.iteri
         (fun i e ->
           match strip_magic e with
-          | MLlam _ when stores_erased_fn env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
+          | MLlam _ when stores_erased_fn_ir env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
           | MLlam _ as lam ->
             (* The slot's own signature where it erased only its domain
                ({!Translation.gen_expr_custom_cons}'s [erased_fn_slot]). *)
@@ -312,8 +315,8 @@ let region ~outer body =
               else
                 match List.nth_opt field_tys i with
                 | Some (Miniml.Tvar (_, j)) -> (
-                  match Option.map tvar_erase_type (List.nth_opt temps (j - 1)) with
-                  | Some t when partially_erased_fun_ty t -> Some t
+                  match Option.map tvar_erase_type_ir (List.nth_opt temps (j - 1)) with
+                  | Some t when partially_erased_fun_ty_ir t -> Some t
                   | _ -> None )
                 | _ -> None
             in
@@ -330,19 +333,21 @@ let region ~outer body =
         | None -> []
       in
       let env = Common.empty_env () in
-      let rec codomain = function
-        | Tconst t | Tref (_, t) -> codomain t
-        | Tfun (_, cod) -> Some cod
-        | t -> ( match unfold_cpp_typedef env t with Tfun _ as f when f <> t -> codomain f | _ -> None )
+      let rec codomain (t : Cpp_ir.Lowered.Type.t) =
+        match t with
+        | Const t | Reference (_, t) -> codomain t
+        | Function (_, cod) -> Some cod
+        | t -> ( match unfold_cpp_typedef_ir env t with Function _ as f when f <> t -> codomain f | _ -> None )
       in
       let slot ft =
         match (ft, ty) with
         | Miniml.Tvar _, _ -> None
         | _, Miniml.Tglob (_, tys, _) -> (
-          match cpp_of_ml env (Mlutil.type_subst_list tys ft) with
+          match cpp_of_ml_ir env (Mlutil.type_subst_list tys ft) with
           | ct -> (
             match codomain ct with
-            | Some cod when Option.has_some (codomain cod) && (not (prints_as_any ct)) && names_only_scoped_tvars ct ->
+            | Some cod
+              when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct)) && names_only_scoped_tvars_ir ct ->
               Some ct
             | _ -> None )
           | exception _ -> None )
@@ -412,9 +417,9 @@ let region ~outer body =
             let slot_ty =
               match param_ml_ty i with
               | Some t -> (
-                match cpp_of_ml (Common.empty_env ()) t with
-                | c when prints_as_any c -> None
-                | c -> Some (if deduced then Translation_calls.deduce_erased_domains c else c)
+                match cpp_of_ml_ir (Common.empty_env ()) t with
+                | c when Cpp_ir.Types.prints_as_any c -> None
+                | c -> Some (if deduced then Translation_calls.deduce_erased_domains_ir c else c)
                 | exception _ -> None )
               | None -> None
             in
@@ -428,14 +433,14 @@ let region ~outer body =
     | MLapp (((MLrel (h, _) | MLmagic (_, MLrel (h, _), _)) as f), args)
       when List.exists (function MLlam _ -> true | _ -> false) args ->
       walk scope f;
-      let dom = match planned scope h with Some (Tfun (dom, _), _) -> dom | _ -> [] in
+      let dom = match planned scope h with Some (Function (dom, _), _) -> dom | _ -> [] in
       List.iteri
         (fun k a ->
           match a with
           | MLlam _ as lam ->
             let slot_ty =
               match List.nth_opt dom k with
-              | Some t when not (exists_cpp_type prints_as_any t) -> Some t
+              | Some t when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) -> Some t
               | _ -> None
             in
             let ids, body = Mlutil.collect_lams lam in
@@ -494,7 +499,8 @@ let region ~outer body =
         match List.nth_opt declared i with
         | Some (Some t) -> (
           match strip_param_wrappers t with
-          | t when t <> Topaque && not (is_cpp_dummy_type t) -> Some (t, Binding)
+          | Obligation Opaque_type -> None
+          | t when not (is_cpp_dummy_type_ir t) -> Some (t, Binding)
           | _ -> None )
         | _ -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding )
   in

@@ -770,6 +770,13 @@ let rec extract_template_args = function
   | Tshared_ptr inner -> extract_template_args inner
   | _ -> []
 
+(** {!extract_template_args} in CppIR. *)
+let rec extract_template_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list = function
+  | Entity_application (_, args, _) -> args
+  | In_namespace (_, inner) -> extract_template_args_ir inner
+  | Shared_pointer inner -> extract_template_args_ir inner
+  | _ -> []
+
 (** [erase_type_to_any ty] — recursively replace leaf types with [Tany],
     preserving the structure of container types ([Tglob] with args) and
     namespace wrappers.  Used to build the cast type for [any_cast] on
@@ -1632,6 +1639,32 @@ let refine_param_from_slot ~tvars ~slot bare =
     says_something && keeps_names && has_erased_type_in_type bare
     && has_erased_type_in_type erased
   then erased
+  else bare
+
+let refine_param_from_slot_ir ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
+  let name_of (t : Cpp_ir.Lowered.Type.t) =
+    match t with
+    | Variable (Index (_, Some n) | Named n) -> Some n
+    | Variable (Index (i, None)) -> Some (Cpp_ir.Type.positional_id i)
+    | _ -> None
+  in
+  let spelled_by_bare = Cpp_ir.Types.variable_names bare in
+  let nameable n = List.exists (Id.equal n) tvars || Id.Set.mem n spelled_by_bare in
+  let erased =
+    Cpp_ir.Types.map
+      (fun t -> match name_of t with Some n when not (nameable n) -> Cpp_ir.Type.Any | _ -> t)
+      slot
+  in
+  let keeps_names = Id.Set.subset spelled_by_bare (Cpp_ir.Types.variable_names erased) in
+  let says_something =
+    let normalise =
+      Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+          if is_tany_node_ir t || is_cpp_dummy_type_ir t then Any
+          else match t with Variable (Index (_, Some n) | Named n) -> Variable (Named n) | t -> t )
+    in
+    normalise erased <> normalise bare
+  in
+  if says_something && keeps_names && has_erased_type_in_type_ir bare && has_erased_type_in_type_ir erased then erased
   else bare
 
 (** Collect (index, name) pairs for all Tvar occurrences, sorted by index; a

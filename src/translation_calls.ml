@@ -382,7 +382,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
      TFunctor<two<std::any, T1>>] is the carrier its [tfmap] call is at,
      already at the erased element. *)
   let carrier_from_dictionary i =
-    let unwrap = strip_param_spelling in
+    let unwrap = Cpp_ir.Types.strip_param_spelling in
     List.find_map
       (fun (k, pt) ->
         match resolve_tmeta pt with
@@ -437,9 +437,9 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
                 Option.map unwrap
                   (planned_binder_type_or_derive ~use:"argument's type argument" ~agree:( = ) env j occ)
               with
-              | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
-                && not (prints_as_any x) ->
-                Some (Legacy_minicpp_to_cpp_ir.lower_type x)
+              | Some (Cpp_ir.Type.Entity_application (g', [x], _)) when GlobRef.UserOrd.equal g g'
+                && not (Cpp_ir.Types.prints_as_any x) ->
+                Some x
               | _ -> None )
             | _ -> None )
           | None -> None )
@@ -1503,9 +1503,9 @@ type argument_position = {
     lowering recorded for the binder. *)
 let local_callable env j occ =
   let callable ty =
-    let ty = match ty with Some _ -> ty | None -> Option.map (cpp_of_ml env) (get_env_type_opt j) in
-    match Option.map (unfold_cpp_typedef env) ty with
-    | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
+    let ty = match ty with Some _ -> ty | None -> Option.map (cpp_of_ml_ir env) (get_env_type_opt j) in
+    match Option.map (unfold_cpp_typedef_ir env) ty with
+    | Some (Cpp_ir.Type.(Function _ | Const (Function _) | Reference (_, (Function _ | Const (Function _))))) -> true
     | _ -> false
   in
   callable (planned_binder_type ~use:"local callable" ~agree:(fun p l -> callable p = callable l) j occ)

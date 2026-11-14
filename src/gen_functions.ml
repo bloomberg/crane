@@ -1396,7 +1396,7 @@ let gen_dfun ~minted n b cty ty temps =
         Translation_support.declared_by_value
           (List.assoc_opt (fst (List.nth all_ids i)) ids)
           ~summary:(List.nth owned_flags i) )
-      ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) ids)
+      ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids)
       ~ty:(fun i -> snd (List.nth all_params i))
   in
   (* Expose the C++ return type to inner call sites so they can recover erased

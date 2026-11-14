@@ -1349,6 +1349,13 @@ let with_iife_return_type (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_
 let declared_by_value declared ~summary =
   match declared with Some ty -> not (declared_by_reference ty) | None -> summary
 
+(** {!Minicpp.declared_by_reference} in CppIR: whether a parameter declared
+    at [ty] is a reference the body does not own. *)
+let rec declared_by_reference_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Reference _ | Const _ -> true
+  | In_namespace (_, t) -> declared_by_reference_ir t
+  | _ -> false
+
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type worth moving.  That is one
     {!Ownership_ir.worth_moving} accepts as reading [ty]; but an erased ML
@@ -1356,10 +1363,10 @@ let declared_by_value declared ~summary =
     [declared] it at is read instead ({!Ownership_ir.worth_moving_ir}):
     [x] in an instance's [fun (A : Type) (x : A) => Some x] is a boxed
     [crane::obj]. *)
-let owned_parameters ?(declared = fun _ -> None) n ~owned ~ty =
+let owned_parameters ?(declared : int -> Cpp_ir.Lowered.Type.t option = fun _ -> None) n ~owned ~ty =
   let worth i =
     match (resolve_tmeta (ty i), declared i) with
-    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_ir.worth_moving_ir (Legacy_minicpp_to_cpp_ir.lower_type cty)
+    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_ir.worth_moving_ir cty
     | ty, _ -> Ownership_ir.worth_moving ty
   in
   List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)
@@ -2706,9 +2713,14 @@ let strip_ns_tglob = function
   | Tnamespace (_, (Tglob _ as inner)) -> inner
   | t -> t
 
+(** {!strip_ns_tglob} in CppIR. *)
+let strip_ns_tglob_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | In_namespace (_, (Entity_application _ as inner)) -> inner
+  | t -> t
+
 (** Binder-type state: {!Translation_state.cpp_binder_types}, every binder's
     C++ type tagged with what decided it. *)
-type binder_env = (cpp_type * binder_origin) IntMap.t
+type binder_env = (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t
 
 (** Strip self-referential [Tnamespace] wrappers, at every depth.
 
