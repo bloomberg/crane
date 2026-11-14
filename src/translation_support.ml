@@ -1574,8 +1574,7 @@ let resolve_body_tvars b ty =
     | [] -> b
     | _ -> map_types_in_ast (subst_tvars_type tvar_subst) b
 
-(** Substitute [CPPvar target] with [repl] in expressions and statements. Uses
-    generic AST visitors for structural recursion.
+(** Substitute [Local target] with [repl] in expressions and statements.
 
     With [~keep_cast:true], an occurrence that already sits directly under an
     [any_cast] keeps that cast: only the variable underneath is substituted,
@@ -1587,46 +1586,53 @@ let resolve_body_tvars b ty =
     With [~extra_args], an occurrence in callee position also gains those
     arguments.  Lifting a local binding to a top-level function turns its free
     variables into trailing parameters, and every call has to grow to match;
-    the list is given already reversed, as {!CPPfun_call} stores its
-    arguments. *)
-let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = [])
-    (target : Id.t) (repl : cpp_expr) (e : cpp_expr) =
+    the list is in source order. *)
+let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = []) (target : Id.t) (repl : Cpp_ir.Lowered.Expr.t)
+    (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   let sub = local_var_subst_expr ~keep_cast ~extra_args target repl in
   match e with
-  | CPPany_cast (ty, CPPvar id) when keep_cast && Id.equal id target ->
-    Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type ty) (Legacy_minicpp_to_cpp_ir.lower_expr (match repl with CPPany_cast (_, inner) -> inner | r -> r)))
-  | CPPfun_call (o, CPPvar id, args) when extra_args <> [] && Id.equal id target
-    ->
-    CPPfun_call
-      (o, repl, of_reversed (extra_args @ List.map sub (to_reversed args)))
-  | CPPvar id when Id.equal id target -> repl
+  | Any_cast (ty, Local id) when keep_cast && Id.equal id target ->
+    Cpp_erasure.unbox_ir ty (match repl with Any_cast (_, inner) -> inner | r -> r)
+  | Call (o, Local id, args) when extra_args <> [] && Id.equal id target -> Call (o, repl, List.map sub args @ extra_args)
+  | Local id when Id.equal id target -> repl
   | _ ->
     (* A lambda's body then reads the local [repl] reads in place of
        [target], and so do the Core binders it records by name.  What it
        takes by move it takes from [repl] where that is a local, and
        copies otherwise: a capture moves a local, not an expression. *)
-    let e =
+    let e : Cpp_ir.Lowered.Expr.t =
       match e with
-      | CPPlambda l ->
-        let l = match free_vars_expr repl with [v] -> rekey_lambda_binders target v l | _ -> l in
-        let moved x = if not (Id.equal x target) then [x] else match repl with CPPvar v -> [v] | _ -> [] in
-        CPPlambda {l with cl_moved = List.concat_map moved l.cl_moved}
+      | Lambda l ->
+        let l =
+          match Cpp_ir.Variables.free_in_expr repl with
+          | [v] ->
+            let rekey = List.map (fun (z, b) -> ((if Id.equal z target then v else z), b)) in
+            { l with
+              binders = rekey l.binders;
+              fixpoint = Option.map (fun (f : Cpp_ir.Expr.Local_fixpoint.t) -> {f with captured = rekey f.captured}) l.fixpoint
+            }
+          | _ -> l
+        in
+        let moved x =
+          if not (Id.equal x target) then [x]
+          else match repl with Local v -> [v] | _ -> []
+        in
+        Lambda {l with moved = List.concat_map moved l.moved}
       | _ -> e
     in
-    map_expr
-      sub
-      (local_var_subst_stmt ~keep_cast ~extra_args target repl)
-      Fun.id
+    Cpp_ir.Map.expr
+      (Cpp_ir.Map.make ~expr:sub ~stmt:(local_var_subst_stmt ~keep_cast ~extra_args target repl) ~type_:Fun.id ())
       e
 
 (** Statement-level counterpart of [local_var_subst_expr]: substitute
-    [CPPvar target] with [repl] inside a single C++ statement. *)
-and local_var_subst_stmt ?(keep_cast = false) ?(extra_args = [])
-    (target : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
-  map_stmt
-    (local_var_subst_expr ~keep_cast ~extra_args target repl)
-    (local_var_subst_stmt ~keep_cast ~extra_args target repl)
-    Fun.id
+    [Local target] with [repl] inside a single C++ statement. *)
+and local_var_subst_stmt ?(keep_cast = false) ?(extra_args = []) (target : Id.t) (repl : Cpp_ir.Lowered.Expr.t)
+    (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+  Cpp_ir.Map.stmt
+    (Cpp_ir.Map.make
+       ~expr:(local_var_subst_expr ~keep_cast ~extra_args target repl)
+       ~stmt:(local_var_subst_stmt ~keep_cast ~extra_args target repl)
+       ~type_:Fun.id ())
     s
 
 (** Check whether a variable [target] is referenced in a list of C++ stmts. *)
@@ -1717,9 +1723,9 @@ let lifted_member_refs occ ids =
     by [renamed] (in array order), called as the helper [refs] lifts it to at
     [targs], the group's own type arguments, and passed [extra_args], what the
     group captures.  A member reaches its partners as it reaches itself. *)
-let subst_lifted_members ?(extra_args = []) renamed refs targs body =
+let subst_lifted_members ?(extra_args = []) renamed refs targs (body : Cpp_ir.Lowered.Stmt.t list) =
   List.fold_left2
-    (fun body id r -> List.map (local_var_subst_stmt ~extra_args id (mk_cppglob r targs)) body)
+    (fun body id r -> List.map (local_var_subst_stmt ~extra_args id (mk_cppglob_ir r targs)) body)
     body renamed (Array.to_list refs)
 
 (* Walk an ML AST and collect source-order parameter indices that are NOT

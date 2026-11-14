@@ -1764,13 +1764,13 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                     a ) ) )
         in
         let body_stmts =
-          List.fold_left
-            (fun stmts (_, _, subst) ->
-              match subst with
-              | Some (id, expr) -> List.map (local_var_subst_stmt id expr) stmts
-              | None -> stmts )
-            body_stmts
-            cpp_arg_info
+          List.map Cpp_ir_to_legacy_minicpp.stmt
+            (List.fold_left
+               (fun stmts (_, _, subst) ->
+                 match subst with
+                 | Some (id, expr) -> List.map (local_var_subst_stmt id (Legacy_minicpp_to_cpp_ir.lower_expr expr)) stmts
+                 | None -> stmts )
+               (List.map Legacy_minicpp_to_cpp_ir.lower_stmt body_stmts) cpp_arg_info)
         in
         let body_stmts = return_captures_by_value body_stmts in
         (* When the lambda body is a standalone fixpoint (MLfix with no
@@ -6241,8 +6241,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             else
               CPPvar binding_name
           in
-          List.map (local_var_subst_stmt ~keep_cast:true var_name subst_expr)
-            stmts
+          let repl = Legacy_minicpp_to_cpp_ir.lower_expr subst_expr in
+          List.map (fun st -> Cpp_ir_to_legacy_minicpp.stmt (local_var_subst_stmt ~keep_cast:true var_name repl (Legacy_minicpp_to_cpp_ir.lower_stmt st))) stmts
         else
           stmts )
       body_stmts
@@ -7079,9 +7079,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
                      CPPvar name
                    | _ -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) (Cpp_ir.Expr.Local name))
                  in
-                 List.map
-                   (local_var_subst_stmt ~keep_cast:true name cast_expr)
-                   stmts
+                 let repl = Legacy_minicpp_to_cpp_ir.lower_expr cast_expr in
+                 List.map (fun st -> Cpp_ir_to_legacy_minicpp.stmt (local_var_subst_stmt ~keep_cast:true name repl (Legacy_minicpp_to_cpp_ir.lower_stmt st))) stmts
                else stmts)
             br_stmts
             br_ids
@@ -7352,9 +7351,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           (* Replace references to the group's members with calls to the
              lifted functions *)
           let body =
-            subst_lifted_members ~extra_args:free_args renamed member_refs
-              (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
-              body
+            List.map Cpp_ir_to_legacy_minicpp.stmt
+              (subst_lifted_members ~extra_args:(List.rev_map Legacy_minicpp_to_cpp_ir.lower_expr free_args) renamed member_refs
+                 (List.map Legacy_minicpp_to_cpp_ir.lower_type (class_args @ List.map (fun id -> named_tvar id) all_tvar_names))
+                 (List.map Legacy_minicpp_to_cpp_ir.lower_stmt body))
           in
           (* The captured variables are the enclosing body's binders. *)
           let binders =
@@ -7386,9 +7386,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let lifted_call = mk_cppglob lifted_ref call_type_args in
       let result = gen_stmts ~slot env_with_fix k b in
-      List.map
-        (local_var_subst_stmt ~extra_args:free_args fix_name lifted_call)
-        result )
+      let extra_args = List.rev_map Legacy_minicpp_to_cpp_ir.lower_expr free_args and lifted_call = Legacy_minicpp_to_cpp_ir.lower_expr lifted_call in
+      List.map (fun st -> Cpp_ir_to_legacy_minicpp.stmt (local_var_subst_stmt ~extra_args fix_name lifted_call (Legacy_minicpp_to_cpp_ir.lower_stmt st))) result )
     else
       (* No extra Tvars — proceed with local fixpoint approach.
 
@@ -8257,9 +8256,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 params
             in
             let body =
-              subst_lifted_members renamed member_refs
-                (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
-                body
+              List.map Cpp_ir_to_legacy_minicpp.stmt
+                (subst_lifted_members renamed member_refs
+                   (List.map Legacy_minicpp_to_cpp_ir.lower_type (class_args @ List.map (fun id -> named_tvar id) all_tvar_names))
+                   (List.map Legacy_minicpp_to_cpp_ir.lower_stmt body))
             in
             let inner =
               Dfun (mk_dfun ~binders:param_binders ~ret:cod member_refs.(i) (Ddef (cpp_params, body)))
