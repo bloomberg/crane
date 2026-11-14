@@ -213,7 +213,7 @@ let gen_typeclass_cpp name fields =
       (List.map snd (class_promoted_vars_arities name))
   in
   let promoted_map =
-    promoted_resolutions ~fields name (Tinstance (inst_id, name))
+    promoted_resolutions ~fields name (Instance (inst_id, name))
   in
   (* Substitute promoted Tvars in cpp_type trees.  After conversion, a promoted
      var appears as [Tvar (Tv_index (_, Some name) | Tv_named name)]; [promoted_map] says which qualified
@@ -221,19 +221,18 @@ let gen_typeclass_cpp name fields =
      [typename I::base_category::Obj] when it comes from a typeclass-typed
      promoted field).  A name with no entry is left as a plain type variable. *)
   let subst_promoted_in_cpp_type =
-    rewrite_cpp_type (function
-      | Tpromoted vname | Tvar (Tv_index (_, Some vname) | Tv_named vname) -> (
+    Cpp_ir.Types.rewrite (function
+      | Cpp_ir.Type.Promoted_member vname | Variable (Index (_, Some vname) | Named vname) -> (
         match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
         | Some (_, replacement) -> Some replacement
-        | None -> Some (named_tvar vname) )
+        | None -> Some (Cpp_ir.Build.named_variable vname) )
       | _ -> None )
   in
   (* A type translation converted, with the promoted variables it names
      respelled, in CppIR. *)
   let converted ml_ty =
-    Legacy_minicpp_to_cpp_ir.lower_type
-      (subst_promoted_in_cpp_type
-         (convert_ml_type_to_cpp_type (empty_env ()) prefixed_ip_vars ml_ty))
+    subst_promoted_in_cpp_type
+      (Legacy_minicpp_to_cpp_ir.lower_type (convert_ml_type_to_cpp_type (empty_env ()) prefixed_ip_vars ml_ty))
   in
   let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
     Scope (Local inst_id, Id.of_string method_name, type_args)

@@ -705,6 +705,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     ms_params = params;
     _
   } = s in
+  let ret_cpp_ir = ret_cpp in
   let ret_cpp = Cpp_ir_to_legacy_minicpp.ty ret_cpp in
   let params = List.map (fun (x, t) -> (x, Cpp_ir_to_legacy_minicpp.ty t)) params in
   (* Suspended at its constructors, and whole only where it calls itself
@@ -763,7 +764,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type (Some ret_cpp) @@ fun () ->
+    with_cpp_return_type_ir (Some ret_cpp_ir) @@ fun () ->
     with_type_vars (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or

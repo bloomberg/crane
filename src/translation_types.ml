@@ -45,7 +45,7 @@ let ind_promoted_type_args_ir g : Cpp_ir.Lowered.Type.t list =
   List.map
     (fun v ->
       match promoted_var_binding v with
-      | Some t -> Legacy_minicpp_to_cpp_ir.lower_type t
+      | Some t -> t
       | None -> Promoted_member v )
     (Table.promoted_type_params g)
 
@@ -53,7 +53,7 @@ let ind_promoted_type_args_ir g : Cpp_ir.Lowered.Type.t list =
 let ind_promoted_type_args g =
   List.map
     (fun v ->
-      match promoted_var_binding v with Some t -> t | None -> Tpromoted v )
+      match promoted_var_binding v with Some t -> Cpp_ir_to_legacy_minicpp.ty t | None -> Tpromoted v )
     (Table.promoted_type_params g)
 
 (** Strip the const/reference decoration a parameter type carries, leaving the
@@ -240,7 +240,7 @@ let inline_iife (k : cpp_expr -> cpp_stmt) = function
 let position_cpp_ty (expected : cpp_type option) =
   match expected with
   | Some _ as t -> t
-  | None -> (!tctx).current_cpp_return_type
+  | None -> current_cpp_return_type ()
 
 (** A callable handed to a parameter the callee declared at one of its own
     type variables has to arrive under a name: a closure's type cannot be
@@ -836,10 +836,10 @@ let restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
     are dropped, since a promoted variable that resolves to [std::any] says no
     more than the erased annotation it would replace. *)
 let promoted_tys_of_arity n =
-  match List.filter_map (fun (_, t) -> if prints_as_any t then None else Some t)
+  match List.filter_map (fun (_, t) -> if Cpp_ir.Types.prints_as_any t then None else Some t)
           (!tctx).promoted_var_map
   with
-  | tys when List.length tys = n -> Some tys
+  | tys when List.length tys = n -> Some (List.map Cpp_ir_to_legacy_minicpp.ty tys)
   | _ -> None
 
 (** When a lambda literal is about to be stored via [crane_erase_fn] (see the
@@ -1050,7 +1050,7 @@ let rec cpp_ir_of_ml_type
     ( match Table.promoted_type_var_name g with
     | Some var_id ->
       ( match promoted_var_resolution g with
-      | Some resolved -> Legacy_minicpp_to_cpp_ir.lower_type resolved
+      | Some resolved -> resolved
       | None ->
         (* No resolution found.  When the constructor-expression flag is set,
            all promoted vars become [Tany] (= std::any) because module-level
@@ -1893,6 +1893,23 @@ let rec unfold_cpp_typedef env cpp_ty =
     | None -> cpp_ty )
   | _ -> cpp_ty
 
+(** {!unfold_cpp_typedef} in CppIR. *)
+let rec unfold_cpp_typedef_ir env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  match cpp_ty with
+  | In_namespace (_, inner) -> unfold_cpp_typedef_ir env inner
+  | Entity_application (GlobRef.ConstRef kn, args, _) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some ml_ty ->
+      let body = cpp_of_ml_ir env ml_ty in
+      let n_promoted =
+        let n = List.length (Table.promoted_type_params (GlobRef.ConstRef kn)) in
+        if List.length args >= n + Mlutil.type_maxvar ml_ty then n else 0
+      in
+      if args = [] then body
+      else Cpp_ir.Types.substitute (fun i -> if i >= 1 then List.nth_opt args (n_promoted + i - 1) else None) body
+    | None -> cpp_ty )
+  | _ -> cpp_ty
+
 (** Whether the pattern variable at de Bruijn index [i] holds a box, and so
     must be recovered with an [any_cast] before it is used at a concrete
     type.  Read off the recorded type rather than tracked alongside it: a
@@ -2218,7 +2235,7 @@ let expected_type_args_from_return env ?slot ind ~arity =
   let r = match slot with
   | Some t when go t <> None -> go t
   | _ -> (
-    match (!tctx).current_cpp_return_type with
+    match current_cpp_return_type () with
     | Some rt -> go rt
     | None -> None ) in
   r
@@ -2316,7 +2333,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
   let* v_ml = Mlutil.Var_types.find_tvar tys v in
   let* result =
     match result with
-    | None -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (!tctx).current_cpp_return_type
+    | None -> current_cpp_return_type_ir ()
     | r -> r
   in
   let over = template_arg_of_ml_type_ir ~site:Through_tvar env tvars v_ml in
@@ -2379,7 +2396,7 @@ let lifted_call_type_args
       | t -> t
     in
     let tvar_map =
-      match (!tctx).current_cpp_return_type with
+      match current_cpp_return_type () with
       | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
       | None -> []
     in
@@ -2392,7 +2409,7 @@ let lifted_call_type_args
             with
             | Some (_, ty) -> ty
             | None -> (
-              match (!tctx).current_cpp_return_type with
+              match current_cpp_return_type () with
               | Some ret_ty -> ret_ty
               | None -> named_tvar tvar_name ) )
           extra_tvar_names

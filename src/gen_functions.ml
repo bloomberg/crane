@@ -721,9 +721,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       (fun (_tt, tc_name, class_info, _) ->
         match class_info with
         | Some (class_ref, _) ->
-          List.map
-            (fun (v, t) -> (v, Legacy_minicpp_to_cpp_ir.lower_type t))
-            (promoted_resolutions class_ref (Tinstance (tc_name, class_ref)))
+          promoted_resolutions class_ref (Instance (tc_name, class_ref))
         | None -> [] )
       typeclass_temps
   in
@@ -1305,7 +1303,9 @@ let gen_dfun ~minted n b cty ty temps =
      the instance perfectly well. *)
   tctx :=
     { !tctx with
-      promoted_var_map = promoted_var_resolutions @ saved_promoted_var_map };
+      promoted_var_map =
+        List.map (fun (v, t) -> (v, Legacy_minicpp_to_cpp_ir.lower_type t)) promoted_var_resolutions
+        @ saved_promoted_var_map };
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
@@ -1405,7 +1405,7 @@ let gen_dfun ~minted n b cty ty temps =
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
   let saved_return_type = (!tctx).current_cpp_return_type in
-  tctx := { !tctx with current_cpp_return_type = Some cod };
+  tctx := { !tctx with current_cpp_return_type = Some (Legacy_minicpp_to_cpp_ir.lower_type cod) };
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default CPPabort throw. *)

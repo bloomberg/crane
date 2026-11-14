@@ -27,7 +27,7 @@ open Core_query
     erased field or parameter, and it holds for a mapped constructor
     ([std::make_optional<std::any>]) as for one of Crane's own. *)
 let into_erased_return slot =
-  match Option.map slot_repr_of_cpp_type (!tctx).current_cpp_return_type with
+  match Option.map slot_repr_of_cpp_type (current_cpp_return_type ()) with
   | Some (Boxed kind) -> into_box kind slot
   | Some Native | None -> slot
 
@@ -179,7 +179,7 @@ let temps_from_slot env ~expected_ty ind temps =
     match expected_ty with
     | Some _ -> expected_ty
     | None -> (
-      match (!tctx).current_cpp_return_type with
+      match current_cpp_return_type () with
       | Some (Tshared_ptr t) -> Some t
       | t -> t )
   in
@@ -720,7 +720,7 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
                  | Some t -> has_tany_in_type (unfold_cpp_typedef env t)
                  | None -> false ))
            && not
-                ( match (!tctx).current_cpp_return_type with
+                ( match current_cpp_return_type () with
                 | Some t -> resolves_to_any_type t
                 | None -> false ) ->
       let field_tys =
@@ -810,7 +810,7 @@ let custom_refined_annotation env ~expected_ty ~slot (ty : ml_type) r ts =
     let expected =
       match expected_ty with
       | Some _ -> expected_ty
-      | None -> (!tctx).current_cpp_return_type
+      | None -> current_cpp_return_type ()
     in
     match (ty, Option.map (fun t -> Ml_type_util.unqualify_ty (unfold_cpp_typedef env t)) expected) with
     | Miniml.Tglob (n, tys, sc), Some (Tglob (n', etys, _))
@@ -925,7 +925,7 @@ let custom env ~expected_ty ~slot (ty : ml_type) r =
     | None -> [] in
   let draft_ctor_temps_for_wrap =
     ctor_draft_temps env ~promoted_active:((!tctx).promoted_var_map <> [])
-      ~return:(!tctx).current_cpp_return_type ty
+      ~return:(current_cpp_return_type ()) ty
   in
   (* The same slots, read off the destination instead of off this
      constructor's own annotation.  A locally concrete value can be built into
@@ -1033,7 +1033,7 @@ let custom env ~expected_ty ~slot (ty : ml_type) r =
   let slot_is_deeply_erased =
     erased_arg_under_a_field
     || ((not is_list_cons_ctor)
-        && match (!tctx).current_cpp_return_type with
+        && match current_cpp_return_type () with
            | Some t -> resolves_to_any_type t
            | None -> false)
   in
@@ -1062,7 +1062,7 @@ type custom_arg = {
 let custom_field ?var env c ~slot r i e =
   let ty_args_for_expected = c.cc_ty_args_for_expected and field_types_for_wrap = c.cc_field_types in
   let ctor_temps_at_slot = c.cc_temps_at_slot and is_passthrough_ctor_arg = c.cc_passthrough in
-  let saved_ret = (!tctx).current_cpp_return_type in
+  let saved_ret = current_cpp_return_type () in
   let new_expected =
     match List.nth_opt field_types_for_wrap i with
     | Some (Miniml.Tvar (_, j) as ft) -> (

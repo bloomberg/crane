@@ -889,7 +889,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
           if from_expected <> [] then from_expected
           else
             let from_ret =
-              match (!tctx).current_cpp_return_type with
+              match current_cpp_return_type () with
               | Some (Minicpp.Tglob (ret_r, ret_tys, _))
                 when Names.GlobRef.CanOrd.equal n ret_r
                      && List.length ret_tys = List.length tys ->
@@ -2239,11 +2239,17 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | None -> by_var )
       | _ -> by_var
     in
+    let result_bindings () =
+      let names, m =
+        callee_result_bindings env x ~explicit:true (Option.map Legacy_minicpp_to_cpp_ir.lower_type expected_ty)
+      in
+      (names, List.map (fun (v, t) -> (v, Cpp_ir_to_legacy_minicpp.ty t)) m)
+    in
     let by_var =
       match expected_ty with
       | Some _ when by_var = [] -> (
         (* None written at all: every variable, if the callable binds each. *)
-        match callee_result_bindings env x ~explicit:true expected_ty with
+        match result_bindings () with
         | (_ :: _ as names), (_ :: _ as m) -> (
           let bound =
             List.mapi
@@ -2257,7 +2263,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           else by_var )
         | _ -> by_var )
       | Some _ when List.exists (fun (_, t) -> prints_as_any t) by_var -> (
-        match callee_result_bindings env x ~explicit:true expected_ty with
+        match result_bindings () with
         | names, (_ :: _ as m) -> fill_from (names, m) by_var
         | _ -> by_var )
       | _ -> by_var
@@ -3339,7 +3345,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let stmts =
       let ret =
         if iife_ret = Tvoid then Some Tvoid
-        else (!tctx).current_cpp_return_type
+        else current_cpp_return_type ()
       in
       with_cpp_return_type ret (fun () ->
           gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv case_occ )
@@ -4142,7 +4148,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
                 in
                 let ret_ml = codomain_after expected subst_pt in
                 ( match resolve_tmeta ret_ml with
-                | Miniml.Tvar (_, _) -> concrete_tvar_type
+                | Miniml.Tvar (_, _) -> Option.map Cpp_ir_to_legacy_minicpp.ty concrete_tvar_type
                 | _ ->
                   Some (cpp_of_ml env ret_ml) )
               | None -> None
@@ -4584,7 +4590,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
       | [inst], [Some inst_ty], _ :: method_targs
         when Core_elaborate.member_template_call ~lex:(current_lexenv ()) use ml_args ->
-        CPPscope (CPPtype_name inst_ty, Common.id_of_global Term id, method_targs)
+        CPPscope (CPPtype_name (Cpp_ir_to_legacy_minicpp.ty inst_ty), Common.id_of_global Term id, method_targs)
       | _ ->
         mk_cppglob ?yields:(glob_yields env id (Mlutil.Var_types.apply tys)) id
           all_type_args
@@ -5941,7 +5947,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let body_stmts =
     (
       let inner_ret =
-        match (!tctx).current_cpp_return_type with
+        match current_cpp_return_type () with
         | Some Tvoid -> None
         | rt -> rt
       in
@@ -6168,7 +6174,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
      This flag triggers pre-extraction even when [branch_has_lambda] is
      false (because the lambda is added externally by [inline_iife]). *)
   let return_type_is_coinductive =
-    match (!tctx).current_cpp_return_type with
+    match current_cpp_return_type () with
     | Some (Tglob (r, _, _)) -> Table.is_coinductive r
     | _ -> false
   in
@@ -6389,7 +6395,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
     let branches, default =
       let ret =
         if void_ret = Some Tvoid then Some Tvoid
-        else (!tctx).current_cpp_return_type
+        else current_cpp_return_type ()
       in
       with_cpp_return_type ret (fun () ->
           let branches = gen_enum_branches (Array.to_list pv) in
@@ -6842,7 +6848,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
      a [bool]. *)
   let t =
     let saved_ret = (!tctx).current_cpp_return_type in
-    tctx := { !tctx with current_cpp_return_type = Some typ };
+    tctx := { !tctx with current_cpp_return_type = Some (Legacy_minicpp_to_cpp_ir.lower_type typ) };
     let t = gen_expr ?expected_ty:scrut_expected env t in
     tctx := { !tctx with current_cpp_return_type = saved_ret };
     t
@@ -8071,11 +8077,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
              one; read at the function's result instead, it is cast to a
              type it does not have. *)
           if prints_as_any c then Some c
-          else if ml_type_contains_erased t_effective then (!tctx).current_cpp_return_type
+          else if ml_type_contains_erased t_effective then current_cpp_return_type ()
           else
             match spell_in_scope c with
             | Some _ as t -> t
-            | None -> (!tctx).current_cpp_return_type
+            | None -> current_cpp_return_type ()
         in
         with_cpp_return_type rhs_result (fun () ->
           gen_stmts
@@ -8484,7 +8490,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       | MLglob use when is_effect Core_effects.Return use ->
         (* Eta-reduced Ret: bind action Ret = action (monad right identity).
            In sequential mode, just execute the action and return. *)
-        if (!tctx).current_cpp_return_type = Some Tvoid then
+        if returns_void () then
           side_effect @ [Sreturn None]
         else
           [k a]
@@ -8523,7 +8529,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     else begin
       (* Sequential mode: eliminate Ret, just use the value. *)
       let t = Common.last (a1 :: l) in
-      if (!tctx).current_cpp_return_type = Some Tvoid then
+      if returns_void () then
         (* Void-returning function: discard the value and return. *)
         [Sreturn None]
       else
@@ -8532,7 +8538,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLcase (typ, t, pv, case_occ) when Core_elaborate.match_kind typ pv case_occ = Match_kind.Custom ->
     gen_custom_cpp_case env k typ t pv case_occ
   | MLcons (_, r, [], _) when Table.is_tt_constructor r
-      && (!tctx).current_cpp_return_type = Some Tvoid ->
+      && returns_void () ->
     (* tt (unit constructor) in tail position of a void-returning function *)
     if (!tctx).itree_mode = Reified then [k (mk_itree_ret Tvoid [])]
     else
@@ -8572,7 +8578,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          nat -> nat] -- must be stored in the canonical adapter form the
          application site casts back to. *)
       let value =
-        match Option.map slot_repr_of_cpp_type (!tctx).current_cpp_return_type with
+        match Option.map slot_repr_of_cpp_type (current_cpp_return_type ()) with
         | Some (Boxed kind) -> box_for_any_slot kind ast value
         | Some Native | None -> value
       in
@@ -8679,7 +8685,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     if is_void_tail then begin
       let e = gen_expr ~slot ?expected_ty:(position_cpp_ty None) env t in
-      if (!tctx).current_cpp_return_type = Some Tvoid then
+      if returns_void () then
         [Sexpr e; Sreturn None]
       else
         match k (CPPint 0) with
@@ -8702,7 +8708,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          recovery the let-binding path performs by marking the bound variable
          erased. *)
       let e =
-        match (!tctx).current_cpp_return_type with
+        match current_cpp_return_type () with
         | Some rt when k_returns -> (
           match slot_repr_of_cpp_type rt with
           | Boxed Family_box -> deep_box_list t e
@@ -8782,7 +8788,7 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     let n_values = List.length (List.filter (fun (_, t) -> not (erased_by_extraction t)) ids) in
     match Option.map (cpp_of_ml env) (ml_codomain_after n_values ty) with
     | Some t when not (exists_cpp_type prints_as_any t) -> Some t
-    | _ -> (!tctx).current_cpp_return_type
+    | _ -> current_cpp_return_type ()
   in
   (* The local fixpoint at [local], of one member, lowered as a machine with
      a stack of frames ({!local_fix_stmts}, or as the entry of the machine

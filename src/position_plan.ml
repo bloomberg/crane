@@ -201,6 +201,6 @@ let region ~outer ~reads body =
   in
   (* A walk that fails leaves the coercions it did not reach unplanned,
      which lowering reports. *)
-  (try stmts ~ret:(!tctx).current_cpp_return_type outer body
+  (try stmts ~ret:(current_cpp_return_type ()) outer body
    with e when CErrors.noncritical e -> Probe.hit "magic-pos-walk" (fun () -> Printexc.to_string e));
   !found
