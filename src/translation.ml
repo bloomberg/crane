@@ -1078,7 +1078,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
             | Entity_application (g, _ :: _, _) -> is_list_global g
             | _ -> false
           in
-          let unbox_at t = Cpp_erasure.unbox (Cpp_ir_to_legacy_minicpp.ty t) result in
+          let unbox_at t = Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir t (Legacy_minicpp_to_cpp_ir.lower_expr result)) in
           if ty_is_list ty then
              (* Canonical erased shape is [deque<std::any>] -- every element
                 boxed as a single [std::any] (see [gen_expr_custom_cons]'s
@@ -2583,7 +2583,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
              element erasure in the custom-cons path, extending it to plain
              value-type constructors.  A list is the exception to keeping
              the structure: it goes into a box with its elements boxed one at
-             a time ({!Cpp_erasure.erased_list_shape}), so a list of lists is
+             a time ({!Cpp_erasure.erased_list_shape_ir}), so a list of lists is
              a [List<std::any>] whose elements are boxed lists in turn. *)
           let temps =
             if boxed slot && temps <> [] then
@@ -2808,7 +2808,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
                     let cast_stmt = Sasgn (orig_id, Declare (concrete_ty, None),
-                      Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
+                      Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type concrete_ty) (Cpp_ir.Expr.Local any_id))) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
                 in
@@ -2967,7 +2967,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
                     let cast_stmt = Sasgn (orig_id, Declare (concrete_ty, None),
-                      Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
+                      Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type concrete_ty) (Cpp_ir.Expr.Local any_id))) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
                 in
@@ -2994,7 +2994,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                     ~ret:new_ret_ty
                     ~body:new_body in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
-                Cpp_erasure.converting_ctor func_ty [new_lambda]
+                Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type func_ty) [Legacy_minicpp_to_cpp_ir.lower_expr new_lambda])
               (* A function value that is not a lambda literal (a reference to a
                  global, or a methodified one) cannot have its parameters
                  rewritten the way the branch above rewrites a literal's, so
@@ -3028,7 +3028,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                     | Some t -> t
                     | None -> Tvoid )
                 in
-                Cpp_erasure.converting_ctor (Tfun (param_types, ret_ty)) [expr]
+                Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tfun (param_types, ret_ty))) [Legacy_minicpp_to_cpp_ir.lower_expr expr])
               | _ -> expr )
         | ft ->
           (* Handle arrow types containing erased type variables.
@@ -3156,7 +3156,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
             ) new_params in
             let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
               Sasgn (orig_id, Declare (concrete_ty, None),
-                Cpp_erasure.unbox concrete_ty (CPPvar any_id))
+                Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type concrete_ty) (Cpp_ir.Expr.Local any_id)))
             ) cast_bindings in
             let new_body = cast_stmts @ body_stmts in
             let new_ret_ty = match ret_ty_opt with
@@ -3168,7 +3168,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 ~ret:new_ret_ty
                 ~body:new_body in
             let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
-            Cpp_erasure.converting_ctor func_ty [new_lambda]
+            Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type func_ty) [Legacy_minicpp_to_cpp_ir.lower_expr new_lambda])
           (* The same erased-argument adaptation, for a function value that is
              not a lambda literal (a reference to a global, or to a method):
              there are no parameters here to rewrite, so defer to the runtime
@@ -4080,9 +4080,9 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
           (List.init (count_ml_value_arrows pt) (fun _ ->
                (Tref (Lvalue, Tconst Tauto), None) ))
           None
-          [Sreturn (Some Cpp_erasure.empty_box)]
+          [Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir))]
           ~capture:Closure
-      | _ -> Cpp_erasure.empty_box )
+      | _ -> Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir )
     | _ ->
     let ({ap_index = param_index; ap_param = param_ml_ty; ap_expected = arg_expected_ty; ap_ret = ret;
            ap_tvar_erased = param_tvar_erased; ap_written_by_call = param_written_by_call;
@@ -4330,10 +4330,9 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         | CPPconverting_ctor (t, _) as recovered when cpp_ty_eq t cpp_ty ->
           recovered
         | CPPany_cast _ as already_cast ->
-          Cpp_erasure.converting_ctor cpp_ty [already_cast]
+          Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) [Legacy_minicpp_to_cpp_ir.lower_expr already_cast])
         | v ->
-          Cpp_erasure.converting_ctor cpp_ty
-            [Cpp_erasure.unbox list_any_ty v] )
+          Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) [Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type list_any_ty) (Legacy_minicpp_to_cpp_ir.lower_expr v)]) )
       | Tglob (g, [_], _) when Ml_type_util.is_custom_list_global g ->
         let clean_cpp_ty = clean_self_ns cpp_ty in
         (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
@@ -4359,7 +4358,7 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         in
         let inner = match as_value () with
           | CPPany_cast _ as already_cast -> already_cast
-          | v -> Cpp_erasure.unbox erased_ty v
+          | v -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type erased_ty) (Legacy_minicpp_to_cpp_ir.lower_expr v))
         in
         (* When the callee is a REAL function whose parameter has a CONCRETE
            element type — a wholesale-boxed opaque element
@@ -4831,9 +4830,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                 | Some (Cpp_ir.Type.Entity_application ((GlobRef.IndRef _ as g), (_ :: _ as args), ns))
                   when (not (Table.is_custom g))
                        && not (List.for_all is_any args) ->
-                  Cpp_erasure.converting_ctor
-                    (Cpp_ir_to_legacy_minicpp.ty (Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)))
-                    [e]
+                  Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)) [Legacy_minicpp_to_cpp_ir.lower_expr e])
                 | _ -> e )
               | _ -> e )
             excess
@@ -4890,7 +4887,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             match (Option.map resolve_tmeta cod_inst, expected_spelled) with
             | Some (Miniml.Tdummy Miniml.Ktype), Some t
               when not (prints_as_any t) ->
-              Cpp_erasure.unbox_tolerant t r
+              Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_tolerant_ir (Legacy_minicpp_to_cpp_ir.lower_type t) (Legacy_minicpp_to_cpp_ir.lower_expr r))
             | _ -> r
         else
           CPPabort ("untranslatable curried proof term", abort_ty expected_ty) )
@@ -5457,7 +5454,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                component.  What comes out is concrete, so the accessor's
                result needs no further recovery. *)
             mk_call cglob'
-              [Cpp_erasure.unbox_tolerant (Tglob (g, glob_tys, [])) single_arg]
+              [Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_tolerant_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tglob (g, glob_tys, []))) (Legacy_minicpp_to_cpp_ir.lower_expr single_arg))]
           | Some g, _ ->
             (* Tolerantly: the ML type says the argument is a box, but a
                producer that could name the pair's shape may have emitted the
@@ -5466,9 +5463,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                pair already in hand through -- where a plain [any_cast] would
                throw on the latter. *)
             mk_call cglob'
-              [ Cpp_erasure.unbox_tolerant
-                  (Tglob (g, [Tany; Tany], []))
-                  single_arg ]
+              [ Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_tolerant_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tglob (g, [Tany; Tany], []))) (Legacy_minicpp_to_cpp_ir.lower_expr single_arg)) ]
           | None, _ -> primary_result )
         else
           primary_result
@@ -5693,7 +5688,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           let expected = param_expected_cpp_ty_ir env callee_param_tys i in
           ( match expected with
             | Some ty ->
-              Cpp_erasure.unbox (erase_type_args_to_any (Cpp_ir_to_legacy_minicpp.ty ty)) inner
+              Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type (erase_type_args_to_any (Cpp_ir_to_legacy_minicpp.ty ty))) (Legacy_minicpp_to_cpp_ir.lower_expr inner))
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
@@ -6246,16 +6241,15 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                    | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
                    | _ -> Tglob (g, [Tany], [])
                  in
-                 Cpp_erasure.converting_ctor bare_ty
-                   [Cpp_erasure.unbox list_any_ty (CPPvar binding_name)]
+                 Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type bare_ty) [Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type list_any_ty) (Cpp_ir.Expr.Local binding_name)])
                | Tglob (g, [elem_ty], _) when Ml_type_util.is_custom_list_global g ->
                  let erased_elem = erase_type_to_any elem_ty in
                  let cast_ty =
                    if erased_elem = Tany then bare_ty
                    else Tglob (g, [erased_elem], [])
                  in
-                 Cpp_erasure.unbox cast_ty (CPPvar binding_name)
-               | _ -> Cpp_erasure.unbox bare_ty (CPPvar binding_name))
+                 Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type cast_ty) (Cpp_ir.Expr.Local binding_name))
+               | _ -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type bare_ty) (Cpp_ir.Expr.Local binding_name)))
             else
               CPPvar binding_name
           in
@@ -6805,7 +6799,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
           not (read_is_boxed i occ) && is_env_var_erased env tvars i
         | _ -> false
       in
-      if body_is_erased then (fun e -> k (Cpp_erasure.unbox ret e))
+      if body_is_erased then (fun e -> k (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type ret) (Legacy_minicpp_to_cpp_ir.lower_expr e))))
       else k
     | _ -> k
   in
@@ -6884,7 +6878,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
     let needs_pair_any_cast = cs.cs_pair_any_cast in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
-      (Cpp_erasure.unbox (Tglob (g, [Tany; Tany], [])) (t), true, None)
+      (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tglob (g, [Tany; Tany], []))) (Legacy_minicpp_to_cpp_ir.lower_expr t)), true, None)
     end
     else if (scrut_is_mlmagic || (scrut_is_magic && Cpp_ir.Types.prints_as_any typ)
              || scrut_is_cpp_erased)
@@ -6911,7 +6905,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
           Entity_application (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
-      (Cpp_erasure.unbox (Cpp_ir_to_legacy_minicpp.ty cast_ty) t, false, Some cast_ty)
+      (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir cast_ty (Legacy_minicpp_to_cpp_ir.lower_expr t)), false, Some cast_ty)
     else
       (t, false, None)
   in
@@ -7073,9 +7067,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
                  let cast_expr =
                    match stripped with
                    | Tglob (g, _, _) when is_prod_global g ->
-                     Cpp_erasure.unbox
-                       (Tglob (g, [Tany; Tany], []))
-                       (CPPvar name)
+                     Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tglob (g, [Tany; Tany], []))) (Cpp_ir.Expr.Local name))
                    | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -7087,8 +7079,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
                          Tnamespace (ns_g, Tglob (g, [Tany], []))
                        | _ -> Tglob (g, [Tany], [])
                      in
-                     Cpp_erasure.converting_ctor cpp_ty
-                       [Cpp_erasure.unbox list_any_ty (CPPvar name)]
+                     Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) [Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type list_any_ty) (Cpp_ir.Expr.Local name)])
                    | Tglob (g, [_], _) when Ml_type_util.is_custom_list_global g ->
                      CPPvar name
                    | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
@@ -7098,7 +7089,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
                         wrapping it. any_cast<std::any>(any(V)) throws; pass
                         the std::any value as-is. *)
                      CPPvar name
-                   | _ -> Cpp_erasure.unbox cpp_ty (CPPvar name)
+                   | _ -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) (Cpp_ir.Expr.Local name))
                  in
                  List.map
                    (local_var_subst_stmt ~keep_cast:true name cast_expr)
@@ -7214,7 +7205,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
             List.map (function
               | Sreturn (Some (CPPvar name))
                 when Id.Set.mem name erased_pat_vars ->
-                Sreturn (Some (Cpp_erasure.unbox br_ret (CPPvar name)))
+                Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type br_ret) (Cpp_ir.Expr.Local name))))
               | s -> s)
               br_stmts
         | _ -> br_stmts
@@ -7706,7 +7697,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             (call_opaque,
               lifted,
               of_reversed (free_args @ List.map sub (to_reversed args)) )
-        | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
+        | CPPany_cast (ty, e') -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type ty) (Legacy_minicpp_to_cpp_ir.lower_expr (sub e')))
         | _ ->
           (* Every other form is a plain structural descent.  Spelling the
              cases out by hand is what let uses of [target] under an [if] or
@@ -8741,7 +8732,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     stands for. *)
 and gen_stored_value ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e =
   match e with
-  | MLdummy _ -> Cpp_erasure.empty_box
+  | MLdummy _ -> Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir
   | e when ml_value_is_void_call e -> wrap_void_call_as_value (gen_expr ~slot env e)
   | _ -> gen_expr ?expected_ty ~slot env e
 

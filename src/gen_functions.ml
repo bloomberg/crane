@@ -1630,7 +1630,7 @@ let recover_erased_body_types ty b =
     initialisation. *)
 let gen_constant_value ?expected_ty b =
   match b with
-  | MLdummy _ -> Cpp_erasure.empty_box
+  | MLdummy _ -> Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir
   | _ -> gen_expr ?expected_ty (empty_env ()) b
 
 (** The parameters a head declares for the type variables [cty] spells,

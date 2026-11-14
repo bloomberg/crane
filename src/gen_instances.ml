@@ -568,7 +568,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
                     Sasgn (name, Declare (body_cpp, None),
-                           Cpp_erasure.unbox body_cpp (CPPvar param_name))
+                           Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type body_cpp) (Cpp_ir.Expr.Local param_name)))
                     :: acc
                   ) stmts (List.rev cast_info)
                 in

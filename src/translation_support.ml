@@ -854,7 +854,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let inner = strip_ns inner in
       let derefed = CPPderef expr in
       if inner = dst_ty then derefed
-      else Cpp_erasure.converting_ctor orig_dst_ty [derefed]
+      else Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type orig_dst_ty) [Legacy_minicpp_to_cpp_ir.lower_expr derefed])
     | _, Tshared_ptr inner ->
       mk_call (CPPalloc (Alloc_heap, inner)) [expr]
     | Tglob (g1, _src_ts, _), Tglob (g2, _dst_ts, _)
@@ -882,7 +882,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          nor from [pair<any,any>], which is how a pair's components are boxed
          one at a time.  Dispatch at compile time instead. *)
       if not (is_access_path expr) then
-        Cpp_erasure.converting_ctor orig_dst_ty [expr]
+        Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type orig_dst_ty) [Legacy_minicpp_to_cpp_ir.lower_expr expr])
       else begin
         (* Which way [U] is read at [A] -- unboxed, converted, or taken apart
            component by component -- cannot be decided until C++ substitutes
@@ -911,13 +911,13 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
     | (_, (Tglob (g, [elem_ty], _) | Tnamespace (_, Tglob (g, [elem_ty], _))))
       when Ml_type_util.is_custom_list_global g && elem_ty <> Tany && elem_ty <> Tauto ->
       (match src_ty with
-       | Tany -> Cpp_erasure.unbox (Tglob (g, [Tany], [])) expr
+       | Tany -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type (Tglob (g, [Tany], []))) (Legacy_minicpp_to_cpp_ir.lower_expr expr))
        | _ -> expr)
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never shared_ptr)
          because nested self-references are wrapped at the field level. *)
-      Cpp_erasure.converting_ctor orig_dst_ty [expr]
+      Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type orig_dst_ty) [Legacy_minicpp_to_cpp_ir.lower_expr expr])
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
@@ -1608,8 +1608,7 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = [])
   let sub = local_var_subst_expr ~keep_cast ~extra_args target repl in
   match e with
   | CPPany_cast (ty, CPPvar id) when keep_cast && Id.equal id target ->
-    Cpp_erasure.unbox ty
-      (match repl with CPPany_cast (_, inner) -> inner | r -> r)
+    Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type ty) (Legacy_minicpp_to_cpp_ir.lower_expr (match repl with CPPany_cast (_, inner) -> inner | r -> r)))
   | CPPfun_call (o, CPPvar id, args) when extra_args <> [] && Id.equal id target
     ->
     CPPfun_call

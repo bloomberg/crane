@@ -397,7 +397,7 @@ and cpp_expr =
         written as ([std::any] itself, or a [using] alias for it).  Prints
         exactly as the converting constructor it is, but boxing is a category
         of its own so that recognising one is a pattern rather than a question
-        about a type.  Built only by {!Cpp_erasure.converting_ctor}. *)
+        about a type.  Built only by {!Cpp_erasure.converting_ctor_ir}. *)
   | CPPderef of cpp_expr
   | CPPmove of cpp_expr
   | CPPforward of cpp_type * cpp_expr

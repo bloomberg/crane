@@ -827,7 +827,7 @@ let mentions_unresolved_promoted_ir (ty : Cpp_ir.Lowered.Type.t) =
 let apply_erased_curried ?(box = false) callee arg_exprs =
   List.fold_left
     (fun f a ->
-      let a = if box then Cpp_erasure.converting_ctor Tany [a] else a in
+      let a = if box then Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir Cpp_ir.Type.Any [Legacy_minicpp_to_cpp_ir.lower_expr a]) else a in
       match f with
       (* A callable boxed right here never lost its type: recovering it would
          be a cast straight back to what it already was. *)
@@ -3135,13 +3135,13 @@ let rec coerce ?term ?from ~into expr =
         (* A list went into the box with its elements boxed, so that is the
            shape the cast has to name however concrete the context's element
            type is; the converting constructor then recovers each element. *)
-        match Cpp_erasure.erased_list_shape into with
+        match Cpp_erasure.erased_list_shape_ir (Legacy_minicpp_to_cpp_ir.lower_type into) with
         (* A custom list has no converting constructor to unbox its elements
            with, so it stays at the flat shape until a consumer converts it. *)
-        | Some (g, shape) when Table.is_custom g -> Cpp_erasure.unbox shape expr
+        | Some (g, shape) when Table.is_custom g -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir shape (Legacy_minicpp_to_cpp_ir.lower_expr expr))
         | Some (_, shape) ->
-          Cpp_erasure.converting_ctor into [Cpp_erasure.unbox shape expr]
-        | None -> Cpp_erasure.unbox into expr ) )
+          Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir (Legacy_minicpp_to_cpp_ir.lower_type into) [Cpp_erasure.unbox_ir shape (Legacy_minicpp_to_cpp_ir.lower_expr expr)])
+        | None -> Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type into) (Legacy_minicpp_to_cpp_ir.lower_expr expr)) ) )
     (* Nothing may be boxed or cast on the strength of an admission that the
        representation is unknown. *)
     | `Opaque -> expr
@@ -3171,7 +3171,7 @@ let rec coerce ?term ?from ~into expr =
               wrap_crane_erase_fn Boxed_whole (erased_fn_instantiation expr)
             else expr
           in
-          Cpp_erasure.converting_ctor Tany [adapted]
+          Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.converting_ctor_ir Cpp_ir.Type.Any [Legacy_minicpp_to_cpp_ir.lower_expr adapted])
       else
         match into with
         (* A slot that erased its domain -- a record field whose Rocq type is
@@ -3283,7 +3283,7 @@ let deep_box_list e expr =
   | e -> (
     match
       Option.bind (infer_ml_body_type e) (fun t ->
-          Cpp_erasure.erased_list_shape (cpp_of_ml (empty_env ()) t) )
+          Cpp_erasure.erased_list_shape_ir (cpp_of_ml_ir (empty_env ()) t) )
     with
     | Some _ -> mk_call (CPPrt Crane_rt.Deep_box) [expr]
     | None -> expr )
@@ -3411,7 +3411,7 @@ let recover_erased_scrutinee env ~is_magic typ expr =
     let cpp_ty =
       cpp_of_ml env typ
     in
-    if prints_as_any cpp_ty then expr else Cpp_erasure.unbox cpp_ty expr
+    if prints_as_any cpp_ty then expr else Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty) (Legacy_minicpp_to_cpp_ir.lower_expr expr))
 
 (** Build the qualified constructor struct type for a pattern match branch.
 

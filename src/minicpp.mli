@@ -548,7 +548,7 @@ and cpp_expr =
           question about a type, and so that the two ways of writing one down
           that mean nothing — a box around a box, and a cast applied straight
           to a fresh box — are normalised away at the single place that builds
-          them, {!Cpp_erasure.converting_ctor}. *)
+          them, {!Cpp_erasure.converting_ctor_ir}. *)
   | CPPderef of cpp_expr  (** Pointer dereference *)
   | CPPmove of cpp_expr  (** std::move for move semantics *)
   | CPPforward of cpp_type * cpp_expr
