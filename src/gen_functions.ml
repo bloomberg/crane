@@ -156,64 +156,6 @@ let other_instance_self_calls n b =
   walk b;
   !found
 
-(** Substitute [CPPvar id] with [repl] in expressions and statements. Uses
-    generic AST visitors for structural recursion. *)
-let rec var_subst_expr (id : Id.t) (repl : cpp_expr) (e : cpp_expr) =
-  match e with
-  | CPPvar id' when Id.equal id id' -> repl
-  (* A lambda moving [id] into its captures moves the variable it is
-     replaced by.  A method's receiver becoming [this] keeps its name there:
-     the closure captures a copy of the object, which
-     {!Gen_inductives.replace_this_in_lambdas} names.  Replaced by anything
-     else, it captures nothing of that name. *)
-  | CPPlambda l when List.exists (Id.equal id) l.cl_moved ->
-    let cl_moved =
-      List.sort_uniq Id.compare
-        (List.concat_map
-           (fun x ->
-             if not (Id.equal x id) then [x]
-             else
-               match repl with
-               | CPPvar y -> [y]
-               | CPPthis | CPPderef CPPthis -> [x]
-               | _ -> [] )
-           l.cl_moved )
-    in
-    map_expr (var_subst_expr id repl) (var_subst_stmt id repl) Fun.id (CPPlambda {l with cl_moved})
-  | _ -> map_expr (var_subst_expr id repl) (var_subst_stmt id repl) Fun.id e
-
-(** Statement-level case of {!var_subst_expr}. *)
-and var_subst_stmt (id : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
-  map_stmt (var_subst_expr id repl) (var_subst_stmt id repl) Fun.id s
-
-(** Substitute unnamed type variables with named ones based on a variable list.
-    This is used when generating methods to replace T1, T2, etc. with the
-    struct's template parameter names like A, B, etc. Uses [map_cpp_type] for
-    structural recursion on types. *)
-let tvar_subst_type (tvars : Id.t list) : cpp_type -> cpp_type =
-  map_cpp_type (fun ty ->
-    match ty with
-    | Tvar (Tv_index (i, None)) ->
-      (try Tvar (Tv_index (i, Some (List.nth tvars (pred i)))) with Failure _ -> ty)
-    | _ -> ty )
-
-(** Substitute type variables in expressions and statements. Uses generic AST
-    visitors for structural recursion. *)
-let rec tvar_subst_expr (tvars : Id.t list) (e : cpp_expr) : cpp_expr =
-  map_expr
-    (tvar_subst_expr tvars)
-    (tvar_subst_stmt tvars)
-    (tvar_subst_type tvars)
-    e
-
-(** Statement-level case of {!tvar_subst_expr}. *)
-and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
-  map_stmt
-    (tvar_subst_expr tvars)
-    (tvar_subst_stmt tvars)
-    (tvar_subst_type tvars)
-    s
-
 (** [is_unit_cpp_type ty] is [true] for the C++ rendering of Rocq's [unit]
     (which [Shared.v] maps to [std::monostate]) and for [void]. *)
 let is_unit_cpp_type = function
@@ -284,6 +226,181 @@ let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
     closure returned where the result erased is stored in the canonical form
     its caller reads ({!Translation.erase_returned_fn_values}). *)
 let finish_fn_body cod body = dead_unit_returns_to_abort cod (erase_returned_fn_values cod body)
+
+(** {!glob_subst_expr} in CppIR. *)
+let rec glob_subst_expr_ir ?(spare = []) (id : GlobRef.t) (repl : Cpp_ir.Lowered.Expr.t)
+    (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  match e with
+  | Entity (id', _, _) when GlobRef.UserOrd.equal id id' -> repl
+  | Call (({occurrence = Some o; _} as cs), (Entity (id', _, _) as head), args)
+    when GlobRef.UserOrd.equal id id' && List.exists (Miniml.Occurrence.equal o) spare ->
+    Call (cs, head, List.map (glob_subst_expr_ir ~spare id repl) args)
+  | _ -> Cpp_ir.Map.expr (glob_subst_map ~spare id repl) e
+
+(** Statement-level case of {!glob_subst_expr_ir}. *)
+and glob_subst_stmt_ir ?(spare = []) id repl (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+  Cpp_ir.Map.stmt (glob_subst_map ~spare id repl) s
+
+and glob_subst_map ~spare id repl =
+  Cpp_ir.Map.make ~expr:(glob_subst_expr_ir ~spare id repl) ~stmt:(glob_subst_stmt_ir ~spare id repl)
+    ~type_:Fun.id ()
+
+(** Substitute the local [id] with [repl] in expressions and statements.
+    A lambda moving [id] into its captures moves the variable it is
+    replaced by.  A method's receiver becoming [this] keeps its name there:
+    the closure captures a copy of the object, which
+    {!Gen_inductives.replace_this_in_lambdas} names.  Replaced by anything
+    else, it captures nothing of that name. *)
+let rec var_subst_expr_ir (id : Id.t) (repl : Cpp_ir.Lowered.Expr.t) (e : Cpp_ir.Lowered.Expr.t) :
+    Cpp_ir.Lowered.Expr.t =
+  match e with
+  | Local id' when Id.equal id id' -> repl
+  | Lambda l when List.exists (Id.equal id) l.moved ->
+    let moved =
+      List.sort_uniq Id.compare
+        (List.concat_map
+           (fun x ->
+             if not (Id.equal x id) then [x]
+             else
+               match repl with
+               | Local y -> [y]
+               | This | Dereference This -> [x]
+               | _ -> [] )
+           l.moved )
+    in
+    Cpp_ir.Map.expr (var_subst_map id repl) (Lambda {l with moved})
+  | _ -> Cpp_ir.Map.expr (var_subst_map id repl) e
+
+(** Statement-level case of {!var_subst_expr_ir}. *)
+and var_subst_stmt_ir id repl (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+  Cpp_ir.Map.stmt (var_subst_map id repl) s
+
+and var_subst_map id repl =
+  Cpp_ir.Map.make ~expr:(var_subst_expr_ir id repl) ~stmt:(var_subst_stmt_ir id repl) ~type_:Fun.id ()
+
+(** Substitute unnamed type variables with named ones based on a variable
+    list: each unnamed variable [Ti] in [s] is named by the [i]th of
+    [tvars].  Used when generating methods, to name [T1], [T2], ... by the
+    struct's template parameters. *)
+let tvar_subst_stmt_ir (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+  let type_ =
+    Cpp_ir.Types.map (fun (ty : Cpp_ir.Lowered.Type.t) ->
+        match ty with
+        | Variable (Index (i, None)) -> (
+          try Variable (Index (i, Some (List.nth tvars (pred i)))) with Failure _ -> ty )
+        | _ -> ty )
+  in
+  let rec expr e = Cpp_ir.Map.expr (m ()) e
+  and stmt s = Cpp_ir.Map.stmt (m ()) s
+  and m () = Cpp_ir.Map.make ~expr ~stmt ~type_ () in
+  stmt s
+
+(** {!dead_unit_returns_to_abort} in CppIR. *)
+let dead_unit_returns_to_abort_ir (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
+  let is_unit : Cpp_ir.Lowered.Type.t -> bool = function
+    | Void -> true
+    | Entity_application (r, _, _) | In_namespace (r, _) -> Table.is_unit_type r
+    | _ -> false
+  in
+  let rec is_tt : Cpp_ir.Lowered.Expr.t -> bool = function
+    | Entity (r, _, _) -> Table.is_tt_constructor r
+    | Call (_, f, _) -> is_tt f
+    | _ -> false
+  in
+  let rec fix_stmts ret_ty stmts =
+    match ret_ty with
+    | Some t when not (is_unit t || Translation_types.resolves_to_any_type_ir t) ->
+      List.map (fix_stmt ret_ty) stmts
+    | _ -> List.map (fix_stmt None) stmts
+  and fix_stmt ret_ty (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+    match s with
+    | Return (Some e) when ret_ty <> None && is_tt e ->
+      Return (Some (Abort (Minicpp.dead_branch_message, match ret_ty with Some t -> t | None -> Any)))
+    | _ -> Cpp_ir.Map.stmt (fix_map ret_ty) s
+  and fix_expr ret_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+    match e with
+    | Lambda l -> Lambda {l with body = fix_stmts l.return_type l.body}
+    | _ -> Cpp_ir.Map.expr (fix_map ret_ty) e
+  and fix_map ret_ty = Cpp_ir.Map.make ~expr:(fix_expr ret_ty) ~stmt:(fix_stmt ret_ty) ~type_:Fun.id () in
+  fix_stmts (Some cod) body
+
+(** {!Translation.erase_returned_fn_values} in CppIR: a closure [body]
+    returns where its result [ret_ty] is the erased box is stored in the
+    canonical form its caller reads.  Nested lambda bodies are left alone:
+    their returns answer to their own return type. *)
+let erase_returned_fn_values_ir (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
+  if not (Translation_types.resolves_to_any_type_ir ret_ty) then body
+  else
+    let rec fix_stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+      match s with
+      | Return (Some (Lambda _ as e)) -> Return (Some (Erase_callable (Boxed_whole, e)))
+      | _ -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:fix_stmt ~type_:Fun.id ()) s
+    in
+    List.map fix_stmt body
+
+(** {!finish_fn_body} in CppIR. *)
+let finish_fn_body_ir cod body = dead_unit_returns_to_abort_ir cod (erase_returned_fn_values_ir cod body)
+
+(** {!Translation.return_captures_by_value} in CppIR. *)
+let return_captures_by_value_ir (stmts : Cpp_ir.Lowered.Stmt.t list) =
+  let closure (l : _ Cpp_ir.Expr.Lambda.t) : _ Cpp_ir.Expr.Lambda.t =
+    match l.capture with
+    | Runs_in_place ->
+      Probe.violation "closure capture" (Pp.str "a lambda holding references into its frame is returned");
+      {l with capture = Stored}
+    | _ -> l
+  in
+  let rec by_value (l : _ Cpp_ir.Expr.Lambda.t) = closure {l with body = List.map stmt l.body}
+  and expr (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+    match e with
+    | Lambda l -> Lambda (by_value l)
+    | Call (res, Lambda l, args) -> Call (res, Lambda {l with body = List.map stmt l.body}, List.map expr args)
+    | Call (res, f, args) -> Call (res, expr f, List.map expr args)
+    | Dereference e -> Dereference (expr e)
+    | Move e -> Move (expr e)
+    | Forward (ty, e) -> Forward (ty, expr e)
+    | Aggregate a -> Aggregate {a with values = List.map expr a.values}
+    | Local_aggregate a -> Local_aggregate {a with values = List.map expr a.values}
+    | Binary (op, a, b) -> Binary (op, expr a, expr b)
+    | Unary (op, e) -> Unary (op, expr e)
+    | Access (Dot, e, id) -> Access (Dot, expr e, id)
+    | Scope (e, id, []) -> Scope (expr e, id, [])
+    | Member (e, id) -> Member (expr e, id)
+    | Project (e, id, ty) -> Project (expr e, id, ty)
+    | Access_call (Arrow, e, id, args) -> Access_call (Arrow, expr e, id, List.map expr args)
+    | Any_cast (ty, e) -> Any_cast (ty, expr e)
+    | e -> e
+  and stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+    match s with
+    | Return (Some e) -> Return (Some (expr e))
+    | Expression e -> Expression (expr e)
+    | If i -> If {condition = expr i.condition; then_ = List.map stmt i.then_; else_ = List.map stmt i.else_}
+    | Switch w ->
+      Switch
+        { w with
+          scrutinee = expr w.scrutinee;
+          branches = List.map (fun (id, body) -> (id, List.map stmt body)) w.branches;
+          default = Option.map (List.map stmt) w.default }
+    | Match (scrut, branches, default) ->
+      Match
+        ( {scrut with expr = expr scrut.expr},
+          List.map (fun (br : _ Cpp_ir.Stmt.Match.branch) -> {br with body = List.map stmt br.body}) branches,
+          Option.map (List.map stmt) default )
+    | Custom_match c ->
+      Custom_match
+        { c with
+          scrutinee = expr c.scrutinee;
+          branches =
+            List.map (fun (b : _ Cpp_ir.Stmt.Custom_match.branch) -> {b with body = List.map stmt b.body}) c.branches }
+    | s -> s
+  in
+  List.map
+    (fun (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t ->
+      match s with
+      | Return (Some (Lambda ({capture = Runs_in_place; _} as l))) -> Return (Some (Lambda (closure l)))
+      | Return (Some e) -> Return (Some (expr e))
+      | s -> s )
+    stmts
 
 (** [return ty::lazy_([=]() -> cod { return x; })]: the body's result [x], of
     C++ type [cod], suspended whole as the coinductive [ml_ret], whose type

@@ -10,8 +10,9 @@
     {!gen_record_methods} to turn an inductive or an eponymous record into a
     CppIR struct (or enum).  Methods are generated ahead of the files
     ({!generate_method_ahead}) and taken from {!methods_ahead} when the struct
-    is built; their bodies, like every type and conversion translation
-    produces, are MiniCpp until the struct takes them. *)
+    is built.  A method is CppIR from the statements translation generates
+    for its body on; the rest of the struct's types and conversions are
+    MiniCpp until the struct takes them. *)
 
 open Common
 open Miniml
@@ -32,56 +33,39 @@ module IntSet = Escape.IntSet
 (** Replace [this] in an expression that a method returns with
     [shared_from_this()] of [inner_ty], recursing into lambdas and calls: a
     raw [this] cannot convert to the [shared_ptr] the return type expects. *)
-let rec replace_return_this_expr inner_ty = function
-  | CPPthis -> CPPshared_from_this inner_ty
-  | CPPlambda l ->
-    CPPlambda (map_lambda (replace_return_this_stmt inner_ty) Fun.id l)
-  | CPPfun_call (_, f, args) ->
-    CPPfun_call
-      (call_opaque, replace_return_this_expr inner_ty f,
-        map_args (replace_return_this_expr inner_ty) args )
+let rec replace_return_this_expr inner_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  match e with
+  | This -> Shared_from_this inner_ty
+  | Lambda l -> Lambda {l with body = List.map (replace_return_this_stmt inner_ty) l.body}
+  | Call (_, f, args) ->
+    Call
+      ( Loopify_analysis.call_opaque,
+        replace_return_this_expr inner_ty f,
+        List.map (replace_return_this_expr inner_ty) args )
   | e -> e
 
 (** Statement-level counterpart of {!replace_return_this_expr}: recurses into
     if/switch/match branches to replace [return this] with [shared_from_this]. *)
-and replace_return_this_stmt inner_ty = function
-  | Sreturn (Some e) -> Sreturn (Some (replace_return_this_expr inner_ty e))
-  | Sif (cond, then_stmts, else_stmts) ->
-    Sif
-      ( cond,
-        List.map (replace_return_this_stmt inner_ty) then_stmts,
-        List.map (replace_return_this_stmt inner_ty) else_stmts )
-  | Scustom_case (ty, scrut, tys, brs, tag) ->
-    Scustom_case
-      ( ty,
-        scrut,
-        tys,
-        List.map
-          (fun (binds, br_ty, stmts) ->
-            (binds, br_ty, List.map (replace_return_this_stmt inner_ty) stmts) )
-          brs,
-        tag )
-  | Sswitch (scrut, ind, brs, default) ->
-    Sswitch
+and replace_return_this_stmt inner_ty (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+  let body = List.map (replace_return_this_stmt inner_ty) in
+  match s with
+  | Return (Some e) -> Return (Some (replace_return_this_expr inner_ty e))
+  | If i -> If {i with then_ = body i.then_; else_ = body i.else_}
+  | Custom_match c ->
+    Custom_match
+      { c with
+        branches = List.map (fun (b : _ Cpp_ir.Stmt.Custom_match.branch) -> {b with body = body b.body}) c.branches }
+  | Switch w ->
+    Switch
+      { w with
+        branches = List.map (fun (ctor, stmts) -> (ctor, body stmts)) w.branches;
+        default = Option.map body w.default }
+  | Match (scrut, branches, default) ->
+    Match
       ( scrut,
-        ind,
-        List.map
-          (fun (ctor, stmts) ->
-            (ctor, List.map (replace_return_this_stmt inner_ty) stmts) )
-          brs,
-        Option.map (List.map (replace_return_this_stmt inner_ty)) default )
-  | Smatch (scrut, branches, default) ->
-    Smatch
-      ( scrut,
-        List.map
-          (fun br ->
-            { br with
-              smb_body =
-                List.map (replace_return_this_stmt inner_ty) br.smb_body
-            })
-          branches,
-        Option.map (List.map (replace_return_this_stmt inner_ty)) default )
-  | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
+        List.map (fun (br : _ Cpp_ir.Stmt.Match.branch) -> {br with body = body br.body}) branches,
+        Option.map body default )
+  | Expression e -> Expression (replace_return_this_expr inner_ty e)
   | s -> s
 
 (** Prevent dangling [this] in by-value lambda captures.
@@ -92,50 +76,54 @@ and replace_return_this_stmt inner_ty = function
     the caller's [shared_ptr] is released.
 
     Fix: bind [shared_from_this()] to a local [_self] at the top of the
-    method body, then replace [CPPthis] inside every by-value lambda body
-    with [CPPvar "_self"].  The lambda's [=] capture picks up [_self] as
+    method body, then replace [this] inside every by-value lambda body
+    with the local [_self].  The lambda's [=] capture picks up [_self] as
     a [shared_ptr] copy that keeps the object alive.  The outer method
-    body keeps raw [CPPthis] for direct method calls (safe because the
+    body keeps raw [this] for direct method calls (safe because the
     method is invoked on a live object). *)
-let replace_this_in_lambdas ?receiver self_type stmts =
+let replace_this_in_lambdas ?receiver (self_type : Cpp_ir.Lowered.Type.t) (stmts : Cpp_ir.Lowered.Stmt.t list) =
   let self_id = Id.of_string "_self" in
-  (* Check if CPPthis or CPPshared_from_this appears in an expression. *)
-  let rec expr_has_this = function
-    | CPPthis | CPPshared_from_this _ -> true
+  let visit ~expr ~stmt : _ Cpp_ir.Children.visitor = {expr; stmt; type_ = ignore} in
+  (* Whether [this] or [shared_from_this()] appears in an expression, not
+     looking into the statements of a lambda's body. *)
+  let rec expr_has_this (e : Cpp_ir.Lowered.Expr.t) =
+    match e with
+    | This | Shared_from_this _ -> true
     | e ->
       let found = ref false in
-      ignore (map_expr (fun e' ->
-        if expr_has_this e' then found := true; e') (fun s -> s) Fun.id e);
+      Cpp_ir.Children.expr (visit ~expr:(fun e' -> if expr_has_this e' then found := true) ~stmt:ignore) e;
       !found
   in
-  (* Check if CPPthis or CPPshared_from_this appears in statements. *)
-  let rec stmt_has_this = function
-    | s ->
-      let found = ref false in
-      ignore (map_stmt
-        (fun e -> if expr_has_this e then found := true; e)
-        (fun s' -> if stmt_has_this s' then found := true; s')
-        Fun.id s);
-      !found
+  (* Whether [this] or [shared_from_this()] appears in a statement. *)
+  let rec stmt_has_this s =
+    let found = ref false in
+    Cpp_ir.Children.stmt
+      (visit
+         ~expr:(fun e -> if expr_has_this e then found := true)
+         ~stmt:(fun s' -> if stmt_has_this s' then found := true) )
+      s;
+    !found
   in
   let stmts_have_this stmts = List.exists stmt_has_this stmts in
   (* Check if any by-value lambda in the method body captures this. *)
-  let rec lambda_captures_this_expr = function
-    | CPPlambda {cl_body = body; cl_capture = Closure; _} -> stmts_have_this body
+  let rec lambda_captures_this_expr (e : Cpp_ir.Lowered.Expr.t) =
+    match e with
+    | Lambda {body; capture = Stored; _} -> stmts_have_this body
     | e ->
       let found = ref false in
-      ignore (map_expr (fun e' ->
-        if lambda_captures_this_expr e' then found := true; e')
-        (fun s ->
-          if lambda_captures_this_stmt s then found := true; s)
-        Fun.id e);
+      Cpp_ir.Children.expr
+        (visit
+           ~expr:(fun e' -> if lambda_captures_this_expr e' then found := true)
+           ~stmt:(fun s -> if lambda_captures_this_stmt s then found := true) )
+        e;
       !found
   and lambda_captures_this_stmt s =
     let found = ref false in
-    ignore (map_stmt
-      (fun e -> if lambda_captures_this_expr e then found := true; e)
-      (fun s' -> if lambda_captures_this_stmt s' then found := true; s')
-      Fun.id s);
+    Cpp_ir.Children.stmt
+      (visit
+         ~expr:(fun e -> if lambda_captures_this_expr e then found := true)
+         ~stmt:(fun s' -> if lambda_captures_this_stmt s' then found := true) )
+      s;
     !found
   in
   let needs_self = List.exists lambda_captures_this_stmt stmts in
@@ -145,7 +133,7 @@ let replace_this_in_lambdas ?receiver self_type stmts =
        Coinductives and regular inductives are both value types. *)
     let is_value_self =
       match self_type with
-      | Tglob (self_ref, _, _) -> not (is_enum_inductive self_ref)
+      | Entity_application (self_ref, _, _) -> not (is_enum_inductive self_ref)
       | _ -> false
     in
     (* For value-type methods, the loopifier uses "_self" as the name for the
@@ -153,39 +141,34 @@ let replace_this_in_lambdas ?receiver self_type stmts =
        name for the value copy would cause a redefinition conflict in loopified
        methods.  Use "_self_val" for the value copy to avoid the clash. *)
     let self_id = if is_value_self then Id.of_string "_self_val" else self_id in
-    (* Substitute CPPthis and CPPshared_from_this → CPPvar self_id inside
-       by-value lambda bodies.  For value-type _self_val, also collapse
-       CPPderef(CPPthis) → CPPvar self_id to avoid dereferencing a value. *)
-    let rec subst_expr = function
-      | CPPderef (CPPthis | CPPshared_from_this _) when is_value_self ->
-        CPPvar self_id
-      | CPPthis | CPPshared_from_this _ -> CPPvar self_id
-      | e -> map_expr subst_expr subst_stmt Fun.id e
-    and subst_stmt s =
-      map_stmt subst_expr subst_stmt Fun.id s
-    in
+    (* Substitute [this] and [shared_from_this()] by the local [self_id]
+       inside by-value lambda bodies.  For value-type _self_val, also collapse
+       [*this] into the local, to avoid dereferencing a value. *)
+    let rec subst_expr (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+      match e with
+      | Dereference (This | Shared_from_this _) when is_value_self -> Local self_id
+      | This | Shared_from_this _ -> Local self_id
+      | e -> Cpp_ir.Map.expr (subst_map ()) e
+    and subst_stmt s = Cpp_ir.Map.stmt (subst_map ()) s
+    and subst_map () = (Cpp_ir.Map.make ~expr:subst_expr ~stmt:subst_stmt ~type_:Fun.id ()) in
     (* A closure taking the receiver by move takes the copy by move. *)
-    let copy_moved l =
+    let copy_moved (l : _ Cpp_ir.Expr.Lambda.t) =
       match receiver with
-      | Some r when List.exists (Id.equal r) l.cl_moved ->
-        {l with cl_moved = List.sort Id.compare (self_id :: List.filter (fun x -> not (Id.equal x r)) l.cl_moved)}
+      | Some r when List.exists (Id.equal r) l.moved ->
+        {l with moved = List.sort Id.compare (self_id :: List.filter (fun x -> not (Id.equal x r)) l.moved)}
       | _ -> l
     in
-    let rec walk_expr = function
-      | CPPlambda ({cl_capture = Closure; _} as l) ->
-        CPPlambda (copy_moved (map_lambda subst_stmt Fun.id l))
-      | e -> map_expr walk_expr walk_stmt Fun.id e
-    and walk_stmt s =
-      map_stmt walk_expr walk_stmt Fun.id s
+    let rec walk_expr (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+      match e with
+      | Lambda ({capture = Stored; _} as l) -> Lambda (copy_moved {l with body = List.map subst_stmt l.body})
+      | e -> Cpp_ir.Map.expr (walk_map ()) e
+    and walk_stmt s = Cpp_ir.Map.stmt (walk_map ()) s
+    and walk_map () = (Cpp_ir.Map.make ~expr:walk_expr ~stmt:walk_stmt ~type_:Fun.id ()) in
+    let self_expr, (self_ty : _ Cpp_ir.Stmt.Binding.t) =
+      if is_value_self then (Cpp_ir.Expr.Dereference This, Declare (self_type, None))
+      else (Shared_from_this self_type, Declare (Shared_pointer self_type, None))
     in
-    let self_expr, self_ty =
-      if is_value_self then
-        (CPPderef CPPthis, Declare (self_type, None))
-      else
-        (CPPshared_from_this self_type, Declare (Tshared_ptr self_type, None))
-    in
-    let self_binding = Sasgn (self_id, self_ty, self_expr) in
-    self_binding :: List.map walk_stmt stmts
+    (Bind_variable (self_id, self_ty, self_expr) : Cpp_ir.Lowered.Stmt.t) :: List.map walk_stmt stmts
 
 (** Whether an expression of a method body is [shared_from_this()]: itself,
     or inside a lambda's body or a call. *)
@@ -497,12 +480,6 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   }
 
 (** Whether a type mentions the template parameter [name] anywhere. *)
-let cpp_type_has_tvar name =
-  exists_cpp_type (function
-    | Tvar (Tv_index (_, Some n) | Tv_named n) -> Id.equal n name
-    | _ -> false )
-
-(** {!cpp_type_has_tvar} over a CppIR type. *)
 let cpp_type_has_tvar_ir name =
   Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
@@ -671,10 +648,7 @@ let planned_method_head func_ref vars s =
   if Probe.checking () then Callable_abi.check (method_plan func_ref s (method_head vars s));
   match Callable_abi.receiver abi with
   | Some r ->
-    ( Cpp_ir_to_legacy_minicpp.template_parameters (Callable_abi.declared_head abi),
-      Cpp_ir_to_legacy_minicpp.ty r.ret,
-      Id.Set.of_list r.return_only,
-      r.dropped_names )
+    (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
   | None ->
     CErrors.anomaly
       Pp.(str "the method " ++ GlobRef.print func_ref ++ str " was planned as a function.")
@@ -707,8 +681,6 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   } = s in
   let ret_cpp_ir = ret_cpp in
   let ret_cpp = Cpp_ir_to_legacy_minicpp.ty ret_cpp in
-  let params_ir = params in
-  let params = List.map (fun (x, t) -> (x, Cpp_ir_to_legacy_minicpp.ty t)) params in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method =
@@ -740,10 +712,11 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            ([closures_copy]).  [this_pos] counts the parameters outermost
            first, [i] innermost first. *)
         (not (this_arg_id <> None && i = method_n_params - 1 - this_pos))
-        && Translation_support.declared_by_value
-             (List.assoc_opt (Common.get_db_name (i + 1) env) params)
-             ~summary:(List.nth method_owned_flags i) )
-      ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params_ir)
+        &&
+        match List.assoc_opt (Common.get_db_name (i + 1) env) params with
+        | Some ty -> not (Translation_support.declared_by_reference_ir ty)
+        | None -> List.nth method_owned_flags i )
+      ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
   in
   (* The receiver becomes [this]; a closure reading it captures a copy of
@@ -774,7 +747,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
             with_region ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
-                gen_stmts env method_k inner_body ) ) )
+                List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_stmts env method_k inner_body) ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
@@ -804,8 +777,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   in
   let stmts =
     if all_method_type_args <> [] then
-      let self_call_with_tys = mk_cppglob func_ref all_method_type_args in
-      List.map (glob_subst_stmt func_ref self_call_with_tys) stmts
+      let self_call_with_tys = Legacy_minicpp_to_cpp_ir.lower_expr (mk_cppglob func_ref all_method_type_args) in
+      List.map (glob_subst_stmt_ir func_ref self_call_with_tys) stmts
     else
       stmts
   in
@@ -815,12 +788,12 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       (* For value-type methods, substitute with [CPPderef CPPthis] so that
          return positions produce a value copy rather than a raw pointer.
          For shared_ptr/coinductive methods, keep bare [CPPthis]. *)
-      let this_expr =
+      let this_expr : Cpp_ir.Lowered.Expr.t =
         if not (Table.is_coinductive name) && not (is_enum_inductive name) then
-          CPPderef CPPthis
-        else CPPthis
+          Dereference This
+        else This
       in
-      List.map (var_subst_stmt id this_expr) stmts
+      List.map (var_subst_stmt_ir id this_expr) stmts
     | None -> stmts
   in
   (* Replace [CPPthis] with [CPPshared_from_this] in return expressions.  When a
@@ -832,12 +805,11 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      to avoid replacing [this] in method calls that just forward the receiver. *)
   (* Compute self_type unconditionally: both the return-this and the
      lambda-this passes need it. *)
-  let self_type_args =
-    List.map named_tvar vars
+  let self_type : Cpp_ir.Lowered.Type.t =
+    Entity_application (name, List.map Cpp_ir.Build.named_variable vars, [])
   in
-  let self_type = Tglob (name, self_type_args, []) in
   let stmts =
-    if contains_shared_ptr ret_cpp then
+    if Loopify_analysis.contains_shared_ptr ret_cpp_ir then
       List.map (replace_return_this_stmt self_type) stmts
     else stmts
   in
@@ -846,18 +818,18 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      When a method returns a closure that captures [this], the raw pointer
      would dangle once the receiver is gone; the closure holding its own copy
      keeps the value alive. *)
-  let stmts = return_captures_by_value stmts in
+  let stmts = return_captures_by_value_ir stmts in
   let stmts = replace_this_in_lambdas ?receiver:this_arg_id self_type stmts in
   (* Apply tvar_subst_stmt with the extended vars list (defined above).
      extended_vars covers positions 1..num_ind_vars (inductive vars) and
-     num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt can
+     num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt_ir can
      name them all correctly. *)
   (* A [tt] the method returns is dead where its result is not [unit] -- with
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
-    finish_fn_body
-      (apply_unit_void (ml_type_is_void_call ty) ret_cpp)
-      (List.map (tvar_subst_stmt extended_vars) stmts)
+    finish_fn_body_ir
+      (if ml_type_is_void_call ty then Void else ret_cpp_ir)
+      (List.map (tvar_subst_stmt_ir extended_vars) stmts)
   in
 
 
@@ -870,20 +842,20 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      ones the receiver carries and the ones its head dropped are not. *)
   let stmt_has_tvar name stmts =
     let found = ref false in
-    let rec on_type t =
-      if cpp_type_has_tvar name t then found := true;
-      t
-    and on_expr = function
-      | CPPglob (_, _, Some {ci_inline = Some _; _}) as e -> e
-      | CPPfun_call (_, CPPglob (_, _, Some {ci_inline = Some _; _}), args) as e ->
-        List.iter (fun a -> ignore (on_expr a)) (to_reversed args);
-        e
-      | CPPglob (r, tys, ci) as e when Cpp_names.lookup_method_this_pos r <> None ->
-        ignore (Minicpp.map_expr on_expr on_stmt on_type (CPPglob (r, Cpp_names.method_type_args r tys, ci)));
-        e
-      | e -> Minicpp.map_expr on_expr on_stmt on_type e
-    and on_stmt s = Minicpp.map_stmt on_expr on_stmt on_type s in
-    List.iter (fun s -> ignore (on_stmt s)) stmts;
+    let rec visitor : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor Lazy.t =
+      lazy
+        { expr = on_expr;
+          stmt = (fun s -> Cpp_ir.Children.stmt (Lazy.force visitor) s);
+          type_ = (fun t -> if cpp_type_has_tvar_ir name t then found := true) }
+    and on_expr (e : Cpp_ir.Lowered.Expr.t) =
+      match e with
+      | Entity (_, _, Some {inline = Some _; _}) -> ()
+      | Call (_, Entity (_, _, Some {inline = Some _; _}), args) -> List.iter on_expr args
+      | Entity (r, tys, ci) when Cpp_names.lookup_method_this_pos r <> None ->
+        Cpp_ir.Children.expr (Lazy.force visitor) (Entity (r, Cpp_names.method_type_args r tys, ci))
+      | e -> Cpp_ir.Children.expr (Lazy.force visitor) e
+    in
+    List.iter (fun s -> Cpp_ir.Children.stmt (Lazy.force visitor) s) stmts;
     !found
   in
   (* A variable the head drops must be one the body does not name either:
@@ -904,61 +876,62 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      A return type that erased away entirely needs nothing said: anything
      converts to [std::any] by boxing. *)
   let stmts =
-    if Id.Set.is_empty return_only || ret = Tany then stmts
+    if Id.Set.is_empty return_only || ret = Any then stmts
     else
-      let rec cast_stmt s =
+      let rec cast_stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
         match s with
-        | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (ret, e, false)))
-        | _ -> Minicpp.map_stmt (fun e -> e) cast_stmt (fun t -> t) s
+        | Return (Some e) -> Return (Some (Container_cast (ret, e, false)))
+        | _ -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:cast_stmt ~type_:Fun.id ()) s
       in
       List.map cast_stmt stmts
   in
   let phantom_name_set = Id.Set.of_list dropped_names in
-  let rec strip_phantom_any_cast_expr e =
-    let e = match e with
-      | CPPany_cast (Tvar (Tv_index (_, Some name) | Tv_named name), inner) when Id.Set.mem name phantom_name_set ->
+  let rec strip_phantom_any_cast_expr (e : Cpp_ir.Lowered.Expr.t) =
+    let e : Cpp_ir.Lowered.Expr.t =
+      match e with
+      | Any_cast (Variable (Index (_, Some name) | Named name), inner) when Id.Set.mem name phantom_name_set ->
         strip_phantom_any_cast_expr inner
       | _ -> e
     in
-    Minicpp.map_expr strip_phantom_any_cast_expr strip_phantom_any_cast_stmt (fun t -> t) e
-  and strip_phantom_any_cast_stmt s =
-    Minicpp.map_stmt strip_phantom_any_cast_expr strip_phantom_any_cast_stmt (fun t -> t) s
+    Cpp_ir.Map.expr (strip_phantom_map ()) e
+  and strip_phantom_any_cast_stmt s = Cpp_ir.Map.stmt (strip_phantom_map ()) s
+  and strip_phantom_map () =
+    Cpp_ir.Map.make ~expr:strip_phantom_any_cast_expr ~stmt:strip_phantom_any_cast_stmt ~type_:Fun.id ()
   in
   let stmts =
     if Id.Set.is_empty phantom_name_set then stmts
     else List.map strip_phantom_any_cast_stmt stmts
   in
-  ( Fmethod
-      {
-        mf_name = func_name;
-        mf_globref = Some func_ref;
-        mf_tparams = tparams;
-        mf_ret_type = ret;
-        mf_params = params;
-        mf_body = stmts;
-        mf_receiver =
-          Instance
-            { this_pos;
-              is_const = true;
-              ref_qual = Rq_any;
-              returns_field = Escape.returns_receiver_field ~this_pos body };
-        mf_is_inline = false;
-        mf_no_pure = no_pure;
-        mf_constexpr = Undecided;
-        mf_is_noexcept = false;
-        mf_is_conversion = false;
-        mf_binders = parameter_binders env params;
-        mf_receiver_binder = Option.bind this_arg_id (local_binder env);
-        mf_loop = None;
-      },
-    VPublic,
-    SNoTag )
+  ( ( Method
+        { name = func_name;
+          globref = Some func_ref;
+          type_params = tparams;
+          return_type = ret;
+          params;
+          body = stmts;
+          receiver =
+            Instance
+              { this_position = this_pos;
+                is_const = true;
+                ref_qualifier = Any;
+                returns_field = Escape.returns_receiver_field ~this_pos body };
+          is_inline = false;
+          no_pure;
+          constexpr = Undecided;
+          is_noexcept = false;
+          is_conversion = false;
+          binders = parameter_binders env params;
+          receiver_binder = Option.bind this_arg_id (local_binder env);
+          loop = None },
+      Public,
+      Untagged )
+    : Cpp_ir.Lowered.phase Cpp_ir.Field.member )
 
 (** The methods generated ahead of the files, by the function each is made
     of, with the struct and variables it was generated for, and the helpers
     lifted out of its body. *)
 let methods_ahead :
-    ((GlobRef.t * Id.t list) * ((cpp_field * cpp_visibility * section_tag) * cpp_decl list)) list
+    ((GlobRef.t * Id.t list) * (Cpp_ir.Lowered.phase Cpp_ir.Field.member * cpp_decl list)) list
     Ref.User.Tbl.t =
   Ref.User.Tbl.create 16
 
@@ -1028,12 +1001,15 @@ let gen_methods ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
   in
+  (* {!Borrow_projection.lend} still splits MiniCpp fields: the method is
+     raised for it and its overloads lowered back. *)
+  let lend member =
+    let f, vis, tag = Cpp_ir_to_legacy_minicpp.member member in
+    List.map Legacy_minicpp_to_cpp_ir.lower_member
+      (Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (f, vis, tag))
+  in
   Control_to_cpp_ir.lower_struct_methods ~merged name vars
-    (List.concat_map
-       (fun c ->
-         List.map Legacy_minicpp_to_cpp_ir.lower_member
-           (Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c)) )
-       candidates )
+    (List.concat_map (fun c -> lend (gen_single_method name vars c)) candidates)
 
 (** Does the ML type [ml_ty] contain [ind_ref] (or a mutual sibling) anywhere
     in its type arguments, but NOT at the top level?  Used to detect fields
