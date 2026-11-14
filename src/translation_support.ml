@@ -2734,7 +2734,7 @@ let rec clean_self_ns t =
 type local_fix_self = {
   fix_id : Id.t;
   self_id : Id.t;
-  param_tys_rev : cpp_type list;
+  param_tys_rev : Cpp_ir.Lowered.Type.t list;
   param_core_tys_rev : Miniml.ml_type list;  (** the parameters' Core types, as [param_tys_rev] spells them *)
 }
 
@@ -2781,36 +2781,31 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     @return the expression and statement rewriters, which are mutually
       recursive and must be taken together. *)
 let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
-    (cpp_expr -> cpp_expr) * (cpp_stmt -> cpp_stmt) =
-  let self_vars_rev = if passing then List.rev_map (fun s -> CPPvar s.self_id) selves else [] in
+    (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t) * (Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t) =
+  let self_vars : Cpp_ir.Lowered.Expr.t list = if passing then List.map (fun s : Cpp_ir.Lowered.Expr.t -> Local s.self_id) selves else [] in
   let find_self id =
-    Option.map
-      (fun s -> ((if passing then s.self_id else s.fix_id), s))
-      (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
+    Option.map (fun s -> ((if passing then s.self_id else s.fix_id), s)) (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
   in
   let find_self_id id = Option.map fst (find_self id) in
+  let call occurrence f args : Cpp_ir.Lowered.Expr.t =
+    Call ({yields = Untyped; params = Unknown; constructs = None; occurrence}, f, args)
+  in
   (* The self id this application spine calls, with every argument along it
-     in one reversed list -- an outer application's arguments come after an
-     inner one's, so they go first once reversed -- and the Core call the
-     spine is made of, which its innermost call records. *)
-  let rec self_call_spine = function
-    | CPPfun_call (cs, CPPvar id, args) ->
-      Option.map (fun self_id -> (self_id, to_reversed args, cs.cs_occurrence)) (find_self_id id)
-    | CPPfun_call (_, callee, args) ->
-      Option.map
-        (fun (self_id, inner, occurrence) -> (self_id, to_reversed args @ inner, occurrence))
-        (self_call_spine callee)
+     in one source-order list -- an inner application's arguments come
+     before an outer one's -- and the Core call the spine is made of, which
+     its innermost call records. *)
+  let rec self_call_spine : Cpp_ir.Lowered.Expr.t -> _ = function
+    | Call (cs, Local id, args) -> Option.map (fun self_id -> (self_id, args, cs.occurrence)) (find_self_id id)
+    | Call (_, callee, args) ->
+      Option.map (fun (self_id, inner, occurrence) -> (self_id, inner @ args, occurrence)) (self_call_spine callee)
     | _ -> None
   in
-  let rec rewrite_expr e =
+  let rec rewrite_expr (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
     match self_call_spine e with
-    | Some (self_id, args_rev, occurrence) ->
-      CPPfun_call
-        ( {call_opaque with cs_occurrence = occurrence}, CPPvar self_id,
-          of_reversed (List.map rewrite_expr args_rev @ self_vars_rev) )
+    | Some (self_id, args, occurrence) -> call occurrence (Local self_id) (self_vars @ List.map rewrite_expr args)
     | None -> (
       match e with
-      | CPPvar id when passing && Option.has_some (find_self id) ->
+      | Local id when passing && Option.has_some (find_self id) ->
         let self_id, self = Option.get (find_self id) in
         let tys_rev = self.param_tys_rev in
         let n = List.length tys_rev in
@@ -2820,22 +2815,21 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
         let args_rev =
           List.map2
             (fun (_, x) core ->
-              let v = CPPvar (Option.get x) in
-              if Ownership_ir.worth_moving core && not (Ml_type_util.ml_type_is_unit core) then CPPmove v else v )
+              let v : Cpp_ir.Lowered.Expr.t = Local (Option.get x) in
+              if Ownership_ir.worth_moving core && not (Ml_type_util.ml_type_is_unit core) then (Move v : Cpp_ir.Lowered.Expr.t) else v )
             params_rev self.param_core_tys_rev
         in
-        CPPlambda
-          { cl_tparams = [];
-            cl_binders = [];
-            cl_fixpoint = None;
-            cl_moved = [];
-            cl_params = of_reversed params_rev;
-            cl_ret = None;
-            cl_body =
-              [Sreturn (Some (CPPfun_call (call_opaque, CPPvar self_id, of_reversed (args_rev @ self_vars_rev))))];
-            cl_capture = Closure }
-      | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e )
-  and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
+        Lambda
+          { type_params = [];
+            binders = [];
+            fixpoint = None;
+            moved = [];
+            params = List.rev params_rev;
+            return_type = None;
+            body = [Return (Some (call None (Local self_id) (self_vars @ List.rev args_rev)))];
+            capture = Stored }
+      | _ -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:rewrite_expr ~stmt:rewrite_stmt ~type_:Fun.id ()) e )
+  and rewrite_stmt s = Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:rewrite_expr ~stmt:rewrite_stmt ~type_:Fun.id ()) s in
   (rewrite_expr, rewrite_stmt)
 
 (** [ml_ast_type_hint e] is the ML type [e] carries, when it carries one: a

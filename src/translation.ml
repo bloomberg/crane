@@ -124,6 +124,7 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
   | [{fix_id; _}], [((_, member, _, _) as binder)], [Sasgn (_, _, CPPlambda impl)], [(_, body)] -> (
     let self_ids = List.map (fun s -> Some s.self_id) selves in
     let _, flat = self_call_rewriter ~passing:false selves in
+    let flat st = Cpp_ir_to_legacy_minicpp.stmt (flat (Legacy_minicpp_to_cpp_ir.lower_stmt st)) in
     let lam =
       { impl with
         cl_params = of_reversed (List.filter (fun (_, x) -> not (List.mem x self_ids)) (to_reversed impl.cl_params));
@@ -239,7 +240,7 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
     | _ -> None
   in
   (* Create self-parameter IDs and impl IDs for each fixpoint. *)
-  let selves = local_fix_selves (cpp_of_ml env) renamed_ids funs_with_params in
+  let selves = local_fix_selves (cpp_of_ml_ir env) renamed_ids funs_with_params in
   let self_ids = List.map (fun s -> s.self_id) selves in
   let impl_ids =
     List.map
@@ -247,7 +248,8 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
       renamed_ids
   in
   let rewrite_expr, rewrite_stmt =
-    self_call_rewriter selves
+    let rewrite_expr, rewrite_stmt = self_call_rewriter selves in
+    ((fun e -> Cpp_ir_to_legacy_minicpp.expr (rewrite_expr (Legacy_minicpp_to_cpp_ir.lower_expr e))), fun st -> Cpp_ir_to_legacy_minicpp.stmt (rewrite_stmt (Legacy_minicpp_to_cpp_ir.lower_stmt st)))
   in
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
   let impl_stmts =
@@ -392,7 +394,7 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
       | _ -> Some t )
     | _ -> None
   in
-  let selves = local_fix_selves (cpp_of_ml env) renamed_ids funs_with_params in
+  let selves = local_fix_selves (cpp_of_ml_ir env) renamed_ids funs_with_params in
   let self_ids = List.map (fun s -> s.self_id) selves in
   let impl_ids =
     List.map
@@ -400,7 +402,8 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
       renamed_ids
   in
   let rewrite_expr, rewrite_stmt =
-    self_call_rewriter selves
+    let rewrite_expr, rewrite_stmt = self_call_rewriter selves in
+    ((fun e -> Cpp_ir_to_legacy_minicpp.expr (rewrite_expr (Legacy_minicpp_to_cpp_ir.lower_expr e))), fun st -> Cpp_ir_to_legacy_minicpp.stmt (rewrite_stmt (Legacy_minicpp_to_cpp_ir.lower_stmt st)))
   in
   let impl_stmts =
     List.map2
