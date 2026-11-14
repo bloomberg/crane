@@ -68,7 +68,7 @@ let adapt_to_erased_param env param_ty a expr =
     when (match get_env_type_opt j with
           | Some t -> cpp_of_ml env t = cpp_of_ml env param_ty
           | None -> false) -> expr
-  | _ -> erase_fn_arg_for_param env param_ty a expr
+  | _ -> Cpp_ir_to_legacy_minicpp.expr (erase_fn_arg_for_param env param_ty a (Legacy_minicpp_to_cpp_ir.lower_expr expr))
 
 (* The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
@@ -1123,7 +1123,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
         when List.length dom > List.length exp_dom -> (
         (* The closure reads the function where it is made, and takes it
            there where this read moves it. *)
-        match (curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr, var_expr) with
+        match (Cpp_ir_to_legacy_minicpp.expr (curry_value_to_expected env ?expected_ty (get_env_type_opt i) (Legacy_minicpp_to_cpp_ir.lower_expr var_expr)), var_expr) with
         | CPPlambda l, CPPvar x when move_candidate -> CPPlambda {l with cl_moved = [x]}
         | e, _ -> e )
       | _ -> result )
@@ -1311,7 +1311,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
       | MLrel (_, occ), CPPfun_call (_, CPPvar _, _) -> made_of occ call
       | _ -> call
     in
-    ( match record_call_sig env callee_ty_inst result with
+    ( match Cpp_ir_to_legacy_minicpp.expr (record_call_sig env callee_ty_inst (Legacy_minicpp_to_cpp_ir.lower_expr result)) with
     | CPPany_cast (ty, call) -> CPPany_cast (ty, made_of_application call)
     | result -> made_of_application result )
   | MLlam _ as a ->
@@ -2322,14 +2322,15 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                    (fun (f : Cpp_ir.Lowered.Type.t) ->
                      match f with Function _ -> not (is_fully_erased_fun_ty_ir f) | _ -> false )
                    dom ->
-            curry_value_to_expected env ~exact:true
-              (Option.map expand_ml_fun_alias (instantiated_type use)) cglob
+            Cpp_ir_to_legacy_minicpp.expr
+              (curry_value_to_expected env ~exact:true
+                 (Option.map expand_ml_fun_alias (instantiated_type use)) (Legacy_minicpp_to_cpp_ir.lower_expr cglob))
           | _ -> cglob
         in
         ( match into with
         | Some into -> coerce_ir ~from ~into cglob
         | None -> cglob )
-      | _ -> curry_to_expected env ?expected_ty use cglob )
+      | _ -> Cpp_ir_to_legacy_minicpp.expr (curry_to_expected env ?expected_ty use (Legacy_minicpp_to_cpp_ir.lower_expr cglob)) )
   | MLcons (ty, r, ts, _) when is_custom r ->
     gen_expr_custom_cons ?expected_ty ~slot env ty r ts
   | MLcons (ty, r, ts, _)
@@ -3453,7 +3454,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
               | Tglob (_, args, _) -> Mlutil.type_subst_list args fld_ty
               | _ -> fld_ty
             in
-            curry_value_to_expected env ?expected_ty (Some fld_ty) access
+            Cpp_ir_to_legacy_minicpp.expr (curry_value_to_expected env ?expected_ty (Some fld_ty) (Legacy_minicpp_to_cpp_ir.lower_expr access))
         else
           access
       | _ ->
@@ -3639,7 +3640,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                      [Nat].  Box the elements on the way in, as the result is
                      unboxed on the way out. *)
                   CPPcontainer_cast (cpp_of_ml env' pt, e, false)
-                | Some pt -> erase_fn_arg_for_param env' pt a e
+                | Some pt -> Cpp_ir_to_legacy_minicpp.expr (erase_fn_arg_for_param env' pt a (Legacy_minicpp_to_cpp_ir.lower_expr e))
                 | None -> e )
               value_args
           in
@@ -4209,7 +4210,7 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
     let expr =
       match param_ml_ty with
       | Some param_ty when not deduced_callable ->
-        erase_fn_arg_for_param env param_ty ml_arg expr
+        Cpp_ir_to_legacy_minicpp.expr (erase_fn_arg_for_param env param_ty ml_arg (Legacy_minicpp_to_cpp_ir.lower_expr expr))
       | _ -> expr
     in
     (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no
@@ -5703,7 +5704,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       in
       match List.nth_opt callee_param_tys i with
       | Some param_ty when erased_callee -> adapt_to_erased_param env param_ty x expr
-      | Some param_ty -> erase_fn_arg_for_param env param_ty x expr
+      | Some param_ty -> Cpp_ir_to_legacy_minicpp.expr (erase_fn_arg_for_param env param_ty x (Legacy_minicpp_to_cpp_ir.lower_expr expr))
       | None -> expr) args
     in
     (* Detect over-application: when a local variable's C++ type has fewer
