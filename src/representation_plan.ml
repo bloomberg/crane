@@ -5,7 +5,6 @@
     [representation_plan.mli]. *)
 
 open Miniml
-open Minicpp
 open Util
 open Translation_state
 open Ml_type_util
@@ -193,7 +192,7 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
 let reads_boxed_component scope a =
   let is_pair_projection r =
     match Table.find_custom_opt r with
-    | Some s -> ( match inline_shape_of_text s with Inline_pair_projection _ -> true | _ -> false )
+    | Some s -> ( match Cpp_ir.Foreign.shape_of_text s with Pair_projection _ -> true | _ -> false )
     | None -> false
   in
   match a with

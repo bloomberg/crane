@@ -11,7 +11,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Util
@@ -91,7 +90,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
      ({!plan_instance_methods}), decided by the very code that generates
      them. *)
   let gen_body env e =
-    if bodies then List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_stmts env (fun x -> Sreturn (Some x)) e)
+    if bodies then gen_stmts env (fun x -> Return (Some x)) e
     else []
   in
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers ty body in

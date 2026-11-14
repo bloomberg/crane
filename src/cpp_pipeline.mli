@@ -2,8 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The passes a declaration goes through between generation and the
-    printer.  It reaches them in CppIR ({!Cpp_ir.Lowered}) -- a generator
-    still building MiniCpp has it lowered first ({!lower}) -- every pass
+    printer.  It reaches them in CppIR ({!Cpp_ir.Lowered}), every pass
     runs over CppIR, and the declaration handed back is resolved
     ({!Cpp_ir.Resolved}).
 
@@ -29,11 +28,6 @@
     {!Cpp_ir.Representation_obligation.t}), or if what it borrows and moves
     fails {!Borrow_projection.check_decl} or {!Move_check.check_decl}. *)
 val finish : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
-
-(** [lower d] is the MiniCpp declaration [d] in CppIR
-    ({!Legacy_minicpp_to_cpp_ir.lower}).  Under [CRANE_CHECK_IR] it fails
-    unless converting it back gives [d] again. *)
-val lower : Minicpp.cpp_decl -> Cpp_ir.Lowered.Decl.t
 
 
 (** The names of the passes {!finish} runs, in order, the {!Cpp_erasure} seam

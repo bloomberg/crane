@@ -10,7 +10,17 @@
    but refuses two generations lifting the same helper. *)
 
 open Crane_plugin
-open Minicpp
+
+(* A function [r] returning nothing, of body [body]. *)
+let dfun r body : Cpp_ir.Lowered.Decl.t =
+  Function
+    { path = {outer = (r, []); inner = []};
+      return_type = Void;
+      no_pure = false;
+      constexpr = Undecided;
+      shape = Definition ([], body);
+      binders = [];
+      loop = None }
 
 let check name cond =
   if not cond then (
@@ -35,9 +45,7 @@ let () =
     Lifted.make ~origin:None ~binder:(Names.Id.of_string "go") (Let (Miniml.Occurrence.fresh ()))
   in
   let helper_decl =
-    Dfun
-      (mk_dfun ~ret:Tvoid (Lifted.ref_of helper)
-         (Ddef ([], [Sreturn (Some (CPPglob (r "callee", [], None)))])))
+    dfun (Lifted.ref_of helper) [Return (Some (Entity (r "callee", [], None)))]
   in
   let h =
     match Unit_program.helper helper_decl with
@@ -49,7 +57,7 @@ let () =
   check "a helper is keyed by itself"
     (match Generated_entity_id.role h.helper_id with Lifted_helper h -> Lifted.equal h helper);
   check "an ordinary declaration is not a helper"
-    (Unit_program.helper (Dfun (mk_dfun ~ret:Tvoid (r "f") (Ddef ([], []))))
+    (Unit_program.helper (dfun (r "f") [])
      = None);
   check "dependencies are the globals named"
     (Entity_id.Set.mem (Entity_id.of_ref (r "callee"))
@@ -77,12 +85,12 @@ let () =
     Lifted.make ~origin:(Some (r "stray")) ~binder:(Names.Id.of_string "go")
       (Let (Miniml.Occurrence.fresh ()))
   in
-  let owned_decl = Dfun (mk_dfun ~ret:Tvoid (Lifted.ref_of owned) (Ddef ([], []))) in
+  let owned_decl = dfun (Lifted.ref_of owned) [] in
   Unit_program.record_lifted_ahead [owned_decl];
   check "a helper lifted out of nothing the unit declares or emits is refused"
     (raises_anomaly check_plan);
   State.reset State.Unit;
-  let again = Dfun (mk_dfun ~ret:Tvoid (Lifted.ref_of owned) (Ddef ([], []))) in
+  let again = dfun (Lifted.ref_of owned) [] in
   Unit_program.record_lifted_ahead [owned_decl; owned_decl];
   check "a helper handed on to another generation is one helper"
     (not (raises_user_error (fun () -> Unit_program.record_lifted_ahead [owned_decl])));

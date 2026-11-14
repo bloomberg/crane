@@ -6,7 +6,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Table
@@ -78,27 +77,6 @@ let rec expand_ml_fun_alias ty =
     @param tmpl  the template type (may contain [Tvar] holes)
     @param conc  the concrete type to unify against
     @return association list of type variable bindings *)
-let rec extract_tvar_map tmpl conc =
-  match (tmpl, conc) with
-  | Tvar (Tv_index (_, Some id) | Tv_named id), _ -> [(id, conc)]
-  | Tglob (g1, tys1, _), Tglob (g2, tys2, _)
-    when globref_equal g1 g2
-         && List.length tys1 = List.length tys2 ->
-    List.concat (List.map2 extract_tvar_map tys1 tys2)
-  | Tfun (args1, ret1), Tfun (args2, ret2)
-    when List.length args1 = List.length args2 ->
-    List.concat (List.map2 extract_tvar_map args1 args2)
-    @ extract_tvar_map ret1 ret2
-  | Tref (k1, t1), Tref (k2, t2) when k1 = k2 -> extract_tvar_map t1 t2
-  | Tconst t1, Tconst t2 -> extract_tvar_map t1 t2
-  | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
-  (* A qualification is spelling, not structure: seen through on the way down.
-     A variable binds the concrete type as written (the first case), so the
-     binding keeps its qualification. *)
-  | Tnamespace (_, t1), t2 | t1, Tnamespace (_, t2) -> extract_tvar_map t1 t2
-  | _ -> []
-
-(** {!extract_tvar_map} in CppIR. *)
 let rec extract_tvar_map_ir (tmpl : Cpp_ir.Lowered.Type.t) (conc : Cpp_ir.Lowered.Type.t) :
     (Names.Id.t * Cpp_ir.Lowered.Type.t) list =
   match (tmpl, conc) with
@@ -452,15 +430,6 @@ let ml_type_is_unit (ty : ml_type) : bool =
 let own_type_variables ~n_outer tys =
   List.exists (fun ty -> Mlutil.IntSet.exists (fun i -> i > n_outer) (Mlutil.ml_tvars ty)) tys
 
-(** Check if a C++ type is the Unit enum (from Rocq's [unit]).
-    After [convert_ml_type_to_cpp_type], Rocq's [unit] becomes a [Tnamespace]
-    wrapping a [Tglob] referencing the unit inductive, or a bare [Tglob] for
-    local references.  This detects it for codomain void-ification. *)
-let is_cpp_unit_type = function
-  | Tglob (GlobRef.IndRef _ as r, _, _) -> Table.is_unit_type r
-  | Tnamespace (r, _) -> Table.is_unit_type r
-  | _ -> false
-
 let is_cpp_unit_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application ((GlobRef.IndRef _ as r), _, _) -> Table.is_unit_type r
   | In_namespace (r, _) -> Table.is_unit_type r
@@ -520,21 +489,8 @@ let rec ml_codomain_after n = function
 (** Return [true] if the C++ type contains any unresolved type variable
     ([Tvar] or [Tauto]): such a type has no spelling of its own at the use, so
     it cannot serve as a cast target or a concrete expected type. *)
-let contains_tvar =
-  exists_cpp_type (function Tvar _ | Tauto -> true | _ -> false)
-
-(** {!contains_tvar} in CppIR. *)
 let contains_tvar_ir =
   Cpp_ir.Types.exists (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Variable _ | Auto -> true | _ -> false)
-
-(** Whether a C++ type mentions a type variable not among [bound_names].  An
-    unnamed [Tvar] and [Tauto] always count: neither can be matched against the
-    bound set. *)
-let has_unbound_tvar bound_names =
-  exists_cpp_type (function
-    | Tvar (Tv_index (_, Some name) | Tv_named name) -> not (List.exists (Id.equal name) bound_names)
-    | Tvar (Tv_index (_, None)) | Tauto -> true
-    | _ -> false )
 
 (** Whether [g] is the standard library's [prod], by identity: a user's
     inductive of the same name is not the pair. *)
@@ -543,27 +499,6 @@ let is_prod_global g = Rocqlib.check_ref "core.prod.type" g
 (** Structural equality on C++ types, ignoring [Tconst] and [Tnamespace]
     wrappers and [Tvar] name annotations.  Used to match the state parameter type
     against the state component of a [pair<S,R>] return type. *)
-let rec cpp_ty_eq t1 t2 =
-  let rec strip = function Tconst t | Tnamespace (_, t) -> strip t | t -> t in
-  match (strip t1, strip t2) with
-  | Tglob (g1, ts1, _), Tglob (g2, ts2, _) ->
-    GlobRef.CanOrd.equal g1 g2
-    && List.length ts1 = List.length ts2
-    && List.for_all2 cpp_ty_eq ts1 ts2
-  | Tvar (Tv_index (i1, _)), Tvar (Tv_index (i2, _)) -> i1 = i2
-  | Tvar (Tv_named x1), Tvar (Tv_named x2) -> Id.equal x1 x2
-  | Tref (Lvalue, t1'), Tref (Lvalue, t2') | Tref (Forwarding, t1'), Tref (Forwarding, t2') -> cpp_ty_eq t1' t2'
-  | Tshared_ptr t1', Tshared_ptr t2' -> cpp_ty_eq t1' t2'
-  | Tfun (d1, c1), Tfun (d2, c2) ->
-    List.length d1 = List.length d2
-    && List.for_all2 cpp_ty_eq d1 d2
-    && cpp_ty_eq c1 c2
-  | Tvoid, Tvoid -> true
-  | Tauto, Tauto -> true
-  | Tany, Tany -> true
-  | _ -> false
-
-(** {!cpp_ty_eq} in CppIR. *)
 let rec cpp_ty_eq_ir (t1 : Cpp_ir.Lowered.Type.t) (t2 : Cpp_ir.Lowered.Type.t) =
   let rec strip : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
     | Const t | In_namespace (_, t) -> strip t
@@ -600,52 +535,15 @@ let list_ctor_struct_names (g : GlobRef.t) : string * string =
       ctor_struct_name_of_ref cons_ref )
   | _ -> ("Nil", "Cons")
 
-let is_cpp_dummy_type = Minicpp.is_cpp_dummy_type
-
 (** {!is_cpp_dummy_type} in CppIR. *)
 let is_cpp_dummy_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Erased _ -> true | _ -> false
 
 (** The type under any module or namespace qualification.  Questions about
     what a type {i is} -- which inductive, at which instantiation -- are about
     the type inside the qualification, not the wrapper. *)
-let rec unqualify_ty = function
-  | Minicpp.Tconst t | Minicpp.Tnamespace (_, t) -> unqualify_ty t
-  | t -> t
-
-(** {!unqualify_ty} in CppIR. *)
 let rec unqualify_ty_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Const t | In_namespace (_, t) -> unqualify_ty_ir t
   | t -> t
-
-(** [template_args t] — the type arguments [t] is applied to, for a [t] that
-    names a template at all.  Which node spells the head is not the question:
-    the same struct arrives as a [Tglob], a [Tid], a [Tid_external] or a
-    [Tapply] depending on how it is referred to, and wrapped in the
-    qualifications {!unqualify_ty} strips.  [None] distinguishes "not a
-    template" from a template applied to nothing. *)
-let rec template_args t =
-  match unqualify_ty t with
-  | Minicpp.Tref (_, t) | Minicpp.Tptr t | Minicpp.Tshared_ptr t ->
-    template_args t
-  | Minicpp.Tglob (_, args, _)
-  | Minicpp.Tid (_, args)
-  | Minicpp.Tid_external (_, args)
-  | Minicpp.Tapply (_, args) -> Some args
-  | _ -> None
-
-let prints_as_any = Minicpp.prints_as_any
-
-(** What erasure did to a function type's {e domain}, and -- where it left the
-    domain erased -- what it did to the result.  Every C++ type is exactly one
-    of these, so a site that asks the question has to say which answer it is
-    prepared for. *)
-type fun_erasure =
-  | Fe_not_a_function
-  | Fe_concrete_domain  (** a function type, no argument erased *)
-  | Fe_erased_domain of Minicpp.cpp_type option
-      (** at least one argument erased; the payload is the result type the
-          signature kept, or [None] when the result erased along with the
-          arguments *)
 
 (** How a value is represented in the slot it is built into.  [Native]: at its
     own type.  [Boxed]: inside a [std::any], so it must take the canonical
@@ -664,38 +562,8 @@ and box_kind = Var_box | Family_box
     erased, spelled through its alias [using memCType = std::any]: a
     type-level function of a value ([memCType c]), or a class field with no
     instance behind it. *)
-let names_erased_alias = function
-  | Minicpp.Tglob (g, _, _) -> Table.is_erased_type_const g
-  | _ -> false
-
-(** {!names_erased_alias} in CppIR. *)
 let names_erased_alias_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application (g, _, _) -> Table.is_erased_type_const g
-  | _ -> false
-
-(** Classify a C++ type by {!fun_erasure}.  This is the one place a function
-    type's domain is tested for erasure; the predicates below are named
-    shorthands for its answers and cannot drift from it. *)
-let classify_fun_erasure = function
-  | Minicpp.Tfun (dom, cod) ->
-    let erased t = prints_as_any t || names_erased_alias t in
-    if not (List.exists erased dom) then Fe_concrete_domain
-    else Fe_erased_domain (if prints_as_any cod then None else Some cod)
-  | _ -> Fe_not_a_function
-
-(** [is_fully_erased_fun_ty t] -- true if [t] is a function type whose whole
-    signature has erased to [std::any], as [std::function<std::any(std::any)>]
-    has.  Such a signature pins nothing down, so a parameter at that type has
-    nothing to gain from being generalised into a deduced callable -- and a
-    definition that keeps it stays an ordinary function, usable as a value of
-    the very type its Rocq signature names.
-
-    Stricter than [Fe_erased_domain None], which is content with {e some} of
-    the arguments surviving. *)
-let is_fully_erased_fun_ty t =
-  match t with
-  | Minicpp.Tfun (dom, cod) ->
-    dom <> [] && List.for_all prints_as_any dom && prints_as_any cod
   | _ -> false
 
 let is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
@@ -721,13 +589,7 @@ let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     [crane_erase_fn] adapter: nothing converts to such a signature on its own.
 
     Strictly weaker than {!partially_erased_fun_ty_ir}, and neither implies nor is
-    implied by {!is_fully_erased_fun_ty}. *)
-let erased_domain_fun_ty t =
-  match classify_fun_erasure t with
-  | Fe_erased_domain _ -> true
-  | _ -> false
-
-(** {!erased_domain_fun_ty} in CppIR. *)
+    implied by {!is_fully_erased_fun_ty_ir}. *)
 let erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Function (dom, _) ->
     List.exists (fun t -> Cpp_ir.Types.prints_as_any t || names_erased_alias_ir t) dom
@@ -738,9 +600,6 @@ let erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     Deliberately narrower than {!prints_as_any}: {!Minicpp.Topaque} spells
     itself [std::any] but makes no claim about the representation, so it is
     excluded. *)
-let is_boxed_type t = t = Minicpp.Tany || is_cpp_dummy_type t
-
-(** {!is_boxed_type} in CppIR. *)
 let is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Any | Erased _ -> true | _ -> false
 
 
@@ -754,10 +613,6 @@ let is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Any | Erased _ -
     on the value really is boxed, and downstream code is entitled to box into
     and [any_cast] out of the slot.  [Topaque] therefore survives only in the
     inferred type of an expression, never in a declaration. *)
-let materialise_opaque (ty : cpp_type) : cpp_type =
-  map_cpp_type (function Topaque -> Tany | t -> t) ty
-
-(** {!materialise_opaque} in CppIR. *)
 let materialise_opaque_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   Cpp_ir.Types.map (function Obligation Opaque_type -> Any | t -> t) ty
 
@@ -780,40 +635,11 @@ let rec is_all_erased : Cpp_ir.Lowered.Type.t -> bool = function
     Returns [\[\]] if no [Tglob] is found.
 
     For example, [Tnamespace(ns, Tglob(g, \[T1; T2\], _))] returns [\[T1; T2\]]. *)
-let rec extract_template_args = function
-  | Tglob (_, args, _) -> args
-  | Tnamespace (_, inner) -> extract_template_args inner
-  | Tshared_ptr inner -> extract_template_args inner
-  | _ -> []
-
-(** {!extract_template_args} in CppIR. *)
 let rec extract_template_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list = function
   | Entity_application (_, args, _) -> args
   | In_namespace (_, inner) -> extract_template_args_ir inner
   | Shared_pointer inner -> extract_template_args_ir inner
   | _ -> []
-
-(** [erase_type_to_any ty] — recursively replace leaf types with [Tany],
-    preserving the structure of container types ([Tglob] with args) and
-    namespace wrappers.  Used to build the cast type for [any_cast] on
-    erased container fields—e.g. [deque<pair<nat, bool>>] becomes
-    [deque<any>].
-
-    Note: the variant in [Translation.eta_fun] that preserves bare
-    [Tglob(_,\[\],_)] has intentionally different semantics and remains
-    local. *)
-and erase_type_to_any = function
-  | Tglob (g, args, ns) when args <> [] ->
-    Tglob (g, List.map erase_type_to_any args, ns)
-  | Tnamespace (ns_g, inner) ->
-    Tnamespace (ns_g, erase_type_to_any inner)
-  | _ -> Tany
-
-(** [resolve_tvars_to_any ty] replaces every unresolved type variable
-    ([Tvar (Tv_index (_, None))]) in [ty] with [Tany], so that an [any_cast] target
-    renders as [std::any] rather than as a placeholder with no C++ spelling. *)
-and resolve_tvars_to_any ty =
-  map_cpp_type (function Tvar (Tv_index (_, None)) -> Tany | t -> t) ty
 
 (** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
     ML AST: a bare type variable, [Tunknown], an empty [Tmeta] or a [Topen]
@@ -829,25 +655,12 @@ and is_ml_erased_ty = function
 (** Check if a C++ type is a skipped type (inline custom with empty string).
     Such types arise from [Crane Extract Skip] and represent infrastructure
     (e.g. ReSum) that should be completely erased. *)
-let is_skipped_cpp_type = function
-  | Minicpp.Tglob (r, _, _) ->
-    Table.is_inline_custom r && Table.find_custom_opt r = Some ""
-  | _ -> false
-
-(** Whether a C++ type is a type class's, under [const], a reference or a
-    [shared_ptr]. *)
-let rec is_typeclass_type_cpp = function
-  | Minicpp.Tglob (r, _, _) -> Table.is_typeclass r
-  | Minicpp.Tconst t | Minicpp.Tref (Minicpp.Lvalue, t) | Minicpp.Tref (Minicpp.Forwarding, t) | Minicpp.Tshared_ptr t ->
-    is_typeclass_type_cpp t
-  | _ -> false
-
-(** {!is_skipped_cpp_type} in CppIR. *)
 let is_skipped_cpp_type_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application (r, _, _) -> Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
-(** {!is_typeclass_type_cpp} in CppIR. *)
+(** Whether a C++ type is a type class's, under [const], a reference or a
+    [shared_ptr]. *)
 let rec is_typeclass_type_cpp_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application (r, _, _) -> Table.is_typeclass r
   | Const t | Reference ((Lvalue | Forwarding), t) | Shared_pointer t -> is_typeclass_type_cpp_ir t
@@ -861,129 +674,6 @@ let is_skipped_ml_type = function
   | Miniml.Tglob (r, _, _) ->
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
-
-(** Whether a single type node erases to [std::any]: [Tany] and [Topaque]
-    themselves, and an unnamed [Tvar], which {!tvar_erase_type} turns into
-    one. *)
-let is_tany_node = function
-  | Tany | Topaque -> true
-  | Tvar (Tv_index (_, None)) -> true
-  | _ -> false
-
-(** Whether a C++ type contains [std::any] anywhere.  Used to detect a
-    let-binding whose type annotation still holds unresolved carrier
-    projections, to be replaced by concrete types from the generated lambda. *)
-let has_tany_in_type = exists_cpp_type is_tany_node
-
-(** Like [has_tany_in_type] but also treats the [Terased] markers
-    ([dummy_type]/[dummy_prop]/[dummy_implicit]) as erased types.  Used for non-lambda let bindings where [auto]
-    is the right fallback — but NOT for the Tfun+lambda case where we want to
-    preserve the lambda's concrete return type. *)
-let has_erased_type_in_type =
-  exists_cpp_type (fun t -> is_tany_node t || is_cpp_dummy_type t)
-
-(** Whether a C++ type still holds a promoted type variable the scope could not
-    answer.  [Tpromoted] survives only where [promoted_var_binding] said
-    nothing -- a mention with no instance in sight, or one whose instance the
-    term leaves genuinely ambiguous -- so it is erased in the same sense as
-    [std::any], and a binding annotated with it is better left to deduction. *)
-let has_unresolved_promoted_in_type =
-  exists_cpp_type (function Tpromoted _ -> true | _ -> false)
-
-(** Check if a C++ type is the [dummy_prop] marker from proof erasure.
-
-    In the extraction pipeline, [Tdummy Kprop] in the ML AST gets converted
-    to [Terased Ek_prop] (printed [dummy_prop]) in the C++ AST by
-    [convert_ml_type_to_cpp_type]. This marker occupies Kill Kprop positions
-    to maintain positional alignment during type argument processing, but it
-    has no corresponding C++ template parameter.
-
-    These markers must be stripped before the "all or nothing" erased type
-    check in [filter_erased_type_args]. If we don't strip them first, their
-    presence would trigger the erasure of all type arguments (since [dummy_prop]
-    is technically an "erased" type), even when the other type arguments are
-    concrete and should be preserved.
-
-    Example:
-    - ML type args: [[Tglob nat; Tdummy Kprop; Tglob bool]]
-    - After conversion: [[Tglob nat; Tglob dummy_prop; Tglob bool]]
-    - After stripping dummy_prop: [[Tglob nat; Tglob bool]]
-    - After filtering: [[Tglob nat; Tglob bool]] (preserved)
-
-    Without stripping dummy_prop first:
-    - Would see [Tglob dummy_prop] as erased → drop all args → [[]]
-
-    @param t C++ type to check
-    @return [true] if [t] is the dummy_prop marker, [false] otherwise *)
-let is_cpp_dummy_prop = function
-  | Minicpp.Terased Minicpp.Ek_prop -> true
-  | _ -> false
-
-(** Filter erased type arguments from a template argument list, each argument
-    paired with a key that survives with it, using a two-phase approach:
-    proof erasure stripping followed by all-or-nothing type erasure.
-
-    Phase 1: Strip proof-erasure markers ([dummy_prop] from [Tdummy Kprop]).
-    These are positional placeholders in the ML AST that have no C++ analog.
-    They must be removed before checking for erased types, otherwise their
-    presence would trigger full erasure of concrete type arguments.
-
-    Phase 2: Apply the "all or nothing" rule for erased types.
-    If ANY remaining type argument prints as [std::any] ({!prints_as_any}:
-    [Tany], [Topaque], or a [dummy_type] / [dummy_implicit] marker), drop ALL
-    type arguments and return [[]].  With [~preserve_positions:true] nothing
-    is dropped: each such argument is written [Tany] in its place instead.
-
-    The "all or nothing" rule is required because C++ template arguments are
-    positional. If we kept some type args and dropped others, the remaining
-    args would shift into the wrong parameter positions, causing type mismatches.
-
-    Dropping all args is safe because C++ template argument deduction can
-    infer type arguments from value arguments at the call site. For example:
-    - [std::make_optional(5u)] deduces [std::optional<unsigned int>]
-    - [std::vector v{1, 2, 3}] deduces [std::vector<int>]
-
-    It is called wherever a call writes a global's explicit type arguments
-    ([Translation], [Translation_calls]).
-
-    Example scenarios:
-
-    1. Concrete types (no erasure):
-       Input: [[Tglob nat; Tglob bool]]
-       Output: [[Tglob nat; Tglob bool]]
-
-    2. Proof in middle (strip but keep others):
-       Input: [[Tglob nat; Tglob dummy_prop; Tglob bool]]
-       After phase 1: [[Tglob nat; Tglob bool]]
-       Output: [[Tglob nat; Tglob bool]]
-
-    3. Erased type in middle (drop all):
-       Input: [[Tglob nat; Tglob dummy_type; Tglob bool]]
-       After phase 1: [[Tglob nat; Tglob dummy_type; Tglob bool]]
-       After phase 2: [[]] (erased)
-
-    4. Only proofs (drop all):
-       Input: [[Tglob dummy_prop; Tglob dummy_prop]]
-       After phase 1: [[]]
-       Output: [[]]
-
-    @param pairs  keyed C++ types (template arguments)
-    @return the filtered list: either all concrete types or empty, unless
-      [preserve_positions] *)
-let filter_erased_keyed ?(preserve_positions = false) pairs =
-  let all = pairs in
-  let pairs = List.filter (fun (_, t) -> not (is_cpp_dummy_prop t)) pairs in
-  if List.length pairs <> List.length all then
-    Probe.hit "REPAIR_filter_erased_type_args_prop" (fun () -> "");
-  if preserve_positions then
-    List.map (fun (k, t) -> (k, if prints_as_any t then Minicpp.Tany else t)) pairs
-  else if List.exists (fun (_, t) -> prints_as_any t) pairs then (
-    Probe.hit "REPAIR_filter_erased_type_args_drop" (fun () -> "");
-    [] )
-  else pairs
-
-let filter_erased_type_args ?preserve_positions tys =
-  List.map snd (filter_erased_keyed ?preserve_positions (List.map (fun t -> ((), t)) tys))
 
 (** Check if an ML type contains any unresolved type variable or placeholder.
     Returns true for Tvar, unresolved Tmeta, and Tunknown. Used to
@@ -1063,13 +753,6 @@ let rec subst_tvars_type subst = function
 (** Replace all unnamed Tvars with Tany (for type erasure in indexed
     inductives). Used when a type has Tvars that don't correspond to any
     template parameters.  Named variables are kept. *)
-let tvar_erase_type =
-  rewrite_cpp_type (function
-    | Tvar (Tv_index (_, None)) -> Some Tany
-    | Tvar (Tv_index (_, Some _) | Tv_named _) as ty -> Some ty (* Named Tvars are kept *)
-    | _ -> None )
-
-(** {!tvar_erase_type} in CppIR. *)
 let tvar_erase_type_ir =
   Cpp_ir.Types.rewrite (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
@@ -1104,24 +787,6 @@ let rec index_erase_type_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t
     | Any -> Any
     | t -> In_namespace (r, t) )
   | _ -> Any
-
-(** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
-    detect types that can't be fully resolved in monomorphized contexts
-    (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
-    List<T1>. *)
-let has_unnamed_tvar : cpp_type -> bool =
-  exists_cpp_type (function Tvar (Tv_index (_, None)) -> true | _ -> false)
-
-(** [type_is_erased ty] is {!is_tany_node} looked at through the type
-    modifiers that do not change a type's representation, so that
-    [M::std::any] answers the same as [std::any].  Used to identify methods
-    that return [std::any] because of type erasure in indexed inductives.
-    Unlike {!prints_as_any} it does not count the dummy globs: those are
-    proof erasure, not an unresolved type. *)
-let rec type_is_erased (ty : cpp_type) : bool =
-  match ty with
-  | Tconst inner | Tnamespace (_, inner) -> type_is_erased inner
-  | t -> is_tany_node t
 
 (** Extract return type from a function type, stripping all Tarr layers. *)
 let rec ml_return_type = function
@@ -1169,19 +834,6 @@ let ref_has_no_cpp_name r =
 
     Asked before writing a type into a position that has an alternative to
     writing it. *)
-let has_no_cpp_spelling ty =
-  let as_printed =
-    Minicpp.map_cpp_type
-      (function
-        | Tapply (Tglob (r, _, _), [arg]) when ref_has_no_cpp_name r -> arg
-        | t -> t )
-      ty
-  in
-  Minicpp.exists_cpp_type
-    (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
-    as_printed
-
-(** {!has_no_cpp_spelling} in CppIR. *)
 let has_no_cpp_spelling_ir (ty : Cpp_ir.Lowered.Type.t) =
   let as_printed =
     Cpp_ir.Types.map
@@ -1234,12 +886,6 @@ let rec strip_tarr_n n ty =
     Normalises lambda parameter types before building [Tfun] wrappers.
     Unlike [Loopify_tail.strip_ref_and_const_type] this is intentionally
     non-recursive: a forwarding reference [T&&] becomes [T&]. *)
-let strip_cpp_ref_const = function
-  | Tref (Lvalue, t) | Tconst t -> t
-  | Tref (Forwarding, t) -> Tref (Lvalue, t)
-  | t -> t
-
-(** {!strip_cpp_ref_const} in CppIR. *)
 let strip_cpp_ref_const_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Reference (Lvalue, t) | Const t -> t
   | Reference (Forwarding, t) -> Reference (Lvalue, t)
@@ -1253,33 +899,21 @@ let count_real_ml_args args =
   List.length (List.filter (fun a ->
     match a with MLdummy _ -> false | _ -> true) args)
 
-(** Check if a C++ type is a non-trivial value type (inductive struct),
-    meaning it should be passed by value when owned and by const ref when
-    borrowed, rather than by const value like primitives. *)
-let is_inductive_value_type = function
-  | Tglob (g, _, _) | Tnamespace (g, _) -> (
-    match g with
-    | GlobRef.IndRef _ ->
-      not (is_enum_inductive g)
-      && not (Table.is_coinductive g)
-      && not (Table.is_custom_scalar_ref g)
-    | _ -> false )
-  | _ -> false
-
 (** Whether copying a value of this C++ type is free.
 
     A type declared with [Crane TriviallyCopyable] qualifies only when its
     type arguments do -- copying a [std::pair] costs what copying its
     components costs. *)
-let rec is_trivially_copyable_type = function
-  | Tglob (g, ts, _) ->
+let rec is_trivially_copyable_type_ir (t : Cpp_ir.Lowered.Type.t) =
+  match t with
+  | Entity_application (g, ts, _) ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
     || Table.is_trivially_copyable_ref g
-       && List.for_all is_trivially_copyable_type ts
-  | Tnamespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
+       && List.for_all is_trivially_copyable_type_ir ts
+  | In_namespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
-(** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type}
+(** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type_ir}
     read off the ML type. *)
 let rec ml_is_trivially_copyable ty =
   match resolve_tmeta ty with
@@ -1438,44 +1072,6 @@ let custom_referenced_positions_opt g =
   | Some _ as r -> r
   | None -> check_template (Table.find_custom_opt g)
 
-(** [refine_erased_by ~expected actual] takes, at every position where
-    [actual] erased and [expected] did not, the spelling [expected] gives.
-
-    A producer computes a type from its own instantiation, which knows nothing
-    of the positions the value is going to occupy; the slot the value flows
-    into has already written the type down.  Where the two disagree only in how
-    much they erased, the slot's spelling is the one both producers for that
-    slot will agree on, and the one the declaration states -- so it wins, and
-    the producer's concrete knowledge is kept everywhere else.
-
-    Only erasure is refined: a position where both are concrete keeps the
-    producer's, and a shape mismatch is left alone entirely. *)
-let rec refine_erased_by ~expected actual =
-  let erased t = prints_as_any t || is_cpp_dummy_type t in
-  if erased actual && not (erased expected) then expected
-  else
-    match (expected, actual) with
-    | Minicpp.Tglob (g, ea, _), Minicpp.Tglob (g', aa, x)
-      when globref_equal g g' && List.length ea = List.length aa ->
-      Minicpp.Tglob (g', List.map2 (fun e a -> refine_erased_by ~expected:e a) ea aa, x)
-    | Minicpp.Tfun (ed, ec), Minicpp.Tfun (ad, ac)
-      when List.length ed = List.length ad ->
-      Minicpp.Tfun
-        ( List.map2 (fun e a -> refine_erased_by ~expected:e a) ed ad,
-          refine_erased_by ~expected:ec ac )
-    | Minicpp.Tconst e, Minicpp.Tconst a -> Minicpp.Tconst (refine_erased_by ~expected:e a)
-    | Minicpp.Tref (ke, e), Minicpp.Tref (ka, a) when ke = ka ->
-      Minicpp.Tref (ka, refine_erased_by ~expected:e a)
-    | Minicpp.Tptr e, Minicpp.Tptr a -> Minicpp.Tptr (refine_erased_by ~expected:e a)
-    | Minicpp.Tshared_ptr e, Minicpp.Tshared_ptr a ->
-      Minicpp.Tshared_ptr (refine_erased_by ~expected:e a)
-    (* A qualification is spelling: seen through on either side, kept on the
-       actual one. *)
-    | _, Minicpp.Tnamespace (ns, a) ->
-      Minicpp.Tnamespace (ns, refine_erased_by ~expected a)
-    | Minicpp.Tnamespace (_, e), _ -> refine_erased_by ~expected:e actual
-    | _ -> actual
-
 (** [written_type_args g tys] keeps only those of [g]'s type arguments that a
     spelling of [g] actually writes.
 
@@ -1503,31 +1099,37 @@ let prune_unwritten_args_ir =
         Entity_application (g, List.mapi (fun i t -> if written i then t else (Void : Cpp_ir.Lowered.Type.t)) tys, es)
       | t -> t )
 
-let lower_type = Legacy_minicpp_to_cpp_ir.lower_type
-
-let prune_unwritten_args t = Cpp_ir_to_legacy_minicpp.ty (prune_unwritten_args_ir (lower_type t))
-
-(** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
-    erased argument in a position nothing writes never reaches the C++. *)
-let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
-
-(** {!is_tany_node} over a CppIR type. *)
+(** Whether a single type node erases to [std::any]: [Any] and the opaque
+    obligation themselves, and an unnamed variable, which
+    {!tvar_erase_type_ir} turns into one. *)
 let is_tany_node_ir (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Any | Obligation Opaque_type | Variable (Index (_, None)) -> true
   | _ -> false
 
-(** {!has_erased_type_in_type} in CppIR. *)
+(** Like [has_tany_in_type_ir] but also treats the [Terased] markers
+    ([dummy_type]/[dummy_prop]/[dummy_implicit]) as erased types.  Used for non-lambda let bindings where [auto]
+    is the right fallback — but NOT for the Tfun+lambda case where we want to
+    preserve the lambda's concrete return type. *)
 let has_erased_type_in_type_ir =
   Cpp_ir.Types.exists (fun t -> is_tany_node_ir t || is_cpp_dummy_type_ir t)
 
-(** {!has_tany_in_type} over a CppIR type. *)
+(** Whether a C++ type contains [std::any] anywhere.  Used to detect a
+    let-binding whose type annotation still holds unresolved carrier
+    projections, to be replaced by concrete types from the generated lambda. *)
 let has_tany_in_type_ir = Cpp_ir.Children.exists_type is_tany_node_ir
 
-(** {!has_tany_written} over a CppIR type. *)
 let has_tany_written_ir t = has_tany_in_type_ir (prune_unwritten_args_ir t)
 
-(** {!has_unnamed_tvar} over a CppIR type. *)
+let rec type_is_erased_ir (ty : Cpp_ir.Lowered.Type.t) : bool =
+  match ty with
+  | Const inner | In_namespace (_, inner) -> type_is_erased_ir inner
+  | t -> is_tany_node_ir t
+
+(** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
+    detect types that can't be fully resolved in monomorphized contexts
+    (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
+    List<T1>. *)
 let has_unnamed_tvar_ir =
   Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with Variable (Index (_, None)) -> true | _ -> false )
@@ -1537,7 +1139,57 @@ let resolve_tvars_to_any_ir =
   Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
       match t with Variable (Index (_, None)) -> Any | t -> t )
 
-(** {!filter_erased_keyed} over CppIR types. *)
+(** Filter erased type arguments from a template argument list, each argument
+    paired with a key that survives with it, using a two-phase approach:
+    proof erasure stripping followed by all-or-nothing type erasure.
+
+    Phase 1: Strip proof-erasure markers ([dummy_prop] from [Tdummy Kprop]).
+    These are positional placeholders in the ML AST that have no C++ analog.
+    They must be removed before checking for erased types, otherwise their
+    presence would trigger full erasure of concrete type arguments.
+
+    Phase 2: Apply the "all or nothing" rule for erased types.
+    If ANY remaining type argument prints as [std::any] ({!prints_as_any}:
+    [Tany], [Topaque], or a [dummy_type] / [dummy_implicit] marker), drop ALL
+    type arguments and return [[]].  With [~preserve_positions:true] nothing
+    is dropped: each such argument is written [Tany] in its place instead.
+
+    The "all or nothing" rule is required because C++ template arguments are
+    positional. If we kept some type args and dropped others, the remaining
+    args would shift into the wrong parameter positions, causing type mismatches.
+
+    Dropping all args is safe because C++ template argument deduction can
+    infer type arguments from value arguments at the call site. For example:
+    - [std::make_optional(5u)] deduces [std::optional<unsigned int>]
+    - [std::vector v{1, 2, 3}] deduces [std::vector<int>]
+
+    It is called wherever a call writes a global's explicit type arguments
+    ([Translation], [Translation_calls]).
+
+    Example scenarios:
+
+    1. Concrete types (no erasure):
+       Input: [[Tglob nat; Tglob bool]]
+       Output: [[Tglob nat; Tglob bool]]
+
+    2. Proof in middle (strip but keep others):
+       Input: [[Tglob nat; Tglob dummy_prop; Tglob bool]]
+       After phase 1: [[Tglob nat; Tglob bool]]
+       Output: [[Tglob nat; Tglob bool]]
+
+    3. Erased type in middle (drop all):
+       Input: [[Tglob nat; Tglob dummy_type; Tglob bool]]
+       After phase 1: [[Tglob nat; Tglob dummy_type; Tglob bool]]
+       After phase 2: [[]] (erased)
+
+    4. Only proofs (drop all):
+       Input: [[Tglob dummy_prop; Tglob dummy_prop]]
+       After phase 1: [[]]
+       Output: [[]]
+
+    @param pairs  keyed C++ types (template arguments)
+    @return the filtered list: either all concrete types or empty, unless
+      [preserve_positions] *)
 let filter_erased_keyed_ir ?(preserve_positions = false) (pairs : ('k * Cpp_ir.Lowered.Type.t) list) =
   let all = pairs in
   let pairs =
@@ -1552,11 +1204,21 @@ let filter_erased_keyed_ir ?(preserve_positions = false) (pairs : ('k * Cpp_ir.L
     [] )
   else pairs
 
-(** {!filter_erased_type_args} over CppIR types. *)
 let filter_erased_type_args_ir ?preserve_positions tys =
   List.map snd (filter_erased_keyed_ir ?preserve_positions (List.map (fun t -> ((), t)) tys))
 
-(** {!refine_erased_by} over CppIR types. *)
+(** [refine_erased_by ~expected actual] takes, at every position where
+    [actual] erased and [expected] did not, the spelling [expected] gives.
+
+    A producer computes a type from its own instantiation, which knows nothing
+    of the positions the value is going to occupy; the slot the value flows
+    into has already written the type down.  Where the two disagree only in how
+    much they erased, the slot's spelling is the one both producers for that
+    slot will agree on, and the one the declaration states -- so it wins, and
+    the producer's concrete knowledge is kept everywhere else.
+
+    Only erasure is refined: a position where both are concrete keeps the
+    producer's, and a shape mismatch is left alone entirely. *)
 let rec refine_erased_by_ir ~(expected : Cpp_ir.Lowered.Type.t) (actual : Cpp_ir.Lowered.Type.t) :
     Cpp_ir.Lowered.Type.t =
   let erased t = Cpp_ir.Types.prints_as_any t in
@@ -1622,49 +1284,6 @@ let rec fill_holes_type fills t =
 let fill_holes fills e =
   match fills with [] -> e | _ -> Mlutil.ast_map_types (fill_holes_type fills) e
 
-let refine_param_from_slot ~tvars ~slot bare =
-  let spelled_by_bare = Minicpp.tvar_names bare in
-  let nameable n =
-    List.exists (Id.equal n) tvars || Id.Set.mem n spelled_by_bare
-  in
-  let erased =
-    Minicpp.map_cpp_type
-      (fun t ->
-        match Minicpp.tvar_name t with
-        | Some n when not (nameable n) -> Tany
-        | _ -> t )
-      slot
-  in
-  (* Every name the parameter already has, it keeps.  The slot is the callee's
-     declaration with this call's arguments substituted in, and a substitution
-     that is not the one this call performs resolves a name to something else
-     entirely -- [void], here.  Erasing a name the parameter cannot spell is
-     the whole point; replacing one it can is a different operation. *)
-  let keeps_names =
-    Id.Set.subset spelled_by_bare (Minicpp.tvar_names erased)
-  in
-  (* Whether the slot says anything the parameter does not already say.  Two
-     things it may differ in without saying anything: which spelling of erasure
-     it uses ([Tany] node or [dummy_type] marker), and what de Bruijn index it
-     gives a type variable -- the slot's indices are the callee's, so they are
-     not the caller's to adopt even when the name is the same. *)
-  let says_something =
-    let normalise =
-      Minicpp.map_cpp_type (fun t ->
-          if is_tany_node t || is_cpp_dummy_type t then Minicpp.Tany
-          else
-            match t with
-            | Minicpp.Tvar (Tv_index (_, Some n) | Tv_named n) -> Minicpp.Tvar (Tv_named n)
-            | t -> t )
-    in
-    normalise erased <> normalise bare
-  in
-  if
-    says_something && keeps_names && has_erased_type_in_type bare
-    && has_erased_type_in_type erased
-  then erased
-  else bare
-
 let refine_param_from_slot_ir ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
   let name_of (t : Cpp_ir.Lowered.Type.t) =
     match t with
@@ -1728,8 +1347,6 @@ let get_tvars_indexed_ir (t : Cpp_ir.Lowered.Type.t) =
   in
   List.sort (fun (x, _) (y, _) -> Int.compare x y) (aux [] t)
 
-let get_tvars_indexed t = get_tvars_indexed_ir (lower_type t)
-
 (** Like [get_tvar_indices_ir] but only collects tvars that will actually
     appear in the rendered C++ type.  For custom types with a template
     (e.g. [std::shared_ptr<ITree<%t1>>]), only type-arg positions
@@ -1784,9 +1401,6 @@ let rendered_tvar_arities_ir (t : Cpp_ir.Lowered.Type.t) =
   arities
 
 (** Tvar names, sorted by index *)
-let get_tvars t = List.map snd (get_tvars_indexed t)
-
-(** {!get_tvars} in CppIR. *)
 let get_tvars_ir t = List.map snd (get_tvars_indexed_ir t)
 
 (** Tvar indices only, sorted *)
@@ -1806,7 +1420,7 @@ let get_tvar_indices_ir t = List.map fst (get_tvars_indexed_ir t)
     Used by the function emitter (to choose between an [is_invocable_r_v]
     constraint and plain [TTtypename]), by {!Plan_templates.phantom_aware_temps}
     (to choose whether a template parameter needs a [void] default) and by the
-    call emitter ({!explicit_tvar_prefix}). *)
+    call emitter ({!explicit_tvar_prefix_ir}). *)
 let primary_tvar_indices_ir (dom : Cpp_ir.Lowered.Type.t list) cod =
   let add_rendered acc t =
     List.fold_left
@@ -1825,11 +1439,9 @@ let primary_tvar_indices_ir (dom : Cpp_ir.Lowered.Type.t list) cod =
   in
   IntSet.union concrete clean_fun
 
-let primary_tvar_indices dom cod = primary_tvar_indices_ir (List.map lower_type dom) (lower_type cod)
-
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
-    {!Translation.convert_ml_type_to_cpp_type} but may be needed in function bodies
+    {!Translation.cpp_ir_of_ml_type} but may be needed in function bodies
     for [any_cast] when matching on type-indexed inductives with
     wholesale-erased fields.
 
@@ -2206,7 +1818,7 @@ let index_only_result_tvar ml_ty =
 
 let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml_ty)
 
-(** [explicit_tvar_prefix ~force_required cty] is how many of a signature's
+(** [explicit_tvar_prefix_ir ~force_required cty] is how many of a signature's
     leading template parameters the signature does not represent, and which a
     call therefore has to spell out instead of leaving to deduction.
 
@@ -2244,5 +1856,3 @@ let explicit_tvar_prefix_ir ?(force_required = IntSet.empty) (cty : Cpp_ir.Lower
     in
     count indexed
   | _ -> 0
-
-let explicit_tvar_prefix ?force_required cty = explicit_tvar_prefix_ir ?force_required (lower_type cty)

@@ -6,14 +6,10 @@
     variables and higher-kinded carriers in scope.  It sits between
     {!Translation} (expressions and statements) and the declaration
     generators ([Gen_functions], [Gen_records], [Gen_instances],
-    [Gen_inductives]) that build CppIR declarations from MiniML ones.  Types
-    and expressions are still produced as MiniCpp by translation and
-    lowered to CppIR ({!Legacy_minicpp_to_cpp_ir}) where a generator
-    assembles a declaration. *)
+    [Gen_inductives]) that build CppIR declarations from MiniML ones. *)
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Util
@@ -126,7 +122,7 @@ let hkt_carrier_fixed_args = Ml_type_util.hkt_carrier_fixed_args
     emitted as [template <typename _A0> using C = List<_A0>;].  The element
     types are fresh type variables numbered from [base], so the caller must
     append {!hkt_alias_param_name} entries to the type-variable list it passes
-    to [convert_ml_type_to_cpp_type]. *)
+    to [cpp_ir_of_ml_type]. *)
 let hkt_carrier_alias base arity ml_ty =
   let is_lambda =
     match ml_ty with
@@ -650,22 +646,15 @@ let hkt_tvar_resolutions_of_type ?source_order ty : (int * Cpp_ir.Lowered.Type.t
     (hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
-    {!hkt_tvar_resolutions_of_type}) throughout a MiniCpp type, the
-    resolutions raised to MiniCpp first. *)
-let apply_hkt_resolutions resolutions ty =
-  if resolutions = [] then ty
-  else
-    let resolutions = List.map (fun (i, t) -> (i, Cpp_ir_to_legacy_minicpp.ty t)) resolutions in
-    Minicpp.subst_cpp_tvars (fun i -> List.assoc_opt i resolutions) ty
-
-(** Rewrite those type variables throughout the statements of a function
+    {!hkt_tvar_resolutions_of_type}) throughout the statements of a function
     body, so type annotations there agree with the resolved signature. *)
-let apply_hkt_resolutions_stmts resolutions stmts =
+let apply_hkt_resolutions_stmts resolutions (stmts : Cpp_ir.Lowered.Stmt.t list) =
   if resolutions = [] then stmts
   else
-    let ft = apply_hkt_resolutions resolutions in
-    let rec fe e = Minicpp.map_expr fe fs ft e
-    and fs s = Minicpp.map_stmt fe fs ft s in
+    let ft = Cpp_ir.Types.substitute (fun i -> List.assoc_opt i resolutions) in
+    let rec fe e = Cpp_ir.Map.expr (rw ()) e
+    and fs s = Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
     List.map fs stmts
 
 (** Rewrite those type variables throughout a whole CppIR declaration: an instance
@@ -689,7 +678,7 @@ let apply_hkt_resolutions_decl resolutions (decl : Cpp_ir.Lowered.Decl.t) =
     record struct's (see [Gen_records]); every use has to supply them in this
     order, or it names a different template. *)
 let mentioned_promoted_args r =
-  List.map (fun v -> Tpromoted v) (Table.promoted_type_params r)
+  List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Table.promoted_type_params r)
 
 (** [deapply_families name vars ty] takes the application off each of
     [name]'s family parameters in [ty], spelled at [vars].  A family is a plain
@@ -698,8 +687,8 @@ let mentioned_promoted_args r =
     {!Plan_templates.deapply_plain_tvars} does not see. *)
 let deapply_families name vars =
   let families = List.filteri (fun i _ -> Table.is_family_ind_param name i) vars in
-  map_cpp_type (function
-    | Tapply ((Tvar (Tv_index (_, Some v) | Tv_named v) as head), _)
+  Cpp_ir.Types.map (function
+    | Apply ((Variable (Index (_, Some v) | Named v) as head), _)
       when List.exists (Id.equal v) families ->
       head
     | t -> t )
@@ -747,8 +736,8 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
               GlobRef.CanOrd.equal g name
               || Table.same_mutual_block g name
               || spells_bare g )
-            ~src_ty:(Legacy_minicpp_to_cpp_ir.lower_type (deapply_families name vars (at vars)))
-            ~dst_ty:(Legacy_minicpp_to_cpp_ir.lower_type (deapply_families name u_var_names (at u_var_names)))
+            ~src_ty:(deapply_families name vars (at vars))
+            ~dst_ty:(deapply_families name u_var_names (at u_var_names))
             (Local field_id) )
         fields
     in
@@ -771,7 +760,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
         return_type =
           Entity_application
             ( name,
-              List.map Legacy_minicpp_to_cpp_ir.lower_type leading
+              leading
               @ List.map Cpp_ir.Build.named_variable u_var_names,
               [] );
         params = [];

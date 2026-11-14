@@ -32,6 +32,10 @@ val any_type_aliases : Id.Set.t ref
     or because it is an axiom type. *)
 val is_any_shaped_ir : 'p Cpp_ir.Type.t -> bool
 
+(** [erase_type_to_any ty] is [ty] with each leaf erased and the containers
+    it is made of kept: the cast target of an erased container field. *)
+val erase_type_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+
 (** [erased_list_shape_ir ty] is the shape a value of list type [ty]
     physically has once it has been through a [std::any]: its elements were
     boxed one at a time, so the container holds [std::any] however concrete

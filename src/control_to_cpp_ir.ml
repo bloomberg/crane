@@ -547,7 +547,7 @@ let local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity =
     | Some _ | None -> None )
   | _ -> None
 
-let lower_local_loop ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lambda) : stmt option =
+let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lambda) : stmt option =
   let lowering = local_lowering ~owner ~function_ ~lifted ~member in
   let member_loop = Control_ir.Loop.Member (fst member, snd member) in
   let unlowered why =
@@ -759,7 +759,7 @@ let lifted_resumes r ~owner ~depth ~arity =
     Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) ~parameters:(first, l) ())
   | _ -> None
 
-let lower_lifted_helper d =
+let lower_lifted d =
   (* The loop the plan commits the helper to, and what came of it. *)
   let decided =
     match function_of d with
@@ -808,16 +808,6 @@ let lower_group decls =
         lower_locals ~unlowered d )
     decls
 
-(* The entry points: translation still generates MiniCpp, which each
-   converts to CppIR on the way in and back on the way out. *)
-
-let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name lam =
-  match Legacy_minicpp_to_cpp_ir.lower_expr (Minicpp.CPPlambda lam) with
-  | Lambda lam ->
-    Option.map Cpp_ir_to_legacy_minicpp.stmt (lower_local_loop ~owner ~function_ ~lifted ~member ~tparams ~name lam)
-  | _ -> assert false
-
-let lower_lifted d = Cpp_ir_to_legacy_minicpp.decl (lower_lifted_helper (Legacy_minicpp_to_cpp_ir.lower d))
 
 (** {1 The control check, over the finished declaration} *)
 

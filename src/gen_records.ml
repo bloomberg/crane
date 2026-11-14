@@ -6,13 +6,10 @@
     generation (MiniML to CppIR), re-exported by {!Gen_decls}: {!Cpp_ind}
     asks it for a record's struct and a class's concept, {!Gen_functions}
     and {!Gen_instances} for the constraint on a class-typed parameter.
-    Types are converted through MiniCpp and lowered into CppIR with
-    {!Legacy_minicpp_to_cpp_ir.lower_type}; the declarations it returns are
-    {!Cpp_ir.Lowered.Decl.t}. *)
+    The declarations it returns are {!Cpp_ir.Lowered.Decl.t}. *)
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Util
 open Ml_type_util
@@ -43,13 +40,13 @@ let gen_record_cpp name fields ind =
     List.filteri (fun i _ -> i >= nb_keep) ind.ip_vars
     |> List.map (fun id -> Id.to_string (Common.tparam_name id))
   in
-  let replace_promoted = function
-    | (Tpromoted id | Tvar (Tv_index (_, Some id) | Tv_named id))
+  let replace_promoted : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+    | (Promoted_member id | Variable (Index (_, Some id) | Named id))
       when List.mem (Id.to_string id) promoted_var_names ->
-      Tany
+      Any
     (* Any record's or class's promoted field: a plain struct has no
        instance to name it through, whoever owns it. *)
-    | Tglob (g, _, _) when Table.is_promoted_type_var g -> Tany
+    | Entity_application (g, _, _) when Table.is_promoted_type_var g -> Any
     | ty -> ty
   in
   (* A field's type at a given spelling of the template parameters.  The
@@ -63,19 +60,19 @@ let gen_record_cpp name fields ind =
         all_vars
     in
     let ct =
-      convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
+      cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
         spelling t
     in
-        let ct = Minicpp.map_cpp_type replace_promoted ct in
+        let ct = Cpp_ir.Types.map replace_promoted ct in
         (* A record's parameters are plain [typename]s, so one of them cannot
            be applied: where the field type applies a higher-kinded parameter
            ([F A]), the parameter stands for the carrier already applied at
            the erased element -- [FnD<std::optional<std::any>>] -- and the
            application is the parameter itself.  Only a class demotes such a
            parameter to an associated type it can apply. *)
-    Minicpp.map_cpp_type
+    Cpp_ir.Types.map
       (function
-        | Tapply ((Tvar (Tv_index (_, Some v) | Tv_named v) as head), _)
+        | Apply ((Variable (Index (_, Some v) | Named v) as head), _)
           when List.exists (fun x -> Id.equal x v) spelling -> head
         | ty -> ty )
       ct
@@ -88,7 +85,7 @@ let gen_record_cpp name fields ind =
   let l : Cpp_ir.Lowered.phase Cpp_ir.Field.member list =
     List.mapi
       (fun i (x, t) : Cpp_ir.Lowered.phase Cpp_ir.Field.member ->
-        (Entity_data (field_name i x, Legacy_minicpp_to_cpp_ir.lower_type (field_cpp_ty vars t)), Public, Untagged) )
+        (Entity_data (field_name i x, field_cpp_ty vars t), Public, Untagged) )
       fields
   in
   (* A record's fields are payloads like any other, so the promoted variables

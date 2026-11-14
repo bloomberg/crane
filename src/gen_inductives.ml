@@ -11,12 +11,10 @@
     CppIR struct (or enum).  Methods are generated ahead of the files
     ({!generate_method_ahead}) and taken from {!methods_ahead} when the struct
     is built.  A method is CppIR from the statements translation generates
-    for its body on; the rest of the struct's types and conversions are
-    MiniCpp until the struct takes them. *)
+    for its body on. *)
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Table
@@ -270,7 +268,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let _, ret_ty = get_args_and_ret [] ty in
   (* The function's variables renumbered so the inductive's come first and
      its own after them ({!Method_registry.renumbering}), the positions
-     convert_ml_type_to_cpp_type maps. *)
+     cpp_ir_of_ml_type maps. *)
   let renumbering = Method_registry.renumbering ~num_ind_vars ~this_pos ty in
   let extra_tvars_orig = renumbering.extra in
   let remap_ml_tvar = renumbering.rename in
@@ -679,20 +677,18 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     ms_params = params;
     _
   } = s in
-  let ret_cpp_ir = ret_cpp in
-  let ret_cpp = Cpp_ir_to_legacy_minicpp.ty ret_cpp in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method =
     Translation_support.suspends_whole func_ref ret_ty (snd (collect_lams body))
   in
-  let method_k x =
+  let method_k x : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_method then
       suspend_whole
-        ~cpp_of:(convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
+        ~cpp_of:(cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
         ~cod:ret_cpp ret_ty x
     else
-      Sreturn (Some x)
+      Return (Some x)
   in
   (* Generate the method body, owning its owned parameters.  The de Bruijn
      environment has parameters in reverse order: ids_normal_order has
@@ -738,7 +734,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type_ir (Some ret_cpp_ir) @@ fun () ->
+    with_cpp_return_type_ir (Some ret_cpp) @@ fun () ->
     with_type_vars (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or
@@ -747,7 +743,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
             with_region ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
-                List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_stmts env method_k inner_body) ) ) )
+                gen_stmts env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
@@ -809,7 +805,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     Entity_application (name, List.map Cpp_ir.Build.named_variable vars, [])
   in
   let stmts =
-    if Cpp_ir.Types.exists (function Shared_pointer _ -> true | _ -> false) ret_cpp_ir then
+    if Cpp_ir.Types.exists (function Shared_pointer _ -> true | _ -> false) ret_cpp then
       List.map (replace_return_this_stmt self_type) stmts
     else stmts
   in
@@ -828,7 +824,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
     finish_fn_body_ir
-      (if ml_type_is_void_call ty then Void else ret_cpp_ir)
+      (if ml_type_is_void_call ty then Void else ret_cpp)
       (List.map (tvar_subst_stmt_ir extended_vars) stmts)
   in
 
@@ -931,7 +927,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     of, with the struct and variables it was generated for, and the helpers
     lifted out of its body. *)
 let methods_ahead :
-    ((GlobRef.t * Id.t list) * (Cpp_ir.Lowered.phase Cpp_ir.Field.member * cpp_decl list)) list
+    ((GlobRef.t * Id.t list) * (Cpp_ir.Lowered.phase Cpp_ir.Field.member * Cpp_ir.Lowered.Decl.t list)) list
     Ref.User.Tbl.t =
   Ref.User.Tbl.create 16
 
@@ -1082,7 +1078,7 @@ let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
     call site, not baked into the field type. *)
 let constructor_field_storage ~name ~is_coinductive var_names ty =
   let cpp_ty =
-    convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
+    cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
   in
   (* Wrap fields that contain a nested self-reference in
      their type arguments (e.g. list(tree(A)) inside tree).
@@ -1096,29 +1092,29 @@ let constructor_field_storage ~name ~is_coinductive var_names ty =
   (* Completeness-aware element wrapping: record [name] as boxed wherever it
      is a container element ({!maybe_record_boxed_recursive_ind}). *)
   maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-  let bare_cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) var_names ty in
+  let bare_cpp_ty = cpp_ir_of_ml_type (empty_env ()) var_names ty in
   if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
     (* If the field recurses THROUGH a boxed-element container, the
        element box already breaks the completeness cycle, so the outer
        shared_ptr/arena pointer is redundant: store the container by
        value. *)
     if ml_type_recurses_through_boxed_container ~ind_ref:name ty then bare_cpp_ty
-    else Tshared_ptr bare_cpp_ty
+    else Shared_pointer bare_cpp_ty
   else
     match cpp_ty with
-    | Tshared_ptr _ -> cpp_ty
-    | _ when (not is_coinductive) && boxes_field ty -> Tshared_ptr bare_cpp_ty
-    | _ when (not is_coinductive) && boxes_param_field ~owner:name ty && bare_cpp_ty <> Tany ->
-      Tid_external (Crane_rt.field, [bare_cpp_ty])
+    | Shared_pointer _ -> cpp_ty
+    | _ when (not is_coinductive) && boxes_field ty -> Shared_pointer bare_cpp_ty
+    | _ when (not is_coinductive) && boxes_param_field ~owner:name ty && bare_cpp_ty <> Any ->
+      External (Crane_rt.field, [bare_cpp_ty])
     | _ -> cpp_ty
 
 (** A field's storage type at the inductive's own variables [vars], erased
     where the inductive has none. *)
-let constructor_field_at_own_vars vars cpp_ty =
+let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   if vars = [] then
     match cpp_ty with
-    | Tshared_ptr _ -> tvar_erase_type cpp_ty
-    | _ when has_unnamed_tvar cpp_ty -> Tany
+    | Shared_pointer _ -> tvar_erase_type_ir cpp_ty
+    | _ when has_unnamed_tvar_ir cpp_ty -> Any
     | _ -> cpp_ty
   else cpp_ty
 
@@ -1134,8 +1130,8 @@ let constructor_pointer_fields ~name ~is_coinductive vars tys =
            constructor_field_at_own_vars vars
              (constructor_field_storage ~name ~is_coinductive vars ty)
          with
-         | Tshared_ptr (Tglob (r, _, _)) when globref_equal r name -> [(i, true)]
-         | Tshared_ptr _ -> [(i, false)]
+         | Shared_pointer (Entity_application (r, _, _)) when globref_equal r name -> [(i, true)]
+         | Shared_pointer _ -> [(i, false)]
          | _ -> [] )
        tys )
 
@@ -1168,10 +1164,6 @@ module F = Cpp_ir.Field
 module B = Cpp_ir.Build
 module V = F.Visibility
 module Sec = F.Section
-
-(* A translation result, converted where the struct takes it. *)
-let lower_type = Legacy_minicpp_to_cpp_ir.lower_type
-let lower_expr = Legacy_minicpp_to_cpp_ir.lower_expr
 
 (** A plain static member function: no template parameters, no [this], and
     none of the qualifiers a real method carries.  Factories are the only
@@ -1401,26 +1393,26 @@ let gen_ind_header_v2
           compute_and_register_field_names ~owner:c cname_str
             (augment_with_args_renaming c ctor_consarg_names)
             ctor_consarg_names n_fields in
-        let erase_if_needed cpp_ty =
+        let erase_if_needed (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
           if vars = [] then
             match cpp_ty with
-            | Tshared_ptr _ -> tvar_erase_type cpp_ty
-            | _ when has_unnamed_tvar cpp_ty -> Tany
+            | Shared_pointer _ -> tvar_erase_type_ir cpp_ty
+            | _ when has_unnamed_tvar_ir cpp_ty -> Any
             | _ -> cpp_ty
           else cpp_ty
         in
         (* A field's value type, and the type the struct stores it at:
            boxed under [Crane BoxedFields] when it holds an inductive. *)
         let value_ty var_names ty =
-          erase_if_needed (convert_ml_type_to_cpp_type (empty_env ()) var_names ty)
+          erase_if_needed (cpp_ir_of_ml_type (empty_env ()) var_names ty)
         in
         let stored_ty var_names ty =
           let t = value_ty var_names ty in
-          if boxes_field ty then Tshared_ptr t else t
+          if boxes_field ty then T.Shared_pointer t else t
         in
         let flat_fields =
           List.mapi (fun j ty ->
-            ((F.Data (List.nth field_ids j, lower_type (stored_ty vars ty)), V.Public, Sec.Data) : Cpp_ir.Lowered.phase F.member)
+            ((F.Data (List.nth field_ids j, stored_ty vars ty), V.Public, Sec.Data) : Cpp_ir.Lowered.phase F.member)
           ) tys_list
         in
         let field_exprs = List.map (fun fid -> E.Local fid) field_ids in
@@ -1442,8 +1434,8 @@ let gen_ind_header_v2
         let factory_args =
           List.map2 (fun (param_name, cpp_ty) ty : Cpp_ir.Lowered.Expr.t ->
             if boxes_field ty then
-              B.call (E.Allocate (Heap, lower_type cpp_ty)) [E.Move (E.Local param_name)]
-            else if is_trivially_copyable_type cpp_ty then E.Local param_name
+              B.call (E.Allocate (Heap, cpp_ty)) [E.Move (E.Local param_name)]
+            else if is_trivially_copyable_type_ir cpp_ty then E.Local param_name
             else E.Move (E.Local param_name)
           ) factory_params tys_list
         in
@@ -1451,7 +1443,7 @@ let gen_ind_header_v2
         let factory_field : Cpp_ir.Lowered.phase F.member =
           ( Method
               (static_method ~name:factory_name ~ret:self_ty
-                 ~params:(List.map (fun (x, t) -> (x, lower_type t)) factory_params) ~body:factory_body),
+                 ~params:factory_params ~body:factory_body),
             V.Public, Sec.Creators )
         in
         let method_fields = gen_methods name vars method_candidates in
@@ -1490,19 +1482,19 @@ let gen_ind_header_v2
             (fun k (r, rvars) ->
               ( (r, List.length rvars),
                 ( Generated_name.indexed "S" k,
-                  Tglob (r, List.map named_tvar rvars, []) ) ) )
+                  (T.Entity_application (r, List.map B.named_variable rvars, []) : Cpp_ir.Lowered.Type.t) ) ) )
             group
         in
         let through_selves =
-          map_cpp_type (fun t ->
+          Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) ->
             match t with
-            | Tglob (r, args, _) | Tnamespace (_, Tglob (r, args, _)) -> (
+            | Entity_application (r, args, _) | In_namespace (_, Entity_application (r, args, _)) -> (
               match
                 List.find_opt
                   (fun ((r', n), _) -> globref_equal r r' && List.length args = n)
                   selves
               with
-              | Some (_, (id, _)) -> named_tvar id
+              | Some (_, (id, _)) -> B.named_variable id
               | None -> t )
             | _ -> t )
         in
@@ -1534,10 +1526,9 @@ let gen_ind_header_v2
                    tys_list
                in
                (* Deferred only where a field names the incomplete type. *)
-               let lower_fields = List.map (fun (f, ty) -> (f, lower_type ty)) in
                let selves, deferred_fields = deferred_ctor_struct cname fields in
                if is_coinductive && deferred_fields <> fields then
-                 ( (F.Deferred_struct {name = cname; selves = lower_fields selves; fields = lower_fields deferred_fields}
+                 ( (F.Deferred_struct {name = cname; selves; fields = deferred_fields}
                      : Cpp_ir.Lowered.phase F.t),
                    V.Public,
                    Sec.Types )
@@ -1545,7 +1536,7 @@ let gen_ind_header_v2
                  ( F.Nested_struct
                      ( cname,
                        List.map
-                         (fun (f, ty) : Cpp_ir.Lowered.phase F.member -> (F.Data (f, lower_type ty), V.Public, Sec.Untagged))
+                         (fun (f, ty) : Cpp_ir.Lowered.phase F.member -> (F.Data (f, ty), V.Public, Sec.Untagged))
                          fields ),
                    V.Public,
                    Sec.Types ) )
@@ -1960,7 +1951,7 @@ let gen_ind_header_v2
             p ^ string_of_int !hv_seq
           in
           let cpp_of_ml t =
-            lower_type (convert_ml_type_to_cpp_type (empty_env ()) vars t)
+            cpp_ir_of_ml_type (empty_env ()) vars t
           in
 
           (* Spelled as from outside the inductive's own scope, which is where
@@ -2713,17 +2704,17 @@ let gen_ind_header_v2
               (* The field as the struct declares it. *)
               let storage_ty = compute_field_cpp_ty ty in
               let api_ty =
-                convert_ml_type_to_cpp_type
+                cpp_ir_of_ml_type
                   (empty_env ())
                   vars
                   ty
               in
-              let api_ty =
+              let api_ty : Cpp_ir.Lowered.Type.t =
                 if vars = [] then
                   match api_ty with
-                  | Tshared_ptr _ ->
-                    tvar_erase_type api_ty
-                  | _ when has_unnamed_tvar api_ty -> Tany
+                  | Shared_pointer _ ->
+                    tvar_erase_type_ir api_ty
+                  | _ when has_unnamed_tvar_ir api_ty -> Any
                   | _ -> api_ty
                 else api_ty
               in
@@ -2750,38 +2741,44 @@ let gen_ind_header_v2
           List.map
             (fun (j, storage_ty, api_ty) ->
               let param_ty =
-                match storage_ty with
-                | Tshared_ptr _ ->
-                  if is_coinductive then Tref (Lvalue, Tconst api_ty)
+                match (storage_ty : Cpp_ir.Lowered.Type.t) with
+                | Shared_pointer _ ->
+                  if is_coinductive then T.Reference (Lvalue, T.Const api_ty)
                   else api_ty
                 | _ -> api_ty
               in
               (param_name_of j, param_ty) )
             cpp_tys
         in
-        let lower_params = List.map (fun (x, t) -> (x, lower_type t)) in
         (* A conversion between the parameter and its field reads the
            parameter for the last time, and takes it by move where it reads
            it once, outside any closure. *)
-        let sink_converted api_ty var e =
+        let sink_converted api_ty (var : Cpp_ir.Lowered.Expr.t) (e : Cpp_ir.Lowered.Expr.t) =
+          (* [on_expr] and [on_stmts] folded over what {!Cpp_ir.Subterms}
+             visits, in its order. *)
+          let fold visit ~on_expr ~on_stmts acc t =
+            let acc = ref acc in
+            visit ~expr:(fun e -> acc := on_expr !acc e) ~stmts:(fun ss -> acc := on_stmts !acc ss) t;
+            !acc
+          in
           (* The parameter's reads in [e], each in a closure or a statement
              counting as two. *)
-          let rec reads ~weight n e =
+          let rec reads ~weight n (e : Cpp_ir.Lowered.Expr.t) =
             match e with
-            | CPPvar _ when e = var -> n + weight
-            | CPPlambda _ -> fold_expr_children ~on_expr:(reads ~weight:2) ~on_stmts:(stmt_reads ~weight:2) n e
-            | _ -> fold_expr_children ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight:2) n e
+            | Local _ when e = var -> n + weight
+            | Lambda _ -> fold Cpp_ir.Subterms.expr ~on_expr:(reads ~weight:2) ~on_stmts:(stmt_reads ~weight:2) n e
+            | _ -> fold Cpp_ir.Subterms.expr ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight:2) n e
           and stmt_reads ~weight n ss =
             List.fold_left
-              (fun n s -> fold_stmt_children ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight) n s)
+              (fun n s -> fold Cpp_ir.Subterms.stmt ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight) n s)
               n ss
           in
-          if is_trivially_copyable_type api_ty || reads ~weight:1 0 e <> 1 then e
+          if is_trivially_copyable_type_ir api_ty || reads ~weight:1 0 e <> 1 then e
           else
-            let rec moved e =
+            let rec moved (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
               match e with
-              | CPPvar _ when e = var -> CPPmove var
-              | _ -> map_expr moved Fun.id Fun.id e
+              | Local _ when e = var -> Move var
+              | _ -> Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:moved ~stmt:Fun.id ~type_:Fun.id ()) e
             in
             moved e
         in
@@ -2790,17 +2787,17 @@ let gen_ind_header_v2
         let ctor_args =
           List.map
             (fun (j, storage_ty, api_ty) : Cpp_ir.Lowered.Expr.t ->
-              let var = CPPvar (param_name_of j) in
+              let var : Cpp_ir.Lowered.Expr.t = E.Local (param_name_of j) in
               let local : Cpp_ir.Lowered.Expr.t = E.Local (param_name_of j) in
-              match storage_ty with
-              | Tfun (storage_args, storage_ret) -> begin
-                match api_ty with
-                | Tfun (api_args, api_ret) when List.length storage_args = List.length api_args
+              match (storage_ty : Cpp_ir.Lowered.Type.t) with
+              | Function (storage_args, storage_ret) -> begin
+                match (api_ty : Cpp_ir.Lowered.Type.t) with
+                | Function (api_args, api_ret) when List.length storage_args = List.length api_args
                   && storage_ty <> api_ty ->
                   let lambda_params =
                     List.mapi
                       (fun k storage_arg ->
-                        (lower_type storage_arg, Some (Id.of_string ("x" ^ string_of_int k)))
+                        (storage_arg, Some (Id.of_string ("x" ^ string_of_int k)))
                       )
                       storage_args
                   in
@@ -2810,34 +2807,31 @@ let gen_ind_header_v2
                         let arg_var : Cpp_ir.Lowered.Expr.t = Local (Id.of_string ("x" ^ string_of_int k)) in
                         if _storage_arg = api_arg then arg_var
                         else
-                          gen_type_conversion_expr ~src_ty:(lower_type _storage_arg) ~dst_ty:(lower_type api_arg)
+                          gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
                             arg_var )
                       (List.combine storage_args api_args)
                   in
-                  let call = B.call (lower_expr var) call_args in
+                  let call = B.call var call_args in
                   let ret =
                     if storage_ret = api_ret then call
-                    else gen_type_conversion_expr ~src_ty:(lower_type api_ret) ~dst_ty:(lower_type storage_ret) call
+                    else gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
                   in
                   (* The lambda's result is the storage-side type by
                      construction -- [ret] is the call converted into it.  Say
                      so, rather than leaving a later pass to read it back off
                      the body. *)
-                  lambda lambda_params (Some (lower_type storage_ret))
+                  lambda lambda_params (Some storage_ret)
                     [S.Return (Some ret)] ~capture:Stored
                 | _ when storage_ty = api_ty -> E.Move local
                 | _ ->
-                  lower_expr
-                    (sink_converted api_ty var
-                       (Cpp_ir_to_legacy_minicpp.expr
-                       (gen_type_conversion_expr ~src_ty:(lower_type api_ty) ~dst_ty:(lower_type storage_ty)
-                          (lower_expr var))))
+                  sink_converted api_ty var
+                    (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
               end
-              | Tshared_ptr inner ->
-                let arg = if is_coinductive then var else CPPmove var in
+              | Shared_pointer inner ->
+                let arg = if is_coinductive then var else E.Move var in
                 let converted =
-                  if inner = api_ty then lower_expr arg
-                  else gen_type_conversion_expr ~src_ty:(lower_type api_ty) ~dst_ty:(lower_type inner) (lower_expr arg)
+                  if inner = api_ty then arg
+                  else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
                 (* A single factory call.  For arena-eligible types this is
                    the runtime-arena-aware factory ([Arena_scoped]:
@@ -2846,17 +2840,14 @@ let gen_ind_header_v2
                    exactly make_shared/make_rc; NoArena / coinductive / mutual
                    types keep the plain factory. *)
                 if arena_runtime_ok then
-                  B.call (E.Allocate (Arena_scoped, lower_type inner)) [converted]
-                else B.call (E.Allocate (Heap, lower_type inner)) [converted]
+                  B.call (E.Allocate (Arena_scoped, inner)) [converted]
+                else B.call (E.Allocate (Heap, inner)) [converted]
               | _ when storage_ty = api_ty ->
-                if is_trivially_copyable_type api_ty then local
+                if is_trivially_copyable_type_ir api_ty then local
                 else E.Move local
               | _ ->
-                lower_expr
-                  (sink_converted api_ty var
-                     (Cpp_ir_to_legacy_minicpp.expr
-                       (gen_type_conversion_expr ~src_ty:(lower_type api_ty) ~dst_ty:(lower_type storage_ty)
-                          (lower_expr var)))) )
+                sink_converted api_ty var
+                  (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
         (* Under [Crane NonAtomicRc], a field holding the inductive itself
@@ -2871,15 +2862,15 @@ let gen_ind_header_v2
           Table.non_atomic_rc () && (not is_coinductive) && (not arena_runtime_ok)
           && (not (Table.is_shared_variant name))
           && is_ref_to name vars ty
-          && (match storage_ty with Tshared_ptr _ -> true | _ -> false)
+          && (match (storage_ty : Cpp_ir.Lowered.Type.t) with Shared_pointer _ -> true | _ -> false)
         in
         let fields = List.combine cpp_tys tys_list in
         let primary_params =
           List.map2
             (fun ((_, storage_ty, _) as f, ty) (pname, pty) ->
-              match storage_ty with
-              | Tshared_ptr inner when child_field f ty ->
-                (pname, Tid_external (Crane_rt.child_slot, [inner]))
+              match (storage_ty : Cpp_ir.Lowered.Type.t) with
+              | Shared_pointer inner when child_field f ty ->
+                (pname, T.External (Crane_rt.child_slot, [inner]))
               | _ -> (pname, pty) )
             fields params
         in
@@ -2894,7 +2885,7 @@ let gen_ind_header_v2
         let body = [S.Return (Some (build i cname primary_ctor_args))] in
         let primary : Cpp_ir.Lowered.phase F.member =
           ( Method
-              (static_method ~name:factory_name ~ret:ret_ty ~params:(lower_params primary_params) ~body),
+              (static_method ~name:factory_name ~ret:ret_ty ~params:primary_params ~body),
             V.Public,
             Sec.Creators )
         in
@@ -2911,8 +2902,8 @@ let gen_ind_header_v2
         let token_field =
           List.find_map
             (fun ((j, storage_ty, _), ty) ->
-              match (storage_ty, Mlutil.ml_resolve ty) with
-              | Tshared_ptr inner, Miniml.Tglob (r, _, _)
+              match ((storage_ty : Cpp_ir.Lowered.Type.t), Mlutil.ml_resolve ty) with
+              | Shared_pointer inner, Miniml.Tglob (r, _, _)
                 when GlobRef.CanOrd.equal r name ->
                 Some (j, inner)
               | _ -> None )
@@ -2943,7 +2934,7 @@ let gen_ind_header_v2
           [ ( Method
                 (static_method
                    ~name:(Generated_name.companion (Id.of_string fname) "reuse")
-                   ~ret:ret_ty ~params:((tok_id, ret_ty) :: lower_params params) ~body),
+                   ~ret:ret_ty ~params:((tok_id, ret_ty) :: params) ~body),
               V.Public,
               Sec.Creators ) ]
         in
@@ -2959,7 +2950,7 @@ let gen_ind_header_v2
                  && not (Table.is_shared_variant name) ->
               let tok_id = Id.of_string "_tok" in
               let reuse_params =
-                (tok_id, Tshared_ptr rec_inner) :: params
+                (tok_id, T.Shared_pointer rec_inner) :: params
               in
               let reuse_ctor_args =
                 List.map2
@@ -2978,7 +2969,7 @@ let gen_ind_header_v2
               [ ( Method
                     (static_method
                        ~name:(Generated_name.companion (Id.of_string fname) "reuse")
-                       ~ret:ret_ty ~params:(lower_params reuse_params) ~body:reuse_body),
+                       ~ret:ret_ty ~params:reuse_params ~body:reuse_body),
                   V.Public,
                   Sec.Creators ) ]
           | _ -> []
@@ -3004,7 +2995,7 @@ let gen_ind_header_v2
                       injected-class-name, so class template argument
                       deduction is not available. *)
                    (fun i cname args : Cpp_ir.Lowered.Expr.t ->
-                     let self = lower_expr (mk_cppglob name (List.map named_tvar vars)) in
+                     let self = mk_cppglob_ir name (List.map B.named_variable vars) in
                      if is_coinductive then
                        B.call self
                          [B.call lazy_cell (E.In_place :: E.In_place_index i :: args)]
@@ -3031,7 +3022,7 @@ let gen_ind_header_v2
               [E.Forward (B.named_variable f, E.Local thunk)]
           in
           let body =
-            [S.Return (Some (B.call (lower_expr (mk_cppglob name (List.map named_tvar vars))) [delegate]))]
+            [S.Return (Some (B.call (mk_cppglob_ir name (List.map B.named_variable vars)) [delegate]))]
           in
           let m =
             { (static_method ~name:(Id.of_string "lazy_") ~ret:self_ty
@@ -3109,11 +3100,12 @@ let gen_ind_header_v2
                           in
                           find 0 promoted
                         in
-                        map_cpp_type
-                          (function
-                            | (Tvar (Tv_index (_, Some id) | Tv_named id) | Tpromoted id) as t -> (
+                        Cpp_ir.Types.map
+                          (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+                            match t with
+                            | (Variable (Index (_, Some id) | Named id) | Promoted_member id) as t -> (
                               match name_at id with
-                              | Some u -> Tvar (Tv_named u)
+                              | Some u -> Variable (Named u)
                               | None -> t )
                             | t -> t )
                           t
@@ -3137,15 +3129,15 @@ let gen_ind_header_v2
                          unboxed, and the struct's constructor boxes the
                          result again where that pays. *)
                       let src_expr, src_fty, dst_fty =
-                        let unboxed = function
-                          | Tid_external (f, [t]) when String.equal f Crane_rt.field -> Some t
+                        let unboxed : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t option = function
+                          | External (f, [t]) when String.equal f Crane_rt.field -> Some t
                           | _ -> None
                         in
                         match (unboxed src_fty, unboxed dst_fty) with
                         | Some s, Some d ->
-                          ( mk_call (CPPrt Crane_rt.Unbox_field) [CPPvar field_id],
+                          ( B.call (E.Runtime Crane_rt.Unbox_field) [E.Local field_id],
                             s, d )
-                        | _ -> (CPPvar field_id, src_fty, dst_fty)
+                        | _ -> ((E.Local field_id : Cpp_ir.Lowered.Expr.t), src_fty, dst_fty)
                       in
                       (* A translation result, converted where the branch
                          takes it. *)
@@ -3159,8 +3151,8 @@ let gen_ind_header_v2
                           GlobRef.CanOrd.equal g name
                           || Table.same_mutual_block g name
                           || spells_bare g)
-                        ~src_ty:(lower_type src_fty) ~dst_ty:(lower_type dst_fty)
-                        (lower_expr src_expr))
+                        ~src_ty:src_fty ~dst_ty:dst_fty
+                        src_expr)
                     field_info
                 in
                 (cname_id, field_info, converted)

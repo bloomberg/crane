@@ -87,15 +87,15 @@ val source : Names.GlobRef.t -> Unit_program.owner
 (** [helper_id d] is the id of the lifted helper [d] in the unit's program
     ({!Unit_program.id}): the only declaration of its own generation.
     That [d] is not a lifted helper is an anomaly. *)
-val helper_id : Minicpp.cpp_decl -> Unit_program.id
+val helper_id : Cpp_ir.Lowered.Decl.t -> Unit_program.id
 
 (** [helper_placed d] is the lifted helper [d] under its {!helper_id}, in
     CppIR. *)
-val helper_placed : Minicpp.cpp_decl -> Unit_program.id * Cpp_ir.Lowered.Decl.t
+val helper_placed : Cpp_ir.Lowered.Decl.t -> Unit_program.id * Cpp_ir.Lowered.Decl.t
 
 (** [helpers_placed ds] is each lifted helper of [ds] under its
     {!helper_id}, in CppIR. *)
-val helpers_placed : Minicpp.cpp_decl list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
+val helpers_placed : Cpp_ir.Lowered.Decl.t list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
 
 (** [instance_ids r ds] is the id of each of [ds], the declarations of the
     instance [r]. *)
@@ -110,7 +110,7 @@ val instance_jobs : Names.GlobRef.t -> generated -> Unit_program.job list
     its id: how a wrapper module places an instance, as it places a lifted
     helper. *)
 val instance_placed :
-  Names.GlobRef.t -> generated -> Minicpp.cpp_decl list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
+  Names.GlobRef.t -> generated -> Cpp_ir.Lowered.Decl.t list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
 
 (** [concept_id r] is the id of the concept of the class [r]. *)
 val concept_id : Names.GlobRef.t -> Unit_program.id
@@ -133,7 +133,7 @@ type ahead = {
           before any function of the unit is finished. *)
   finishing : Unit_program.job list;
       (** What of the declaration to finish, each under its id. *)
-  helpers : Minicpp.cpp_decl list;
+  helpers : Cpp_ir.Lowered.Decl.t list;
       (** The helpers lifted out of it, finished after everything else, each
           under its {!helper_id}. *)
   handed_on : Unit_program.job list;
@@ -153,7 +153,7 @@ val functions_ahead : (Names.GlobRef.t * Gen_decls.generated_fun list) list -> a
 (** [entity r ids helpers] is the generation of [r]: the declarations
     [ids], and the helpers among [helpers]. *)
 val entity :
-  Names.GlobRef.t -> Unit_program.id list -> Minicpp.cpp_decl list -> Unit_program.entity
+  Names.GlobRef.t -> Unit_program.id list -> Cpp_ir.Lowered.Decl.t list -> Unit_program.entity
 
 (** [funs_entities ~fallback funs] is each generated function as the entity
     its declaration is about, [fallback] where it says none. *)
@@ -287,7 +287,7 @@ val record_methods :
   Names.GlobRef.t ->
   Names.Id.t list ->
   Method_registry.method_candidate list ->
-  Cpp_ir.Lowered.phase Cpp_ir.Field.member list * Minicpp.cpp_decl list
+  Cpp_ir.Lowered.phase Cpp_ir.Field.member list * Cpp_ir.Lowered.Decl.t list
 
 (** [record_field_types r vars fields] is the C++ type of each of the
     fields [fields] of the eponymous record [r], of variables [vars], which
@@ -349,7 +349,7 @@ val finished_placed : Unit_program.id * Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved
 
 (** [finished_helper d] is the lifted helper [d] ({!finished_placed} under
     its {!helper_id}). *)
-val finished_helper : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
+val finished_helper : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [entity_placed (id, d)] is the function entity of {!finished_placed}:
     its declaration and definition. *)
@@ -357,7 +357,7 @@ val entity_placed : Unit_program.id * Cpp_ir.Lowered.Decl.t -> Function_entity.t
 
 (** [helper_entity d] is {!entity_placed} of the lifted helper [d] under
     its {!helper_id}. *)
-val helper_entity : Minicpp.cpp_decl -> Function_entity.t
+val helper_entity : Cpp_ir.Lowered.Decl.t -> Function_entity.t
 
 (** [finished_concept r d] is [d], the concept of the class [r]. *)
 val finished_concept : Names.GlobRef.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
@@ -399,7 +399,7 @@ val template_kinds : Miniml.ml_structure -> (Names.GlobRef.t * Tparam_kinds.t) l
     entity [r] gave the declarations [ids] to finish and lifted
     [helpers]. *)
 val record_entity :
-  Names.GlobRef.t -> Unit_program.id list -> Minicpp.cpp_decl list -> Unit_program.entity
+  Names.GlobRef.t -> Unit_program.id list -> Cpp_ir.Lowered.Decl.t list -> Unit_program.entity
 
 (** [record_funs ~fallback funs] records each generated function as the
     entity its declaration is about, [fallback] where it names none. *)
@@ -411,14 +411,14 @@ val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> un
     ({!generating_ahead}) and taken from there by the header; that it was
     not is an anomaly.  [CRANE_CHECK_IR] regenerates and checks. *)
 val instance_entity :
-  module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated * Minicpp.cpp_decl list
+  module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated * Cpp_ir.Lowered.Decl.t list
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
     out of it that the element places: a constant's or a function's.  A
     fixpoint's helpers are written in front of it, and are not among them. *)
 type element = {
   rendered : rendered;  (** The declarations written, finished. *)
-  helpers : Minicpp.cpp_decl list;
+  helpers : Cpp_ir.Lowered.Decl.t list;
       (** The lifted helpers this element places; empty where the header
           writes them in front of each function, or writes none. *)
   member_defs : rendered;

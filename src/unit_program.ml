@@ -1,7 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-open Minicpp
 
 type owner =
   | Source of Entity_id.t
@@ -52,7 +51,7 @@ end)
 
 type helper = {
   helper_id : Generated_entity_id.t;
-  helper_decl : cpp_decl;
+  helper_decl : Cpp_ir.Lowered.Decl.t;
 }
 
 let helper_declaration h = {owner = Generated h.helper_id; part = Declaration 0}
@@ -66,19 +65,18 @@ type entity = {
 let helper d =
   Option.map
     (fun h -> { helper_id = Generated_entity_id.lifted_helper h; helper_decl = d })
-    (Option.bind (decl_globref d) Lifted.of_ref)
+    (Option.bind (Cpp_ir.Globrefs.declared d) Lifted.of_ref)
 
 let dependencies decls =
   let found = ref Entity_id.Set.empty in
   List.iter
-    (Minicpp.iter_globrefs (fun r -> found := Entity_id.Set.add (Entity_id.of_ref r) !found))
+    (Cpp_ir.Globrefs.iter (fun r -> found := Entity_id.Set.add (Entity_id.of_ref r) !found))
     decls;
   !found
 
 type job = id * Cpp_ir.Lowered.Decl.t
 
 let job id d : job = (id, d)
-let legacy_job id d = job id (Cpp_pipeline.lower d)
 
 type declaration = {
   id : id;

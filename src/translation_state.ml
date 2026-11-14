@@ -12,26 +12,17 @@ module IntMap = Map.Make (Int)
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Core_query
 
-(** A [CPPglob] for the global [r] at [tys], its custom extraction
+(** An [Entity] for the global [r] at [tys], its custom extraction
     ({!Table.inline_custom_text}) looked up once here.  [yields] is what
     the global evaluates to, and is worth passing whenever the caller has the
     global's instantiated type: for a [%result] block template in value
     position it is the only record of the type, since there is no call node to
     carry one. *)
-let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
-  CPPglob (r, tys, Some {ci_inline = Option.map inline_template (Table.inline_custom_text r); ci_yields = yields})
-
-(** {!mk_cppglob} in CppIR. *)
 let mk_cppglob_ir ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
   Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = yields})
-
-(** A [CPPglob] for a local variable ([VarRef]): no custom extraction applies. *)
-let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
-  CPPglob (r, tys, None)
 
 (** [callee_ml_type r] -- the ML type of the callable [r] as the unit's plan
     of it records it ({!Callable_abi.ml_type}): the signature call
@@ -157,7 +148,7 @@ type translation_ctx = {
      (prints as: typename _tcI0::m_carrier).
      Set ({!with_promoted_var_map}) when generating template functions and
      instances with typeclass parameters. Used by
-     {!Translation.convert_ml_type_to_cpp_type} to resolve [Tpromoted]
+     {!Translation.cpp_ir_of_ml_type} to resolve [Tpromoted]
      markers.  CppIR: type conversion reads it as it is. *)
   promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
   (* When true, we are inside a constructor expression (module-level static
@@ -183,7 +174,7 @@ type translation_ctx = {
      ({!Ownership_ir.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
      instead of the normal factory.  The plan names at most one on any path,
      so nothing here tracks whether it has been taken. *)
-  reuse_token : cpp_expr option;
+  reuse_token : Cpp_ir.Lowered.Expr.t option;
   (* When generating a method body, holds the set of self-references
      (the inductive type(s) this method belongs to). Merged into the ns
      argument of convert_ml_type_to_cpp_type so that self-refs inside
@@ -377,11 +368,6 @@ let with_cpp_return_type_ir (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a)
     ({!translation_ctx.current_cpp_return_type}). *)
 let current_cpp_return_type_ir () : Cpp_ir.Lowered.Type.t option = (!tctx).current_cpp_return_type
 
-(** {!current_cpp_return_type_ir} raised to MiniCpp, for a reader that builds
-    MiniCpp from it. *)
-let current_cpp_return_type () : cpp_type option =
-  Option.map Cpp_ir_to_legacy_minicpp.ty (!tctx).current_cpp_return_type
-
 (** Whether the enclosing function returns [void]. *)
 let returns_void () =
   match (!tctx).current_cpp_return_type with Some Cpp_ir.Type.Void -> true | _ -> false
@@ -440,11 +426,6 @@ let spells_bare r = List.exists (GlobRef.CanOrd.equal r) (local_inductives_in_sc
 
 (** The type of the inductive [r] at [args] as generation spells it: bare
     where it is local, qualified by its namespace elsewhere. *)
-let inductive_type r args es =
-  let t = Tglob (r, args, es) in
-  if spells_bare r then t else Tnamespace (r, t)
-
-(** {!inductive_type} in CppIR. *)
 let inductive_type_ir r args es : Cpp_ir.Lowered.Type.t =
   let t : Cpp_ir.Lowered.Type.t = Entity_application (r, args, es) in
   if spells_bare r then t else In_namespace (r, t)
@@ -559,7 +540,7 @@ let takes_reuse_token e =
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the Perceus reuse token
     of the arm it generates. *)
-let with_reuse_token (tok : cpp_expr option) (f : unit -> 'a) : 'a
+let with_reuse_token (tok : Cpp_ir.Lowered.Expr.t option) (f : unit -> 'a) : 'a
     =
   with_field
     (fun c -> c.reuse_token)
@@ -575,7 +556,7 @@ let set_current_parameters (bs : Core_binder.t list) =
     one.  Not a field of {!tctx}: a helper belongs to the generation it was
     lifted in, whatever scope inside that generation lifted it, so no scope
     restores it. *)
-let lifted_so_far : cpp_decl list option ref = ref None
+let lifted_so_far : Cpp_ir.Lowered.Decl.t list option ref = ref None
 
 (** Lift a declaration out of the body being generated, to the generation
     collecting its helpers ({!collecting_lifted}).
@@ -584,14 +565,14 @@ let lifted_so_far : cpp_decl list option ref = ref None
     was bound to there ({!Lifted}), so a generation lifting one identity
     twice lifts one helper and keeps the first.  That is sound only where
     both are the same declaration, which [CRANE_CHECK_IR] holds it to. *)
-let add_lifted_decl (d : cpp_decl) =
+let add_lifted_decl (d : Cpp_ir.Lowered.Decl.t) =
   match !lifted_so_far with
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: a helper was lifted outside every generation that places one.")
   | Some ds -> (
     let same_helper d' =
-      match (decl_globref d, decl_globref d') with
+      match (Cpp_ir.Globrefs.declared d, Cpp_ir.Globrefs.declared d') with
       | Some r, Some r' -> globref_equal r r'
       | _ -> false
     in
@@ -602,7 +583,7 @@ let add_lifted_decl (d : cpp_decl) =
         Probe.violation "lifted helpers"
           Pp.(
             str "one generation lifted two different helpers as "
-            ++ Option.cata GlobRef.print (mt ()) (decl_globref d)) )
+            ++ Option.cata GlobRef.print (mt ()) (Cpp_ir.Globrefs.declared d)) )
 
 (** [collecting_lifted f] runs [f] and returns, with its result, the helpers
     lifted out of the bodies it generated, in the order they were lifted: a

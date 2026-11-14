@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Declaration-level C++ code generation from extracted MiniML.
 
-    This module turns Rocq/MiniML declarations into {!Minicpp} C++ declarations:
+    This module turns Rocq/MiniML declarations into CppIR C++ declarations:
     inductive types (an encapsulated struct with methods, held by value, behind
     a [std::shared_ptr], or as an [enum class]), records, typeclass concepts,
     typeclass instances, and top-level (possibly mutually recursive) function definitions
@@ -14,7 +14,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 
 (** {2 Declaration Generation} *)
@@ -47,7 +46,7 @@ type generated_entity =
 type generated_fun = {
   gf_entity : generated_entity;  (** the definition or declaration *)
   gf_env : env;  (** the environment its names were allocated in *)
-  gf_lifted : cpp_decl list;  (** helpers lifted out of its body *)
+  gf_lifted : Cpp_ir.Lowered.Decl.t list;  (** helpers lifted out of its body *)
 }
 
 (** [defined d tvars] is the definition [d] of a function or constant whose
@@ -79,7 +78,7 @@ val plan_method :
     the files are rendered, recording it with the helpers lifted out of its
     body for the inductive's generation to take, and returns those helpers. *)
 val generate_method_ahead :
-  GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> cpp_decl list
+  GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> Cpp_ir.Lowered.Decl.t list
 
 (** [check_method_ahead name vars candidate] generates the method again and
     checks it is the one {!generate_method_ahead} recorded. *)

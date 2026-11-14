@@ -604,13 +604,6 @@ val lookup_method_arity : Names.GlobRef.t -> int
     receiver and thus omitted from explicit template arguments. *)
 val lookup_method_ind_tvar_positions : Names.GlobRef.t -> int list
 
-(** The type of a registered method's receiver at the given instantiation: the
-    eponymous inductive applied to the type arguments sitting at
-    {!lookup_method_ind_tvar_positions}. [None] when the reference is not a
-    registered method, or is not instantiated at all of those positions. *)
-val method_receiver_cpp_type :
-  Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_type option
-
 (** Whether the method's return type is erased to [std::any]
     ({!Method_registry.method_returns_any}). *)
 val method_returns_any : Names.GlobRef.t -> bool

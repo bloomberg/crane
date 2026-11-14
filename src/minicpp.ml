@@ -959,38 +959,6 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved | Tany | Topaque
   | Tauto | Thole | Terased _ -> ty
 
-(** [rewrite_cpp_type f ty]: where [f] answers, its answer replaces the node
-    and is not descended into; elsewhere the node is rebuilt from its rewritten
-    children, exactly as it was -- no application is re-normalised, and a
-    [Ttyctor]'s head is reached like any other child. *)
-let rec rewrite_cpp_type (f : cpp_type -> cpp_type option) (ty : cpp_type) :
-    cpp_type =
-  match f ty with
-  | Some t -> t
-  | None -> (
-    let go = rewrite_cpp_type f in
-    match ty with
-    | Tglob (r, tys, args) -> Tglob (r, List.map go tys, args)
-    | Tforeign fr -> Tforeign {fr with fr_types = List.map go fr.fr_types}
-    | Tid (id, tys) -> Tid (id, List.map go tys)
-    | Tid_external (id, tys) -> Tid_external (id, List.map go tys)
-    | Tfun (dom, cod) -> Tfun (List.map go dom, go cod)
-    | Tconst t -> Tconst (go t)
-    | Tshared_ptr t -> Tshared_ptr (go t)
-    | Tref (k, t) -> Tref (k, go t)
-    | Tptr t -> Tptr (go t)
-    | Tvariant (k, ts) -> Tvariant (k, List.map go ts)
-    | Tnamespace (r, t) -> Tnamespace (r, go t)
-    | Tqualified (t, id) -> Tqualified (go t, id)
-    | Tapply (h, ts) -> Tapply (go h, List.map go ts)
-    | Tdecay t -> Tdecay (go t)
-    | Tnondeduced t -> Tnondeduced (go t)
-    | Trebind (h, x) -> Trebind (go h, go x)
-    | Ttyctor t -> Ttyctor (go t)
-    | Texpr_type _ | Tdecltype_auto | Tvar _ | Tinstance _ | Tpromoted _
-    | Tvoid | Tunresolved | Tany | Topaque | Tauto | Thole | Terased _ ->
-      ty )
-
 let ctor_alias_tvar = Generated_name.role "TcArg"
 
 (** [tapply head args] is [head] applied to [args], reduced where [head] is an
