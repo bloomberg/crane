@@ -5,97 +5,39 @@
     [borrow_projection.mli]. *)
 
 open Names
-open Minicpp
+open Cpp_ir.Grammar
+
+type method_ = Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t
 
 (* Whether [e] mentions [this] anywhere. *)
-let rec reads_this e =
+let rec reads_this (e : Cpp_ir.Lowered.Expr.t) =
   match e with
-  | CPPthis -> true
+  | This -> true
   | _ ->
     let found = ref false in
-    iter_expr_children
-      ~on_expr:(fun e -> if reads_this e then found := true)
-      ~on_stmts:(fun _ -> ())
-      e;
+    Cpp_ir.Subterms.expr ~expr:(fun e -> if reads_this e then found := true) ~stmts:(fun _ -> ()) e;
     !found
 
 (* What the C++ body of a projection looks like: a single-branch match on
    [this], borrowed, whose body returns one of the fields it binds.  Not what
-   decides a split -- the Core function does ({!Minicpp.receiver}'s
-   [returns_field]) -- but what that decision promises, checked. *)
-let reads_one_field m =
-  m.mf_params = [] && not m.mf_is_conversion
+   decides a split -- the Core function does ([returns_field] of
+   {!Cpp_ir.Field.Receiver.t}) -- but what that decision promises, checked. *)
+let reads_one_field (m : method_) =
+  m.params = [] && (not m.is_conversion)
   &&
-  match m.mf_body with
-  | [Smatch (sc, [b], None)] ->
-    (not sc.sc_owned) && b.smb_extra_conds = [] && reads_this sc.sc_expr
+  match m.body with
+  | [Match (sc, [b], None)] ->
+    (not sc.owned) && b.extra_conditions = [] && reads_this sc.expr
     &&
-    ( match b.smb_body with
-    | [Sreturn (Some (CPPvar x))] ->
-      List.exists (fun fb -> Id.equal x fb.fb_name) b.smb_field_bindings
+    ( match b.body with
+    | [Return (Some (Local x))] ->
+      List.exists (fun (fb : _ Match.field_binding) -> Id.equal x fb.name) b.field_bindings
     | _ -> false )
   | _ -> false
 
-(* [m] returns one field of its receiver, not yet split, and the field has a
-   value a reference can name. *)
-let lends_field m =
-  ( match m.mf_receiver with
-  | Instance {returns_field = true; is_const = true; ref_qual = Rq_any; _} -> true
-  | _ -> false )
-  &&
-  match m.mf_ret_type with
-  | Tref _ | Tvoid -> false
-  | _ -> true
-
-(* Whether [m] is split, as the Core decision ({!lends_field}) says.  Under
-   [CRANE_CHECK_IR], a body that does not have the shape that decision
-   promises ({!reads_one_field}) is a violation. *)
-let is_projection m =
-  let lends = lends_field m in
-  ( if Probe.checking () then
-      let unsplit =
-        match m.mf_receiver with
-        | Instance {is_const = true; ref_qual = Rq_any; _} -> true
-        | _ -> false
-      in
-      let shaped =
-        unsplit && reads_one_field m
-        && (match m.mf_ret_type with Tref _ | Tvoid -> false | _ -> true)
-      in
-      if shaped <> lends then
-        Probe.violation "borrowed projection"
-          Pp.(
-            str "the Core function of " ++ Id.print m.mf_name
-            ++ str (if lends then " returns a receiver field its body does not read"
-                    else " does not return the receiver field its body reads") ) );
-  lends
-
-(* The projection as the pair that cannot dangle: a reference for an lvalue
-   receiver, and a copy for a temporary one, which dies at the end of the
-   full expression that called it. *)
-let split m =
-  let with_ref_qual ref_qual =
-    match m.mf_receiver with
-    | Instance r -> Instance {r with ref_qual}
-    | Static -> Static
-  in
-  [ Fmethod
-      { m with
-        mf_ret_type = Tref (Lvalue, Tconst m.mf_ret_type);
-        mf_receiver = with_ref_qual Rq_lvalue };
-    Fmethod {m with mf_receiver = with_ref_qual Rq_rvalue} ]
-
-(* [field] as the struct declares it: a coinductive's projection as its two
-   overloads, in its place. *)
-let lend ~coinductive ((f, vis, tag) as field) =
-  match f with
-  | Fmethod m when coinductive && is_projection m -> List.map (fun f -> (f, vis, tag)) (split m)
-  | _ -> [field]
-
-(* Whether the method [m] of a finished declaration returns one field of
-   its receiver, not yet split, and the field has a value a reference can
-   name: {!lends_field} of a method in CppIR. *)
-let lends_field_ir (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) =
+(* Whether the method [m] returns one field of its receiver, not yet split,
+   and the field has a value a reference can name. *)
+let lends_field (m : method_) =
   ( match m.receiver with
   | Instance {returns_field = true; is_const = true; ref_qualifier = Any; _} -> true
   | _ -> false )
@@ -103,6 +45,48 @@ let lends_field_ir (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) =
   match m.return_type with
   | Reference _ | Void -> false
   | _ -> true
+
+(* Whether [m] is split, as the Core decision ({!lends_field}) says.  Under
+   [CRANE_CHECK_IR], a body that does not have the shape that decision
+   promises ({!reads_one_field}) is a violation. *)
+let is_projection (m : method_) =
+  let lends = lends_field m in
+  ( if Probe.checking () then
+      let unsplit =
+        match m.receiver with
+        | Instance {is_const = true; ref_qualifier = Any; _} -> true
+        | _ -> false
+      in
+      let shaped =
+        unsplit && reads_one_field m
+        && match m.return_type with Reference _ | Void -> false | _ -> true
+      in
+      if shaped <> lends then
+        Probe.violation "borrowed projection"
+          Pp.(
+            str "the Core function of " ++ Id.print m.name
+            ++ str (if lends then " returns a receiver field its body does not read"
+                    else " does not return the receiver field its body reads") ) );
+  lends
+
+(* The projection as the pair that cannot dangle: a reference for an lvalue
+   receiver, and a copy for a temporary one, which dies at the end of the
+   full expression that called it. *)
+let split (m : method_) : Cpp_ir.Lowered.phase Cpp_ir.Field.t list =
+  let with_ref_qual ref_qualifier : Receiver.t =
+    match m.receiver with
+    | Instance r -> Instance {r with ref_qualifier}
+    | Static -> Static
+  in
+  [ Method {m with return_type = Reference (Lvalue, Const m.return_type); receiver = with_ref_qual Lvalue};
+    Method {m with receiver = with_ref_qual Rvalue} ]
+
+(* [field] as the struct declares it: a coinductive's projection as its two
+   overloads, in its place. *)
+let lend ~coinductive (((f, vis, tag) as field) : Cpp_ir.Lowered.phase Cpp_ir.Field.member) =
+  match f with
+  | Method m when coinductive && is_projection m -> List.map (fun f -> (f, vis, tag)) (split m)
+  | _ -> [field]
 
 (* A coinductive struct whose method still lends a field unsplit was
    generated without {!lend}. *)
@@ -114,7 +98,7 @@ let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
     List.iter
       (fun ((f, _, _) : _ Cpp_ir.Field.member) ->
         match f with
-        | Method m when lends_field_ir m ->
+        | Method m when lends_field m ->
           Probe.violation "borrowed projection"
             Pp.(str "the projection " ++ Id.print m.name ++ str " reached the printer unsplit")
         | _ -> () )

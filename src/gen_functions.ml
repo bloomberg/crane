@@ -1630,7 +1630,7 @@ let recover_erased_body_types ty b =
     initialisation. *)
 let gen_constant_value ?expected_ty b =
   match b with
-  | MLdummy _ -> Cpp_erasure.empty_box
+  | MLdummy _ -> Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir
   | _ -> gen_expr ?expected_ty (empty_env ()) b
 
 (** The parameters a head declares for the type variables [cty] spells,
@@ -1694,12 +1694,12 @@ let gen_decl__inner n b ty =
           | CPPglob (_, _, Some ci) when ci.ci_inline <> None ->
             body_expr  (* inline custom literal (e.g. std::monostate{}) *)
           | _ ->
-            mk_iife None [Sexpr body_expr; Sreturn (Some (mk_tt_expr ()))]
+            mk_iife None [Sexpr body_expr; Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ())))]
         else body_expr
       in
       let body_expr =
         match slot_repr_of_cpp_type cty with
-        | Boxed kind -> box_for_any_slot kind b body_expr
+        | Boxed kind -> Cpp_ir_to_legacy_minicpp.expr (box_for_any_slot kind b (Legacy_minicpp_to_cpp_ir.lower_expr body_expr))
         | Native -> body_expr
       in
       let inner =
@@ -1916,13 +1916,13 @@ let gen_spec__inner n b ty =
         && (has_magic || ml_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then unbox_value ty b_expr
+        if needs_any_cast then Cpp_ir_to_legacy_minicpp.expr (unbox_value (Legacy_minicpp_to_cpp_ir.lower_type ty) (Legacy_minicpp_to_cpp_ir.lower_expr b_expr))
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
              [std::any] whatever its ML type says, and neither (a) nor (b)
              sees that. *)
-          recover_boxed_component ty b_expr
+          Cpp_ir_to_legacy_minicpp.expr (recover_boxed_component (Legacy_minicpp_to_cpp_ir.lower_type ty) (Legacy_minicpp_to_cpp_ir.lower_expr b_expr))
       in
       (* When a unit-typed constant's body may call a void-ified function,
          wrap in an IIFE that executes the body for side effects and
@@ -1933,12 +1933,12 @@ let gen_spec__inner n b ty =
           | CPPenum_val _ -> b_expr
           | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> b_expr
           | _ ->
-            mk_iife None [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))]
+            mk_iife None [Sexpr b_expr; Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ())))]
         else b_expr
       in
       let b_expr =
         match slot_repr_of_cpp_type ty with
-        | Boxed kind -> box_for_any_slot kind inner_body b_expr
+        | Boxed kind -> Cpp_ir_to_legacy_minicpp.expr (box_for_any_slot kind inner_body (Legacy_minicpp_to_cpp_ir.lower_expr b_expr))
         | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell

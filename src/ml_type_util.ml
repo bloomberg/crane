@@ -563,6 +563,25 @@ let rec cpp_ty_eq t1 t2 =
   | Tany, Tany -> true
   | _ -> false
 
+(** {!cpp_ty_eq} in CppIR. *)
+let rec cpp_ty_eq_ir (t1 : Cpp_ir.Lowered.Type.t) (t2 : Cpp_ir.Lowered.Type.t) =
+  let rec strip : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+    | Const t | In_namespace (_, t) -> strip t
+    | t -> t
+  in
+  match (strip t1, strip t2) with
+  | Entity_application (g1, ts1, _), Entity_application (g2, ts2, _) ->
+    GlobRef.CanOrd.equal g1 g2 && List.length ts1 = List.length ts2 && List.for_all2 cpp_ty_eq_ir ts1 ts2
+  | Variable (Index (i1, _)), Variable (Index (i2, _)) -> i1 = i2
+  | Variable (Named x1), Variable (Named x2) -> Id.equal x1 x2
+  | Reference (Lvalue, t1'), Reference (Lvalue, t2') | Reference (Forwarding, t1'), Reference (Forwarding, t2') ->
+    cpp_ty_eq_ir t1' t2'
+  | Shared_pointer t1', Shared_pointer t2' -> cpp_ty_eq_ir t1' t2'
+  | Function (d1, c1), Function (d2, c2) ->
+    List.length d1 = List.length d2 && List.for_all2 cpp_ty_eq_ir d1 d2 && cpp_ty_eq_ir c1 c2
+  | Void, Void | Auto, Auto | Any, Any -> true
+  | _ -> false
+
 (** Whether [g] is the standard library's [list], by identity. *)
 let is_list_global g = Rocqlib.check_ref "core.list.type" g
 
@@ -720,6 +739,9 @@ let erased_domain_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     itself [std::any] but makes no claim about the representation, so it is
     excluded. *)
 let is_boxed_type t = t = Minicpp.Tany || is_cpp_dummy_type t
+
+(** {!is_boxed_type} in CppIR. *)
+let is_boxed_type_ir : Cpp_ir.Lowered.Type.t -> bool = function Any | Erased _ -> true | _ -> false
 
 
 (** [materialise_opaque ty] — replace every {!Minicpp.Topaque} in [ty] with

@@ -36,68 +36,6 @@ let register_axiom_type (r : GlobRef.t) = Ref.User.Tbl.replace axiom_type_refs r
 (** Whether a GlobRef has been registered as an axiom type. *)
 let is_axiom_type_ref (r : GlobRef.t) = Ref.User.Tbl.mem axiom_type_refs r
 
-(** {2 Building and reading boxes in MiniCpp} *)
-
-module Legacy = struct
-  open Minicpp
-
-  (** [erased_list_shape ty] -- see [cpp_erasure.mli]. *)
-  let erased_list_shape ty =
-    let rec go = function
-      | Tnamespace (ns_g, t) -> (
-        match go t with
-        | Some (g, t') -> Some (g, Tnamespace (ns_g, t'))
-        | None -> None )
-      | Tglob (g, [elem], _)
-        when Ml_type_util.is_list_global g
-             && not (Ml_type_util.prints_as_any elem) ->
-        Some (g, Tglob (g, [Tany], []))
-      | _ -> None
-    in
-    go ty
-
-  (** [converting_ctor ty args] -- see [cpp_erasure.mli]. *)
-  let converting_ctor ty args =
-    match args with
-    | [inner] when Ml_type_util.prints_as_any ty ->
-      (* Boxing a box is two sites each believing they owned the boundary; the
-         inner value would then be unreachable, because the consumer casts once.
-         Re-box what was inside instead. *)
-      let inner = match inner with CPPbox (_, x) -> x | x -> x in
-      CPPbox (ty, inner)
-    | _ -> CPPconverting_ctor (ty, args)
-
-  (** [empty_box] -- see [cpp_erasure.mli]. *)
-  let empty_box = converting_ctor Tany []
-
-  (** [unbox ty e] -- see [cpp_erasure.mli]. *)
-  let unbox ty e =
-    match e with
-    (* [any_cast] to an erased type does not unwrap the box: it asks whether the
-       box holds a *further* box, and throws when it does not. *)
-    | _ when Ml_type_util.prints_as_any ty -> e
-    (* A cast applied straight to a box built here is dead work. *)
-    | CPPbox (_, inner) -> inner
-    (* Nor is a closure built here a box: [std::any_cast] would wrap it in a
-       [std::any] holding the closure type and throw -- a definitional
-       instance [:= @id lit], eta-expanded, read back at [Endo<lit>]. *)
-    | CPPlambda _ -> e
-    | _ -> CPPany_cast (ty, e)
-
-  (** [unbox_tolerant ty e] -- see [cpp_erasure.mli]. *)
-  let unbox_tolerant ty e =
-    match e with
-    | CPPbox (_, inner) -> inner
-    | CPPlambda _ -> e
-    | _ -> CPPany_cast_tolerant (ty, e)
-end
-
-let erased_list_shape = Legacy.erased_list_shape
-let converting_ctor = Legacy.converting_ctor
-let empty_box = Legacy.empty_box
-let unbox = Legacy.unbox
-let unbox_tolerant = Legacy.unbox_tolerant
-
 (** {2 The boxedness oracle} *)
 
 open Cpp_ir.Grammar
@@ -161,7 +99,7 @@ let rec erase_type_to_any : ty -> ty = function
   | In_namespace (ns_g, inner) -> In_namespace (ns_g, erase_type_to_any inner)
   | _ -> Any
 
-(** {!erased_list_shape} of a type in CppIR. *)
+(** [erased_list_shape_ir ty] -- see [cpp_erasure.mli]. *)
 let erased_list_shape_ir (ty : ty) =
   let rec go : ty -> (GlobRef.t * ty) option = function
     | In_namespace (ns_g, t) -> (
@@ -283,13 +221,37 @@ let rec boxed_var boxed : expr -> bool = function
   | Move e -> boxed_var boxed e
   | _ -> false
 
-(** [unbox_ir ty e] is {!unbox} in CppIR. *)
+(** [converting_ctor_ir ty args] -- see [cpp_erasure.mli]. *)
+let converting_ctor_ir (ty : ty) (args : expr list) : expr =
+  match args with
+  | [inner] when Types.prints_as_any ty ->
+    (* Boxing a box is two sites each believing they owned the boundary; the
+       inner value would then be unreachable, because the consumer casts once.
+       Re-box what was inside instead. *)
+    let inner = match inner with Box (_, x) -> x | x -> x in
+    Box (ty, inner)
+  | _ -> Converting_construct (ty, args)
+
+(** [empty_box_ir] -- see [cpp_erasure.mli]. *)
+let empty_box_ir : expr = converting_ctor_ir Any []
+
+(** [unbox_ir ty e] -- see [cpp_erasure.mli]. *)
 let unbox_ir (ty : ty) (e : expr) : expr =
   match e with
+  (* [any_cast] to an erased type does not unwrap the box: it asks whether the
+     box holds a *further* box, and throws when it does not. *)
   | _ when Types.prints_as_any ty -> e
+  (* A cast applied straight to a box built here is dead work. *)
   | Box (_, inner) -> inner
+  (* Nor is a closure built here a box: [std::any_cast] would wrap it in a
+     [std::any] holding the closure type and throw -- a definitional
+     instance [:= @id lit], eta-expanded, read back at [Endo<lit>]. *)
   | Lambda _ -> e
   | _ -> Any_cast (ty, e)
+
+(** [unbox_tolerant_ir ty e] -- see [cpp_erasure.mli]. *)
+let unbox_tolerant_ir (ty : ty) (e : expr) : expr =
+  match e with Box (_, inner) -> inner | Lambda _ -> e | _ -> Tolerant_any_cast (ty, e)
 
 (* [boxed] is the set of binders in scope whose declared type is [std::any].
    It is threaded through the walk so that a binder is boxed exactly where

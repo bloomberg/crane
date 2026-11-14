@@ -148,11 +148,11 @@ val gen_expr : ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:slot -> env -> ml_ast
 (** [recover_boxed_component into e] opens the box when [e] is evidently a
     component read out of a pair that was itself recovered from a box, and so
     hands back a [std::any] however concrete its ML type looks. *)
-val recover_boxed_component : cpp_type -> cpp_expr -> cpp_expr
+val recover_boxed_component : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** [unbox_value into e] recovers [e], a value known to come out of a box, at
     [into] -- through a closure's returns where [e] is one built here. *)
-val unbox_value : cpp_type -> cpp_expr -> cpp_expr
+val unbox_value : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** Generate pattern matching as a C++ expression: an if/else-if chain over
     the scrutinee's variant, wrapped in an immediately-invoked lambda.  The
@@ -225,11 +225,8 @@ val ml_type_is_void_call : ml_type -> bool
 val apply_unit_void : bool -> cpp_type -> cpp_type
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor). *)
-val mk_tt_expr : unit -> cpp_expr
+val mk_tt_expr : unit -> Cpp_ir.Lowered.Expr.t
 
-(** Qualify inductive type references with {!Minicpp.Tnamespace}, subject to
-    a [skip] predicate that leaves selected inductives unwrapped. *)
-val qualify_inductives : ?skip:(GlobRef.t -> bool) -> cpp_type -> cpp_type
 
 
 (** [guard_compare n params body]: [body] under [n]'s [Crane Guard Compare],
@@ -246,8 +243,11 @@ val guard_compare :
 (** Generate a C++ expression converting [expr] from [src_ty] to [dst_ty],
     inserting [make_shared]/dereference/etc. as needed. *)
 val gen_type_conversion_expr :
-  ?skip:(GlobRef.t -> bool) -> src_ty:cpp_type -> dst_ty:cpp_type ->
-  cpp_expr -> cpp_expr
+  ?skip:(GlobRef.t -> bool) ->
+  src_ty:Cpp_ir.Lowered.Type.t ->
+  dst_ty:Cpp_ir.Lowered.Type.t ->
+  Cpp_ir.Lowered.Expr.t ->
+  Cpp_ir.Lowered.Expr.t
 
 (** Collect [Tvar] indices referenced by an ML type, added to the accumulator
     list. *)
@@ -337,10 +337,6 @@ val param_passing_ir : owned:bool -> Cpp_ir.Lowered.Type.t -> Callable_abi.passi
     [std::any], following erased-type constants and alias chains. *)
 val resolves_to_any_type : cpp_type -> bool
 
-(** [spells_as_any t] — whether [t] is written [std::any] in the generated
-    code, following the alias chains that {!Ml_type_util.prints_as_any}, being
-    structural, cannot see through. *)
-val spells_as_any : cpp_type -> bool
 
 (** [classify_erasure ty] — the erasure status of one side of a value
     boundary; see the layering note at the top of [ml_type_util.mli].  Prefer
@@ -349,8 +345,7 @@ val spells_as_any : cpp_type -> bool
     inside a [std::any]), [`Opaque] (spelled [std::any], promising nothing)
     and [`Concrete] are each easy to reach for by mistake. *)
 val classify_erasure :
-  cpp_type option ->
-  [`Unknown | `Boxed | `Opaque | `Concrete of cpp_type]
+  Cpp_ir.Lowered.Type.t option -> [`Unknown | `Boxed | `Opaque | `Concrete of Cpp_ir.Lowered.Type.t]
 
 (** [erase_returned_fn_values ret_ty body] wraps closures returned directly
     from a function whose return type erases to [std::any] in the
@@ -370,7 +365,7 @@ val box_kind_of_cpp_type : cpp_type -> Ml_type_util.box_kind
     shape a boxed slot of kind [kind] is read back at: a function value in
     the [crane_erase_fn] adapter, and a list in a [Family_box] at the
     element-boxed shape.  Other expressions are returned unchanged. *)
-val box_for_any_slot : Ml_type_util.box_kind -> ml_ast -> cpp_expr -> cpp_expr
+val box_for_any_slot : Ml_type_util.box_kind -> ml_ast -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** True when a single-branch match body is a direct projection returning a
     field stored as an erased [std::any]. *)
