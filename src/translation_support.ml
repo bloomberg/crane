@@ -55,6 +55,24 @@ let factory_name_of_ctor ?fallback_idx cref =
   if collides then Generated_name.separate_underscores (ctor_struct_name ^ "_")
   else lc
 
+(** What a branch throws when the scrutinee's indices rule it out.
+
+    Two places recognise such a branch -- the coercion seam, where extraction
+    records a [unit] flowing into a type no value of [unit] can become, and the
+    sweep over a finished body, where a [return tt] contradicts the declared
+    return type -- and a reader of the generated code should not have to tell
+    them apart. *)
+let dead_branch_message = "unreachable: impossible dependent match branch"
+
+(** What a converting constructor throws for a field it cannot convert.
+
+    A converting constructor is generated for every constructor of the
+    inductive, but at a given call only the one the source holds runs.  When
+    the two instantiations disagree on a field of some other constructor there
+    is no conversion to write, and none is needed: the branch is dead. *)
+let inactive_field_message =
+  "unreachable: inactive constructor field at this instantiation"
+
 (** [mk_lambda_ir ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
     with template parameters of its own, [tparams], less those none of its
     [params] (source order) deduces ({!Head_relaxation.settle_lowered_lambda}):
@@ -907,7 +925,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
                    disagree completely on one that is not, so the unreachable
                    side gets the throw rather than a conversion no one asked
                    for. *)
-                else_ = [Throw Minicpp.inactive_field_message] } ]
+                else_ = [Throw inactive_field_message] } ]
     (* A custom-mapped list at a known element type, under any namespace
        wrapper: only an erased source needs unboxing. *)
     | _, (Entity_application (g, [elem_ty], _) | In_namespace (_, Entity_application (g, [elem_ty], _)))

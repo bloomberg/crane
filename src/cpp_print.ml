@@ -207,7 +207,7 @@ let identifier_tokens text =
     to find out whether one is needed at all: rendering the constructor
     applied to it says whether the application is just a head plus this
     argument. *)
-let ctor_alias_tvar = Minicpp.ctor_alias_tvar
+let ctor_alias_tvar = Generated_name.role "TcArg"
 
 (** A template synthesised to stand where a type constructor is written as a
     template template argument but has no template name of its own.

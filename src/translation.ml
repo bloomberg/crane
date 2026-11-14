@@ -3977,8 +3977,8 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                   [ If_constexpr
                       { test = Convertible (ty, Reference (Lvalue, Const (cpp_of_ml_ir env from)));
                         then_ = [Return (Some (Convert (ty, inner)))];
-                        else_ = [Throw Minicpp.dead_branch_message] } ]
-              | _ -> Abort (Minicpp.dead_branch_message, ty) )
+                        else_ = [Throw dead_branch_message] } ]
+              | _ -> Abort (dead_branch_message, ty) )
             | _ -> inner )
       | _ -> inner )
   | MLdummy _ ->

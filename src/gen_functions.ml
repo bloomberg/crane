@@ -247,7 +247,7 @@ let dead_unit_returns_to_abort_ir (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.L
   and fix_stmt ret_ty (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
     match s with
     | Return (Some e) when ret_ty <> None && is_tt e ->
-      Return (Some (Abort (Minicpp.dead_branch_message, match ret_ty with Some t -> t | None -> Any)))
+      Return (Some (Abort (Translation_support.dead_branch_message, match ret_ty with Some t -> t | None -> Any)))
     | _ -> Cpp_ir.Map.stmt (fix_map ret_ty) s
   and fix_expr ret_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
     match e with
