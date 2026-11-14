@@ -2234,8 +2234,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let by_var =
       match (List.exists (fun (_, t) -> prints_as_any t) by_var, slot.call_result) with
       | true, (Some _ as res) -> (
-        match instance_family_binding env x tys res with
-        | Some (_, names, m) -> fill_from (names, m) by_var
+        match instance_family_binding env x tys (Option.map Legacy_minicpp_to_cpp_ir.lower_type res) with
+        | Some (_, names, m) -> fill_from (names, List.map (fun (v, t) -> (v, Cpp_ir_to_legacy_minicpp.ty t)) m) by_var
         | None -> by_var )
       | _ -> by_var
     in
@@ -3681,7 +3681,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | [], _ -> callee
             | _, CPPscope (b, id, tys) ->
               CPPscope
-                (b, id, tys @ List.filter_map (ml_arg_to_template_type env') tc_args)
+                (b, id, tys @ List.filter_map (fun a -> Option.map Cpp_ir_to_legacy_minicpp.ty (ml_arg_to_template_type env' a)) tc_args)
             | _ -> callee
           in
           (* A class method is a static member function of the instance
@@ -4023,7 +4023,7 @@ and project_through_instance env use args (projection : Elaborated_call.static_p
      TFunctor_box] -- is spelled as the template argument it would be. *)
   let inst_expr =
     match ml_arg_to_template_type env inst with
-    | Some t -> CPPtype_name t
+    | Some t -> CPPtype_name (Cpp_ir_to_legacy_minicpp.ty t)
     | None -> gen_expr env inst
   in
   mk_call
@@ -5495,7 +5495,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       match (tc_args, gen_expr env f) with
       | [], e -> e
       | _, CPPscope (b, id, tys) ->
-        CPPscope (b, id, tys @ List.filter_map (ml_arg_to_template_type env) tc_args)
+        CPPscope (b, id, tys @ List.filter_map (fun a -> Option.map Cpp_ir_to_legacy_minicpp.ty (ml_arg_to_template_type env a)) tc_args)
       | _, e -> e
     in
     (* The callee's own function type, with an alias standing for one expanded

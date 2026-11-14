@@ -680,19 +680,22 @@ let value_indexed_family r =
     the carrier [carrier] heads a type, an erased argument at a position the
     carrier fills with one of its variables takes that variable's binding in
     [m].  See {!instance_family_binding}. *)
-let refine_by_instance_family (carrier, _, m) t =
+let refine_by_instance_family ((carrier : Cpp_ir.Lowered.Type.t), _, m) (t : Cpp_ir.Lowered.Type.t) :
+    Cpp_ir.Lowered.Type.t =
   match carrier with
-  | Tglob (h, cargs, _) ->
-    map_cpp_type
-      (function
-        | Tglob (h', args, es) when GlobRef.CanOrd.equal h h' ->
+  | Entity_application (h, cargs, _) ->
+    Cpp_ir.Types.map
+      (fun (t : Cpp_ir.Lowered.Type.t) ->
+        match t with
+        | Entity_application (h', args, es) when GlobRef.CanOrd.equal h h' ->
           let n = List.length cargs in
-          Tglob
+          Entity_application
             ( h',
               List.mapi
                 (fun i a ->
                   match List.nth_opt cargs i with
-                  | Some (Tvar (Tv_index (_, Some v) | Tv_named v)) when i < n && prints_as_any a -> (
+                  | Some (Cpp_ir.Type.Variable (Index (_, Some v) | Named v))
+                    when i < n && Cpp_ir.Types.prints_as_any a -> (
                     match List.find_opt (fun (v', _) -> Id.equal v v') m with
                     | Some (_, b) -> b
                     | None -> a )

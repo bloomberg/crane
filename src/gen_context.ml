@@ -530,7 +530,7 @@ let promoted_resolutions_of_body ?r ?ty b =
            && leading <> [] && spellable d (strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (ml_arg_to_template_type_ir (env_at d) (strip_magic e));
+        (ml_arg_to_template_type (env_at d) (strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
@@ -554,7 +554,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | MLapp (MLglob {callee = r; _}, args)
       when instance_class r <> None && closed (strip_magic e) ->
       Option.iter (add r)
-        (ml_arg_to_template_type_ir (empty_env ()) (strip_magic e));
+        (ml_arg_to_template_type (empty_env ()) (strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -598,7 +598,7 @@ let promoted_resolutions_of_body ?r ?ty b =
             MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> fresh_rel (n - i)))
           in
           Option.iter (add_at class_ref inst)
-            (ml_arg_to_template_type_ir
+            (ml_arg_to_template_type
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )

@@ -900,7 +900,7 @@ let callee_result_bindings env id ~explicit (expected : Cpp_ir.Lowered.Type.t op
     [ts] instantiates the instance's variables in order, so position [k] is
     [Tvar (k + 1)], named [names.(k)] in the carrier pattern returned.  [None]
     where nothing is erased or nothing matches. *)
-let instance_family_binding env r ts expected =
+let instance_family_binding env r ts (expected : Cpp_ir.Lowered.Type.t option) =
   let erased t = Mlutil.isTdummy (resolve_tmeta t) in
   match (expected, find_type_opt r) with
   | Some exp, Some inst_ty
@@ -924,17 +924,17 @@ let instance_family_binding env r ts expected =
       (* A family is written applied until it is deapplied: in the pattern
          it is the variable itself. *)
       let carrier =
-        Ml_type_util.unqualify_ty
-          (deapply_families (convert_ml_type_to_cpp_type env names carrier))
+        Ml_type_util.unqualify_ty_ir
+          (deapply_families_ir (cpp_ir_of_ml_type env names carrier))
       in
-      match (carrier, Ml_type_util.unqualify_ty (unfold_cpp_typedef env exp)) with
-      | Tglob (h1, cargs, _), Tglob (h2, eargs, _)
+      match (carrier, Ml_type_util.unqualify_ty_ir (unfold_cpp_typedef_ir env exp)) with
+      | Entity_application (h1, cargs, _), Entity_application (h2, eargs, _)
         when GlobRef.CanOrd.equal h1 h2 && List.length cargs <= List.length eargs ->
         let m =
           List.filter
-            (fun (_, t) -> not (prints_as_any t))
+            (fun (_, t) -> not (Cpp_ir.Types.prints_as_any t))
             (List.concat
-               (List.map2 extract_tvar_map cargs
+               (List.map2 Ml_type_util.extract_tvar_map_ir cargs
                   (safe_firstn (List.length cargs) eargs) ) )
         in
         if m = [] then None else Some (carrier, names, m)
@@ -942,7 +942,7 @@ let instance_family_binding env r ts expected =
     | _ -> None )
   | _ -> None
 
-let rec ml_arg_to_template_type ?expected env ml_arg =
+let rec ml_arg_to_template_type ?expected env ml_arg : Cpp_ir.Lowered.Type.t option =
   (* [None] for skipped infrastructure (ReSum instances, say): it is passed
      as a dictionary, so it is told apart from the regular arguments, but it
      has no struct and so no type to write.
@@ -970,8 +970,8 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
       (Instance_methods.instance_tvars ty (Instance_methods.class_type ty))
   in
   let instance_type_args r ts =
-    filter_erased_type_args
-      (build_template_params ~site:Through_tvar env []
+    Ml_type_util.filter_erased_type_args_ir
+      (build_template_params_ir ~site:Through_tvar env []
          (List.filter_map (Mlutil.Var_types.find_tvar ts) (struct_vars r ts)) )
   in
   let instance_type_args_from_expected r ts =
@@ -985,7 +985,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
             let j = Scheme.Var.ordinal v in
             ( j,
               if not (Mlutil.isTdummy (resolve_tmeta t)) then
-                Some (List.hd (build_template_params ~site:Through_tvar env [] [t]))
+                Some (List.hd (build_template_params_ir ~site:Through_tvar env [] [t]))
               else
                 Option.bind (List.nth_opt names (j - 1)) (fun v ->
                     Option.map snd (List.find_opt (fun (v', _) -> Id.equal v v') m) ) ) )
@@ -1005,7 +1005,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
     else
       (* Use the instance struct as a type - convert to Tglob *)
       Some
-        (Tglob
+        (Cpp_ir.Type.Entity_application
            ( r,
              ( match instance_type_args_from_expected r ts with
              | Some args -> args
@@ -1016,7 +1016,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
        create a Tvar reference to the template parameter *)
     let db, _ = env in
     let name = List.nth db (pred i) in
-    Some (named_tvar name)
+    Some (Cpp_ir.Type.Variable (Named name))
   | MLapp (MLglob {callee = r; _}, _) when ref_returns_skipped r -> None
   | MLapp (MLglob ({callee = r; _} as use), inner_args) ->
     let ts = Mlutil.written_type_args use in
@@ -1034,7 +1034,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
     (* Instance parameters come first in the generated struct's template
        list ([template <typename _tcI0, typename T1>]), so the instance
        arguments must precede the type arguments here too. *)
-    Some (Tglob (r, template_args @ instance_type_args r ts, []))
+    Some (Cpp_ir.Type.Entity_application (r, template_args @ instance_type_args r ts, []))
   | MLcase (_, scrutinee, branches, _)
     when Array.length branches = 1 ->
     (* Record field projection — e.g., [base_category(PS)].
@@ -1047,9 +1047,9 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
           let idx = List.length binds - j in
           let field_id, _ = List.nth binds idx in
           match field_id with
-          | Id name | Tmp name -> Tqualified (base_ty, name)
-          | Dummy -> Tany )
-        | _ -> Tany )
+          | Id name | Tmp name -> Cpp_ir.Type.Member (base_ty, name)
+          | Dummy -> Cpp_ir.Type.Any )
+        | _ -> Cpp_ir.Type.Any )
       (ml_arg_to_template_type env scrutinee)
   | MLapp (f, args) ->
     (* Parameterized instance application with non-glob head.
@@ -1063,20 +1063,18 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
         args
     in
     Option.map
-      (function
-        | Tglob (r, existing, es) -> Tglob (r, existing @ arg_tys, es)
+      (fun (t : Cpp_ir.Lowered.Type.t) ->
+        match t with
+        | Entity_application (r, existing, es) -> Cpp_ir.Type.Entity_application (r, existing @ arg_tys, es)
         | head_ty -> head_ty )
       (ml_arg_to_template_type env f)
-  | MLdummy _ -> Some Tany (* Should not happen at top level, but be safe *)
+  | MLdummy _ -> Some Cpp_ir.Type.Any (* Should not happen at top level, but be safe *)
   | _ ->
     CErrors.anomaly
       (Pp.str
          "ml_arg_to_template_type: unexpected ML term after \
           is_typeclass_instance_arg filter" )
 
-(** {!ml_arg_to_template_type} in CppIR. *)
-let ml_arg_to_template_type_ir ?expected env ml_arg =
-  Option.map Legacy_minicpp_to_cpp_ir.lower_type (ml_arg_to_template_type ?expected env ml_arg)
 
 (** The mirror of {!recover_carrier_result}: a value reaching a parameter the
     callee declared as a carrier applied to a type variable -- [M A], a
@@ -1369,9 +1367,10 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
       | None -> current_cpp_return_type () )
     | _ -> expected_result
   in
+  let expected_result_ir = Option.map Legacy_minicpp_to_cpp_ir.lower_type expected_result in
   let typeclass_type_args =
     List.map
-      (ml_arg_to_template_type_ir ?expected:expected_result env)
+      (ml_arg_to_template_type ?expected:expected_result_ir env)
       typeclass_ml_args
   in
   (* The families the call's instances were found to have: the slots their
@@ -1382,7 +1381,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
         match strip_magic a with
         | MLglob ({callee = r; _} as use) ->
           instance_family_binding env r (Mlutil.written_type_args use)
-            expected_result
+            expected_result_ir
         | _ -> None )
       typeclass_ml_args
   in
@@ -1730,7 +1729,10 @@ let argument_position ~local_callable env id plan i ml_arg =
     if not param_mentions_carrier then arg_expected_ty
     else
       List.fold_left
-        (fun t b -> Option.map (refine_by_instance_family b) t)
+        (fun t b ->
+          Option.map
+            (fun t -> Cpp_ir_to_legacy_minicpp.ty (refine_by_instance_family b (Legacy_minicpp_to_cpp_ir.lower_type t)))
+            t )
         arg_expected_ty instance_families
   in
   (* A callable the callee deduces is called at the callee's instantiation,

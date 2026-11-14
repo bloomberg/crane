@@ -315,6 +315,9 @@ val is_cpp_dummy_type : Minicpp.cpp_type -> bool
     the type inside the qualification, not the wrapper. *)
 val unqualify_ty : Minicpp.cpp_type -> Minicpp.cpp_type
 
+(** {!unqualify_ty} in CppIR. *)
+val unqualify_ty_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+
 (** [template_args t] is the type arguments [t] is applied to, for a [t] that
     names a template at all -- whichever node spells its head, and through the
     qualifications {!unqualify_ty} strips.  [None] means [t] names no

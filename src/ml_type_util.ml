@@ -586,6 +586,11 @@ let rec unqualify_ty = function
   | Minicpp.Tconst t | Minicpp.Tnamespace (_, t) -> unqualify_ty t
   | t -> t
 
+(** {!unqualify_ty} in CppIR. *)
+let rec unqualify_ty_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | Const t | In_namespace (_, t) -> unqualify_ty_ir t
+  | t -> t
+
 (** [template_args t] — the type arguments [t] is applied to, for a [t] that
     names a template at all.  Which node spells the head is not the question:
     the same struct arrives as a [Tglob], a [Tid], a [Tid_external] or a

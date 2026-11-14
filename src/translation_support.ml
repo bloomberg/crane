@@ -2916,7 +2916,7 @@ type call_plan = {
           function's return type. *)
   cp_instance_type_args : Cpp_ir.Lowered.Type.t option list;
       (** The template argument each class-instance argument is passed as. *)
-  cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
+  cp_instance_families : (Cpp_ir.Lowered.Type.t * Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) list;
       (** The families the call's instances were found to have
           ({!Translation_calls.instance_family_binding}); the slots their
           arguments are generated against erase them the same way. *)
