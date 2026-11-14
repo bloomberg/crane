@@ -646,6 +646,11 @@ let is_fully_erased_fun_ty t =
     dom <> [] && List.for_all prints_as_any dom && prints_as_any cod
   | _ -> false
 
+let is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
+  | Function (dom, cod) ->
+    dom <> [] && List.for_all Cpp_ir.Types.prints_as_any dom && Cpp_ir.Types.prints_as_any cod
+  | _ -> false
+
 (** [partially_erased_fun_ty t] -- true of a function type that erased only its
     arguments and kept a concrete result, as
     [std::function<uint64_t(std::any)>] has.  A closure landing in such a slot
@@ -1645,6 +1650,8 @@ let get_tvars t = List.map snd (get_tvars_indexed t)
 
 (** Tvar indices only, sorted *)
 let get_tvar_indices t = List.map fst (get_tvars_indexed t)
+
+let get_tvar_indices_ir t = List.map fst (get_tvars_indexed_ir t)
 
 (** Collect tvar indices that are represented concretely in the generated C++
     signature.
