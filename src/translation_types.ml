@@ -253,7 +253,7 @@ let inline_iife (k : cpp_expr -> cpp_stmt) = function
 let position_cpp_ty (expected : cpp_type option) =
   match expected with
   | Some _ as t -> t
-  | None -> (!tctx).current_cpp_return_type
+  | None -> current_cpp_return_type ()
 
 (** A callable handed to a parameter the callee declared at one of its own
     type variables has to arrive under a name: a closure's type cannot be
@@ -2626,7 +2626,7 @@ let expected_type_args_from_return env ?slot ind ~arity =
   let r = match slot with
   | Some t when go t <> None -> go t
   | _ -> (
-    match (!tctx).current_cpp_return_type with
+    match current_cpp_return_type () with
     | Some rt -> go rt
     | None -> None ) in
   r
@@ -2724,7 +2724,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
   let* v_ml = Mlutil.Var_types.find_tvar tys v in
   let* result =
     match result with
-    | None -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (!tctx).current_cpp_return_type
+    | None -> current_cpp_return_type_ir ()
     | r -> r
   in
   let over = template_arg_of_ml_type_ir ~site:Through_tvar env tvars v_ml in
@@ -2787,7 +2787,7 @@ let lifted_call_type_args
       | t -> t
     in
     let tvar_map =
-      match (!tctx).current_cpp_return_type with
+      match current_cpp_return_type () with
       | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
       | None -> []
     in
@@ -2800,7 +2800,7 @@ let lifted_call_type_args
             with
             | Some (_, ty) -> ty
             | None -> (
-              match (!tctx).current_cpp_return_type with
+              match current_cpp_return_type () with
               | Some ret_ty -> ret_ty
               | None -> named_tvar tvar_name ) )
           extra_tvar_names

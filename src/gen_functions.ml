@@ -1391,7 +1391,7 @@ let gen_dfun ~minted n b cty ty temps =
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
   let saved_return_type = (!tctx).current_cpp_return_type in
-  tctx := { !tctx with current_cpp_return_type = Some cod };
+  tctx := { !tctx with current_cpp_return_type = Some (Legacy_minicpp_to_cpp_ir.lower_type cod) };
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default CPPabort throw. *)

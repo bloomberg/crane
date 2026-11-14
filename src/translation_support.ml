@@ -1332,8 +1332,8 @@ let with_escape_analysis f =
      outer function returns void, gen_stmts generates bare 'return;' for tt,
      but IIFE bodies return their own type (e.g. monostate), not void. *)
   let inner_return_type =
-    match (!tctx).current_cpp_return_type with
-    | Some Tvoid -> None
+    match current_cpp_return_type_ir () with
+    | Some Cpp_ir.Type.Void -> None
     | rt -> rt
   in
   (* A lambda body is not part of the constructor expression that encloses it.

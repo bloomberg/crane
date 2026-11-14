@@ -211,7 +211,7 @@ let region ~outer body =
   let found = ref [] in
   let reads = ref [] in
   let promoted_active = (!tctx).promoted_var_map <> [] in
-  let return = (!tctx).current_cpp_return_type in
+  let return = current_cpp_return_type () in
   let type_vars = (!tctx).current_type_vars in
   let ns = (!tctx).method_self_ns in
   let reified = (!tctx).itree_mode = Reified in

@@ -110,8 +110,9 @@ type translation_ctx = {
   (* C++ return type of the enclosing function, set by the function and
      instance generators ({!with_cpp_return_type}). Used to recover erased
      template type args at call sites where C++ can't deduce them from lambda
-     arguments. *)
-  current_cpp_return_type : cpp_type option;
+     arguments.  CppIR: planning reads it as it is, and a reader still
+     building MiniCpp raises it ({!current_cpp_return_type}). *)
+  current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
   (* De Bruijn environment: each variable's binder, with its ML type and
      role. *)
   env_types : Lexenv.t;
@@ -368,13 +369,31 @@ let current_scope_type_names () =
 let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =
   with_field (fun c -> c.current_type_vars) set_current_type_vars tvars f
 
-(** [with_cpp_return_type ty f] runs [f] with [ty] as the enclosing function's
-    C++ return type -- the type a tail expression is cast to. *)
-let with_cpp_return_type (ty : cpp_type option) (f : unit -> 'a) : 'a =
+(** [with_cpp_return_type_ir ty f] runs [f] with [ty] as the enclosing
+    function's C++ return type -- the type a tail expression is cast to. *)
+let with_cpp_return_type_ir (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.current_cpp_return_type)
     (fun t -> tctx := { !tctx with current_cpp_return_type = t })
     ty f
+
+(** {!with_cpp_return_type_ir} for a producer that computed the type as
+    MiniCpp: lowered here. *)
+let with_cpp_return_type (ty : cpp_type option) (f : unit -> 'a) : 'a =
+  with_cpp_return_type_ir (Option.map Legacy_minicpp_to_cpp_ir.lower_type ty) f
+
+(** The enclosing function's C++ return type
+    ({!translation_ctx.current_cpp_return_type}). *)
+let current_cpp_return_type_ir () : Cpp_ir.Lowered.Type.t option = (!tctx).current_cpp_return_type
+
+(** {!current_cpp_return_type_ir} raised to MiniCpp, for a reader that builds
+    MiniCpp from it. *)
+let current_cpp_return_type () : cpp_type option =
+  Option.map Cpp_ir_to_legacy_minicpp.ty (!tctx).current_cpp_return_type
+
+(** Whether the enclosing function returns [void]. *)
+let returns_void () =
+  match (!tctx).current_cpp_return_type with Some Cpp_ir.Type.Void -> true | _ -> false
 
 (** [with_parameters bs f] runs [f] with [bs] as the binders of the
     declaration's parameters ({!translation_ctx.current_parameters}). *)

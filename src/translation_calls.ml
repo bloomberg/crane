@@ -543,13 +543,13 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     (* Whether the callee returns a variable of an erased type binder, and
        if so the variable and the concrete C++ type to use for it. *)
     let try_recover_erased_return_type () =
-      match (!tctx).current_cpp_return_type with
+      match current_cpp_return_type_ir () with
       | None -> None
       | Some ret_ty -> (
         match Option.map (fun t -> resolve_tmeta (ml_return_type t)) (find_type_opt id) with
         | Some (Miniml.Tvar (_, i)) -> (
           match scheme_var i with
-          | Some v when erased_type_binder v -> Some (v, Legacy_minicpp_to_cpp_ir.lower_type ret_ty)
+          | Some v when erased_type_binder v -> Some (v, ret_ty)
           | _ -> None )
         | _ -> None )
     in
@@ -1357,7 +1357,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
     | None -> (
       match from_args () with
       | Some _ as a -> a
-      | None -> (!tctx).current_cpp_return_type )
+      | None -> current_cpp_return_type () )
     | _ -> expected_result
   in
   let typeclass_type_args =
@@ -1393,7 +1393,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
     if (not (Mlutil.Var_types.is_empty tys)) || excess_args = [] then
       None
     else
-      match (!tctx).current_cpp_return_type with
+      match current_cpp_return_type () with
       | None -> None
       | Some ret_ty ->
         match find_type_opt id with
@@ -1445,7 +1445,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
              ~explicit:(expected_ty <> None)
              ( match expected_ty with
              | Some _ -> expected_ty
-             | None -> (!tctx).current_cpp_return_type ) ) )
+             | None -> current_cpp_return_type () ) ) )
   in
   {
     cp_instantiated = inst;
@@ -1776,7 +1776,7 @@ let argument_position ~local_callable env id plan i ml_arg =
     else
       match arg_expected_ty with
       | Some t when Ml_type_util.has_no_cpp_spelling t ->
-        (!tctx).current_cpp_return_type
+        current_cpp_return_type ()
       | t -> t
   in
   { ap_index = param_index;
