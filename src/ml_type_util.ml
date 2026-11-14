@@ -1591,7 +1591,7 @@ let get_tvars_indexed_ir (t : Cpp_ir.Lowered.Type.t) =
 
 let get_tvars_indexed t = get_tvars_indexed_ir (lower_type t)
 
-(** Like [get_tvar_indices] but only collects tvars that will actually
+(** Like [get_tvar_indices_ir] but only collects tvars that will actually
     appear in the rendered C++ type.  For custom types with a template
     (e.g. [std::shared_ptr<ITree<%t1>>]), only type-arg positions
     referenced by the template are visited.  Unreferenced positions hold
@@ -1615,7 +1615,6 @@ let get_rendered_tvar_indices_ir (t : Cpp_ir.Lowered.Type.t) =
   in
   aux [] t
 
-let get_rendered_tvar_indices t = get_rendered_tvar_indices_ir (lower_type t)
 
 (** The arity at which the {e rendered} type applies each type variable.
 
@@ -1649,8 +1648,6 @@ let rendered_tvar_arities_ir (t : Cpp_ir.Lowered.Type.t) =
 let get_tvars t = List.map snd (get_tvars_indexed t)
 
 (** Tvar indices only, sorted *)
-let get_tvar_indices t = List.map fst (get_tvars_indexed t)
-
 let get_tvar_indices_ir t = List.map fst (get_tvars_indexed_ir t)
 
 (** Collect tvar indices that are represented concretely in the generated C++

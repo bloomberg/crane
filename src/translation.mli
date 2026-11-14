@@ -329,15 +329,12 @@ val infer_owned_flags :
     [CRANE_CHECK_IR] the two readings must agree. *)
 val wrap_param_by_ownership : ?is_owned:bool -> ?core:Miniml.ml_type -> cpp_type -> cpp_type
 
-(** How a parameter declared at a type -- after {!wrap_param_by_ownership},
-    or as the [F &&] a deduced callable is -- owned or not, is passed. *)
-val param_passing : owned:bool -> cpp_type -> Callable_abi.passing
-
 (** {!wrap_param_by_ownership} over a CppIR type. *)
 val wrap_param_by_ownership_ir :
   ?is_owned:bool -> ?core:Miniml.ml_type -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
-(** {!param_passing} over a CppIR type. *)
+(** How a parameter declared at a type -- after {!wrap_param_by_ownership_ir},
+    or as the [F &&] a deduced callable is -- owned or not, is passed. *)
 val param_passing_ir : owned:bool -> Cpp_ir.Lowered.Type.t -> Callable_abi.passing
 
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to

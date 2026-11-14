@@ -3183,14 +3183,9 @@ let wrap_param_by_ownership_ir ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowere
   in
   if lent && not is_owned then Reference (Lvalue, Const cpp_ty) else cpp_ty
 
-(** How a parameter declared at [ty] -- after {!wrap_param_by_ownership},
+(** How a parameter declared at [t] -- after {!wrap_param_by_ownership_ir},
     or as the [F &&] a deduced callable is -- with ownership [owned], is
     passed. *)
-let param_passing ~owned = function
-  | Tref (Forwarding, _) -> Callable_abi.Forwarded
-  | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
-
-(** {!param_passing} over a CppIR type. *)
 let param_passing_ir ~owned (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Reference (Forwarding, _) -> Callable_abi.Forwarded
