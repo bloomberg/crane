@@ -7369,7 +7369,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           in
           let inner = Dfun (mk_dfun ~binders ~ret:cod member_refs.(i) (Ddef (cpp_params, body))) in
           let lifted_decl =
-            Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+            Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters class_temps @ all_temps_with_funs, None, inner)
           in
           add_lifted_decl (Control_to_cpp_ir.lower_lifted lifted_decl) )
         funs_compiled;
@@ -7841,7 +7841,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, compiled_body)))
       in
       let lifted_decl =
-        Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+        Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters class_temps @ all_temps_with_funs, None, inner)
       in
       add_lifted_decl lifted_decl;
 
@@ -8268,7 +8268,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               Dfun (mk_dfun ~binders:param_binders ~ret:cod member_refs.(i) (Ddef (cpp_params, body)))
             in
             let lifted_decl =
-              Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+              Dtemplate (Cpp_ir_to_legacy_minicpp.template_parameters class_temps @ all_temps_with_funs, None, inner)
             in
             add_lifted_decl (Control_to_cpp_ir.lower_lifted lifted_decl) )
           funs_compiled;

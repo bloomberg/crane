@@ -726,9 +726,6 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       typeclass_temps
   in
   let hkt_tvar_resolutions = hkt_tvar_resolutions_of_type ty in
-  let hkt_tvar_resolutions_ir =
-    List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) hkt_tvar_resolutions
-  in
   (* Type annotations inside the body must name the same resolved types as the
      signature does. *)
   let gen_body_stmts env cw e =
@@ -739,8 +736,8 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   let resolve_promoted_in_type =
     Cpp_ir.Types.rewrite (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
-      | Variable (Index (i, _)) when List.mem_assoc i hkt_tvar_resolutions_ir ->
-        Some (List.assoc i hkt_tvar_resolutions_ir)
+      | Variable (Index (i, _)) when List.mem_assoc i hkt_tvar_resolutions ->
+        Some (List.assoc i hkt_tvar_resolutions)
       | Promoted_member name as ty ->
         Some
           ( match
@@ -1288,7 +1285,7 @@ let gen_dfun ~minted n b cty ty temps =
   (* The head itself, at the kinds it declares: see
      {!Translation_state.current_template_head}. *)
   let saved_template_head = get_current_template_head () in
-  set_current_template_head (Cpp_ir_to_legacy_minicpp.template_parameters (typeclass_temps_basic @ regular_temps));
+  set_current_template_head (typeclass_temps_basic @ regular_temps);
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)

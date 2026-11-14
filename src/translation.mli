@@ -213,7 +213,7 @@ val collect_typeclass_param_ids : ml_type -> Id.t list
     [typename <htp_instance>::<htp_field>]. *)
 type hkt_tvar_position = {
   htp_tvar : int;
-  htp_instance : Minicpp.cpp_type;  (** always a {!Minicpp.Tinstance} *)
+  htp_instance : Cpp_ir.Lowered.Type.t;  (** always an {!Cpp_ir.Type.Instance} *)
   htp_field : Id.t;
 }
 

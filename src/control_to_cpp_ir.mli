@@ -134,7 +134,7 @@ val local_loop :
   function_:bool ->
   lifted:Miniml.Occurrence.t list ->
   member:Miniml.Occurrence.t * int ->
-  tparams:(Minicpp.template_type * Names.Id.t) list ->
+  tparams:Cpp_ir.Lowered.phase Cpp_ir.Template.parameters ->
   name:Names.Id.t ->
   Minicpp.cpp_lambda ->
   Minicpp.cpp_stmt option

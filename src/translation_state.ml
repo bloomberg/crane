@@ -93,7 +93,7 @@ type translation_ctx = {
 
      Only the emitters that build the head know it, so a scope that does not
      say leaves this empty and both readers answer negatively. *)
-  current_template_head : (template_type * Id.t) list;
+  current_template_head : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters;
   (* The Core binders of the parameters of the declaration whose body is
      being generated ({!Core_binder}), which call sites and matches ask a
      variable's type as a parameter of: by binder, since every binder the
@@ -321,7 +321,7 @@ let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
     by it on the way out; every other scope leaves the enclosing answer
     standing rather than guessing at one.  The readers below derive their
     answers from it rather than each keeping a list of their own. *)
-let set_current_template_head (head : (template_type * Id.t) list) =
+let set_current_template_head (head : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters) =
   tctx := { !tctx with current_template_head = head }
 let get_current_template_head () = (!tctx).current_template_head
 
@@ -331,7 +331,7 @@ let is_current_typename_var (id : Id.t) =
   List.exists
     (fun (tt, i) ->
       Id.equal id i
-      && match tt with TTtypename | TTtypename_default _ -> true | _ -> false )
+      && match (tt : _ Cpp_ir.Template.Parameter_kind.t) with Typename | Typename_default _ -> true | _ -> false )
     (!tctx).current_template_head
 
 (** The head's concept-constrained parameters: the class instances the
@@ -339,7 +339,7 @@ let is_current_typename_var (id : Id.t) =
     them, so it has to declare them too. *)
 let current_class_temps () =
   List.filter
-    (fun (tt, _) -> match tt with TTconcept _ -> true | _ -> false)
+    (fun (tt, _) -> match (tt : _ Cpp_ir.Template.Parameter_kind.t) with Concept _ -> true | _ -> false)
     (!tctx).current_template_head
 
 (** Every type name the current declaration's head puts in scope: its

@@ -317,7 +317,7 @@ let collect_typeclass_param_ids ty =
     instance parameter: [htp_tvar] stands for [typename <htp_instance>::<htp_field>]. *)
 type hkt_tvar_position = {
   htp_tvar : int;  (** the MiniML type variable's index *)
-  htp_instance : Minicpp.cpp_type;  (** always a {!Minicpp.Tinstance} *)
+  htp_instance : Cpp_ir.Lowered.Type.t;  (** always an {!Cpp_ir.Type.Instance} *)
   htp_field : Id.t;  (** the class's type parameter the variable fills *)
 }
 
@@ -348,7 +348,7 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
                 Some var_name ) ->
               { htp_tvar = j;
                 htp_instance =
-                  Minicpp.Tinstance (tc_instance_id (number i), class_ref);
+                  Cpp_ir.Type.Instance (tc_instance_id (number i), class_ref);
                 htp_field = var_name }
               :: acc
             | _ -> acc )
