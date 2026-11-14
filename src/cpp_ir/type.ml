@@ -11,11 +11,12 @@ module Reference_kind = Grammar.Reference_kind
 module Type_test = Grammar.Type_test
 
 (** [positional_name i] is the name the type variable at index [i] of a
-    declaration's parameter list is written under: [T<i>]. *)
-let positional_name i = "T" ^ string_of_int i
+    declaration's parameter list is written under: [T<i>]
+    ({!Core.Positional.name}). *)
+let positional_name = Core.Positional.name
 
 (** [positional_id i] is {!positional_name} as an identifier. *)
-let positional_id i = Names.Id.of_string (positional_name i)
+let positional_id = Core.Positional.id
 
 (** Whether [t] is the type variable named [id], under either spelling a
     variable's head may have. *)

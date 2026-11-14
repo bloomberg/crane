@@ -293,7 +293,7 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
            it -- [memM T2] of a natural transformation. *)
         let collides i =
           List.exists
-            (fun v -> String.equal (Id.to_string v) (Cpp_ir.Type.positional_name i))
+            (fun v -> String.equal (Id.to_string v) (Core.Positional.name i))
             scope
         in
         Call_tyargs.resolve Call_tyargs.Eta_parameter
@@ -463,7 +463,7 @@ type walker = {
 }
 
 (* The variables a head of [n] generates under: [T1] .. [Tn]. *)
-let head_scope n = List.init n (fun k -> Cpp_ir.Type.positional_id (k + 1))
+let head_scope n = List.init n (fun k -> Core.Positional.id (k + 1))
 
 let walker ?caller ?scope b ~n_outer =
   let scope = match scope with Some s -> s | None -> head_scope n_outer in
