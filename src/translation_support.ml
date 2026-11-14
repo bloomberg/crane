@@ -8,7 +8,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Util
@@ -908,7 +907,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
                    disagree completely on one that is not, so the unreachable
                    side gets the throw rather than a conversion no one asked
                    for. *)
-                else_ = [Throw inactive_field_message] } ]
+                else_ = [Throw Minicpp.inactive_field_message] } ]
     (* A custom-mapped list at a known element type, under any namespace
        wrapper: only an erased source needs unboxing. *)
     | _, (Entity_application (g, [elem_ty], _) | In_namespace (_, Entity_application (g, [elem_ty], _)))
@@ -1387,10 +1386,6 @@ let type_arg_omission r =
 
 (** [ty] with every family variable written applied taken back to the bare
     variable: a plain family is declared without its index. *)
-let deapply_families =
-  map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t)
-
-(** {!deapply_families} in CppIR. *)
 let deapply_families_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t =
   Cpp_ir.Types.map (function Apply ((Variable _ as v), _) -> v | t -> t)
 

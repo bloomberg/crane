@@ -8,7 +8,6 @@
 
 open Common
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Table
@@ -1315,12 +1314,12 @@ let template_arg_of_ml_type_ir ~site env tvars ty =
     codomain that is a type variable takes its C++ shape from the template
     argument instantiating it, so it is curried; one the declaration writes
     out is flat there. *)
-let codomain_site ml_ty = if ml_codomain_is_tvar ml_ty then Through_tvar else Declared
+let codomain_site ml_ty : Cpp_ir.Types.arrow_site = if ml_codomain_is_tvar ml_ty then Through_tvar else Declared
 
 (** {!codomain_site} for a call to the global [id].  An inline custom
     constant has no template argument: what it yields is whatever its text
     reads -- [fst]'s [%a0.first] is the pair's component, stored flat. *)
-let call_result_site id =
+let call_result_site id : Cpp_ir.Types.arrow_site =
   if is_inline_custom id then Declared
   else match find_type_opt id with Some ml_ty -> codomain_site ml_ty | None -> Declared
 

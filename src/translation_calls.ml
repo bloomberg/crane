@@ -6,7 +6,6 @@
     call node, and calls through type-class instances. *)
 
 open Miniml
-open Minicpp
 open Names
 open Mlutil
 open Table
@@ -17,6 +16,9 @@ open Translation_support
 open Translation_types
 open Core_query
 
+(** Where a callee's arrows are spelled ({!Cpp_ir.Types.spell_arrows}). *)
+type arrow_site = Cpp_ir.Types.arrow_site = Declared | Through_tvar | Declared_at of int
+
 (** An {!adapter_params} parameter read back as the argument to pass along. *)
 let adapter_arg_ir ((_, id) : Cpp_ir.Lowered.Type.t * Id.t option) : Cpp_ir.Lowered.Expr.t = Local (Option.get id)
 
@@ -24,7 +26,7 @@ let adapter_arg_ir ((_, id) : Cpp_ir.Lowered.Type.t * Id.t option) : Cpp_ir.Lowe
     at the arrow site [site] takes them -- all at once where it was declared
     with them, one at a time through a type variable, and past the [n] a
     declaration wrote one at a time.  No arguments is [f] itself. *)
-let apply_at_site_ir site (f : Cpp_ir.Lowered.Expr.t) args =
+let apply_at_site_ir (site : Cpp_ir.Types.arrow_site) (f : Cpp_ir.Lowered.Expr.t) args =
   let apply f args = match args with [] -> f | _ -> Cpp_ir.Build.call f args in
   let one_at_a_time f args = List.fold_left (fun f a -> Cpp_ir.Build.call f [a]) f args in
   match site with
