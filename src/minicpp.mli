@@ -1260,9 +1260,6 @@ type arrow_site = Cpp_ir.Types.arrow_site =
     spells it.  The only place a chain of arrows is regrouped. *)
 val spell_arrows : arrow_site -> cpp_type -> cpp_type
 
-(** Whether two function types have the same arrows, however grouped. *)
-val same_arrows : cpp_type -> cpp_type -> bool
-
 (** [apply_at_site site f args]: [f], a callable spelled at [site], applied to
     [args] -- in one call where its arrows are flat, one argument at a time
     where they are curried, and the first [n] in one call then the rest one

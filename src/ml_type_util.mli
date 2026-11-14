@@ -441,6 +441,12 @@ val is_skipped_cpp_type : Minicpp.cpp_type -> bool
     [shared_ptr]. *)
 val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
 
+(** {!is_skipped_cpp_type} in CppIR. *)
+val is_skipped_cpp_type_ir : Cpp_ir.Lowered.Type.t -> bool
+
+(** {!is_typeclass_type_cpp} in CppIR. *)
+val is_typeclass_type_cpp_ir : Cpp_ir.Lowered.Type.t -> bool
+
 (** Whether a MiniML type should be skipped during extraction. *)
 val is_skipped_ml_type : Miniml.ml_type -> bool
 
