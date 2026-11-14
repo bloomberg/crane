@@ -11,6 +11,7 @@ open Translation_state
 open Ml_type_util
 open Translation_support
 open Translation_types
+open Core_query
 
 (* What decided a binder's C++ type, as {!Translation_state.binder_origin}
    says for the recorded one: the conversion of its ML type where it is

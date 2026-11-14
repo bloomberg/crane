@@ -8,8 +8,7 @@ open Miniml
 open Names
 open Util
 open Ml_type_util
-open Translation_state
-open Translation_support
+open Core_query
 
 type layers = {
   inner_ty : ml_type;

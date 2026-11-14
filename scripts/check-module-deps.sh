@@ -23,9 +23,19 @@ FINISHING="Cpp_pipeline Cpp_constraints Loopify Loopify_analysis Loopify_tail Lo
 PRINTER_FINISHING=${FINISHING/ Cpp_erasure/}
 PRINTER_FINISHING=${PRINTER_FINISHING/ Legacy_minicpp_to_cpp_ir/}
 
+# Core elaboration plans calls, matches and spines before translation runs,
+# on Core terms, their ML types and the table: it reaches no translation
+# module and no C++ representation.  It renumbers a method's body as the
+# registry does (Method_registry, which reads only the table), so that one
+# is allowed.  Ml_type_util, which it opens, still depends on Minicpp and
+# CppIR, so the rule is about these modules' own code.
+CORE_PLANNING="core_query core_elaborate match_kind core_normalize numeral_literal elaborated_call instance_methods core/positional"
+CORE_FORBIDDEN="${TRANSLATION/ Method_registry/} $PRINTER $FINISHING Minicpp Cpp_ir"
+
 # layer modules : forbidden dependencies
 rules=(
-  "core/inductive miniml minicpp foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
+  "core/inductive core/positional miniml minicpp foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
+  "$CORE_PLANNING : $CORE_FORBIDDEN"
   "cpp_pipeline cpp_constraints loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_cpp_ir legacy_minicpp_to_cpp_ir cpp_ir_to_legacy_minicpp : $TRANSLATION $PRINTER"
   # CppIR is one node of the dependency graph (src/cpp_ir/ is a namespace), so
   # none of its files may reach a module that names it: not MiniCpp, not the

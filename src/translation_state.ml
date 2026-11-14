@@ -14,6 +14,7 @@ open Common
 open Miniml
 open Minicpp
 open Names
+open Core_query
 
 (** A [CPPglob] for the global [r] at [tys], its custom extraction
     ({!Table.inline_custom_text}) looked up once here.  [yields] is what
@@ -27,10 +28,6 @@ let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
 (** A [CPPglob] for a local variable ([VarRef]): no custom extraction applies. *)
 let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   CPPglob (r, tys, None)
-
-(** {!Table.find_type}, [None] where [r] has no recorded type. *)
-let find_type_opt (r : GlobRef.t) : ml_type option =
-  try Some (Table.find_type r) with Not_found -> None
 
 (** [callee_ml_type r] -- the ML type of the callable [r] as the unit's plan
     of it records it ({!Callable_abi.ml_type}): the signature call
@@ -69,11 +66,6 @@ let callee_ml_type_exn r = match callee_ml_type r with Some t -> t | None -> rai
 type binder_role = Lexenv.role =
   | Value
   | Dictionary
-
-(** A declaration's parameter of type [ty] is its dictionary exactly when
-    [ty] is a class: the one criterion the head generators promote a
-    parameter to an instance by. *)
-let parameter_role ty = if Table.is_typeclass_type ty then Dictionary else Value
 
 (** A binder of the lexical environment ({!Lexenv.binder}). *)
 type env_binder = Lexenv.binder = {

@@ -454,7 +454,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
             List.mapi
               (fun i _ -> tc_instance_id i)
               (List.filter
-                 (fun ty -> parameter_role ty = Dictionary)
+                 (fun ty -> Core_query.parameter_role ty = Dictionary)
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =

@@ -1560,7 +1560,7 @@ let elaborate_unit elaborations =
     (fun r -> Translation_calls.callee_abi ~instances:0 r)
     (Core_elaborate.referenced elaborations);
   (* Every global a call may project through an instance
-     ({!Translation_types.static_projection}). *)
+     ({!Core_query.static_projection}). *)
   Callable_abi.install_projections Translation_calls.projection_abi
     (List.filter
        (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)

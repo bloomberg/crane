@@ -109,7 +109,7 @@ let held group ~reading e ty =
     &&
     match e with
     | MLapp (MLglob {callee = r; _}, _) ->
-      Option.cata Ml_type_util.result_is_index_only_tvar false (Translation_state.find_type_opt r)
+      Option.cata Ml_type_util.result_is_index_only_tvar false (Core_query.find_type_opt r)
     | _ -> false
   in
   if not boxed_only then Some ty
