@@ -162,8 +162,8 @@ type translation_ctx = {
      Set ({!with_promoted_var_map}) when generating template functions and
      instances with typeclass parameters. Used by
      {!Translation.convert_ml_type_to_cpp_type} to resolve [Tpromoted]
-     markers. *)
-  promoted_var_map : (Id.t * cpp_type) list;
+     markers.  CppIR: type conversion reads it as it is. *)
+  promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
   (* When true, we are inside a constructor expression (module-level static
      initializer). Promoted type vars that can't be resolved via
      promoted_var_map fall back to Tany (std::any) instead of keeping
@@ -465,7 +465,7 @@ let with_lifted_fixpoint (occurrence : Miniml.Occurrence.t) (f : unit -> 'a) : '
 
 (** [with_promoted_var_map m f] runs [f] with [m] as the resolution for the
     promoted type variables in scope -- see {!translation_ctx.promoted_var_map}. *)
-let with_promoted_var_map (m : (Id.t * cpp_type) list) (f : unit -> 'a) : 'a =
+let with_promoted_var_map (m : (Id.t * Cpp_ir.Lowered.Type.t) list) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.promoted_var_map)
     (fun m -> tctx := { !tctx with promoted_var_map = m })

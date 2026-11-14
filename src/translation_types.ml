@@ -44,7 +44,7 @@ let ind_promoted_type_args_ir g : Cpp_ir.Lowered.Type.t list =
   List.map
     (fun v ->
       match promoted_var_binding v with
-      | Some t -> Legacy_minicpp_to_cpp_ir.lower_type t
+      | Some t -> t
       | None -> Promoted_member v )
     (Table.promoted_type_params g)
 
@@ -52,7 +52,7 @@ let ind_promoted_type_args_ir g : Cpp_ir.Lowered.Type.t list =
 let ind_promoted_type_args g =
   List.map
     (fun v ->
-      match promoted_var_binding v with Some t -> t | None -> Tpromoted v )
+      match promoted_var_binding v with Some t -> Cpp_ir_to_legacy_minicpp.ty t | None -> Tpromoted v )
     (Table.promoted_type_params g)
 
 (** Strip the const/reference decoration a parameter type carries, leaving the
@@ -1142,10 +1142,10 @@ let restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
     are dropped, since a promoted variable that resolves to [std::any] says no
     more than the erased annotation it would replace. *)
 let promoted_tys_of_arity n =
-  match List.filter_map (fun (_, t) -> if prints_as_any t then None else Some t)
+  match List.filter_map (fun (_, t) -> if Cpp_ir.Types.prints_as_any t then None else Some t)
           (!tctx).promoted_var_map
   with
-  | tys when List.length tys = n -> Some tys
+  | tys when List.length tys = n -> Some (List.map Cpp_ir_to_legacy_minicpp.ty tys)
   | _ -> None
 
 (** When a lambda literal is about to be stored via [crane_erase_fn] (see the
@@ -1458,7 +1458,7 @@ let rec cpp_ir_of_ml_type
     ( match Table.promoted_type_var_name g with
     | Some var_id ->
       ( match promoted_var_resolution g with
-      | Some resolved -> Legacy_minicpp_to_cpp_ir.lower_type resolved
+      | Some resolved -> resolved
       | None ->
         (* No resolution found.  When the constructor-expression flag is set,
            all promoted vars become [Tany] (= std::any) because module-level

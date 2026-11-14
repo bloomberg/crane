@@ -1069,6 +1069,10 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
          "ml_arg_to_template_type: unexpected ML term after \
           is_typeclass_instance_arg filter" )
 
+(** {!ml_arg_to_template_type} in CppIR. *)
+let ml_arg_to_template_type_ir ?expected env ml_arg =
+  Option.map Legacy_minicpp_to_cpp_ir.lower_type (ml_arg_to_template_type ?expected env ml_arg)
+
 (** The mirror of {!recover_carrier_result}: a value reaching a parameter the
     callee declared as a carrier applied to a type variable -- [M A], a
     {!Miniml.Tapp} -- arrives at whatever element the caller had, while a
@@ -1427,8 +1431,8 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
       match tc_arg with
       | MLglob {callee = r; _} ->
         List.filter_map (fun (var_name, ml_ty) ->
-          let cpp_ty = cpp_of_ml env ml_ty in
-          if prints_as_any cpp_ty then None
+          let cpp_ty = cpp_of_ml_ir env ml_ty in
+          if Cpp_ir.Types.prints_as_any cpp_ty then None
           else Some (var_name, cpp_ty)
         ) (Table.get_instance_promoted_types r)
       | _ -> []

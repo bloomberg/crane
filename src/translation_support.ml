@@ -3522,7 +3522,7 @@ type call_plan = {
       (** For a call with no written type arguments and excess value
           arguments, the concrete type of its polymorphic result: the excess
           arguments' types to the enclosing function's return type. *)
-  cp_instance_promoted : (Id.t * cpp_type) list;
+  cp_instance_promoted : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** Promoted variables bound to concrete C++ types by the concrete
           instances the call passes, so that constructors in its arguments
           use those types instead of [std::any]. *)

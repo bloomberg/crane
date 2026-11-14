@@ -246,7 +246,8 @@ let class_fields_with_types = Table.get_record_field_bindings
 
     [fields] defaults to {!class_fields_with_types}; pass it when the caller
     already holds the pairing, as it does while generating the class itself. *)
-let promoted_resolutions ?fields class_ref inst_ty =
+let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
+    (Id.t * Cpp_ir.Lowered.Type.t) list =
   let fields =
     match fields with Some f -> f | None -> class_fields_with_types class_ref
   in
@@ -261,12 +262,12 @@ let promoted_resolutions ?fields class_ref inst_ty =
           List.filter_map
             (fun v ->
               if is_direct v then None
-              else Some (v, Tqualified (Tqualified (inst_ty, field_id), v)) )
+              else Some (v, Cpp_ir.Type.Member (Member (inst_ty, field_id), v)) )
             (class_promoted_vars r)
         | _ -> [] )
       fields
   in
-  List.map (fun v -> (v, Tqualified (inst_ty, v))) direct @ nested
+  List.map (fun v -> (v, Cpp_ir.Type.Member (inst_ty, v))) direct @ nested
 
 (** The resolutions a class argument supplies to the instance that was given
     it.
@@ -287,10 +288,10 @@ let promoted_resolutions ?fields class_ref inst_ty =
     is why one list serves both.  An argument applied to a different number is
     left alone: that it is applied at all says it has a context, and a context
     this one cannot supply is not one to guess at. *)
-let rec class_arg_type ~own_instances sh =
+let rec class_arg_type ~own_instances sh : Cpp_ir.Lowered.Type.t option =
   match sh with
   | Table.Carg_unknown -> None
-  | Table.Carg (r, []) -> Some (Tglob (r, [], []))
+  | Table.Carg (r, []) -> Some (Entity_application (r, [], []))
   | Table.Carg (r, [arg]) when Table.is_projection r ->
     (* A class field is an instance of its own class -- [@IPTR P] is an [IPtr]
        -- but it is not applied to the record, it is selected from it.  Spelling
@@ -298,7 +299,7 @@ let rec class_arg_type ~own_instances sh =
        second, wrong answer for every name it owns is indistinguishable from
        none: {!drop_ambiguous} then drops the right one with it. *)
     Option.map
-      (fun t -> Tqualified (t, Common.id_of_global Term r))
+      (fun t -> Cpp_ir.Type.Member (t, Common.id_of_global Term r))
       (class_arg_type ~own_instances arg)
   | Table.Carg (r, args) ->
     (* A recorded argument spells itself; an unknown one is the context the
@@ -317,7 +318,7 @@ let rec class_arg_type ~own_instances sh =
         args
     in
     if List.for_all Option.has_some ts then
-      Some (Tglob (r, List.map Option.get ts, []))
+      Some (Cpp_ir.Type.Entity_application (r, List.map Option.get ts, []))
     else None
 
 (** The resolutions the class arguments [arg_shapes] of an instance supply:
@@ -423,11 +424,11 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Some (class_ref, _) when Table.is_typeclass class_ref -> Some class_ref
     | _ -> None
   in
-  let add inst_ref inst_ty =
+  let add inst_ref (inst_ty : Cpp_ir.Lowered.Type.t) =
     match Table.get_instance_class_shape inst_ref with
     | Some (class_ref, _) when Table.is_typeclass class_ref ->
       let own_instances =
-        match inst_ty with Tglob (_, args, _) -> args | _ -> []
+        match inst_ty with Entity_application (_, args, _) -> args | _ -> []
       in
       found :=
         !found
@@ -529,7 +530,7 @@ let promoted_resolutions_of_body ?r ?ty b =
            && leading <> [] && spellable d (strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (ml_arg_to_template_type (env_at d) (strip_magic e));
+        (ml_arg_to_template_type_ir (env_at d) (strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
@@ -553,7 +554,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | MLapp (MLglob {callee = r; _}, args)
       when instance_class r <> None && closed (strip_magic e) ->
       Option.iter (add r)
-        (ml_arg_to_template_type (empty_env ()) (strip_magic e));
+        (ml_arg_to_template_type_ir (empty_env ()) (strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -568,7 +569,7 @@ let promoted_resolutions_of_body ?r ?ty b =
             ()
           | _ -> walk a )
         args
-    | MLglob {callee = r; _} -> add r (Tglob (r, [], []))
+    | MLglob {callee = r; _} -> add r (Entity_application (r, [], []))
     | _ -> Mlutil.ast_iter walk e
   in
   walk b;
@@ -597,7 +598,7 @@ let promoted_resolutions_of_body ?r ?ty b =
             MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> fresh_rel (n - i)))
           in
           Option.iter (add_at class_ref inst)
-            (ml_arg_to_template_type
+            (ml_arg_to_template_type_ir
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )

@@ -136,7 +136,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       (fun (tt, inst_id) ->
         match tt with
         | TTconcept (class_ref, _) ->
-          promoted_resolutions class_ref (Tinstance (inst_id, class_ref))
+          promoted_resolutions class_ref (Instance (inst_id, class_ref))
         | _ -> [] )
       tc_temps
   in
@@ -150,7 +150,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
         (List.filter_map
            (fun (tt, inst_id) ->
              match tt with
-             | TTconcept (class_ref, _) -> Some (Tinstance (inst_id, class_ref))
+             | TTconcept (class_ref, _) -> Some (Cpp_ir.Type.Instance (inst_id, class_ref))
              | _ -> None )
            tc_temps )
       name
@@ -167,7 +167,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       match
         List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).promoted_var_map
       with
-      | Some (_, r) -> r
+      | Some (_, r) -> Cpp_ir_to_legacy_minicpp.ty r
       | None -> t )
     | t -> t
   in

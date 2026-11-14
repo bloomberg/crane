@@ -137,6 +137,10 @@ val empty_slot : slot
 val ml_arg_to_template_type :
   ?expected:cpp_type -> env -> ml_ast -> cpp_type option
 
+(** {!ml_arg_to_template_type} in CppIR. *)
+val ml_arg_to_template_type_ir :
+  ?expected:cpp_type -> env -> ml_ast -> Cpp_ir.Lowered.Type.t option
+
 (** Whether a C++ type names a class field the current scope does not
     resolve, so that it would print through the field's file-scope erased
     alias. *)

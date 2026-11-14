@@ -728,7 +728,9 @@ let dfun_body_scope ~minted n b cty ty temps =
       (fun (_tt, tc_name, class_info, _) ->
         match class_info with
         | Some (class_ref, _) ->
-          promoted_resolutions class_ref (Tinstance (tc_name, class_ref))
+          List.map
+            (fun (v, t) -> (v, Cpp_ir_to_legacy_minicpp.ty t))
+            (promoted_resolutions class_ref (Instance (tc_name, class_ref)))
         | None -> [] )
       typeclass_temps
   in
@@ -1291,7 +1293,9 @@ let gen_dfun ~minted n b cty ty temps =
      the instance perfectly well. *)
   tctx :=
     { !tctx with
-      promoted_var_map = promoted_var_resolutions @ saved_promoted_var_map };
+      promoted_var_map =
+        List.map (fun (v, t) -> (v, Legacy_minicpp_to_cpp_ir.lower_type t)) promoted_var_resolutions
+        @ saved_promoted_var_map };
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
