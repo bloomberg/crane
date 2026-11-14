@@ -1158,7 +1158,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
       let t = Common.last (a1 :: l) in
       match t with
       | MLglob {callee = g; _} when is_ghost g ->
-        mk_itree_ret Tvoid []
+        Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret Void [])
       | _ ->
         let inner = gen_expr env t in
         (* The result type is the type argument written for the variable the
@@ -1171,10 +1171,10 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
             | _ -> None
           in
           match Option.bind value_var (Mlutil.Var_types.find_tvar ret_tys) with
-          | Some r_ml when not (Mlutil.isTdummy r_ml) -> cpp_of_ml env r_ml
-          | _ -> Tvoid
+          | Some r_ml when not (Mlutil.isTdummy r_ml) -> cpp_of_ml_ir env r_ml
+          | _ -> Void
         in
-        mk_itree_ret r_cpp [inner]
+        Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret r_cpp [Legacy_minicpp_to_cpp_ir.lower_expr inner])
     end
     else begin
       let t = Common.last (a1 :: l) in
@@ -2651,7 +2651,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
               (* The arguments are read where the thunk is made, and taken
                  by move there when the plan moves them. *)
               let moved = moved_names env (Ownership_ir.eta_captures (!tctx).move_plan ts) in
-              suspend_ctor ~moved type_expr (Id.of_string ctor_struct) (of_reversed args)
+              Cpp_ir_to_legacy_minicpp.expr (suspend_ctor ~moved (Legacy_minicpp_to_cpp_ir.lower_type type_expr) (Id.of_string ctor_struct) (List.rev_map Legacy_minicpp_to_cpp_ir.lower_expr args))
             else
               CPPfun_call
                 ( ctor_sig ~constructs:r args,
@@ -3777,7 +3777,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
   | MLuint x -> CPPuint x
   | MLnumeral (ind, n) -> (
     match Table.get_numeral_info ind with
-    | Some info -> render_numeral info n
+    | Some info -> Cpp_ir_to_legacy_minicpp.expr (render_numeral info n)
     | None -> CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
   | MLfloat f -> CPPfloat f
   | MLparray (elems, def) ->
@@ -4260,7 +4260,7 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
            are function VALUES, not void call results. *)
         ( match expr with
         | CPPlambda _ -> expr
-        | _ -> wrap_void_call_as_value expr )
+        | _ -> Cpp_ir_to_legacy_minicpp.expr (wrap_void_call_as_value (Legacy_minicpp_to_cpp_ir.lower_expr expr)) )
       | _ -> expr
     in
     (* A bare local variable known to be boxed as [std::any]
@@ -4412,9 +4412,9 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
       let no_value = r_cpp = Tvoid || ml_type_is_void r_ml in
       let as_statement = no_value || ml_expr_is_void_call ml_arg in
       let ret_expr =
-        if no_value then mk_itree_ret Tvoid []
-        else if as_statement then mk_itree_ret r_cpp [mk_tt_expr ()]
-        else mk_itree_ret_for_value r_cpp r_ml expr
+        if no_value then Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret Void [])
+        else if as_statement then Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret (Legacy_minicpp_to_cpp_ir.lower_type r_cpp) [mk_tt_expr ()])
+        else Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret_for_value (Legacy_minicpp_to_cpp_ir.lower_type r_cpp) r_ml (Legacy_minicpp_to_cpp_ir.lower_expr expr))
       in
       let body =
         if as_statement then [Sexpr expr; Sreturn (Some ret_expr)]
@@ -4464,7 +4464,7 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
       in
       let body =
         [ Sexpr (CPPfun_call (call_opaque, expr, of_reversed args));
-          Sreturn (Some (mk_tt_expr ())) ]
+          Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ()))) ]
       in
       mk_lambda params None body ~capture:Immediate
     | _ -> as_value ()
@@ -4973,7 +4973,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             (* Nothing is missing, so there is nothing to fill: the template
                renders with what it was given. *)
             cglob
-          else apply_global id cglob args
+          else Cpp_ir_to_legacy_minicpp.expr (apply_global id (Legacy_minicpp_to_cpp_ir.lower_expr cglob) (List.map Legacy_minicpp_to_cpp_ir.lower_expr args))
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
@@ -5324,7 +5324,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
              called.  Only globals whose declaration really takes no C++
              parameters -- thunks and those whose every parameter is erased --
              get the [()]. *)
-          apply_global id cglob args
+          Cpp_ir_to_legacy_minicpp.expr (apply_global id (Legacy_minicpp_to_cpp_ir.lower_expr cglob) (List.map Legacy_minicpp_to_cpp_ir.lower_expr args))
     in
     (* Collapse identity inline customs (%a0) at AST level.  This prevents
        unnecessary IIFE wrapping when a void call passes through an identity
@@ -5663,7 +5663,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       let expr =
         match x with
         | e when ml_value_is_void_call e ->
-          wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
+          Cpp_ir_to_legacy_minicpp.expr (wrap_void_call_as_value (Legacy_minicpp_to_cpp_ir.lower_expr (gen_expr ~slot:arg_slot env x)))
         | MLlam _ ->
           gen_expr ?expected_ty:(declared_dom i) ~slot:arg_slot env x
         | MLmagic (_, _, _) ->
@@ -7510,7 +7510,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let r_cpp = cpp_of_ml env r_ml in
 
         let reified_ty = mk_itree_type r_cpp in
-        let ret_k v = Sreturn (Some (mk_itree_ret_for_value r_cpp r_ml v)) in
+        let ret_k v = Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret_for_value (Legacy_minicpp_to_cpp_ir.lower_type r_cpp) r_ml (Legacy_minicpp_to_cpp_ir.lower_expr v)))) in
         let body_stmts = gen_stmts env ret_k a in
         let iife = mk_iife (Some reified_ty) body_stmts in
         (* Shift owned vars for the continuation *)
@@ -7623,7 +7623,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         List.mapi
           (fun i a ->
             match List.nth_opt param_ml_tys i with
-            | Some ty -> name_fn_arg_for_tvar_param ty a
+            | Some ty -> Cpp_ir_to_legacy_minicpp.expr (name_fn_arg_for_tvar_param ty (Legacy_minicpp_to_cpp_ir.lower_expr a))
             | None -> a )
           args
       in
@@ -7905,7 +7905,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let decl =
         if stmts_reference_var x_renamed body then
           let cpp_ty = cpp_of_ml env t in
-          [Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), mk_tt_expr ())]
+          [Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ()))]
         else []
       in
       rhs @ decl @ body )
@@ -8464,7 +8464,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           else if ml_type_is_unit ml_ty && not (is_cpp_unit_type cpp_ty) then
             []
           else if ml_type_is_unit ml_ty then
-            [Sasgn (x, Declare (cpp_ty, bound_by_bind env), mk_tt_expr ())]
+            [Sasgn (x, Declare (cpp_ty, bound_by_bind env), Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ()))]
           else
             []
         in
@@ -8537,7 +8537,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLcons (_, r, [], _) when Table.is_tt_constructor r
       && returns_void () ->
     (* tt (unit constructor) in tail position of a void-returning function *)
-    if (!tctx).itree_mode = Reified then [k (mk_itree_ret Tvoid [])]
+    if (!tctx).itree_mode = Reified then [k (Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret Void []))]
     else
       [Sreturn None]
   | MLglob {callee = r; _} when is_ghost r ->
@@ -8545,7 +8545,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
          returns shared_ptr<ITree<void>>. *)
-      [k (mk_itree_ret Tvoid [])]
+      [k (Cpp_ir_to_legacy_minicpp.expr (mk_itree_ret Void []))]
     else
       [Sreturn None]
   | MLexn msg ->
@@ -8687,7 +8687,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
              the variable declaration separately.  No value needed. *)
           [Sexpr e]
         | _ ->
-          [Sexpr e] @ inline_iife k (mk_tt_expr ())
+          [Sexpr e] @ inline_iife k (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ()))
     end
     else begin
       (* Whether this continuation is the function's result rather than a
@@ -8720,7 +8720,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
 and gen_stored_value ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e =
   match e with
   | MLdummy _ -> Cpp_ir_to_legacy_minicpp.expr Cpp_erasure.empty_box_ir
-  | e when ml_value_is_void_call e -> wrap_void_call_as_value (gen_expr ~slot env e)
+  | e when ml_value_is_void_call e -> Cpp_ir_to_legacy_minicpp.expr (wrap_void_call_as_value (Legacy_minicpp_to_cpp_ir.lower_expr (gen_expr ~slot env e)))
   | _ -> gen_expr ?expected_ty ~slot env e
 
 

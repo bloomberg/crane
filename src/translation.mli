@@ -225,7 +225,7 @@ val ml_type_is_void_call : ml_type -> bool
 val apply_unit_void : bool -> cpp_type -> cpp_type
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor). *)
-val mk_tt_expr : unit -> cpp_expr
+val mk_tt_expr : unit -> Cpp_ir.Lowered.Expr.t
 
 
 

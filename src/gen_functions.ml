@@ -1694,7 +1694,7 @@ let gen_decl__inner n b ty =
           | CPPglob (_, _, Some ci) when ci.ci_inline <> None ->
             body_expr  (* inline custom literal (e.g. std::monostate{}) *)
           | _ ->
-            mk_iife None [Sexpr body_expr; Sreturn (Some (mk_tt_expr ()))]
+            mk_iife None [Sexpr body_expr; Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ())))]
         else body_expr
       in
       let body_expr =
@@ -1933,7 +1933,7 @@ let gen_spec__inner n b ty =
           | CPPenum_val _ -> b_expr
           | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> b_expr
           | _ ->
-            mk_iife None [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))]
+            mk_iife None [Sexpr b_expr; Sreturn (Some (Cpp_ir_to_legacy_minicpp.expr (mk_tt_expr ())))]
         else b_expr
       in
       let b_expr =

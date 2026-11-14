@@ -25,6 +25,10 @@ open Core_query
 let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   CPPglob (r, tys, Some {ci_inline = Option.map inline_template (Table.inline_custom_text r); ci_yields = yields})
 
+(** {!mk_cppglob} in CppIR. *)
+let mk_cppglob_ir ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
+  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = yields})
+
 (** A [CPPglob] for a local variable ([VarRef]): no custom extraction applies. *)
 let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   CPPglob (r, tys, None)

@@ -251,9 +251,9 @@ let position_cpp_ty_ir (expected : Cpp_ir.Lowered.Type.t option) =
     The parameter type must be the callee's own, before this call site's
     instantiation is substituted into it: it is the template parameter that
     C++ has to deduce, not what it should deduce to. *)
-let name_fn_arg_for_tvar_param param_ml_ty expr =
+let name_fn_arg_for_tvar_param param_ml_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match (resolve_tmeta param_ml_ty, expr) with
-  | (Miniml.Tvar (_, _)), CPPlambda _ -> CPPfn_value expr
+  | Miniml.Tvar (_, _), Lambda _ -> Function_value expr
   | _ -> expr
 
 (** Whether [expr] is a pair recovered from a box, i.e. one whose [any_cast]
@@ -628,7 +628,7 @@ let cpp_integer_range = function
     it.  Emitting an out-of-range literal moves the failure to the C++
     compiler at best and wraps silently at worst, so refuse it here, where the
     Rocq definition responsible can still be named. *)
-let render_numeral info (n : Z.t) : cpp_expr =
+let render_numeral info (n : Z.t) : Cpp_ir.Lowered.Expr.t =
   let cpp_ty = Table.find_custom_opt info.Table.num_ind in
   ( match Option.bind cpp_ty cpp_integer_range with
   | Some (lo, hi) when Z.lt n lo || Z.gt n hi ->
@@ -640,7 +640,7 @@ let render_numeral info (n : Z.t) : cpp_expr =
          ++ Printer.pr_global info.Table.num_ind
          ++ str " extracts to."))
   | _ -> () );
-  CPPnumeral (info.Table.num_ind, {nl_value = n; nl_text = Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt})
+  Numeral (info.Table.num_ind, {value = n; text = Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt})
 
 (** Whether [r] is a type family over a value -- [sem : idx -> Type] --
     whose applications ML writes without their argument, so that a generic
@@ -1294,8 +1294,8 @@ let glob_is_nullary_function x =
 
 (** The global [x], spelled [cglob], applied to [args]: a call, except that a
     global value referenced bare stays a value ({!glob_is_nullary_function}). *)
-let apply_global x cglob args =
-  if args = [] && not (glob_is_nullary_function x) then cglob else mk_call cglob args
+let apply_global x (cglob : Cpp_ir.Lowered.Expr.t) args =
+  if args = [] && not (glob_is_nullary_function x) then cglob else Cpp_ir.Build.call cglob args
 
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
     [std::any].  Handles direct [Tany], erased-type constants (aliases for

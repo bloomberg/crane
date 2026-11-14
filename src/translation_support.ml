@@ -368,22 +368,18 @@ let apply_unit_void unit_void ty = if unit_void then Tvoid else ty
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor).
     Does NOT call [gen_expr] — it checks the extraction table directly. *)
-let mk_tt_expr () =
+let mk_tt_expr () : Cpp_ir.Lowered.Expr.t =
   match Table.resolve_tt_ctor () with
-  | Some tt_ref when Table.is_custom tt_ref ->
-    mk_cppglob tt_ref []
+  | Some tt_ref when Table.is_custom tt_ref -> mk_cppglob_ir tt_ref []
   | Some tt_ref ->
     let ind_ref, ctor_name =
       match tt_ref with
       | GlobRef.ConstructRef ((kn, i), cidx) ->
-        ( GlobRef.IndRef (kn, i),
-          Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) )
-      | _ ->
-        CErrors.anomaly (Pp.str "mk_tt_expr: tt is not a ConstructRef")
+        (GlobRef.IndRef (kn, i), Id.of_string (Common.enum_ctor_name_of_ref kn i cidx))
+      | _ -> CErrors.anomaly (Pp.str "mk_tt_expr: tt is not a ConstructRef")
     in
-    CPPenum_val (ind_ref, ctor_name)
-  | None ->
-    CErrors.anomaly (Pp.str "mk_tt_expr: could not resolve core.unit.tt")
+    Enum_value (ind_ref, ctor_name)
+  | None -> CErrors.anomaly (Pp.str "mk_tt_expr: could not resolve core.unit.tt")
 
 (** Whether [ty]'s codomain is a monad extracted as a reified tree. *)
 let codomain_is_reified_monad (ty : Miniml.ml_type) : bool =
@@ -430,8 +426,8 @@ let is_void_ified_ref (r : GlobRef.t) : bool =
     be used in value context.  Produces:
       [&]() { void_call(); return std::monostate{}; }()
     The call is executed for side effects; the IIFE returns the unit value. *)
-let wrap_void_call_as_value (call_expr : cpp_expr) : cpp_expr =
-  mk_iife None [Sexpr call_expr; Sreturn (Some (mk_tt_expr ()))]
+let wrap_void_call_as_value (call_expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  Cpp_ir.Build.iife None [Expression call_expr; Return (Some (mk_tt_expr ()))]
 
 (** Check whether an ML function expression [f] in [MLapp(f, args)] would
     produce a void-returning call in C++.  Handles:
@@ -913,11 +909,11 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
          because nested self-references are wrapped at the field level. *)
       Cpp_erasure.converting_ctor_ir orig_dst_ty [expr]
 
-(** Build a [CPPfun_call] for [ITree<R>::ret(...)].
-    When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
-let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
-  let itree_ty = Tid_external (Crane_rt.itree, [r_cpp]) in
-  mk_call (CPPqualified_t (itree_ty, Id.of_string "ret")) args
+(** Build a call of [ITree<R>::ret(...)].
+    When [r_cpp] is [void], generates [ITree<void>::ret()]. *)
+let mk_itree_ret (r_cpp : Cpp_ir.Lowered.Type.t) (args : Cpp_ir.Lowered.Expr.t list) : Cpp_ir.Lowered.Expr.t =
+  let itree_ty : Cpp_ir.Lowered.Type.t = External (Crane_rt.itree, [r_cpp]) in
+  Cpp_ir.Build.call (Type_member (itree_ty, Id.of_string "ret")) args
 
 (** Build [ITree<R>::ret(v)], or [ITree<void>::ret()] where there is no value
     to carry.  [r_cpp] is the C++ result type, [r_ml] the ML one, [v] the value.
@@ -927,9 +923,8 @@ let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
     tree like any other.  Spelling it [ITree<void>] instead loses the
     distinction between a computation that yields nothing and one that yields
     the trivial thing, and the two then meet in one match. *)
-let mk_itree_ret_for_value r_cpp r_ml v =
-  if r_cpp = Tvoid || ml_type_is_void r_ml then mk_itree_ret Tvoid []
-  else mk_itree_ret r_cpp [v]
+let mk_itree_ret_for_value (r_cpp : Cpp_ir.Lowered.Type.t) r_ml v =
+  if r_cpp = Void || ml_type_is_void r_ml then mk_itree_ret Void [] else mk_itree_ret r_cpp [v]
 
 (** Reify a monadic parameter type for ITree extraction.
 
@@ -1285,16 +1280,13 @@ let suspends_constructor ~self ~binder_type n ts =
     cell already holding its value, where a suspension would be a closure
     to allocate, run and free.  The thunk takes the variables [moved] by
     move where it is made. *)
-let suspend_ctor ~moved ty ctor args =
-  let thunk =
-    match
-      mk_lambda [] (Some (Tqualified (ty, ctor)))
-        [Sreturn (Some (CPPbraced (call_args args)))] ~capture:Closure
-    with
-    | CPPlambda l -> CPPlambda {l with cl_moved = moved}
+let suspend_ctor ~moved (ty : Cpp_ir.Lowered.Type.t) ctor (args : Cpp_ir.Lowered.Expr.t list) : Cpp_ir.Lowered.Expr.t =
+  let thunk : Cpp_ir.Lowered.Expr.t =
+    match Cpp_ir.Build.lambda [] (Some (Member (ty, ctor))) [Return (Some (Braced args))] ~capture:Stored with
+    | Lambda l -> Lambda {l with moved}
     | e -> e
   in
-  CPPsuspend (ty, thunk)
+  Suspend (ty, thunk)
 
 (** Run [f] in a fresh escape-analysis scope, restoring the enclosing one
     afterwards.  Escape analysis runs at several nesting levels (lambdas,
