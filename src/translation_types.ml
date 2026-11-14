@@ -2301,6 +2301,23 @@ let rec unfold_cpp_typedef env cpp_ty =
     | None -> cpp_ty )
   | _ -> cpp_ty
 
+(** {!unfold_cpp_typedef} in CppIR. *)
+let rec unfold_cpp_typedef_ir env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  match cpp_ty with
+  | In_namespace (_, inner) -> unfold_cpp_typedef_ir env inner
+  | Entity_application (GlobRef.ConstRef kn, args, _) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some ml_ty ->
+      let body = cpp_of_ml_ir env ml_ty in
+      let n_promoted =
+        let n = List.length (Table.promoted_type_params (GlobRef.ConstRef kn)) in
+        if List.length args >= n + Mlutil.type_maxvar ml_ty then n else 0
+      in
+      if args = [] then body
+      else Cpp_ir.Types.substitute (fun i -> if i >= 1 then List.nth_opt args (n_promoted + i - 1) else None) body
+    | None -> cpp_ty )
+  | _ -> cpp_ty
+
 (** Whether the pattern variable at de Bruijn index [i] holds a box, and so
     must be recovered with an [any_cast] before it is used at a concrete
     type.  Read off the recorded type rather than tracked alongside it: a

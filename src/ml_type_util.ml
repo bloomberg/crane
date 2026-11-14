@@ -98,6 +98,22 @@ let rec extract_tvar_map tmpl conc =
   | Tnamespace (_, t1), t2 | t1, Tnamespace (_, t2) -> extract_tvar_map t1 t2
   | _ -> []
 
+(** {!extract_tvar_map} in CppIR. *)
+let rec extract_tvar_map_ir (tmpl : Cpp_ir.Lowered.Type.t) (conc : Cpp_ir.Lowered.Type.t) :
+    (Names.Id.t * Cpp_ir.Lowered.Type.t) list =
+  match (tmpl, conc) with
+  | Variable (Index (_, Some id) | Named id), _ -> [(id, conc)]
+  | Entity_application (g1, tys1, _), Entity_application (g2, tys2, _)
+    when globref_equal g1 g2 && List.length tys1 = List.length tys2 ->
+    List.concat (List.map2 extract_tvar_map_ir tys1 tys2)
+  | Function (args1, ret1), Function (args2, ret2) when List.length args1 = List.length args2 ->
+    List.concat (List.map2 extract_tvar_map_ir args1 args2) @ extract_tvar_map_ir ret1 ret2
+  | Reference (k1, t1), Reference (k2, t2) when k1 = k2 -> extract_tvar_map_ir t1 t2
+  | Const t1, Const t2 -> extract_tvar_map_ir t1 t2
+  | In_namespace (_, t1), In_namespace (_, t2) -> extract_tvar_map_ir t1 t2
+  | In_namespace (_, t1), t2 | t1, In_namespace (_, t2) -> extract_tvar_map_ir t1 t2
+  | _ -> []
+
 (** Search an ML type for the first self-referential or mutually-recursive
     subtype, returning its type arguments. Recurses into [Tglob] type
     arguments and resolves [Tmeta] indirections.

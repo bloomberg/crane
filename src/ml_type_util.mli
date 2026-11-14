@@ -67,6 +67,10 @@ val extract_tvar_map :
   Minicpp.cpp_type ->
   Minicpp.cpp_type -> (Names.variable * Minicpp.cpp_type) list
 
+(** {!extract_tvar_map} in CppIR. *)
+val extract_tvar_map_ir :
+  Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> (Names.variable * Cpp_ir.Lowered.Type.t) list
+
 (** Find the arguments of a self- or mutually-recursive occurrence in a type. *)
 val find_self_ref_args :
   is_self_or_mutual:(Names.GlobRef.t -> bool) ->

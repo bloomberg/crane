@@ -2238,11 +2238,17 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | None -> by_var )
       | _ -> by_var
     in
+    let result_bindings () =
+      let names, m =
+        callee_result_bindings env x ~explicit:true (Option.map Legacy_minicpp_to_cpp_ir.lower_type expected_ty)
+      in
+      (names, List.map (fun (v, t) -> (v, Cpp_ir_to_legacy_minicpp.ty t)) m)
+    in
     let by_var =
       match expected_ty with
       | Some _ when by_var = [] -> (
         (* None written at all: every variable, if the callable binds each. *)
-        match callee_result_bindings env x ~explicit:true expected_ty with
+        match result_bindings () with
         | (_ :: _ as names), (_ :: _ as m) -> (
           let bound =
             List.mapi
@@ -2256,7 +2262,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           else by_var )
         | _ -> by_var )
       | Some _ when List.exists (fun (_, t) -> prints_as_any t) by_var -> (
-        match callee_result_bindings env x ~explicit:true expected_ty with
+        match result_bindings () with
         | names, (_ :: _ as m) -> fill_from (names, m) by_var
         | _ -> by_var )
       | _ -> by_var
@@ -4141,7 +4147,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
                 in
                 let ret_ml = codomain_after expected subst_pt in
                 ( match resolve_tmeta ret_ml with
-                | Miniml.Tvar (_, _) -> concrete_tvar_type
+                | Miniml.Tvar (_, _) -> Option.map Cpp_ir_to_legacy_minicpp.ty concrete_tvar_type
                 | _ ->
                   Some (cpp_of_ml env ret_ml) )
               | None -> None
@@ -4583,7 +4589,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
       | [inst], [Some inst_ty], _ :: method_targs
         when Core_elaborate.member_template_call ~lex:(current_lexenv ()) use ml_args ->
-        CPPscope (CPPtype_name inst_ty, Common.id_of_global Term id, method_targs)
+        CPPscope (CPPtype_name (Cpp_ir_to_legacy_minicpp.ty inst_ty), Common.id_of_global Term id, method_targs)
       | _ ->
         mk_cppglob ?yields:(glob_yields env id (Mlutil.Var_types.apply tys)) id
           all_type_args

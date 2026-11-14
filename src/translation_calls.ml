@@ -624,7 +624,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
                 (fun name -> List.find_opt (fun (v, _) -> Id.equal v name) m)
             with
             | Some (v, t') -> (
-              match erase_carrier_elements i (Legacy_minicpp_to_cpp_ir.lower_type t') with
+              match erase_carrier_elements i t' with
               | Some t'' -> Some (v, t'')
               | None -> None )
             | None -> None
@@ -692,7 +692,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         (* Use [concrete_tvar_type] when available (excess args case),
            otherwise fall back to the enclosing function's return type, at
            every variable of an erased type binder. *)
-        let t1 = Option.default ret_ty (Option.map Legacy_minicpp_to_cpp_ir.lower_type concrete_tvar_type) in
+        let t1 = Option.default ret_ty concrete_tvar_type in
         List.map
           (fun v -> (v, t1))
           (List.filter erased_type_binder (Option.cata Ml_schema.vars [] schema))
@@ -723,7 +723,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
   let apply regular =
     let regular = at_plain_positions regular in
     Template_application.plan abi
-      ~instance:(fun k -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (List.nth_opt instance_args k))
+      ~instance:(fun k -> List.nth_opt instance_args k)
       ~scheme:(fun v -> Scheme.Var.assoc_opt v regular)
   in
   let regular = build_type_args tyargs in
@@ -825,7 +825,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     let dictionaries =
       List.filteri
         (fun j _ -> j >= List.length instance_args - List.length carriers)
-        instance_args
+        (List.map Cpp_ir_to_legacy_minicpp.ty instance_args)
     in
     List.combine
       (List.filteri (fun j _ -> j < List.length dictionaries) carriers)
@@ -852,39 +852,43 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     [expected] is a callable and the codomain is not, the call is the callable
     -- an instance function passed as a dictionary -- and the callable's
     result is what the codomain meets. *)
-let callee_result_bindings env id ~explicit expected =
+let callee_result_bindings env id ~explicit (expected : Cpp_ir.Lowered.Type.t option) =
   match (expected, callee_ml_type id) with
   | Some exp, Some ml_ty ->
     let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
     let names =
       List.init n (fun i -> Generated_name.indexed "R" (i + 1))
     in
-    let cod =
-      match convert_ml_type_to_cpp_type env names (type_simpl ml_ty) with
-      | Tfun (_, c) -> c
+    let cod : Cpp_ir.Lowered.Type.t =
+      match cpp_ir_of_ml_type env names (type_simpl ml_ty) with
+      | Function (_, c) -> c
       | t -> t
     in
     (* A family is written applied at an erased index and declared plain: in
        the pattern it is the variable itself. *)
-    let cod = deapply_families cod in
+    let cod = deapply_families_ir cod in
     (* The enclosing function's result is this call's only where the call is
        what it returns, which nothing here says; a codomain with structure has
        to match it to count as evidence, a bare variable matches anything --
        [tfmap f (ops b)] inside [TFunctor_bundle] read [bundle<std::any>] for
        the list. *)
-    let bare_cod = match cod with Tvar _ -> true | _ -> false in
+    let bare_cod = match cod with Variable _ -> true | _ -> false in
+    let rec strip_param_spelling : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+      | Non_deduced t | Const t | Reference (_, t) -> strip_param_spelling t
+      | t -> t
+    in
     let exp =
-      let as_fun t = unfold_cpp_typedef env (strip_param_spelling t) in
+      let as_fun t = unfold_cpp_typedef_ir env (strip_param_spelling t) in
       match (as_fun exp, cod) with
-      | Tfun (_, c), (Tglob _ | Tnamespace _) -> c
+      | Function (_, c), (Entity_application _ | In_namespace _) -> c
       | e, _ -> e
     in
     if (not explicit) && bare_cod then (names, [])
     else
       ( names,
         List.filter
-          (fun (_, t) -> not (prints_as_any t))
-          (extract_tvar_map cod (unfold_cpp_typedef env exp)) )
+          (fun (_, t) -> not (Cpp_ir.Types.prints_as_any t))
+          (Ml_type_util.extract_tvar_map_ir cod (unfold_cpp_typedef_ir env exp)) )
   | _ -> ([], [])
 
 (** An instance's type argument extraction could not express -- a family
@@ -1366,7 +1370,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
   in
   let typeclass_type_args =
     List.map
-      (ml_arg_to_template_type ?expected:expected_result env)
+      (ml_arg_to_template_type_ir ?expected:expected_result env)
       typeclass_ml_args
   in
   (* The families the call's instances were found to have: the slots their
@@ -1397,7 +1401,7 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
     if (not (Mlutil.Var_types.is_empty tys)) || excess_args = [] then
       None
     else
-      match current_cpp_return_type () with
+      match current_cpp_return_type_ir () with
       | None -> None
       | Some ret_ty ->
         match find_type_opt id with
@@ -1411,12 +1415,12 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
               List.filter_map
                 (fun ml_arg ->
                   match ml_arg with
-                  | MLrel (i, _) -> Option.map (convert_ml_type_to_cpp_type env tvars) (parameter_type env i)
+                  | MLrel (i, _) -> Option.map (cpp_ir_of_ml_type env tvars) (parameter_type env i)
                   | _ -> None )
                 excess_args
             in
             if List.length excess_cpp_tys = List.length excess_args then
-              Some (Tfun (excess_cpp_tys, ret_ty))
+              Some (Cpp_ir.Type.Function (excess_cpp_tys, ret_ty))
             else
               None
           | _ -> None )
@@ -1448,8 +1452,8 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
            callee_result_bindings env id
              ~explicit:(expected_ty <> None)
              ( match expected_ty with
-             | Some _ -> expected_ty
-             | None -> current_cpp_return_type () ) ) )
+             | Some t -> Some (Legacy_minicpp_to_cpp_ir.lower_type t)
+             | None -> current_cpp_return_type_ir () ) ) )
   in
   {
     cp_instantiated = inst;
@@ -1681,7 +1685,7 @@ let argument_position ~local_callable env id plan i ml_arg =
         |> map_cpp_type (function
              | Tvar (Tv_index (_, Some v) | Tv_named v) as t -> (
                match List.find_opt (fun (v', _) -> Id.equal v v') m with
-               | Some (_, t') -> t'
+               | Some (_, t') -> Cpp_ir_to_legacy_minicpp.ty t'
                | None -> t )
              | t -> t )
       in

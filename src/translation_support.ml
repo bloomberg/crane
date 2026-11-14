@@ -1428,6 +1428,10 @@ let type_arg_omission r =
 let deapply_families =
   map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t)
 
+(** {!deapply_families} in CppIR. *)
+let deapply_families_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t =
+  Cpp_ir.Types.map (function Apply ((Variable _ as v), _) -> v | t -> t)
+
 (** The number of type parameters [g] is written with in C++: the promoted
     variables it leads with ({!Table.promoted_type_params}), then an inductive's
     parameters or the variables of a type alias's body.  A family alias under
@@ -3510,7 +3514,7 @@ type call_plan = {
           a family it erased refined from what the arguments state, or, where
           the position states none, the arguments' or the enclosing
           function's return type. *)
-  cp_instance_type_args : cpp_type option list;
+  cp_instance_type_args : Cpp_ir.Lowered.Type.t option list;
       (** The template argument each class-instance argument is passed as. *)
   cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
       (** The families the call's instances were found to have
@@ -3518,7 +3522,7 @@ type call_plan = {
           arguments are generated against erase them the same way. *)
   cp_tvars : Id.t list;
       (** The enclosing declaration's type variable names. *)
-  cp_concrete_tvar_type : cpp_type option;
+  cp_concrete_tvar_type : Cpp_ir.Lowered.Type.t option;
       (** For a call with no written type arguments and excess value
           arguments, the concrete type of its polymorphic result: the excess
           arguments' types to the enclosing function's return type. *)
@@ -3526,7 +3530,7 @@ type call_plan = {
       (** Promoted variables bound to concrete C++ types by the concrete
           instances the call passes, so that constructors in its arguments
           use those types instead of [std::any]. *)
-  cp_result_tvar_map : (Id.t list * (Id.t * cpp_type) list) Lazy.t;
+  cp_result_tvar_map : (Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) Lazy.t;
       (** The callee's variables as the call's expected result instantiates
           them, read for a parameter the substitution left erased. *)
 }
