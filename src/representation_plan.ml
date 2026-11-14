@@ -412,7 +412,7 @@ let region ~outer body =
             let ids, body = slot_refined_lambda (Common.empty_env ()) ~expected_ml_ty ids body in
             (* A callable the callee deduces is written against
                [const auto &] where the slot's domain is a box
-               ({!Translation_calls.deduce_erased_domains}). *)
+               ({!Translation_calls.deduce_erased_domains_ir}). *)
             let deduced = Callable_abi.deduces_callable use.callee (Param_pos.of_regular ~leading i) in
             let slot_ty =
               match param_ml_ty i with

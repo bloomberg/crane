@@ -684,7 +684,7 @@ let is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     dom <> [] && List.for_all Cpp_ir.Types.prints_as_any dom && Cpp_ir.Types.prints_as_any cod
   | _ -> false
 
-(** [partially_erased_fun_ty t] -- true of a function type that erased only its
+(** [partially_erased_fun_ty_ir t] -- true of a function type that erased only its
     arguments and kept a concrete result, as
     [std::function<uint64_t(std::any)>] has.  A closure landing in such a slot
     was written at the concrete domain, so it reaches the slot through the
@@ -707,7 +707,7 @@ let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     under which a closure written at the concrete domain needs the
     [crane_erase_fn] adapter: nothing converts to such a signature on its own.
 
-    Strictly weaker than {!partially_erased_fun_ty}, and neither implies nor is
+    Strictly weaker than {!partially_erased_fun_ty_ir}, and neither implies nor is
     implied by {!is_fully_erased_fun_ty}. *)
 let erased_domain_fun_ty t =
   match classify_fun_erasure t with
@@ -754,9 +754,9 @@ let materialise_opaque_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     - [pair<uint64_t, any>] → false ([uint64_t] is concrete)
     Used to detect fully-erased tuple chains where the runtime encoding
     stores [pair<any,any>] at every level regardless of the static type. *)
-let rec is_all_erased = function
-  | ty when prints_as_any ty -> true
-  | Tglob (_, args, _) when args <> [] -> List.for_all is_all_erased args
+let rec is_all_erased : Cpp_ir.Lowered.Type.t -> bool = function
+  | ty when Cpp_ir.Types.prints_as_any ty -> true
+  | Entity_application (_, args, _) when args <> [] -> List.for_all is_all_erased args
   | _ -> false
 
 (** [extract_template_args ty] — unwrap namespace and shared_ptr wrappers

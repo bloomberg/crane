@@ -1318,7 +1318,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     (* What the lambda takes by move as it is made. *)
     let moved_captures = moved_names env (Ownership_ir.captures (!tctx).move_plan a) in
     (* Whether a binder becomes a C++ parameter: see
-       {!Translation_types.lambda_binder_emitted}. *)
+       {!Translation_types.lambda_binder_emitted_ir}. *)
     let binder_emitted ~body binders i ty = lambda_binder_emitted_ir env ~expected_ty ~body binders i ty in
     (* A slot spelled [std::type_identity_t<Id_<...>>] -- a definitional
        class, taken out of deduction -- is still a function type, and the
@@ -2009,9 +2009,10 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
           let local_tvars =
             List.init (List.fold_left max 0 all_tvars) (fun k -> local_tvar (k + 1))
           in
-          let local_ty ty = template_arg_of_ml_type ~site:Through_tvar env local_tvars ty in
+          let local_ty ty = template_arg_of_ml_type_ir ~site:Through_tvar env local_tvars ty in
+          let local_var j : Cpp_ir.Lowered.Type.t = Variable (Index (j, Some (local_tvar j))) in
           (* A forwarding parameter, and the argument that forwards it. *)
-          let forwarding = Tref (Forwarding, Tauto) in
+          let forwarding : Cpp_ir.Lowered.Type.t = Reference (Forwarding, Auto) in
           let forward x = CPPforward (Texpr_type x, x) in
           (* What the callee returns once given its value arguments, in the
              lambda's own variables. *)
@@ -2019,18 +2020,18 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
           (* The lambda returns what the call does: its type where every
              variable in it is named, [decltype(auto)] -- the call's own
              answer -- where one is not. *)
-          let lambda ?ret tparams params call =
-            let ret =
+          let lambda ?ret tparams (params : Cpp_ir.Lowered.Type.t list) call =
+            let ret : Cpp_ir.Lowered.Type.t =
               match ret with
               | Some t
-                when (not (Ml_type_util.has_unnamed_tvar t)) && not (prints_as_any t)
+                when (not (Ml_type_util.has_unnamed_tvar_ir t)) && not (Cpp_ir.Types.prints_as_any t)
                 ->
                 t
-              | _ -> Tdecltype_auto
+              | _ -> Decltype_auto
             in
             mk_lambda ~tparams
-              (List.map2 (fun ty id -> (ty, Some id)) params arg_ids)
-              (Some ret) [Sreturn (Some call)] ~capture:Closure
+              (List.map2 (fun ty id -> (Cpp_ir_to_legacy_minicpp.ty ty, Some id)) params arg_ids)
+              (Some (Cpp_ir_to_legacy_minicpp.ty ret)) [Sreturn (Some call)] ~capture:Closure
           in
           if non_deducible_tvars <> [] && not (IntSet.is_empty deducible_set)
           then
@@ -2042,7 +2043,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
               List.map
                 (function
                   | Miniml.Tarr _ -> forwarding
-                  | ty -> Tref (Lvalue, Tconst (local_ty ty)) )
+                  | ty -> Reference (Lvalue, Const (local_ty ty)) )
                 non_dummy_param_tys
             in
             let fwd_args =
@@ -2051,34 +2052,27 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                   match ty with Miniml.Tarr _ -> forward x | _ -> x )
                 arg_vars non_dummy_param_tys
             in
-            let invoke_result =
-              Tid_external
+            let invoke_result : Cpp_ir.Lowered.Type.t =
+              External
                 ( "std::invoke_result_t",
-                  Tref (Lvalue, Texpr_type (List.hd arg_vars))
-                  :: List.map (fun j -> Tref (Lvalue, Tvar (Tv_index (j, Some (local_tvar j)))))
-                       deducible_tvars )
+                  Reference (Lvalue, Type_of (Local (List.hd arg_ids)))
+                  :: List.map (fun j -> Cpp_ir.Type.Reference (Lvalue, local_var j)) deducible_tvars )
             in
             let ty_args =
-              written_at_variables r
+              written_at_variables_ir r
                 (List.map
-                   (fun i ->
-                     ( i,
-                       if IntSet.mem i deducible_set then Tvar (Tv_index (i, Some (local_tvar i)))
-                       else invoke_result ) )
+                   (fun i -> (i, if IntSet.mem i deducible_set then local_var i else invoke_result))
                    (List.sort compare (deducible_tvars @ non_deducible_tvars)) )
             in
             let ret =
-              Minicpp.subst_cpp_tvars
-                (fun i ->
-                  if IntSet.mem i deducible_set then
-                    Some (Tvar (Tv_index (i, Some (local_tvar i))))
-                  else Some invoke_result )
+              Cpp_ir.Types.substitute
+                (fun i -> if IntSet.mem i deducible_set then Some (local_var i) else Some invoke_result)
                 (local_ty result_ml)
             in
             lambda ~ret
               (List.map local_tvar deducible_tvars)
               params
-              (mk_call (mk_cppglob r ty_args) fwd_args)
+              (mk_call (mk_cppglob r (List.map Cpp_ir_to_legacy_minicpp.ty ty_args)) fwd_args)
           else
             (* Simple forwarding.  A parameter whose type names no variable is
                written at it: a value stored behind [std::any] is then unboxed
@@ -2103,8 +2097,8 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                   match ty with
                   | Miniml.Tarr _ -> forwarding
                   | _ when IntSet.is_empty (spelled_tvars_of IntSet.empty ty) ->
-                    Tref (Lvalue, Tconst (convert_ml_type_to_cpp_type env [] ty))
-                  | _ when own_index -> Tref (Lvalue, Tconst Tauto)
+                    Reference (Lvalue, Const (cpp_ir_of_ml_type env [] ty))
+                  | _ when own_index -> Reference (Lvalue, Const Auto)
                   | _ -> forwarding )
                 non_dummy_param_tys
             in
@@ -2123,7 +2117,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
             let by_var =
               List.map
                 (fun (v, ty) ->
-                  (Scheme.Var.ordinal v, convert_ml_type_to_cpp_type env inner_tvars ty) )
+                  (Scheme.Var.ordinal v, cpp_ir_of_ml_type env inner_tvars ty) )
                 (Mlutil.Var_types.bindings tys_inner)
             in
             (* An erased argument is left to deduction -- unless nothing can
@@ -2132,19 +2126,20 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                too, takes the tree at [std::any].  With no argument given at
                all -- the index is this lambda's own type binder -- every
                variable is such a one, since none is deducible here. *)
-            let by_var =
+            let by_var : (int * Cpp_ir.Lowered.Type.t) list =
               if own_index then
-                List.init (List.fold_left max 0 all_tvars) (fun k -> (k + 1, Tany))
-              else if non_deducible_tvars = [] then List.filter (fun (_, t) -> t <> Tany) by_var
-              else if by_var = [] then List.map (fun i -> (i, Tany)) non_deducible_tvars
+                List.init (List.fold_left max 0 all_tvars) (fun k -> (k + 1, Cpp_ir.Type.Any))
+              else if non_deducible_tvars = [] then List.filter (fun (_, t) -> t <> Cpp_ir.Type.Any) by_var
+              else if by_var = [] then List.map (fun i -> (i, Cpp_ir.Type.Any)) non_deducible_tvars
               else by_var
             in
             let ret =
-              Minicpp.subst_cpp_tvars
+              Cpp_ir.Types.substitute
                 (fun i -> List.assoc_opt i by_var)
-                (convert_ml_type_to_cpp_type env [] result_ml)
+                (cpp_ir_of_ml_type env [] result_ml)
             in
-            lambda ~ret [] params (mk_call (mk_cppglob r (written_at_variables r by_var)) fwd_args)
+            lambda ~ret [] params
+              (mk_call (mk_cppglob r (List.map Cpp_ir_to_legacy_minicpp.ty (written_at_variables_ir r by_var))) fwd_args)
         else
           (* Every binder was a type: the body is the value the slot takes. *)
           gen_expr ?expected_ty ~slot env a
@@ -3199,7 +3194,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
         let ft_opt, expr =
           (* A constructor argument returns its own value, not the enclosing
              function's, so the ambient return type must not reach it. *)
-          with_cpp_return_type None (fun () ->
+          with_cpp_return_type_ir None (fun () ->
           let ft_opt =
             try Some (List.nth field_types i)
             with Failure _ | Invalid_argument _ -> None
@@ -3340,20 +3335,21 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
         | (_, rty, _, _) :: _ -> rty
         | [] -> typ
       in
-      let r = cpp_of_ml env branch_rty in
-      if is_cpp_unit_type r
+      let r = cpp_of_ml_ir env branch_rty in
+      if is_cpp_unit_type_ir r
          || ml_type_is_void_call branch_rty
-      then Tvoid else r
+      then Cpp_ir.Type.Void else r
     in
     let stmts =
       let ret =
-        if iife_ret = Tvoid then Some Tvoid
-        else current_cpp_return_type ()
+        match iife_ret with
+        | Void -> Some iife_ret
+        | _ -> current_cpp_return_type_ir ()
       in
-      with_cpp_return_type ret (fun () ->
+      with_cpp_return_type_ir ret (fun () ->
           gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv case_occ )
     in
-    mk_iife (Some iife_ret) stmts
+    mk_iife (Some (Cpp_ir_to_legacy_minicpp.ty iife_ret)) stmts
   | MLcase (typ, t, pv, case_occ)
     when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
     let ids, r, pat, body = pv.(0) in
@@ -4311,8 +4307,8 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
               unchanged; a later pass (e.g. [gen_match_branch]'s field
               substitution) supplies the correct cast at its own,
               properly-scoped [tvars]. *)
-           && erase_unresolved_tvars (cpp_of_ml env param_ty)
-              = cpp_of_ml env param_ty ->
+           && erase_unresolved_tvars_ir (cpp_of_ml_ir env param_ty)
+              = cpp_of_ml_ir env param_ty ->
       let cpp_ty = cpp_of_ml env param_ty in
       ( match strip_ns_tglob cpp_ty with
       | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
@@ -4853,7 +4849,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               let from_cod =
                 Option.map
                   (fun c ->
-                    cpp_of_ml env (ml_drop_arrows (List.length excess) c) )
+                    cpp_of_ml_ir env (ml_drop_arrows (List.length excess) c) )
                   cod_inst
               in
               (* The instantiated codomain does not always name a type to
@@ -4861,10 +4857,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                  application went through the boxed convention.  The position
                  the call sits in then says what the value is. *)
               match from_cod with
-              | Some c when states_unboxed_target c -> from_cod
-              | _ -> expected_spelled
+              | Some c when states_unboxed_target_ir c -> from_cod
+              | _ -> expected_ty
             in
-            unbox_into recovered_at applied
+            unbox_into_ir recovered_at applied
           else
             (* A codomain instantiated at a type the call erased -- [resum]'s
                [C a b] at [C := IFun], a category over families -- is a
@@ -5694,10 +5690,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
         | MLrel (j, occ) when read_is_boxed j occ ->
           let inner = gen_expr ~slot:arg_slot env x in
-          let expected = param_expected_cpp_ty env callee_param_tys i in
+          let expected = param_expected_cpp_ty_ir env callee_param_tys i in
           ( match expected with
             | Some ty ->
-              Cpp_erasure.unbox (erase_type_args_to_any ty) inner
+              Cpp_erasure.unbox (erase_type_args_to_any (Cpp_ir_to_legacy_minicpp.ty ty)) inner
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
@@ -5963,12 +5959,12 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let body_stmts =
     (
       let inner_ret =
-        match current_cpp_return_type () with
-        | Some Tvoid -> None
+        match current_cpp_return_type_ir () with
+        | Some Void -> None
         | rt -> rt
       in
       with_scope @@ fun () ->
-      with_cpp_return_type inner_ret (fun () ->
+      with_cpp_return_type_ir inner_ret (fun () ->
           populate_erased_field_env
             ?scrut_db:(Option.map (fun db -> db + n_pat_vars) scrut_db)
             ~cname ~typ ~env ~n_pat_vars
@@ -6315,7 +6311,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)
   let has_used_fields = List.exists Fun.id dummies in
-  { smb_ctor_type = ctor_type;
+  { smb_ctor_type = Cpp_ir_to_legacy_minicpp.ty ctor_type;
     smb_var = (if has_used_fields then Some sname else None);
     smb_field_bindings =
       (if has_used_fields then
@@ -6407,20 +6403,21 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
       in
       Option.map (fun (_, _, _, body) -> gen_stmts env (fun x -> Sreturn (Some x)) body) wild_br
     in
-    let void_ret = iife_void_return env typ pv in
+    let void_ret = iife_void_return_ir env typ pv in
     let branches, default =
       let ret =
-        if void_ret = Some Tvoid then Some Tvoid
-        else current_cpp_return_type ()
+        match void_ret with
+        | Some Void -> void_ret
+        | _ -> current_cpp_return_type_ir ()
       in
-      with_cpp_return_type ret (fun () ->
+      with_cpp_return_type_ir ret (fun () ->
           let branches = gen_enum_branches (Array.to_list pv) in
           (branches, gen_default_stmts ()) )
     in
     let body = [Sswitch (scrutinee, ind_ref, branches, default)] in
     let iife_ret_opt =
       match void_ret with
-      | Some _ as v -> v
+      | Some _ -> Some Tvoid
       | None -> iife_closure_return env typ pv body
     in
     mk_iife iife_ret_opt body
@@ -6521,8 +6518,8 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
     in
     let branches, wildcard = gen_branches 0 (Array.to_list pv) in
     let iife_ret_opt =
-      match iife_void_return env typ pv with
-      | Some _ as v -> v
+      match iife_void_return_ir env typ pv with
+      | Some _ -> Some Tvoid
       | None ->
         iife_closure_return env typ pv [Smatch (scrut, branches, wildcard)]
     in
@@ -6849,7 +6846,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
      below it is rebound to the generated C++ expression, and inside
      [gen_cases] the name belongs to a branch body. *)
   let scrut_db = scrutinee_binder t in
-  let typ_ir = Legacy_minicpp_to_cpp_ir.lower_type typ in
+  let typ_ir = typ in
   let scrut_expected =
     match flatten_app t with
     | MLapp (MLglob {callee = r; _}, _)
@@ -6889,15 +6886,15 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
       let g = Option.get pair_g_opt in
       (Cpp_erasure.unbox (Tglob (g, [Tany; Tany], [])) (t), true, None)
     end
-    else if (scrut_is_mlmagic || (scrut_is_magic && prints_as_any typ)
+    else if (scrut_is_mlmagic || (scrut_is_magic && Cpp_ir.Types.prints_as_any typ)
              || scrut_is_cpp_erased)
-            && not (prints_as_any concrete_match_type) then
+            && not (Cpp_ir.Types.prints_as_any concrete_match_type) then
       (* Erase template args one level deep, preserving nested generic structure.
          E.g., deque<pair<T1,T2>> → deque<pair<any,any>>, deque<T> → deque<any>. *)
-      let erase_tparams = function
-        | Tglob (_, [], _) -> Tany
-        | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
-        | _ -> Tany
+      let erase_tparams : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+        | Entity_application (_, [], _) -> Any
+        | Entity_application (g2, args2, ns2) -> Entity_application (g2, List.map (fun _ -> Cpp_ir.Type.Any) args2, ns2)
+        | _ -> Any
       in
       (* Canonical erased shape for a LIST scrutinee is [deque<std::any>] -- a
          bare [std::any] per element -- not a structure-preserving
@@ -6907,24 +6904,24 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
          structure-preserving shape instead would throw [std::bad_any_cast]
          at runtime.  See the matching invariant in [gen_expr]'s
          [MLrel]/[MLmagic] cases. *)
-      let cast_ty = match concrete_match_type with
-        | Tglob (g, (_ :: _), ns) when is_list_global g ->
-          Tglob (g, [Tany], ns)
-        | Tglob (g, (_ :: _ as args), ns) when scrut_is_mlmagic ->
-          Tglob (g, List.map erase_tparams args, ns)
+      let cast_ty : Cpp_ir.Lowered.Type.t = match concrete_match_type with
+        | Entity_application (g, (_ :: _), ns) when is_list_global g ->
+          Entity_application (g, [Any], ns)
+        | Entity_application (g, (_ :: _ as args), ns) when scrut_is_mlmagic ->
+          Entity_application (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
-      (Cpp_erasure.unbox cast_ty t, false, Some cast_ty)
+      (Cpp_erasure.unbox (Cpp_ir_to_legacy_minicpp.ty cast_ty) t, false, Some cast_ty)
     else
       (t, false, None)
   in
   (* When [fix_a_fired], pass [pair<any,any>] as the [Scustom_case] type so
      that {!Cpp_erasure.lower_boxed_reads} reads the scrutinee at
      [pair<any,any>] instead of the concrete nested pair type. *)
-  let case_typ =
+  let case_typ : Cpp_ir.Lowered.Type.t =
     if fix_a_fired then
       match pair_g_opt with
-      | Some g -> Tglob (g, [Tany; Tany], [])
+      | Some g -> Entity_application (g, [Any; Any], [])
       | None -> typ
     else
       (* The scrutinee is read at the type it was cast to, which is what a
@@ -7228,7 +7225,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   let cases = gen_cases 0 (Array.to_list pv) in
   cache_prefix @
   [ Scustom_case
-      ( case_typ,
+      ( Cpp_ir_to_legacy_minicpp.ty case_typ,
         scrut,
         temps,
         cases,
@@ -7292,7 +7289,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   (* Statements open a position of their own and state no type for it: the
      value a [return] here carries goes to the enclosing function, not to the
      position the caller's expression was being built for.  What a tail
-     statement lands in is {!with_cpp_return_type}, which
+     statement lands in is {!with_cpp_return_type_ir}, which
      {!position_cpp_ty_ir} falls back to. *)
   match ast with
   | MLletin (_, let_ty, (MLfix (x, ids, funs, cofix, occ) as fix_term), b, let_occ) as _whole ->
@@ -8803,9 +8800,9 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
      function around it builds from two calls. *)
   let fix_return_type =
     let n_values = List.length (List.filter (fun (_, t) -> not (erased_by_extraction t)) ids) in
-    match Option.map (cpp_of_ml env) (ml_codomain_after n_values ty) with
-    | Some t when not (exists_cpp_type prints_as_any t) -> Some t
-    | _ -> current_cpp_return_type ()
+    match Option.map (cpp_of_ml_ir env) (ml_codomain_after n_values ty) with
+    | Some t when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) -> Some t
+    | _ -> current_cpp_return_type_ir ()
   in
   (* The local fixpoint at [local], of one member, lowered as a machine with
      a stack of frames ({!local_fix_stmts}, or as the entry of the machine
@@ -8829,7 +8826,7 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
   let result =
     ( (renamed_n, ty),
       ids,
-      with_cpp_return_type fix_return_type (fun () ->
+      with_cpp_return_type_ir fix_return_type (fun () ->
           with_region ~owned:owned_params ?resumes ?certain f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
       parameter_binders env ids )
   in

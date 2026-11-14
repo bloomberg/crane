@@ -33,7 +33,7 @@
     parameter's ML type at the call's reading
     ({!Translation_types.slot_refined_lambda},
     {!Core_elaborate.instantiate}).  Its parameters are declared and assigned
-    as lowering declares them ({!Translation_types.lambda_binder_emitted},
+    as lowering declares them ({!Translation_types.lambda_binder_emitted_ir},
     {!Translation_types.lambda_param_cpp_type},
     {!Translation_types.lambda_param_assigned}), against the C++ slot the
     plan reads off the position: a global's parameter type at the call's

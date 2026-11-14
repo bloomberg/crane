@@ -226,7 +226,7 @@ let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps
    inferred from the value argument (e.g. [bool] from [true : bool])
    would produce an incompatible template instantiation
    ([SigT<std::any, Bool0>] vs. the declared
-   [SigT<std::any, List<std::any>>]).  {!index_erase_type} is the
+   [SigT<std::any, List<std::any>>]).  {!index_erase_type_ir} is the
    same erasure the type side applies to those positions in
    {!convert_ml_type_to_cpp_type}, so the two agree by construction. *)
 let erase_past_type_arg ts_updated temps =
@@ -805,7 +805,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
      C++ type with an ML reading to take back. *)
   let ty =
     (* With no slot of its own, a constructor in a tail statement lands in
-       the enclosing function's result ({!with_cpp_return_type}, as
+       the enclosing function's result ({!with_cpp_return_type_ir}, as
        {!position_cpp_ty_ir} reads it). *)
     let expected =
       match expected_ty with

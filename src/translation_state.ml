@@ -100,7 +100,7 @@ type translation_ctx = {
      body pushes shifts a parameter's index. *)
   current_parameters : Core_binder.t list;
   (* C++ return type of the enclosing function, set by the function and
-     instance generators ({!with_cpp_return_type}). Used to recover erased
+     instance generators ({!with_cpp_return_type_ir}). Used to recover erased
      template type args at call sites where C++ can't deduce them from lambda
      arguments.  CppIR: planning reads it as it is, and a reader still
      building MiniCpp raises it ({!current_cpp_return_type}). *)
@@ -369,11 +369,6 @@ let with_cpp_return_type_ir (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a)
     (fun t -> tctx := { !tctx with current_cpp_return_type = t })
     ty f
 
-(** {!with_cpp_return_type_ir} for a producer that computed the type as
-    MiniCpp: lowered here. *)
-let with_cpp_return_type (ty : cpp_type option) (f : unit -> 'a) : 'a =
-  with_cpp_return_type_ir (Option.map Legacy_minicpp_to_cpp_ir.lower_type ty) f
-
 (** The enclosing function's C++ return type
     ({!translation_ctx.current_cpp_return_type}). *)
 let current_cpp_return_type_ir () : Cpp_ir.Lowered.Type.t option = (!tctx).current_cpp_return_type
@@ -444,6 +439,11 @@ let spells_bare r = List.exists (GlobRef.CanOrd.equal r) (local_inductives_in_sc
 let inductive_type r args es =
   let t = Tglob (r, args, es) in
   if spells_bare r then t else Tnamespace (r, t)
+
+(** {!inductive_type} in CppIR. *)
+let inductive_type_ir r args es : Cpp_ir.Lowered.Type.t =
+  let t : Cpp_ir.Lowered.Type.t = Entity_application (r, args, es) in
+  if spells_bare r then t else In_namespace (r, t)
 
 (** [with_lifted_fixpoint occurrence f] runs [f] generating the members of
     the local fixpoint at [occurrence] as lifted helpers

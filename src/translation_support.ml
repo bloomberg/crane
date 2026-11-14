@@ -3093,11 +3093,6 @@ let apply_hkt_tyctors_ir g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered
         | _ -> t )
     temps
 
-(** {!apply_hkt_tyctors_ir} over MiniCpp types. *)
-let apply_hkt_tyctors g temps =
-  List.map Cpp_ir_to_legacy_minicpp.ty
-    (apply_hkt_tyctors_ir g (List.map Legacy_minicpp_to_cpp_ir.lower_type temps))
-
 (** The name a type variable carries in [tvars], where it has one.  MiniML
     numbers them from one, and a scope shorter than the type -- a declaration
     read before its own quantifiers are in hand -- simply leaves the variable

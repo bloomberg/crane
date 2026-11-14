@@ -458,7 +458,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type (Some method_ret_ty) @@ fun () ->
+            with_cpp_return_type_ir (Some (Legacy_minicpp_to_cpp_ir.lower_type method_ret_ty)) @@ fun () ->
             if bodies then begin_body ~owner:name ();
             if List.for_all (fun b -> b.mb_kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either

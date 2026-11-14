@@ -386,7 +386,7 @@ val partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
 (** True of a function type that erased at least one argument, whichever way its
     result went: the condition under which a closure needs the [crane_erase_fn]
     adapter to reach the slot.  Strictly weaker than
-    {!partially_erased_fun_ty}, and independent of {!is_fully_erased_fun_ty}. *)
+    {!partially_erased_fun_ty_ir}, and independent of {!is_fully_erased_fun_ty}. *)
 val erased_domain_fun_ty : Minicpp.cpp_type -> bool
 
 (** {!erased_domain_fun_ty} in CppIR. *)
@@ -409,7 +409,7 @@ val materialise_opaque : Minicpp.cpp_type -> Minicpp.cpp_type
 val materialise_opaque_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether every component of a C++ type is erased. *)
-val is_all_erased : Minicpp.cpp_type -> bool
+val is_all_erased : Cpp_ir.Lowered.Type.t -> bool
 
 (** The template arguments of a C++ type. *)
 val extract_template_args : Minicpp.cpp_type -> Minicpp.cpp_type list

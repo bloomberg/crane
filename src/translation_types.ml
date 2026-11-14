@@ -2554,7 +2554,7 @@ let dict_carrier_type_args env tvars id args =
   let* cod =
     dict_carrier_ml_type ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref id args
   in
-  (* Abstracted over the traversed type, as {!apply_hkt_tyctors} does: the
+  (* Abstracted over the traversed type, as {!apply_hkt_tyctors_ir} does: the
      class applies its carrier to it and this idiom writes it first, so the two
      agree on one body and the printer mints one alias for both.
 
@@ -3222,6 +3222,9 @@ let classify_erasure = function
     structural, cannot see through. *)
 let spells_as_any t = prints_as_any t || resolves_to_any_type t
 
+(** {!spells_as_any} in CppIR. *)
+let spells_as_any_ir t = Cpp_ir.Types.prints_as_any t || resolves_to_any_type_ir t
+
 (** [coerce ?term ?from ~into expr] adapts [expr] across a representation
     boundary: it is the single place that decides between boxing, [any_cast],
     [crane_erase_fn] and doing nothing.
@@ -3563,9 +3566,9 @@ let recover_erased_scrutinee env ~is_magic typ expr =
 (** Build the qualified constructor struct type for a pattern match branch.
 
     For [list<int>::Cons], this produces
-    [Tqualified(Tnamespace(r, Tglob(r, temps, \[\])), ctor_name)].
+    [Member (In_namespace (r, Entity_application (r, temps, \[\])), ctor_name)].
     Local inductives omit the namespace wrapper to avoid double qualification. *)
-let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
+let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : Cpp_ir.Lowered.Type.t =
   let ctor_name = ctor_struct_id_of_ref cname in
   match typ with
   | Tglob (r, tys, _) ->
@@ -3594,11 +3597,11 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
        argument at the flat arity a stored value has (see
        {!template_arg_of_ml_type}). *)
     let temps =
-      ind_promoted_type_args r
-      @ apply_hkt_tyctors r (template_params_of_ml ~site:Declared env tys)
+      ind_promoted_type_args_ir r
+      @ apply_hkt_tyctors_ir r (template_params_of_ml_ir ~site:Declared env tys)
     in
-    Tqualified (inductive_type r temps [], ctor_name)
-  | _ -> Tid (ctor_name, [])
+    Member (inductive_type_ir r temps [], ctor_name)
+  | _ -> Named (ctor_name, [])
 
 (** [unbox_value into e] recovers [e], a value known to come out of a box, at
     [into]: {!coerce} from [std::any]. *)
@@ -3643,8 +3646,8 @@ type custom_scrutinee = {
   cs_cpp_erased : bool;  (** a variable whose binder holds a box *)
   cs_magic : bool;  (** either, or a variable whose ML type erases to a box *)
   cs_callee_ret_erased : bool;  (** a call whose declared codomain is a box *)
-  cs_typ : cpp_type;  (** the annotation, converted *)
-  cs_concrete : cpp_type;  (** the inductive the patterns recover, where [cs_typ] erases *)
+  cs_typ : Cpp_ir.Lowered.Type.t;  (** the annotation, converted *)
+  cs_concrete : Cpp_ir.Lowered.Type.t;  (** the inductive the patterns recover, where [cs_typ] erases *)
   cs_pair : GlobRef.t option;  (** that inductive, when it is a pair *)
   cs_pair_any_cast : bool;  (** the pair is read back as [pair<any, any>], every field a box *)
 }
@@ -3706,19 +3709,19 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
              [prints_as_any] catches the codomain a callee left as an erased
              type argument, which converts to a dummy glob rather than to
              [Tany]. *)
-          let rty_cpp = cpp_of_ml env rty in
-          spells_as_any rty_cpp
+          let rty_cpp = cpp_of_ml_ir env rty in
+          spells_as_any_ir rty_cpp
         | None -> false )
       | None -> false )
     | _ -> false
   in
-  let typ = cpp_of_ml env typ in
+  let typ = cpp_of_ml_ir env typ in
   (* [concrete_match_type]: when [typ] is erased ([std::any]), recover the
      actual inductive type from the first branch's pattern constructor and
      its field types.  Used for non-pair matches (e.g. option, variant) where
      we need to emit [any_cast<ConcreteType>(scrut)]. *)
-  let concrete_match_type =
-    if spells_as_any typ || scrut_callee_ret_erased then
+  let concrete_match_type : Cpp_ir.Lowered.Type.t =
+    if spells_as_any_ir typ || scrut_callee_ret_erased then
       try
         let _, _, pat0, _ = pv.(0) in
         let ind_ref = match pat0 with
@@ -3728,14 +3731,14 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
         in
         let ids0, _, _, _ = pv.(0) in
         let tyargs = List.rev_map (fun (_, ty) ->
-          erase_unresolved_tvars (cpp_of_ml env ty)
+          erase_unresolved_tvars_ir (cpp_of_ml_ir env ty)
         ) ids0 in
-        Tglob (ind_ref, tyargs, [])
+        Entity_application (ind_ref, tyargs, [])
       with _ -> typ
     else typ
   in
   let pair_g_opt = match concrete_match_type with
-    | Tglob (g, _, _) when is_prod_global g -> Some g
+    | Entity_application (g, _, _) when is_prod_global g -> Some g
     | _ -> None
   in
   let scrut_is_trivial_ml = match t with
@@ -3745,15 +3748,15 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
   let needs_pair_any_cast =
     pair_g_opt <> None &&
     ( scrut_is_cpp_erased || scrut_is_mlmagic || scrut_callee_ret_erased
-      || (scrut_is_magic && prints_as_any typ)
+      || (scrut_is_magic && Cpp_ir.Types.prints_as_any typ)
       (* Read off the type only where nothing says otherwise: a variable
          is boxed exactly when its binder is ([scrut_is_magic]), and one
          declared [pair<std::any, exp<std::any>>] holds that pair. *)
       || (not scrut_is_trivial_ml)
-         && (is_all_erased typ || resolves_to_any_type typ) &&
-         ( Ml_type_util.has_tany_in_type concrete_match_type
+         && (is_all_erased typ || resolves_to_any_type_ir typ) &&
+         ( Ml_type_util.has_tany_in_type_ir concrete_match_type
            || (match concrete_match_type with
-               | Tglob (_, args, _) -> List.exists resolves_to_any_type args
+               | Entity_application (_, args, _) -> List.exists resolves_to_any_type_ir args
                | _ -> false) ) )
   in
   {

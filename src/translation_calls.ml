@@ -170,12 +170,6 @@ let written_at_variables_ir id (by_var : (int * Cpp_ir.Lowered.Type.t) list) =
        ~instance:(fun _ -> None)
        ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
 
-(** {!written_at_variables_ir} for variables given in MiniCpp, the arguments
-    written in MiniCpp. *)
-let written_at_variables id by_var =
-  List.map Cpp_ir_to_legacy_minicpp.ty
-    (written_at_variables_ir id (List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) by_var))
-
 (** A call lowered against its callee's plan: the plan its arguments are
     lowered by, the callee's C++ type at the call, the written type arguments by
     scheme variable after the evidence stage, the callee's ABI and the
@@ -1580,7 +1574,7 @@ let argument_position ~local_callable env id plan i ml_arg =
      function type into a codomain that was a type variable flattens the
      element's arrows into the callable's own parameter list, and a
      template argument keeps its currying (see
-     {!template_arg_of_ml_type}).  A parameter declared as a bare type
+     {!template_arg_of_ml_type_ir}).  A parameter declared as a bare type
      variable has arity zero, so its value is curried throughout. *)
   (* This parameter's substituted C++ type.  [param_index] counts
      positions of the unsubstituted type, so it has to be converted before
