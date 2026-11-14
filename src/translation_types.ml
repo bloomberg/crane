@@ -727,13 +727,13 @@ let param_states_type_args x orig =
     ground type alone: [deque<Nat>] becomes [deque<any>], while [Nat] stays
     [Nat].  This is the shape a box built out of a pattern binder physically
     has, and so the type an [any_cast] recovering it must name.  Deliberately
-    weaker than {!Ml_type_util.erase_type_to_any}, which boxes the leaf too. *)
-let rec erase_type_args_to_any = function
-  | Tglob (g, (_ :: _ as args), ns) ->
-    Tglob (g, List.map erase_type_args_to_any args, ns)
-  | Tglob (_, [], _) as t -> t
-  | Tnamespace (ns_g, inner) -> Tnamespace (ns_g, erase_type_args_to_any inner)
-  | _ -> Tany
+    weaker than {!Cpp_erasure}'s [erase_type_to_any], which boxes the leaf
+    too. *)
+let rec erase_type_args_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | Entity_application (g, (_ :: _ as args), ns) -> Entity_application (g, List.map erase_type_args_to_any args, ns)
+  | Entity_application (_, [], _) as t -> t
+  | In_namespace (ns_g, inner) -> In_namespace (ns_g, erase_type_args_to_any inner)
+  | _ -> Any
 
 (** A singleton class's dictionary at the head of a call: the instance
     parameter it is, the class, and the class's one method, as the

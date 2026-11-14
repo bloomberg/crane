@@ -3186,7 +3186,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
           (* A field erased whole -- [den t], whatever [t] the call names --
              holds a function as the canonical callable it is read back as. *)
           | _ when ft_has_erased_tvar ft ->
-            Cpp_ir_to_legacy_minicpp.expr (box_for_any_slot (box_kind_of_cpp_type (cpp_of_ml env ft)) ml_e (Legacy_minicpp_to_cpp_ir.lower_expr expr))
+            Cpp_ir_to_legacy_minicpp.expr (box_for_any_slot (box_kind_of_cpp_type_ir (cpp_of_ml_ir env ft)) ml_e (Legacy_minicpp_to_cpp_ir.lower_expr expr))
           | _ -> expr )
       in
       let gen_and_wrap i e =
@@ -5674,7 +5674,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           let expected = param_expected_cpp_ty_ir env callee_param_tys i in
           ( match expected with
             | Some ty ->
-              Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (Legacy_minicpp_to_cpp_ir.lower_type (erase_type_args_to_any (Cpp_ir_to_legacy_minicpp.ty ty))) (Legacy_minicpp_to_cpp_ir.lower_expr inner))
+              Cpp_ir_to_legacy_minicpp.expr (Cpp_erasure.unbox_ir (erase_type_args_to_any ty) (Legacy_minicpp_to_cpp_ir.lower_expr inner))
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
@@ -8700,12 +8700,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          recovery the let-binding path performs by marking the bound variable
          erased. *)
       let e =
-        match current_cpp_return_type () with
+        match current_cpp_return_type_ir () with
         | Some rt when k_returns -> (
-          match slot_repr_of_cpp_type rt with
+          match slot_repr_of_cpp_type_ir rt with
           | Boxed Family_box -> Cpp_ir_to_legacy_minicpp.expr (deep_box_list t (Legacy_minicpp_to_cpp_ir.lower_expr e))
           | Boxed Var_box -> e
-          | Native -> Cpp_ir_to_legacy_minicpp.expr (recover_boxed_component (Legacy_minicpp_to_cpp_ir.lower_type rt) (Legacy_minicpp_to_cpp_ir.lower_expr e)) )
+          | Native -> Cpp_ir_to_legacy_minicpp.expr (recover_boxed_component rt (Legacy_minicpp_to_cpp_ir.lower_expr e)) )
         | _ -> e
       in
       inline_iife k e
