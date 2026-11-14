@@ -28,6 +28,9 @@ include Translation_types
 include Translation_calls
 include Translation_constructors
 
+(* The CppIR twins below are unused until their callers build CppIR. *)
+[@@@warning "-32"]
+
 (* How a match branch reads a field of the constructor it matched: as the
    structured binding has it; through the pointer the field is stored behind
    (a recursive field, or under [Crane BoxedFields] one holding an inductive);
@@ -62,13 +65,17 @@ let erased_member i =
    erased a domain ({!erased_member_types}), adapted to it -- unless it is
    a variable already of that type, which an adapter would only wrap again at
    every call that passes it on. *)
-let adapt_to_erased_param env param_ty a expr =
+let adapt_to_erased_param_ir env param_ty a expr =
   match a with
   | MLrel (j, _)
     when (match get_env_type_opt j with
-          | Some t -> cpp_of_ml env t = cpp_of_ml env param_ty
+          | Some t -> cpp_of_ml_ir env t = cpp_of_ml_ir env param_ty
           | None -> false) -> expr
-  | _ -> Cpp_ir_to_legacy_minicpp.expr (erase_fn_arg_for_param env param_ty a (Legacy_minicpp_to_cpp_ir.lower_expr expr))
+  | _ -> erase_fn_arg_for_param env param_ty a expr
+
+(* {!adapt_to_erased_param_ir} in MiniCpp. *)
+let adapt_to_erased_param env param_ty a expr =
+  Cpp_ir_to_legacy_minicpp.expr (adapt_to_erased_param_ir env param_ty a (Legacy_minicpp_to_cpp_ir.lower_expr expr))
 
 (* The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
@@ -101,6 +108,10 @@ let local_fixpoint ~name ~encoding (binder, member, _, captured) =
       lf_captured = captured;
       lf_encoding = encoding }
 
+(* {!local_fixpoint} in CppIR. *)
+let local_fixpoint_ir ~name ~encoding (binder, member, _, captured) : Cpp_ir.Expr.Local_fixpoint.t option =
+  Some {binder; name; member; captured; encoding}
+
 let fixpoint_parameters (_, _, params, _) = params
 
 (* [stmts] with the declaration of the local [id] standing for the Core
@@ -109,6 +120,15 @@ let declaring id b stmts =
   List.map
     (function
       | Sasgn (x, Declare (ty, None), e) when Id.equal x id -> Sasgn (x, Declare (ty, b), e)
+      | s -> s )
+    stmts
+
+(* {!declaring} in CppIR. *)
+let declaring_ir id b stmts =
+  List.map
+    (fun (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t ->
+      match s with
+      | Bind_variable (x, Declare (ty, None), e) when Id.equal x id -> Bind_variable (x, Declare (ty, b), e)
       | s -> s )
     stmts
 
@@ -185,6 +205,10 @@ let moved_names env captures =
    impl: its one read, a move where the wrapper takes it by value. *)
 let forwarded ~by_value ty v =
   if by_value && Ownership_ir.worth_moving ty && not (ml_type_is_unit ty) then CPPmove v else v
+
+(* {!forwarded} in CppIR. *)
+let forwarded_ir ~by_value ty (v : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  if by_value && Ownership_ir.worth_moving ty && not (ml_type_is_unit ty) then Move v else v
 
 (** How each function of the local fixpoint group whose bodies are [funs]
     passes its parameters ({!Ownership_ir.Local_passing}): a group of
@@ -486,23 +510,42 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
 (* How the lambda of each function of the local fixpoint [fix] holds each
    variable it captures, generated as closures or else [in_place]
    ({!Ownership_ir.captures_by_member}). *)
+(* {!gen_local_fix_ycomb} in CppIR. *)
+let gen_local_fix_ycomb_ir env ~binders ~passing ~captures renamed_ids funs_with_params =
+  let stmts, defs, subst =
+    gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids
+      (List.map (fun (ps, body) -> (ps, List.map Cpp_ir_to_legacy_minicpp.stmt body)) funs_with_params)
+  in
+  (List.map Legacy_minicpp_to_cpp_ir.lower_stmt stmts, defs, subst)
+
+(* {!gen_local_fix_by_ref} in CppIR. *)
+let gen_local_fix_by_ref_ir env ~binders ~passing ~captures renamed_ids funs_with_params =
+  let stmts, defs =
+    gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids
+      (List.map (fun (ps, body) -> (ps, List.map Cpp_ir_to_legacy_minicpp.stmt body)) funs_with_params)
+  in
+  (List.map Legacy_minicpp_to_cpp_ir.lower_stmt stmts, defs)
+
 let fix_captures ~in_place fix = Ownership_ir.captures_by_member ~in_place (!tctx).move_plan fix
 
 (* Whether a record's fields are moved out of what [base] reads it from. *)
-let moved_out base = match base with CPPmove _ -> true | _ -> false
+let moved_out_ir (base : Cpp_ir.Lowered.Expr.t) = match base with Move _ -> true | _ -> false
 
 (* Whether a match taking the record [t] apart, a class instance's fields
    unless [is_typeclass], takes its value, as the plan says
    ({!Ownership_ir.takes_record}); under [CRANE_CHECK_IR], the code reading
    it from [base] must agree. *)
-let record_taken ~is_typeclass t base =
+let record_taken_ir ~is_typeclass t base =
   let taken = (not is_typeclass) && Ownership_ir.takes_record (!tctx).move_plan t in
-  if Probe.checking () && taken <> moved_out base then
+  if Probe.checking () && taken <> moved_out_ir base then
     Probe.violation "ownership plan"
       (Pp.str
          ( if taken then "a record the plan takes apart by value is read in place"
            else "a record the plan reads in place is taken apart by value" ) );
   taken
+
+(* {!record_taken_ir} in MiniCpp. *)
+let record_taken ~is_typeclass t base = record_taken_ir ~is_typeclass t (Legacy_minicpp_to_cpp_ir.lower_expr base)
 
 (* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
    does whether [let _ : ty := a] binds the closure [a] to a local, which the
@@ -625,6 +668,13 @@ let check_binder_scopes env i =
           str "the variable at index " ++ int i ++ str " is " ++ name x ++ str " to the names in scope and "
           ++ name (Option.map (fun b -> b.eb_id) b)
           ++ str " to the binders typed in scope")
+
+(* Runs [f], which generates the body of [case], a match taking a record
+   apart into the fields [asgns] declares, under the plan in which each field
+   moved out of the record into a local of its own is the body's.  A field
+   copied out of a record still held is not: it may be read in place. *)
+let with_fields_plan case asgns f =
+  with_plan (Ownership_ir.fields_by_value (!tctx).move_plan ~case ~by_value:(List.map snd asgns)) f
 
 let rec gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) env (ty : ml_type)
     r ts =
@@ -7257,13 +7307,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
    taken apart into three fields made three calls per level.  The temporary
    is read for nothing else, so each field is moved out of it.  Returns what
    the fields are read out of, and the statements evaluating it. *)
-(* Runs [f], which generates the body of [case], a match taking a record
-   apart into the fields [asgns] declares, under the plan in which each field
-   moved out of the record into a local of its own is the body's.  A field
-   copied out of a record still held is not: it may be read in place. *)
-and with_fields_plan case asgns f =
-  with_plan (Ownership_ir.fields_by_value (!tctx).move_plan ~case ~by_value:(List.map snd asgns)) f
-
 and record_read_once env ~is_typeclass t =
   let scrut = gen_expr env t in
   if is_typeclass || is_trivial_scrut scrut then (scrut, [])
@@ -8823,6 +8866,46 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
   in
   restore_env_types saved_env_types;
   result
+
+(* The generators in CppIR, for the generators already building CppIR.
+   Each one below converts at the boundary until its generator builds CppIR
+   itself, and then becomes the MiniCpp wrapper of the CppIR generator. *)
+
+(* {!gen_expr} in CppIR. *)
+and gen_expr_ir ?expected_ty ?slot env e : Cpp_ir.Lowered.Expr.t = Legacy_minicpp_to_cpp_ir.lower_expr (gen_expr ?expected_ty ?slot env e)
+
+(* {!project_through_instance} in CppIR. *)
+and project_through_instance_ir env use args projection : Cpp_ir.Lowered.Expr.t =
+  Legacy_minicpp_to_cpp_ir.lower_expr (project_through_instance env use args projection)
+
+(* {!eta_fun} in CppIR. *)
+and eta_fun_ir ?slot ?expected_ty env f args : Cpp_ir.Lowered.Expr.t = Legacy_minicpp_to_cpp_ir.lower_expr (eta_fun ?slot ?expected_ty env f args)
+
+(* {!gen_cpp_case} in CppIR. *)
+and gen_cpp_case_ir typ t env pv case_occ : Cpp_ir.Lowered.Expr.t = Legacy_minicpp_to_cpp_ir.lower_expr (gen_cpp_case typ t env pv case_occ)
+
+(* {!gen_custom_cpp_case} in CppIR. *)
+and gen_custom_cpp_case_ir env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) typ t pv case_occ :
+    Cpp_ir.Lowered.Stmt.t list =
+  List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_custom_cpp_case env (fun e -> Cpp_ir_to_legacy_minicpp.stmt (k (Legacy_minicpp_to_cpp_ir.lower_expr e))) typ t pv case_occ)
+
+(* {!record_read_once} in CppIR. *)
+and record_read_once_ir env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowered.Stmt.t list =
+  let e, ss = record_read_once env ~is_typeclass t in
+  (Legacy_minicpp_to_cpp_ir.lower_expr e, List.map Legacy_minicpp_to_cpp_ir.lower_stmt ss)
+
+(* {!gen_stmts} in CppIR. *)
+and gen_stmts_ir ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast : Cpp_ir.Lowered.Stmt.t list =
+  List.map Legacy_minicpp_to_cpp_ir.lower_stmt (gen_stmts ?slot env (fun e -> Cpp_ir_to_legacy_minicpp.stmt (k (Legacy_minicpp_to_cpp_ir.lower_expr e))) ast)
+
+(* {!gen_stored_value} in CppIR. *)
+and gen_stored_value_ir ?expected_ty ~slot env e : Cpp_ir.Lowered.Expr.t =
+  Legacy_minicpp_to_cpp_ir.lower_expr (gen_stored_value ?expected_ty ~slot env e)
+
+(* {!gen_fix} in CppIR. *)
+and gen_fix_ir env ?all_fix_ids ?by_value ?local ?lifted ~fix_idx nty f =
+  let n, ids, body, binders = gen_fix env ?all_fix_ids ?by_value ?local ?lifted ~fix_idx nty f in
+  (n, ids, List.map Legacy_minicpp_to_cpp_ir.lower_stmt body, binders)
 
 let () = type_term_arg := fun env a -> gen_expr env a
 let () = plan_representation := Representation_plan.region
