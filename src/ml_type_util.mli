@@ -677,6 +677,31 @@ val prune_unwritten_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
     erased argument in a position nothing writes never reaches the C++. *)
 val has_tany_written : Minicpp.cpp_type -> bool
 
+(** {!is_tany_node} over a CppIR type. *)
+val is_tany_node_ir : Cpp_ir.Lowered.Type.t -> bool
+
+(** {!has_tany_in_type} over a CppIR type. *)
+val has_tany_in_type_ir : Cpp_ir.Lowered.Type.t -> bool
+
+(** {!has_tany_written} over a CppIR type. *)
+val has_tany_written_ir : Cpp_ir.Lowered.Type.t -> bool
+
+(** {!has_unnamed_tvar} over a CppIR type. *)
+val has_unnamed_tvar_ir : Cpp_ir.Lowered.Type.t -> bool
+
+(** {!resolve_tvars_to_any} over a CppIR type. *)
+val resolve_tvars_to_any_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+
+(** {!filter_erased_keyed} over CppIR types. *)
+val filter_erased_keyed_ir :
+  ?preserve_positions:bool -> ('k * Cpp_ir.Lowered.Type.t) list -> ('k * Cpp_ir.Lowered.Type.t) list
+
+(** {!filter_erased_type_args} over CppIR types. *)
+val filter_erased_type_args_ir : ?preserve_positions:bool -> Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t list
+
+(** {!refine_erased_by} over CppIR types. *)
+val refine_erased_by_ir : expected:Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
+
 (** [refine_erased ~writable have want] is [have] with each of its erased
     nodes replaced by whatever [want] states in the same position, at any
     depth.

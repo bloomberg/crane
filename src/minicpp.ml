@@ -993,30 +993,6 @@ let rec rewrite_cpp_type (f : cpp_type -> cpp_type option) (ty : cpp_type) :
 
 let ctor_alias_tvar = Generated_name.role "TcArg"
 
-let abstract_cpp_type ~over ty =
-  let sentinel = Thole in
-  let fired = ref false in
-  (* Structural equality, but never descending into a [decltype]: it wraps an
-     expression, and comparing two of those raises on the closures an
-     expression can hold. *)
-  let same a b =
-    match (a, b) with
-    | (Tdecay (Texpr_type _) | Texpr_type _), _
-    | _, (Tdecay (Texpr_type _) | Texpr_type _) ->
-      false
-    (* A type variable is its index; the name beside it is a spelling hint one
-       side may not have been given. *)
-    | Tvar (Tv_index (i, _)), Tvar (Tv_index (j, _)) -> i = j
-    | Tvar (Tv_named x), Tvar (Tv_named y) -> Id.equal x y
-    | _ -> a = b
-  in
-  let abstracted =
-    map_cpp_type
-      (fun t -> if same t over then (fired := true; sentinel) else t)
-      ty
-  in
-  if !fired then Some abstracted else None
-
 (** [tapply head args] is [head] applied to [args], reduced where [head] is an
     abstraction.
 
@@ -1098,7 +1074,10 @@ let inactive_field_message =
 
     A value that crosses from one spelling to another is the same function
     regrouped, and the crossing is written ({!CPPregroup}). *)
-type arrow_site = Declared | Through_tvar | Declared_at of int
+type arrow_site = Cpp_ir.Types.arrow_site =
+  | Declared
+  | Through_tvar
+  | Declared_at of int
 
 let rec spell_arrows site ty =
   match site with

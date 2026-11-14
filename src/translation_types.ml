@@ -1772,8 +1772,10 @@ let slot_repr_of_cpp_type t =
     currently in effect.  Nearly every conversion inside expression generation
     wants this, and spelling out {!get_current_type_vars} at each one invites
     passing the wrong scope. *)
-let cpp_of_ml env t =
-  convert_ml_type_to_cpp_type env (get_current_type_vars ()) t
+let cpp_of_ml_ir env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
+
+(** {!cpp_of_ml_ir} in MiniCpp. *)
+let cpp_of_ml env t = Cpp_ir_to_legacy_minicpp.ty (cpp_of_ml_ir env t)
 
 (** [template_arg_of_ml_type ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says
@@ -1787,12 +1789,15 @@ let cpp_of_ml env t =
     parameter: the signature may mention it inside an arrow it writes out
     itself (as [ap : F (A -> B) -> ...] does), and there the currying is what
     makes the argument match. *)
-let template_arg_of_ml_type ~site env tvars ty =
+let template_arg_of_ml_type_ir ~site env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
-  spell_arrows site
-    (convert_ml_type_to_cpp_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
+  Cpp_ir.Types.spell_arrows site (cpp_ir_of_ml_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
+
+(** {!template_arg_of_ml_type_ir} in MiniCpp. *)
+let template_arg_of_ml_type ~site env tvars ty =
+  Cpp_ir_to_legacy_minicpp.ty (template_arg_of_ml_type_ir ~site env tvars ty)
 
 (** The site a callee's {e result} is spelled at ({!Minicpp.arrow_site}): a
     codomain that is a type variable takes its C++ shape from the template
@@ -1807,23 +1812,27 @@ let call_result_site id =
   if is_inline_custom id then Declared
   else match find_type_opt id with Some ml_ty -> codomain_site ml_ty | None -> Declared
 
-let build_template_params ~site env tvars tys =
+let build_template_params_ir ~site env tvars tys =
   List.map
     (fun ty ->
-      let t = template_arg_of_ml_type ~site env tvars ty in
+      let t = template_arg_of_ml_type_ir ~site env tvars ty in
       (* Check for unbound type variables *)
       match t with
-      | Tvar (Tv_index (_, None)) when tvars <> [] ->
+      | Variable (Index (_, None)) when tvars <> [] ->
         (* Type variable has no binding, but we're in a context with typename
            params. This means the Tvar index exceeds the scope of tvars.
            Mark as dummy_type to trigger full erasure via filter_erased_type_args.
            Using the unbound Tvar would generate invalid C++ references. *)
-        Terased Ek_type
+        (Erased Type : Cpp_ir.Lowered.Type.t)
       | _ ->
         (* Type is either bound, or we're in an untyped context (tvars = []).
            Keep the type as-is. *)
         t )
     tys
+
+(** {!build_template_params_ir} in MiniCpp. *)
+let build_template_params ~site env tvars tys =
+  List.map Cpp_ir_to_legacy_minicpp.ty (build_template_params_ir ~site env tvars tys)
 
 (** Generate code for a custom-extracted constructor application.
 
@@ -1859,8 +1868,11 @@ let build_template_params ~site env tvars tys =
 
 (** [template_params_of_ml ~site:Through_tvar env tys] is {!build_template_params} against the
     type variables the enclosing scope has in hand; see {!cpp_of_ml}. *)
+let template_params_of_ml_ir ~site env tys = build_template_params_ir ~site env (get_current_type_vars ()) tys
+
+(** {!template_params_of_ml_ir} in MiniCpp. *)
 let template_params_of_ml ~site env tys =
-  build_template_params ~site env (get_current_type_vars ()) tys
+  List.map Cpp_ir_to_legacy_minicpp.ty (template_params_of_ml_ir ~site env tys)
 
 (** [param_expected_cpp_ty env param_tys i] is the C++ type the callee declares
     for its [i]th parameter, and so the type an argument generated for that
@@ -2649,14 +2661,11 @@ let leading_phantom_count id =
     variable: [c] itself as a constructor, unless applying it changes
     nothing -- [fun T => list nat], which extraction writes as its body
     [list nat] -- when it is the constant one, [crane::constant_tc<c>::c]. *)
-let carrier_template env tvars c =
-  let carrier = template_arg_of_ml_type ~site:Through_tvar env tvars c in
+let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
+  let carrier = template_arg_of_ml_type_ir ~site:Through_tvar env tvars c in
   let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
-  Minicpp.Ttyctor
-    ( if constant then
-        Minicpp.Tqualified
-          (Minicpp.Tid_external (Crane_rt.constant_tc, [carrier]), Id.of_string "c")
-      else carrier )
+  Type_constructor
+    (if constant then Member (External (Crane_rt.constant_tc, [carrier]), Id.of_string "c") else carrier)
 
 (** The explicit type arguments a call needs when the callee is generic in a
     type {e constructor} and Rocq erased which one.
@@ -2673,7 +2682,7 @@ let carrier_template env tvars c =
     The callee returns [Tapp (p, [Tvar v])] -- the carrier at position [p]
     applied to the variable at position [v] -- so abstracting the expected
     result over whatever [v] was instantiated to inverts that application.
-    {!Minicpp.abstract_cpp_type} writes the sentinel the printer mints an
+    {!abstract_cpp_type_ir} writes the sentinel the printer mints an
     alias template for, and only position [p] is written: the rest deduce
     through the alias, which is transparent.
 
@@ -2714,29 +2723,26 @@ let hkt_carrier_type_args env tvars ?result id tys =
   in
   let* v_ml = Mlutil.Var_types.find_tvar tys v in
   let* result =
-    match result with None -> (!tctx).current_cpp_return_type | r -> r
+    match result with
+    | None -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (!tctx).current_cpp_return_type
+    | r -> r
   in
-  let over = template_arg_of_ml_type ~site:Through_tvar env tvars v_ml in
-  let* carrier = Minicpp.abstract_cpp_type ~over result in
+  let over = template_arg_of_ml_type_ir ~site:Through_tvar env tvars v_ml in
+  let* carrier = abstract_cpp_type_ir ~over result in
   (* A carrier that is one template applied to the argument is left to
      deduction, which reads it off the value argument and gets it right.  Only
      a carrier with no head to read -- a composite, or a partial application --
      has to be written, and it is written alone: everything after it deduces
      through the alias, which is transparent. *)
-  let sentinel = Minicpp.Thole in
-  let rec is_plain_head = function
+  let rec is_plain_head (t : Cpp_ir.Lowered.Type.t) =
+    match t with
     (* A namespace or a const/reference wrapper is spelling, not structure. *)
-    | Minicpp.Tnamespace (_, t) | Minicpp.Tconst t | Minicpp.Tref (Minicpp.Lvalue, t)
-    | Minicpp.Tref (Minicpp.Forwarding, t) ->
-      is_plain_head t
-    | Minicpp.Tglob (_, [arg], _)
-    | Minicpp.Tid (_, [arg])
-    | Minicpp.Tid_external (_, [arg])
-    | Minicpp.Tapply (_, [arg]) ->
-      arg = sentinel
+    | In_namespace (_, t) | Const t | Reference (_, t) -> is_plain_head t
+    | Entity_application (_, [arg], _) | Named (_, [arg]) | External (_, [arg]) | Apply (_, [arg]) ->
+      arg = Carrier_parameter
     | _ -> false
   in
-  if is_plain_head carrier then None else Some [Minicpp.Ttyctor carrier]
+  if is_plain_head carrier then None else Some [(Type_constructor carrier : Cpp_ir.Lowered.Type.t)]
 
 (** The explicit type arguments a call to a lifted helper has to carry.
 
@@ -2916,13 +2922,11 @@ let dict_carrier_type_args env tvars id args =
     | Miniml.Tglob (_, (t0 :: _ as targs), _)
     | Miniml.Tapp (_, (t0 :: _ as targs)) ->
       let whole = if List.exists unrecovered targs then t0 else traversed cod in
-      Some (template_arg_of_ml_type ~site:Through_tvar env tvars whole)
+      Some (template_arg_of_ml_type_ir ~site:Through_tvar env tvars whole)
     | _ -> None
   in
-  let* carrier =
-    Minicpp.abstract_cpp_type ~over (template_arg_of_ml_type ~site:Through_tvar env tvars cod)
-  in
-  Some [Minicpp.Ttyctor carrier]
+  let* carrier = abstract_cpp_type_ir ~over (template_arg_of_ml_type_ir ~site:Through_tvar env tvars cod) in
+  Some [(Type_constructor carrier : Cpp_ir.Lowered.Type.t)]
 
 (** Whether [e] denotes a value whose ML type is a function (at least one value
     arrow).  Used to decide, at a constructor argument that is stored into an

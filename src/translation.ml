@@ -3990,13 +3990,13 @@ and project_through_instance env use args (projection : Elaborated_call.static_p
      a closure does not deduce, and [ret] mentions its variable only in its
      result. *)
   let targs =
-    let by_var = List.map (fun (v, t) -> (v, cpp_of_ml env t)) (Mlutil.Var_types.bindings tys) in
+    let by_var = List.map (fun (v, t) -> (v, cpp_of_ml_ir env t)) (Mlutil.Var_types.bindings tys) in
     List.map Cpp_ir_to_legacy_minicpp.ty
       (Template_application.to_list
          (Template_application.plan
             (Callable_abi.projection projection_abi x)
             ~instance:(fun _ -> None)
-            ~scheme:(fun v -> Option.map Legacy_minicpp_to_cpp_ir.lower_type (Scheme.Var.assoc_opt v by_var)) ) )
+            ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) ) )
   in
   (* What each operand is written into.  [tys] leads with the carrier, which
      is how the field's own type numbers the class parameter, so the single

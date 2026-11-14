@@ -1397,6 +1397,68 @@ let prune_unwritten_args t = Cpp_ir_to_legacy_minicpp.ty (prune_unwritten_args_i
     erased argument in a position nothing writes never reaches the C++. *)
 let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
 
+(** {!is_tany_node} over a CppIR type. *)
+let is_tany_node_ir (t : Cpp_ir.Lowered.Type.t) =
+  match t with
+  | Any | Obligation Opaque_type | Variable (Index (_, None)) -> true
+  | _ -> false
+
+(** {!has_tany_in_type} over a CppIR type. *)
+let has_tany_in_type_ir = Cpp_ir.Children.exists_type is_tany_node_ir
+
+(** {!has_tany_written} over a CppIR type. *)
+let has_tany_written_ir t = has_tany_in_type_ir (prune_unwritten_args_ir t)
+
+(** {!has_unnamed_tvar} over a CppIR type. *)
+let has_unnamed_tvar_ir =
+  Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
+      match t with Variable (Index (_, None)) -> true | _ -> false )
+
+(** {!resolve_tvars_to_any} over a CppIR type. *)
+let resolve_tvars_to_any_ir =
+  Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+      match t with Variable (Index (_, None)) -> Any | t -> t )
+
+(** {!filter_erased_keyed} over CppIR types. *)
+let filter_erased_keyed_ir ?(preserve_positions = false) (pairs : ('k * Cpp_ir.Lowered.Type.t) list) =
+  let all = pairs in
+  let pairs =
+    List.filter (fun (_, (t : Cpp_ir.Lowered.Type.t)) -> match t with Erased Proof -> false | _ -> true) pairs
+  in
+  if List.length pairs <> List.length all then
+    Probe.hit "REPAIR_filter_erased_type_args_prop" (fun () -> "");
+  if preserve_positions then
+    List.map (fun (k, t) -> (k, if Cpp_ir.Types.prints_as_any t then (Any : Cpp_ir.Lowered.Type.t) else t)) pairs
+  else if List.exists (fun (_, t) -> Cpp_ir.Types.prints_as_any t) pairs then (
+    Probe.hit "REPAIR_filter_erased_type_args_drop" (fun () -> "");
+    [] )
+  else pairs
+
+(** {!filter_erased_type_args} over CppIR types. *)
+let filter_erased_type_args_ir ?preserve_positions tys =
+  List.map snd (filter_erased_keyed_ir ?preserve_positions (List.map (fun t -> ((), t)) tys))
+
+(** {!refine_erased_by} over CppIR types. *)
+let rec refine_erased_by_ir ~(expected : Cpp_ir.Lowered.Type.t) (actual : Cpp_ir.Lowered.Type.t) :
+    Cpp_ir.Lowered.Type.t =
+  let erased t = Cpp_ir.Types.prints_as_any t in
+  if erased actual && not (erased expected) then expected
+  else
+    let go e a = refine_erased_by_ir ~expected:e a in
+    match (expected, actual) with
+    | Entity_application (g, ea, _), Entity_application (g', aa, x)
+      when globref_equal g g' && List.length ea = List.length aa ->
+      Entity_application (g', List.map2 go ea aa, x)
+    | Function (ed, ec), Function (ad, ac) when List.length ed = List.length ad ->
+      Function (List.map2 go ed ad, go ec ac)
+    | Const e, Const a -> Const (go e a)
+    | Reference (ke, e), Reference (ka, a) when ke = ka -> Reference (ka, go e a)
+    | Pointer e, Pointer a -> Pointer (go e a)
+    | Shared_pointer e, Shared_pointer a -> Shared_pointer (go e a)
+    | _, In_namespace (ns, a) -> In_namespace (ns, refine_erased_by_ir ~expected a)
+    | In_namespace (_, e), _ -> refine_erased_by_ir ~expected:e actual
+    | _ -> actual
+
 (* What [fills] filled the hole [o] with, if anything. *)
 let filled_with fills o =
   List.find_map (fun (o', t) -> if Miniml.Open.equal o o' then Some t else None) fills

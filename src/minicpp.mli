@@ -1234,11 +1234,6 @@ val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
     the carrier's argument goes. *)
 val ctor_alias_tvar : string
 
-(** [abstract_cpp_type ~over ty] is [ty] with every occurrence of [over]
-    replaced by the {!ctor_alias_tvar} sentinel -- the type constructor whose
-    application to [over] is [ty] -- or [None] where [over] does not occur, so
-    that there is no such constructor to name. *)
-val abstract_cpp_type : over:cpp_type -> cpp_type -> cpp_type option
 
 (** What a branch throws when the scrutinee's indices rule it out; shared by
     the coercion seam and the sweep over a finished body, which recognise such
@@ -1256,7 +1251,10 @@ val inactive_field_message : string
     ([crane::fn<crane::fn<R(B)>(A)>]), or flat for the first [n] parameters
     a declaration wrote and curried for the rest.  See the implementation's
     {b Arity} section. *)
-type arrow_site = Declared | Through_tvar | Declared_at of int
+type arrow_site = Cpp_ir.Types.arrow_site =
+  | Declared
+  | Through_tvar
+  | Declared_at of int
 
 (** [spell_arrows site ty] respells every function type in [ty] as [site]
     spells it.  The only place a chain of arrows is regrouped. *)
