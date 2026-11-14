@@ -134,9 +134,6 @@ let adapter_arg (_, id) = CPPvar (Option.get id)
     A slot spelled [std::any] wants the box as it stands, and one still spelled
     as a template parameter has not been stated at all: an [any_cast] there
     would be a guess about an instantiation this site cannot see. *)
-let states_unboxed_target into = not (prints_as_any into || contains_tvar into)
-
-(** {!states_unboxed_target} in CppIR. *)
 let states_unboxed_target_ir into = not (Cpp_ir.Types.prints_as_any into || contains_tvar_ir into)
 
 (** [inline_iife k expr] checks whether [expr] is an IIFE
@@ -369,16 +366,6 @@ let pattern_binder_type i : Cpp_ir.Lowered.Type.t option =
     Normalize those to [Topaque]: the variable was quantified somewhere we
     cannot see, so [std::any] is the only spelling available, but nothing here
     establishes that the value is actually boxed. *)
-let rec erase_unresolved_tvars = function
-  | Tvar (Tv_index (_, None)) -> Topaque
-  | Tglob (g, ts, es) -> Tglob (g, List.map erase_unresolved_tvars ts, es)
-  | Tfun (dom, cod) ->
-    Tfun (List.map erase_unresolved_tvars dom, erase_unresolved_tvars cod)
-  | Tshared_ptr t -> Tshared_ptr (erase_unresolved_tvars t)
-  | Tref (k, t) -> Tref (k, erase_unresolved_tvars t)
-  | t -> t
-
-(** {!erase_unresolved_tvars} in CppIR. *)
 let rec erase_unresolved_tvars_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Variable (Index (_, None)) -> Obligation Opaque_type
   | Entity_application (g, ts, es) -> Entity_application (g, List.map erase_unresolved_tvars_ir ts, es)
@@ -969,11 +956,6 @@ let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~ml_ari
     component is itself only a box.  This is the type an [any_cast] reading
     such a value back has to name, whatever concrete type the context has in
     mind for it. *)
-let boxed_shape_of = function
-  | Tglob (g, (_ :: _ as args), ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
-  | t -> t
-
-(** {!boxed_shape_of} in CppIR. *)
 let boxed_shape_of_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Entity_application (g, (_ :: _ as args), ns) -> Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)
   | t -> t
@@ -1419,7 +1401,7 @@ let cpp_of_ml_ir env t = cpp_ir_of_ml_type env (get_current_type_vars ()) t
 (** {!cpp_of_ml_ir} in MiniCpp. *)
 let cpp_of_ml env t = Cpp_ir_to_legacy_minicpp.ty (cpp_of_ml_ir env t)
 
-(** [template_arg_of_ml_type ~site env tvars ty] converts [ty] for a template
+(** [template_arg_of_ml_type_ir ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says
     ({!Minicpp.arrow_site}).
 
@@ -1436,10 +1418,6 @@ let template_arg_of_ml_type_ir ~site env tvars ty =
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
   Cpp_ir.Types.spell_arrows site (cpp_ir_of_ml_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
-
-(** {!template_arg_of_ml_type_ir} in MiniCpp. *)
-let template_arg_of_ml_type ~site env tvars ty =
-  Cpp_ir_to_legacy_minicpp.ty (template_arg_of_ml_type_ir ~site env tvars ty)
 
 (** The site a callee's {e result} is spelled at ({!Minicpp.arrow_site}): a
     codomain that is a type variable takes its C++ shape from the template
@@ -1521,14 +1499,6 @@ let template_params_of_ml ~site env tys =
     position should aim at.  [None] when the position says nothing useful:
     either the callee has fewer parameters, or the declared type is erased and
     naming [std::any] as the expectation would only invite a spurious box. *)
-let param_expected_cpp_ty env param_tys i =
-  match List.nth_opt param_tys i with
-  | Some ml_ty ->
-    let cpp_ty = cpp_of_ml env ml_ty in
-    if prints_as_any cpp_ty then None else Some cpp_ty
-  | None -> None
-
-(** {!param_expected_cpp_ty} in CppIR. *)
 let param_expected_cpp_ty_ir env param_tys i =
   match List.nth_opt param_tys i with
   | Some ml_ty ->
@@ -1580,16 +1550,6 @@ let result_cpp_via_receiver env callee_ty args =
 (** [iife_void_return env typ pv] is [Some Tvoid] when the match's branches
     produce nothing: a lambda that may fall off its end has to say [-> void]
     explicitly. *)
-let iife_void_return env typ pv =
-  let branch_rty =
-    match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
-  in
-  let r = cpp_of_ml env branch_rty in
-  if is_cpp_unit_type r || ml_type_is_void_call branch_rty then
-    Some Tvoid
-  else None
-
-(** {!iife_void_return} in CppIR. *)
 let iife_void_return_ir env typ pv : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
     match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
@@ -2044,30 +2004,6 @@ let read_is_boxed i occ =
     the decision [use] names the same answer.  A read the plan has no answer
     for is an anomaly. *)
 (* A C++ type, written compactly for a probe or a violation report. *)
-let rec type_shape = function
-  | Tfun (dom, cod) -> "fn(" ^ String.concat "," (List.map type_shape dom) ^ ")->" ^ type_shape cod
-  | Tany -> "any"
-  | Tauto -> "auto"
-  | Topaque -> "opaque"
-  | Tconst t -> "const " ^ type_shape t
-  | Tref (_, t) -> "ref " ^ type_shape t
-  | Tglob (g, args, _) -> Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
-  | Tvar (Tv_index (i, Some id)) -> "T" ^ string_of_int i ^ ":" ^ Id.to_string id
-  | Tvar (Tv_index (i, None)) -> "T" ^ string_of_int i
-  | Tvar (Tv_named id) -> "N:" ^ Id.to_string id
-  | Tshared_ptr t -> "sp " ^ type_shape t
-  | Tvariant _ -> "variant"
-  | Tqualified (t, id) -> type_shape t ^ "::" ^ Id.to_string id
-  | Tid (id, args) -> "id:" ^ Id.to_string id ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
-  | Tid_external (n, _) -> "ext:" ^ n
-  | Tpromoted id -> "prom:" ^ Id.to_string id
-  | Tinstance (id, _) -> "inst:" ^ Id.to_string id
-  | Terased _ -> "erased"
-  | Tapply (h, args) -> "app(" ^ type_shape h ^ ")<" ^ String.concat "," (List.map type_shape args) ^ ">"
-  | Tnamespace (_, t) -> "ns " ^ type_shape t
-  | _ -> "other"
-
-(** {!type_shape} in CppIR. *)
 let rec type_shape_ir : Cpp_ir.Lowered.Type.t -> string = function
   | Function (dom, cod) -> "fn(" ^ String.concat "," (List.map type_shape_ir dom) ^ ")->" ^ type_shape_ir cod
   | Any -> "any"
@@ -2142,7 +2078,7 @@ let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
     reads a component out of a pair recovered from a box, decided on Core:
     a global call whose one value argument is a coercion from a box planned
     at a product position, which lowering recovers at the erased shape
-    [pair<any, any>] ({!boxed_shape_of}).  Such a component is itself a
+    [pair<any, any>] ({!boxed_shape_of_ir}).  Such a component is itself a
     box. *)
 let reads_erased_pair_component env t =
   match t with
@@ -2798,51 +2734,6 @@ let binder_matched_at body =
     [forall T] -- and unused it is erased like a dummy.  The count of binders
     the term writes and the parameter list it is written with are both read
     off this, so they cannot disagree. *)
-let lambda_binder_emitted env ~expected_ty ~body binders i ty =
-  (* Where the slot is a definitional class -- an alias for a function type
-     -- which of its domains the declaration takes as values.  Read off the
-     alias's own definition, before this call instantiated it: [Id_ obj C] is
-     [forall a : obj, C a a], a function of an object, and stays one when
-     [obj := Type -> Type] erases the object; [MonadIter m] is
-     [forall R I : Type, ...], and takes [R] and [I] as types only. *)
-  let slot_value_doms =
-    let rec alias_ref t =
-      match strip_param_spelling t with
-      | Tnamespace (_, t) -> alias_ref t
-      | Tglob (GlobRef.ConstRef kn, _, _) -> Some kn
-      | _ -> None
-    in
-    let rec value_doms t =
-      match resolve_tmeta (expand_ml_fun_alias t) with
-      | Miniml.Tarr (d, c) -> not (erased_by_extraction d) :: value_doms c
-      | _ -> []
-    in
-    match Option.bind expected_ty alias_ref with
-    | Some kn -> (
-      match Table.lookup_typedef_unchecked kn with
-      | Some body -> value_doms body
-      | None -> [] )
-    | None -> []
-  in
-  let slot_doms_cpp =
-    match Option.map (unfold_cpp_typedef env) expected_ty with
-    | Some (Tfun (doms, _)) -> doms
-    | _ -> []
-  in
-  let slot_keeps binders i =
-    let d = List.length binders - 1 - i in
-    match List.nth_opt slot_value_doms d with
-    | Some true -> (
-      match List.nth_opt slot_doms_cpp d with
-      | Some t -> prints_as_any t
-      | None -> true )
-    | _ -> false
-  in
-  slot_keeps binders i
-  || (is_runtime_binder_type ty && ty <> Miniml.Taxiom)
-  || Mlutil.ast_occurs (i + 1) body
-
-(** {!lambda_binder_emitted} against a slot type held in CppIR. *)
 let lambda_binder_emitted_ir env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~body binders i ty =
   let slot_value_doms =
     let rec alias_ref (t : Cpp_ir.Lowered.Type.t) =
@@ -3071,37 +2962,6 @@ let ctor_arg_is_passthrough r i =
     promoted types of [promoted_active]'s arity or, failing that, [return]'s
     arguments when it is the same inductive; an unresolved one written down as
     a box ({!Ml_type_util.materialise_opaque}). *)
-let ctor_draft_temps env ~promoted_active ~return (ty : ml_type) =
-  let temps =
-    match ty with
-    | Miniml.Tglob (cn, raw_tys, _) ->
-      let tys =
-        match cn with
-        | GlobRef.IndRef (kn, _) -> (
-          match Table.get_ind_num_param_vars_opt kn with
-          | Some nv -> safe_firstn nv raw_tys
-          | None -> raw_tys )
-        | _ -> raw_tys
-      in
-      let temps = template_params_of_ml ~site:Through_tvar env tys in
-      if List.for_all prints_as_any temps && promoted_active then
-        match promoted_tys_of_arity (List.length tys) with
-        | Some promoted_tys -> promoted_tys
-        | None -> temps
-      else if List.for_all prints_as_any temps then
-        match return with
-        | Some (Tglob (rn, rargs, _))
-          when GlobRef.CanOrd.equal rn cn
-               && List.length rargs = List.length temps
-               && not (List.exists prints_as_any rargs) ->
-          rargs
-        | _ -> temps
-      else temps
-    | _ -> []
-  in
-  List.map materialise_opaque temps
-
-(** {!ctor_draft_temps} in CppIR. *)
 let ctor_draft_temps_ir env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : ml_type) =
   let temps =
     match ty with
@@ -3137,16 +2997,6 @@ let ctor_draft_temps_ir env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t op
     parameter of the inductive ([field_tys], dummies dropped) whose template
     argument ([temps]) prints as [std::any], and the constructor's template
     does not forward the argument as it is. *)
-let stores_erased_fn ?var env r ~field_tys ~temps i e =
-  match List.nth_opt field_tys i with
-  | Some (Miniml.Tvar (_, j)) -> (
-    match List.nth_opt temps (j - 1) with
-    | _ when ctor_arg_is_passthrough r i -> false
-    | Some t when prints_as_any (unfold_cpp_typedef env t) -> ml_expr_is_function_value ?var e
-    | _ -> false )
-  | _ -> false
-
-(** {!stores_erased_fn} in CppIR. *)
 let stores_erased_fn_ir ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list) i e =
   match List.nth_opt field_tys i with
   | Some (Miniml.Tvar (_, j)) -> (
@@ -3156,7 +3006,7 @@ let stores_erased_fn_ir ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t li
     | _ -> false )
   | _ -> false
 
-(** [e], a constructor argument {!stores_erased_fn} says is stored via
+(** [e], a constructor argument {!stores_erased_fn_ir} says is stored via
     [crane_erase_fn], as lowering generates it: a lambda is only ever invoked
     with its whole argument boxed as one [std::any] holding the fully erased
     representation ([pair<any,any>] for a pair domain), so a custom match on
@@ -3595,7 +3445,7 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : Cpp_ir.Lowered.
     (* The constructor struct is nested in the instantiation, so it has to be
        qualified by the same one the declaration spells: an inductive's
        argument at the flat arity a stored value has (see
-       {!template_arg_of_ml_type}). *)
+       {!template_arg_of_ml_type_ir}). *)
     let temps =
       ind_promoted_type_args_ir r
       @ apply_hkt_tyctors_ir r (template_params_of_ml_ir ~site:Declared env tys)
@@ -3607,13 +3457,6 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : Cpp_ir.Lowered.
     [into]: {!coerce} from [std::any]. *)
 let unbox_value into e = coerce ~from:Tany ~into e
 
-(** [unbox_into into e] recovers [e] from its box at [into], where the position
-    stated a type to recover it at, and leaves it boxed otherwise. *)
-let unbox_into into e =
-  match into with
-  | Some into when states_unboxed_target into -> coerce ~from:Tany ~into e
-  | _ -> e
-
 (** [recover_boxed_result_ir ~boxed ~expected expr] casts the result of a call
     back into the type the position expects -- see {!position_cpp_ty_ir} -- when
     [boxed]
@@ -3623,14 +3466,15 @@ let unbox_into into e =
     adapter.
 
     [boxed] is a statement about the callee, not a guess, so the recovery is
-    unconditional: unlike {!unbox_into} it casts at a template parameter too,
+    unconditional: unlike {!unbox_into_ir} it casts at a template parameter too,
     which inside a template is the one name the result has. *)
 let recover_boxed_result_ir ~boxed ~expected expr =
   match position_cpp_ty_ir expected with
   | Some into when boxed -> coerce_ir ~from:Any ~into expr
   | _ -> expr
 
-(** {!unbox_into} at a position type held in CppIR. *)
+(** [unbox_into_ir into e] recovers [e] from its box at [into], where the
+    position stated a type to recover it at, and leaves it boxed otherwise. *)
 let unbox_into_ir into e =
   match into with
   | Some into when states_unboxed_target_ir into -> coerce_ir ~from:Any ~into e

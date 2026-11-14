@@ -690,12 +690,6 @@ let is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     was written at the concrete domain, so it reaches the slot through the
     [crane_erase_fn] adapter -- taken at the slot's own result type, since
     erasing that too would box the result twice. *)
-let partially_erased_fun_ty t =
-  match classify_fun_erasure t with
-  | Fe_erased_domain (Some _) -> true
-  | _ -> false
-
-(** {!partially_erased_fun_ty} in CppIR. *)
 let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Function (dom, cod) ->
     let erased t = Cpp_ir.Types.prints_as_any t || names_erased_alias_ir t in
@@ -1077,9 +1071,6 @@ let rec index_erase_type_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t
     | Any -> Any
     | t -> In_namespace (r, t) )
   | _ -> Any
-
-let index_erase_type ty =
-  Cpp_ir_to_legacy_minicpp.ty (index_erase_type_ir (Legacy_minicpp_to_cpp_ir.lower_type ty))
 
 (** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
     detect types that can't be fully resolved in monomorphized contexts

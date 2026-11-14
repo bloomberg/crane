@@ -1218,16 +1218,6 @@ let assumed_callables struc callables =
 (** [slot] for a lambda going to a callable its callee deduces: the positions
     the slot erases are left to deduction ([const auto&]), so the lambda takes
     whatever its callee's instantiation hands it there. *)
-let deduce_erased_domains = function
-  | Tfun (doms, cod) ->
-    Tfun
-      ( List.map
-          (fun d -> if exists_cpp_type prints_as_any d then Tref (Lvalue, Tconst Tauto) else d)
-          doms,
-        cod )
-  | t -> t
-
-(** {!deduce_erased_domains} in CppIR. *)
 let deduce_erased_domains_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Function (doms, cod) ->
     Function
