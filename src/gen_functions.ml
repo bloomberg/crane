@@ -1396,7 +1396,7 @@ let gen_dfun ~minted n b cty ty temps =
         Translation_support.declared_by_value
           (List.assoc_opt (fst (List.nth all_ids i)) ids)
           ~summary:(List.nth owned_flags i) )
-      ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) ids)
+      ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids)
       ~ty:(fun i -> snd (List.nth all_params i))
   in
   (* Expose the C++ return type to inner call sites so they can recover erased
@@ -1662,7 +1662,8 @@ let gen_decl__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
-  let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
+  let cty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
+  let cty = Cpp_ir_to_legacy_minicpp.ty cty_ir in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match cty with
@@ -1681,7 +1682,7 @@ let gen_decl__inner n b ty =
     | _ ->
       begin_body ~owner:n ();
       let body_expr =
-        with_cpp_return_type (Some cty) (fun () -> with_region b (fun () -> gen_constant_value b))
+        with_cpp_return_type_ir (Some cty_ir) (fun () -> with_region b (fun () -> gen_constant_value b))
       in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the

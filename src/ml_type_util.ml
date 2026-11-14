@@ -684,18 +684,12 @@ let is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     dom <> [] && List.for_all Cpp_ir.Types.prints_as_any dom && Cpp_ir.Types.prints_as_any cod
   | _ -> false
 
-(** [partially_erased_fun_ty t] -- true of a function type that erased only its
+(** [partially_erased_fun_ty_ir t] -- true of a function type that erased only its
     arguments and kept a concrete result, as
     [std::function<uint64_t(std::any)>] has.  A closure landing in such a slot
     was written at the concrete domain, so it reaches the slot through the
     [crane_erase_fn] adapter -- taken at the slot's own result type, since
     erasing that too would box the result twice. *)
-let partially_erased_fun_ty t =
-  match classify_fun_erasure t with
-  | Fe_erased_domain (Some _) -> true
-  | _ -> false
-
-(** {!partially_erased_fun_ty} in CppIR. *)
 let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
   | Function (dom, cod) ->
     let erased t = Cpp_ir.Types.prints_as_any t || names_erased_alias_ir t in
@@ -707,7 +701,7 @@ let partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool = function
     under which a closure written at the concrete domain needs the
     [crane_erase_fn] adapter: nothing converts to such a signature on its own.
 
-    Strictly weaker than {!partially_erased_fun_ty}, and neither implies nor is
+    Strictly weaker than {!partially_erased_fun_ty_ir}, and neither implies nor is
     implied by {!is_fully_erased_fun_ty}. *)
 let erased_domain_fun_ty t =
   match classify_fun_erasure t with
@@ -754,9 +748,9 @@ let materialise_opaque_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     - [pair<uint64_t, any>] → false ([uint64_t] is concrete)
     Used to detect fully-erased tuple chains where the runtime encoding
     stores [pair<any,any>] at every level regardless of the static type. *)
-let rec is_all_erased = function
-  | ty when prints_as_any ty -> true
-  | Tglob (_, args, _) when args <> [] -> List.for_all is_all_erased args
+let rec is_all_erased : Cpp_ir.Lowered.Type.t -> bool = function
+  | ty when Cpp_ir.Types.prints_as_any ty -> true
+  | Entity_application (_, args, _) when args <> [] -> List.for_all is_all_erased args
   | _ -> false
 
 (** [extract_template_args ty] — unwrap namespace and shared_ptr wrappers
@@ -768,6 +762,13 @@ let rec extract_template_args = function
   | Tglob (_, args, _) -> args
   | Tnamespace (_, inner) -> extract_template_args inner
   | Tshared_ptr inner -> extract_template_args inner
+  | _ -> []
+
+(** {!extract_template_args} in CppIR. *)
+let rec extract_template_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list = function
+  | Entity_application (_, args, _) -> args
+  | In_namespace (_, inner) -> extract_template_args_ir inner
+  | Shared_pointer inner -> extract_template_args_ir inner
   | _ -> []
 
 (** [erase_type_to_any ty] — recursively replace leaf types with [Tany],
@@ -1070,9 +1071,6 @@ let rec index_erase_type_ir (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t
     | Any -> Any
     | t -> In_namespace (r, t) )
   | _ -> Any
-
-let index_erase_type ty =
-  Cpp_ir_to_legacy_minicpp.ty (index_erase_type_ir (Legacy_minicpp_to_cpp_ir.lower_type ty))
 
 (** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
     detect types that can't be fully resolved in monomorphized contexts
@@ -1632,6 +1630,32 @@ let refine_param_from_slot ~tvars ~slot bare =
     says_something && keeps_names && has_erased_type_in_type bare
     && has_erased_type_in_type erased
   then erased
+  else bare
+
+let refine_param_from_slot_ir ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
+  let name_of (t : Cpp_ir.Lowered.Type.t) =
+    match t with
+    | Variable (Index (_, Some n) | Named n) -> Some n
+    | Variable (Index (i, None)) -> Some (Cpp_ir.Type.positional_id i)
+    | _ -> None
+  in
+  let spelled_by_bare = Cpp_ir.Types.variable_names bare in
+  let nameable n = List.exists (Id.equal n) tvars || Id.Set.mem n spelled_by_bare in
+  let erased =
+    Cpp_ir.Types.map
+      (fun t -> match name_of t with Some n when not (nameable n) -> Cpp_ir.Type.Any | _ -> t)
+      slot
+  in
+  let keeps_names = Id.Set.subset spelled_by_bare (Cpp_ir.Types.variable_names erased) in
+  let says_something =
+    let normalise =
+      Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
+          if is_tany_node_ir t || is_cpp_dummy_type_ir t then Any
+          else match t with Variable (Index (_, Some n) | Named n) -> Variable (Named n) | t -> t )
+    in
+    normalise erased <> normalise bare
+  in
+  if says_something && keeps_names && has_erased_type_in_type_ir bare && has_erased_type_in_type_ir erased then erased
   else bare
 
 (** Collect (index, name) pairs for all Tvar occurrences, sorted by index; a

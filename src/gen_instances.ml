@@ -458,7 +458,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type (Some method_ret_ty) @@ fun () ->
+            with_cpp_return_type_ir (Some (Legacy_minicpp_to_cpp_ir.lower_type method_ret_ty)) @@ fun () ->
             if bodies then begin_body ~owner:name ();
             if List.for_all (fun b -> b.mb_kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
@@ -555,7 +555,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                       let name, _, cpp_ty = params_db.(i) in
                       List.exists (fun (n, _, _) -> Id.equal n name) cast_info
                       || not (declared_by_reference cpp_ty) )
-                    ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some cpp_ty)
+                    ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some (Legacy_minicpp_to_cpp_ir.lower_type cpp_ty))
                     ~ty:(fun i -> snd (List.nth ml_vars i))
                 in
                 let stmts =
@@ -638,7 +638,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                    re-deriving them from ML types substitution has since
                    given extra arrows.  Same order as [renamed_ml]. *)
                 with_method_env_types ~outer:outer_binders
-                  ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
+                  ~cpp:(List.rev_map (fun b -> Some (Legacy_minicpp_to_cpp_ir.lower_type b.mb_cpp_ty)) binders)
                   env renamed_ml
                   (fun () ->
                     let binders_db = Array.of_list (List.rev binders) in
@@ -647,7 +647,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                         ~owned:(fun i ->
                           binders_db.(i).mb_kind = `Value
                           && not (declared_by_reference binders_db.(i).mb_cpp_ty) )
-                        ~declared:(fun i -> Some binders_db.(i).mb_cpp_ty)
+                        ~declared:(fun i -> Some (Legacy_minicpp_to_cpp_ir.lower_type binders_db.(i).mb_cpp_ty))
                         ~ty:(fun i -> binders_db.(i).mb_ml_ty)
                     in
                     with_region ~owned inner_body (fun () ->

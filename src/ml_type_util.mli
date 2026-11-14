@@ -378,15 +378,12 @@ val is_fully_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
 
 (** True of a function type that erased its arguments but kept a concrete
     result, so a closure reaching it needs the [crane_erase_fn] adapter. *)
-val partially_erased_fun_ty : Minicpp.cpp_type -> bool
-
-(** {!partially_erased_fun_ty} in CppIR. *)
 val partially_erased_fun_ty_ir : Cpp_ir.Lowered.Type.t -> bool
 
 (** True of a function type that erased at least one argument, whichever way its
     result went: the condition under which a closure needs the [crane_erase_fn]
     adapter to reach the slot.  Strictly weaker than
-    {!partially_erased_fun_ty}, and independent of {!is_fully_erased_fun_ty}. *)
+    {!partially_erased_fun_ty_ir}, and independent of {!is_fully_erased_fun_ty}. *)
 val erased_domain_fun_ty : Minicpp.cpp_type -> bool
 
 (** {!erased_domain_fun_ty} in CppIR. *)
@@ -409,10 +406,13 @@ val materialise_opaque : Minicpp.cpp_type -> Minicpp.cpp_type
 val materialise_opaque_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether every component of a C++ type is erased. *)
-val is_all_erased : Minicpp.cpp_type -> bool
+val is_all_erased : Cpp_ir.Lowered.Type.t -> bool
 
 (** The template arguments of a C++ type. *)
 val extract_template_args : Minicpp.cpp_type -> Minicpp.cpp_type list
+
+(** {!extract_template_args} in CppIR. *)
+val extract_template_args_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list
 
 (** Erase a C++ type to [any]. *)
 val erase_type_to_any : Minicpp.cpp_type -> Minicpp.cpp_type
@@ -484,9 +484,6 @@ val tvar_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Erase a type down to its outermost applied type constructors, boxing every
     leaf: [List<Nat>] becomes [List<std::any>], [Nat] becomes [std::any]. *)
-val index_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
-
-(** {!index_erase_type} over a CppIR type. *)
 val index_erase_type_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether a C++ type contains an unnamed type variable. *)
@@ -825,6 +822,10 @@ val fill_holes : (Miniml.Open.t * Miniml.ml_type) list -> Miniml.ml_ast -> Minim
     [dummy_type] marker). *)
 val refine_param_from_slot :
   tvars:Names.Id.t list -> slot:Minicpp.cpp_type -> Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** {!refine_param_from_slot} in CppIR. *)
+val refine_param_from_slot_ir :
+  tvars:Names.Id.t list -> slot:Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** [(index, name)] of every type variable in a C++ type, sorted by index. *)
 val get_tvars_indexed : Minicpp.cpp_type -> (int * Names.Id.t) list

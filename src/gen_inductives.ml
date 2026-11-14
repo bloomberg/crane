@@ -707,6 +707,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   } = s in
   let ret_cpp_ir = ret_cpp in
   let ret_cpp = Cpp_ir_to_legacy_minicpp.ty ret_cpp in
+  let params_ir = params in
   let params = List.map (fun (x, t) -> (x, Cpp_ir_to_legacy_minicpp.ty t)) params in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
@@ -742,7 +743,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         && Translation_support.declared_by_value
              (List.assoc_opt (Common.get_db_name (i + 1) env) params)
              ~summary:(List.nth method_owned_flags i) )
-      ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params)
+      ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params_ir)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
   in
   (* The receiver becomes [this]; a closure reading it captures a copy of

@@ -170,12 +170,6 @@ let written_at_variables_ir id (by_var : (int * Cpp_ir.Lowered.Type.t) list) =
        ~instance:(fun _ -> None)
        ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
 
-(** {!written_at_variables_ir} for variables given in MiniCpp, the arguments
-    written in MiniCpp. *)
-let written_at_variables id by_var =
-  List.map Cpp_ir_to_legacy_minicpp.ty
-    (written_at_variables_ir id (List.map (fun (i, t) -> (i, Legacy_minicpp_to_cpp_ir.lower_type t)) by_var))
-
 (** A call lowered against its callee's plan: the plan its arguments are
     lowered by, the callee's C++ type at the call, the written type arguments by
     scheme variable after the evidence stage, the callee's ABI and the
@@ -382,7 +376,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
      TFunctor<two<std::any, T1>>] is the carrier its [tfmap] call is at,
      already at the erased element. *)
   let carrier_from_dictionary i =
-    let unwrap = strip_param_spelling in
+    let unwrap = Cpp_ir.Types.strip_param_spelling in
     List.find_map
       (fun (k, pt) ->
         match resolve_tmeta pt with
@@ -437,9 +431,9 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
                 Option.map unwrap
                   (planned_binder_type_or_derive ~use:"argument's type argument" ~agree:( = ) env j occ)
               with
-              | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
-                && not (prints_as_any x) ->
-                Some (Legacy_minicpp_to_cpp_ir.lower_type x)
+              | Some (Cpp_ir.Type.Entity_application (g', [x], _)) when GlobRef.UserOrd.equal g g'
+                && not (Cpp_ir.Types.prints_as_any x) ->
+                Some x
               | _ -> None )
             | _ -> None )
           | None -> None )
@@ -1224,16 +1218,6 @@ let assumed_callables struc callables =
 (** [slot] for a lambda going to a callable its callee deduces: the positions
     the slot erases are left to deduction ([const auto&]), so the lambda takes
     whatever its callee's instantiation hands it there. *)
-let deduce_erased_domains = function
-  | Tfun (doms, cod) ->
-    Tfun
-      ( List.map
-          (fun d -> if exists_cpp_type prints_as_any d then Tref (Lvalue, Tconst Tauto) else d)
-          doms,
-        cod )
-  | t -> t
-
-(** {!deduce_erased_domains} in CppIR. *)
 let deduce_erased_domains_ir : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Function (doms, cod) ->
     Function
@@ -1503,9 +1487,9 @@ type argument_position = {
     lowering recorded for the binder. *)
 let local_callable env j occ =
   let callable ty =
-    let ty = match ty with Some _ -> ty | None -> Option.map (cpp_of_ml env) (get_env_type_opt j) in
-    match Option.map (unfold_cpp_typedef env) ty with
-    | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
+    let ty = match ty with Some _ -> ty | None -> Option.map (cpp_of_ml_ir env) (get_env_type_opt j) in
+    match Option.map (unfold_cpp_typedef_ir env) ty with
+    | Some (Cpp_ir.Type.(Function _ | Const (Function _) | Reference (_, (Function _ | Const (Function _))))) -> true
     | _ -> false
   in
   callable (planned_binder_type ~use:"local callable" ~agree:(fun p l -> callable p = callable l) j occ)
@@ -1580,7 +1564,7 @@ let argument_position ~local_callable env id plan i ml_arg =
      function type into a codomain that was a type variable flattens the
      element's arrows into the callable's own parameter list, and a
      template argument keeps its currying (see
-     {!template_arg_of_ml_type}).  A parameter declared as a bare type
+     {!template_arg_of_ml_type_ir}).  A parameter declared as a bare type
      variable has arity zero, so its value is curried throughout. *)
   (* This parameter's substituted C++ type.  [param_index] counts
      positions of the unsubstituted type, so it has to be converted before
