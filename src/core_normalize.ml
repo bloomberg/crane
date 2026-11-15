@@ -44,5 +44,5 @@ let check s =
 let structure =
   Modutil.map_struct_decls (function
     | Dterm (r, b, ty) -> Dterm (r, spine b, ty)
-    | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = spine fd.fd_body}) fds)
+    | Dfix fds -> Dfix (Core.Nonempty.map (fun fd -> {fd with fd_body = spine fd.fd_body}) fds)
     | d -> d )

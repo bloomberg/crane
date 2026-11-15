@@ -1604,7 +1604,7 @@ let declares struc =
     (function
       | Dind (kn, ind) -> inductive kn ind
       | Dtype (r, _, _) | Dterm (r, _, _) -> add r
-      | Dfix fds -> List.iter (fun fd -> add fd.fd_ref) fds )
+      | Dfix fds -> Core.Nonempty.iter (fun fd -> add fd.fd_ref) fds )
     (function
       | Sind (kn, ind) -> inductive kn ind
       | Stype (r, _, _) | Sval (r, _, _) -> add r )

@@ -93,7 +93,7 @@ let struct_functions struc =
         match se with
         | SEdecl (Dterm (r, (MLlam _ as b), ty)) -> acc := (r, b, ty) :: !acc
         | SEdecl (Dfix fds) ->
-          List.iter (fun fd -> acc := (fd.fd_ref, fd.fd_body, fd.fd_type) :: !acc) fds
+          Core.Nonempty.iter (fun fd -> acc := (fd.fd_ref, fd.fd_body, fd.fd_type) :: !acc) fds
         | SEmodule {ml_mod_expr = MEstruct (_, l); _} -> elems l
         | _ -> () )
       l
@@ -219,9 +219,9 @@ let decl_iter_references ?prune do_term do_cons do_type =
       ast_iter a;
       type_iter t
     | Dfix fds ->
-      List.iter (fun fd -> do_term fd.fd_ref) fds;
-      List.iter (fun fd -> ast_iter fd.fd_body) fds;
-      List.iter (fun fd -> type_iter fd.fd_type) fds
+      Core.Nonempty.iter (fun fd -> do_term fd.fd_ref) fds;
+      Core.Nonempty.iter (fun fd -> ast_iter fd.fd_body) fds;
+      Core.Nonempty.iter (fun fd -> type_iter fd.fd_type) fds
 
 (** Iterate over all references in an ML specification. *)
 let spec_iter_references do_term do_cons do_type = function
@@ -244,7 +244,7 @@ let rec ast_search f a = if f a then raise Found else ast_iter (ast_search f) a
 (** Search for an AST node in a declaration. *)
 let decl_ast_search f = function
   | Dterm (_, a, _) -> ast_search f a
-  | Dfix fds -> List.iter (fun fd -> ast_search f fd.fd_body) fds
+  | Dfix fds -> Core.Nonempty.iter (fun fd -> ast_search f fd.fd_body) fds
   | _ -> ()
 
 (** Search for an AST node anywhere in a structure. *)
@@ -271,7 +271,7 @@ let decl_type_search f = function
       (fun {ip_types = v} -> Array.iter (List.iter (type_search f)) v)
       p
   | Dterm (_, _, u) -> type_search f u
-  | Dfix fds -> List.iter (fun fd -> type_search f fd.fd_type) fds
+  | Dfix fds -> Core.Nonempty.iter (fun fd -> type_search f fd.fd_type) fds
   | Dtype (_, _, u) -> type_search f u
 
 (** Search for a type in a specification. *)
@@ -302,7 +302,9 @@ let rec msig_of_ms = function
   | (l, SEdecl (Dtype (r, v, t))) :: ms ->
     (l, Spec (Stype (r, v, Some t))) :: msig_of_ms ms
   | (l, SEdecl (Dfix fds)) :: ms ->
-    List.map (fun fd -> (l, Spec (Sval (fd.fd_ref, fd.fd_body, fd.fd_type)))) fds
+    List.map
+      (fun fd -> (l, Spec (Sval (fd.fd_ref, fd.fd_body, fd.fd_type))))
+      (Core.Nonempty.to_list fds)
     @ msig_of_ms ms
   | (l, SEmodule m) :: ms -> (l, Smodule m.ml_mod_type) :: msig_of_ms ms
   | (l, SEmodtype m) :: ms -> (l, Smodtype m) :: msig_of_ms ms
@@ -363,6 +365,7 @@ let get_decl_in_structure r struc =
 
 (** Convert member [i] of a Dfix group to an MLfixpoint term for inlining. *)
 let dfix_to_mlfix fds i =
+  let fds = Core.Nonempty.to_list fds in
   let rv = Array.of_list (List.map (fun fd -> fd.fd_ref) fds) in
   let rec make_subst n s =
     if n < 0 then
@@ -414,7 +417,7 @@ let decl_of_term r a t =
        by its occurrence. *)
     let c = Mlutil.ast_subst_each (fun () -> MLglob (Mlutil.self_reference r)) c in
     unify_binders_with_signature t c;
-    Dfix [{fd_ref = r; fd_body = c; fd_type = t}]
+    Dfix (Core.Nonempty.singleton {fd_ref = r; fd_body = c; fd_type = t})
     (* The self-reference instantiates [r] at its own type variables
        ({!Miniml.Global_use.identity}), so a self-call states no type
        arguments of its own. *)
@@ -434,7 +437,7 @@ let rec optim_se top to_appear s = function
     (l, SEdecl d) :: optim_se top to_appear s lse
   | (l, SEdecl (Dfix fds)) :: lse ->
     let fds =
-      List.map
+      Core.Nonempty.map
         (fun fd -> {fd with fd_body = normalize (ast_glob_subst !s fd.fd_body)})
         fds
     in
@@ -444,8 +447,8 @@ let rec optim_se top to_appear s = function
       (fun i fd ->
         if inline fd.fd_ref fake_body then
           s := Ref.User.Map.add fd.fd_ref (dfix_to_mlfix fds i) !s )
-      fds;
-    let fds = List.map (fun fd -> {fd with fd_body = dump_unused_vars fd.fd_body}) fds in
+      (Core.Nonempty.to_list fds);
+    let fds = Core.Nonempty.map (fun fd -> {fd with fd_body = dump_unused_vars fd.fd_body}) fds in
     (l, SEdecl (Dfix fds)) :: optim_se top to_appear s lse
   | (l, SEmodule m) :: lse ->
     let m = {m with ml_mod_expr = optim_me to_appear s m.ml_mod_expr} in
@@ -491,7 +494,7 @@ let declared_refs = function
   | Dind (kn, _) -> [GlobRef.IndRef (kn, 0)]
   | Dtype (r, _, _) -> [r]
   | Dterm (r, _, _) -> [r]
-  | Dfix fds -> List.map (fun fd -> fd.fd_ref) fds
+  | Dfix fds -> List.map (fun fd -> fd.fd_ref) (Core.Nonempty.to_list fds)
 
 (** Computes the dependencies of a declaration, except in case of custom
     extraction. *)
@@ -533,7 +536,7 @@ let rec depcheck_se = function
       match d with
       | Dfix fds when List.for_all is_custom refs' ->
         let unused fd = {fd with fd_body = MLexn "UNUSED"} in
-        (l, SEdecl (Dfix (List.map unused fds))) :: se'
+        (l, SEdecl (Dfix (Core.Nonempty.map unused fds))) :: se'
       | _ ->
         compute_deps_decl d;
         t :: se' )

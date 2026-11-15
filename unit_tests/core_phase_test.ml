@@ -28,8 +28,6 @@ let () =
   let lam = MLlam (Dummy, nat, fresh_rel 1) in
   let fine = [term "f" lam (Tarr (nat, nat))] in
   check "a well-formed program freezes" (not (refused fine));
-  check "an empty recursive group is refused"
-    (refused [(Label.make "g", SEdecl (Dfix []))]);
   check "a local group selecting a missing member is refused"
     (refused [term "h" (MLfixpoint (2, [|(Id.of_string "go", nat)|], [|lam|], Occurrence.fresh ())) nat]);
   check "a declaration made twice is refused" (refused (fine @ fine));

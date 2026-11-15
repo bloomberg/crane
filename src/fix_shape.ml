@@ -48,7 +48,7 @@ let rec expr e =
 let decl = function
   | Dterm (r, b, ty) -> Dterm (r, expr b, ty)
   | Dfix fds ->
-    Dfix (List.map (fun fd -> {fd with fd_body = expr (float_lets_under_lams fd.fd_body)}) fds)
+    Dfix (Core.Nonempty.map (fun fd -> {fd with fd_body = expr (float_lets_under_lams fd.fd_body)}) fds)
   | d -> d
 
 let structure = Modutil.map_struct_decls decl

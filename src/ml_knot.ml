@@ -92,8 +92,10 @@ let structure struc =
     List.map
       (fun (lbl, se) ->
         match se with
-        | SEdecl (Dfix [fd]) -> (
-          match fixpoint defs fd with Some fd -> (lbl, SEdecl (Dfix [fd])) | None -> (lbl, se) )
+        | SEdecl (Dfix {head = fd; tail = []}) -> (
+          match fixpoint defs fd with
+          | Some fd -> (lbl, SEdecl (Dfix (Core.Nonempty.singleton fd)))
+          | None -> (lbl, se) )
         | SEmodule ({ml_mod_expr = MEstruct (mp, l); _} as m) ->
           (lbl, SEmodule {m with ml_mod_expr = MEstruct (mp, elems l)})
         | se -> (lbl, se) )

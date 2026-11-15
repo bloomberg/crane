@@ -797,7 +797,7 @@ let member_names_of_sel sel =
         | SEdecl (Dind (_, ind)) ->
           Array.to_list (Array.map (fun p -> name p.ip_typename) ind.ind_packets)
         | SEdecl (Dfix fds) ->
-          List.map (fun fd -> name (Label.to_id (label_of_r fd.fd_ref))) fds
+          List.map (fun fd -> name (Label.to_id (label_of_r fd.fd_ref))) (Core.Nonempty.to_list fds)
         | SEdecl _ -> [name (Label.to_id l)]
         | SEmodule _ | SEmodtype _ -> [name (Label.to_id l)]
       in

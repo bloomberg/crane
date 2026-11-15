@@ -24,7 +24,8 @@ let functions struc =
   Modutil.struct_iter
     (function
       | Miniml.Dterm (r, b, ty) when Ml_type_util.ml_domains ty <> [] -> add r b ty
-      | Miniml.Dfix fds -> List.iter (fun (fd : Miniml.ml_fix_def) -> add fd.fd_ref fd.fd_body fd.fd_type) fds
+      | Miniml.Dfix fds ->
+        Core.Nonempty.iter (fun (fd : Miniml.ml_fix_def) -> add fd.fd_ref fd.fd_body fd.fd_type) fds
       | _ -> () )
     (fun _ -> ())
     (fun _ -> ())

@@ -19,7 +19,7 @@ let call f = MLapp (MLglob (Global_use.monomorphic (r f)), [fresh_rel 1])
 let calling fs = MLlam (Dummy, nat, List.fold_left (fun b f -> MLletin (Dummy, nat, call f, b, Occurrence.fresh ())) (fresh_rel 1) fs)
 let fd name fs = {fd_ref = r name; fd_body = calling fs; fd_type = Tarr (nat, nat)}
 let term name fs = (Label.make name, SEdecl (Dterm (r name, calling fs, Tarr (nat, nat))))
-let fix fds = (Label.make "fix", SEdecl (Dfix fds))
+let fix fds = (Label.make "fix", SEdecl (Dfix (Core.Nonempty.of_list_exn fds)))
 let names = Option.map (List.map (function GlobRef.VarRef id -> Id.to_string id | _ -> "?"))
 
 let program =

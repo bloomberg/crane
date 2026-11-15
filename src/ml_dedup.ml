@@ -50,7 +50,7 @@ let forwarder body target =
 let function_def d =
   let emitted r = not (Table.is_custom r || Table.is_projection r) in
   match d with
-  | Dfix [fd] when emitted fd.fd_ref -> Some (fd.fd_ref, fd.fd_body, fd.fd_type)
+  | Dfix {head = fd; tail = []} when emitted fd.fd_ref -> Some (fd.fd_ref, fd.fd_body, fd.fd_type)
   | Dterm (r, (MLlam _ as body), ty) when emitted r -> Some (r, body, ty)
   | _ -> None
 

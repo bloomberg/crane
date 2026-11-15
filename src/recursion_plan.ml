@@ -1104,7 +1104,9 @@ let splice_calls def sites body =
 
 (* The effect operations of [fd]'s body alone, generated in its mode. *)
 let definition_effects fd =
-  Core_effects.analyze [(Names.ModPath.MPfile Names.DirPath.empty, [(Names.Label.make "spliced", SEdecl (Dfix [fd]))])]
+  Core_effects.analyze
+    [ ( Names.ModPath.MPfile Names.DirPath.empty,
+        [(Names.Label.make "spliced", SEdecl (Dfix (Core.Nonempty.singleton fd)))] ) ]
 
 (* Whether functions of types [a] and [b] yield one type, once every
    abbreviation is unfolded, whatever [Type Expand] says the C++ spells, a
@@ -1319,7 +1321,7 @@ let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core_pha
   { structure =
       Modutil.map_struct_decls
         (function
-          | Dfix fds -> Dfix (List.map splice fds)
+          | Dfix fds -> Dfix (Core.Nonempty.map splice fds)
           | Dterm (r, b, ty) ->
             let fd = splice {fd_ref = r; fd_body = b; fd_type = ty} in
             Dterm (r, fd.fd_body, ty)

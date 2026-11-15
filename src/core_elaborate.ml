@@ -848,7 +848,7 @@ let structure ~methods struc =
         if Instance_methods.methods r body ty <> None then names_only b written else written b;
         instance_methods b r body ty
       | Dfix fds ->
-        List.iter
+        Core.Nonempty.iter
           (fun fd ->
             define fd.fd_ref;
             if not (as_method fd.fd_ref) then declaration ~caller:fd.fd_ref b fd.fd_type fd.fd_body )

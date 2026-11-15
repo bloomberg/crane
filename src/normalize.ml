@@ -369,11 +369,14 @@ let body ~effects ~splices ~globals ty b =
   scope ~group:{globals; own_tvars = Mlutil.type_maxvar ty; locals = []; fresh = temporaries (); effects; splices} ~depth:0 b
 
 let decl ~effects ~splices ~methods = function
-  | Dfix fds when List.exists (fun fd -> loopified ~methods fd.fd_ref) fds ->
+  | Dfix fds when Core.Nonempty.exists (fun fd -> loopified ~methods fd.fd_ref) fds ->
     (* A group is normalized whole: loopification inlines one member's
        partners into it, whether or not they are loopified themselves. *)
-    let globals = List.map (fun fd -> fd.fd_ref) fds in
-    Dfix (List.map (fun fd -> {fd with fd_body = body ~effects ~splices ~globals fd.fd_type fd.fd_body}) fds)
+    let globals = List.map (fun fd -> fd.fd_ref) (Core.Nonempty.to_list fds) in
+    Dfix
+      (Core.Nonempty.map
+         (fun fd -> {fd with fd_body = body ~effects ~splices ~globals fd.fd_type fd.fd_body})
+         fds)
   | Dterm (r, b, ty) when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
     Dterm (r, body ~effects ~splices ~globals:[] ty b, ty)
@@ -403,14 +406,17 @@ let eta_body ty b =
 let eta_expand =
   Modutil.map_struct_decls (function
     | Dterm (r, b, ty) -> Dterm (r, eta_body ty b, ty)
-    | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = eta_body fd.fd_type fd.fd_body}) fds)
+    | Dfix fds -> Dfix (Core.Nonempty.map (fun fd -> {fd with fd_body = eta_body fd.fd_type fd.fd_body}) fds)
     | d -> d )
 
 let let_lambdas =
   Modutil.map_struct_decls (function
     | Dterm (r, b, ty) -> Dterm (r, Core_elaborate.generated_definition ty b, ty)
     | Dfix fds ->
-      Dfix (List.map (fun fd -> {fd with fd_body = Core_elaborate.generated_definition fd.fd_type fd.fd_body}) fds)
+      Dfix
+        (Core.Nonempty.map
+           (fun fd -> {fd with fd_body = Core_elaborate.generated_definition fd.fd_type fd.fd_body})
+           fds)
     | d -> d )
 
 (* The methods the structure's functions become. *)

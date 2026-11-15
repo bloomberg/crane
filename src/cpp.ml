@@ -1627,7 +1627,9 @@ let plan_callables ?(reversed = false) s =
     | Dterm (r, a, t) when not (is_typeclass_instance t) -> plan ~fixpoint:false r a t
     | Dterm (r, a, t) -> instance_plans := (r, Cpp_ind.plan_instance_methods r a t) :: !instance_plans
     | Dfix fds ->
-      List.iter (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type) (order fds)
+      List.iter
+        (fun fd -> plan ~fixpoint:true fd.fd_ref fd.fd_body fd.fd_type)
+        (order (Core.Nonempty.to_list fds))
     | Dind (kn, ind) -> plan_methods kn ind
     | Dtype _ -> ()
   in
@@ -2220,7 +2222,7 @@ let plan_names s =
           | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Type_class _ -> [] )
       | Dtype (r, _, _) -> name Type r
       | Dterm (r, _, _) -> name Term r
-      | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
+      | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) (Core.Nonempty.to_list fds) )
     (declarations s)
 
 let plan_referenced_names s =
@@ -2319,9 +2321,9 @@ let plan_referenced_names s =
       term a;
       ty t
     | Dfix fds ->
-      List.iter (fun fd -> name Term fd.fd_ref) fds;
-      List.iter (fun fd -> term fd.fd_body) fds;
-      List.iter (fun fd -> ty fd.fd_type) fds
+      Core.Nonempty.iter (fun fd -> name Term fd.fd_ref) fds;
+      Core.Nonempty.iter (fun fd -> term fd.fd_body) fds;
+      Core.Nonempty.iter (fun fd -> ty fd.fd_type) fds
   in
   let spec = function
     | Sind (kn, ind) -> inductive kn ind

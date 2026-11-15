@@ -358,13 +358,12 @@ type ml_fix_def = {fd_ref : GlobRef.t; fd_body : ml_ast; fd_type : ml_type}
 (** A concrete, defined top-level ML entity. [Dind] is an inductive definition;
     [Dtype] a type abbreviation (its reference, type-variable names, and body);
     [Dterm] a single term definition (reference, body, type); and [Dfix] a
-    block of mutually recursive definitions, in definition order and never
-    empty. *)
+    block of mutually recursive definitions, in definition order. *)
 type ml_decl =
   | Dind of MutInd.t * ml_ind
   | Dtype of GlobRef.t * Id.t list * ml_type
   | Dterm of GlobRef.t * ml_ast * ml_type
-  | Dfix of ml_fix_def list
+  | Dfix of ml_fix_def Core.Nonempty.t
 
 (** The specification (interface view) of an ML entity, used when emitting
     signatures. [Sind] specifies an inductive; [Stype] a type name (with an

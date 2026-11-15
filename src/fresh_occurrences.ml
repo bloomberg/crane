@@ -28,7 +28,7 @@ let rec term e =
 
 let decl = function
   | Dterm (r, b, ty) -> Dterm (r, term b, ty)
-  | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = term fd.fd_body}) fds)
+  | Dfix fds -> Dfix (Core.Nonempty.map (fun fd -> {fd with fd_body = term fd.fd_body}) fds)
   | d -> d
 
 let structure = Modutil.map_struct_decls decl

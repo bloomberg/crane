@@ -97,7 +97,8 @@ let zonk p =
   in
   let decl = function
     | Dterm (r, b, t) -> Dterm (r, body b, ty t)
-    | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = body fd.fd_body; fd_type = ty fd.fd_type}) fds)
+    | Dfix fds ->
+      Dfix (Core.Nonempty.map (fun fd -> {fd with fd_body = body fd.fd_body; fd_type = ty fd.fd_type}) fds)
     | Dtype (r, vars, t) -> Dtype (r, vars, ty t)
     | Dind (_, ind) as d -> inductive ind; d
   in
@@ -122,8 +123,8 @@ let check_zonked p =
   iter_types walk p;
   Table.iter_types walk
 
-(** Every recursive group is nonempty, and a local one selects a member it
-    has. *)
+(** Every local recursive group is nonempty and selects a member it has (a
+    top-level group is nonempty by its type). *)
 let check_recursive_groups p =
   let rec check_body = function
     | MLfixpoint (i, ids, funs, _) | MLcofixpoint (i, ids, funs, _) as e ->
@@ -135,7 +136,6 @@ let check_recursive_groups p =
   in
   Modutil.struct_iter
     (function
-      | Dfix [] -> fail "has an empty recursive group"
       | (Dterm _ | Dfix _) as d -> List.iter (fun fd -> check_body fd.fd_body) (Mlutil.term_defs d)
       | Dind _ | Dtype _ -> () )
     (fun _ -> ())

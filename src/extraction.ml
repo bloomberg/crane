@@ -2949,9 +2949,12 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
      means cofixpoint *)
   if not is_fix then
     Array.iter (fun kn -> add_cofixpoint (GlobRef.ConstRef kn)) vkn;
+  (* [vkn] names the bodies of a kernel (co)fixpoint, of which there is at
+     least one. *)
   Dfix
-    (List.init n (fun i ->
-         {fd_ref = GlobRef.ConstRef vkn.(i); fd_body = terms.(i); fd_type = types.(i)} ))
+    (Core.Nonempty.of_list_exn
+       (List.init n (fun i ->
+            {fd_ref = GlobRef.ConstRef vkn.(i); fd_body = terms.(i); fd_type = types.(i)} )))
 
 (** Main entry point for extracting a constant declaration, dispatching on its
     {!flag} and on its body (symbol, primitive or axiom, transparent
@@ -3331,7 +3334,7 @@ let logical_decl = function
   | Dterm (_, MLdummy _, Tdummy _) -> true
   | Dtype (_, _, Tdummy _) -> true
   | Dfix fds ->
-    List.for_all (fun fd -> isMLdummy fd.fd_body && isTdummy fd.fd_type) fds
+    Core.Nonempty.for_all (fun fd -> isMLdummy fd.fd_body && isTdummy fd.fd_type) fds
   | Dind (_, i) -> Array.for_all (fun ip -> ip.ip_logical) i.ind_packets
   | _ -> false
 

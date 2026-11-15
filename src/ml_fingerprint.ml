@@ -180,7 +180,7 @@ let ml_decl w = function
   | Dind (m, ind) -> tag w "Dind"; mutind w m; ml_ind w ind
   | Dtype (r, vars, ty) -> tag w "Dtype"; globref w r; list w (id w) vars; ml_type w ty
   | Dterm (r, a, ty) -> tag w "Dterm"; globref w r; ml_ast w a; ml_type w ty
-  | Dfix fds -> tag w "Dfix"; list w (fix_def w) fds
+  | Dfix fds -> tag w "Dfix"; list w (fix_def w) (Core.Nonempty.to_list fds)
 
 let ml_spec w = function
   | Sind (m, ind) -> tag w "Sind"; mutind w m; ml_ind w ind

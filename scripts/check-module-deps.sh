@@ -30,7 +30,7 @@ CORE_FORBIDDEN="${TRANSLATION/ Method_registry/} $PRINTER $FINISHING Cpp_ir"
 
 # layer modules : forbidden dependencies
 rules=(
-  "core/inductive core/positional miniml foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
+  "core/inductive core/nonempty core/positional miniml foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
   "$CORE_PLANNING : $CORE_FORBIDDEN"
   "cpp_pipeline cpp_constraints loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_cpp_ir : $TRANSLATION $PRINTER"
   # CppIR is one node of the dependency graph (src/cpp_ir/ is a namespace), so

@@ -633,5 +633,5 @@ val is_suppressed_projection : Names.GlobRef.t -> bool
 
 (** Drop from a [Dfix] group the entries that are inline customs, local or
     globally registered method candidates, eponymous-record projections, or
-    suppressed projections. *)
-val filter_dfix : Miniml.ml_fix_def list -> Miniml.ml_fix_def list
+    suppressed projections.  What is left is a list, and may be empty. *)
+val filter_dfix : Miniml.ml_fix_def Core.Nonempty.t -> Miniml.ml_fix_def list

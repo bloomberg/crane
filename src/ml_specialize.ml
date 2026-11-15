@@ -21,7 +21,7 @@ let definitions struc =
       (fun (_, se) ->
         match se with
         | SEdecl (Dterm (r, b, ty)) -> add r (Term (b, ty))
-        | SEdecl (Dfix [fd]) -> add fd.fd_ref (Fix fd)
+        | SEdecl (Dfix {head = fd; tail = []}) -> add fd.fd_ref (Fix fd)
         | SEmodule {ml_mod_expr = MEstruct (_, l); _} -> elems l
         | _ -> ())
       l

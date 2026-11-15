@@ -1191,4 +1191,4 @@ let filter_dfix fds =
       && is_registered_method x = None
       && (not (is_eponymous_record_projection x))
       && not (is_suppressed_projection x) )
-    fds
+    (Core.Nonempty.to_list fds)

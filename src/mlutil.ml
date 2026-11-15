@@ -905,7 +905,7 @@ let isMLdummy = function
 
 let term_defs = function
   | Dterm (fd_ref, fd_body, fd_type) -> [{fd_ref; fd_body; fd_type}]
-  | Dfix fds -> fds
+  | Dfix fds -> Core.Nonempty.to_list fds
   | Dind _ | Dtype _ -> []
 
 let sign_of_id = function

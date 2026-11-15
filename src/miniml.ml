@@ -231,7 +231,7 @@ type ml_decl =
   | Dind of MutInd.t * ml_ind
   | Dtype of GlobRef.t * Id.t list * ml_type
   | Dterm of GlobRef.t * ml_ast * ml_type
-  | Dfix of ml_fix_def list
+  | Dfix of ml_fix_def Core.Nonempty.t
 
 (** ML specification. *)
 type ml_spec =

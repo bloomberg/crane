@@ -975,7 +975,7 @@ let generate scope ~module_ d =
       Header_only
         (fun () -> declarations_only [(empty_env (), gen_type_alias r l (Some t))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
-    group [{fd_ref = r; fd_body = a; fd_type = t}]
+    group (Core.Nonempty.singleton {fd_ref = r; fd_body = a; fd_type = t})
   | Dterm (r, a, t) when is_typeclass_instance t -> Instance (r, a, t)
   | Dterm (r, a, t) ->
     (* The helpers lifted out of the body are the element's to place: those
@@ -1198,7 +1198,7 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
 let decl_entity = function
   | Dind (kn, _) -> GlobRef.IndRef (kn, 0)
   | Dtype (r, _, _) | Dterm (r, _, _) -> r
-  | Dfix fds -> (List.hd fds).fd_ref
+  | Dfix {head; _} -> head.fd_ref
 
 (** [entity r ids helpers] is the generation of [r]: the declarations
     [ids], and the helpers among [helpers]. *)
