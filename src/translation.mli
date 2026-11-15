@@ -1,377 +1,47 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(************************************************************************)
-(*         *      The Rocq Prover / The Rocq Development Team           *)
-(*  v      *         Copyright INRIA, CNRS and contributors             *)
-(* <O___,, * (see version control and CREDITS file for authors & dates) *)
-(*   \VV/  **************************************************************)
-(*    //   *    This file is distributed under the terms of the         *)
-(*         *     GNU Lesser General Public License Version 2.1          *)
-(*         *     (see LICENSE file for the text of the license)         *)
-(************************************************************************)
 
 open Common
 open Names
 
 (** {1 Translation: Core to CppIR}
 
-    Expression-level lowering from the extracted {!Core} AST to the
-    C++-oriented {!Cpp_ir} AST. This is the second stage of the pipeline
-    ({v Rocq PCUIC --> Core --> CppIR --> C++ v}), sitting below the
-    declaration-level generators in {!Gen_decls} (which call into {!gen_expr},
-    {!gen_stmts}, and the type-conversion helpers here) and above {!Cpp_print},
-    which renders the resulting CppIR.
+    The entry points of expression lowering, from the extracted {!Core} AST
+    to the C++-oriented {!Cpp_ir} AST, for the declaration-level generators
+    ({!Gen_decls} and the [Gen_*] modules), which lower each body through
+    {!gen_expr} and {!gen_stmts}.
 
-    Besides the core expression/statement/type generators, this module exposes
-    a family of pure analysis helpers — ownership and escape inference, type
-    variable collection, monad detection, numeral folding, and constructor
-    field-name registration — that {!Gen_decls} shares so declaration and
-    expression codegen agree on names, signatures, and calling conventions.
-    A small amount of mutable per-module state (the local-inductive set and
-    [method_self_ns]) controls whether inductive references are namespace- or
-    sibling-qualified. *)
+    Lowering itself is spread over modules that each own one form
+    ({!Translation_expr}, {!Translation_stmts}, {!Translation_lambda},
+    {!Translation_application}, {!Translation_construct},
+    {!Translation_match}, {!Translation_effects},
+    {!Translation_local_functions}), which recurse through
+    {!Translation_knot}; this module ties that knot at load time.  What the
+    generators share with lowering below it is named where it lives: the
+    per-declaration context in {!Translation_state}, type conversion and
+    binder types in {!Translation_types}, call planning in
+    {!Translation_calls}, and the rest in {!Translation_support}. *)
 
-(** {2 Local Inductive Context}
-    The inductives the module being generated declares are spelled bare, as
-    sibling types, not qualified by their namespace
-    ({!Translation_state.generating_in}). *)
+(** Generate a C++ expression from a Core expression
+    ({!Translation_expr.gen_expr}).  [slot] describes the position; callers
+    outside lowering leave it at {!Translation_support.empty_slot}. *)
+val gen_expr :
+  ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:Translation_support.slot -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t
+
+(** Generate C++ statements from a Core expression
+    ({!Translation_stmts.gen_stmts}).  The continuation [k] turns the final
+    expression into a statement (a return, an assignment). *)
+val gen_stmts :
+  ?slot:Translation_support.slot ->
+  env ->
+  (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
+  Core.Expr.t ->
+  Cpp_ir.Lowered.Stmt.t list
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
     inductives added to [method_self_ns], restoring the enclosing namespace on
     the way out however [f] leaves. *)
 val with_method_ns_for_locals : ?base:Ref.User.Set.t -> (unit -> 'a) -> 'a
-
-(** Return the codomain of an ML type, chasing through arrows and meta
-    indirections. For [A -> B -> C] this returns [C]. *)
-val ml_codomain : Core.Type.t -> Core.Type.t
-
-(** {2 Type Conversion}
-    Convert Core types to CppIR types. *)
-
-(** Convert an ML type to C++ type representation.
-    @param env The current variable environment
-    @param ns
-      Set of inductive references that should be treated as local (no namespace
-      wrapper). Defaults to empty; most callers omit it.
-    @param tvars Type variable names for substitution
-    @param Core.Type.t The ML type to convert *)
-val cpp_ir_of_ml_type :
-  env -> ?ns:Ref.User.Set.t -> Id.t list -> Core.Type.t -> Cpp_ir.Lowered.Type.t
-
-(** [push_binders env ids] is {!Translation_state.push_env_types} plus the C++
-    type assignment: each binder's C++ type is decided once, here, at the
-    point it is bound.  [?cpp] overrides the conversion for binders whose type
-    the caller knows better than their ML type says. *)
-val push_binders :
-  ?cpp:Cpp_ir.Lowered.Type.t option list -> env -> (Id.t * Core.Type.t) list -> unit
-
-(** {!push_binders} for a declaration's parameters, whose class-typed ones are
-    its dictionaries ({!Core_query.parameter_role}). *)
-val push_parameters :
-  ?cpp:Cpp_ir.Lowered.Type.t option list -> env -> (Id.t * Core.Type.t) list -> unit
-
-(** Binder-type state: every binder's C++ type, tagged with what decided it. *)
-type binder_env =
-  (Cpp_ir.Lowered.Type.t * Translation_state.binder_origin) Translation_state.IntMap.t
-
-(** Save the current binder-type state. *)
-val save_erased_env : unit -> binder_env
-
-(** Restore binder-type state saved by {!save_erased_env}. *)
-val restore_erased_env : binder_env -> unit
-
-(** {2 Expression Generation} *)
-
-
-(** What the position a subterm occupies tells the generator about how to
-    build it.  Internal to the generator, which carries these properties down
-    every position whose value ends up in the same slot; callers outside
-    translation describe no slot and leave them at {!empty_slot}. *)
-type slot = {
-  repr : Ml_type_util.slot_repr;
-      (** How the value is represented in the slot; [Boxed] when the slot is
-          really [std::any], so a constructor built for it must use the
-          canonical erased shape every other producer of the same Coq type
-          agrees on. *)
-  expected_ml_ty : Core.Type.t option;
-      (** The ML type of the slot, when the caller knows it more precisely than
-          the expression's own annotation does. *)
-  in_ctor_arg : bool;
-      (** The slot is an argument of a constructor, so a nested constructor
-          filling it cannot name a template parameter of its own. *)
-  eta_keep_moves : bool;
-      (** The slot holds a single-use partial application whose closure may
-          capture by reference and keep its [CPPmove] wrappers. *)
-  call_result : Cpp_ir.Lowered.Type.t option;
-      (** The type the call this slot is an argument of is expected to
-          produce, where an instance passed as a value reads back the carrier
-          argument extraction erased. *)
-  stated_ml_ty : Core.Type.t option;
-      (** The ML type the position states, erased parts and all; read only
-          where an erased part is expected. *)
-  building_constant : bool;
-      (** The constructor in this slot is part of a constant, so it is built
-          here rather than hoisted again. *)
-}
-
-(** The slot properties of a position that constrains nothing. *)
-val empty_slot : slot
-
-(** [ml_arg_to_template_type env a] is the C++ type that names the instance [a]
-    stands for: the struct an instance definition generated, at the arguments
-    the term applies it to.  This is the spelling a call through the instance
-    already uses, so a type that has to agree with such a call takes it from
-    here rather than rebuilding it.  [expected], the type the call through
-    the instance returns, supplies an instance argument extraction erased.
-    [None] for skipped infrastructure, which has no struct. *)
-val ml_arg_to_template_type :
-  ?expected:Cpp_ir.Lowered.Type.t -> env -> Core.Expr.t -> Cpp_ir.Lowered.Type.t option
-
-(** Generate a C++ expression from an ML AST. *)
-val gen_expr : ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:slot -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t
-
-(** [recover_boxed_component into e] opens the box when [e] is evidently a
-    component read out of a pair that was itself recovered from a box, and so
-    hands back a [std::any] however concrete its ML type looks. *)
-val recover_boxed_component : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
-
-(** [unbox_value into e] recovers [e], a value known to come out of a box, at
-    [into] -- through a closure's returns where [e] is one built here. *)
-val unbox_value : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
-
-(** Generate pattern matching as a C++ expression: an if/else-if chain over
-    the scrutinee's variant, wrapped in an immediately-invoked lambda.  The
-    occurrence is the match's, the site of the binders its patterns bind
-    ({!Core_binder.Branch}). *)
-val gen_cpp_case : Core.Type.t -> Core.Expr.t -> env -> Core.Match.Branch.t array -> Core.Occurrence.t -> Cpp_ir.Lowered.Expr.t
-
-(** The Core binders of the parameters of a function whose body is generated
-    under [env], by name ({!Core_binder}): [env] gives no two binders in
-    scope one name. *)
-val parameter_binders : env -> (Names.Id.t * 'a) list -> (Names.Id.t * Core_binder.t) list
-
-(** Generate C++ statements from an ML AST. The continuation [k] transforms the
-    final expression into a statement (e.g., return, assignment). Handles
-    let-bindings, pattern matching, fix expressions, and monadic operations.
-
-    [slot] is {!gen_expr}'s, carried into the tail positions of these
-    statements. *)
-val gen_stmts :
-  ?slot:slot -> env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t -> Cpp_ir.Lowered.Stmt.t list
-
-(** Try eta-expanding/applying [f] to [args] when a call is under-applied or
-    involves a type-erased higher-order callback. Falls back to a plain
-    application. *)
-val eta_fun :
-  ?slot:slot ->
-  ?expected_ty:Cpp_ir.Lowered.Type.t ->
-  env -> Core.Expr.t -> Core.Expr.t list -> Cpp_ir.Lowered.Expr.t
-(** [slot] is {!gen_expr}'s, carried into the argument expressions. *)
-
-(** Strip [Core.Expr.Coerce], [Core.Expr.Boxed_value] and [Core.Expr.Lambda_group_barrier] wrappers recursively — each
-    is a transparent coercion in the ML AST and should be ignored by
-    numeral-folding traversals. *)
-val strip_magic : Core.Expr.t -> Core.Expr.t
-
-(** {2 Declaration-Generation Helper Functions}
-    Pure helpers shared between the expression-level codegen above and the
-    declaration-level generators in {!Gen_decls}. *)
-
-(** Return a prefix of [lst] with length [min(n, length lst)], never raising
-    when [n > length lst]. *)
-val safe_firstn : int -> 'a list -> 'a list
-
-(** Extract the innermost result type from a (possibly monadic) ML type. *)
-val ml_result_type : Core.Type.t -> Core.Type.t
-
-(** Check if a monad reference uses the reified ITree extraction mode. *)
-val is_monad_reified : GlobRef.t -> bool
-
-(** Collect [Core.Binder_name.Source.t]s for typeclass-typed parameters in an ML arrow type. *)
-val collect_typeclass_param_ids : Core.Type.t -> Id.t list
-
-(** A type variable that really denotes an associated type of a type-class
-    instance parameter: [htp_tvar] stands for
-    [typename <htp_instance>::<htp_field>]. *)
-type hkt_tvar_position = {
-  htp_tvar : int;
-  htp_instance : Cpp_ir.Lowered.Type.t;  (** always an {!Cpp_ir.Type.Instance} *)
-  htp_field : Id.t;
-}
-
-(** Type variables standing for a higher-kinded class parameter. *)
-val hkt_tvar_positions_of_type : ?source_order:bool -> Core.Type.t -> hkt_tvar_position list
-
-(** Whether a declaration of this ML type is emitted as returning [void]: its
-    result, after the arrows and a monad's result argument, is [unit] -- and
-    the monad is not a reified one, whose trees are values. *)
-val ml_type_is_void_call : Core.Type.t -> bool
-
-(** Generate the C++ expression for Rocq's [tt] (the unit constructor). *)
-val mk_tt_expr : unit -> Cpp_ir.Lowered.Expr.t
-
-
-
-(** Generate a C++ expression converting [expr] from [src_ty] to [dst_ty],
-    inserting [make_shared]/dereference/etc. as needed. *)
-val gen_type_conversion_expr :
-  ?skip:(GlobRef.t -> bool) ->
-  src_ty:Cpp_ir.Lowered.Type.t ->
-  dst_ty:Cpp_ir.Lowered.Type.t ->
-  Cpp_ir.Lowered.Expr.t ->
-  Cpp_ir.Lowered.Expr.t
-
-(** Collect [Core.Type.Variable] indices referenced by an ML type, added to the accumulator
-    list. *)
-val collect_tvars : int list -> Core.Type.t -> int list
-
-(** True when evaluating an ML AST may throw through an extracted axiom or
-    exception. *)
-val ast_may_throw : Core.Expr.t -> bool
-
-(** Detect which of the first [n_params] parameters (by de Bruijn index) are
-    NOT simply forwarded unchanged to a self/recursive call, per
-    [is_self_call]. *)
-val detect_non_forwarded_params_generic :
-  is_self_call:(int -> Core.Expr.t -> bool) -> int -> Core.Expr.t -> int list
-
-(** Whether [body] calls [r] outside every lambda and every coinductive
-    constructor, where no suspension reaches the call. *)
-val calls_eagerly : Names.GlobRef.t -> Core.Expr.t -> bool
-
-(** The source-order indices of the first [n_params] parameters that a
-    closure in [body] may hold on to: named under a lambda not applied on the
-    spot, or anywhere when [suspended]. *)
-val escaping_params : suspended:bool -> int -> Core.Expr.t -> int list
-
-(** Why a global is emitted as a function of no parameters, so that naming
-    it calls it (see {!Translation_support.thunk_reason}). *)
-type thunk_reason = Translation_support.thunk_reason = Cofixpoint | Throws | Monadic
-
-(** The {!thunk_reason} of a global, if it has one: what its declaration and
-    every reference to it read. *)
-val thunk_reason : Names.GlobRef.t -> thunk_reason option
-
-(** For each function of a recursive group of [groups], the source-order
-    indices of the parameters a call from another member of its group passes
-    a closure for -- a lambda, or anything that may compute one, but not a
-    parameter of the caller or a named function -- whose type flows back,
-    through the group's calls, into the instantiation that makes it. *)
-val partner_closure_params :
-  Recursive_groups.t -> Core.Program.t -> (Names.GlobRef.t * int list) list
-
-(** Make [l] the extraction's {!partner_closure_params}. *)
-val install_partner_closure_params : (Names.GlobRef.t * int list) list -> unit
-
-(** The source-order indices of the callable parameters, among the first
-    [n_params], that a function made from [self_ref] takes as a [crane::fn]
-    rather than generalising to [F &&]: those a self-call passes something
-    else for, those a call from a partner in its recursive group passes a
-    closure for, and those a closure in [body] holds on to. *)
-val ungeneralised_callable_params :
-  self_ref:Names.GlobRef.t -> suspended:bool -> int -> Core.Expr.t -> Escape.IntSet.t
-
-(** A definition's parameters as its function takes them: [b]'s leading
-    lambdas, innermost first, as many as its type has domains; the rest stay
-    in the body as the closure it returns. *)
-val collect_typed_lams : Core.Type.t -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
-
-(** Whether a function takes a callable parameter of C++ type [f] as a
-    deduced [F &&] rather than a [crane::fn]: unless the parameter is
-    [kept_as_fn] (in {!ungeneralised_callable_params}' set), or [f] erased
-    throughout in a signature deducing no type variable ([primary] empty). *)
-val generalises_callable :
-  kept_as_fn:bool -> primary:Escape.IntSet.t -> Cpp_ir.Lowered.Type.t -> bool
-
-(** Which of [params], innermost first, the function whose [body] stands
-    under them owns (passes by value and may move): as {!Ownership} settled
-    them for the global [owner] where that covers them, as
-    {!Ownership.read_off} reads [body] otherwise. *)
-val infer_owned_flags :
-  ?owner:Names.GlobRef.t -> Core.Expr.t -> ('a * Core.Type.t) list -> bool list
-
-(** A C++ parameter type wrapped with const/ref as ownership says: by value
-    where owned, by const reference where borrowed and lent by reference. *)
-val wrap_param_by_ownership :
-  ?is_owned:bool -> ?core:Core.Type.t -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
-
-(** How a parameter declared at a type -- after {!wrap_param_by_ownership},
-    or as the [F &&] a deduced callable is -- owned or not, is passed. *)
-val param_passing : owned:bool -> Cpp_ir.Lowered.Type.t -> Callable_abi.passing
-
-(** [classify_erasure ty] — the erasure status of one side of a value
-    boundary; see the layering note at the top of [ml_type_util.mli].  Prefer
-    this to assembling an answer out of the structural predicates: [`Unknown]
-    (untracked — may be boxed into, never cast out of), [`Boxed] (really
-    inside a [std::any]), [`Opaque] (spelled [std::any], promising nothing)
-    and [`Concrete] are each easy to reach for by mistake. *)
-val classify_erasure :
-  Cpp_ir.Lowered.Type.t option -> [`Unknown | `Boxed | `Opaque | `Concrete of Cpp_ir.Lowered.Type.t]
-
-(** [box_for_any_slot kind e expr] adapts [expr], generated from [e], to the
-    shape a boxed slot of kind [kind] is read back at: a function value in
-    the [crane_erase_fn] adapter, and a list in a [Family_box] at the
-    element-boxed shape.  Other expressions are returned unchanged. *)
-val box_for_any_slot : Ml_type_util.box_kind -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t
-
-(** True when a single-branch match body is a direct projection returning a
-    field stored as an erased [std::any]. *)
-val ml_body_returns_erased_field : Core.Expr.t -> bool
-
-(** Build a [Core.Type.Variable i -> concrete_type] substitution mapping for extra type
-    variables introduced beyond an inductive's own [num_ind_vars]. *)
-val make_subst_extra_tvars :
-  int -> (int * Id.t) list -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
-
-(** Unify the (possibly polymorphic) declared type [ty] against the concrete
-    types occurring in body [b], substituting resolved type variables so
-    [gen_decl] can print a monomorphic signature even for polymorphic
-    definitions. *)
-val resolve_body_tvars : Core.Expr.t -> Core.Type.t -> Core.Expr.t
-
-(** The factory method name for a constructor (see
-    {!Translation_support.factory_name_of_ctor}). *)
-val factory_name_of_ctor : ?fallback_idx:int -> GlobRef.t -> string
-
-(** Augment [kernel_arg_names] with names from an [Arguments] declaration.
-    Where [kernel_arg_names] has [None] (anonymous binder), the corresponding
-    entry from [Arguments_renaming.arguments_names] is used if present and
-    non-anonymous.  Kernel-named entries ([Some _]) are never overridden.
-    Returns [kernel_arg_names] unchanged if [Arguments_renaming] has no entry
-    for [cref] or if all kernel binders are already named. *)
-val augment_with_args_renaming :
-  GlobRef.t -> Id.t option list -> Id.t option list
-
-(** Compute and register field names for all [n_fields] fields of a
-    constructor struct.  [field_consarg_names] supplies the pretty names used
-    for struct field declarations (may include [Arguments_renaming] overrides);
-    [bind_consarg_names] supplies the kernel-only names used for structured-
-    binding variable generation. *)
-val compute_and_register_field_names :
-  owner:GlobRef.t ->
-  string -> Id.t option list -> Id.t option list -> int -> Id.t list
-
-
-(** [collecting_lifted f] runs [f] and returns, with its result, the helpers
-    lifted out of the bodies it generated, in the order they were lifted.
-    Every helper is lifted inside one: a generation's helpers are part of
-    what it generates, for whoever records the generation to place, and a
-    helper lifted outside every collection is an anomaly. *)
-val collecting_lifted : (unit -> 'a) -> 'a * Cpp_ir.Lowered.Decl.t list
-
-(** [relift ds] lifts [ds] again, to the generation collecting the current
-    body's helpers: a generation that takes another's output takes the
-    helpers lifted out of it along with it. *)
-val relift : Cpp_ir.Lowered.Decl.t list -> unit
-
-
-(** [is_list_global g] returns true iff [g] is the Coq list inductive.
-    Exposed so that cpp_print.ml can detect list types in any_cast contexts. *)
-val is_list_global : GlobRef.t -> bool
-
-(** [has_tvar ty] returns true iff [ty] contains any type variable
-    ([Core.Type.Variable], [Core.Type.Unknown], or unresolved [Core.Type.Meta]). *)
-val has_tvar : Core.Type.t -> bool
 
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
     on an inductive whose kept parameters are [param_vars], has no C++ spelling

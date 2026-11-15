@@ -35,7 +35,6 @@ open Names
 open ModPath
 open Table
 open Common
-open Translation
 open Gen_decls
 open Cpp_state
 open Cpp_names
@@ -2458,9 +2457,9 @@ let plan_accessors s =
       match ty with
       | Core.Type.Global_app {head = m; _} when is_monad m -> false
       | _ -> (
-        match cpp_ir_of_ml_type (empty_env ()) [] ty with
+        match Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty with
         | Function _ -> false
-        | _ when thunk_reason r = Some Throws -> false
+        | _ when Translation_support.thunk_reason r = Some Throws -> false
         | cty ->
           in_template
           || in_struct

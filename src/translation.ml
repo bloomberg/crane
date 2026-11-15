@@ -10,23 +10,14 @@
     them, once, at load time. *)
 
 open Names
-include Translation_state
-include Ml_type_util
-include Core_query
-include Translation_support
-include Translation_types
-include Translation_calls
-include Translation_constructors
 
 let gen_expr = Translation_expr.gen_expr
 let gen_stmts = Translation_stmts.gen_stmts
-let eta_fun = Translation_application.eta_fun
-let gen_cpp_case = Translation_match.gen_cpp_case
 
 let () = Translation_knot.install {expr = Translation_expr.gen_expr; stmts = Translation_stmts.gen_stmts}
-let () = type_term_arg := fun env a -> gen_expr env a
-let () = plan_representation := Representation_plan.region
-let () = plan_positions := Position_plan.region
+let () = Translation_types.type_term_arg := fun env a -> gen_expr env a
+let () = Translation_state.plan_representation := Representation_plan.region
+let () = Translation_state.plan_positions := Position_plan.region
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
     inductives added to {!Translation_state.method_self_ns}, and puts the
@@ -45,10 +36,10 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
         if Table.has_recursive_fields g && not (Table.is_enum_inductive g)
         then Ref.User.Set.add g acc
         else acc)
-      (Option.default (!tctx).method_self_ns base)
-      (local_inductives_in_scope ())
+      (Option.default (!Translation_state.tctx).method_self_ns base)
+      (Translation_state.local_inductives_in_scope ())
   in
-  with_method_self_ns full_ns f
+  Translation_state.with_method_self_ns full_ns f
 
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
     on an inductive whose kept parameters are [param_vars], has no C++ spelling
@@ -58,4 +49,4 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
     because it is a question about C++ types, and the registry is deliberately
     kept below the type translation. *)
 let return_type_is_erased (param_vars : Id.t list) (ret : Core.Type.t) : bool =
-  type_is_erased (cpp_ir_of_ml_type (Common.empty_env ()) param_vars ret)
+  Ml_type_util.type_is_erased (Translation_types.cpp_ir_of_ml_type (Common.empty_env ()) param_vars ret)

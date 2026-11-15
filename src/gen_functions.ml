@@ -50,7 +50,7 @@ let type_alias_rhs r vars ot =
          parameter, read the value slot off the FRONT and wrote [ITree<iptr>].
          Eta-expansion appends; positional resolution reads from the
          beginning. *)
-      (Some (cpp_ir_of_ml_type (empty_env ()) vars t), None) )
+      (Some (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars t), None) )
 
 (** The kinds of the parameters [vars] of the type alias [r], whose body is
     [t], as {!gen_type_alias} declares them -- without recording them. *)
@@ -542,7 +542,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   (* Suppress __attribute__((pure)) for functions whose ML return type is
      monadic — these perform side effects even though the C++ return type
      may look pure after type erasure. *)
-  let no_pure = is_monadic_ml_type (ml_codomain ty) || ast_may_throw b in
+  let no_pure = is_monadic_ml_type (ml_codomain ty) || Translation_support.ast_may_throw b in
   with_itree_mode_for ty @@ fun () ->
   (* Void-ify unit codomain: unit as return type maps to C++ void.
      Check the ML result type (unwrapping monad if present) to determine
@@ -552,7 +552,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
        so the C++ function literally returns void)
      - Reified mode: Core.Type.Global_app(itree, [E; Unit]) → Core.Type.Global_app(itree, [E; void])
        (printed as shared_ptr<ITree<void>> via monad template) *)
-  let cod : Cpp_ir.Lowered.Type.t = if ml_type_is_void_call ty then Void else cod in
+  let cod : Cpp_ir.Lowered.Type.t = if Translation_support.ml_type_is_void_call ty then Void else cod in
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
   let mldom = List.rev (Ml_type_util.ml_domains ty) in
   let ids, b = collect_typed_lams ty b in
@@ -728,7 +728,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      it would be if written.  The indices are source order (param 0 = first
      Rocq parameter). *)
   let non_fwd_set =
-    ungeneralised_callable_params ~self_ref:n
+    Translation_support.ungeneralised_callable_params ~self_ref:n
       ~suspended:(Table.is_coinductive_type (ml_return_type ty))
       (List.length all_params) b
   in
@@ -828,9 +828,9 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      ... }], where the body's [f1] matches no parameter. *)
   let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
   reset_env_types ();
-  push_parameters env all_ids;
+  Translation_types.push_parameters env all_ids;
   let n_params = List.length all_params in
-  let owned_flags = infer_owned_flags ~owner:n b all_ids in
+  let owned_flags = Translation_support.infer_owned_flags ~owner:n b all_ids in
   (* Zip all_ids with ownership flags. all_ids and all_params have the same
      length (push_vars' preserves length), so owned_flags aligns 1:1. *)
   let all_ids_with_owned =
@@ -865,14 +865,14 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   let ids =
     List.map
       (fun (x, ty, owned) ->
-        let cpp_ty = cpp_ir_of_ml_type env [] ty in
+        let cpp_ty = Translation_types.cpp_ir_of_ml_type env [] ty in
         let cpp_ty =
           if has_type_resolutions then resolve_promoted_in_type cpp_ty
           else cpp_ty
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = Translation_support.reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
+        let wrapped = Translation_support.wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
         (x, wrapped) )
       ids_with_owned
   in
@@ -926,7 +926,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       (fun (x, ty, i) ->
         match unwrap_fun_ty2 ty with
         | Some (Function (fdom, fcod) as f)
-          when generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
+          when Translation_support.generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
           let fun_idx = get_tvar_indices f in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
@@ -961,7 +961,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       (fun i (x, ty) ->
         match unwrap_fun_ty2 ty with
         | Some (Function _ as f)
-          when generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
+          when Translation_support.generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
           ( x,
             (Reference (Forwarding, Variable (Named (fun_tparam_id (List.length ids - i - 1))))
               : Cpp_ir.Lowered.Type.t) )
@@ -997,7 +997,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     let alias_rhs_is_fun kn =
       match Table.lookup_typedef_unchecked kn with
       | Some ml_ty -> (
-        match cpp_ir_of_ml_type env [] ml_ty with
+        match Translation_types.cpp_ir_of_ml_type env [] ml_ty with
         | Function _ | Const (Function _) -> true
         | _ -> false )
       | None -> false
@@ -1157,7 +1157,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
     bs_passing =
-      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> param_passing ~owned ty) ids ids_with_owned);
+      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> Translation_support.param_passing ~owned ty) ids ids_with_owned);
     bs_self_call_undeducible = self_call_undeducible;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
@@ -1360,7 +1360,7 @@ let gen_dfun ~minted n b cty ty temps =
   let is_cofix_return = Translation_support.suspends_whole n ml_ret b in
   let cofix_wrap (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_return then
-      suspend_whole ~cpp_of:(cpp_ir_of_ml_type env type_var_ids) ~cod ml_ret x
+      suspend_whole ~cpp_of:(Translation_types.cpp_ir_of_ml_type env type_var_ids) ~cod ml_ret x
     else if cod = Void then
       (* void function: execute expression for side effects, then return.
          Some tail expressions (like writeTVar) have side effects that must
@@ -1723,7 +1723,7 @@ let gen_decl__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
-  let cty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
+  let cty_ir = Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty in
   let tvars = get_tvars cty_ir in
   let temps = Cpp_ir.Build.typenames tvars in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
@@ -1731,7 +1731,7 @@ let gen_decl__inner n b ty =
     | Function _ -> function_without_plan n
     | _ ->
     match b with
-    | _ when thunk_reason n = Some Throws ->
+    | _ when Translation_support.thunk_reason n = Some Throws ->
       (* A body that only throws becomes a zero-arg function, so the throw
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
@@ -1751,12 +1751,12 @@ let gen_decl__inner n b ty =
           | Enum_value _ -> body_expr  (* already a literal *)
           | Entity (_, _, Some ci) when ci.inline <> None ->
             body_expr  (* inline custom literal (e.g. std::monostate{}) *)
-          | _ -> Cpp_ir.Build.iife None [Expression body_expr; Return (Some (mk_tt_expr ()))]
+          | _ -> Cpp_ir.Build.iife None [Expression body_expr; Return (Some (Translation_support.mk_tt_expr ()))]
         else body_expr
       in
       let body_expr =
         match Translation_types.slot_repr_of_cpp_type cty_ir with
-        | Boxed kind -> box_for_any_slot kind b body_expr
+        | Boxed kind -> Translation_types.box_for_any_slot kind b body_expr
         | Native -> body_expr
       in
       (templated (deapply_plain_tvars temps (variable n cty_ir body_expr)), empty_env (), tvars)
@@ -1787,9 +1787,9 @@ let with_function_head n b ty k =
   with_body_resolutions n b @@ fun () ->
   let ty = type_simpl ty in
   let b = recover_erased_body_types ty b in
-  let b = resolve_body_tvars b ty in
+  let b = Translation_support.resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
-  let cty = cpp_ir_of_ml_type (empty_env ()) [] ty in
+  let cty = Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty in
   let tvars = List.map snd (Ml_type_util.get_tvars_indexed cty) in
   let index_tvar_set = collect_ml_type_index_tvars ty in
   let extra_index_tvars =
@@ -1807,7 +1807,7 @@ let with_function_head n b ty k =
   in
   let tc_param_ids =
     match ty with
-    | Core.Type.Arrow _ -> collect_typeclass_param_ids ty
+    | Core.Type.Arrow _ -> Translation_support.collect_typeclass_param_ids ty
     | _ -> []
   in
   let minted =
@@ -1849,7 +1849,7 @@ let plan_function ~fixpoint n b ty =
   let plan cty =
     let abi = plan_scope_head n ty (dfun_body_scope ~minted:h.fh_minted n h.fh_body cty ty h.fh_temps) in
     ( if Probe.checking () then
-        match cpp_ir_of_ml_type (empty_env ()) [] ty with
+        match Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty with
         | live -> Translation_support.check_planned_arity abi live
         | exception e when CErrors.noncritical e -> () );
     Some abi
@@ -1869,7 +1869,7 @@ let gen_decl_for_pp__inner n b ty =
   | Function _ ->
     let f, env, tvars = gen_function n ty h in
     (Some f, env, tvars)
-  | cty when thunk_reason n = Some Throws ->
+  | cty when Translation_support.thunk_reason n = Some Throws ->
     let body_expr = gen_expr (empty_env ()) h.fh_body in
     let inner = thunk n cty body_expr in
     let ds = match h.fh_temps with [] -> inner | l -> Template (l, None, inner) in
@@ -1897,7 +1897,7 @@ let gen_spec__inner n b ty =
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   with_method_ns_for_locals @@ fun () ->
-  let ty_ir = cpp_ir_of_ml_type (empty_env ()) [] ty in
+  let ty_ir = Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty in
   let temps = Cpp_ir.Build.typenames (get_tvars ty_ir) in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
   let result =
@@ -1905,7 +1905,7 @@ let gen_spec__inner n b ty =
     | Function _ -> function_without_plan n
     | _ ->
     match b with
-    | _ when thunk_reason n = Some Throws ->
+    | _ when Translation_support.thunk_reason n = Some Throws ->
       (* Throws when called, so: a zero-arg function declaration. *)
       let inner : Cpp_ir.Lowered.Decl.t =
         Function
@@ -1968,16 +1968,16 @@ let gen_spec__inner n b ty =
       in
       let needs_any_cast =
         is_concrete_target
-        && (has_magic || ml_body_returns_erased_field inner_body)
+        && (has_magic || Translation_support.ml_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then unbox_value ty_ir b_expr
+        if needs_any_cast then Translation_types.unbox_value ty_ir b_expr
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
              [std::any] whatever its ML type says, and neither (a) nor (b)
              sees that. *)
-          recover_boxed_component ty_ir b_expr
+          Translation_types.recover_boxed_component ty_ir b_expr
       in
       (* When a unit-typed constant's body may call a void-ified function,
          wrap in an IIFE that executes the body for side effects and
@@ -1987,12 +1987,12 @@ let gen_spec__inner n b ty =
           match b_expr with
           | Enum_value _ -> b_expr
           | Entity (_, _, Some ci) when ci.inline <> None -> b_expr
-          | _ -> Cpp_ir.Build.iife None [Expression b_expr; Return (Some (mk_tt_expr ()))]
+          | _ -> Cpp_ir.Build.iife None [Expression b_expr; Return (Some (Translation_support.mk_tt_expr ()))]
         else b_expr
       in
       let b_expr =
         match Translation_types.slot_repr_of_cpp_type ty_ir with
-        | Boxed kind -> box_for_any_slot kind inner_body b_expr
+        | Boxed kind -> Translation_types.box_for_any_slot kind inner_body b_expr
         | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell

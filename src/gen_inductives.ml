@@ -271,7 +271,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let renumbering = Method_registry.renumbering ~num_ind_vars ~this_pos ty in
   let extra_tvars_orig = renumbering.extra in
   let remap_ml_tvar = renumbering.rename in
-  let all_tvars = List.sort compare (collect_tvars [] ty) in
+  let all_tvars = List.sort compare (Core_query.collect_tvars [] ty) in
   let ty = Method_registry.renumber_type renumbering ty in
   let ret_ty = Method_registry.renumber_type renumbering ret_ty in
   let body = Method_registry.renumber_body renumbering body in
@@ -281,7 +281,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let extra_tvars = List.map snd extra_remap in
   let extra_tvar_names = List.mapi (fun i _ -> tvar_id (i + 1)) extra_tvars in
   let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
-  let subst_extra_tvars = make_subst_extra_tvars num_ind_vars extra_tvar_map in
+  let subst_extra_tvars = Translation_support.make_subst_extra_tvars num_ind_vars extra_tvar_map in
 
   (* For type conversion in method contexts, use ns = {name} so that
      self-references INSIDE container types get shared_ptr wrapping
@@ -299,7 +299,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     | _ -> ty
   in
   let strip_top_level_self_ptr ty = strip_self_ptr ty in
-  let ret_cpp = cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars ret_ty in
+  let ret_cpp = Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars ret_ty in
   let ret_cpp = strip_top_level_self_ptr ret_cpp in
   let ret_cpp = subst_extra_tvars ret_cpp in
 
@@ -327,7 +327,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
   reset_env_types ();
-  push_parameters env all_ids;
+  Translation_types.push_parameters env all_ids;
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
@@ -371,13 +371,13 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      not where a self-call passes something else for it, nor where a closure
      holds on to it. *)
   let ungeneralised =
-    ungeneralised_callable_params ~self_ref:func_ref
+    Translation_support.ungeneralised_callable_params ~self_ref:func_ref
       ~suspended:(Table.is_coinductive_type ret_ty) n_method_params inner_body
   in
   let params_with_idx =
     List.mapi
       (fun i (id, ty, orig_idx) ->
-        let cpp_ty = cpp_ir_of_ml_type env ~ns:method_ns vars ty in
+        let cpp_ty = Translation_types.cpp_ir_of_ml_type env ~ns:method_ns vars ty in
         let cpp_ty = strip_top_level_self_ptr cpp_ty in
         let cpp_ty = subst_extra_tvars cpp_ty in
         let owned = get_param_owned_flag orig_idx in
@@ -434,13 +434,13 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
         let wrapped : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
           | Function _ when generalised -> Reference (Forwarding, Variable (Named (fun_tparam_id i)))
-          | _ -> wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
+          | _ -> Translation_support.wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
         in
         (id, wrapped) )
       params_with_idx param_ids_with_pos
   in
   let passing =
-    List.map2 (fun (_, ty) (_, _, _, owned, _) -> param_passing ~owned ty) params params_with_idx
+    List.map2 (fun (_, ty) (_, _, _, owned, _) -> Translation_support.param_passing ~owned ty) params params_with_idx
   in
 
   {
@@ -546,7 +546,7 @@ let method_head vars s =
           List.rev_map
             (fun t ->
               subst_extra_tvars
-                (strip_top_level_self_ptr (cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars (declined t))) )
+                (strip_top_level_self_ptr (Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars (declined t))) )
             !annotations )
     in
     let constraints =
@@ -684,7 +684,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let method_k x : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_method then
       suspend_whole
-        ~cpp_of:(cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
+        ~cpp_of:(Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
         ~cod:ret_cpp ret_ty x
     else
       Return (Some x)
@@ -823,7 +823,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
     finish_fn_body
-      (if ml_type_is_void_call ty then Void else ret_cpp)
+      (if Translation_support.ml_type_is_void_call ty then Void else ret_cpp)
       (List.map (tvar_subst_stmt extended_vars) stmts)
   in
 
@@ -1077,7 +1077,7 @@ let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
     call site, not baked into the field type. *)
 let constructor_field_storage ~name ~is_coinductive var_names ty =
   let cpp_ty =
-    cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
+    Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
   in
   (* Wrap fields that contain a nested self-reference in
      their type arguments (e.g. list(tree(A)) inside tree).
@@ -1091,7 +1091,7 @@ let constructor_field_storage ~name ~is_coinductive var_names ty =
   (* Completeness-aware element wrapping: record [name] as boxed wherever it
      is a container element ({!maybe_record_boxed_recursive_ind}). *)
   maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-  let bare_cpp_ty = cpp_ir_of_ml_type (empty_env ()) var_names ty in
+  let bare_cpp_ty = Translation_types.cpp_ir_of_ml_type (empty_env ()) var_names ty in
   if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
     (* If the field recurses THROUGH a boxed-element container, the
        element box already breaks the completeness cycle, so the outer
@@ -1390,8 +1390,8 @@ let gen_ind_header_v2
           if 0 < Array.length consarg_names then consarg_names.(0) else [] in
         let n_fields = List.length tys_list in
         let field_ids =
-          compute_and_register_field_names ~owner:c cname_str
-            (augment_with_args_renaming c ctor_consarg_names)
+          Translation_support.compute_and_register_field_names ~owner:c cname_str
+            (Translation_support.augment_with_args_renaming c ctor_consarg_names)
             ctor_consarg_names n_fields in
         let erase_if_needed (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
           if vars = [] then
@@ -1404,7 +1404,7 @@ let gen_ind_header_v2
         (* A field's value type, and the type the struct stores it at:
            boxed under [Crane BoxedFields] when it holds an inductive. *)
         let value_ty var_names ty =
-          erase_if_needed (cpp_ir_of_ml_type (empty_env ()) var_names ty)
+          erase_if_needed (Translation_types.cpp_ir_of_ml_type (empty_env ()) var_names ty)
         in
         let stored_ty var_names ty =
           let t = value_ty var_names ty in
@@ -1427,7 +1427,7 @@ let gen_ind_header_v2
                  (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
                  tys_list)
         in
-        let factory_name = Id.of_string (factory_name_of_ctor c) in
+        let factory_name = Id.of_string (Translation_support.factory_name_of_ctor c) in
         let factory_params =
           List.mapi (fun j ty -> (List.nth field_ids j, value_ty vars ty)) tys_list
         in
@@ -1516,8 +1516,8 @@ let gen_ind_header_v2
                in
                let n_fields = List.length tys_list in
                let field_ids =
-                 compute_and_register_field_names ~owner:c ctor_struct_name
-                   (augment_with_args_renaming c ctor_consarg_names)
+                 Translation_support.compute_and_register_field_names ~owner:c ctor_struct_name
+                   (Translation_support.augment_with_args_renaming c ctor_consarg_names)
                    ctor_consarg_names n_fields
                in
                let fields =
@@ -1951,7 +1951,7 @@ let gen_ind_header_v2
             p ^ string_of_int !hv_seq
           in
           let cpp_of_ml t =
-            cpp_ir_of_ml_type (empty_env ()) vars t
+            Translation_types.cpp_ir_of_ml_type (empty_env ()) vars t
           in
 
           (* Spelled as from outside the inductive's own scope, which is where
@@ -2700,7 +2700,7 @@ let gen_ind_header_v2
       let mk_factory_methods ret_ty build i tys_list =
         let c = cnames.(i) in
         let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
-        let fname = factory_name_of_ctor ~fallback_idx:i c in
+        let fname = Translation_support.factory_name_of_ctor ~fallback_idx:i c in
         let factory_name = Id.of_string fname in
         (* Convert ML types both as public API types and constructor storage
            types.  Public APIs remain value-shaped (empty ns); storage uses
@@ -2712,7 +2712,7 @@ let gen_ind_header_v2
               (* The field as the struct declares it. *)
               let storage_ty = compute_field_cpp_ty ty in
               let api_ty =
-                cpp_ir_of_ml_type
+                Translation_types.cpp_ir_of_ml_type
                   (empty_env ())
                   vars
                   ty
@@ -2815,14 +2815,14 @@ let gen_ind_header_v2
                         let arg_var : Cpp_ir.Lowered.Expr.t = Local (Id.of_string ("x" ^ string_of_int k)) in
                         if _storage_arg = api_arg then arg_var
                         else
-                          gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
+                          Translation_support.gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
                             arg_var )
                       (List.combine storage_args api_args)
                   in
                   let call = B.call var call_args in
                   let ret =
                     if storage_ret = api_ret then call
-                    else gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
+                    else Translation_support.gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
                   in
                   (* The lambda's result is the storage-side type by
                      construction -- [ret] is the call converted into it.  Say
@@ -2833,13 +2833,13 @@ let gen_ind_header_v2
                 | _ when storage_ty = api_ty -> E.Move local
                 | _ ->
                   sink_converted api_ty var
-                    (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
+                    (Translation_support.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
               end
               | Shared_pointer inner ->
                 let arg = if is_coinductive then var else E.Move var in
                 let converted =
                   if inner = api_ty then arg
-                  else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
+                  else Translation_support.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
                 (* A single factory call.  For arena-eligible types this is
                    the runtime-arena-aware factory ([Arena_scoped]:
@@ -2855,7 +2855,7 @@ let gen_ind_header_v2
                 else E.Move local
               | _ ->
                 sink_converted api_ty var
-                  (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
+                  (Translation_support.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
         (* Under [Crane NonAtomicRc], a field holding the inductive itself
@@ -3149,7 +3149,7 @@ let gen_ind_header_v2
                       in
                       (* A translation result, converted where the branch
                          takes it. *)
-                      gen_type_conversion_expr
+                      Translation_support.gen_type_conversion_expr
 
                         (* Every inductive generated into this same scope --
                            the type itself, its mutual siblings, and any other

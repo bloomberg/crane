@@ -13,7 +13,6 @@ open Names
 open Mlutil
 open Util
 open Translation_state
-open Translation
 
 module IntSet = Escape.IntSet
 
@@ -60,7 +59,7 @@ let begin_body ~owner ?(function_ = false) () =
     stack holding exactly [params] (innermost binder first, as returned by
     {!push_vars'}), restoring the ambient stack afterwards.  [env] is the
     type-variable scope the parameters' C++ types are assigned in; see
-    {!Translation.push_binders}.
+    {!Translation_types.push_binders}.
 
     An instance method's body is generated outside any enclosing function, so
     without this the stack still describes whatever was translated last — and
@@ -71,22 +70,22 @@ let begin_body ~owner ?(function_ = false) () =
     [?outer] are the binders around the method -- an instance's own
     parameters, its dictionaries among them -- pushed beneath [params].
     [?cpp] gives C++ types for [params] already decided by the caller, passed
-    on to {!Translation.push_binders} and recorded as the head's declared
+    on to {!Translation_types.push_binders} and recorded as the head's declared
     ones ([declared_outer] in {!Translation_state}). *)
 let with_method_env_types ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(outer = []) env params f =
   let saved_env_types = (!tctx).env_types in
-  let saved_erased = save_erased_env () in
+  let saved_erased = Translation_types.save_erased_env () in
   let saved_declared = (!tctx).declared_outer in
   reset_env_types ();
-  push_parameters env outer;
-  push_binders ~cpp env params;
+  Translation_types.push_parameters env outer;
+  Translation_types.push_binders ~cpp env params;
   tctx :=
     { !tctx with
       declared_outer = (if cpp = [] then None else Some (Lexenv.depth (!tctx).env_types, cpp)) };
   Fun.protect
     ~finally:(fun () ->
       tctx := { !tctx with env_types = saved_env_types; declared_outer = saved_declared };
-      restore_erased_env saved_erased )
+      Translation_types.restore_erased_env saved_erased )
     f
 
 (** Count the actual (non-promoted) type parameters in [signature].  Entries
@@ -477,7 +476,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Some ty ->
       let binders, _ = collect_lams b in
       let doms = Ml_type_util.ml_domains ty in
-      let tc_names = ref (Translation.collect_typeclass_param_ids ty) in
+      let tc_names = ref (Translation_support.collect_typeclass_param_ids ty) in
       let outer_first =
         List.mapi
           (fun j _ ->
@@ -517,18 +516,18 @@ let promoted_resolutions_of_body ?r ?ty b =
       snd (empty_env ()) )
   in
   let rec walk_at d e =
-    match strip_magic e with
+    match Core_query.strip_magic e with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
-      when instance_class_at r <> None && (not (closed (strip_magic e)))
-           && leading <> [] && spellable d (strip_magic e) ->
+      when instance_class_at r <> None && (not (closed (Core_query.strip_magic e)))
+           && leading <> [] && spellable d (Core_query.strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (ml_arg_to_template_type (env_at d) (strip_magic e));
+        (Translation_calls.ml_arg_to_template_type (env_at d) (Core_query.strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
         (fun a ->
-          match strip_magic a with
+          match Core_query.strip_magic a with
           | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
             when instance_class r' <> None ->
             ()
@@ -545,11 +544,11 @@ let promoted_resolutions_of_body ?r ?ty b =
     | e' -> Mlutil.ast_iter (walk_at d) e'
   in
   let rec walk e =
-        match strip_magic e with
+        match Core_query.strip_magic e with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
-      when instance_class r <> None && closed (strip_magic e) ->
+      when instance_class r <> None && closed (Core_query.strip_magic e) ->
       Option.iter (add r)
-        (ml_arg_to_template_type (empty_env ()) (strip_magic e));
+        (Translation_calls.ml_arg_to_template_type (empty_env ()) (Core_query.strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -558,7 +557,7 @@ let promoted_resolutions_of_body ?r ?ty b =
          ambiguous, leaving the name erased. *)
       List.iter
         (fun a ->
-          match strip_magic a with
+          match Core_query.strip_magic a with
           | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
             when instance_class r' <> None ->
             ()
@@ -576,7 +575,7 @@ let promoted_resolutions_of_body ?r ?ty b =
      the template names those binders take. *)
   ( match (r, ty) with
   | Some r, Some ty ->
-    let tc_names = collect_typeclass_param_ids ty in
+    let tc_names = Translation_support.collect_typeclass_param_ids ty in
     List.iter
       (fun (inst, ords) ->
         match
@@ -594,7 +593,7 @@ let promoted_resolutions_of_body ?r ?ty b =
                              arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
           in
           Option.iter (add_at class_ref inst)
-            (ml_arg_to_template_type
+            (Translation_calls.ml_arg_to_template_type
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )
@@ -612,7 +611,7 @@ let promoted_resolutions_of_body ?r ?ty b =
 let type_resolutions_of_referenced_globals b =
   let found = ref [] in
   let rec walk e =
-    ( match strip_magic e with
+    ( match Core_query.strip_magic e with
     | Core.Expr.Global {callee = r; _} -> found := !found @ ind_type_resolutions r
     | _ -> () );
     Mlutil.ast_iter walk e
@@ -641,9 +640,9 @@ let with_body_resolutions r b f =
     positions come from {!Translation_support.hkt_tvar_positions_of_type}. *)
 let hkt_tvar_resolutions_of_type ?source_order ty : (int * Cpp_ir.Lowered.Type.t) list =
   List.map
-    (fun { htp_tvar; htp_instance; htp_field } ->
+    (fun { Translation_support.htp_tvar; htp_instance; htp_field } ->
       (htp_tvar, Cpp_ir.Type.Member (htp_instance, htp_field)) )
-    (hkt_tvar_positions_of_type ?source_order ty)
+    (Translation_support.hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
     {!hkt_tvar_resolutions_of_type}) throughout the statements of a function
@@ -727,7 +726,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
     let converted =
       List.map
         (fun (field_id, at) ->
-          gen_type_conversion_expr
+          Translation_support.gen_type_conversion_expr
             (* Every inductive generated into this same scope -- the type
                itself, its mutual siblings, and any other module-local
                inductive -- is spelled bare here, so it must not be
