@@ -546,7 +546,8 @@ let method_head vars s =
           List.rev_map
             (fun t ->
               subst_extra_tvars
-                (strip_top_level_self_ptr (Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:method_ns vars (declined t))) )
+                (strip_top_level_self_ptr
+                  (Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:method_ns vars (declined t))) )
             !annotations )
     in
     let constraints =
@@ -2218,7 +2219,9 @@ let gen_ind_header_v2
                          E.Binary (Not_equal, dot0 (E.Local pv) "use_count",
                            E.Literal (Int 1))); then_ = [S.Continue]; else_ = []} ]
                    @ unique_fence
-                   @ [S.Bind_variable (ev, S.Binding.Declare (T.Reference (Lvalue, T.Auto), None), E.Dereference (E.Local pv))]
+                   @
+                     [S.Bind_variable
+                       (ev, S.Binding.Declare (T.Reference (Lvalue, T.Auto), None), E.Dereference (E.Local pv))]
                    @ body_for on_spine (E.Local ev))]
             end
           in
@@ -2324,8 +2327,10 @@ let gen_ind_header_v2
                           push_self_stmt
                             (E.Access (Dot, E.Local lc, elem_field));
                           S.If {condition = E.Binary (And, tail,
-                              E.Binary (Equal, dot0 tail "use_count", E.Literal (Int 1))); then_ = (* The fence follows the [use_count] test rather
-                               than preceding it -- see [unique_fence]. *)
+                              E.Binary (Equal, dot0 tail "use_count", E.Literal (Int 1)));
+                               (* The fence follows the [use_count] test rather than
+                                  preceding it -- see [unique_fence]. *)
+                               then_ =
                             unique_fence
                             @ [S.Bind_variable (lp, S.Binding.Existing, dot0 tail "get")]; else_ = [S.Break]} ]);
                       S.Expression (dot0 fe "reset") ]
@@ -2390,7 +2395,8 @@ let gen_ind_header_v2
                 | Some _ -> T.Member (parent_ty, ctor_id)
               in
               Some (S.If_declaration {name = _alt_id; type_ = T.Pointer T.Auto; init = E.Variant_get_if (ctor_arg,
-                  E.Unary (Address_of, E.Local variant_var)); then_ = mk_classified_field_stmts classified_fields; else_ = []})
+                  E.Unary (Address_of, E.Local variant_var));
+                    then_ = mk_classified_field_stmts classified_fields; else_ = []})
           in
           let drain_stmts =
             Array.to_list
@@ -2535,9 +2541,10 @@ let gen_ind_header_v2
                        | Some e ->
                          Some
                            (S.If_declaration {name = _alt_id; type_ = T.Pointer T.Auto; init = E.Variant_get_if
-                                  (T.Named (ctor_id, []), E.Unary (Address_of, v_mut)); then_ = [S.If {condition = E.Unary (Not, e);
-                                                                                                       then_ = [S.Return None];
-                                                                                                       else_ = []}]; else_ = []}))
+                                  (T.Named (ctor_id, []), E.Unary (Address_of, v_mut));
+                                    then_ =
+                                      [S.If {condition = E.Unary (Not, e); then_ = [S.Return None]; else_ = []}];
+                                        else_ = []}))
                    tys)
               |> List.filter_map Fun.id
             in
@@ -2629,17 +2636,22 @@ let gen_ind_header_v2
               | (partner_ty, partner_drains) :: rest ->
                 let inner = build_if_chain rest in
                 let partner_body =
-                  [S.If {condition = sp_alive_and_unique; then_ = S.Bind_variable (_pv_id, S.Binding.Declare (T.Reference (Lvalue, T.Auto), None),
+                  [S.If
+                    {condition = sp_alive_and_unique;
+                      then_ = S.Bind_variable (_pv_id, S.Binding.Declare (T.Reference (Lvalue, T.Auto), None),
                       E.Access_call (Arrow, deref_sp,
                         Id.of_string "v_mut", []))
                     :: partner_drains; else_ = []}]
                 in
-                [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer partner_ty)
+                [S.If_declaration
+                  {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer partner_ty)
                     (E.Unary (Address_of, E.Local _cur_id)); then_ = partner_body; else_ = inner}]
             in
             let loop_body_stmts =
-              [S.If_declaration {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer self_ty)
-                  (E.Unary (Address_of, E.Local _cur_id)); then_ = self_branch_body; else_ = build_if_chain partner_branches}]
+              [S.If_declaration
+                {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer self_ty)
+                  (E.Unary (Address_of, E.Local _cur_id)); then_ = self_branch_body;
+                    else_ = build_if_chain partner_branches}]
             in
             let body =
               [ S.Bind_variable (_stack_id, S.Binding.Declare (stack_ty, None), E.Braced []);

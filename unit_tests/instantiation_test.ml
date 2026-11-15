@@ -9,9 +9,15 @@ let check name cond =
     exit 1 )
 
 let owner = Names.GlobRef.VarRef (Names.Id.of_string "f")
-let nat = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
-let list t = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "list"); type_arguments = [t]; index_arguments = []}
-let meta id = function None -> Core.Type.Meta (Core.Extracted.Meta.fresh id) | Some t -> Core.Type.Meta (Core.Extracted.Meta.solved id t)
+let nat =
+  Core.Type.Global_app
+    {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
+let list t =
+  Core.Type.Global_app
+    {head = Names.GlobRef.VarRef (Names.Id.of_string "list"); type_arguments = [t]; index_arguments = []}
+let meta id =
+  function None -> Core.Type.Meta (Core.Extracted.Meta.fresh id)
+    | Some t -> Core.Type.Meta (Core.Extracted.Meta.solved id t)
 
 let rec gen_type depth metas =
   match Random.int (if depth = 0 then 3 else 5) with
@@ -46,7 +52,8 @@ let () =
     (* One metavariable is one hole wherever it occurs. *)
     let same = Core_util.freeze_types [List.hd open_metas; list (List.hd open_metas)] in
     ( match same with
-    | [Core.Type.Hole a; Core.Type.Global_app {type_arguments = [Core.Type.Hole b]; _}] -> check "a shared meta is one hole" (a = b)
+    | [Core.Type.Hole a; Core.Type.Global_app {type_arguments = [Core.Type.Hole b]; _}] ->
+      check "a shared meta is one hole" (a = b)
     | _ -> check "a lone open meta freezes to a hole" false );
     let id = Scheme.Id.fresh owner ~arity in
     let inst =

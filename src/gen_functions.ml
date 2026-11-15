@@ -502,7 +502,8 @@ type body_scope = {
       (** Under polymorphic recursion, the parameters a self-call has to
           write although the call is not at the declaration's own
           instantiation ({!self_call_reference}); [None] where it is. *)
-  bs_gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t -> Cpp_ir.Lowered.Stmt.t list;
+  bs_gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t ->
+    Cpp_ir.Lowered.Stmt.t list;
       (** Generates body statements with the signature's higher-kinded
           resolutions applied. *)
   bs_no_pure : bool;
@@ -1157,7 +1158,8 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
     bs_passing =
-      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> Translation_support.param_passing ~owned ty) ids ids_with_owned);
+      List.rev
+        (List.map2 (fun (_, ty) (_, _, owned) -> Translation_support.param_passing ~owned ty) ids ids_with_owned);
     bs_self_call_undeducible = self_call_undeducible;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
@@ -2000,7 +2002,8 @@ let gen_spec__inner n b ty =
          through the instance the term names -- has the real type: [run :=
          @int_to_ptr natIPtr (@PIV natIPtr) ...] is an [EOU<pair<Nat, bool>>],
          not an [EOU<crane::obj>].  The initialiser says it. *)
-      let ty_ir : Cpp_ir.Lowered.Type.t = if Translation_types.mentions_unresolved_promoted ty_ir then Auto else ty_ir in
+      let ty_ir : Cpp_ir.Lowered.Type.t =
+        if Translation_types.mentions_unresolved_promoted ty_ir then Auto else ty_ir in
       (* A polymorphic constant's family parameter is plain, as a
          function's is, and written applied until deapplied. *)
       (templated (deapply_plain_tvars temps (variable n (Const ty_ir) b_expr)), empty_env ())
@@ -2042,7 +2045,8 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 let gen_dfuns_dual fds =
   let generated =
     List.map
-      (fun {Core.Recursion.Definition.entity; body; type_} -> collecting_lifted (fun () -> gen_dfun_def entity body type_))
+      (fun {Core.Recursion.Definition.entity; body; type_} ->
+        collecting_lifted (fun () -> gen_dfun_def entity body type_))
       fds
   in
   let lowered = Control_to_cpp_ir.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in

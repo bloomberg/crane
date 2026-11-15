@@ -60,7 +60,8 @@ let rec map_core_type f t =
 
 let core_tvars t =
   fold_core_type
-    (fun s -> function Core.Type.Variable {variable = i; _} | Core.Type.Variable_app {head = i; _} -> IntSet.add i s | _ -> s)
+    (fun s -> function Core.Type.Variable {variable = i; _}
+      | Core.Type.Variable_app {head = i; _} -> IntSet.add i s | _ -> s)
     IntSet.empty t
 
 (** {1 Names operations} *)
@@ -220,7 +221,11 @@ let constructor_params = function
   | GlobRef.ConstRef kn -> (
     match Table.lookup_typedef_unchecked kn with
     | Some body ->
-      fold_core_type (fun acc -> function Core.Type.Variable_app {head = j; _} when not (List.mem (j - 1) acc) -> (j - 1) :: acc | _ -> acc) [] body
+      fold_core_type
+        (fun acc -> function
+          | Core.Type.Variable_app {head = j; _} when not (List.mem (j - 1) acc) -> (j - 1) :: acc
+          | _ -> acc)
+        [] body
     | None -> [] )
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ | GlobRef.VarRef _ -> []
 
@@ -326,7 +331,8 @@ let rec apply_core_type head args =
       | _ -> head )
     | Core.Type.Global_app {head = r; type_arguments = pre; index_arguments = es} ->
       Core.Type.Global_app {head = r;
-                            type_arguments = fill_placeholders ~generated:(not (Table.is_custom r)) ~constructors:(constructor_params r) pre args;
+                            type_arguments = fill_placeholders ~generated:(not (Table.is_custom r))
+                              ~constructors:(constructor_params r) pre args;
                             index_arguments = es}
     | Core.Type.Meta {contents = Some u} -> apply_core_type u args
     | Core.Type.Meta {contents = None; id} -> pending_application id args
@@ -384,7 +390,8 @@ let type_subst_vect v t =
   let rec subst t =
     match t with
     | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = j} when j >= 1 && j <= n -> v.(j - 1)
-    | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; _} -> t (* Per-constructor type var, leave unchanged *)
+    (* Per-constructor type var, leave unchanged *)
+    | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; _} -> t
     | Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = j} when j >= 1 && j <= n ->
       v.(j - 1) (* Rigidity constrains unification, not substitution *)
     | Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; _} -> t (* Per-constructor type var, leave unchanged *)
@@ -456,8 +463,8 @@ let rec mgu = function
   | Core.Type.Global_app {head = r;
                           type_arguments = l;
                           index_arguments = a}, Core.Type.Global_app {head = r';
-                                                                      type_arguments = l';
-                                                                      index_arguments = a'} when GlobRef.CanOrd.equal r r' ->
+                                                                      type_arguments = l'; index_arguments = a'}
+                                                                        when GlobRef.CanOrd.equal r r' ->
     if List.length l <> List.length l' then (
       Feedback.msg_debug
         Pp.(
@@ -965,7 +972,8 @@ type sign_kind =
   | EmptySig
   | NonLogicalSig (* at least a [Core.Signature.Argument.Runtime] *)
   | SafeLogicalSig (* only [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] *)
-  | UnsafeLogicalSig (* No [Core.Signature.Argument.Runtime], not all [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] *)
+  | UnsafeLogicalSig (* No [Core.Signature.Argument.Runtime], not all [Core.Signature.Argument.Erased
+                        Core.Erasure_reason.Type_argument] *)
 
 (** Classifies a signature as empty, non-logical, safe-logical, or
     unsafe-logical. *)
@@ -1680,7 +1688,8 @@ let dump_unused_vars a =
     let b' = ren (List.rev_append occs env) b in
     let ids' =
       List.map2
-        (fun (id, ty) occ -> if !occ then (id, ty) else (Core.Binder_name.Anonymous, Core.Type.Erased Core.Erasure_reason.Type_argument) )
+        (fun (id, ty) occ -> if !occ then (id, ty) else
+          (Core.Binder_name.Anonymous, Core.Type.Erased Core.Erasure_reason.Type_argument) )
           (*TODO: I am making up the kill reason *)
         ids
         occs
@@ -1782,8 +1791,8 @@ let permut_rels k k' =
 (* What a read substituted by [e] becomes: a variable put for a variable
    renames the read, which stays the occurrence it was; any other term is
    copied there, keeping the occurrences of its own reads. *)
-let renamed occ = function Core.Expr.Bound_variable {index = j; _} -> Core.Expr.Bound_variable {index = j;
-                                                                                                occurrence = occ} | e -> e
+let renamed occ =
+  function Core.Expr.Bound_variable {index = j; _} -> Core.Expr.Bound_variable {index = j; occurrence = occ} | e -> e
 
 (** {2 Substitution. [ast_subst e t] substitutes [e] for [Rel 1] in [t]. Lifting
     (of one binder) is done at the same time} *)
@@ -1945,9 +1954,10 @@ let dummy_lams a n = many_lams Core.Binder_name.Anonymous a (List.init n (fun _ 
 (** {2 mixed according to a signature} *)
 
 (* An anonymous lambda for each [Core.Signature.Argument.Runtime] entry of the signature, at its type
-   among [types], and a [Core.Binder_name.Anonymous] one for each [Core.Signature.Argument.Erased].  The [types] list provides
-   one type per signature element; if the lists go out of sync (e.g. the types
-   list is shorter), we fall back to [Core.Type.Axiom] to avoid crashing. *)
+   among [types], and a [Core.Binder_name.Anonymous] one for each
+   [Core.Signature.Argument.Erased].  The [types] list provides one type per
+   signature element; if the lists go out of sync (e.g. the types list is
+   shorter), we fall back to [Core.Type.Axiom] to avoid crashing. *)
 let rec anonym_or_dummy_lams_typed a types = function
   | [] -> a
   | Core.Signature.Argument.Runtime :: s ->
@@ -2945,7 +2955,10 @@ let optimize_fix a =
            Conservative Types, as the dummy it stands for, as extraction
            writes an erased argument of any other call. *)
         let args =
-          List.rev (List.mapi (fun i (_, ty) -> match ty with Core.Type.Erased k -> Core.Expr.Erased_value k | _ -> Core.Expr.fresh_rel (i + 1)) ids)
+          List.rev
+            (List.mapi
+              (fun i (_, ty) -> match ty with Core.Type.Erased k -> Core.Expr.Erased_value k
+                | _ -> Core.Expr.fresh_rel (i + 1)) ids)
         in
         let new_f = Core.Expr.Apply {callee = Core.Expr.fresh_rel (n + 1); arguments = args} in
         let new_c = named_lams ids (normalize (ast_subst new_f f.body)) in
@@ -3180,7 +3193,8 @@ let remap_tvars f =
       Core.Expr.Lambda_group_barrier {value = remap_ast a; occurrence = mocc}
     | Core.Expr.Persistent_array {elements = arr; default = def} ->
       Core.Expr.Persistent_array {elements = Array.map remap_ast arr; default = remap_ast def}
-    | a -> a (* Core.Expr.Bound_variable, Core.Expr.Runtime_error, Core.Expr.Erased_value, Core.Expr.Axiom_value, Core.Expr.UInt63, Core.Expr.Float64, Core.Expr.String, Core.Expr.Numeral *)
+    | a -> a (* Core.Expr.Bound_variable, Core.Expr.Runtime_error, Core.Expr.Erased_value, Core.Expr.Axiom_value,
+                Core.Expr.UInt63, Core.Expr.Float64, Core.Expr.String, Core.Expr.Numeral *)
   in
   remap_ast
 

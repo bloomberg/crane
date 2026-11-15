@@ -54,7 +54,8 @@ let rec type_ : l Type.t -> r Type.t = function
   | Obligation _ -> owed "a type obligation"
 
 and foreign (f : l Foreign.t) : r Foreign.t =
-  {custom = f.custom; types = list type_ f.types; values = list expr f.values; yields = opt type_ f.yields; pieces = f.pieces}
+  {custom = f.custom; types = list type_ f.types; values = list expr f.values;
+    yields = opt type_ f.yields; pieces = f.pieces}
 
 and custom (c : l Foreign.custom) : r Foreign.custom = {inline = c.inline; custom_yields = opt type_ c.custom_yields}
 
@@ -169,7 +170,8 @@ and binding : l Binding.t -> r Binding.t = function
   | Declare_static t -> Declare_static (type_ t)
 
 and custom_match (m : l Custom_match.t) : r Custom_match.t =
-  let param (p : l Custom_match.param) : r Custom_match.param = {name = p.name; type_ = type_ p.type_; binder = p.binder} in
+  let param (p : l Custom_match.param) : r Custom_match.param =
+    {name = p.name; type_ = type_ p.type_; binder = p.binder} in
   { return_type = type_ m.return_type;
     scrutinee = expr m.scrutinee;
     type_args = list type_ m.type_args;
@@ -179,7 +181,9 @@ and custom_match (m : l Custom_match.t) : r Custom_match.t =
     template = m.template;
     inductive = m.inductive;
     hold = m.hold;
-    pieces = (match m.pieces with Instantiated ps -> Instantiated ps | Uninstantiated -> owed "an uninstantiated custom match") }
+    pieces =
+      (match m.pieces with Instantiated ps -> Instantiated ps
+        | Uninstantiated -> owed "an uninstantiated custom match") }
 
 and match_branch (b : l Match.branch) : r Match.branch =
   let field (f : l Match.field_binding) : r Match.field_binding =
@@ -214,7 +218,8 @@ and stmt : l Stmt.t -> r Stmt.t = function
     let (Convertible (a, b)) = s.test in
     If_constexpr {test = Convertible (type_ a, type_ b); then_ = stmts s.then_; else_ = stmts s.else_}
   | If_declaration s ->
-    If_declaration {name = s.name; type_ = type_ s.type_; init = expr s.init; then_ = stmts s.then_; else_ = stmts s.else_}
+    If_declaration
+      {name = s.name; type_ = type_ s.type_; init = expr s.init; then_ = stmts s.then_; else_ = stmts s.else_}
   | Foreign_text s -> Foreign_text s
   | Comment s -> Comment s
   | Local_struct (x, fs) -> Local_struct (x, list (fun (f, t) -> (f, type_ t)) fs)
@@ -240,7 +245,10 @@ let parameter_kind : l Parameter_kind.t -> r Parameter_kind.t = function
   | Template n -> Template n
   | Callable_declared _ -> owed "a callable parameter's declared constraint"
   | Invocable (is, t) ->
-    Invocable (list (fun (i : l Invocation.t) : r Invocation.t -> {callable = i.callable; args = list (fun (c, t) -> (c, type_ t)) i.args}) is, type_ t)
+    Invocable
+      (list
+        (fun (i : l Invocation.t) : r Invocation.t ->
+          {callable = i.callable; args = list (fun (c, t) -> (c, type_ t)) i.args}) is, type_ t)
   | Concept (r, ts) -> Concept (r, list type_ ts)
 
 let parameters ps : r Template.parameters = list (fun (k, x) -> (parameter_kind k, x)) ps
@@ -326,9 +334,11 @@ let rec decl : l Decl.t -> r Decl.t = function
   | Variable v -> Variable {ref_ = v.ref_; type_ = type_ v.type_; init = expr v.init; constexpr = constexpr v.constexpr}
   | Concept (r, e) -> Concept (r, expr e)
   | Static_assert (e, m) -> Static_assert (expr e, m)
-  | Type_alias a -> Type_alias {type_params = parameters a.type_params; name = a.name; rhs = opt type_ a.rhs; note = a.note}
+  | Type_alias a ->
+    Type_alias {type_params = parameters a.type_params; name = a.name; rhs = opt type_ a.rhs; note = a.note}
   | Struct_forward_declaration (ps, r) -> Struct_forward_declaration (parameters ps, r)
   | Merged_struct_members s -> Merged_struct_members (struct_ s)
   | Member_definition m ->
-    Member_definition {owner = m.owner; enclosing = m.enclosing; type_params = parameters m.type_params; member = out_of_line m.member}
+    Member_definition
+      {owner = m.owner; enclosing = m.enclosing; type_params = parameters m.type_params; member = out_of_line m.member}
   | Enum e -> Enum {ref_ = e.ref_; ctors = e.ctors; rocq_names = e.rocq_names; type_params = parameters e.type_params}

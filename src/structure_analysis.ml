@@ -131,7 +131,8 @@ let collect_functor_app_sources (s : Core.Program.t) :
          | _ -> acc )
        s [])
 
-let declares_module_type sel = List.exists (function _, Core.Module.Structure_item.Module_type _ -> true | _ -> false) sel
+let declares_module_type sel =
+  List.exists (function _, Core.Module.Structure_item.Module_type _ -> true | _ -> false) sel
 
 (** The concept scope of the functor [f] outside the structure -- in another
     file of a separate extraction, whose own unit declares the concepts --
@@ -263,7 +264,8 @@ let throwing_values (s : Core.Program.t) : GlobRef.t list =
   iter_structure
     (fun _mp _l se ->
       match se with
-      | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = e; _}) when Core_util.only_throws e ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = e; _})
+        when Core_util.only_throws e ->
         found := r :: !found
       | _ -> () )
     s;
@@ -597,7 +599,8 @@ let decls_by_ref (s : Core.Program.t) =
         (fun (_l, se) ->
           match se with
           | Core.Module.Structure_item.Declaration d ->
-            List.iter (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace tbl fd.entity d) (Core_util.term_defs d)
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace tbl fd.entity d)
+              (Core_util.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -816,7 +819,8 @@ let collect_collision_wrappers
            spelled with the wrapper in place of the child. *)
         let is_flattened_child l se =
           match se with
-          | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure _ | Core.Module.Expr.Path _; _} ->
+          | Core.Module.Structure_item.Module
+            {Core.Module.expr = Core.Module.Expr.Structure _ | Core.Module.Expr.Path _; _} ->
             is_colliding_child l se
           | _ -> false
         in
@@ -857,8 +861,8 @@ let collect_collision_wrappers
           List.iter
             (fun (l, se) ->
               match se with
-              | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = inner_mp;
-                                                                                                  items = inner_sel}; _} ->
+              | Core.Module.Structure_item.Module
+                {Core.Module.expr = Core.Module.Expr.Structure {path = inner_mp; items = inner_sel}; _} ->
                 add (MPdot (mp, l)) parent_name;
                 add inner_mp parent_name;
                 register_decl_modpaths inner_sel

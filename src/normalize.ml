@@ -470,7 +470,8 @@ let eta_expand =
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
-           (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body})
+           (fun (fd : Core.Recursion.Definition.t) ->
+             {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body})
            fds )
     | d -> d )
 
@@ -499,5 +500,6 @@ let structure (program : Core_phase.normalizing) : Core_phase.normalizing =
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program
   in
-  {structure = Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of struc)) struc;
+  {structure = Modutil.map_struct_decls
+    (decl ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of struc)) struc;
    splices}

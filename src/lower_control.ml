@@ -11,7 +11,9 @@ type t = (Loop.t * Term.t) list
 
 let empty = []
 
-let rec strip = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e
+let rec strip =
+  function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _}
+    | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e
 
 (* The occurrence of the call headed by [f]: the global's use, or the read
    of the member. *)
@@ -118,8 +120,9 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     match e with
     | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {selected = 0;
                                                      members = [|{body = fix; _}|];
-                                                     occurrence = o} | Core.Expr.Cofixpoint {selected = 0;
-                                                                                             members = [|{body = fix; _}|];
+                                                     occurrence = o}
+                                                       | Core.Expr.Cofixpoint
+                                                         {selected = 0; members = [|{body = fix; _}|];
                                                                                              occurrence = o});
                        arguments = args}
       when adopts o ->
@@ -269,10 +272,12 @@ let lower ~methods plan program =
   let check_entered r lowered =
     match Splices.entered_copy (Core_phase.splices program) r with
     | Some o when Probe.checking () ->
-      let enters t = List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.Term.entries t) in
+      let enters t =
+        List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.Term.entries t) in
       if not (Option.cata enters false lowered) then
         Probe.violation "entered partner"
-          Pp.(str "the machine of " ++ str (Table.kername_of_global r) ++ str " does not enter the partner spliced into its body")
+          Pp.(str "the machine of " ++ str (Table.kername_of_global r)
+              ++ str " does not enter the partner spliced into its body")
     | Some _ | None -> ()
   in
   let loops = ref [] in

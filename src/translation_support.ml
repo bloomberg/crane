@@ -508,7 +508,8 @@ let rec core_value_is_void_call = function
     && Array.for_all
          (fun {Core.Match.Branch.binders = binds; body = body; _} ->
            let applies_void_binder = function
-             | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; _} when k >= 1 && k <= List.length binds -> (
+             | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; _} when k >= 1
+               && k <= List.length binds -> (
                match List.nth_opt binds (List.length binds - k) with
                | Some (_, ty) -> core_type_is_void_call ty
                | None -> false )
@@ -712,7 +713,8 @@ let retype_dependent_params (typ : Core.Type.t) ids =
   in
   if is_dep_ind then
     List.map (fun (n, core_ty) ->
-      match core_ty with Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; _} -> (n, Core.Type.Erased Core.Erasure_reason.Type_argument) | _ -> (n, core_ty)) ids
+      match core_ty with Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; _} ->
+        (n, Core.Type.Erased Core.Erasure_reason.Type_argument) | _ -> (n, core_ty)) ids
   else ids
 
 (** The declared ML types of constructor [ctor]'s value fields, instantiated at
@@ -1086,7 +1088,10 @@ let rec is_reified_monadic_expr core_expr =
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
     is_reified_monadic_expr e
-  | Core.Expr.Apply {callee = (Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _} | Core.Expr.Lambda_group_barrier {value = f; _});
+  | Core.Expr.Apply
+    {callee =
+      (Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _}
+        | Core.Expr.Lambda_group_barrier {value = f; _});
                      arguments = args} ->
     is_reified_monadic_expr (Core.Expr.Apply {callee = f; arguments = args})
   | Core.Expr.Bound_variable {index = i; _} ->
@@ -1660,7 +1665,8 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = []) (target : I
             let rekey = List.map (fun (z, b) -> ((if Id.equal z target then v else z), b)) in
             { l with
               binders = rekey l.binders;
-              fixpoint = Option.map (fun (f : Cpp_ir.Expr.Local_fixpoint.t) -> {f with captured = rekey f.captured}) l.fixpoint
+              fixpoint = Option.map
+                (fun (f : Cpp_ir.Expr.Local_fixpoint.t) -> {f with captured = rekey f.captured}) l.fixpoint
             }
           | _ -> l
         in
@@ -2288,7 +2294,9 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) (convert_fn : _ -> Cp
         match unwrap_fun_ty ty with
         | Some (Function (dom, cod_f)) when not (is_non_fwd_source j) ->
           let cod_f : Cpp_ir.Lowered.Type.t = if is_cpp_unit_type cod_f then Void else cod_f in
-          Some (x, (Callable_declared (dom, cod_f) : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t), fun_tparam_id j)
+          Some
+            (x,
+              (Callable_declared (dom, cod_f) : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t), fun_tparam_id j)
         | _ -> None )
       (List.mapi (fun j (x, ty) -> (x, ty, j)) (List.rev cpp_params))
   in
@@ -2298,7 +2306,9 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) (convert_fn : _ -> Cp
       (fun j (x, ty) ->
         match unwrap_fun_ty ty with
         | Some (Function _) when not (is_non_fwd_db j) ->
-          (x, (Reference (Forwarding, Cpp_ir.Build.named_variable (fun_tparam_id (n_params - j - 1))) : Cpp_ir.Lowered.Type.t))
+          (x,
+            (Reference (Forwarding, Cpp_ir.Build.named_variable (fun_tparam_id (n_params - j - 1))) :
+              Cpp_ir.Lowered.Type.t))
         | _ -> (x, ty) )
       cpp_params
   in
@@ -2585,7 +2595,8 @@ let rec core_lent_by_reference ty =
       | Core.Type.Global_app {head = (GlobRef.IndRef _ | GlobRef.ConstRef _); _} as unfolded -> (
         match core_lent_by_reference unfolded with
         | Some lent ->
-          Some (lent && match unfolded with Core.Type.Global_app {head = r; _} -> not (Table.is_coinductive r) | _ -> true)
+          Some
+            (lent && match unfolded with Core.Type.Global_app {head = r; _} -> not (Table.is_coinductive r) | _ -> true)
         | None -> None )
       | _ -> Some false )
     | None -> None )
@@ -2694,7 +2705,8 @@ let rec core_body_returns_erased_field = function
   | Core.Expr.Apply {callee = ( Core.Expr.Global ({callee = r; _} as use)
         | Core.Expr.Coerce {value = Core.Expr.Global ({callee = r; _} as use); _}
         | Core.Expr.Boxed_value {value = Core.Expr.Global ({callee = r; _} as use); _}
-        | Core.Expr.Lambda_group_barrier {value = Core.Expr.Global ({callee = r; _} as use); _} ); arguments = args} as full ->
+        | Core.Expr.Lambda_group_barrier {value = Core.Expr.Global ({callee = r; _} as use); _} ); arguments = args} as
+          full ->
     let direct =
       match find_type_opt r with
       | Some ty ->
@@ -2814,9 +2826,11 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
       recursive and must be taken together. *)
 let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
     (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t) * (Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t) =
-  let self_vars : Cpp_ir.Lowered.Expr.t list = if passing then List.map (fun s : Cpp_ir.Lowered.Expr.t -> Local s.self_id) selves else [] in
+  let self_vars : Cpp_ir.Lowered.Expr.t list =
+    if passing then List.map (fun s : Cpp_ir.Lowered.Expr.t -> Local s.self_id) selves else [] in
   let find_self id =
-    Option.map (fun s -> ((if passing then s.self_id else s.fix_id), s)) (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
+    Option.map (fun s -> ((if passing then s.self_id else s.fix_id), s))
+      (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
   in
   let find_self_id id = Option.map fst (find_self id) in
   let call occurrence f args : Cpp_ir.Lowered.Expr.t =
@@ -2848,7 +2862,8 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
           List.map2
             (fun (_, x) core ->
               let v : Cpp_ir.Lowered.Expr.t = Local (Option.get x) in
-              if Ownership_ir.worth_moving core && not (Type_util.core_type_is_unit core) then (Move v : Cpp_ir.Lowered.Expr.t) else v )
+              if Ownership_ir.worth_moving core && not (Type_util.core_type_is_unit core) then
+                (Move v : Cpp_ir.Lowered.Expr.t) else v )
             params_rev self.param_core_tys_rev
         in
         Lambda

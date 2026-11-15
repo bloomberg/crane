@@ -28,7 +28,8 @@ let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
 (* An environment naming the binders of [lex] as they are bound, for the
    conversions that look a binder's name up (an instance passed as a
    template argument); a position's type names none. *)
-let named_env (lex : Lexenv.t) : Common.env = (List.map (fun (b : Lexenv.binder) -> b.eb_id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
+let named_env (lex : Lexenv.t) : Common.env =
+  (List.map (fun (b : Lexenv.binder) -> b.eb_id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
 
 (* The slot a coercion's inner term is generated in
    ({!Translation_expr.gen_crossing}): boxed where it crosses from a
@@ -53,7 +54,8 @@ let region ~outer ~reads body =
     | Core.Expr.Coerce {source_type = from; target_type = into; value = t; occurrence = occ} ->
       found := (occ, pos) :: !found;
       let env = named_env lex in
-      expr ~pos:(match t with Core.Expr.Lambda _ -> pos | _ -> None) ~ret ~slot:(coerced_slot env ~pos slot ~from ~into) lex t
+      expr ~pos:(match t with Core.Expr.Lambda _ -> pos | _ -> None) ~ret
+        ~slot:(coerced_slot env ~pos slot ~from ~into) lex t
     | Core.Expr.Boxed_value {value = t;
                              occurrence = occ} | Core.Expr.Lambda_group_barrier {value = t; occurrence = occ} ->
       found := (occ, pos) :: !found;
@@ -88,7 +90,8 @@ let region ~outer ~reads body =
         Array.iter (branch ~ret lex) branches
       | Match_kind.Variant ->
         let is_enum =
-          match typ with Core.Type.Global_app {head = (Names.GlobRef.IndRef _ as r); _} -> Table.is_enum_inductive r | _ -> false
+          match typ with Core.Type.Global_app {head = (Names.GlobRef.IndRef _ as r); _} ->
+            Table.is_enum_inductive r | _ -> false
         in
         let ret = if is_enum && iife_void_return env typ branches = Some Void then Some Void else ret in
         Array.iter (branch ~ret lex) branches )
@@ -137,7 +140,8 @@ let region ~outer ~reads body =
     List.iteri
       (fun i e ->
         let a = Translation_constructors.custom_field ~var env c ~slot r i e in
-        with_cpp_return_type a.ca_ret (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
+        with_cpp_return_type a.ca_ret
+          (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
       ts
   and branch ~ret ?slot lex {Core.Match.Branch.binders = ids; body = body; _} =
     stmts ~ret ?slot (push (List.rev ids) lex) body
@@ -154,7 +158,9 @@ let region ~outer ~reads body =
       stmts ~ret ~slot (push [(x, t)] lex) b
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} ->
       expr ~pos:None ~ret lex scrut;
-      let slot = match Core_elaborate.match_kind ~walk:(elaborations ()) typ branches occ with Match_kind.Record _ -> slot | _ -> empty_slot in
+      let slot =
+        match Core_elaborate.match_kind ~walk:(elaborations ()) typ branches occ with Match_kind.Record _ ->
+          slot | _ -> empty_slot in
       Array.iter (branch ~ret ~slot lex) branches
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
@@ -200,12 +206,14 @@ let region ~outer ~reads body =
                of that read, which holds no coercion. *)
             let ap =
               with_cpp_return_type ret (fun () ->
-                  Translation_calls.argument_position ~local_callable:(fun _ _ -> false) (named_env lex) use.callee plan i a )
+                  Translation_calls.argument_position ~local_callable:(fun _ _ -> false) (named_env lex)
+                    use.callee plan i a )
             in
             let slot =
               { slot with
                 expected_core_ty =
-                  (match ap.ap_param with Some t when not (core_type_contains_erased t) -> Some t | _ -> slot.expected_core_ty);
+                  (match ap.ap_param with Some t when not (core_type_contains_erased t) -> Some t
+                    | _ -> slot.expected_core_ty);
                 stated_core_ty = ap.ap_param }
             in
             expr ~pos:ap.ap_expected ~ret:ap.ap_ret ~slot lex a

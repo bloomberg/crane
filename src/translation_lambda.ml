@@ -458,7 +458,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
              carrier is the name the parameter gave it back. *)
           let ret =
             match (body_expected_core_ty, rank2_carrier) with
-            | Some core_ty, Some x -> Some (Rank2.at_carrier x (cpp_ir_of_core_type env (get_current_type_vars ()) core_ty))
+            | Some core_ty, Some x ->
+              Some (Rank2.at_carrier x (cpp_ir_of_core_type env (get_current_type_vars ()) core_ty))
             | Some core_ty, None -> Some (cpp_ir_of_core_type env (get_current_type_vars ()) core_ty)
             | None, _ -> None
           in

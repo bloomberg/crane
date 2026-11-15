@@ -28,7 +28,8 @@ let rec group ~effects ~n_outer ?continuation ~cofix ids bodies =
    inside a closure. *)
 and escapes ~effects ~n_outer k t =
   let in_place_group ?continuation ~cofix g =
-    group ~effects ~n_outer ?continuation ~cofix (Core.Recursion.Group.functions g) (Core.Recursion.Group.bodies g) = In_place
+    group ~effects ~n_outer ?continuation ~cofix (Core.Recursion.Group.functions g)
+      (Core.Recursion.Group.bodies g) = In_place
   in
   let rec go k = function
     | Core.Expr.Bound_variable {index = i; _} -> i = k
@@ -46,7 +47,8 @@ and escapes ~effects ~n_outer k t =
     | Core.Expr.Let {value = Core.Expr.Cofixpoint g; body = b; _} when in_place_group ~continuation:b ~cofix:true g ->
       in_place k (Core.Recursion.Group.bodies g) || go (k + 1) b
     (* A bind generated as sequencing runs its continuation's body inline. *)
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind effects use -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)}
+      when sequential_bind effects use -> (
       match List.rev args with
       | continuation :: rest -> (
         List.exists (go k) rest

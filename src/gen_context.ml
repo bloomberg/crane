@@ -88,7 +88,8 @@ let count_keep_params sign =
 
 (** True when [i] (an index into a class's [type_variables]) is a real C++ template
     type parameter.  Everything else — the promoted [Type]-valued fields past
-    the [Core.Signature.Argument.Runtime] parameters, and any [Core.Signature.Argument.Runtime] parameter that is itself a type
+    the [Core.Signature.Argument.Runtime] parameters, and any
+    [Core.Signature.Argument.Runtime] parameter that is itself a type
     constructor ([M : Type -> Type]) — becomes an associated type of the
     instance, spelled [typename I::name]. *)
 let is_class_tparam class_ref i =
@@ -128,7 +129,8 @@ let hkt_carrier_alias base arity core_ty =
      The alias applies it to its parameter. *)
   | _ when arity = 1 && is_lambda ->
     ( [hkt_alias_param_name 0],
-      Core_util.fill_type_hole (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) core_ty )
+      Core_util.fill_type_hole
+        (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) core_ty )
   | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = es} ->
     let kept = hkt_carrier_fixed_args arity core_ty in
     let params =

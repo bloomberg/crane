@@ -662,11 +662,13 @@ type sign_kind =
   | EmptySig  (** the empty signature *)
   | NonLogicalSig  (** at least a [Core.Signature.Argument.Runtime] *)
   | SafeLogicalSig  (** only [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] *)
-  | UnsafeLogicalSig  (** no [Core.Signature.Argument.Runtime], not all [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] *)
+  | UnsafeLogicalSig  (** no [Core.Signature.Argument.Runtime], not all [Core.Signature.Argument.Erased
+                          Core.Erasure_reason.Type_argument] *)
 
 (** Classify a signature into one of the sign_kind categories.
     @return [EmptySig] for an empty list; [NonLogicalSig] if any [Core.Signature.Argument.Runtime] is
-            present; [SafeLogicalSig] if all entries are [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument];
+            present; [SafeLogicalSig] if all entries are
+            [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument];
             [UnsafeLogicalSig] otherwise *)
 val sign_kind : Core.Signature.t -> sign_kind
 

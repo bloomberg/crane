@@ -57,20 +57,39 @@ let use_holes = function
 let () =
   let scheme = Scheme.Id.fresh (r "g") ~arity:1 in
   let self = Core.Expr.Global (Core.Global_use.identity (r "g") scheme) in
-  let fix = Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Id.of_string "go") (Core.Type.Arrow {parameter = a; result = a}) (Core.Expr.Lambda {parameter = x "y"; parameter_type = a; body = Core.Expr.Apply {callee = Core.Expr.fresh_rel 2; arguments = [Core.Expr.fresh_rel 1]}}) (Core.Occurrence.fresh ())) in
+  let fix =
+    Core.Expr.Fixpoint
+      (Core.Recursion.Group.singleton (Id.of_string "go") (Core.Type.Arrow {parameter = a; result = a})
+        (Core.Expr.Lambda
+          {parameter = x "y"; parameter_type = a;
+            body = Core.Expr.Apply {callee = Core.Expr.fresh_rel 2; arguments = [Core.Expr.fresh_rel 1]}})
+              (Core.Occurrence.fresh ())) in
   let body =
-    Core.Expr.Lambda {parameter = x "n"; parameter_type = a; body = Core.Expr.Let {binder = x "m"; binder_type = a; value = Core.Expr.fresh_rel 1; body = Core.Expr.Apply {callee = fix; arguments = [Core.Expr.Apply {callee = self; arguments = [Core.Expr.fresh_rel 1]}]}; occurrence = Core.Occurrence.fresh ()}}
+    Core.Expr.Lambda
+      {parameter = x "n"; parameter_type = a;
+        body = Core.Expr.Let
+          {binder = x "m"; binder_type = a; value = Core.Expr.fresh_rel 1;
+            body = Core.Expr.Apply
+              {callee = fix; arguments = [Core.Expr.Apply {callee = self; arguments = [Core.Expr.fresh_rel 1]}]};
+                occurrence = Core.Occurrence.fresh ()}}
   in
   let copied = Core_copy.copy body in
   check "a copy is the term it copies" (copied = body);
   check "a copy shares no occurrence with its original" (not (shares body copied));
-  check "the copied term itself has every occurrence once" (not (shares copied (Core.Expr.Erased_value Core.Erasure_reason.Type_argument)));
+  check "the copied term itself has every occurrence once"
+    (not (shares copied (Core.Expr.Erased_value Core.Erasure_reason.Type_argument)));
   check "a term sharing an occurrence is told apart" (shares body body);
   let matching =
-    Core.Expr.Lambda {parameter = x "b"; parameter_type = bool; body = Core.Expr.Match {scrutinee_type = bool; scrutinee = Core.Expr.fresh_rel 1; branches = [| { Core.Match.Branch.binders = [];
+    Core.Expr.Lambda
+      {parameter = x "b"; parameter_type = bool;
+        body = Core.Expr.Match
+          {scrutinee_type = bool; scrutinee = Core.Expr.fresh_rel 1; branches = [| { Core.Match.Branch.binders = [];
                  result_type = nat;
                  pattern = Core.Pattern.Wildcard;
-                 body = Core.Expr.Let {binder = x "k"; binder_type = nat; value = Core.Expr.Erased_value Core.Erasure_reason.Type_argument; body = Core.Expr.fresh_rel 1; occurrence = Core.Occurrence.fresh ()} } |]; occurrence = Core.Occurrence.fresh ()}}
+                 body = Core.Expr.Let
+                   {binder = x "k"; binder_type = nat; value = Core.Expr.Erased_value Core.Erasure_reason.Type_argument;
+                     body = Core.Expr.fresh_rel 1; occurrence = Core.Occurrence.fresh ()} } |];
+                       occurrence = Core.Occurrence.fresh ()}}
   in
   check "a copied match is a match of its own" (not (shares matching (Core_copy.copy matching)));
   (* Holes: renamed apart from the original's, the same new one wherever
@@ -87,12 +106,17 @@ let () =
   (* Open annotations: likewise, in the frozen program copies are made in. *)
   let o = Core.Type.Open (Core.Open.fresh 7) in
   Core.Extracted.Meta.freeze ();
-  let opened = Core_copy.copy (Core.Expr.Lambda {parameter = x "p"; parameter_type = o; body = Core.Expr.Lambda {parameter = x "q"; parameter_type = o; body = Core.Expr.fresh_rel 1}}) in
+  let opened =
+    Core_copy.copy
+      (Core.Expr.Lambda
+        {parameter = x "p"; parameter_type = o;
+          body = Core.Expr.Lambda {parameter = x "q"; parameter_type = o; body = Core.Expr.fresh_rel 1}}) in
   Core.Extracted.Meta.thaw ();
   ( match opened with
   | Core.Expr.Lambda {parameter_type = Core.Type.Open p;
                       body = Core.Expr.Lambda {parameter_type = Core.Type.Open q; _}; _} ->
-    check "a copied open annotation is a new one" (not (Core.Open.equal p (match o with Core.Type.Open o -> o | _ -> assert false)));
+    check "a copied open annotation is a new one"
+      (not (Core.Open.equal p (match o with Core.Type.Open o -> o | _ -> assert false)));
     check "an open annotation shared in the original is shared in the copy" (Core.Open.equal p q)
   | _ -> check "a copy keeps the lambdas" false );
   (* Instantiation: the use's solutions replace the callee's variables, in
@@ -101,9 +125,13 @@ let () =
   let inst = Core_copy.instance at_nat body in
   ( match inst with
   | Core.Expr.Lambda {parameter_type = t;
-                      body = Core.Expr.Let {binder_type = t';
-                                            body = Core.Expr.Apply {callee = (Core.Expr.Fixpoint {members = [|{type_ = ft; _}|]; _} | Core.Expr.Cofixpoint {members = [|{type_ = ft; _}|]; _});
-                                                                    arguments = [Core.Expr.Apply {callee = Core.Expr.Global u; _}]}; _}; _} ->
+                      body = Core.Expr.Let
+                        {binder_type = t';
+                          body = Core.Expr.Apply
+                            {callee =
+                              (Core.Expr.Fixpoint {members = [|{type_ = ft; _}|]; _}
+                                | Core.Expr.Cofixpoint {members = [|{type_ = ft; _}|]; _});
+                                  arguments = [Core.Expr.Apply {callee = Core.Expr.Global u; _}]}; _}; _} ->
     check "a parameter's variable is solved" (t = nat && t' = nat);
     check "a local fixpoint's signature is solved" (ft = Core.Type.Arrow {parameter = nat; result = nat});
     ( match Core.Global_use.instantiation u with
@@ -117,7 +145,9 @@ let () =
   check "an instance shares no occurrence with its original" (not (shares body inst));
   let rigid = Core_copy.instance (Core.Global_use.identity (r "g") scheme) body in
   ( match rigid with
-  | Core.Expr.Lambda {body = Core.Expr.Let {body = Core.Expr.Apply {arguments = [Core.Expr.Apply {callee = Core.Expr.Global u; _}]; _}; _}; _} ->
+  | Core.Expr.Lambda
+    {body = Core.Expr.Let
+      {body = Core.Expr.Apply {arguments = [Core.Expr.Apply {callee = Core.Expr.Global u; _}]; _}; _}; _} ->
     check "a rigid use leaves the self-reference rigid"
       (match Core.Global_use.instantiation u with
        | Some i -> Scheme.Instantiation.for_all (fun _ s -> s.Scheme.solution = Scheme.Identity) i
@@ -130,26 +160,39 @@ let () =
    a parameter passed a variable or an erased value reads it. *)
 let () =
   let ty = Core.Type.Arrow {parameter = nat;
-                            result = Core.Type.Arrow {parameter = bool;
-                                                      result = Core.Type.Arrow {parameter = nat; result = nat}}} in
+                            result = Core.Type.Arrow
+                              {parameter = bool; result = Core.Type.Arrow {parameter = nat; result = nat}}} in
   let h = Core.Global_use.monomorphic (r "h") and k = Core.Global_use.monomorphic (r "k") in
   let body =
-    Core.Expr.Lambda {parameter = x "p"; parameter_type = nat; body = Core.Expr.Lambda {parameter = x "q"; parameter_type = bool; body = Core.Expr.Lambda {parameter = x "s"; parameter_type = nat; body = Core.Expr.Apply {callee = Core.Expr.Global h; arguments = [Core.Expr.fresh_rel 3; Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 1]}}}}
+    Core.Expr.Lambda
+      {parameter = x "p"; parameter_type = nat;
+        body = Core.Expr.Lambda
+          {parameter = x "q"; parameter_type = bool;
+            body = Core.Expr.Lambda
+              {parameter = x "s"; parameter_type = nat;
+                body = Core.Expr.Apply
+                  {callee = Core.Expr.Global h;
+                    arguments =
+                      [Core.Expr.fresh_rel 3; Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 1]}}}}
   in
   let use = Core.Global_use.monomorphic (r "f") in
   let a1 = Core.Expr.Apply {callee = Core.Expr.Global k;
-                            arguments = [Core.Expr.fresh_rel 3]} and a2 = Core.Expr.fresh_rel 1 and a3 = Core.Expr.Apply {callee = Core.Expr.Global k;
-                                                                                                                          arguments = [Core.Expr.fresh_rel 2]} in
+                            arguments = [Core.Expr.fresh_rel 3]} and a2 = Core.Expr.fresh_rel 1
+                              and a3 =
+                                Core.Expr.Apply {callee = Core.Expr.Global k; arguments = [Core.Expr.fresh_rel 2]} in
   ( match Core_copy.call ~ty use body [a1; a2; a3] with
   | Some
       (Core.Expr.Let {binder = p;
                       binder_type = tp;
                       value = a1';
-                      body = Core.Expr.Let {binder = s;
-                                            binder_type = ts;
-                                            value = a3';
-                                            body = Core.Expr.Apply {arguments = [Core.Expr.Bound_variable {index = 2; _}; Core.Expr.Bound_variable {index = 3;
-                                                                                                                                                    occurrence = o}; Core.Expr.Bound_variable {index = 1; _}; Core.Expr.Bound_variable {index = 1; _}]; _}; _}; _}) ->
+                      body = Core.Expr.Let
+                        {binder = s; binder_type = ts; value = a3';
+                          body = Core.Expr.Apply
+                            {arguments =
+                              [Core.Expr.Bound_variable {index = 2; _};
+                                Core.Expr.Bound_variable {index = 3; occurrence = o};
+                                  Core.Expr.Bound_variable {index = 1; _}; Core.Expr.Bound_variable {index = 1; _}]; _};
+                                    _}; _}) ->
     check "the parameters passed a term are bound outermost first" (p = x "p" && s = x "s");
     check "each binder takes its parameter's type" (tp = nat && ts = nat);
     check "the first argument stands where the call did" (a1' == a1);
@@ -158,10 +201,15 @@ let () =
     check "a parameter passed a variable reads it as a read of its own"
       (match a2 with Core.Expr.Bound_variable {occurrence = o2; _} -> not (Core.Occurrence.equal o o2) | _ -> false)
   | _ -> check "a call is lets around the body" false );
-  ( match Core_copy.call ~ty:(Core.Type.Arrow {parameter = nat; result = nat}) use (Core.Expr.Lambda {parameter = x "p"; parameter_type = nat; body = Core.Expr.fresh_rel 1}) [Core.Expr.Erased_value Core.Erasure_reason.Type_argument] with
+  ( match Core_copy.call ~ty:(Core.Type.Arrow {parameter = nat; result = nat}) use
+    (Core.Expr.Lambda {parameter = x "p"; parameter_type = nat; body = Core.Expr.fresh_rel 1})
+      [Core.Expr.Erased_value Core.Erasure_reason.Type_argument] with
   | Some (Core.Expr.Erased_value Core.Erasure_reason.Type_argument) -> ()
   | _ -> check "a parameter passed an erased value is that value" false );
   check "a call with too few arguments is not made" (Core_copy.call ~ty use body [a1] = None);
   check "a call with too many arguments is not made" (Core_copy.call ~ty use body [a1; a2; a3; a2] = None);
   check "a body binding fewer parameters than its type is not called"
-    (Core_copy.call ~ty use (Core.Expr.Lambda {parameter = x "p"; parameter_type = nat; body = Core.Expr.Erased_value Core.Erasure_reason.Type_argument}) [a1; a2; a3] = None)
+    (Core_copy.call ~ty use
+      (Core.Expr.Lambda
+        {parameter = x "p"; parameter_type = nat; body = Core.Expr.Erased_value Core.Erasure_reason.Type_argument})
+          [a1; a2; a3] = None)

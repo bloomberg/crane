@@ -52,7 +52,8 @@ let resolved what resolve x =
   | x -> x
   | exception Cpp_ir.Resolve.Owed form ->
     CErrors.anomaly
-      Pp.(str "Crane: " ++ str what ++ str ": " ++ str form ++ str ", which only a lowered declaration may hold, survived resolution")
+      Pp.(str "Crane: " ++ str what ++ str ": " ++ str form
+          ++ str ", which only a lowered declaration may hold, survived resolution")
 
 let ir_type = resolved "a type written outside every finished declaration" Cpp_ir.Resolve.type_
 let ir_expr = resolved "a value in a module type's concept" Cpp_ir.Resolve.expr

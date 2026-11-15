@@ -1039,12 +1039,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
                 | [] -> None
               in
               { b with body =
-                rewrite_enter_stmts { ctx with er_env = lenv;
-                                               er_binders = List.map (fun (p : custom_param) -> (p.name, p.binder)) ps @ ctx.er_binders;
+                rewrite_enter_stmts
+                  { ctx with er_env = lenv;
+                    er_binders = List.map (fun (p : custom_param) -> (p.name, p.binder)) ps @ ctx.er_binders;
                                                er_branch_ctx = br_ctx;
                                                er_aliased =
                                                  with_aliased ctx.er_aliased
-                                                   (free_vars_expr scrut @ List.map (fun (p : custom_param) -> p.name) ps) } b.body } )
+                                                   (free_vars_expr scrut
+                                                     @ List.map (fun (p : custom_param) -> p.name) ps) } b.body } )
             branches };
     ]
   | Match (scrut, branches, default) ->
@@ -1199,7 +1201,8 @@ and rewrite_enter_stmts ctx stmts =
       in
       (* Each kept at the type its local was declared at: the binder's. *)
       let cont_types = saved_local_types env cont_vars in
-      if Probe.checking () && List.exists (function (Obligation Unresolved_type) | Auto -> true | _ -> false) cont_types then
+      if Probe.checking ()
+        && List.exists (function (Obligation Unresolved_type) | Auto -> true | _ -> false) cont_types then
         Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
       let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
       let field_names = derive_field_names cont_vars in
@@ -1298,7 +1301,9 @@ and rewrite_enter_stmts ctx stmts =
              field -- reads what it is recomputed from. *)
           let rec through b =
             b
-            :: ( match List.find_opt (fun (c : Recursion_plan.recomputable) -> Core_binder.equal c.recomputed b) p.recomputable with
+            ::
+              ( match List.find_opt
+                (fun (c : Recursion_plan.recomputable) -> Core_binder.equal c.recomputed b) p.recomputable with
                | Some c -> List.concat_map through c.from
                | None -> [] )
           in
@@ -1445,7 +1450,8 @@ and rewrite_enter_stmts ctx stmts =
     in
     let here =
       match stmt, rest with
-      | Declare (id, _, _), Bind_variable (id', Existing, e) :: _ when Id.equal id id' && count_calls_expr check e >= 1 ->
+      | Declare (id, _, _), Bind_variable (id', Existing, e) :: _ when Id.equal id id'
+        && count_calls_expr check e >= 1 ->
         (* The call assigning [id] ends this handler: all that follows it,
            every use of [id], runs in the continuation's, which declares
            [id] itself. *)
@@ -1646,7 +1652,9 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
             | Some f -> f
             | None -> List.map (fun _ -> false) flags
           in
-          push (List.map2 (fun (safe, is_uptr) arg -> adjust_arg env safe is_uptr arg) (List.combine flags uptr_flags) args)
+          push
+            (List.map2 (fun (safe, is_uptr) arg -> adjust_arg env safe is_uptr arg)
+              (List.combine flags uptr_flags) args)
         | _ -> push args )
       | s -> map_stmt ~fl:(on_stmts env) Fun.id (on_stmt env) Fun.id s
     in
@@ -2164,7 +2172,8 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
                er_entered_by = entered_by;
                er_entered = entered;
                er_points_into = points_into;
-               er_entering = Option.bind loop (fun l -> Option.map Control_ir.Term.continues ((Lower_control.loop (Loop_facts.control ())) l));
+               er_entering = Option.bind loop
+                 (fun l -> Option.map Control_ir.Term.continues ((Lower_control.loop (Loop_facts.control ())) l));
                er_aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top

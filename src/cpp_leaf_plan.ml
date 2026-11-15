@@ -82,7 +82,8 @@ module Ir = struct
     in
     let rec field ((f, _, _) : resolved Field.member) =
       match f with
-      | Method {type_params = tps; _} | Constructor {type_params = tps; _} | Nested_type_alias (tps, _, _) -> concepts tps
+      | Method {type_params = tps; _} | Constructor {type_params = tps; _}
+      | Nested_type_alias (tps, _, _) -> concepts tps
       | Nested_struct (_, fs) -> List.concat_map field fs
       | Out_of_line_declaration m -> out_of_line m
       | Entity_data (r, _) -> [r]
@@ -90,7 +91,8 @@ module Ir = struct
     in
     match d with
     | Template (tps, _, inner) -> concepts tps @ declared_globals inner
-    | Namespace (w, ds) -> Option.cata (fun (w : Namespace.wrapper) -> [w.ref_]) [] w @ List.concat_map declared_globals ds
+    | Namespace (w, ds) ->
+      Option.cata (fun (w : Namespace.wrapper) -> [w.ref_]) [] w @ List.concat_map declared_globals ds
     | Function f -> List.map fst (f.path.outer :: f.path.inner)
     | Struct s | Merged_struct_members s -> (s.ref_ :: concepts s.type_params) @ List.concat_map field s.fields
     | Variable x -> [x.ref_]
@@ -315,7 +317,8 @@ and rebind_applied_head (h : ty) (args : ty list) : ty =
     match h with
     | (Entity_application (r, _, _) | In_namespace (_, Entity_application (r, _, _))) when family r -> h
     | Entity_application (r, tys, es) -> Entity_application (r, List.map sub tys, es)
-    | In_namespace (r, Entity_application (g, tys, es)) -> In_namespace (r, Entity_application (g, List.map sub tys, es))
+    | In_namespace (r, Entity_application (g, tys, es)) ->
+      In_namespace (r, Entity_application (g, List.map sub tys, es))
     | h -> h )
   | _ -> h
 
@@ -426,7 +429,8 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
       match k with
       | Typename | Template _ -> []
       | Typename_default t -> [t]
-      | Invocable (invs, cod) -> cod :: List.concat_map (fun (inv : _ Cpp_ir.Template.Invocation.t) -> List.map snd inv.args) invs
+      | Invocable (invs, cod) ->
+        cod :: List.concat_map (fun (inv : _ Cpp_ir.Template.Invocation.t) -> List.map snd inv.args) invs
       | Concept (_, args) -> args
     in
     if
@@ -456,7 +460,8 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
    shapes answered here ({!Cpp_print.pp_cpp_type_at}'s [template_name]). *)
 let rec applied_to_sentinel_alone (t : ty) =
   match t with
-  | Named (_, args) | External (_, args) | Entity_application (_, args, _) | Variant (_, args) -> args = [Carrier_parameter]
+  | Named (_, args) | External (_, args) | Entity_application (_, args, _) | Variant (_, args) ->
+    args = [Carrier_parameter]
   | Shared_pointer t -> t = Carrier_parameter
   | In_namespace (_, t) -> applied_to_sentinel_alone t
   | Foreign {types = args; pieces; _} -> (
@@ -629,7 +634,8 @@ let planned_writes ~file ~module_ w =
 
 (** The synthesised templates [w], written in the module [module_], writes
     in the file [file], as planned. *)
-let planned_aliases ~file ~module_ w = match planned_writes ~file ~module_ w with Some (aliases, _) -> aliases | None -> []
+let planned_aliases ~file ~module_ w =
+  match planned_writes ~file ~module_ w with Some (aliases, _) -> aliases | None -> []
 
 (** How [w], written in the module [module_], writes its type constructors
     in the file [file], as planned; none before the unit's templates are
@@ -692,7 +698,8 @@ let global_names frames globals =
         match r with
         | GlobRef.IndRef _ ->
           Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
-          @ if Cpp_names.is_enum_cached r then Cpp_resolution.[Enumerator_qualifier (Enumerator_value, r); Enumerator_qualifier (Case_label, r)] else []
+          @ if Cpp_names.is_enum_cached r then
+            Cpp_resolution.[Enumerator_qualifier (Enumerator_value, r); Enumerator_qualifier (Case_label, r)] else []
         | GlobRef.ConstRef _ | GlobRef.ConstructRef _ -> [Cpp_resolution.Value_reference r]
         | GlobRef.VarRef _ -> [] )
       (List.filter decided globals)
@@ -832,7 +839,8 @@ and tyctors_spelled ctx vl t =
 let resolved_for ctx t =
   { ctx with
     rc_names =
-      Names_resolved (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names [ctx.rc_frame] (type_globals t)))
+      Names_resolved
+        (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names [ctx.rc_frame] (type_globals t)))
   }
 
 (** {2 Synthesised templates}
@@ -940,7 +948,8 @@ let vars_written uses vl t =
     | Variable (Named _) | Instance _ | Promoted_member _ | Carrier_parameter | Void | Any | Auto | Decltype_auto
     | Erased _ | Type_of _ ->
       []
-    | Named (_, args) | External (_, args) | Entity_application (_, args, _) | Variant (_, args) -> List.concat_map go args
+    | Named (_, args) | External (_, args) | Entity_application (_, args, _) | Variant (_, args) ->
+      List.concat_map go args
     | Foreign {types; pieces; _} ->
       List.concat_map
         (fun (p : Cpp_ir.Foreign.piece) ->
@@ -949,7 +958,8 @@ let vars_written uses vl t =
           | Text _ | Value _ | Yields | Result | Statement_end -> [] )
         pieces
     | Function (dom, cod) -> go cod @ List.concat_map go dom
-    | Const t | Shared_pointer t | Reference (_, t) | Pointer t | Decay t | Non_deduced t | In_namespace (_, t) | Member (t, _) ->
+    | Const t | Shared_pointer t | Reference (_, t) | Pointer t | Decay t | Non_deduced t
+    | In_namespace (_, t) | Member (t, _) ->
       go t
     | Rebind (h, x) -> go h @ go x
     | Apply (head, args) -> go head @ List.concat_map go args
@@ -1109,7 +1119,8 @@ and ctor_alias_of_probe ctx vl ~base probe =
         let names = identifier_tokens rendered in
         if List.filter (fun (i, name) -> List.mem (written_var i name) names) all <> captured then
           Probe.violation "captured variables"
-            Pp.(str "the body " ++ str rendered ++ str " is read off its structure as writing other variables than its text names") );
+            Pp.(str "the body " ++ str rendered
+                ++ str " is read off its structure as writing other variables than its text names") );
     (* A class instance the body reads a type out of -- [typename
        _tcI0::ptr] -- is the enclosing declaration's parameter as much
        as a variable is, and is captured the same way. *)
@@ -1160,7 +1171,9 @@ and ctor_alias_of_probe ctx vl ~base probe =
         @ List.map (fun (_, name) -> Cpp_ast.Type_parameter name) instance_names
       in
       Some
-        ( {ca_base = base; ca_holder = Some params; ca_declared = declared_in; ca_body = body; ca_type = renamed; ca_vars = vl; ca_uses = uses},
+        (
+          {ca_base = base; ca_holder = Some params; ca_declared = declared_in; ca_body = body; ca_type = renamed;
+            ca_vars = vl; ca_uses = uses},
           List.map (fun (i, name) -> Cpp_state.Captured_variable (i, name)) vars
           @ List.map (fun id -> Cpp_state.Captured_instance id) instances )
 
@@ -1329,7 +1342,8 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
   | Forward_declaration {defined = Defined_struct {struct_; tparams; constraint_; _}; _} ->
     ([], Cpp_resolution.Definition (Struct_definition, struct_))
     :: global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
-  | Forward_declaration {defined = Defined_enum r; _} -> ([], Cpp_resolution.Definition (Enum_definition, r)) :: global_names [[]] [r]
+  | Forward_declaration {defined = Defined_enum r; _} ->
+    ([], Cpp_resolution.Definition (Enum_definition, r)) :: global_names [[]] [r]
   | Synthesised_template {body; _} -> global_names [[]] (type_globals body)
   | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
   | Functor_alias _ | Derived_functor _ ->
@@ -1370,14 +1384,17 @@ let unmerged_wrappers_written d = unmerged_wrappers_named ~name:(fun r -> (r, wr
 
 (* The wrapper module [homed] says the struct of the wrapper [r] holds the
    declarations of, if any. *)
-let home_of ~homed r = List.find_map (fun (r', wrapped) -> if Common.globref_equal r r' then Some wrapped else None) homed
+let home_of ~homed r =
+  List.find_map (fun (r', wrapped) -> if Common.globref_equal r r' then Some wrapped else None) homed
 
 (** The names of the wrapper structs [d] writes that hold a wrapper module's
     declarations: those of the wrappers [homed] gives a module. *)
 let absorbed_by ~homed d =
-  List.filter_map (fun (r, name) -> if Option.has_some (home_of ~homed r) then Some name else None) (unmerged_wrappers_written d)
+  List.filter_map (fun (r, name) -> if Option.has_some (home_of ~homed r) then Some name else None)
+    (unmerged_wrappers_written d)
 
-let absorbs ~homed d = List.exists (fun r -> Option.has_some (home_of ~homed r)) (unmerged_wrappers_named ~name:Fun.id d)
+let absorbs ~homed d =
+  List.exists (fun r -> Option.has_some (home_of ~homed r)) (unmerged_wrappers_named ~name:Fun.id d)
 
 let read_decl ctx env d = read_cpp_decl (writing ctx d) env d
 
@@ -1395,7 +1412,8 @@ let absorbing ctx ~homed ?tyctors env (d : Cpp_ir.Resolved.Decl.t) =
     match home_of ~homed w.ref_ with
     | Some module_ ->
       let written = Cpp_ast.concat Pp.fnl (List.map (Cpp_ast.absorbed ?tyctors env) members) in
-      Cpp_ast.wrapper_struct ~name:(nspace_wrapper_name ctx w.ref_) ~module_ ~fields:Cpp_ast.(seq [written; text (Pp.fnl ())])
+      Cpp_ast.wrapper_struct ~name:(nspace_wrapper_name ctx w.ref_) ~module_
+        ~fields:Cpp_ast.(seq [written; text (Pp.fnl ())])
     | None -> CErrors.anomaly Pp.(str "Crane: a wrapper absorbing a wrapper module is not that module's home.") )
   | _ ->
     CErrors.anomaly Pp.(str "Crane: a declaration absorbing a wrapper module is not the wrapper struct holding it.")
@@ -1455,7 +1473,8 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
       let tyctors =
         match u.declaration with
         | Declaration {decl; _} -> Some (ctor_aliases_written ctx decl).read_uses
-        | Fields {record; vars; fields} -> Some (ctor_aliases_of_fields ctx ~vl:vars record (List.map snd fields)).read_uses
+        | Fields {record; vars; fields} ->
+          Some (ctor_aliases_of_fields ctx ~vl:vars record (List.map snd fields)).read_uses
         | Synthesised_template s -> Some (snd (written_body ctx s.vars s.body))
         | _ -> u.tyctors
       in
@@ -1471,5 +1490,6 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
       in
       if needs <> u.needs then
         Probe.violation "unprinted declarations"
-          (Pp.str "a declaration printed where the tree puts it needs other declarations than planned where it was made") );
+          (Pp.str
+            "a declaration printed where the tree puts it needs other declarations than planned where it was made") );
   text

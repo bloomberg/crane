@@ -1138,10 +1138,11 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             | _ -> expr )
       | ft ->
         (* Handle arrow types containing erased type variables.
-           E.g. field type Core.Type.Arrow(Core.Type.Variable 1, Core.Type.Global_app(nat)) where Core.Type.Variable 1 is erased:
-           the concrete lambda [](uint64_t x){return x*x;} must become
-           [](std::any _a0){return any_cast<uint64_t>(_a0) * any_cast<uint64_t>(_a0);}
-           so it matches the factory param std::function<uint64_t(std::any)>. *)
+           E.g. field type Core.Type.Arrow(Core.Type.Variable 1,
+           Core.Type.Global_app(nat)) where Core.Type.Variable 1 is erased: the
+           concrete lambda [](uint64_t x){return x*x;} must become [](std::any
+           _a0){return any_cast<uint64_t>(_a0) * any_cast<uint64_t>(_a0);} so it
+           matches the factory param std::function<uint64_t(std::any)>. *)
         let tvar_is_erased i =
           try match List.nth ctor_temps (i - 1) with
             | Any -> true | _ -> false

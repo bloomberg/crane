@@ -99,7 +99,8 @@ let struct_functions struc =
                                                                    type_ = ty}) ->
           acc := (r, b, ty) :: !acc
         | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) ->
-          Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> acc := (fd.entity, fd.body, fd.type_) :: !acc) fds
+          Core.Nonempty.iter
+            (fun (fd : Core.Recursion.Definition.t) -> acc := (fd.entity, fd.body, fd.type_) :: !acc) fds
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = l; _}; _} -> elems l
         | _ -> () )
       l
@@ -316,9 +317,10 @@ let rec msig_of_ms = function
                                                                                  body = Some t})) :: msig_of_ms ms
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: ms ->
     List.map
-      (fun (fd : Core.Recursion.Definition.t) -> (l, Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Value {entity = fd.entity;
-                                                                                                                               body = fd.body;
-                                                                                                                               type_ = fd.type_})))
+      (fun (fd : Core.Recursion.Definition.t) ->
+        (l,
+          Core.Module.Signature_item.Declaration
+            (Core.Signature.Declaration.Value {entity = fd.entity; body = fd.body; type_ = fd.type_})))
       (Core.Nonempty.to_list fds)
     @ msig_of_ms ms
   | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: ms ->

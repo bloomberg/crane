@@ -79,9 +79,11 @@ let fixpoint defs (fd : Core.Recursion.Definition.t) =
             match tie defs f ~kept k j gbody with
             | None -> None
             | Some tied ->
-              let args = List.mapi (fun i a -> if i = j then Core.Expr.Erased_value Core.Erasure_reason.Proof else a) args in
+              let args =
+                List.mapi (fun i a -> if i = j then Core.Expr.Erased_value Core.Erasure_reason.Proof else a) args in
               Option.map
-                (fun body -> {fd with Core.Recursion.Definition.body = Core_util.named_lams params (Core_util.normalize body)})
+                (fun body ->
+                  {fd with Core.Recursion.Definition.body = Core_util.named_lams params (Core_util.normalize body)})
                 (Core_specialize.instantiate (Core_util.named_lams gparams tied) args) ) )
       | _ -> None )
     | _ -> None
@@ -99,8 +101,9 @@ let structure struc =
           | None -> (lbl, se) )
         | Core.Module.Structure_item.Module ({Core.Module.expr = Core.Module.Expr.Structure {path = mp;
                                                                                              items = l}; _} as m) ->
-          (lbl, Core.Module.Structure_item.Module {m with Core.Module.expr = Core.Module.Expr.Structure {path = mp;
-                                                                                                         items = elems l}})
+          (lbl,
+            Core.Module.Structure_item.Module
+              {m with Core.Module.expr = Core.Module.Expr.Structure {path = mp; items = elems l}})
         | se -> (lbl, se) )
       l
   in

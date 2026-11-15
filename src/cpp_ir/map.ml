@@ -24,7 +24,8 @@ type 'p t = {
 
 (** A rewrite whose statement lists are rewritten statement by statement,
     unless [stmts] says otherwise. *)
-let make ?stmts ~expr ~stmt ~type_ () = {expr; stmt; type_; stmts = (match stmts with Some f -> f | None -> List.map stmt)}
+let make ?stmts ~expr ~stmt ~type_ () =
+  {expr; stmt; type_; stmts = (match stmts with Some f -> f | None -> List.map stmt)}
 
 let list = List.map
 let opt = Option.map
@@ -52,7 +53,9 @@ let template_parameters : type p. p t -> p Template.parameters -> p Template.par
         | Callable_declared (dom, cod) -> Callable_declared (list m.type_ dom, m.type_ cod)
         | Invocable (invs, cod) ->
           Invocable
-            (list (fun (i : p Invocation.t) -> {i with args = list (fun (c, t) -> (c, m.type_ t)) i.args}) invs, m.type_ cod)
+            (list
+              (fun (i : p Invocation.t) -> {i with args = list (fun (c, t) -> (c, m.type_ t)) i.args}) invs,
+                m.type_ cod)
         | Concept (r, ts) -> Concept (r, list m.type_ ts)
         | Typename | Template _ -> k
       in
@@ -166,7 +169,8 @@ let expr : type p. p t -> p Expr.t -> p Expr.t =
     let e = ex e in
     Tolerant_any_cast (ty t, e)
   | Unbox (u, e) ->
-    let u : p Unbox.t = match u with To t -> To (ty t) | Or_keep t -> Or_keep (ty t) | List (a, b) -> List (ty a, ty b) in
+    let u : p Unbox.t =
+      match u with To t -> To (ty t) | Or_keep t -> Or_keep (ty t) | List (a, b) -> List (ty a, ty b) in
     Unbox (u, ex e)
   | Convert (t, e) ->
     let e = ex e in
@@ -200,7 +204,8 @@ let stmt : type p. p t -> p Stmt.t -> p Stmt.t =
   | Declare (x, t, b) -> Declare (x, ty t, b)
   | Bind_variable (x, b, e) ->
     let b : p Binding.t =
-      match b with Declare (t, c) -> Declare (ty t, c) | Declare_static t -> Declare_static (ty t) | Existing -> Existing
+      match b with Declare (t, c) -> Declare (ty t, c) | Declare_static t -> Declare_static (ty t)
+        | Existing -> Existing
     in
     Bind_variable (x, b, ex e)
   | Expression e -> Expression (ex e)
@@ -210,7 +215,8 @@ let stmt : type p. p t -> p Stmt.t -> p Stmt.t =
         (fun (b : p Custom_match.branch) : p Custom_match.branch ->
           let b_body = body b.body in
           let b_type = ty b.type_ in
-          {params = list (fun (p : p Custom_match.param) -> {p with type_ = ty p.type_}) b.params; type_ = b_type; body = b_body} )
+          {params = list (fun (p : p Custom_match.param) -> {p with type_ = ty p.type_}) b.params;
+            type_ = b_type; body = b_body} )
         c.branches
     in
     let type_args = list ty c.type_args in

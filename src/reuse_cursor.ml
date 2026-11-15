@@ -276,7 +276,8 @@ let plan ~pointer_fields ~in_place (l : Term.loop) =
 
 let positioned c positions =
   let at i =
-    List.find_map (fun (k, p) -> if Option.equal Int.equal p (Some i) then Some k else None) (List.mapi (fun k p -> (k, p)) positions)
+    List.find_map (fun (k, p) -> if Option.equal Int.equal p (Some i) then Some k else None)
+      (List.mapi (fun k p -> (k, p)) positions)
   in
   Option.map
     (fun parameter ->

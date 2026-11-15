@@ -1104,7 +1104,8 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
   Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
-  let acc = {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
+  let acc =
+    {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
   Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
@@ -1135,7 +1136,8 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
       ( Target_plan.same_callables callables callables'
       && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
-  let assumed = Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
+  let assumed =
+    Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
   Pipeline_trace.event "layout" decide_callables;
   let acc = {acc with callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
   Accumulated_plan.bind acc @@ fun () ->
@@ -1625,7 +1627,8 @@ let check_against_plan (plan : Target_plan.t) =
     in
     Target_plan.check_kinds_recorded plan;
     List.iter
-      (fun (r, kinds) -> if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then fail "template-parameter kinds")
+      (fun (r, kinds) -> if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then
+        fail "template-parameter kinds")
       plan.template_kinds;
     List.iter
       (fun (mp, s) ->
@@ -1664,7 +1667,8 @@ let check_against_plan (plan : Target_plan.t) =
           fail ("promoted inductives: planned but not rendered " ^ Pp.string_of_ppcmds (GlobRef.print r)) )
       promoted;
     let planned = plan.representation.nested_structs and printed = !Cpp_state.printed_nested_structs in
-    List.iter (fun x -> if not (mem x planned) then fail ("nested structs: printed but not planned " ^ describe x)) printed;
+    List.iter
+      (fun x -> if not (mem x planned) then fail ("nested structs: printed but not planned " ^ describe x)) printed;
     if printed <> [] then
       List.iter
         (fun x -> if not (mem x printed) then fail ("nested structs: planned but not printed " ^ describe x))
@@ -1702,7 +1706,8 @@ let declares struc =
 
 (** Renders an entire ML structure to C++ header and implementation files:
     plans the unit, renders each file once, then writes and formats them. *)
-let print_structure_to_file ?(namespace = None) ?(unit_includes = []) ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
+let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
+  ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
     (fn, si, mo) dry (core : Core_phase.normalized Core_phase.program) =
   let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
@@ -2337,7 +2342,8 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
         ignore ignore d)
     ignore ignore struc;
   Cpp_state.note_program_reads !program_reads;
-  (* Generic traversal of Core.Program.t: walks Core.Module.Expr.Structure/Core.Module.Expr.Functor/Core.Module.Expr.Apply
+  (* Generic traversal of Core.Program.t: walks
+     Core.Module.Expr.Structure/Core.Module.Expr.Functor/Core.Module.Expr.Apply
      and calls [visit ~in_struct elem] on each structure element. *)
   let iter_structure visit struc =
     let rec walk_elem ~in_struct = function

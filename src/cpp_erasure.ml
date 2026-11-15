@@ -417,7 +417,8 @@ and reads_stmt r (s : stmt) : stmt =
   match s with
   | Match (scrut, branches, default) ->
     let branch (b : phase Match.branch) =
-      let r' = with_boxed_params r (List.map (fun (fb : phase Match.field_binding) -> (fb.name, fb.type_)) b.field_bindings) in
+      let r' =
+        with_boxed_params r (List.map (fun (fb : phase Match.field_binding) -> (fb.name, fb.type_)) b.field_bindings) in
       {b with body = List.map (reads_stmt r') b.body}
     in
     let default = Option.map (List.map st) default in
@@ -561,7 +562,8 @@ let rec supply_type_args (t : ty) : ty =
       | Entity_application (r, tys, args) when Table.to_inline r -> (
         match Table.find_custom_opt r with
         | Some s ->
-          let tokens = Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
+          let tokens =
+            Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
           Some (Entity_application (r, supplied tokens (List.map supply_type_args tys), args))
         | None -> None )
       | _ -> None )
@@ -572,7 +574,8 @@ let rec supply_type_args (t : ty) : ty =
    anything is printed, wherever it has none. *)
 let names_ret text = List.mem Foreign_template.CCret (Foreign_template.term_template text)
 
-let refuse_ret r why = CErrors.user_err Pp.(str "Crane: the mapping " ++ GlobRef.print r ++ str " names %ret" ++ str why)
+let refuse_ret r why =
+  CErrors.user_err Pp.(str "Crane: the mapping " ++ GlobRef.print r ++ str " names %ret" ++ str why)
 
 let in_block = " in a block template."
 
@@ -679,7 +682,8 @@ let rec instantiated_type ~boxing (t : ty) : ty =
         (* An empty text is a global removed from the output, written as
            its arguments alone ({!Type_util.ref_has_no_cpp_name}). *)
         | Some s when s <> "" ->
-          let tokens = Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
+          let tokens =
+            Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
           Some (Foreign (instantiated_foreign ~boxing r tokens tys args None))
         | Some _ | None ->
           let args = List.map (instantiated_expr ~boxing) args in
@@ -776,7 +780,8 @@ and instantiated_stmt ~boxing (s : stmt) : stmt =
   match s with
   (* The variable the block assigns is declared in front of it. *)
   | Foreign_block b ->
-    let value : expr = Foreign (Statements, instantiated_block ~boxing b.custom b.template b.type_args b.values (Some b.result_type)) in
+    let value : expr =
+      Foreign (Statements, instantiated_block ~boxing b.custom b.template b.type_args b.values (Some b.result_type)) in
     Bind_variable (b.result, Declare (instantiated_type ~boxing b.result_type, b.binder), value)
   | s -> Map.stmt (instantiating ~boxing) s
 
@@ -828,7 +833,8 @@ let value_qualifier : ty -> expr option = function
   | _ -> None
 
 let lower_qualifiers (d : settled) : settled =
-  let qualified ty id : expr = match value_qualifier ty with Some q -> Scope (q, id, []) | None -> Type_member (ty, id) in
+  let qualified ty id : expr =
+    match value_qualifier ty with Some q -> Scope (q, id, []) | None -> Type_member (ty, id) in
   let rec fe (e : expr) : expr =
     match Map.expr (rw ()) e with
     (* A suspension is its type's [lazy_] factory applied to the thunk. *)
@@ -901,7 +907,8 @@ let instantiate_type t = (pointer_slots () ()).type_ (instantiated_type ~boxing:
    and need no block of their own. *)
 let scrutinee_name (branches : phase Match.branch list) =
   let after prefix s =
-    if String.starts_with ~prefix s then Some (String.sub s (String.length prefix) (String.length s - String.length prefix))
+    if String.starts_with ~prefix s then
+      Some (String.sub s (String.length prefix) (String.length s - String.length prefix))
     else None
   in
   match List.find_map (fun (br : phase Match.branch) -> br.var) branches with
@@ -1054,7 +1061,8 @@ let method_value n (tys : ty list) pos : expr =
 
 (* Whether a global is written as a function of its own, not a mapping's
    text. *)
-let not_inline : phase Cpp_ir.Foreign.custom option -> bool = function None | Some {inline = None; _} -> true | _ -> false
+let not_inline : phase Cpp_ir.Foreign.custom option -> bool =
+  function None | Some {inline = None; _} -> true | _ -> false
 
 let lower_method_calls (d : settled) : settled =
   let rec fe (e : expr) : expr =
@@ -1463,7 +1471,8 @@ let report_unspellable where (ty : ty) =
       (Pp.str
          (Printf.sprintf "crane: firing %d: %s yields std::any; outermost %s; nameless globs: %s" !unspellable_firings
             where (shape ty)
-            (String.concat ", " (tagged "empty custom" (List.rev !empty_custom) @ tagged "skipped module" (List.rev !skipped_mod))) ) )
+            (String.concat ", "
+              (tagged "empty custom" (List.rev !empty_custom) @ tagged "skipped module" (List.rev !skipped_mod))) ) )
   end
 
 (* Whether the template of [m] writes down the type of branch [i]'s binder

@@ -318,8 +318,9 @@ val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
     planned none, {!foreign}'s.  Under [CRANE_CHECK_IR] a planned one is
     checked against {!foreign}'s, and emission finding none planned is a
     violation: every callee a body names is planned before bodies are
-    generated.  A method's call is still planned against its foreign one: it is written as its function's call would be, then
-    printed on the receiver without the variables the receiver carries or
+    generated.  A method's call is still planned against its foreign one: it is
+    written as its function's call would be, then printed on the receiver
+    without the variables the receiver carries or
     {!dropped_positions}. *)
 val plan :
   ?omitted:(Scheme.Var.t -> omission option) ->

@@ -144,7 +144,8 @@ val instantiation :
     one with the roles it gave the call; none otherwise.  Unlike
     {!instantiation} it neither counts nor checks the lookup: it is for a
     planner reading the walk, not for lowering. *)
-val planned_instantiation : walk:t option -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.instantiated option
+val planned_instantiation : walk:t option -> Core.Global_use.t -> Core.Expr.t list ->
+  Elaborated_call.instantiated option
 
 (** [closed_instance_call ~walk ~lex use args] -- whether the call [use args]
     builds a typeclass instance from nothing but instance parameters, so

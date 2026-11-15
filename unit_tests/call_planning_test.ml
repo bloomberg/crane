@@ -98,9 +98,11 @@ let () =
   check "an undeducible hole is filled from the argument's type" (var_type partial 1 = Some nat);
   check "and says so" (Call_tyargs.resolved_from Call_tyargs.Argument_types partial.reading);
   check "the callee's type is instantiated at the filled reading"
-    (partial.callee_type_at_call = Core.Type.Arrow {parameter = Core.Type.Arrow {parameter = nat; result = nat};
-                                                    result = Core.Type.Arrow {parameter = nat; result = nat}});
-  check "its parameters too" (Param_pos.to_list partial.params = [Core.Type.Arrow {parameter = nat; result = nat}; nat]);
+    (partial.callee_type_at_call = Core.Type.Arrow
+      {parameter = Core.Type.Arrow {parameter = nat; result = nat};
+        result = Core.Type.Arrow {parameter = nat; result = nat}});
+  check "its parameters too"
+    (Param_pos.to_list partial.params = [Core.Type.Arrow {parameter = nat; result = nat}; nat]);
   let full = instantiate (unwritten f ~arity:1) [g; b] in
   check "a full application is not eta-expanded, so nothing is filled"
     (not (Call_tyargs.resolved_from Call_tyargs.Argument_types full.reading))
@@ -118,7 +120,8 @@ let () =
   check "its declared position maps to the same parameter"
     (Option.bind (over.subst_index_of_orig (Param_pos.of_regular ~leading:0 0)) (Param_pos.nth over.params)
     = Some nat);
-  let dummy = instantiate (Core.Global_use.monomorphic k) [Core.Expr.Erased_value Core.Erasure_reason.Type_argument; a] in
+  let dummy =
+    instantiate (Core.Global_use.monomorphic k) [Core.Expr.Erased_value Core.Erasure_reason.Type_argument; a] in
   check "an erased argument at a value domain stays, so the call's arity does not change"
     (dummy.call.excess = [a] && dummy.call.roles = [Elaborated_call.Regular; Excess])
 
@@ -156,7 +159,13 @@ let () =
   in
   let d = r "cd" in
   let dty = Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}} in
-  let t = walk [Core.Decl.Value {entity = d; body = Core.Expr.Lambda {parameter = id "inst"; parameter_type = cls; body = Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body}}; type_ = dty}] in
+  let t =
+    walk
+      [Core.Decl.Value
+        {entity = d;
+          body = Core.Expr.Lambda
+            {parameter = id "inst"; parameter_type = cls;
+              body = Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body}}; type_ = dty}] in
   check "the declaration's class-typed parameter is its dictionary"
     (Core_elaborate.roles t closed 3 = Some [Elaborated_call.Dictionary; Regular; Excess]);
   let lex =
@@ -201,13 +210,16 @@ let () =
   let ctor = GlobRef.ConstructRef ((kn, 0), 1) in
   let constant = Core.Expr.Construct {result_type = ty;
                                       constructor = ctor;
-                                      arguments = [Core.Expr.UInt63 (Uint63.of_int 3); Core.Expr.Erased_value Core.Erasure_reason.Proof];
+                                      arguments =
+                                        [Core.Expr.UInt63 (Uint63.of_int 3);
+                                          Core.Expr.Erased_value Core.Erasure_reason.Proof];
                                       occurrence = occ ()} in
   check "without the option no construction is a shared constant"
     ((not (Table.is_shared_variant ind)) && not (Core_elaborate.shared_constant ~walk:None constant));
   let walk = Some (walk [Core.Decl.Value {entity = r "sd"; body = constant; type_ = ty}]) in
   check "the walk agrees for the occurrence" (not (Core_elaborate.shared_constant ~walk constant));
-  check "a term that is no construction is never one" (not (Core_elaborate.shared_constant ~walk (Core.Expr.UInt63 (Uint63.of_int 3))))
+  check "a term that is no construction is never one"
+    (not (Core_elaborate.shared_constant ~walk (Core.Expr.UInt63 (Uint63.of_int 3))))
 
 (* How a match is lowered, from its annotated type and branches alone. *)
 let () =
@@ -220,21 +232,22 @@ let () =
   Table.add_inductive_kind kc (Core.Inductive.Kind.Type_class [{Core.Record.Field.projection = Some fx; type_ = nat}]);
   let rec_ty = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0);
                                      type_arguments = [];
-                                     index_arguments = []} and cls_ty = Core.Type.Global_app {head = GlobRef.IndRef (kc, 0);
-                                                                                              type_arguments = [];
-                                                                                              index_arguments = []} in
+                                     index_arguments = []}
+                                       and cls_ty =
+                                         Core.Type.Global_app
+                                           {head = GlobRef.IndRef (kc, 0); type_arguments = []; index_arguments = []} in
   let pat = Core.Pattern.binding_all (GlobRef.ConstructRef ((kn, 0), 1)) 2 in
   let ids = [(id "x", nat); (id "y", Core.Type.Arrow {parameter = nat; result = nat})] in
   let one body = [|{Core.Match.Branch.binders = ids; result_type = nat; pattern = pat; body = body}|] in
   let a = declare "ma" nat in
   let kind = Match_kind.classify rec_ty in
   check "reading the first field is a projection of field 0"
-    (kind (one (Core.Expr.fresh_rel 2)) = Record {typeclass = false;
-                                                  body = Projection {field = 0; application = Read}});
+    (kind (one (Core.Expr.fresh_rel 2)) = Record
+      {typeclass = false; body = Projection {field = 0; application = Read}});
   check "calling the second is a call projection"
     (kind (one (Core.Expr.Apply {callee = Core.Expr.fresh_rel 1;
-                                 arguments = [a]})) = Record {typeclass = false;
-                                                              body = Projection {field = 1; application = Call}});
+                                 arguments = [a]})) = Record
+                                   {typeclass = false; body = Projection {field = 1; application = Call}});
   check "calling it through a coercion is a coerced call"
     (kind (one (Core.Expr.Apply {callee = Core.Expr.Boxed_value {value = Core.Expr.fresh_rel 1; occurrence = occ ()};
                                  arguments = [a]}))
@@ -277,13 +290,14 @@ let () =
   let staged = Core.Expr.Apply {callee = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a]};
                                 arguments = [b]} in
   check "a staged application is not canonical" (not (Core_normalize.is_canonical staged));
-  check "a global applied in stages is applied once" (Core_normalize.spine staged = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]});
+  check "a global applied in stages is applied once"
+    (Core_normalize.spine staged = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]});
   check "a coercion of the head is dropped"
-    (Core_normalize.apply (Core.Expr.Boxed_value {value = Core.Expr.Global f;
-                                                  occurrence = occ ()}) [a; b] = Core.Expr.Apply {callee = Core.Expr.Global f;
-                                                                                                  arguments = [a; b]});
+    (Core_normalize.apply (Core.Expr.Boxed_value {value = Core.Expr.Global f; occurrence = occ ()}) [a; b] =
+      Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]});
   check "an erased head is itself, its arguments never evaluated"
-    (Core_normalize.apply (Core.Expr.Erased_value Core.Erasure_reason.Proof) [a] = Core.Expr.Erased_value Core.Erasure_reason.Proof
+    (Core_normalize.apply (Core.Expr.Erased_value Core.Erasure_reason.Proof) [a] = Core.Expr.Erased_value
+      Core.Erasure_reason.Proof
     && Core_normalize.apply (Core.Expr.Runtime_error "absurd") [a] = Core.Expr.Runtime_error "absurd");
   (* [(let (x, y) := p in g x) a] is [let (x, y) := p in g x a]: the
      argument is lifted past the branch's binders. *)
@@ -298,10 +312,14 @@ let () =
                                    body = body}|];
                      occurrence = mocc}
   in
-  ( match Core_normalize.apply (destructure (Core.Expr.Apply {callee = Core.Expr.Global f;
-                                                              arguments = [Core.Expr.fresh_rel 2]})) [Core.Expr.fresh_rel 1] with
-  | Core.Expr.Match {branches = [|{Core.Match.Branch.body = Core.Expr.Apply {callee = Core.Expr.Global f';
-                                                                             arguments = [Core.Expr.Bound_variable {index = 2; _}; Core.Expr.Bound_variable {index = 3; _}]}; _}|];
+  ( match Core_normalize.apply
+    (destructure (Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [Core.Expr.fresh_rel 2]}))
+      [Core.Expr.fresh_rel 1] with
+  | Core.Expr.Match
+    {branches =
+      [|{Core.Match.Branch.body = Core.Expr.Apply
+          {callee = Core.Expr.Global f';
+            arguments = [Core.Expr.Bound_variable {index = 2; _}; Core.Expr.Bound_variable {index = 3; _}]}; _}|];
                      occurrence = o; _} ->
     check "a destructuring's branch takes the argument, lifted"
       (Core.Global_use.callee f' = r "nf" && Core.Occurrence.equal o mocc)
@@ -309,11 +327,18 @@ let () =
   let local = Core.Expr.Apply {callee = Core.Expr.fresh_rel 1; arguments = [a]} in
   check "a variable head is canonical" (Core_normalize.canonical_application local);
   check "a nested staged application is made canonical under a lambda"
-    (Core_normalize.spine (Core.Expr.Lambda {parameter = id "z"; parameter_type = nat; body = staged}) = Core.Expr.Lambda {parameter = id "z"; parameter_type = nat; body = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]}});
+    (Core_normalize.spine (Core.Expr.Lambda {parameter = id "z"; parameter_type = nat; body = staged}) =
+      Core.Expr.Lambda
+        {parameter = id "z"; parameter_type = nat;
+          body = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]}});
   check "spine makes every application canonical"
-    (Core_normalize.is_canonical (Core_normalize.spine (Core.Expr.Tuple [staged; destructure (Core.Expr.Apply {callee = Core.Expr.Apply {callee = Core.Expr.Global f;
-                                                                                                                                         arguments = [a]};
-                                                                                                               arguments = [b]})])));
+    (Core_normalize.is_canonical
+      (Core_normalize.spine
+        (Core.Expr.Tuple
+          [staged;
+            destructure
+              (Core.Expr.Apply
+                {callee = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a]}; arguments = [b]})])));
   check "spine leaves a canonical term alone" (Core_normalize.spine local = local)
 
 (* A constructor chain of an inductive no numeral mapping names is no
@@ -324,13 +349,13 @@ let () =
   let ty = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   let two = Core.Expr.Construct {result_type = ty;
                                  constructor = succ;
-                                 arguments = [Core.Expr.Construct {result_type = ty;
-                                                                   constructor = succ;
-                                                                   arguments = [Core.Expr.Construct {result_type = ty;
-                                                                                                     constructor = zero;
-                                                                                                     arguments = [];
-                                                                                                     occurrence = occ ()}];
-                                                                   occurrence = occ ()}];
+                                 arguments =
+                                   [Core.Expr.Construct
+                                     {result_type = ty; constructor = succ;
+                                       arguments =
+                                         [Core.Expr.Construct
+                                           {result_type = ty; constructor = zero; arguments = []; occurrence = occ ()}];
+                                             occurrence = occ ()}];
                                  occurrence = occ ()} in
   check "an unregistered Peano chain does not fold"
     ((not (Numeral_literal.folds two)) && Numeral_literal.fold two == two

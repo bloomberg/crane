@@ -125,7 +125,8 @@ let rec tail_result_type = function
 let recover_fix_codomain ((id, ty) : Names.Id.t * Core.Type.t) (body : Core.Expr.t) =
   let dom, cod = Core_util.type_decomp ty in
   match cod with
-  | Core.Type.Variable {variable = i; _} when not (List.exists (fun t -> Core_util.IntSet.mem i (Core_util.core_tvars t)) dom) -> (
+  | Core.Type.Variable {variable = i; _}
+    when not (List.exists (fun t -> Core_util.IntSet.mem i (Core_util.core_tvars t)) dom) -> (
     match tail_result_type body with
     | Some t ->
       let subst = Type_util.subst_tvars_type [(i, t)] in
@@ -234,7 +235,8 @@ let structure =
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
-          (fun (fd : Core.Recursion.Definition.t) -> expr ~outer:(Core_util.IntSet.fold max (Core_util.core_tvars fd.type_) 0) fd.body)
+          (fun (fd : Core.Recursion.Definition.t) ->
+            expr ~outer:(Core_util.IntSet.fold max (Core_util.core_tvars fd.type_) 0) fd.body)
           (Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     ignore ignore

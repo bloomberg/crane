@@ -48,12 +48,15 @@ let size_body pass_left =
         ~binders:[(id "l", tree); (id "r", tree)]
         (Core.Pattern.Constructor {constructor = node;
                                    fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]})
-        (resume (continue_ f [pass_left]) (resume (continue_ f [Core.Expr.fresh_rel 2]) (Term.Return (app "plus" [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2])))) ]
+        (resume (continue_ f [pass_left])
+          (resume (continue_ f [Core.Expr.fresh_rel 2])
+            (Term.Return (app "plus" [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2])))) ]
 
 let () =
   let size pass = {Term.loop = f; parameters = [(id "t", tree)]; body = size_body pass} in
   check "a subtree behind the pointer is held by pointer" ((plan (size (Core.Expr.fresh_rel 2))).own = [Storage.Local]);
-  check "a value a call made is held by value" ((plan (size (app "mirror" [Core.Expr.fresh_rel 2]))).own = [Storage.Frame]);
+  check "a value a call made is held by value"
+    ((plan (size (app "mirror" [Core.Expr.fresh_rel 2]))).own = [Storage.Frame]);
 
   (* tree_size t := match t with node n kids => n + sizes kids, sizes the
      entered fixpoint over a list of trees: sizes (cons a rest) :=
@@ -68,7 +71,8 @@ let () =
               ~binders:[(id "a", tree); (id "rest", lst)]
               (Core.Pattern.Constructor {constructor = cons;
                                          fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]})
-              (resume (continue_ f [Core.Expr.fresh_rel 2]) (resume (continue_ sizes [pass_rest]) (Term.Return (Core.Expr.fresh_rel 1)))) ] }
+              (resume (continue_ f [Core.Expr.fresh_rel 2])
+                (resume (continue_ sizes [pass_rest]) (Term.Return (Core.Expr.fresh_rel 1)))) ] }
   in
   let machine ?(pass_rest = Core.Expr.fresh_rel 2) pass_kids =
     { Term.loop = f;
@@ -98,12 +102,17 @@ let () =
                 ~binders:[(id "n", tree); (id "kids", tree)]
                 (Core.Pattern.Constructor {constructor = node;
                                            fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]})
-                (Term.Let {binder = id "k"; binder_type = lst; value = Core.Expr.fresh_rel 1; body = Term.Entry {entered = entered (Core.Expr.fresh_rel 2); name = None; scope = continue_ sizes [Core.Expr.fresh_rel 1]}}) ] }
+                (Term.Let
+                  {binder = id "k"; binder_type = lst; value = Core.Expr.fresh_rel 1;
+                    body = Term.Entry
+                      {entered = entered (Core.Expr.fresh_rel 2); name = None;
+                        scope = continue_ sizes [Core.Expr.fresh_rel 1]}}) ] }
   in
   check "a let's copy is held by value" (p.entered = [(5, Storage.Frame)]);
   (* A parameter its lowering holds by value is a copy in its frame: what
      is passed on of it is no pointer either. *)
-  let p = plan ~holdable:(function Frame_storage.Own _ -> false | Entered _ -> true) (machine (Core.Expr.fresh_rel 1)) in
+  let p =
+    plan ~holdable:(function Frame_storage.Own _ -> false | Entered _ -> true) (machine (Core.Expr.fresh_rel 1)) in
   check "a parameter held by value is no pointer" (p.own = [Storage.Frame]);
   check "nor what an entered loop is passed of it" (p.entered = [(4, Storage.Frame)]);
   (* An entered parameter is asked about by its loop and position. *)
@@ -119,14 +128,16 @@ let () =
   in
   check "the entered parameter is asked about by its loop, position and level"
     (match !asked with [(l, 0, 4)] -> Loop.equal l sizes | _ -> false);
-  check "and held by value where it is not holdable, with what it passes on" (p.entered = [(4, Storage.Frame)] && p.own = [Storage.Frame]);
+  check "and held by value where it is not holdable, with what it passes on"
+    (p.entered = [(4, Storage.Frame)] && p.own = [Storage.Frame]);
 
   (* A local fixpoint's plan: what translation recorded of each function. *)
   let o = Core.Occurrence.fresh () in
   let member = Loop.Member (o, 0) in
   let loop parameters = {Term.loop = member; parameters; body = Term.Return (Core.Expr.fresh_rel 1)} in
   check "a function's loop has no local plan" (Frame_storage.local_holdable (machine (Core.Expr.fresh_rel 1)) 0 = None);
-  check "nor a member translation generated no lambda for" (Frame_storage.local_holdable (loop [(id "t", tree)]) 0 = None);
+  check "nor a member translation generated no lambda for"
+    (Frame_storage.local_holdable (loop [(id "t", tree)]) 0 = None);
   Ownership_ir.Local_passing.record (o, 0) [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded];
   check "the plan is looked up by the member"
     (Ownership_ir.Local_passing.lookup (o, 0) = Some [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded]);

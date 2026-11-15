@@ -19,8 +19,11 @@ type layers = {
 let layers ty body =
   (* For parameterized instances, strip Core.Type.Arrow/Core.Expr.Lambda layers to get to the inner
      typeclass type and constructor body. Example: numOption has type
-     Core.Type.Arrow(Core.Type.Erased, Core.Type.Arrow(Core.Type.Global_app(Numeric,[A],[]), Core.Type.Global_app(Numeric,[option A],[])))
-     and body Core.Expr.Lambda(_, Core.Type.Erased, Core.Expr.Lambda(_, Core.Type.Global_app(Numeric,...), Core.Expr.Construct(...))) *)
+     Core.Type.Arrow(Core.Type.Erased,
+     Core.Type.Arrow(Core.Type.Global_app(Numeric,[A],[]),
+     Core.Type.Global_app(Numeric,[option A],[]))) and body Core.Expr.Lambda(_,
+     Core.Type.Erased, Core.Expr.Lambda(_, Core.Type.Global_app(Numeric,...),
+     Core.Expr.Construct(...))) *)
   let rec strip_outer_layers ty body tc_acc lam_acc =
     let stop ty body =
       {inner_ty = ty; inner_body = body; dictionaries = List.rev tc_acc; lam_params = List.rev lam_acc}
@@ -47,13 +50,17 @@ let layers ty body =
       when erased_by_extraction arg_ty || Table.is_typeclass_type arg_ty ->
       (* An instance eta-reduced past its own parameters -- [TFunctor_pair
          := ft_pair] -- takes them all the same. *)
-      let arg = if erased_by_extraction arg_ty then Core.Expr.Erased_value Core.Erasure_reason.Type_argument else Core.Expr.fresh_rel 1 in
+      let arg =
+        if erased_by_extraction arg_ty then Core.Expr.Erased_value Core.Erasure_reason.Type_argument else
+          Core.Expr.fresh_rel 1 in
       let applied =
         match Core_util.ast_lift 1 body with
         | Core.Expr.Apply {callee = f; arguments = args} -> Core.Expr.Apply {callee = f; arguments = args @ [arg]}
         | f -> Core_normalize.apply f [arg]
       in
-      let body = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = arg_ty; body = applied} in
+      let body =
+        Core.Expr.Lambda
+          {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = arg_ty; body = applied} in
       strip_outer_layers ty body tc_acc lam_acc
     | _ -> stop ty body
   in
@@ -452,7 +459,9 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
           in
           List.fold_left
             (fun acc (i, ty) ->
-              Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i)); parameter_type = ty; body = acc} )
+              Core.Expr.Lambda
+                {parameter = Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i));
+                  parameter_type = ty; body = acc} )
             (Core_normalize.apply inner args)
             (List.rev (List.mapi (fun i t -> (i, t)) missing_tys))
       in
@@ -535,7 +544,8 @@ let eta_call m inner_body =
       let real_idx = ref nparams in
       List.map
         (fun t ->
-          if erased_by_extraction t || Table.is_typeclass_type t then Core.Expr.Erased_value Core.Erasure_reason.Type_argument
+          if erased_by_extraction t || Table.is_typeclass_type t then
+            Core.Expr.Erased_value Core.Erasure_reason.Type_argument
           else begin
             let r = Core.Expr.fresh_rel !real_idx in
             decr real_idx;

@@ -317,8 +317,8 @@ val find_all_module_inductives :
     Type-class inductives are excluded because they are rendered as C++ concepts
     rather than structs, so methods on them would not make sense.
 
-    Scans only [Core.Module.Structure_item.Declaration (Core.Decl.Inductive ...)] entries in the given list; does not recurse
-    into sub-modules.
+    Scans only [Core.Module.Structure_item.Declaration (Core.Decl.Inductive
+    ...)] entries in the given list; does not recurse into sub-modules.
 
     @param module_name the module name to match against (case-insensitive)
     @param decls the module's declaration list

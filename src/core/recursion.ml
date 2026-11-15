@@ -44,7 +44,8 @@ module Group = struct
     make ~selected:g.selected (Array.map2 (fun (m : Member.t) body -> {m with body}) g.members bodies) g.occurrence
 
   (** [g] with [f] applied to each body. *)
-  let map_bodies f g = make ~selected:g.selected (Array.map (fun (m : Member.t) -> {m with body = f m.body}) g.members) g.occurrence
+  let map_bodies f g =
+    make ~selected:g.selected (Array.map (fun (m : Member.t) -> {m with body = f m.body}) g.members) g.occurrence
 
   (** [g] with [h] applied to each body, in order, and then [f] to each
       member's type, in order. *)

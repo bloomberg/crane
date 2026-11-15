@@ -295,7 +295,8 @@ val record_methods :
     ahead of the files, and taken from there by the header, which converts
     them again under [CRANE_CHECK_IR] to compare. *)
 val record_field_types :
-  module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Core.Record.Field.t list -> Cpp_ir.Resolved.Type.t list
+  module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Core.Record.Field.t list ->
+    Cpp_ir.Resolved.Type.t list
 
 (** Every module type's concept generated ahead of the files
     ({!modtype_concept}). *)

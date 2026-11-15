@@ -45,8 +45,8 @@ let loop turn : Term.loop =
                body = Return (Core.Expr.fresh_rel 1)};
               { binders = [(id "x", nat); (id "xs", lst)];
                 result_type = lst;
-                pattern = Core.Pattern.Constructor {constructor = cons;
-                                                    fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
+                pattern = Core.Pattern.Constructor
+                  {constructor = cons; fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
                 body = turn } ] } }
 
 let moves turn = Ownership_ir.continue_moves ~effects:Core_effects.empty (loop turn)
@@ -71,7 +71,10 @@ let () =
   check "an accumulator passed on as it is is not moved" (flags o (continue_ o [xs; acc]) = Some [k; k]);
   let o = Core.Occurrence.fresh () in
   check "an accumulator a closure reads is not moved"
-    (flags o (continue_ o [xs; app "g" [Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body = Core.Expr.fresh_rel 4}]]) = Some [k; k]);
+    (flags o
+      (continue_ o
+        [xs; app "g" [Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body = Core.Expr.fresh_rel 4}]]) =
+          Some [k; k]);
   (* match acc with cons y ys => f xs (cons y acc): [y] is a part of
      [acc], read beside it. *)
   let o = Core.Occurrence.fresh () in
@@ -82,12 +85,13 @@ let () =
         branches =
           [ { binders = [(id "y", nat); (id "ys", lst)];
               result_type = lst;
-              pattern = Core.Pattern.Constructor {constructor = cons;
-                                                  fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
-              body = continue_ o [Core.Expr.fresh_rel 3; Core.Expr.Construct {result_type = lst;
-                                                                              constructor = cons;
-                                                                              arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 5];
-                                                                              occurrence = Core.Occurrence.fresh ()}] } ] }
+              pattern = Core.Pattern.Constructor
+                {constructor = cons; fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
+              body = continue_ o
+                [Core.Expr.fresh_rel 3;
+                  Core.Expr.Construct
+                    {result_type = lst; constructor = cons; arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 5];
+                      occurrence = Core.Occurrence.fresh ()}] } ] }
   in
   check "an accumulator read beside a part of itself is not moved" (flags o on_acc = Some [k; k]);
   (* let next := cons x acc in f xs next: [next] is [Core.Expr.Bound_variable 1], [xs] [Core.Expr.Bound_variable 2]. *)
@@ -97,7 +101,9 @@ let () =
     (flags o (let_next (continue_ o [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1])) = Some [k; a]);
   let o = Core.Occurrence.fresh () in
   check "a local another argument names is moved at the last read"
-    (flags o (let_next (continue_ o [app "drop" [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]; Core.Expr.fresh_rel 1])) = Some [k; a]);
+    (flags o
+      (let_next (continue_ o [app "drop" [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]; Core.Expr.fresh_rel 1])) = Some
+        [k; a]);
   (* match next with cons y ys => f ys next: [ys] is a part of [next]. *)
   let o = Core.Occurrence.fresh () in
   let on_next =
@@ -107,14 +113,15 @@ let () =
         branches =
           [ { binders = [(id "y", nat); (id "ys", lst)];
               result_type = lst;
-              pattern = Core.Pattern.Constructor {constructor = cons;
-                                                  fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
+              pattern = Core.Pattern.Constructor
+                {constructor = cons; fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
               body = continue_ o [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 3] } ] }
   in
   check "a local another argument reads a part of is not moved" (flags o (let_next on_next) = Some [k; k]);
   (* A machine's turn resumes after a call: nothing is planned. *)
   let o = Core.Occurrence.fresh () in
   let resumed =
-    Term.Resume {binder = id "r"; binder_type = lst; value = continue_ o [xs; consed acc]; body = Return (Core.Expr.fresh_rel 1)}
+    Term.Resume
+      {binder = id "r"; binder_type = lst; value = continue_ o [xs; consed acc]; body = Return (Core.Expr.fresh_rel 1)}
   in
   check "a machine's loop moves nothing so" (moves resumed = [])

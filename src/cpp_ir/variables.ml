@@ -173,7 +173,8 @@ let evaluates_operands : type p. p Expr.t -> bool = function
     and so must capture, and whether it names the enclosing [this]. *)
 let lambda_needs_capture : type p. (p Type.t * Id.t option) list -> p Stmt.t list -> bool * bool =
  fun params body ->
-  let names ps = List.fold_left (fun acc (_, x) -> match x with Some id -> Id.Set.add id acc | None -> acc) Id.Set.empty ps in
+  let names ps =
+    List.fold_left (fun acc (_, x) -> match x with Some id -> Id.Set.add id acc | None -> acc) Id.Set.empty ps in
   let uses_this = ref false in
   let rec collect_from_expr (refs, decls) (e : p Expr.t) =
     match e with
@@ -221,7 +222,8 @@ let lambda_needs_capture : type p. (p Type.t * Id.t option) list -> p Stmt.t lis
           (fun acc (br : p Match.branch) ->
             let refs', decls' = List.fold_left collect_from_expr acc br.extra_conditions in
             let branch_decls =
-              let d = List.fold_left (fun d (fb : p Match.field_binding) -> Id.Set.add fb.name d) decls' br.field_bindings in
+              let d =
+                List.fold_left (fun d (fb : p Match.field_binding) -> Id.Set.add fb.name d) decls' br.field_bindings in
               match br.var with Some id -> Id.Set.add id d | None -> d
             in
             List.fold_left collect_from_stmt (refs', branch_decls) br.body )

@@ -248,7 +248,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                planned generated )
         then
           Probe.violation "instance promoted types"
-            Pp.(str "the instance " ++ GlobRef.print name ++ str " gives its promoted variables other types than planned")
+            Pp.(str "the instance " ++ GlobRef.print name
+                ++ str " gives its promoted variables other types than planned")
       end;
       (* Build the environment with lambda parameters for de Bruijn resolution.
          For parameterized instances, method bodies reference the outer lambda
@@ -804,9 +805,10 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
       in
       (* Check if an ML expression is a parameterized reference whose
          typeclass arguments have been erased — e.g.,
-         [Core.Expr.Apply(Core.Expr.Global opposite_category, [Core.Expr.Erased_value Core.Erasure_reason.Type_argument])].  Such
-         references produce an incomplete [Entity_application (r, [], [])]
-         that can't be used as a [using] declaration. *)
+         [Core.Expr.Apply(Core.Expr.Global opposite_category,
+         [Core.Expr.Erased_value Core.Erasure_reason.Type_argument])].  Such
+         references produce an incomplete [Entity_application (r, [], [])] that
+         can't be used as a [using] declaration. *)
       let tc_promoted_usings =
         if List.length fields = List.length method_bodies then
           List.filter_map

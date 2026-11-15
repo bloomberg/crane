@@ -69,7 +69,8 @@ let pp_key k =
 
 (* Total orders on frames and keys, for the table's map. *)
 let compare_entered a b =
-  let rank = function Signature _ -> 0 | Inductive_struct _ -> 1 | In_struct -> 2 | In_template -> 3 | Function _ -> 4 in
+  let rank =
+    function Signature _ -> 0 | Inductive_struct _ -> 1 | In_struct -> 2 | In_template -> 3 | Function _ -> 4 in
   match (a, b) with
   | Signature a, Signature b -> (
     match ModPath.compare a.signature b.signature with
@@ -179,7 +180,8 @@ let pp_access = function
   | Accessor -> Pp.str "an accessor"
   | Either_form -> Pp.str "a variable or an accessor"
 
-let not_a key what = CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " did not resolve to " ++ str what ++ str ".")
+let not_a key what =
+  CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " did not resolve to " ++ str what ++ str ".")
 
 let name_of key = function
   | Name n -> n

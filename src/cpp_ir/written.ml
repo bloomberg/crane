@@ -69,11 +69,14 @@ and expr : type p. p Expr.t -> Id.t list =
   | Call (_, (Entity (_, _, Some {inline = Some t; _}) as f), args) ->
     let spells = inline_spells_arg t in
     expr f @ List.concat (List.mapi (fun i a -> if spells i then expr a else []) args)
-  | Foreign (_, fr) -> List.concat (List.mapi (fun i a -> if List.mem (Foreign.Value i) fr.pieces then expr a else []) fr.values)
+  | Foreign (_, fr) ->
+    List.concat (List.mapi (fun i a -> if List.mem (Foreign.Value i) fr.pieces then expr a else []) fr.values)
   | Lambda l -> without (List.filter_map snd l.params) (body l.body)
   | e ->
     let found = ref [] in
-    Children.expr {Children.expr = (fun e -> found := !found @ expr e); stmt = (fun s -> found := !found @ stmt s); type_ = ignore} e;
+    Children.expr
+      {Children.expr = (fun e -> found := !found @ expr e); stmt = (fun s -> found := !found @ stmt s); type_ = ignore}
+        e;
     !found
 
 (* The variables the text of [s] reads. *)
@@ -107,7 +110,8 @@ and stmt : type p. p Stmt.t -> Id.t list =
     @ List.concat_map
         (fun (br : p Match.branch) ->
           let bound =
-            List.map (fun (f : p Match.field_binding) -> f.name) br.field_bindings @ Option.cata (fun v -> [v]) [] br.var
+            List.map (fun (f : p Match.field_binding) -> f.name) br.field_bindings
+              @ Option.cata (fun v -> [v]) [] br.var
           in
           without bound (List.concat_map expr br.extra_conditions @ body br.body) )
         branches

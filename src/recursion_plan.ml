@@ -452,7 +452,9 @@ let value_levels ~heads ~depth e =
   go 0 e;
   List.sort_uniq Int.compare !found
 
-let rec strip = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e
+let rec strip =
+  function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _}
+    | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e
 
 let in_place from into =
   match (Core_util.type_simpl from, Core_util.type_simpl into) with
@@ -637,7 +639,8 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | _ :: _ as called -> called
       | [] -> (
         match e with
-        | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {occurrence = occ; _} | Core.Expr.Cofixpoint {occurrence = occ; _} as fix); _}
+        | Core.Expr.Apply
+          {callee = (Core.Expr.Fixpoint {occurrence = occ; _} | Core.Expr.Cofixpoint {occurrence = occ; _} as fix); _}
           when reaches depth fix ->
           [{target = Entering occ; occurrence = occ}]
         | Core.Expr.Match {scrutinee_type = ty; branches; _} when match_bound_in_place ty branches ->
@@ -674,7 +677,8 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       let captured (c : call) =
         match c.target with
         | Member (o, _) | Entering o ->
-          Option.default [] (List.find_map (fun (o', l) -> if Core.Occurrence.equal o o' then Some l else None) captures)
+          Option.default []
+            (List.find_map (fun (o', l) -> if Core.Occurrence.equal o o' then Some l else None) captures)
         | Function _ -> []
       in
       through_closures [] (List.concat_map (value_levels ~heads ~depth) args @ List.concat_map captured calls)
@@ -784,8 +788,8 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         | Core.Expr.Boxed_value {value = e; _}
         | Core.Expr.Lambda_group_barrier {value = e; _} ->
           member ~depth e
-        | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k;
-                                                              occurrence = read}; _} when first <= depth - k && depth - k < first + n ->
+        | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; occurrence = read}; _} when first <= depth - k
+          && depth - k < first + n ->
           [{target = Member (occ, depth - k - first); occurrence = read}]
         | _ -> []
       in
@@ -875,8 +879,9 @@ let bound_calls body =
     | Core.Expr.Let {value = (Core.Expr.Fixpoint {occurrence; _} | Core.Expr.Cofixpoint {occurrence; _});
                      body = b; _} ->
       let reads = ref [] in
-      iter_under (fun depth -> function Core.Expr.Bound_variable {index = k;
-                                                                  occurrence = read} when k = depth + 1 -> reads := read :: !reads | _ -> ()) 0 b;
+      iter_under
+        (fun depth -> function Core.Expr.Bound_variable {index = k; occurrence = read} when k = depth
+          + 1 -> reads := read :: !reads | _ -> ()) 0 b;
       found := (occurrence, List.rev !reads) :: !found
     | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {occurrence; _} | Core.Expr.Cofixpoint {occurrence; _}); _} ->
       found := (occurrence, [occurrence]) :: !found
@@ -950,7 +955,8 @@ let local_groups ~effects defs =
       (Array.to_list calls, Array.to_list reads)
     in
     let named =
-      List.map2 (fun calls reads -> List.exists (fun r -> not (List.exists (Core.Occurrence.equal r) calls)) reads) calls reads
+      List.map2
+        (fun calls reads -> List.exists (fun r -> not (List.exists (Core.Occurrence.equal r) calls)) reads) calls reads
     in
     plans :=
       { occurrence;
@@ -1103,7 +1109,8 @@ let flow_of r (fd : Core.Recursion.Definition.t) =
 
 (* The number of parameters the definition [fd] is generated taking: every
    one its type declares. *)
-let definition_parameter_count (fd : Core.Recursion.Definition.t) = List.length (Type_util.core_domains (Core_util.type_simpl fd.type_))
+let definition_parameter_count (fd : Core.Recursion.Definition.t) =
+  List.length (Type_util.core_domains (Core_util.type_simpl fd.type_))
 
 (* The number of parameters of [g], among the definitions [defs]. *)
 let parameters defs g =
@@ -1193,7 +1200,8 @@ let splice_calls (def : Core.Recursion.Definition.t) sites body =
 let definition_effects fd =
   Core_effects.analyze
     [ ( Names.ModPath.MPfile Names.DirPath.empty,
-        [(Names.Label.make "spliced", Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.singleton fd)))] ) ]
+        [(Names.Label.make "spliced",
+            Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.singleton fd)))] ) ]
 
 (* Whether functions of types [a] and [b] yield one type, once every
    abbreviation is unfolded, whatever [Type Expand] says the C++ spells, a
@@ -1281,7 +1289,8 @@ let adopt_calls (def : Core.Recursion.Definition.t) sites body =
   | copy, inner ->
     let name = Names.Id.of_string (Names.Id.to_string (Table.safe_basename_of_global partner) ^ "_entry") in
     let entered = Core.Occurrence.fresh () in
-    let fixpoint = Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:0 ([|(name, def.type_)|]) ([|copy|]) entered) in
+    let fixpoint =
+      Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:0 ([|(name, def.type_)|]) ([|copy|]) entered) in
     Ok (Core_util.named_lams params (Core.Expr.Let {binder = Core.Binder_name.Source name;
                                                  binder_type = def.type_;
                                                  value = fixpoint;
@@ -1374,7 +1383,9 @@ let splice_partners ~loopified ~inlines ({structure = struc;
   let groups = Recursive_groups.analyze struc in
   let originals = ref Ref.User.Map.empty in
   Modutil.struct_iter
-    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> originals := Ref.User.Map.add fd.entity fd !originals) (Core_util.term_defs d))
+    (fun d ->
+      List.iter (fun (fd : Core.Recursion.Definition.t) -> originals := Ref.User.Map.add fd.entity fd !originals)
+        (Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -1526,7 +1537,8 @@ let analyze groups program =
           | _ -> []
         in
         let lex, body = Core_elaborate.declaration_scope fd.type_ fd.body in
-        resumes_of ~effects ~entered:(Splices.is_entered_copy (Core_phase.splices program)) ~origin:r ~targets lex body )
+        resumes_of ~effects ~entered:(Splices.is_entered_copy (Core_phase.splices program))
+          ~origin:r ~targets lex body )
       defs
   in
   let adoptable =
@@ -1550,7 +1562,9 @@ let analyze groups program =
             uses := (use.callee, Core.Global_use.occurrence use) :: !uses
           | e -> Core_util.ast_iter walk e
         in
-        List.iter (fun r -> Option.iter (fun (fd : Core.Recursion.Definition.t) -> walk fd.body) (Ref.User.Map.find_opt r defs)) g.members;
+        List.iter
+          (fun r -> Option.iter (fun (fd : Core.Recursion.Definition.t) -> walk fd.body) (Ref.User.Map.find_opt r defs))
+            g.members;
         List.fold_left
           (fun m r ->
             Ref.User.Map.add r
@@ -1623,11 +1637,13 @@ let equal a b =
             && List.equal same_call r.after r'.after
             && List.equal
                  (fun p p' ->
-                   Core_binder.equal p.passed p'.passed && Core_binder.equal p.into p'.into && same_call p.call p'.call )
+                   Core_binder.equal p.passed p'.passed && Core_binder.equal p.into p'.into
+                     && same_call p.call p'.call )
                  r.passes r'.passes
             && List.equal Core_binder.equal r.read_by_call r'.read_by_call
             && List.equal
-                 (fun c c' -> Core_binder.equal c.recomputed c'.recomputed && List.equal Core_binder.equal c.from c'.from)
+                 (fun c c' -> Core_binder.equal c.recomputed c'.recomputed
+                   && List.equal Core_binder.equal c.from c'.from)
                  r.recomputable r'.recomputable ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Core.Occurrence.equal) a.adoptable b.adoptable

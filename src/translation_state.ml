@@ -57,9 +57,11 @@ let callee_core_type (r : GlobRef.t) : Core.Type.t option =
     planned
   | None ->
     let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
-    Probe.hit "callee-ml-type" (fun () -> (if emitting then "unplanned emit " else "unplanned plan ") ^ Pp.string_of_ppcmds (GlobRef.print r));
+    Probe.hit "callee-ml-type"
+      (fun () -> (if emitting then "unplanned emit " else "unplanned plan ") ^ Pp.string_of_ppcmds (GlobRef.print r));
     if emitting && Option.has_some (find_type_opt r) then
-      Probe.violation "callee signature" Pp.(str "emission reads the signature of " ++ GlobRef.print r ++ str ", which no plan covers");
+      Probe.violation "callee signature"
+        Pp.(str "emission reads the signature of " ++ GlobRef.print r ++ str ", which no plan covers");
     find_type_opt r
 
 (** {!callee_core_type}, raising [Not_found] where there is none. *)
@@ -542,7 +544,8 @@ let local_inductives_in_scope () =
     | Some local -> local
     | None ->
       CErrors.anomaly
-        Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.") )
+        Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp)
+            ++ str " has no planned local inductives.") )
   | Some Outside_modules -> []
   | None -> CErrors.anomaly Pp.(str "Crane: generation asked which inductives it spells bare outside every entry.")
 
@@ -615,7 +618,8 @@ let plan_representation :
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
 let plan_positions :
-    (outer:Lexenv.t -> reads:(Core.Occurrence.t * planned_read) list -> Core.Expr.t -> (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
+    (outer:Lexenv.t -> reads:(Core.Occurrence.t * planned_read) list -> Core.Expr.t ->
+      (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
     ref =
   ref (fun ~outer:_ ~reads:_ _ -> [])
 
@@ -629,7 +633,8 @@ let plan_positions :
 let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
   let outer = Lexenv.type_opt (!tctx).lexical.env_types in
   let p =
-    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~effects:(!tctx).input.unit.effects ~n_outer:(List.length (!tctx).lexical.current_type_vars) body
+    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~effects:(!tctx).input.unit.effects
+      ~n_outer:(List.length (!tctx).lexical.current_type_vars) body
   in
   (* The frames a machine enters its entries by are planned with it. *)
   Ownership_ir.Entry_moves.record_plan p;
@@ -651,7 +656,8 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr
   in
   with_field
     (fun c -> (c.lexical.representation, c.lexical.planned_reads, c.lexical.planned_positions))
-    (fun (r, rd, ps) -> set_lexical (fun l -> { l with representation = r; planned_reads = rd; planned_positions = ps }))
+    (fun (r, rd, ps) ->
+      set_lexical (fun l -> { l with representation = r; planned_reads = rd; planned_positions = ps }))
     (representation, reads, positions)
   @@ fun () -> with_field (fun c -> c.lexical.move_plan) (fun p -> set_lexical (fun l -> { l with move_plan = p })) p f
 
@@ -780,7 +786,8 @@ let restore_env_types (saved : Lexenv.t) =
     set_lexical (fun l ->
         { l with
           cpp_binder_types =
-            IntMap.fold (fun k v acc -> if k > n then IntMap.add (k - n) v acc else acc) l.cpp_binder_types IntMap.empty });
+            IntMap.fold (fun k v acc -> if k > n then IntMap.add (k - n) v acc else acc)
+              l.cpp_binder_types IntMap.empty });
   set_lexical (fun l -> { l with env_types = saved })
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
@@ -798,7 +805,8 @@ let get_env_type_opt (i : int) : Core.Type.t option =
 
 (** The ML type of the innermost binder named [id], if any. *)
 let env_type_of_id (id : Id.t) : Core.Type.t option =
-  Option.map (fun b -> b.eb_type) (List.find_opt (fun b -> Id.equal b.eb_id id) ((!tctx).lexical.env_types :> env_binder list))
+  Option.map (fun b -> b.eb_type)
+    (List.find_opt (fun b -> Id.equal b.eb_id id) ((!tctx).lexical.env_types :> env_binder list))
 
 (** The lexical environment the traversal is generating code in. *)
 let current_lexenv () : Lexenv.t = (!tctx).lexical.env_types

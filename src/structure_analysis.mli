@@ -69,7 +69,9 @@ type module_info = {
 
           A module qualifies as a wrapper when:
           - It contains at least one function declaration ([Core.Decl.Value] or [Core.Decl.Recursive_group]),
-          - All its entries are bare declarations (no [Core.Module.Structure_item.Module] or [Core.Module.Structure_item.Module_type]
+          - All its entries are bare declarations (no
+          [Core.Module.Structure_item.Module] or
+          [Core.Module.Structure_item.Module_type]
             children),
           - It is a file-level module ([is_modfile mp]),
           - It is not the main module. *)

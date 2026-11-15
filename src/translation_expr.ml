@@ -207,7 +207,8 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
      ({!Core_normalize}): no head here is a global already applied, a
      coercion, or a one-branch match, and no numeral literal is spelled
      as a converter's application or as a constructor term. *)
-  | (Core.Expr.Apply _ | Core.Expr.Construct _) as e when Probe.checking () && not (Core_normalize.canonical_application e) ->
+  | (Core.Expr.Apply _ | Core.Expr.Construct _) as e when Probe.checking ()
+    && not (Core_normalize.canonical_application e) ->
     Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
     gen_expr ?expected_ty ~slot env (Core_normalize.spine e)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
@@ -243,7 +244,8 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
     | Call _ ->
-      Cpp_ir.Build.call (Runtime (Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r f))))) [built]
+      Cpp_ir.Build.call
+        (Runtime (Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r f))))) [built]
     | _ -> built )
   | Core.Expr.Apply {callee = f; arguments = args} ->
     Translation_application.gen_application ~expected_ty ~slot env f args
@@ -437,7 +439,8 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
-                     occurrence = case_occ} when Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ = Match_kind.Custom ->
+                     occurrence = case_occ}
+                       when Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ = Match_kind.Custom ->
     Translation_match.gen_custom_match_expr env ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ}
     when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ) ->
@@ -458,7 +461,8 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
   | Core.Expr.Numeral {inductive = ind; value = n} -> (
     match Table.get_numeral_info ind with
     | Some info -> render_numeral info n
-    | None -> CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
+    | None ->
+      CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
   | Core.Expr.Float64 f -> Literal (Float f)
   | Core.Expr.Persistent_array {elements = elems; default = def} ->
     let elems = Array.map (gen_expr env) elems in

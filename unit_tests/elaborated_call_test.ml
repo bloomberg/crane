@@ -45,7 +45,8 @@ let () =
   check "a partial application passes what it has" (partial.primary = [a] && partial.excess = []);
   let g = r "g" in
   Table.add_type g (Core.Type.Arrow {parameter = nat;
-                                     result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
+                                     result = Core.Type.Arrow
+                                       {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = nat;
                                                                                          result = nat}}});
   let eta = elaborate g [a; Core.Expr.Erased_value Core.Erasure_reason.Type_argument; b] in
@@ -100,7 +101,12 @@ let () =
   let unit = ModPath.MPfile (DirPath.make [Id.of_string "U"]) in
   let elaborated =
     Core_elaborate.structure ~methods:(fun _ _ -> [])
-      [(unit, [(Label.make "d", Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r "d"; body = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = [a]}; type_ = nat}))])]
+      [(unit,
+          [(Label.make "d",
+              Core.Module.Structure_item.Declaration
+                (Core.Decl.Value
+                  {entity = r "d";
+                    body = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = [a]}; type_ = nat}))])]
   in
   (* The walk's result is a value: what it planned is read off it, with
      nothing installed. *)
@@ -145,7 +151,8 @@ let () =
   let f = r "pk" in
   let a1 = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1} in
   Table.add_type f (Core.Type.Arrow {parameter = a1;
-                                     result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
+                                     result = Core.Type.Arrow
+                                       {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = a1;
                                                                                          result = a1}}});
   let scheme = Scheme.Id.fresh f ~arity:1 in
@@ -161,8 +168,8 @@ let () =
       ~scope:[] (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty use [a; b])
   in
   check "the callee's type is instantiated at the reading"
-    (inst.callee_type_at_call = Core.Type.Arrow {parameter = nat;
-                                                 result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
+    (inst.callee_type_at_call = Core.Type.Arrow
+      {parameter = nat; result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                            result = Core.Type.Arrow {parameter = nat;
                                                                                                      result = nat}}});
   check "the declared parameters are the callee's own, its erased domain none of them"

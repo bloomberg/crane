@@ -61,7 +61,8 @@ let gen_bind_expr env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
     [a1 :: a2 :: l], in statement position ending in [k]: the action's
     statements, its result bound for the continuation in sequential mode, the
     [bind] call as an expression in reified mode. *)
-let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2 ~l : Cpp_ir.Lowered.Stmt.t list =
+let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
+  ~l : Cpp_ir.Lowered.Stmt.t list =
   let bind_tys = Core_util.written_type_args use in
   (* The action's result type: the argument written for the variable the
      continuation takes, [A] in [bind : forall A B, M A -> (A -> M B) -> M
@@ -188,7 +189,8 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
 
 (** [ret] of an effect monad, [use] applied to [a1 :: l], in statement
     position ending in [k]. *)
-let gen_return_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l : Cpp_ir.Lowered.Stmt.t list =
+let gen_return_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l :
+  Cpp_ir.Lowered.Stmt.t list =
   if not (is_sequential_effect Core_effects.Return use) then begin
     (* Reified mode: Ret is a constructor call, not desugared. *)
     inline_iife k ((gen_expr ~slot env ast))

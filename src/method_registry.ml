@@ -119,7 +119,8 @@ let renumbering ~num_ind_vars ~this_pos ty =
   in
   let ind_tvar_set = Core_util.IntSet.of_list (List.map fst ind_tvar_map) in
   let extra =
-    List.filter (fun i -> not (Core_util.IntSet.mem i ind_tvar_set)) (Core_util.IntSet.elements (Core_util.core_tvars ty))
+    List.filter (fun i -> not (Core_util.IntSet.mem i ind_tvar_set))
+      (Core_util.IntSet.elements (Core_util.core_tvars ty))
   in
   let renamed = (not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)) || extra <> [] in
   let full = ind_tvar_map @ List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra in
@@ -276,8 +277,8 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
     Type-class inductives are excluded because they become C++ concepts rather
     than structs, so attaching methods to them does not apply.
 
-    Only searches [Core.Module.Structure_item.Declaration (Core.Decl.Inductive ...)] entries at the current level; does not
-    recurse into sub-modules. *)
+    Only searches [Core.Module.Structure_item.Declaration (Core.Decl.Inductive
+    ...)] entries at the current level; does not recurse into sub-modules. *)
 let find_eponymous_inductive module_name_str decls =
   let lowercase_module = String.lowercase_ascii module_name_str in
   List.find_map

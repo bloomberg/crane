@@ -152,9 +152,11 @@ let owners t =
    [t] recorded as lifted. *)
 let generated_declarations t =
   let of_entity s (e : entity) =
-    List.fold_left (fun s h -> Id_set.add (helper_declaration h) s) (Id_set.union s (Id_set.of_list e.declarations)) e.helpers
+    List.fold_left (fun s h -> Id_set.add (helper_declaration h) s)
+      (Id_set.union s (Id_set.of_list e.declarations)) e.helpers
   in
-  List.fold_left (fun s h -> Id_set.add (helper_declaration h) s) (List.fold_left of_entity Id_set.empty t.entities) t.lifted
+  List.fold_left (fun s h -> Id_set.add (helper_declaration h) s)
+    (List.fold_left of_entity Id_set.empty t.entities) t.lifted
 
 (** The unit's program: the generations recorded ahead of the files as the
     walk records them, then, once installed, what they finished as. *)
@@ -287,7 +289,8 @@ let check_against_plan ~declares =
 
 let check_against_ahead () =
   if Probe.checking () then
-    let declarations es = List.fold_left (fun s (e : entity) -> Id_set.union s (Id_set.of_list e.declarations)) Id_set.empty es in
+    let declarations es =
+      List.fold_left (fun s (e : entity) -> Id_set.union s (Id_set.of_list e.declarations)) Id_set.empty es in
     let taken_owners = entities_owners !taken and ahead_owners = entities_owners !program.entities in
     let taken_declarations = declarations !taken and ahead_declarations = declarations !program.entities in
     if not (Owner_set.equal taken_owners ahead_owners && Id_set.equal taken_declarations ahead_declarations) then

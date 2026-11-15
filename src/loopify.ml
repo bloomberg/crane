@@ -256,7 +256,8 @@ let definition_calls r =
 
 (** The calls a finished body of the function [f] still recurses by
     ({!definition_calls}), whatever C++ heads them. *)
-let survivors (f : func) = calls_checker (List.concat_map (fun (r, _) -> definition_calls r) (Cpp_ir.Function.path_entries f.path))
+let survivors (f : func) =
+  calls_checker (List.concat_map (fun (r, _) -> definition_calls r) (Cpp_ir.Function.path_entries f.path))
 
 (** {!survivors} of the method [mf]. *)
 let method_survivors (mf : meth) = calls_checker (Option.cata definition_calls [] mf.globref)
@@ -317,7 +318,9 @@ let member_plan ~frames member params =
           member_parts = List.map (List.nth parts) kept;
           member_moves =
             ( if frames then []
-              else List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept)) (Ownership_ir.continue_moves ~effects:(Loop_facts.effects ()) l) ) }
+              else
+                List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept))
+                  (Ownership_ir.continue_moves ~effects:(Loop_facts.effects ()) l) ) }
   | Some _ | None -> None
 
 (** Walk through a statement list and loopify each local fixpoint: the
@@ -402,12 +405,14 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             report_outcome ~name ~check ~strategy:Lp_tail
               (let loop = Some (Control_ir.Loop.Member (fst member, snd member)) in
                checked_tail_loop loop (fun jumped ->
-                   transform_tail ~jumped ~moves ~varying ~parts tparams (planned_jumps loop check) params ret_ty lbody ) )
+                   transform_tail ~jumped ~moves ~varying ~parts tparams (planned_jumps loop check)
+                     params ret_ty lbody ) )
           (* The tail-modulo-cons loop is built for a function, not a lambda:
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
             report_outcome ~name ~check ~strategy:Lp_frame
-              (transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst member, snd member)) ~varying ~outer_env
+              (transform_nontail ~fn_name:name
+                ~loop:(Control_ir.Loop.Member (fst member, snd member)) ~varying ~outer_env
                  ~binders ~entered_by:(entered_by_member member) ~parts check tparams
                  params ret_ty lbody)
           | No_loop | Suspended _ ->
@@ -646,7 +651,8 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   let frame () =
     let machine =
       checked_frame_machine loop (fun entered ->
-          transform_nontail ?fn_name ?loop ~varying ?adopted ?entered_by ~entered ?binders ~parts check tparams params ret_ty body )
+          transform_nontail ?fn_name ?loop ~varying ?adopted ?entered_by ~entered ?binders ~parts check
+            tparams params ret_ty body )
     in
     { nt_body = Option.cata fst body machine;
       nt_outcome = Lp_frame;
@@ -712,10 +718,11 @@ let function_loop r =
   | None -> Some (Control_ir.Loop.Function r)
 
 (** The strategy of the function [r]: as the program's recursion plan has
-    it ({!Recursion_plan.strategy}), read off its Core body and its recursive group's before any of them was lowered, given
-    the constructor fields planned behind the pointer.  A helper lifted out of
-    a definition for one of its local fixpoints is planned by that fixpoint,
-    and one lifted for a lambda a let binds by that let.
+    it ({!Recursion_plan.strategy}), read off its Core body and its recursive
+    group's before any of them was lowered, given the constructor fields planned
+    behind the pointer.  A helper lifted out of a definition for one of its
+    local fixpoints is planned by that fixpoint, and one lifted for a lambda a
+    let binds by that let.
 
     A function the plan does not know, a violation, is not loopified, and
     neither is a member the backend generates itself -- a factory, a deep
@@ -728,7 +735,8 @@ let planned_strategy r =
     let pointer_fields = constructor_pointer_fields in
     let planned =
       match Option.map Lifted.site (Lifted.of_ref r) with
-      | Some (Fixpoint (occurrence, member)) -> (Recursion_plan.strategy_at (Loop_facts.recursion ())) ~pointer_fields (occurrence, member)
+      | Some (Fixpoint (occurrence, member)) ->
+        (Recursion_plan.strategy_at (Loop_facts.recursion ())) ~pointer_fields (occurrence, member)
       | Some (Let occurrence) -> (Recursion_plan.strategy_of_let (Loop_facts.recursion ())) occurrence
       | None -> (Recursion_plan.strategy (Loop_facts.recursion ())) ~pointer_fields r
     in
@@ -772,7 +780,8 @@ let modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check (f :
   end
   else
     let loop =
-      transform_tmc ~jumped ?cursor ~varying ~parts ~shapes tparams check params f.return_type (Cpp_temporaries.own_stmts body)
+      transform_tmc ~jumped ?cursor ~varying ~parts ~shapes tparams check params f.return_type
+        (Cpp_temporaries.own_stmts body)
     in
     if classify (survivors f) loop = No_recursion then Some loop else None
 
@@ -803,7 +812,8 @@ let frame_machine ~loop ?entry ?entered_pointers ~varying ~parts ~tparams check 
     (* The plan has the machine adopt the entry, and Loopify could not
        install it: a fixpoint named as a value, or copied, say. *)
     Probe.violation "control IR"
-      Pp.(str "the machine of " ++ str (Table.kername_of_global r) ++ str " does not adopt the entry its ControlIR enters");
+      Pp.(str "the machine of " ++ str (Table.kername_of_global r)
+          ++ str " does not adopt the entry its ControlIR enters");
     declined
   end
   else
@@ -813,7 +823,8 @@ let frame_machine ~loop ?entry ?entered_pointers ~varying ~parts ~tparams check 
        and its frames are laid out for the calls it takes alone. *)
     match
       checked_frame_machine (Some loop) (fun entered ->
-          transform_nontail ~fn_name:(fundef_display_name f.path) ~loop ~varying ?adopted ?entered_by:(entered_by_definition r)
+          transform_nontail ~fn_name:(fundef_display_name f.path) ~loop ~varying ?adopted
+            ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.binders ?entered_pointers ~parts check tparams params f.return_type body )
     with
     | Some (made, _) -> Ok (made, survived)
@@ -953,7 +964,8 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
         let is_self r =
           match mf.globref with Some sr -> Common.globref_equal r sr | None -> false
         in
-        let parks (cs : signature) = match cs.occurrence with Some o -> List.exists (Core.Occurrence.equal o) park | None -> false in
+        let parks (cs : signature) =
+          match cs.occurrence with Some o -> List.exists (Core.Occurrence.equal o) park | None -> false in
         (* [park e] returns the rewritten self-call, with its value receiver
            replaced by a reference to the parking slot, or [None]. *)
         let park e =
@@ -985,7 +997,8 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
       in
       if parked <> List.length park then begin
         Probe.violation "control lowering"
-          Pp.(str "the tail loop of the method " ++ str name ++ str " has a turn making its receiver that no tail call parks");
+          Pp.(str "the tail loop of the method " ++ str name
+              ++ str " has a turn making its receiver that no tail call parks");
         record_outcome name (Lp_declined value_receiver);
         Method mf
       end else
@@ -1008,7 +1021,8 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
              loop continues by, and the cells built around them its turns'. *)
           let check = planned_jumps loop self_check in
           let shapes =
-            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t)) (Option.bind loop (Lower_control.loop (Loop_facts.control ())))
+            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t))
+              (Option.bind loop (Lower_control.loop (Loop_facts.control ())))
           in
           let r =
             apply_nontail_loopification

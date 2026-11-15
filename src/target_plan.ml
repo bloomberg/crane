@@ -205,7 +205,8 @@ let value_use_demotion prior struc =
     let scan_field =
       match kind_after prior kn ind with Core.Inductive.Kind.Type_class _ -> scan_type | _ -> scan_arg
     in
-    Array.iter (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter scan_field) p.constructor_argument_types) ind.packets
+    Array.iter
+      (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter scan_field) p.constructor_argument_types) ind.packets
   in
   (* A class value a definition computes from data is data: the struct an
      instance is otherwise emitted as is fixed at compile time, so it cannot
@@ -286,7 +287,9 @@ let plan (facts : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {module_names = []; names = []; referenced_names = []; field_names = []; pointer_fields = []; unmerged_wrappers = [];
+    representation =
+      {module_names = []; names = []; referenced_names = []; field_names = []; pointer_fields = [];
+        unmerged_wrappers = [];
         promoted_inductives = [];
         accessors = [];
         nested_structs = [];
@@ -331,7 +334,8 @@ let kind_equal a b =
   | Core.Inductive.Kind.Record f, Core.Inductive.Kind.Record f'
   | Core.Inductive.Kind.Type_class f, Core.Inductive.Kind.Type_class f' ->
     fields_equal f f'
-  | (Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _), _ -> false
+  | (Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Record _
+  | Core.Inductive.Kind.Type_class _), _ -> false
 
 (* The same global under the same name. *)
 let same_name (r, s) (r', s') = GlobRef.UserOrd.equal r r' && String.equal s s'

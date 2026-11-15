@@ -3667,7 +3667,9 @@ let warn_undeclared_mapped_type =
       ++ prlist_with_sep pr_comma str names
       ++ strbrk " but has no From clause, so no header declaring "
       ++ str (if List.length names > 1 then "them" else "it")
-      ++ strbrk " is included on its behalf: it compiles only where another mapping in use happens to import one. Name the header with From \"...\".")
+      ++ strbrk
+           (" is included on its behalf: it compiles only where another mapping in use happens to import one. "
+           ^ "Name the header with From \"...\".") )
 
 let check_type_mapping_header r s imports =
   match Foreign_template.declared_type_names s with

@@ -103,7 +103,8 @@ let is_temporary : stmt -> bool = function
 (* Every local [e] names. *)
 let names_expr (e : expr) =
   let acc = ref Id.Set.empty in
-  let rec visitor = {Cpp_ir.Children.expr = (fun e -> expr e); stmt = (fun s -> Cpp_ir.Children.stmt visitor s); type_ = (fun _ -> ())}
+  let rec visitor =
+    {Cpp_ir.Children.expr = (fun e -> expr e); stmt = (fun s -> Cpp_ir.Children.stmt visitor s); type_ = (fun _ -> ())}
   and expr (e : expr) =
     (match e with Local y -> acc := Id.Set.add y !acc | _ -> ());
     Cpp_ir.Children.expr visitor e

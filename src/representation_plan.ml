@@ -121,7 +121,8 @@ let rec scrutinee_binder lex = function
 and head_is_callable lex h =
   match scrutinee_binder lex h with
   | Some i -> (
-    let rec is_arrow = function Core.Type.Meta {contents = Some t} -> is_arrow t | Core.Type.Arrow _ -> true | _ -> false in
+    let rec is_arrow =
+      function Core.Type.Meta {contents = Some t} -> is_arrow t | Core.Type.Arrow _ -> true | _ -> false in
     match Lexenv.type_opt lex i with Some t -> is_arrow t | None -> true )
   | None -> true
 
@@ -336,7 +337,8 @@ let region ~outer body =
        ({!Translation_construct.gen_construction}'s [expected_for_field]). *)
     | Core.Expr.Construct {result_type = ty;
                            constructor = r;
-                           arguments = args; _} when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
+                           arguments = args; _} when List.exists is_lambda args
+                             && Table.record_fields_of_type ty <> [] ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
         | Some ft -> List.filter (fun t -> not (Core_util.is_erased_type t)) ft
@@ -357,7 +359,8 @@ let region ~outer body =
           | ct -> (
             match codomain ct with
             | Some cod
-              when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct)) && names_only_scoped_tvars ct ->
+              when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct))
+                && names_only_scoped_tvars ct ->
               Some ct
             | _ -> None )
           | exception _ -> None )
@@ -444,7 +447,8 @@ let region ~outer body =
     | Core.Expr.Apply {callee = ( ( Core.Expr.Bound_variable {index = h; _}
             | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = h; _}; _}
             | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = h; _}; _}
-            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = h; _}; _} ) as f ); arguments = args}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = h; _}; _} ) as f );
+              arguments = args}
       when List.exists (function Core.Expr.Lambda _ -> true | _ -> false) args ->
       walk scope f;
       let dom = match planned scope h with Some (Function (dom, _), _) -> dom | _ -> [] in
@@ -467,7 +471,9 @@ let region ~outer body =
          ML type looks; lowering binds it at a dummy type, with no C++ type
          recorded, so an accessor reading it again sees the erasure
          ({!Translation_types.stmts_yield_boxed}). *)
-      let ty = if x <> Core.Binder_name.Anonymous && reads_boxed_component scope a then Core.Type.Erased Core.Erasure_reason.Type_argument else ty in
+      let ty =
+        if x <> Core.Binder_name.Anonymous && reads_boxed_component scope a then
+          Core.Type.Erased Core.Erasure_reason.Type_argument else ty in
       walk (push Klet [(x, ty)] scope) body
     (* Any other lambda's binders at the types they are annotated with.
        Lowering also declares a parameter by the C++ slot the lambda fills --
@@ -541,7 +547,8 @@ let check ?(as_bound = false) ~site ~field ~live () =
       ++ str (if live then "boxes" else "does not box")
       ++ str ", the plan " ++ str planned)
   in
-  match List.find_opt (fun (s, f, _) -> Int.equal f field && Core_binder.equal_site s site) (!tctx).lexical.representation with
+  match List.find_opt (fun (s, f, _) -> Int.equal f field && Core_binder.equal_site s site)
+    (!tctx).lexical.representation with
   | Some (_, _, {pr_boxed; pr_bound_boxed}) ->
     let pr_boxed = if as_bound then pr_bound_boxed else pr_boxed in
     let agrees = pr_boxed = live in

@@ -48,7 +48,9 @@ let analyze struc =
     | a -> Core_util.ast_iter (body mode) a
   in
   Modutil.struct_iter
-    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> body (declaration_mode fd.type_) fd.body) (Core_util.term_defs d))
+    (fun d ->
+      List.iter (fun (fd : Core.Recursion.Definition.t) -> body (declaration_mode fd.type_) fd.body)
+        (Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;

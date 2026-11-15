@@ -534,7 +534,8 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
       ~var_cpp_type:(fun i ->
         Option.bind read (fun occ -> planned_binder_type ~use:"scrutinee" ~agree:(fun p l -> at p = at l) i occ))
   in
-  let scrut_is_wrapped_case = match t with Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ -> true | _ -> false in
+  let scrut_is_wrapped_case =
+    match t with Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ -> true | _ -> false in
   (* Check if this is an enum inductive type *)
   let is_enum =
     match typ with
@@ -586,7 +587,8 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     let gen_default_stmts () =
       let wild_br =
         Array.to_list pv
-        |> List.find_opt (fun {Core.Match.Branch.pattern = p; _} -> match p with Core.Pattern.Wildcard -> true | _ -> false)
+        |> List.find_opt
+          (fun {Core.Match.Branch.pattern = p; _} -> match p with Core.Pattern.Wildcard -> true | _ -> false)
       in
       Option.map
         (fun (br : Core.Match.Branch.t) -> gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) br.body)
@@ -1938,7 +1940,8 @@ let gen_record_projection ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ ~t 
 (** A match taking the record [t] at [typ] apart (the term [ast]), in
     statement position ending in [k]: the scrutinee read once, its fields
     declared as locals, then the one branch's statements. *)
-let gen_record_match_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Stmt.t list =
+let gen_record_match_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~typ ~t
+  ~pv ~case_occ : Cpp_ir.Lowered.Stmt.t list =
   let {Core.Match.Branch.binders = ids; body = body; _} = pv.(0) in
   let n = List.length ids in
   let is_typeclass, is_simple =

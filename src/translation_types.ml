@@ -950,7 +950,8 @@ let rec cpp_ir_of_core_type
     let t1c = reify_monadic_param_type t1 t1c in
     let t2c = cpp_ir_of_core_type env tvars t2 in
     (* Skip erased params: is_erased_type catches direct Core.Type.Erased, is_cpp_dummy_type
-       catches Core.Type.Erased wrapped in Core.Type.Meta (e.g., Core.Type.Meta{contents=Some(Core.Type.Erased Core.Erasure_reason.Proof)}
+       catches Core.Type.Erased wrapped in Core.Type.Meta (e.g.,
+       Core.Type.Meta{contents=Some(Core.Type.Erased Core.Erasure_reason.Proof)}
        which converts to dummy_prop glob). Do NOT use prints_as_any here as it
        also catches Tany (std::any), which is a valid type for universally
        quantified parameters — stripping it would incorrectly collapse (A -> IO)
@@ -1070,7 +1071,8 @@ let rec cpp_ir_of_core_type
       | GlobRef.IndRef _ when Table.has_dependent_params g ->
         let rec first_ktype_idx i = function
           | [] -> max_int
-          | (Core.Type.Erased Core.Erasure_reason.Type_argument | Core.Type.Meta {contents = Some (Core.Type.Erased Core.Erasure_reason.Type_argument)}) :: _ -> i
+          | (Core.Type.Erased Core.Erasure_reason.Type_argument
+          | Core.Type.Meta {contents = Some (Core.Type.Erased Core.Erasure_reason.Type_argument)}) :: _ -> i
           | _ :: rest -> first_ktype_idx (i + 1) rest
         in
         let cutoff = first_ktype_idx 0 filtered_ts in
@@ -1445,8 +1447,8 @@ let result_cpp_via_receiver env callee_ty args : Cpp_ir.Lowered.Type.t option =
   | Some j, dom0 :: _, arg :: _ -> (
     match (resolve_meta dom0, Option.map resolve_meta (infer_core_body_type arg)) with
     | Core.Type.Global_app {head = g1;
-                            type_arguments = formals; _}, Some (Core.Type.Global_app {head = g2;
-                                                                                      type_arguments = actuals; _} as recv)
+                            type_arguments = formals; _},
+                              Some (Core.Type.Global_app {head = g2; type_arguments = actuals; _} as recv)
       when Common.globref_equal g1 g2 -> (
       match (position_of j formals, template_args_ir (cpp_of_core env recv)) with
       | Some i, Some cpp_args when List.length actuals = List.length cpp_args ->
@@ -1917,7 +1919,9 @@ let planned_binder_type ~use ~agree i occ =
         Probe.hit "repr-type" (fun () ->
             use ^ (if agrees then " agree " else " disagree ") ^ binder_kind_name rd_kind ^ " plan " ^ show rd_type
             ^ " live " ^ show live
-            ^ (match (!tctx).input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> ""));
+            ^
+              (match (!tctx).input.body_owner with Some r -> " in "
+                ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> ""));
         if not agrees then
           Probe.violation "variable read binder type"
             Pp.(
@@ -1940,15 +1944,19 @@ let planned_binder_type ~use ~agree i occ =
     region it is lowered in does not reach is an anomaly. *)
 let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
   let show = function Some t -> type_shape t | None -> "none" in
-  let owner () = match (!tctx).input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
+  let owner () =
+    match (!tctx).input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
   match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).lexical.planned_positions with
   | Some (_, planned) ->
     if Probe.checking () then begin
       let agrees = planned = live in
-      Probe.hit "magic-pos" (fun () -> if agrees then "agree" else "disagree plan " ^ show planned ^ " live " ^ show live ^ owner ());
+      Probe.hit "magic-pos"
+        (fun () -> if agrees then "agree" else "disagree plan " ^ show planned ^ " live " ^ show live ^ owner ());
       if not agrees then
         Probe.violation "coercion position"
-          Pp.(str ("a coercion" ^ owner () ^ " is lowered against " ^ show live ^ ", the plan's position is " ^ show planned))
+          Pp.(str
+              ("a coercion" ^ owner () ^ " is lowered against " ^ show live
+                ^ ", the plan's position is " ^ show planned))
     end;
     planned
   | None ->
@@ -2030,7 +2038,8 @@ let app_reads_erased_value env args =
       match strip_magic a with
       | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
         let carried = Option.map (fun t -> carries (strip_cpp_ref_const t)) in
-        match planned_binder_type_or_derive ~use:"erased argument" ~agree:(fun p l -> carried p = carried l) env i occ with
+        match planned_binder_type_or_derive ~use:"erased argument"
+          ~agree:(fun p l -> carried p = carried l) env i occ with
         | Some t -> carries (strip_cpp_ref_const t)
         | None -> false )
       | a -> (
@@ -2460,7 +2469,10 @@ let core_expr_is_function_value ?(var = fun i occ -> (read_is_boxed i occ, get_e
      than in [infer_core_body_type] itself (whose result also feeds unrelated
      callers like lambda return-type annotation), so this fix cannot change
      behavior anywhere but function-value detection. *)
-  | Core.Expr.Apply {callee = (Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _} | Core.Expr.Lambda_group_barrier {value = f; _});
+  | Core.Expr.Apply
+    {callee =
+      (Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _}
+        | Core.Expr.Lambda_group_barrier {value = f; _});
                      arguments = args} ->
     ( match infer_core_body_type (Core.Expr.Apply {callee = f; arguments = args}) with
     | Some t -> count_core_value_arrows t >= 1
@@ -2984,7 +2996,8 @@ let spells_as_any t = Cpp_ir.Types.prints_as_any t || resolves_to_any_type t
     only for the one question a missing [from] leaves open: whether the value
     is a function, and so has to be adapted by [crane_erase_fn] before it is
     boxed. *)
-let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t) (expr : Cpp_ir.Lowered.Expr.t) :
+let rec coerce ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.Lowered.Type.t)
+  (expr : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   let source = classify_erasure from in
   let same_type = match from with Some f -> cpp_ty_eq f into | None -> false in

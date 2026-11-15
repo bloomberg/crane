@@ -347,7 +347,8 @@ let structure struc =
         match se with
         | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body; type_ = ty}) -> (
           match decl defs r body ty with Some d -> (lbl, Core.Module.Structure_item.Declaration d) | None -> (lbl, se) )
-        | Core.Module.Structure_item.Module ({Core.Module.expr = Core.Module.Expr.Structure {path = mp; items = l}; _} as m)
+        | Core.Module.Structure_item.Module
+          ({Core.Module.expr = Core.Module.Expr.Structure {path = mp; items = l}; _} as m)
           ->
           let expr = Core.Module.Expr.Structure {path = mp; items = elems l} in
           (lbl, Core.Module.Structure_item.Module {m with Core.Module.expr})

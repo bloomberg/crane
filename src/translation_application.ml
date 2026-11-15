@@ -83,8 +83,9 @@ let erased_lambda (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) ~params ~ret ~
    {!singleton_dictionary} is the traversal's own reading, checked against
    it. *)
 let singleton_call env i occ =
-  let live () = Option.map (fun (_, c, m) -> (c, m)) (singleton_dictionary env (Core.Expr.Bound_variable {index = i;
-                                                                                                          occurrence = occ})) in
+  let live () =
+    Option.map (fun (_, c, m) -> (c, m))
+      (singleton_dictionary env (Core.Expr.Bound_variable {index = i; occurrence = occ})) in
   match Core_elaborate.singleton_dictionary_call ~walk:(elaborations ()) ~live occ with
   | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
   | None -> None
@@ -95,7 +96,8 @@ let singleton_call env i occ =
    concrete, so the term is an ordinary application and not the single-branch
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
-let project_through_instance env (use : Core.Global_use.t) args (projection : Elaborated_call.static_projection) : Cpp_ir.Lowered.Expr.t =
+let project_through_instance env (use : Core.Global_use.t) args (projection : Elaborated_call.static_projection) :
+  Cpp_ir.Lowered.Expr.t =
   let inst = List.nth args projection.instance in
   let x = use.callee and tys = Core_util.written_type_args use in
   let operands =
@@ -373,7 +375,8 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
            says: an argument that is already a box is left alone. *)
         let from =
           match core_arg with
-          | Core.Expr.Bound_variable {index = j; occurrence = occ} -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
+          | Core.Expr.Bound_variable {index = j; occurrence = occ} ->
+            planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
           | _ -> None
         in
         coerce ~term:core_arg ?from ~into:Any expr
@@ -649,7 +652,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        the call can change, as Core decided it
        ({!Core_elaborate.closed_head_call}). *)
     let closed_head =
-      (not slot.building_constant) && Core_elaborate.closed_head_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args
+      (not slot.building_constant)
+        && Core_elaborate.closed_head_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args
     in
     let args =
       let slot = if closed_head then {slot with building_constant = true} else slot in
@@ -884,7 +888,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             when Cpp_ir.Types.prints_as_any c && not (Cpp_ir.Types.prints_as_any exp) ->
             let arg_ty a =
               match a with
-              | Core.Expr.Bound_variable {index = j; occurrence = occ} -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
+              | Core.Expr.Bound_variable {index = j; occurrence = occ} ->
+                planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
               | _ -> Option.map (cpp_of_core env) (core_ast_type_hint a)
             in
             let rest_tys = List.map arg_ty rest_core in
@@ -1515,7 +1520,9 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                specialised, so the variable holds the concrete pair.  Judge by
                the variable's type when it is known; a coercion is still the
                only evidence available when it is not. *)
-            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} -> (
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
               | None -> true )
@@ -1658,7 +1665,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     in
     let callee_fun_core_ty =
       match f with
-        | Core.Expr.Global ({callee = r; _} as use) when not (Core_util.Var_types.is_empty (Core_util.written_type_args use)) ->
+        | Core.Expr.Global ({callee = r; _} as use)
+          when not (Core_util.Var_types.is_empty (Core_util.written_type_args use)) ->
           (match find_type_opt r with
            | Some ty -> Some (Core_util.instantiate_written ~reader:"callee_fun_core_ty" use ty)
            | None -> infer_core_body_type f)
@@ -2014,7 +2022,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             | Core.Expr.Bound_variable {index = i; _} when i >= 1 && i <= n_binds -> Some (n_binds - i)
             | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
             | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
-            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} when i >= 1 && i <= n_binds ->
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _}
+              when i >= 1 && i <= n_binds ->
               Some (n_binds - i)
             | _ -> None
           in
@@ -2058,14 +2067,16 @@ let gen_singleton_dictionary_call env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
     names, as Core decided it ({!Core_elaborate.static_projection_call}); a
     projection missing arguments is eta-expanded over them first. *)
 let gen_instance_projection ~expected_ty ~slot env ~use ~args : Cpp_ir.Lowered.Expr.t =
-  let projection = Option.get (Core_elaborate.static_projection_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args) in
+  let projection =
+    Option.get (Core_elaborate.static_projection_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args) in
   match projection.missing with
   | [] -> project_through_instance env use args projection
   | missing ->
     let k = List.length missing in
     let call =
       Core.Expr.Apply {callee = Core.Expr.Global use;
-                       arguments = List.map (Core_util.ast_lift k) args @ List.init k (fun i -> Core.Expr.fresh_rel (k - i))}
+                       arguments = List.map (Core_util.ast_lift k) args
+                         @ List.init k (fun i -> Core.Expr.fresh_rel (k - i))}
     in
     gen_expr ?expected_ty ~slot env
       (Core_util.named_lams

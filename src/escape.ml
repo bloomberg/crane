@@ -332,8 +332,8 @@ let find_reuse_candidates (pv : Core.Match.Branch.t array) =
     | _ -> false
   in
   let tail_conses body =
-    List.filter_map (function Core.Expr.Construct {constructor = r;
-                                                   arguments = args; _} -> Some (r, args) | _ -> None) (tail_constructions body)
+    List.filter_map (function Core.Expr.Construct {constructor = r; arguments = args; _} -> Some (r, args) | _ -> None)
+      (tail_constructions body)
   in
   let cands = ref [] in
   Array.iteri

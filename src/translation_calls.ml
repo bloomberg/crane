@@ -81,7 +81,8 @@ let stored_adapter params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
     time ([Declared_at n]).
 
     Returns [cglob] unchanged when the declaration is already a value. *)
-let curry_value_to_expected env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Declared) ?(exact = false) core_ty
+let curry_value_to_expected env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Declared)
+  ?(exact = false) core_ty
     (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   let decl_dom =
     match Option.map (cpp_of_core env) core_ty with
@@ -1773,7 +1774,9 @@ let argument_position ~local_callable env id plan i core_arg =
   in
   let arg_expected_ty =
     match core_arg with
-    | (Core.Expr.Lambda _ | Core.Expr.Coerce {value = Core.Expr.Lambda _; _} | Core.Expr.Boxed_value {value = Core.Expr.Lambda _; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Lambda _; _}) when deduced_callable ->
+    | (Core.Expr.Lambda _ | Core.Expr.Coerce {value = Core.Expr.Lambda _; _}
+    | Core.Expr.Boxed_value {value = Core.Expr.Lambda _; _}
+    | Core.Expr.Lambda_group_barrier {value = Core.Expr.Lambda _; _}) when deduced_callable ->
       Option.map deduce_erased_domains arg_expected_ty
     | _ -> arg_expected_ty
   in

@@ -599,7 +599,9 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
     If {condition = cond; then_ = rw then_br; else_ = rw else_br}
   | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
     let rw = generic_rewrite_stmts ~aliases ~derefs trc in
-    Switch {scrutinee = scrut; enum = r; branches = List.map (fun (id, body) -> (id, rw body)) branches; default = (* The default branch returns too: left as it was, its [return]
+    Switch
+      {scrutinee = scrut; enum = r; branches = List.map (fun (id, body) -> (id, rw body)) branches; default =
+      (* The default branch returns too: left as it was, its [return]
            would leave a tail-modulo-cons loop with the list built so far
            dropped. *)
         Option.map rw default}
@@ -852,7 +854,8 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
            the plan's captures say ({!Ownership_ir.captures}). *)
         if not (!bare = 0 && !moved + !captured = 1) then
           Probe.violation "ownership plan"
-            Pp.(str "a jump the plan moves " ++ Id.print x ++ str " into its next value at reads it " ++ int !bare ++ str " times");
+            Pp.(str "a jump the plan moves " ++ Id.print x ++ str " into its next value at reads it "
+                ++ int !bare ++ str " times");
         arg
       end
     in
@@ -878,7 +881,8 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
                 | Some shadow, Move_parameter when by_value shadow ->
                   if spelled_elsewhere k shadow then begin
                     Probe.violation "ownership plan"
-                      Pp.(str "a jump the plan moves " ++ Id.print shadow ++ str " into its next value at reads it in another argument");
+                      Pp.(str "a jump the plan moves " ++ Id.print shadow
+                          ++ str " into its next value at reads it in another argument");
                     arg
                   end
                   else move_read shadow arg
@@ -1051,7 +1055,8 @@ let drop_unread_shadows shadow_decls body =
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying ~parts tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying ~parts tparams
+  check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup ~varying ~parts tparams params

@@ -10,7 +10,8 @@ let rec spine = function
   | e -> Core_util.ast_map spine e
 
 let canonical_head = function
-  | Core.Expr.Apply {callee = Core.Expr.Global _; _} | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ | Core.Expr.Runtime_error _ | Core.Expr.Erased_value _ -> false
+  | Core.Expr.Apply {callee = Core.Expr.Global _; _} | Core.Expr.Coerce _ | Core.Expr.Boxed_value _
+  | Core.Expr.Lambda_group_barrier _ | Core.Expr.Runtime_error _ | Core.Expr.Erased_value _ -> false
   | Core.Expr.Match {branches = [|_|]; _} -> false
   | _ -> true
 
@@ -44,5 +45,7 @@ let structure =
   Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} -> Core.Decl.Value {entity = r; body = spine b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
-      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = spine fd.body}) fds)
+      Core.Decl.Recursive_group
+        (Core.Nonempty.map
+          (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = spine fd.body}) fds)
     | d -> d )

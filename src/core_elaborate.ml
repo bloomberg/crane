@@ -60,10 +60,11 @@ let classify ~lex id written =
     | Some core_ty ->
       let all_dom = collect_arrow_domains [] core_ty in
       (* Count value-domain entries by filtering out ALL [Core.Type.Erased] positions
-         (both [Core.Erasure_reason.Type_argument] for erased type params and [Core.Erasure_reason.Proof] for erased proofs).
-         Symmetrically, filter the arg list to exclude [Core.Expr.Erased_value] entries.
-         Comparing these two filtered counts avoids false excess detection
-         when erased params appear in [args] as [Core.Expr.Erased_value] instead of (or in
+         (both [Core.Erasure_reason.Type_argument] for erased type params and
+         [Core.Erasure_reason.Proof] for erased proofs). Symmetrically, filter
+         the arg list to exclude [Core.Expr.Erased_value] entries.  Comparing
+         these two filtered counts avoids false excess detection when erased
+         params appear in [args] as [Core.Expr.Erased_value] instead of (or in
          addition to) being carried in [tys]. *)
       let n_value_dom = List.length (List.filter is_value_dom all_dom) in
       (* An erased argument at a position the declaration takes a value at
@@ -791,7 +792,9 @@ let declaration ?caller ?scope b ty body =
    function of the full signature, which no partial application fills. *)
 let constant_at_alias ~caller b ty body =
   let ty = Core_util.type_simpl ty in
-  let body = match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _} | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b in
+  let body =
+    match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _}
+      | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b in
   if Type_util.core_domains ty = [] then
     match Type_util.eta_expand_to (Type_util.expand_core_fun_alias ty) body with
     | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Lexenv.empty expanded
@@ -812,7 +815,9 @@ let instance_methods b name body ty =
   Option.iter
     (fun (lam_params, methods) ->
       let lex =
-        Lexenv.push (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Core.Binder_name.Source x, ty)) lam_params) Lexenv.empty
+        Lexenv.push
+          (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Core.Binder_name.Source x, ty)) lam_params)
+            Lexenv.empty
       in
       let w = walker ~caller:name b ~n_outer:(head_variables ty) in
       List.iter
@@ -865,7 +870,10 @@ let structure ~methods struc =
   let defined = ref GlobRef.Set_env.empty in
   let define r = defined := GlobRef.Set_env.add r !defined in
   let closed_type = walk_type {(walker b ~n_outer:0) with site = Type_term} Lexenv.empty in
-  let inductive (ind : Core.Inductive.t) = Array.iter (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter closed_type) p.constructor_argument_types) ind.packets in
+  let inductive (ind : Core.Inductive.t) =
+    Array.iter
+      (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter closed_type) p.constructor_argument_types)
+        ind.packets in
   let as_methods =
     let acc = ref GlobRef.Set_env.empty in
     Modutil.struct_iter
@@ -1119,7 +1127,8 @@ let member_template_call ~walk ~lex use args =
 
 let singleton_dictionary_call ~walk ~live occ =
   let planned =
-    match List.filter_map (fun (o, h) -> if Core.Occurrence.equal o occ then Some h else None) (walk_of walk).dictionary_calls with
+    match List.filter_map (fun (o, h) -> if Core.Occurrence.equal o occ then Some h else None)
+      (walk_of walk).dictionary_calls with
     | [] -> Some None
     | heads -> Option.map Option.make (agreed same_head heads)
   in

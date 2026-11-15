@@ -73,7 +73,8 @@ let rebind_applied_head : type p. p Type.t -> p Type.t list -> p Type.t =
     match h with
     | (Entity_application (r, _, _) | In_namespace (_, Entity_application (r, _, _))) when family r -> h
     | Entity_application (r, tys, es) -> Entity_application (r, List.map sub tys, es)
-    | In_namespace (r, Entity_application (g, tys, es)) -> In_namespace (r, Entity_application (g, List.map sub tys, es))
+    | In_namespace (r, Entity_application (g, tys, es)) ->
+      In_namespace (r, Entity_application (g, List.map sub tys, es))
     | h -> h )
   | _ -> h
 

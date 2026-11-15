@@ -86,7 +86,8 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
          the save moves is the plan's: the machine reads it by the let's
          binder. *)
       let () =
-        match (Ownership_ir.save_moves (!tctx).lexical.move_plan let_occ, core_binder ~site:(Binding let_occ) env' 1) with
+        match (Ownership_ir.save_moves (!tctx).lexical.move_plan let_occ, core_binder ~site:(Binding let_occ) env' 1)
+          with
         | Some moved, Some binder -> Ownership_ir.Frame_save.record binder moved
         | _ -> ()
       in
@@ -334,7 +335,8 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                   binder = core_binder ~site:(Binding let_occ) env' 1 } : Cpp_ir.Lowered.Stmt.t)
               :: gen_stmts ~slot env' k b
             | None ->
-              (Bind_variable (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), e) : Cpp_ir.Lowered.Stmt.t)
+              (Bind_variable (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), e) :
+                Cpp_ir.Lowered.Stmt.t)
               :: gen_stmts ~slot env' k b
             end
           | _ ->
@@ -366,7 +368,8 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
-                     occurrence = case_occ} when Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ = Match_kind.Custom ->
+                     occurrence = case_occ}
+                       when Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ = Match_kind.Custom ->
     gen_custom_cpp_case env k typ t pv case_occ
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Table.is_tt_constructor r
       && returns_void () ->
@@ -394,7 +397,8 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
-                     occurrence = case_occ} when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ) ->
+                     occurrence = case_occ}
+                       when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ) ->
     Translation_match.gen_record_match_stmts ~slot env k ast ~typ ~t ~pv ~case_occ
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic

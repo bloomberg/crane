@@ -12,8 +12,12 @@ let check name cond =
     exit 1 )
 
 let callee = Names.GlobRef.VarRef (Names.Id.of_string "f")
-let nat = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
-let bool = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "bool"); type_arguments = []; index_arguments = []}
+let nat =
+  Core.Type.Global_app
+    {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
+let bool =
+  Core.Type.Global_app
+    {head = Names.GlobRef.VarRef (Names.Id.of_string "bool"); type_arguments = []; index_arguments = []}
 let binder = Scheme.Binder.of_position 0
 
 let source () =

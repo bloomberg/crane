@@ -243,7 +243,8 @@ let decompose_lambda_n sg n =
 let rec type_sign env sg c =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
-    (if is_info_scheme env sg t then Core.Signature.Argument.Runtime else Core.Signature.Argument.Erased Core.Erasure_reason.Proof)
+    (if is_info_scheme env sg t then Core.Signature.Argument.Runtime else
+      Core.Signature.Argument.Erased Core.Erasure_reason.Proof)
     :: type_sign (push_rel_assum (n, t) env) sg d
   | _ -> []
 
@@ -319,10 +320,12 @@ let rec nb_default_params env sg c =
     if is_default env sg t then n + 1 else n
   | _ -> 0
 
-(** Enriches a type signature by marking implicit arguments as [Core.Signature.Argument.Erased Core.Erasure_reason.Configured_implicit],
+(** Enriches a type signature by marking implicit arguments as
+    [Core.Signature.Argument.Erased Core.Erasure_reason.Configured_implicit],
     skipping the first [nb_params] parameters.
     @param r Global reference whose declared implicits are looked up
-    @param s Type signature to enrich (list of [Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased] entries)
+    @param s Type signature to enrich (list of
+    [Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased] entries)
     @param nb_params Number of leading parameters to skip before applying implicits *)
 let sign_with_implicits r s nb_params =
   let implicits = implicits_of_global r in
@@ -639,7 +642,8 @@ let with_extracting mind f =
     to [Core.Type.Variable], and [j] is the next type var.
     @param env Rocq environment for reduction and sort checking
     @param sg Evar map for universe operations
-    @param db De Bruijn variable context mapping Rocq [Rel] indices to ML [Core.Type.Variable] indices; [0] means the Rel is not a type var
+    @param db De Bruijn variable context mapping Rocq [Rel] indices to ML
+    [Core.Type.Variable] indices; [0] means the Rel is not a type var
     @param j Next available ML type variable index; [0] means no new type vars are generated
     @param c The Rocq term to extract as a type (possibly a type-level function)
     @param args Arguments accumulated during [App] spine traversal *)
@@ -1508,7 +1512,8 @@ and record_constant_type env sg kn opt_typ =
     let r = GlobRef.ConstRef kn in
     let rec mark s t =
       match (s, t) with
-      | Core.Signature.Argument.Erased k :: s, Core.Type.Arrow {parameter = a; result = b} when not (is_erased_type a) ->
+      | Core.Signature.Argument.Erased k :: s, Core.Type.Arrow {parameter = a; result = b}
+        when not (is_erased_type a) ->
         Core.Type.Arrow {parameter = Core.Type.Erased k; result = mark s b}
       | _ :: s, Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = a; result = mark s b}
       | _, Core.Type.Meta {contents = Some t} -> mark s t
@@ -1916,7 +1921,9 @@ and extract_app env sg type_env extracted_ty mk_head args =
     @param env Rocq environment for type checking
     @param sg Evar map for reduction
     @param e ML environment for bound variables
-    @param s Type signature ([Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased] list) driving which positions are kept
+    @param s Type signature
+    ([Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased] list)
+    driving which positions are kept
     @param args Rocq terms to extract (parallel to [typs] and [s])
     @param typs Expected ML types for each argument after unification *)
 and make_args env sg e s args typs =
@@ -2129,7 +2136,8 @@ and extract_cst_app env sg type_env extracted_ty kn args =
       (Core.Expr.Global (Core.Global_use.polymorphic (GlobRef.ConstRef kn) instantiation))
   in
   (* For strict languages, purely logical signatures lead to a dummy lam (except
-     when [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] everywhere). So a [Core.Expr.Erased_value] is left accordingly. *)
+     when [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument]
+     everywhere). So a [Core.Expr.Erased_value] is left accordingly. *)
   let optdummy =
     match sign_kind s_full with
     | UnsafeLogicalSig -> [Core.Expr.Erased_value Core.Erasure_reason.Proof]
@@ -3275,7 +3283,9 @@ let extract_constant_spec env kn cb =
                                        parameters = vl;
                                        body = Some (Core.Type.Erased Core.Erasure_reason.Type_argument)}
     | Logic, Default ->
-      Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = Core.Type.Erased Core.Erasure_reason.Proof}
+      Core.Signature.Declaration.Value
+        {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue";
+          type_ = Core.Type.Erased Core.Erasure_reason.Proof}
     | Info, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
       (* A type scheme with more signature slots than type variables takes at
@@ -3314,7 +3324,8 @@ let extract_constant_spec env kn cb =
           let body = fake_match_projection env p in
           mk_spec (EConstr.of_constr body) )
       | _ ->
-        Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = type_expunge env t} )
+        Core.Signature.Declaration.Value
+          {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = type_expunge env t} )
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
 (** Extracts a module-level "with type" constraint. *)
@@ -3367,7 +3378,8 @@ let extract_inductive env kn =
   in
   let packets =
     Array.mapi
-      (fun i (p : Core.Inductive.Packet.t) -> {p with Core.Inductive.Packet.constructor_argument_types = Array.mapi (f i) p.constructor_argument_types})
+      (fun i (p : Core.Inductive.Packet.t) ->
+        {p with Core.Inductive.Packet.constructor_argument_types = Array.mapi (f i) p.constructor_argument_types})
       ind.packets
   in
   {ind with Core.Inductive.packets = packets}
@@ -3378,7 +3390,8 @@ let logical_decl = function
   | Core.Decl.Value {body = Core.Expr.Erased_value _; type_ = Core.Type.Erased _; _} -> true
   | Core.Decl.Type_alias {body = Core.Type.Erased _; _} -> true
   | Core.Decl.Recursive_group fds ->
-    Core.Nonempty.for_all (fun (fd : Core.Recursion.Definition.t) -> is_erased_value fd.body && is_erased_type fd.type_) fds
+    Core.Nonempty.for_all
+      (fun (fd : Core.Recursion.Definition.t) -> is_erased_value fd.body && is_erased_type fd.type_) fds
   | Core.Decl.Inductive {definition = (i : Core.Inductive.t); _} ->
     Array.for_all (fun (ip : Core.Inductive.Packet.t) -> ip.logical) i.packets
   | _ -> false

@@ -28,7 +28,9 @@ open Cpp_state
    checks below only: it is defined last, since it names through the
    functions here. *)
 let live_name_for_checks : (render_ctx -> Cpp_resolution.key -> Cpp_name.t) ref =
-  ref (fun _ key -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " checked before the resolver exists."))
+  ref
+    (fun _ key ->
+      CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " checked before the resolver exists."))
 
 let violation_resolved key n here =
   Probe.violation "names resolved"
@@ -58,7 +60,8 @@ let live_value_for_checks : (render_ctx -> Cpp_resolution.key -> Cpp_resolution.
   ref (fun _ key ->
       CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " checked before the resolver exists."))
 
-let unresolved key = CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
+let unresolved key =
+  CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
 
 let name_from c names frame key =
   match Cpp_resolution.find names frame key with
@@ -81,7 +84,8 @@ let inside_inductive_struct r v =
     let scope =
       Label.make (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
     in
-    let innermost = match visible_mps v with mp :: _ -> mp | [] -> CErrors.anomaly (Pp.str "Crane: no scope is visible.") in
+    let innermost =
+      match visible_mps v with mp :: _ -> mp | [] -> CErrors.anomaly (Pp.str "Crane: no scope is visible.") in
     inside ~members:(Id.Set.of_list ctors) (ModPath.MPdot (innermost, scope)) [] v
   | _ -> v
 
@@ -139,7 +143,8 @@ let type_head (c : render_ctx) form r =
     | Unresolved -> unresolved key
     | Not_requested ->
       CErrors.anomaly
-        Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.") )
+        Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key
+            ++ str ", which resolving it did not ask for.") )
 
 let live_custom_text r =
   match written_custom_text r with
@@ -325,7 +330,8 @@ let local_at (c : render_ctx) r =
     | Some local -> List.exists (globref_equal r) local
     | None ->
       CErrors.anomaly
-        Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.") )
+        Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp)
+            ++ str " has no planned local inductives.") )
 
 (** [String.capitalize_ascii] of the name's text: the first character of its
     outermost qualifier, or of its base when it has none. *)
@@ -672,14 +678,17 @@ let answered (c : render_ctx) key ~find ~read ~equal ~pp =
     | Cpp_resolution.Found a ->
       ( if Probe.checking () then
           let here = read (!live_value_for_checks c key) in
-          if not (equal a here) then violation_resolved key (Pp.string_of_ppcmds (pp a)) (Pp.string_of_ppcmds (pp here)) );
+          if not (equal a here) then
+            violation_resolved key (Pp.string_of_ppcmds (pp a)) (Pp.string_of_ppcmds (pp here)) );
       a
     | Unresolved -> unresolved key
     | Not_requested ->
       CErrors.anomaly
-        Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.") )
+        Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key
+            ++ str ", which resolving it did not ask for.") )
 
-let not_answered key = CErrors.anomaly Pp.(str "Crane: the resolver did not answer " ++ Cpp_resolution.pp_key key ++ str ".")
+let not_answered key =
+  CErrors.anomaly Pp.(str "Crane: the resolver did not answer " ++ Cpp_resolution.pp_key key ++ str ".")
 
 let reference_equal (a : Cpp_resolution.reference) (b : Cpp_resolution.reference) =
   match (a, b) with
@@ -761,7 +770,8 @@ let live_access x : Cpp_resolution.access =
   let resolved_x_mp = resolve_mp x_mp in
   let planned =
     List.exists
-      (fun (reg_mp, reg_lbl) -> Label.equal x_lbl reg_lbl && (ModPath.equal x_mp reg_mp || ModPath.equal resolved_x_mp reg_mp))
+      (fun (reg_mp, reg_lbl) -> Label.equal x_lbl reg_lbl
+        && (ModPath.equal x_mp reg_mp || ModPath.equal resolved_x_mp reg_mp))
       (Cpp_state.template_static_accessor_names ())
   in
   (* A constant reached through a module alias is the target's own, which
@@ -996,7 +1006,8 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
 let enter_from c (entered : Cpp_resolution.entered) k =
   k (next entered c)
 
-let rec entering_from c l k = match l with [] -> k c | entered :: rest -> enter_from c entered (fun c' -> entering_from c' rest k)
+let rec entering_from c l k =
+  match l with [] -> k c | entered :: rest -> enter_from c entered (fun c' -> entering_from c' rest k)
 
 let rec at_frame c (frame : Cpp_resolution.frame) k =
   match frame with [] -> k c | entered :: outer -> at_frame c outer (fun c -> enter_from c entered k)
@@ -1164,7 +1175,8 @@ let rec live_name c (key : Cpp_resolution.key) =
     | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no inline custom mapping."))
   | Inductive_scope r -> fst (inductive_name ctx r)
   | Built_struct r -> (
-    match r with GlobRef.IndRef _ when is_eponymous_record_cached r -> inductive_value ctx r | _ -> global_name ctx Type r )
+    match r with GlobRef.IndRef _ when is_eponymous_record_cached r -> inductive_value ctx r
+      | _ -> global_name ctx Type r )
   | Enumerator_qualifier (site, r) ->
     let n =
       match site with

@@ -818,7 +818,8 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
   let shadow_updates =
     make_shadow_updates ~derefs shadow_params (filter_by_mask varying br.tmc_rec_args)
   in
-  let shadow_updates = match cursor with None -> shadow_updates | Some cursor_id -> advance_cursor cursor_id shadow_updates in
+  let shadow_updates =
+    match cursor with None -> shadow_updates | Some cursor_id -> advance_cursor cursor_id shadow_updates in
   step_decl @ placement @ shadow_updates
 
 (** Rewrite a single statement for TMC loopification.
@@ -888,7 +889,8 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts ~shapes tparams check params ret_ty body =
+let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts ~shapes tparams
+  check params ret_ty body =
   let branch = branch_along shapes check in
   let planned = planned_result shapes ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;

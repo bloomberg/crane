@@ -531,8 +531,10 @@ let sole_instance ~lex ~n_outer t body =
     if !instances = [] then None
     else
       let n = List.fold_left max 0 vars in
-      Some (List.init n (fun j -> if List.mem (j + 1) vars then instance (j + 1) else Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
-                                                                                                          variable = j + 1}))
+      Some
+        (List.init n
+          (fun j -> if List.mem (j + 1) vars then instance (j + 1) else
+            Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = j + 1}))
   with Not_sole -> None
 
 (** [a], a lambda bound by a let at type [t], with a binder for each value
@@ -640,7 +642,8 @@ let strip_magic = Core.Expr.strip_crossings
     whose body never mentions them. *)
 let rec strip_dictionary e =
   match strip_magic e with
-  | Core.Expr.Lambda {parameter_type = ty; body = b; _} when erased_by_extraction ty && not (Core_util.ast_occurs 1 b) ->
+  | Core.Expr.Lambda {parameter_type = ty; body = b; _} when erased_by_extraction ty
+    && not (Core_util.ast_occurs 1 b) ->
     strip_dictionary (Core_util.ast_pop b)
   | e -> e
 

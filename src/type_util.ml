@@ -232,7 +232,8 @@ let collect_typed_lams ty b =
 let eta_parameters ty params =
   let doms = List.rev (core_domains ty) in
   let n_missing = max 0 (List.length doms - List.length params) in
-  List.mapi (fun i t -> (Core.Binder_name.Source (eta_param_id (n_missing - 1 - i)), t)) (Util.List.firstn n_missing doms)
+  List.mapi (fun i t -> (Core.Binder_name.Source (eta_param_id (n_missing - 1 - i)), t))
+    (Util.List.firstn n_missing doms)
 
 let unwritten_parameters ty params body =
   let missing = eta_parameters ty params in
@@ -469,8 +470,9 @@ let rec core_codomain_erases_to_any ?(has_dummy = false) n = function
     | Core.Type.Erased Core.Erasure_reason.Type_argument ->
       core_codomain_erases_to_any ~has_dummy:true n rest
     | _ when is_erased_type t ->
-      (* Core.Type.Erased Core.Erasure_reason.Proof / Core.Erasure_reason.Configured_implicit: erased proof/implicit, skip without
-         setting has_dummy and without consuming a value-arg slot. *)
+      (* Core.Type.Erased Core.Erasure_reason.Proof /
+         Core.Erasure_reason.Configured_implicit: erased proof/implicit, skip
+         without setting has_dummy and without consuming a value-arg slot. *)
       core_codomain_erases_to_any ~has_dummy n rest
     | _ ->
       if n > 0 then core_codomain_erases_to_any ~has_dummy (n - 1) rest
@@ -985,7 +987,8 @@ module Ctor_fields = struct
   let nested_self_ref f i =
     field f i (function
       | Core.Type.Global_app {head = r;
-                              type_arguments = args; _} | Core.Type.Meta {contents = Some (Core.Type.Global_app {head = r;
+                              type_arguments = args; _}
+                                | Core.Type.Meta {contents = Some (Core.Type.Global_app {head = r;
                                                                                           type_arguments = args; _})}
         when not (is_self_or_mutual f r) ->
         List.exists (mentions_self f) args

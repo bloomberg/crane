@@ -113,20 +113,20 @@ val lifted_resumes :
     is the statement declaring the local fixpoint [name], the function
     [member] of a Core fixpoint of one member, generated in the body of the
     definition [owner], a function's where [function_], inside the helpers
-    lifted for the fixpoints [lifted], as the loop of its ControlIR, where the recursion plan lowers it so and Loopify would: [l]
-    its lambda, its body calling the fixpoint by [name] and its type
-    parameters [tparams], with the loop as its body.  A tail loop is
-    lowered so in any body; a machine with a stack of frames in the body of
-    a function Loopify loopifies, as Loopify lowers it
-    ({!Loopify.local_frame_machine}), even where that function is a
-    machine itself, whose transform takes the local machine as the closure
-    it is.  [None] where it is not one: a fixpoint that may be adopted into
-    a machine ({!Recursion_plan.adoptable_somewhere}), a tail loop in a
-    definition Loopify makes a machine with a stack of its own of, one whose
-    loop leaves one of its calls behind, or that Loopify declines; it is
-    then generated as the Y-combinator Loopify recognises.  A tail loop
-    that only the function it is in the flow of may adopt is lowered so
-    too: that function adopts it only where it is a machine. *)
+    lifted for the fixpoints [lifted], as the loop of its ControlIR, where the
+    recursion plan lowers it so and Loopify would: [l] its lambda, its body
+    calling the fixpoint by [name] and its type parameters [tparams], with the
+    loop as its body.  A tail loop is lowered so in any body; a machine with a
+    stack of frames in the body of a function Loopify loopifies, as Loopify
+    lowers it ({!Loopify.local_frame_machine}), even where that function is a
+    machine itself, whose transform takes the local machine as the closure it
+    is.  [None] where it is not one: a fixpoint that may be adopted into a
+    machine ({!Recursion_plan.adoptable_somewhere}), a tail loop in a definition
+    Loopify makes a machine with a stack of its own of, one whose loop leaves
+    one of its calls behind, or that Loopify declines; it is then generated as
+    the Y-combinator Loopify recognises.  A tail loop that only the function it
+    is in the flow of may adopt is lowered so too: that function adopts it only
+    where it is a machine. *)
 val local_loop :
   owner:Names.GlobRef.t option ->
   function_:bool ->

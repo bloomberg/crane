@@ -664,7 +664,8 @@ let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
           let ct = cpp_of_core env (Core_util.type_subst_list tys ft) in
           match codomain ct with
           | Some cod
-            when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct)) && names_only_scoped_tvars ct ->
+            when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct))
+              && names_only_scoped_tvars ct ->
             Some ct
           | _ -> None )
         | _ -> None )
@@ -881,11 +882,13 @@ type custom = {
     annotation [ty] ({!custom_refined_annotation}), built at [expected_ty]
     into [slot] under the return type in force. *)
 let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r =
-  (* Generate args with expected type hints: pass the i-th type arg of the constructor's inductive type before generating
-     the i-th value arg.  This allows gen_ctor_call to recover concrete element
-     types for nil lists whose ML annotation has unresolved metas (Core.Type.Meta{None}).
-     Specifically: in pair(fr, nil), the pair type args [A, B] tell us B = list(A),
-     so the nil's element type can be recovered as A even if its annotation is Core.Type.Meta. *)
+  (* Generate args with expected type hints: pass the i-th type arg of the
+     constructor's inductive type before generating the i-th value arg.  This
+     allows gen_ctor_call to recover concrete element types for nil lists whose
+     ML annotation has unresolved metas (Core.Type.Meta{None}).  Specifically:
+     in pair(fr, nil), the pair type args [A, B] tell us B = list(A), so the
+     nil's element type can be recovered as A even if its annotation is
+     Core.Type.Meta. *)
   (* Try to get type args from the pair type annotation, falling back to the
      outer [expected_core_ty] (set by an enclosing Core.Expr.Let or Core.Expr.Apply
      lookahead) when the pair type itself is erased (Core.Type.Meta{None}). This

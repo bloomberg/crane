@@ -27,18 +27,27 @@ let prepare field_ty body = Instance_methods.prepare_method ~freshen:false inst 
 
 let () =
   let op_ty = Core.Type.Arrow {parameter = a; result = Core.Type.Arrow {parameter = a; result = a}} in
-  let reduced = prepare op_ty (Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = nat; body = Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 1]}}) in
+  let reduced =
+    prepare op_ty
+      (Core.Expr.Lambda
+        {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = nat;
+          body = Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 1]}}) in
   check "the class arguments are substituted into the declared type"
     (reduced.subst_ty = Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
   check "the declared arity is the field's" (reduced.declared_arity = 2);
   (* Expanded canonically ({!Core_normalize}): the global is applied once. *)
   check "a body eta-reduced below the declared arity is expanded back to it"
     ( reduced.body
-    = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = nat; body = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "a0"); parameter_type = nat; body = Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]}}} );
+    = Core.Expr.Lambda
+      {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = nat;
+        body = Core.Expr.Lambda
+          {parameter = Core.Binder_name.Source (Id.of_string "a0"); parameter_type = nat;
+            body = Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]}}} );
   let params, inner = Instance_methods.params reduced in
   check "the accessor takes each binder up to the arity as a parameter"
     (List.length params = 2 && List.for_all (fun p -> not p.Instance_methods.erased) params);
-  check "the body past the parameters is the call" (inner = Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]});
+  check "the body past the parameters is the call"
+    (inner = Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]});
   check "a body taking its parameters is not eta-called" (Instance_methods.eta_call reduced inner <> None);
   let point_free = prepare op_ty add in
   check "a body naming a function point-free is left as written" (point_free.body = add);
@@ -46,6 +55,8 @@ let () =
   check "a point-free body gives the accessor no parameter" (params = [] && inner = add);
   check "a point-free body is applied to a parameter per declared argument"
     ( Instance_methods.eta_call point_free inner
-    = Some ([(Id.of_string "a0", nat); (Id.of_string "a1", nat)], Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]}) );
+    = Some
+      ([(Id.of_string "a0", nat); (Id.of_string "a1", nat)],
+        Core.Expr.Apply {callee = add; arguments = [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]}) );
   let value = prepare a (Core.Expr.Global (Core.Global_use.monomorphic (r "zero"))) in
   check "a value field is not eta-called" (Instance_methods.eta_call value value.body = None)
