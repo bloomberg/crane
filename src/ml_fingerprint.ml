@@ -115,7 +115,7 @@ and fix w i ids bodies =
   array w (fun (x, ty) -> id w x; ml_type w ty) ids;
   array w (ml_ast w) bodies
 
-and branch w (binders, ty, pat, body) =
+and branch w {br_binders = binders; br_type = ty; br_pattern = pat; br_body = body} =
   list w (fun (x, t) -> ml_ident w x; ml_type w t) binders;
   ml_type w ty; pattern w pat; ml_ast w body
 

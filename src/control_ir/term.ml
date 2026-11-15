@@ -271,7 +271,10 @@ let rebuilt ~pointer_fields ~in_place (l : loop) i =
       | Miniml.MLlam (_, _, b) -> go (depth + 1) b
       | Miniml.MLletin (_, _, a, b, _) -> go depth a || go (depth + 1) b
       | Miniml.MLcase (_, s, branches, _) ->
-        go depth s || Array.exists (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
+        go depth s
+        || Array.exists
+             (fun {Miniml.br_binders = ids; br_body = b; _} -> go (depth + List.length ids) b)
+             branches
       | Miniml.(MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _)) ->
         Array.exists (go (depth + Array.length ids)) funs
       | Miniml.MLapp (f, args) -> go depth f || List.exists (go depth) args

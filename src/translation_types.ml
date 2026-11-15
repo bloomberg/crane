@@ -1444,7 +1444,7 @@ let result_cpp_via_receiver env callee_ty args : Cpp_ir.Lowered.Type.t option =
     explicitly. *)
 let iife_void_return env typ pv : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
-    match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
+    match Array.to_list pv with {br_type = rty; _} :: _ -> rty | [] -> typ
   in
   let r = cpp_of_ml env branch_rty in
   if is_cpp_unit_type r || ml_type_is_void_call branch_rty then
@@ -1498,7 +1498,7 @@ let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir
   if not !found then None
   else
     let branch_rty =
-      match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
+      match Array.to_list pv with {br_type = rty; _} :: _ -> rty | [] -> typ
     in
     match cpp_of_ml env branch_rty with Function _ as r -> Some r | _ -> None
 
@@ -1775,7 +1775,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
     | Miniml.Tglob _ -> typ
     | _ ->
       ( try
-          let _, _, pat0, _ = pv.(0) in
+          let {br_pattern = pat0; _} = pv.(0) in
           match pat0 with
           | Pusual (GlobRef.ConstructRef (ip, _))
           | Pcons (GlobRef.ConstructRef (ip, _), _) ->
@@ -2549,7 +2549,7 @@ let body_reads_members_of_binder body =
     | MLcase (_, sc, pv, _) ->
       reads depth sc
       || Array.exists
-           (fun (ids, _, _, br) -> reads (depth + List.length ids) br)
+           (fun {br_binders = ids; br_body = br; _} -> reads (depth + List.length ids) br)
            pv
     | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
       Array.exists (reads (depth + Array.length ids)) funs
@@ -2579,7 +2579,7 @@ let binder_matched_at body =
     | MLletin (_, _, x, b, _) -> walk depth x; walk (depth + 1) b
     | MLcase (_, sc, pv, _) ->
       walk depth sc;
-      Array.iter (fun (ids, _, _, br) -> walk (depth + List.length ids) br) pv
+      Array.iter (fun {br_binders = ids; br_body = br; _} -> walk (depth + List.length ids) br) pv
     | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) -> Array.iter (walk (depth + Array.length ids)) funs
     | e -> Mlutil.ast_iter (walk depth) e
   in
@@ -3425,13 +3425,13 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
   let concrete_match_type : Cpp_ir.Lowered.Type.t =
     if spells_as_any typ || scrut_callee_ret_erased then
       try
-        let _, _, pat0, _ = pv.(0) in
+        let {br_pattern = pat0; _} = pv.(0) in
         let ind_ref = match pat0 with
           | Pusual (GlobRef.ConstructRef (ip, _))
           | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip
           | _ -> raise Not_found
         in
-        let ids0, _, _, _ = pv.(0) in
+        let {br_binders = ids0; _} = pv.(0) in
         let tyargs = List.rev_map (fun (_, ty) ->
           erase_unresolved_tvars (cpp_of_ml env ty)
         ) ids0 in

@@ -630,7 +630,7 @@ let rec walk w ?(position = no_position) lex e =
     (* A branch's result type is written under its binders: a custom match
        declares it as the type its arm returns. *)
     Array.iter
-      (fun (ids, rty, _, body) ->
+      (fun {br_binders = ids; br_type = rty; br_body = body; _} ->
         List.iter (fun (_, ty) -> walk_type w lex ty) ids;
         let lex = push Lexenv.Value (List.rev ids) lex in
         walk_type w lex rty;
@@ -723,7 +723,9 @@ let rec inline_aliases ~n_outer lex e =
     MLcase
       ( ty,
         go lex scrut,
-        Array.map (fun (ids, rty, pat, body) -> (ids, rty, pat, under (List.rev ids) body)) branches,
+        Array.map
+          (fun br -> {br with br_body = under (List.rev br.br_binders) br.br_body})
+          branches,
         occ )
   | MLfixpoint (i, fs, defs, occ) -> MLfixpoint (i, fs, Array.map (under (fix_binders fs)) defs, occ)
   | MLcofixpoint (i, fs, defs, occ) -> MLcofixpoint (i, fs, Array.map (under (fix_binders fs)) defs, occ)

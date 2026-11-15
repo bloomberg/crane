@@ -166,7 +166,7 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
     | MLcons (_, r, _, _) -> do_cons r
     | MLcase (ty, _, v, _) ->
       type_iter_references do_type ty;
-      Array.iter (fun (_, _, p, _) -> patt_iter_references do_cons p) v
+      Array.iter (fun {br_pattern = p; _} -> patt_iter_references do_cons p) v
     | MLrel _
      |MLlam _
      |MLapp _

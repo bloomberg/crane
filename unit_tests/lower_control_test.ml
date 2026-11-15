@@ -38,8 +38,11 @@ let () =
     MLcase
       ( nat,
         fresh_rel 2,
-        [| ([], nat, Pwild, fresh_rel 1);
-           ([(id "m", nat)], nat, Pwild, call u [fresh_rel 1; plus (fresh_rel 2) (fresh_rel 2)]) |], Occurrence.fresh ())
+        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
+           { br_binders = [(id "m", nat)];
+             br_type = nat;
+             br_pattern = Pwild;
+             br_body = call u [fresh_rel 1; plus (fresh_rel 2) (fresh_rel 2)] } |], Occurrence.fresh ())
   in
   ( match lower body with
   | Term.Match {branches = [{body = Return _; _}; {body = Continue c; _}]; _} ->
@@ -69,7 +72,8 @@ let () =
       ( MLcase
           ( nat,
             fresh_rel 2,
-            [| ([], nat, Pwild, fresh_rel 1); ([], nat, Pwild, call u [fresh_rel 2; fresh_rel 1]) |],
+            [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
+               {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = call u [fresh_rel 2; fresh_rel 1]} |],
             Occurrence.fresh () ),
         Occurrence.fresh () )
   in
@@ -88,7 +92,11 @@ let () =
     MLcase
       ( nat,
         fresh_rel 2,
-        [| ([], nat, Pwild, fresh_rel 1); ([(id "m", nat)], nat, Pwild, call (use ()) [fresh_rel 3; fresh_rel 1]) |], Occurrence.fresh ())
+        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
+           { br_binders = [(id "m", nat)];
+             br_type = nat;
+             br_pattern = Pwild;
+             br_body = call (use ()) [fresh_rel 3; fresh_rel 1] } |], Occurrence.fresh ())
   in
   check "a parameter passed on under a binder is kept, one passed the binder is not" (invariant step = [true; false]);
   check "parameters passed on as they are are kept" (invariant (call (use ()) [fresh_rel 2; fresh_rel 1]) = [true; true]);
@@ -141,7 +149,17 @@ let () =
      in a lambda invoked in place, where the call in a branch is an
      ordinary call; the tail call continues. *)
   let inner = use () and tail = use () in
-  let rhs = MLcase (nat, fresh_rel 2, [| ([], nat, Pwild, fresh_rel 1); ([(id "m", nat)], nat, Pwild, call inner [fresh_rel 1; fresh_rel 2]) |], Occurrence.fresh ()) in
+  let rhs =
+    MLcase
+      ( nat,
+        fresh_rel 2,
+        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
+           { br_binders = [(id "m", nat)];
+             br_type = nat;
+             br_pattern = Pwild;
+             br_body = call inner [fresh_rel 1; fresh_rel 2] } |],
+        Occurrence.fresh () )
+  in
   let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
   let t = lower_frames body in
   check "a call ending a branch of a let's match run in a lambda is no turn" (Term.resumed t = []);
@@ -153,7 +171,16 @@ let () =
   Table.add_inductive_kind kn (Core.Inductive.Kind.Record [(Some (r "a"), nat)]);
   let record = Tglob (GlobRef.IndRef (kn, 0), [], []) in
   let inner = use () and tail = use () in
-  let rhs = MLcase (record, fresh_rel 2, [| ([(id "a", nat)], nat, Pwild, call inner [fresh_rel 1; fresh_rel 2]) |], Occurrence.fresh ()) in
+  let rhs =
+    MLcase
+      ( record,
+        fresh_rel 2,
+        [| { br_binders = [(id "a", nat)];
+             br_type = nat;
+             br_pattern = Pwild;
+             br_body = call inner [fresh_rel 1; fresh_rel 2] } |],
+        Occurrence.fresh () )
+  in
   let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
   let t = lower_frames body in
   check "a call ending a branch of a let's record match is resumed after"
@@ -177,13 +204,14 @@ let () =
     MLcase
       ( nat,
         fresh_rel 1,
-        [| ([], nat, Pwild, call back [fresh_rel 4; fresh_rel 3]);
-           ( [(id "j", nat)],
-             nat,
-             Pwild,
-             MLletin
-               (id "y", nat, MLapp (MLrel (3, go_read), [fresh_rel 1]), call back' [fresh_rel 6; fresh_rel 1], Occurrence.fresh ())
-           ) |], Occurrence.fresh ())
+        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = call back [fresh_rel 4; fresh_rel 3]};
+           { br_binders = [(id "j", nat)];
+             br_type = nat;
+             br_pattern = Pwild;
+             br_body =
+               MLletin
+                 (id "y", nat, MLapp (MLrel (3, go_read), [fresh_rel 1]), call back' [fresh_rel 6; fresh_rel 1], Occurrence.fresh ())
+           } |], Occurrence.fresh ())
   in
   let fixpoint = MLfixpoint (0, [|(Id.of_string "go", Tarr (nat, nat))|], [|MLlam (id "k", nat, go_body)|], fix) in
   let t = lower_adopting fix (MLapp (fixpoint, [fresh_rel 1])) in

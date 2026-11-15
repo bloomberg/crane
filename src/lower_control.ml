@@ -81,7 +81,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
           walk (depth + 1) b
         | MLcase (_, s, branches, _) ->
           walk depth s;
-          Array.iter (fun (ids, _, _, b) -> walk (depth + List.length ids) b) branches
+          Array.iter (fun {br_binders = ids; br_body = b; _} -> walk (depth + List.length ids) b) branches
         | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
           Array.iter (walk (depth + Array.length ids)) funs
         | e -> Mlutil.ast_iter (walk depth) e
@@ -170,7 +170,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
           branches =
             Array.to_list
               (Array.map
-                 (fun (ids, result_type, pattern, b) ->
+                 (fun {br_binders = ids; br_type = result_type; br_pattern = pattern; br_body = b} ->
                    {binders = ids; result_type; pattern; body = lower callee (depth + List.length ids) b} )
                  branches ) }
     | MLcoerce (from, into, a, mocc) ->

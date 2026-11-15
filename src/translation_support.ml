@@ -500,7 +500,7 @@ let rec ml_value_is_void_call = function
   | MLcase (_, _, pv, _) ->
     Array.length pv > 0
     && Array.for_all
-         (fun (binds, _, _, body) ->
+         (fun {br_binders = binds; br_body = body; _} ->
            let applies_void_binder = function
              | MLapp (MLrel (k, _), _) when k >= 1 && k <= List.length binds -> (
                match List.nth_opt binds (List.length binds - k) with
@@ -1271,7 +1271,7 @@ let args_may_corecurse ~self ~binder_type ts =
     | MLletin (_, _, a, b, _) -> corec depth a || corec (depth + 1) b
     | MLcase (_, s, brs, _) ->
       corec depth s
-      || Array.exists (fun (ids, _, _, b) -> corec (depth + List.length ids) b) brs
+      || Array.exists (fun {br_binders = ids; br_body = b; _} -> corec (depth + List.length ids) b) brs
     | e ->
       let exception Found in
       (try Mlutil.ast_iter (fun c -> if corec depth c then raise Found) e; false
@@ -1464,7 +1464,7 @@ let rec collect_tvars_ast acc = function
   | MLcase (ty, e, brs, _) ->
     let acc = collect_tvars_ast (collect_tvars acc ty) e in
     Array.fold_left
-      (fun acc (ids, ty, _, body) ->
+      (fun acc {br_binders = ids; br_type = ty; br_body = body; _} ->
         let acc =
           List.fold_left (fun acc (_, t) -> collect_tvars acc t) acc ids
         in
@@ -1502,7 +1502,7 @@ let rec ast_may_throw = function
   | MLcons (_, _, args, _) -> List.exists ast_may_throw args
   | MLcase (_, e, brs, _) ->
     ast_may_throw e
-    || Array.exists (fun (_, _, _, body) -> ast_may_throw body) brs
+    || Array.exists (fun {br_body = body; _} -> ast_may_throw body) brs
   | MLfixpoint (_, _, funs, _) | MLcofixpoint (_, _, funs, _) -> Array.exists ast_may_throw funs
   | MLapp (f, args) -> ast_may_throw f || List.exists ast_may_throw args
   | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> ast_may_throw a
@@ -1775,7 +1775,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
     | MLcase (_, scrut, branches, _) ->
       walk depth scrut;
       Array.iter
-        (fun (ids, _, _, body) ->
+        (fun {br_binders = ids; br_body = body; _} ->
           walk (depth + List.length ids) body )
         branches
     | MLcons (_, _, args, _) -> List.iter (walk depth) args
@@ -1861,7 +1861,7 @@ let escaping_params ~suspended n_params body =
     | MLcase (_, scrut, branches, _) ->
       walk under depth scrut;
       Array.iter
-        (fun (ids, _, _, b) -> walk under (depth + List.length ids) b)
+        (fun {br_binders = ids; br_body = b; _} -> walk under (depth + List.length ids) b)
         branches
     | MLcons (_, _, args, _) | MLtuple args -> List.iter (walk under depth) args
     | MLfixpoint (_, _, bodies, _) | MLcofixpoint (_, _, bodies, _) ->
@@ -2020,7 +2020,7 @@ let closure_feedback_params ~callee bodies =
       | MLcase (_, scrut, branches, _) ->
         walk locals scrut;
         Array.iter
-          (fun (ids, _, _, b) -> walk (List.map (fun _ -> Local_other) ids @ locals) b)
+          (fun {br_binders = ids; br_body = b; _} -> walk (List.map (fun _ -> Local_other) ids @ locals) b)
           branches
       | MLfixpoint (_, _, bodies, _) | MLcofixpoint (_, _, bodies, _) ->
         let locals = List.init (Array.length bodies) (fun _ -> Local_closure) @ locals in
@@ -2346,7 +2346,7 @@ let rec collect_free_rels_set n_bound acc = function
   | MLcase (_, e, brs, _) ->
     let acc = collect_free_rels_set n_bound acc e in
     Array.fold_left
-      (fun acc (ids, _, _, body) ->
+      (fun acc {br_binders = ids; br_body = body; _} ->
         collect_free_rels_set (n_bound + List.length ids) acc body )
       acc
       brs
@@ -2576,7 +2576,7 @@ let rec ml_return_type_is_erased = function
     down. *)
 let ml_projection_field_type = function
   | Miniml.MLcase (Tglob (r, _, _), _, pv, _) when Array.length pv = 1 ->
-    let ids, _, _, proj_body = pv.(0) in
+    let {br_binders = ids; br_body = proj_body; _} = pv.(0) in
     let n = List.length ids in
     let projected = function
       | Miniml.MLrel (i, _)

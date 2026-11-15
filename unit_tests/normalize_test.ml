@@ -48,14 +48,17 @@ let fresh =
 let () =
   let occ = Occurrence.fresh () in
   let branches =
-    [| ([(x "l", tree)], nat, Pusual (r "Node"), fresh_rel 1);
-       ([], nat, Pusual (r "Leaf"), MLletin (x "z", nat, MLapp (MLglob k, [fresh_rel 1]), fresh_rel 1, Occurrence.fresh ())) |]
+    [| {br_binders = [(x "l", tree)]; br_type = nat; br_pattern = Pusual (r "Node"); br_body = fresh_rel 1};
+       { br_binders = [];
+         br_type = nat;
+         br_pattern = Pusual (r "Leaf");
+         br_body = MLletin (x "z", nat, MLapp (MLglob k, [fresh_rel 1]), fresh_rel 1, Occurrence.fresh ()) } |]
   in
   let rest =
     MLletin (tmp 2, nat, MLapp (MLglob h, [fresh_rel 1; fresh_rel 2]), fresh_rel 1, Occurrence.fresh ())
   in
   match Normalize.into_branches ~fresh ~rty:tree (tmp 1, nat, occ) branches rest with
-  | Some [| (_, rty0, _, b0); (_, rty1, _, b1) |] ->
+  | Some [| {br_type = rty0; br_body = b0; _}; {br_type = rty1; br_body = b1; _} |] ->
     check "each branch is of the type of what follows" (rty0 = tree && rty1 = tree);
     ( match b0 with
     | MLletin (id, ty, MLrel (1, _), MLletin (t2, _, MLapp (_, [MLrel (1, _); MLrel (3, _)]), _, _), o) ->
@@ -79,7 +82,7 @@ let () =
    past the first. *)
 let () =
   let rec sized n = if n <= 1 then fresh_rel 1 else MLapp (MLglob h, [sized (n - 2)]) in
-  let branch = ([], nat, Pwild, MLdummy Ktype) in
+  let branch = {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = MLdummy Ktype} in
   let at n arity = Normalize.into_branches ~fresh ~rty:nat (tmp 1, nat, Occurrence.fresh ()) (Array.make arity branch) (sized n) in
   check "a size whose copies fit the budget is copied" (Option.has_some (at 15 3));
   check "one more node per copy is refused" (not (Option.has_some (at 17 3)));

@@ -765,7 +765,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
           (* Single-branch case = record field projection.  The branch
              destructures the record into named bindings and selects one
              via [MLrel].  Translate into [Member (scrutinee, field)]. *)
-          let (binds, _, _, br_body) = branches.(0) in
+          let {br_binders = binds; br_body; _} = branches.(0) in
           let base_ty = ml_expr_to_cpp_type scrutinee in
           ( match br_body with
           | MLrel (j, _) when j >= 1 && j <= List.length binds ->

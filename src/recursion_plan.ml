@@ -200,7 +200,7 @@ let classify ~effects ~callee body =
       walk_under 1 ~tail b
     | MLcase (_, s, branches, _) ->
       walk ~tail:false s;
-      Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) ~tail b) branches
+      Array.iter (fun {br_binders = ids; br_body = b; _} -> walk_under (List.length ids) ~tail b) branches
     | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> walk ~tail a
     | MLlam _ -> ()
     | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->
@@ -276,7 +276,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
       | MLlam (_, _, b) -> under 1 b
       | MLcase (_, s, branches, _) ->
         Array.fold_left
-          (fun n (ids, _, _, b) -> n + under (List.length ids) b)
+          (fun n {br_binders = ids; br_body = b; _} -> n + under (List.length ids) b)
           (calls ~depth s) branches
       | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
         Array.fold_left (fun n b -> n + under (Array.length ids) b) 0 funs
@@ -313,7 +313,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
     match e with
     | MLcase (_, s, branches, _) ->
       general_if (calls ~depth s > 0);
-      Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) b) branches
+      Array.iter (fun {br_binders = ids; br_body = b; _} -> walk_under (List.length ids) b) branches
     | MLletin (_, _, a, b, _) ->
       general_if (calls ~depth a > 0);
       walk_under 1 b
@@ -367,7 +367,7 @@ let rec iter_scoped f lex e =
     iter_scoped f (bind [(x, ty)] lex) b
   | MLcase (_, s, branches, _) ->
     iter_scoped f lex s;
-    Array.iter (fun (ids, _, _, b) -> iter_scoped f (bind (List.rev ids) lex) b) branches
+    Array.iter (fun {br_binders = ids; br_body = b; _} -> iter_scoped f (bind (List.rev ids) lex) b) branches
   | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
     (* The last function of the group is the innermost binder. *)
     let lex = bind (List.rev_map (fun (g, ty) -> (Id g, ty)) (Array.to_list ids)) lex in
@@ -415,7 +415,7 @@ let value_levels ~heads ~depth e =
       go (d + 1) b
     | MLcase (_, s, branches, _) ->
       go d s;
-      Array.iter (fun (ids, _, _, b) -> go (d + List.length ids) b) branches
+      Array.iter (fun {br_binders = ids; br_body = b; _} -> go (d + List.length ids) b) branches
     | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
       Array.iter (go (d + Array.length ids)) funs
     | e -> Mlutil.ast_iter (go d) e
@@ -522,7 +522,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         go ~enters (d + 1) b
       | MLcase (_, s, branches, _) ->
         go ~enters:false d s;
-        Array.iter (fun (ids, _, _, b) -> go ~enters (d + List.length ids) b) branches
+        Array.iter (fun {br_binders = ids; br_body = b; _} -> go ~enters (d + List.length ids) b) branches
       | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> go ~enters d e
       | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
         match List.rev args with
@@ -583,7 +583,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | MLletin (_, _, a, b, _) -> reaches depth a || reaches (depth + 1) b
       | MLcase (_, s, branches, _) ->
         reaches depth s
-        || Array.exists (fun (ids, _, _, b) -> reaches (depth + List.length ids) b) branches
+        || Array.exists (fun br -> reaches (depth + List.length br.br_binders) br.br_body) branches
       | e ->
         let found = ref false in
         Mlutil.ast_iter (fun c -> if reaches depth c then found := true) e;
@@ -604,7 +604,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
           [{target = Entering occ; occurrence = occ}]
         | MLcase (ty, _, branches, _) when match_bound_in_place ty branches ->
           List.concat_map
-            (fun (ids, _, _, b) -> ending (depth + List.length ids) b)
+            (fun {br_binders = ids; br_body = b; _} -> ending (depth + List.length ids) b)
             (Array.to_list branches)
         | MLletin (_, _, _, b, _) -> ending (depth + 1) b
         | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> ending depth b
@@ -650,7 +650,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
           through_closures [] (value_levels ~heads ~depth fix) @ calls_read depth [] args
         | MLcase (ty, _, branches, _) when match_bound_in_place ty branches ->
           List.concat_map
-            (fun (ids, _, _, b) -> arguments_read (depth + List.length ids) b)
+            (fun {br_binders = ids; br_body = b; _} -> arguments_read (depth + List.length ids) b)
             (Array.to_list branches)
         | MLletin (_, _, _, b, _) -> arguments_read (depth + 1) b
         | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> arguments_read depth b
@@ -706,7 +706,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         List.iter (go depth) (action :: rest);
         walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + 1) k
       | _ -> List.iter (go depth) args )
-    | MLcase (ty, s, [|(ids, _, _, b)|], _) when Table.record_fields_of_type ty <> [] -> (
+    | MLcase (ty, s, [|{br_binders = ids; br_body = b; _}|], _) when Table.record_fields_of_type ty <> [] -> (
       go depth s;
       match strip s with
       | MLrel (i, _) ->
@@ -716,7 +716,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | _ -> go (depth + List.length ids) b )
     | MLcase (_, s, branches, _) ->
       go depth s;
-      Array.iter (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
+      Array.iter (fun {br_binders = ids; br_body = b; _} -> go (depth + List.length ids) b) branches
     | MLfixpoint (_, ids, funs, occ) | MLcofixpoint (_, ids, funs, occ) ->
       (* The member [m] is bound at level [depth + m], the last innermost. *)
       let first = depth and n = Array.length ids in
@@ -756,7 +756,7 @@ let flow_fixpoints ~names depth body =
     | MLletin (_, _, a, b, _) -> mentions depth a || mentions (depth + 1) b
     | MLcase (_, s, branches, _) ->
       mentions depth s
-      || Array.exists (fun (ids, _, _, b) -> mentions (depth + List.length ids) b) branches
+      || Array.exists (fun {br_binders = ids; br_body = b; _} -> mentions (depth + List.length ids) b) branches
     | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
       Array.exists (mentions (depth + Array.length ids)) funs
     | e ->
@@ -774,7 +774,7 @@ let flow_fixpoints ~names depth body =
       flow (depth + 1) b
     | MLcase (_, s, branches, _) ->
       flow depth s;
-      Array.iter (fun (ids, _, _, b) -> flow (depth + List.length ids) b) branches
+      Array.iter (fun {br_binders = ids; br_body = b; _} -> flow (depth + List.length ids) b) branches
     | e -> Mlutil.ast_iter (flow depth) e
   in
   flow depth body;
@@ -791,7 +791,7 @@ let rec iter_under f depth e =
     iter_under f (depth + 1) b
   | MLcase (_, s, branches, _) ->
     iter_under f depth s;
-    Array.iter (fun (ids, _, _, b) -> iter_under f (depth + List.length ids) b) branches
+    Array.iter (fun {br_binders = ids; br_body = b; _} -> iter_under f (depth + List.length ids) b) branches
   | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
     Array.iter (iter_under f (depth + Array.length ids)) funs
   | e -> Mlutil.ast_iter (iter_under f depth) e
@@ -979,7 +979,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
       | (Returning | Binding) when enum && not (Table.is_custom_match branches) -> ()
       | Returning | Binding ->
         operand s;
-        Array.iter (fun (_, _, _, b) -> go pos b) branches )
+        Array.iter (fun {br_body = b; _} -> go pos b) branches )
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match (pos, List.rev args) with
       | (Returning | Binding), MLlam (_, _, k) :: action :: rest ->

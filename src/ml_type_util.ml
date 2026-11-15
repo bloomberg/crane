@@ -699,11 +699,11 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
       ( f ty,
         map_types_in_ast f e,
         Array.map
-          (fun (ids, ty, pat, body) ->
-            ( List.map (fun (id, t) -> (id, f t)) ids,
-              f ty,
-              pat,
-              map_types_in_ast f body ) )
+          (fun {br_binders = ids; br_type = ty; br_pattern = pat; br_body = body} ->
+            { br_binders = List.map (fun (id, t) -> (id, f t)) ids;
+              br_type = f ty;
+              br_pattern = pat;
+              br_body = map_types_in_ast f body } )
           brs,
         occ )
   | MLfixpoint (i, ids, funs, occ) ->

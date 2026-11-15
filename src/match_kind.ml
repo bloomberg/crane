@@ -27,7 +27,7 @@ let classify ty branches =
   if Table.is_custom_match branches then Custom
   else
     match branches with
-    | [|(ids, _, _, body)|] when Table.record_fields_of_type ty <> [] ->
+    | [|{br_binders = ids; br_body = body; _}|] when Table.record_fields_of_type ty <> [] ->
       let n = List.length ids in
       let body =
         match (match body with MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> b | b -> b) with

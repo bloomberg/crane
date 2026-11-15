@@ -211,7 +211,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
          when the IIFE deduces [shared_ptr<T>] from other branches. *)
       returns_target depth scrut
       || Array.exists
-           (fun (ids, _, _, branch_body) ->
+           (fun {br_binders = ids; br_body = branch_body; _} ->
              let n_bindings = List.length ids in
              returns_target (depth + n_bindings) branch_body )
            branches
@@ -229,7 +229,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
        but is used for dispatch, not directly returned. *)
     not
       (Array.exists
-         (fun (ids, _, _, branch_body) ->
+         (fun {br_binders = ids; br_body = branch_body; _} ->
            let n_bindings = List.length ids in
            returns_target n_bindings branch_body )
          branches )
@@ -246,7 +246,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
     | MLcase (_, MLrel (scrut_idx, _), branches, _) when scrut_idx = fix_target_db ->
       not
         (Array.exists
-           (fun (ids, _, _, branch_body) ->
+           (fun {br_binders = ids; br_body = branch_body; _} ->
              let n_bindings = List.length ids in
              returns_target (n_funs + fix_lams + n_bindings) branch_body )
            branches )

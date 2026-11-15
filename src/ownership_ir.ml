@@ -129,7 +129,7 @@ let closure_reads d t =
       Array.fold_left (go (d' + Array.length fs)) acc defs
     | MLcase (_, scrut, branches, _) ->
       Array.fold_left
-        (fun acc (ids, _, _, body) -> go (d' + List.length ids) acc body)
+        (fun acc {br_binders = ids; br_body = body; _} -> go (d' + List.length ids) acc body)
         (go d' acc scrut) branches
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> acc
   in
@@ -329,7 +329,7 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
   | MLcase (_, scrut, branches, _) ->
     Array.fold_left
-      (fun acc (ids, _, _, body) ->
+      (fun acc {br_binders = ids; br_body = body; _} ->
         let n = List.length ids in
         let parents' = bind_parts parents d ~n scrut in
         Levels.union acc (leave parents' d (free parents' (d + n) body)) )
@@ -376,7 +376,7 @@ let reads_at_uses ~n_outer ~arms ty a occurrence =
    taking the record apart that returns one field: the record read. *)
 let field_of = function
   | MLapp (MLglob {callee = r; _}, [t]) when Table.is_projection r -> Some t
-  | MLcase (ty, t, [|(ids, _, _, MLrel (k, _))|], _)
+  | MLcase (ty, t, [|{br_binders = ids; br_body = MLrel (k, _); _}|], _)
     when Table.record_fields_of_type ty <> [] && k <= List.length ids ->
     Some t
   | _ -> None
@@ -407,7 +407,7 @@ let scrutinee_consumed ty scrut branches =
   | Record _ -> true
   | Variant ->
     Array.for_all
-      (fun (_, _, pat, _) ->
+      (fun {br_pattern = pat; _} ->
         match pat with
         | Pusual (Names.GlobRef.ConstructRef (ip, _)) | Pcons (Names.GlobRef.ConstructRef (ip, _), _) ->
           Table.is_enum_inductive (Names.GlobRef.IndRef ip)
@@ -452,7 +452,7 @@ let rec ending_calls a =
   match (call_of a, strip a) with
   | Some call, _ -> [call]
   | None, MLcase (ty, _, branches, _) when bound_in_place ty branches ->
-    List.concat_map (fun (_, _, _, b) -> ending_calls b) (Array.to_list branches)
+    List.concat_map (fun {br_body = b; _} -> ending_calls b) (Array.to_list branches)
   | None, MLletin (_, _, _, b, _) -> ending_calls b
   | None, _ -> []
 
@@ -671,7 +671,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
     | MLcase (ty, scrut, branches, _) ->
       let after_scrut =
         Array.fold_left
-          (fun acc (ids, _, _, body) ->
+          (fun acc {br_binders = ids; br_body = body; _} ->
             let n = List.length ids in
             let tail = if bound_in_place ty branches then tail else None in
             let live_body = walk ~consumed ?tail ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
@@ -730,7 +730,7 @@ let fate ?whole p o = fate_in ?whole p.reads o
 (* The inductive a match's branches take apart, if one names a constructor. *)
 let matched_inductive branches =
   Array.fold_left
-    (fun acc (_, _, pat, _) ->
+    (fun acc {br_pattern = pat; _} ->
       match (acc, pat) with
       | None, (Pusual (Names.GlobRef.ConstructRef (ip, _)) | Pcons (Names.GlobRef.ConstructRef (ip, _), _))
         ->
@@ -768,7 +768,7 @@ module Binding = struct
     &&
     match scrutinee_var scrut with
     | Some (i, o) ->
-      let ids, _, _, body = branches.(0) in
+      let {br_binders = ids; br_body = body; _} = branches.(0) in
       owned i o && Escape.nb_occur_match (i + List.length ids) body = 0
     | None -> true
 
@@ -778,7 +778,7 @@ module Binding = struct
     Escape.is_shared_ptr_type ty
     &&
     match a with
-    | MLcase (_, MLrel (k, o), [|(_, _, _, MLrel _)|], _) -> not (owned k o && fate o = Last_use)
+    | MLcase (_, MLrel (k, o), [|{br_body = MLrel _; _}|], _) -> not (owned k o && fate o = Last_use)
     | _ -> false
 
   (* A variant match takes apart a scrutinee the region owns, binding its
@@ -912,7 +912,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
     | MLcase (ty, scrut, branches, _) ->
       own owned d scrut;
       Array.iteri
-        (fun k ((ids, _, pat, body) as branch) ->
+        (fun k ({br_binders = ids; br_pattern = pat; br_body = body; _} as branch) ->
           let enclosing = !handles in
           List.iteri (fun i (_, ty) -> bound (d + i) ty) ids;
           ( match pat with
@@ -953,7 +953,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
       (not (Ml_type_util.ml_type_is_unit ty))
       && worth_moving ty
       && not (Binding.projects_in_place ~owned:(owned_var owned d) ~fate:(fate_in reads) ty a)
-  and branch_owned owned d case ty scrut branches k (ids, _, pat, body) =
+  and branch_owned owned d case ty scrut branches k {br_binders = ids; br_pattern = pat; br_body = body; _} =
     let n = List.length ids in
     let fields p =
       Levels.of_list (List.filteri (fun i _ -> p i (List.nth ids i)) (List.init n (fun i -> d + i)))
@@ -1066,7 +1066,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
     let consumers =
       match branches_at p.root scrutinee with
       | Some brs when branch < Array.length brs ->
-        let _, _, _, body = brs.(branch) in
+        let {br_body = body; _} = brs.(branch) in
         List.filter
           (function MLcons (_, r, _, _) -> Common.globref_equal r constructor | _ -> false)
           (Escape.tail_constructions body)
@@ -1193,7 +1193,13 @@ let turn_term ?(arguments = fun (c : Control_ir.Term.continue_) -> c.arguments) 
         ( scrutinee_type,
           scrutinee,
           Array.of_list
-            (List.map (fun (b : Control_ir.Term.branch) -> (b.binders, b.result_type, b.pattern, go b.body)) branches),
+            (List.map
+               (fun (b : Control_ir.Term.branch) ->
+                 { br_binders = b.binders;
+                   br_type = b.result_type;
+                   br_pattern = b.pattern;
+                   br_body = go b.body })
+               branches),
           Occurrence.fresh () )
     | Return t -> t
     | Continue c -> MLapp (MLdummy Kprop, arguments c)

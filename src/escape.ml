@@ -35,7 +35,7 @@ let nb_occur_match =
     | MLcase (_, scrut, branches, _) ->
       nb k scrut
       + Array.fold_left
-          (fun max_count (ids, _, _, body) ->
+          (fun max_count {br_binders = ids; br_body = body; _} ->
             max max_count (nb (k + List.length ids) body) )
           0
           branches
@@ -79,7 +79,7 @@ let rec occurs k = function
   | MLcase (_, scrut, branches, _) ->
     occurs k scrut
     || Array.exists
-         (fun (ids, _, _, body) -> occurs (k + List.length ids) body)
+         (fun {br_binders = ids; br_body = body; _} -> occurs (k + List.length ids) body)
          branches
   | MLletin (_, _, rhs, cont, _) -> occurs k rhs || occurs (k + 1) cont
   | MLlam (_, _, body) -> occurs (k + 1) body
@@ -206,7 +206,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
       | MLrel (i, _) when i = k -> false
       | _ -> check k false false scrut )
       || Array.exists
-           (fun (ids, _, _, body) ->
+           (fun {br_binders = ids; br_body = body; _} ->
              check (k + List.length ids) in_tail false body )
            branches
     | MLletin (_, _, rhs, cont, _) ->
@@ -270,7 +270,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
 let sub_bindings_escape k body =
   let rec check k = function
     | MLcase (_, MLrel (i, _), branches, _) when i = k ->
-      Array.exists (fun (ids, _, _, branch_body) ->
+      Array.exists (fun {br_binders = ids; br_body = branch_body; _} ->
         let n = List.length ids in
         List.exists (fun j ->
           escapes ~query:Of_sub_binding (j + 1) branch_body
@@ -278,7 +278,7 @@ let sub_bindings_escape k body =
       ) branches
     | MLcase (_, scrut, branches, _) ->
       check k scrut
-      || Array.exists (fun (ids, _, _, body) ->
+      || Array.exists (fun {br_binders = ids; br_body = body; _} ->
            check (k + List.length ids) body
          ) branches
     | MLletin (_, _, rhs, cont, _) ->
@@ -298,7 +298,7 @@ let rec tail_constructions = function
   | MLletin (_, _, _, b, _) -> tail_constructions b
   | MLcons _ as c -> [c]
   | MLcase (_, _, brs, _) ->
-    List.concat_map (fun (_, _, _, b) -> tail_constructions b) (Array.to_list brs)
+    List.concat_map (fun {br_body = b; _} -> tail_constructions b) (Array.to_list brs)
   | _ -> []
 
 (** [find_reuse_candidates pv]: match branches whose body builds an [MLcons]
@@ -320,7 +320,7 @@ let find_reuse_candidates (pv : ml_branch array) =
   in
   let cands = ref [] in
   Array.iteri
-    (fun idx (ids, _rty, pat, body) ->
+    (fun idx {br_binders = ids; br_pattern = pat; br_body = body; _} ->
       match pat with
       | Pusual mr | Pcons (mr, _) ->
         (* One candidate per constructor the arm may rebuild: a nullary one
@@ -370,7 +370,7 @@ let is_reuse_scrutinee k body =
       | _ -> () );
       scan d scrut;
       Array.iter
-        (fun (ids, _, _, b) -> scan (d + List.length ids) b)
+        (fun {br_binders = ids; br_body = b; _} -> scan (d + List.length ids) b)
         branches
     | MLletin (_, _, rhs, cont, _) -> scan d rhs; scan (d + 1) cont
     | MLlam (_, _, b) -> scan (d + 1) b
@@ -395,7 +395,7 @@ let rec matched k = function
      | MLbarrier (MLrel (i, _), _) -> i = k
      | _ -> false)
     || matched k scrut
-    || Array.exists (fun (ids, _, _, b) -> matched (k + List.length ids) b) branches
+    || Array.exists (fun {br_binders = ids; br_body = b; _} -> matched (k + List.length ids) b) branches
   | MLletin (_, _, rhs, cont, _) -> matched k rhs || matched (k + 1) cont
   | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> matched k a
   | _ -> false
@@ -442,7 +442,7 @@ let returns_receiver_field ~this_pos fn =
   List.length params = 1
   &&
   match bare body with
-  | MLcase (_, scrut, [| (ids, _, (Pcons _ | Pusual _), result) |], _) -> (
+  | MLcase (_, scrut, [| {br_binders = ids; br_pattern = Pcons _ | Pusual _; br_body = result; _} |], _) -> (
     (match bare scrut with MLrel (i, _) -> i = receiver | _ -> false)
     && match bare result with MLrel (j, _) -> j <= List.length ids | _ -> false )
   | _ -> false
@@ -462,7 +462,7 @@ let free_rels depth t =
     | MLcase (_, scrut, branches, _) ->
       collect d scrut;
       Array.iter
-        (fun (ids, _, _, body) -> collect (d + List.length ids) body)
+        (fun {br_binders = ids; br_body = body; _} -> collect (d + List.length ids) body)
         branches
     | MLletin (_, _, rhs, cont, _) ->
       collect d rhs;
@@ -513,7 +513,7 @@ let single_use_nargs k t =
     | MLcase (_, scrut, branches, _) ->
       search k scrut;
       Array.iter
-        (fun (ids, _, _, body) -> search (k + List.length ids) body)
+        (fun {br_binders = ids; br_body = body; _} -> search (k + List.length ids) body)
         branches
     | MLlam (_, _, body) -> search (k + 1) body
     | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->

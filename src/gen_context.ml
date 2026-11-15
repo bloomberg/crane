@@ -541,7 +541,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | MLletin (_, _, a, b', _) -> walk_at d a; walk_at (d + 1) b'
     | MLcase (_, sc, pv, _) ->
       walk_at d sc;
-      Array.iter (fun (ids, _, _, br) -> walk_at (d + List.length ids) br) pv
+      Array.iter (fun {br_binders = ids; br_body = br; _} -> walk_at (d + List.length ids) br) pv
     | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) -> Array.iter (walk_at (d + Array.length ids)) funs
     | e' -> Mlutil.ast_iter (walk_at d) e'
   in

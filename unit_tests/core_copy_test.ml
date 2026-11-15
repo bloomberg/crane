@@ -65,7 +65,17 @@ let () =
   check "the copied term itself has every occurrence once" (not (shares copied (MLdummy Ktype)));
   check "a term sharing an occurrence is told apart" (shares body body);
   let matching =
-    MLlam (x "b", bool, MLcase (bool, fresh_rel 1, [|([], nat, Pwild, MLletin (x "k", nat, MLdummy Ktype, fresh_rel 1, Occurrence.fresh ()))|], Occurrence.fresh ()))
+    MLlam
+      ( x "b",
+        bool,
+        MLcase
+          ( bool,
+            fresh_rel 1,
+            [| { br_binders = [];
+                 br_type = nat;
+                 br_pattern = Pwild;
+                 br_body = MLletin (x "k", nat, MLdummy Ktype, fresh_rel 1, Occurrence.fresh ()) } |],
+            Occurrence.fresh () ) )
   in
   check "a copied match is a match of its own" (not (shares matching (Core_copy.copy matching)));
   (* Holes: renamed apart from the original's, the same new one wherever

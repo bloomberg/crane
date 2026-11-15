@@ -2505,7 +2505,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
         let e = extract_maybe_term env sg mle (type_recomp (l, mlt)) br.(i) in
         (* We suppress dummy arguments according to signature. *)
         let ids, e = case_expunge s e in
-        (List.rev ids, mlt, Pusual r, e)
+        {br_binders = List.rev ids; br_type = mlt; br_pattern = Pusual r; br_body = e}
       in
       (* Apply standard case extraction for all inductives. *)
       let typs = List.map type_simpl (Array.to_list metas) in

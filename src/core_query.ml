@@ -208,8 +208,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
     | None -> None )
   | MLcons (ty, _, _, _) -> Some (resolve_tmeta ty)
   | MLcase (_, _, pv, _) when Array.length pv > 0 ->
-    let (_, rty, _, _) = pv.(0) in
-    Some (resolve_tmeta rty)
+    Some (resolve_tmeta pv.(0).br_type)
   | MLletin (_, _, _, body, _) -> infer_ml_body_type body
   | MLlam (_, ty, body) ->
     Option.map (fun rty -> Tarr (ty, rty)) (infer_ml_body_type body)
@@ -882,7 +881,7 @@ let is_typeclass_instance_arg ~lex ml_arg =
        field from a [PreStableCategory] record.
        Look up the record's field types from the case type rather than
        relying on branch binding types (which may be Tunresolved). *)
-    let (binds, _, _, br_body) = branches.(0) in
+    let {br_binders = binds; br_body; _} = branches.(0) in
     ( match br_body with
     | MLrel (j, _) when j >= 1 && j <= List.length binds ->
       let idx = List.length binds - j in

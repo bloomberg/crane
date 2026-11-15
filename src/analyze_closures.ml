@@ -60,7 +60,10 @@ and escapes ~n_outer k t =
       Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies
     | MLletin (_, _, a, b, _) -> go k a || go (k + 1) b
     | MLcase (_, scrut, branches, _) ->
-      go k scrut || Array.exists (fun (ids, _, _, body) -> go (k + List.length ids) body) branches
+      go k scrut
+      || Array.exists
+           (fun {br_binders = ids; br_body = body; _} -> go (k + List.length ids) body)
+           branches
     | MLcons (_, _, args, _) | MLtuple args -> List.exists (go k) args
     | MLparray (elts, def) -> Array.exists (go k) elts || go k def
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false

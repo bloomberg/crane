@@ -163,8 +163,13 @@ and ml_ind = {
     plugin. [MLtuple] is currently not used by the main extraction, as well as
     deep patterns. *)
 
-(** A branch in a pattern match. *)
-and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
+(** A branch in a pattern match: binders, result type, pattern, body. *)
+and ml_branch = {
+  br_binders : (ml_ident * ml_type) list;
+  br_type : ml_type;
+  br_pattern : ml_pattern;
+  br_body : ml_ast;
+}
 
 (** ML abstract syntax tree. *)
 and ml_ast =

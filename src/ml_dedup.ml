@@ -23,7 +23,11 @@ let rec canonical self body =
       ( Tunknown,
         canonical self s,
         Array.map
-          (fun (ids, _, p, b) -> (List.map (fun _ -> (anon, Tunknown)) ids, Tunknown, p, canonical self b))
+          (fun {br_binders = ids; br_pattern = p; br_body = b; _} ->
+            { br_binders = List.map (fun _ -> (anon, Tunknown)) ids;
+              br_type = Tunknown;
+              br_pattern = p;
+              br_body = canonical self b } )
           brs,
         occ )
   | MLfixpoint (i, fns, bodies, occ) ->

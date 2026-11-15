@@ -223,11 +223,15 @@ and ml_ind = {
 
 (** {2 ML terms} *)
 
-(** A single {!MLcase} branch, as [(binders, ret_type, pattern, body)].
-    [binders] are the variables bound by [pattern] paired with their ML types,
-    [ret_type] is the branch's result type, and [body] the term run when
-    [pattern] matches. *)
-and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
+(** A single {!MLcase} branch. [br_binders] are the variables bound by
+    [br_pattern] paired with their ML types, [br_type] is the branch's result
+    type, and [br_body] the term run when [br_pattern] matches. *)
+and ml_branch = {
+  br_binders : (ml_ident * ml_type) list;
+  br_type : ml_type;
+  br_pattern : ml_pattern;
+  br_body : ml_ast;
+}
 
 (** An erased ML term — the computational residue of a PCUIC term. Key
     constructors: [MLrel] a De Bruijn-indexed local variable; [MLapp] an

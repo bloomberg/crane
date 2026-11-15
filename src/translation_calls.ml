@@ -1071,7 +1071,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg : Cpp_ir.Lowered.Type.t opt
     when Array.length branches = 1 ->
     (* Record field projection — e.g., [base_category(PS)].
        Resolve to [Tqualified(scrutinee_type, field_name)]. *)
-    let (binds, _, _, br_body) = branches.(0) in
+    let {br_binders = binds; br_body; _} = branches.(0) in
     Option.map
       (fun base_ty ->
         match br_body with

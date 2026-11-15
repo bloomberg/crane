@@ -238,7 +238,7 @@ let region ~outer body =
        types they are bound at, pinned by nothing: as statements, with a
        dependent parameter's field retyped as erased; in an expression, not
        ([pr_bound_boxed]).  The body is planned at the statement form's. *)
-    | MLcase (ty, scrut, ([|(ids, _, _, body)|] as branches), occ)
+    | MLcase (ty, scrut, ([|{br_binders = ids; br_body = body; _}|] as branches), occ)
       when Match_kind.is_record (Match_kind.classify ty branches) ->
       walk scope scrut;
       let bound = List.map (fun (_, t) -> at_binding t) ids in
@@ -269,7 +269,7 @@ let region ~outer body =
           pattern_binders scope ~typ ~scrut
       in
       Array.iteri
-        (fun bi (ids, _, pat, body) ->
+        (fun bi {br_binders = ids; br_pattern = pat; br_body = body; _} ->
           let inner = push Kpattern (List.rev ids) scope in
           let inner =
             match pat with

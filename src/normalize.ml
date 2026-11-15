@@ -153,7 +153,7 @@ and fix_reaches_call group ~depth ids bodies =
 
 and branch_reaches_call group ~depth branches =
   Array.exists
-    (fun (ids, _, _, b) -> reaches_call group ~depth:(depth + List.length ids) b)
+    (fun {br_binders = ids; br_body = b; _} -> reaches_call group ~depth:(depth + List.length ids) b)
     branches
 
 (* How many nodes copying what follows a bound match into its branches may
@@ -179,7 +179,7 @@ let into_branches ~fresh ~rty (id, ty, occ) branches rest =
   if (Array.length branches - 1) * Mlutil.ast_size rest > duplication_budget then None
   else
     let renamed = function Tmp x when Mlutil.is_temporary_id x -> fresh () | id -> id in
-    let branch i (ids, _, p, b) =
+    let branch i ({br_binders = ids; br_body = b; _} as br) =
       let id, rest, occ =
         if i = 0 then (id, rest, occ)
         else (renamed id, renamed_temporaries fresh (Core_copy.copy rest), Occurrence.fresh ())
@@ -189,7 +189,7 @@ let into_branches ~fresh ~rty (id, ty, occ) branches rest =
         | MLletin (x, tx, a, b, o) -> MLletin (x, tx, a, plug (m + 1) b, o)
         | b -> MLletin (id, ty, b, below_first (n + m) rest, occ)
       in
-      (ids, rty, p, plug 0 b)
+      {br with br_type = rty; br_body = plug 0 b}
     in
     Some (Array.mapi branch branches)
 
@@ -275,7 +275,8 @@ let rec scope ~group ~depth ?expected e =
           ( ty,
             scrut,
             Array.map
-              (fun (ids, rty, p, body) -> (ids, rty, p, inner ~expected:rty (List.length ids) body))
+              (fun ({br_binders = ids; br_type = rty; br_body = body; _} as br) ->
+                {br with br_body = inner ~expected:rty (List.length ids) body} )
               branches,
             occ )
       in
@@ -283,7 +284,7 @@ let rec scope ~group ~depth ?expected e =
          is itself bound: the call ends its branch, so no binding inside the
          branch can take it out of the expression around the match. *)
       if (not tail) && branch_reaches_call group ~depth branches then
-        let _, rty, _, _ = branches.(0) in
+        let {br_type = rty; _} = branches.(0) in
         take e' rty
       else e'
     | MLletin (id, ty, rhs, body, occ) ->
@@ -342,7 +343,9 @@ let rec scope ~group ~depth ?expected e =
                  ( cty,
                    scrut,
                    Array.map
-                     (fun (ids, rty, p, b) -> (ids, rty, p, scope ~group ~depth:(depth + List.length ids) ~expected:rty b))
+                     (fun ({br_binders = ids; br_type = rty; br_body = b; _} as br) ->
+                       { br with
+                         br_body = scope ~group ~depth:(depth + List.length ids) ~expected:rty b } )
                      branches,
                    case_occ ) )
       | _ -> None

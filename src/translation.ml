@@ -1908,7 +1908,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
         let rec leaf_rtys = function
           | MLcase (_, _, pv, _) ->
             List.concat_map
-              (fun (_, rty, _, body) ->
+              (fun {br_type = rty; br_body = body; _} ->
                 match body with
                 | MLcase _ | MLletin _ -> leaf_rtys body
                 | _ -> [rty] )
@@ -3369,7 +3369,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     let iife_ret =
       let branch_rty =
         match Array.to_list pv with
-        | (_, rty, _, _) :: _ -> rty
+        | {br_type = rty; _} :: _ -> rty
         | [] -> typ
       in
       let r = cpp_of_ml env branch_rty in
@@ -3389,7 +3389,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     Cpp_ir.Build.iife (Some iife_ret) stmts
   | MLcase (typ, t, pv, case_occ)
     when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
-    let ids, r, pat, body = pv.(0) in
+    let {br_binders = ids; br_type = r; br_pattern = pat; br_body = body} = pv.(0) in
     let n = List.length ids in
     let is_typeclass, record_body =
       match Core_elaborate.match_kind typ pv case_occ with
@@ -5923,7 +5923,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
         ||
         match f with
         | MLcase (case_ty, _, pv, _) when Array.length pv = 1 ->
-          let (binds, _, _, br_body) = pv.(0) in
+          let {br_binders = binds; br_body; _} = pv.(0) in
           let n_binds = List.length binds in
           let proj_idx =
             match br_body with
@@ -6459,7 +6459,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     in
     let rec gen_enum_branches = function
       | [] -> []
-      | (ids, _rty, p, body) :: cs ->
+      | {br_binders = ids; br_pattern = p; br_body = body; _} :: cs ->
       match p with
       | Pusual r | Pcons (r, _) ->
         let ids', env' =
@@ -6485,9 +6485,11 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     let gen_default_stmts () =
       let wild_br =
         Array.to_list pv
-        |> List.find_opt (fun (_, _, p, _) -> match p with Pwild -> true | _ -> false)
+        |> List.find_opt (fun {br_pattern = p; _} -> match p with Pwild -> true | _ -> false)
       in
-      Option.map (fun (_, _, _, body) -> gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) wild_br
+      Option.map
+        (fun br -> gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) br.br_body)
+        wild_br
     in
     let void_ret = iife_void_return env typ pv in
     let branches, default =
@@ -6584,7 +6586,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
        a wildcard body from [Pwild] / [Prel]. *)
     let rec gen_branches i = function
       | [] -> ([], None)
-      | (ids, rty, p, body) :: cs ->
+      | {br_binders = ids; br_type = rty; br_pattern = p; br_body = body} :: cs ->
       match p with
       | Pusual r | Pcons (r, _) ->
         let saved_env_types = (!tctx).env_types in
@@ -6639,7 +6641,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
            recycling the cell is not merely a type error but unsound.  Require
            the branch to reconstruct exactly the scrutinee's type. *)
         let branch_rebuilds_scrut_ty branch_idx =
-          let _ids, rty, _pat, _body = pv.(branch_idx) in
+          let {br_type = rty; _} = pv.(branch_idx) in
           Ml_type_util.cpp_ty_eq scrut_cpp_ty
             (cpp_of_ml env rty)
         in
@@ -6647,7 +6649,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
            cell, so a body that reads the scrutinee whole -- an association
            list's [add] returning [(k, x) :: s] -- would read what is left. *)
         let body_reads_scrutinee branch_idx =
-          let ids, _, _, body = pv.(branch_idx) in
+          let {br_binders = ids; br_body = body; _} = pv.(branch_idx) in
           match scrut_db with
           | Some db -> Mlutil.ast_occurs (db + List.length ids) body
           | None -> false
@@ -6656,7 +6658,7 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
           if not (branch_rebuilds_scrut_ty branch_idx) then None
           else if body_reads_scrutinee branch_idx then None
           else
-          let ids, _rty, _pat, body = pv.(branch_idx) in
+          let {br_binders = ids; br_body = body; _} = pv.(branch_idx) in
           let ids', env' =
             push_vars'
               (List.rev_map
@@ -7061,7 +7063,7 @@ and gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
      [any_cast] insertion, and template-arg stripping for erased arguments. *)
   let rec gen_cases i = function
     | [] -> []
-    | (ids, rty, p, t) :: cs ->
+    | {br_binders = ids; br_type = rty; br_pattern = p; br_body = t} :: cs ->
     match p with
     | Pusual r | Pcons (r, _) ->
       let ids', env' =
@@ -8668,7 +8670,7 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
     (* Handle MLexn wrapped in a coercion *)
     [Throw msg]
   | MLcase (typ, t, pv, case_occ) when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
-    let ids, _r, _pat, body = pv.(0) in
+    let {br_binders = ids; br_body = body; _} = pv.(0) in
     let n = List.length ids in
     let is_typeclass, is_simple =
       match Core_elaborate.match_kind typ pv case_occ with

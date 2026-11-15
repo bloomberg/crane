@@ -3361,7 +3361,7 @@ let is_boxed_recursive_ind r = Ref.User.Set.mem r !boxed_recursive_inds
     the first branch's constructor. Raises [Not_found] if not possible. *)
 let indref_of_match pv =
   if Array.is_empty pv then raise Not_found;
-  let _, _, pat, _ = pv.(0) in
+  let pat = pv.(0).br_pattern in
   match pat with
   | Pusual (GlobRef.ConstructRef (ip, _)) -> GlobRef.IndRef ip
   | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip

@@ -52,7 +52,9 @@ let reads env e =
     | MLlam (_, _, b) -> go (depth + 1) acc b
     | MLletin (_, _, a, b, _) -> go (depth + 1) (go depth acc a) b
     | MLcase (_, s, branches, _) ->
-      Array.fold_left (fun acc (ids, _, _, b) -> go (depth + List.length ids) acc b) (go depth acc s) branches
+      Array.fold_left
+        (fun acc {br_binders = ids; br_body = b; _} -> go (depth + List.length ids) acc b)
+        (go depth acc s) branches
     | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
       Array.fold_left (go (depth + Array.length ids)) acc funs
     | MLapp (f, args) -> List.fold_left (go depth) acc (f :: args)
@@ -144,7 +146,7 @@ let own_value ty value =
     | MLcons (_, _, args, _) | MLtuple args -> List.for_all closure_free args
     | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> closure_free e
     | MLletin (_, _, a, b, _) -> closure_free a && closure_free b
-    | MLcase (_, s, branches, _) -> closure_free s && Array.for_all (fun (_, _, _, b) -> closure_free b) branches
+    | MLcase (_, s, branches, _) -> closure_free s && Array.for_all (fun br -> closure_free br.br_body) branches
     | MLparray (elements, default) -> Array.for_all closure_free elements && closure_free default
     | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
   in

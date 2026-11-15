@@ -216,7 +216,7 @@ let () =
   let rec_ty = Tglob (GlobRef.IndRef (kn, 0), [], []) and cls_ty = Tglob (GlobRef.IndRef (kc, 0), [], []) in
   let pat = Pusual (GlobRef.ConstructRef ((kn, 0), 1)) in
   let ids = [(id "x", nat); (id "y", Tarr (nat, nat))] in
-  let one body = [|(ids, nat, pat, body)|] in
+  let one body = [|{br_binders = ids; br_type = nat; br_pattern = pat; br_body = body}|] in
   let a = declare "ma" nat in
   let kind = Match_kind.classify rec_ty in
   check "reading the first field is a projection of field 0"
@@ -233,9 +233,11 @@ let () =
     (kind (one (fresh_rel 3)) = Record {typeclass = false; body = Destructure});
   check "any other body destructures" (kind (one a) = Record {typeclass = false; body = Destructure});
   check "a class's dictionary is a record match marked typeclass"
-    (Match_kind.classify cls_ty [|([(id "x", nat)], nat, pat, fresh_rel 1)|]
+    (Match_kind.classify cls_ty
+       [|{br_binders = [(id "x", nat)]; br_type = nat; br_pattern = pat; br_body = fresh_rel 1}|]
     = Record {typeclass = true; body = Projection {field = 0; application = Read}});
-  check "two branches are a variant" (kind [|(ids, nat, pat, a); (ids, nat, pat, a)|] = Variant);
+  let both = {br_binders = ids; br_type = nat; br_pattern = pat; br_body = a} in
+  check "two branches are a variant" (kind [|both; both|] = Variant);
   check "one branch over no record is a variant" (Match_kind.classify nat (one a) = Variant);
   check "a record match is bound in place, a variant is not"
     (Match_kind.bound_in_place (kind (one a)) && Match_kind.is_record (kind (one a))
@@ -268,9 +270,11 @@ let () =
      argument is lifted past the branch's binders. *)
   let ids = [(id "x", nat); (id "y", nat)] in
   let mocc = occ () in
-  let destructure body = MLcase (nat, a, [|(ids, nat, Pwild, body)|], mocc) in
+  let destructure body =
+    MLcase (nat, a, [|{br_binders = ids; br_type = nat; br_pattern = Pwild; br_body = body}|], mocc)
+  in
   ( match Core_normalize.apply (destructure (MLapp (MLglob f, [fresh_rel 2]))) [fresh_rel 1] with
-  | MLcase (_, _, [|(_, _, _, MLapp (MLglob f', [MLrel (2, _); MLrel (3, _)]))|], o) ->
+  | MLcase (_, _, [|{br_body = MLapp (MLglob f', [MLrel (2, _); MLrel (3, _)]); _}|], o) ->
     check "a destructuring's branch takes the argument, lifted"
       (Global_use.callee f' = r "nf" && Occurrence.equal o mocc)
   | _ -> check "applying a one-branch match applies its branch" false );

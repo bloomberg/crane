@@ -77,7 +77,7 @@ let region ~outer ~reads body =
       match Core_elaborate.match_kind typ branches occ with
       | Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
       | Match_kind.Custom ->
-        let rty = match Array.to_list branches with (_, rty, _, _) :: _ -> rty | [] -> typ in
+        let rty = match Array.to_list branches with {br_type = rty; _} :: _ -> rty | [] -> typ in
         let r = cpp_of_ml env rty in
         let ret = if is_cpp_unit_type r || ml_type_is_void_call rty then Some Void else ret in
         Array.iter (branch ~ret lex) branches
@@ -134,7 +134,8 @@ let region ~outer ~reads body =
         let a = Translation_constructors.custom_field ~var env c ~slot r i e in
         with_cpp_return_type a.ca_ret (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
       ts
-  and branch ~ret ?slot lex (ids, _, _, body) = stmts ~ret ?slot (push (List.rev ids) lex) body
+  and branch ~ret ?slot lex {br_binders = ids; br_body = body; _} =
+    stmts ~ret ?slot (push (List.rev ids) lex) body
   (* [stmts ~ret ~slot lex e]: [e] generated as statements whose tail is
      the result, under the return type [ret], into [slot]. *)
   and stmts ~ret ?(slot = empty_slot) lex e =

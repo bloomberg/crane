@@ -180,25 +180,26 @@ and push defs shrunk fuel use args =
     let any = ref false in
     let brs' =
       Array.map
-        (fun (ids, bty, p, b) ->
+        (fun ({br_binders = ids; br_type = bty; br_body = b; _} as br) ->
           let k = List.length ids in
           let lift = List.map (Mlutil.ast_lift k) in
           let call = MLapp (MLglob use, lift before @ [b] @ lift after) in
           let call' = settle defs fuel call in
           if Mlutil.ast_size call' < Mlutil.ast_size call then (
             any := true;
-            (ids, bty, p, call') )
+            {br with br_body = call'} )
           else
             (* Unreduced, the branch's value is still what it was -- the
                result of a match, typed by the branch -- and is passed by
                name, so it keeps that type rather than taking one from the
                parameter it now meets. *)
             let lift1 = List.map (Mlutil.ast_lift (k + 1)) in
-            ( ids, bty, p,
-              MLletin
-                ( Id (Id.of_string "step"), bty, b,
-                  MLapp (MLglob use, lift1 before @ [fresh_rel 1] @ lift1 after),
-                  Occurrence.fresh () ) ) )
+            { br with
+              br_body =
+                MLletin
+                  ( Id (Id.of_string "step"), bty, b,
+                    MLapp (MLglob use, lift1 before @ [fresh_rel 1] @ lift1 after),
+                    Occurrence.fresh () ) } )
         brs
     in
     if !any then (

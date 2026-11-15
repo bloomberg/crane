@@ -24,7 +24,7 @@ let rec iter_annotations f = function
     f ty;
     iter_annotations f e;
     Array.iter
-      (fun (ids, ty, _, body) ->
+      (fun {br_binders = ids; br_type = ty; br_body = body; _} ->
         List.iter (fun (_, t) -> f t) ids;
         f ty;
         iter_annotations f body )
@@ -91,7 +91,7 @@ let rec tail_result_type = function
   | MLapp (f, args) -> Translation_types.ml_app_result_type f args
   | MLcase (_, _, brs, _) ->
     Array.fold_left
-      (fun acc (_, _, _, b) -> match acc with Some _ -> acc | None -> tail_result_type b)
+      (fun acc {br_body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type b)
       None brs
   | _ -> None
 
