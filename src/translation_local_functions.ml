@@ -83,7 +83,7 @@ let local_passing ~closures funs =
   let n_fix = Array.length funs in
   let member f =
     let lam_ids, inner = Mlutil.collect_lams f in
-    let flags = if closures then [] else Escape.infer_owned_params (List.length lam_ids + n_fix) inner in
+    let flags = if closures then [] else Escape.infer_owned_params ~callee_flags:settled_ownership (List.length lam_ids + n_fix) inner in
     (* [lam_ids] is innermost first, and the plan outermost first. *)
     List.rev
       (List.mapi
@@ -482,7 +482,7 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
      parameter by value ([by_value]: its group's plan owns each,
      {!local_passing}) owns each: it holds its own copy. *)
   let n_total = n_lam_params + n_fix_funs in
-  let fix_owned_base = Escape.infer_owned_params n_total f in
+  let fix_owned_base = Escape.infer_owned_params ~callee_flags:settled_ownership n_total f in
   let fix_sub_esc = Escape.infer_sub_bindings_escape_params n_total f in
   let owned_params =
     owned_parameters n_lam_params

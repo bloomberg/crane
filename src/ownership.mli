@@ -14,12 +14,13 @@
     the least fixed point over every function of the structure, starting
     from every parameter borrowed. *)
 
-(** [read_off params body]: of each parameter of [params], innermost first,
-    whether [body], standing under them, owns it, as the flags installed so
-    far say of its callees: it lets the parameter escape
+(** [read_off ~settled params body]: of each parameter of [params],
+    innermost first, whether [body], standing under them, owns it, as
+    [settled] says of its callees' parameters: it lets the parameter escape
     ({!Escape.infer_owned_params}), or the parameter is a pair whose
     components it lets escape, which a pair taken by value moves out. *)
-val read_off : ('name * Core.Type.t) list -> Core.Expr.t -> bool list
+val read_off :
+  settled:(Names.GlobRef.t -> bool list option) -> ('name * Core.Type.t) list -> Core.Expr.t -> bool list
 
 (** The flags of [struc]'s functions, settled across calls: each
     function's, innermost first, for the parameters its head declares,
@@ -30,10 +31,3 @@ val read_off : ('name * Core.Type.t) list -> Core.Expr.t -> bool list
     which is borrowed. *)
 val summarize :
   ?receiver:(Names.GlobRef.t -> int option) -> Core.Program.t -> (Names.GlobRef.t * bool list) list
-
-(** Install a {!summarize}d program's flags for {!Escape} to consult. *)
-val install : (Names.GlobRef.t * bool list) list -> unit
-
-(** The installed flags of a global's parameters, innermost first: [None]
-    for one {!summarize} did not settle. *)
-val settled : Names.GlobRef.t -> bool list option

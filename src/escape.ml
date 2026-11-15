@@ -172,7 +172,7 @@ let is_partial_app head args =
       asks [Of_param].
 
     An [Of_param] query also counts as an escape passing [Core.Expr.Bound_variable k] directly
-    to a parameter its callee owns ({!callee_flags}): the callee keeps it.
+    to a parameter its callee owns ([callee_flags]): the callee keeps it.
 
     [Of_sub_binding] and [Of_param] both look inside a lambda passed directly
     as a call argument instead of treating every capture as an escape, and
@@ -180,15 +180,12 @@ let is_partial_app head args =
     as capturing its arguments. *)
 type escape_query = Conservative | Of_sub_binding | Of_param
 
-(** The settled ownership of each global's parameters, innermost first, as
-    {!Ownership} computed it -- [None] for a global it has not settled. *)
-let callee_flags : (Names.GlobRef.t -> bool list option) ref = ref (fun _ -> None)
-
 (* Whether [args], applied to the global [g], pass [Core.Expr.Bound_variable k] itself to one of
-   [g]'s owned parameters: the callee keeps it, so a borrowed [k] would be
-   copied there, where an owned one is moved. *)
-let passed_to_owned g k args =
-  match !callee_flags g with
+   [g]'s owned parameters, as [callee_flags] settles them: the callee keeps
+   it, so a borrowed [k] would be copied there, where an owned one is
+   moved. *)
+let passed_to_owned callee_flags g k args =
+  match callee_flags g with
   | None -> false
   | Some flags ->
     let n = List.length flags in
@@ -203,7 +200,7 @@ let passed_to_owned g k args =
       (fun (j, a) -> j < n && direct a && List.nth flags (n - 1 - j))
       (List.mapi (fun j a -> (j, a)) args)
 
-let escapes ?(query = Conservative) ?(return_escapes = true) k t =
+let escapes ?(query = Conservative) ?(callee_flags = fun _ -> None) ?(return_escapes = true) k t =
   let refined = query <> Conservative in
   let cons_escapes = query <> Of_param in
   let rec check k in_tail in_fn_arg = function
@@ -224,7 +221,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
       else
         occurs (k + 1) body
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _};
-                       arguments = args} when query = Of_param && passed_to_owned g k args -> true
+                       arguments = args} when query = Of_param && passed_to_owned callee_flags g k args -> true
     | Core.Expr.Apply {callee = head; arguments = args} ->
       check k false false head
       || List.exists (check k false (refined)) args
@@ -428,11 +425,11 @@ let rec matched k = function
    call that passes it a part of a matched value, which is how a structural
    recursion calls itself, would copy that part in: at every level, against
    one copy at the end. *)
-let returned_or_matched k body =
+let returned_or_matched ~callee_flags k body =
   matched k body
-  && not (escapes ~query:Of_param ~return_escapes:false k body)
+  && not (escapes ~query:Of_param ~callee_flags ~return_escapes:false k body)
 
-let infer_owned_params n_params body =
+let infer_owned_params ~callee_flags n_params body =
   (* Reuse and loopify both rewrite tail-recursive-modulo-cons matches (the
      [Cons x (rec xs)] shape).  Only one of them may rewrite a given match --
      loopify owns the shape wherever it applies -- but BOTH need the scrutinee
@@ -444,8 +441,8 @@ let infer_owned_params n_params body =
      [Table.reuse_loopify_ok]. *)
   List.init n_params (fun i ->
     let k = i + 1 in
-    ( escapes ~query:Of_param k body
-      && not (returned_or_matched k body) )
+    ( escapes ~query:Of_param ~callee_flags k body
+      && not (returned_or_matched ~callee_flags k body) )
     || (reuse () && is_reuse_scrutinee k body))
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]

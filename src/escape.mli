@@ -42,7 +42,9 @@ type escape_query = Conservative | Of_sub_binding | Of_param
     its scope). Escaping positions: constructor args (except for an
     [Of_param] query), lambda captures, tail position, fixpoint captures,
     partial-application captures, and, for an [Of_param] query, an argument
-    the callee owns ({!callee_flags}).
+    the callee owns: [callee_flags g] is the ownership of the global [g]'s
+    parameters, innermost first, [None] for one nothing settled (the
+    default, for every global).
 
     @param query defaults to [Conservative]
     @param return_escapes whether being returned counts (default [true])
@@ -50,13 +52,12 @@ type escape_query = Conservative | Of_sub_binding | Of_param
     @param t the Core term to analyse
     @return [true] if the value bound at index [k] may outlive its scope *)
 val escapes :
-  ?query:escape_query -> ?return_escapes:bool -> int -> Core.Expr.t -> bool
-
-(** The settled ownership of each global's parameters, innermost first --
-    [None] for a global not settled.  {!Ownership} installs it; an
-    [Of_param] query reads a parameter passed directly to an owned parameter
-    of a callee as owned, since the callee keeps it. *)
-val callee_flags : (Names.GlobRef.t -> bool list option) ref
+  ?query:escape_query ->
+  ?callee_flags:(Names.GlobRef.t -> bool list option) ->
+  ?return_escapes:bool ->
+  int ->
+  Core.Expr.t ->
+  bool
 
 (** [partial_app_remaining head args] returns [Some remaining] when
     [Core.Expr.Apply(head, args)] is a partial application with [remaining] args still
@@ -95,12 +96,15 @@ val single_use_nargs : int -> Core.Expr.t -> int
 
 (** {2 Phase 1: owned/borrowed parameter inference} *)
 
-(** [infer_owned_params n body] returns a bool list of length [n]. Element [i]
+(** [infer_owned_params ~callee_flags n body] returns a bool list of length [n]. Element [i]
     is true when the parameter at de Bruijn index [i+1] needs ownership (pass by
     value), false when it can be borrowed (pass by const reference).  A
     parameter that escapes is owned unless it is only matched on and returned
     unchanged; a parameter matched with a reuse candidate arm
-    ({!is_reuse_scrutinee}) is owned when reuse is on.
+    ({!is_reuse_scrutinee}) is owned when reuse is on.  A parameter passed
+    directly to an owned parameter of a callee escapes, since the callee
+    keeps it: [callee_flags g] is the ownership of the global [g]'s
+    parameters, innermost first, settled across calls ({!Ownership}).
 
     De Bruijn indexing: 1 = innermost/last parameter. Output order: element 0 →
     de Bruijn 1, element 1 → de Bruijn 2, etc.
@@ -110,7 +114,8 @@ val single_use_nargs : int -> Core.Expr.t -> int
                 indices [1..n]
     @return list of length [n] where element [i] is [true] iff parameter
             [i+1] (de Bruijn) must be passed by value *)
-val infer_owned_params : int -> Core.Expr.t -> bool list
+val infer_owned_params :
+  callee_flags:(Names.GlobRef.t -> bool list option) -> int -> Core.Expr.t -> bool list
 
 (** [infer_sub_bindings_escape_params n body] returns a bool list of length [n]
     where element [i] is [true] when the parameter at de Bruijn index [i+1] is

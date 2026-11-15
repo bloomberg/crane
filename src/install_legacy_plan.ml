@@ -18,7 +18,6 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
     plan.inductive_kinds
 
 let install_program (facts : Program_facts.program) =
-  Ownership.install facts.parameter_ownership;
   Recursion_plan.install facts.recursion;
   Lower_control.install facts.control
 

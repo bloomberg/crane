@@ -3,15 +3,13 @@
 
 (** Parameter ownership settled across calls.  See [ownership.mli]. *)
 
-let flags : bool list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.Map.empty
-
-let () = Escape.callee_flags := fun r -> Ref.User.Map.find_opt r !flags
-
-let read_off params body =
+let read_off ~settled params body =
   let n = List.length params in
   List.map2
     (fun (escapes, parts_escape) (_, ty) -> escapes || (parts_escape && Ml_type_util.is_prod_ml_type ty))
-    (List.combine (Escape.infer_owned_params n body) (Escape.infer_sub_bindings_escape_params n body))
+    (List.combine
+       (Escape.infer_owned_params ~callee_flags:settled n body)
+       (Escape.infer_sub_bindings_escape_params n body))
     params
 
 (* Every function [struc] defines, in a functor or not, with its body and
@@ -41,17 +39,17 @@ let summarize ?(receiver = fun _ -> None) struc =
     let n = List.length flags in
     List.mapi (fun i owned -> owned && receiver r <> Some (n - 1 - i)) flags
   in
-  (* The fixed point is computed apart from the installed flags, which
-     {!Escape} reads in the meantime as each round leaves them. *)
-  let installed = !flags in
-  flags := Ref.User.Map.empty;
+  (* Each round reads its callees' flags as the rounds before it left
+     them. *)
+  let flags = ref Ref.User.Map.empty in
+  let settled r = Ref.User.Map.find_opt r !flags in
   (* Each round can only turn borrowed parameters owned, so it stops. *)
   let rec round () =
     let changed = ref false in
     List.iter
       (fun (r, b, ty) ->
         let params, body = Ml_type_util.declared_parameters ty b in
-        let f = unless_receiver r (read_off params body) in
+        let f = unless_receiver r (read_off ~settled params body) in
         if Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;
           flags := Ref.User.Map.add r f !flags ))
@@ -59,12 +57,5 @@ let summarize ?(receiver = fun _ -> None) struc =
     if !changed then round ()
   in
   round ();
-  let summary = Ref.User.Map.bindings !flags in
-  flags := installed;
-  summary
-
-let settled r = Ref.User.Map.find_opt r !flags
-
-let install summary =
-  flags := List.fold_left (fun m (r, f) -> Ref.User.Map.add r f m) Ref.User.Map.empty summary
+  Ref.User.Map.bindings !flags
 

@@ -2484,8 +2484,8 @@ let lifted_free_vars ~class_temps env free_indices =
     the global [owner] where they cover [params], and otherwise -- a global
     nothing settled, a lambda -- what its own body reads. *)
 let infer_owned_flags ?owner body params =
-  let read_off_body () = Ownership.read_off params body in
-  match Option.bind owner Ownership.settled with
+  let read_off_body () = Ownership.read_off ~settled:settled_ownership params body in
+  match Option.bind owner settled_ownership with
   | Some settled when List.length settled = List.length params ->
     if Probe.checking () && settled <> read_off_body () then
       Probe.violation "ownership summary"

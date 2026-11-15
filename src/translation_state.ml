@@ -124,17 +124,23 @@ and generation_site =
 (** What the analysis of the whole program decided that lowering reads
     ({!Program_facts.analyze_program}), for every unit of the extraction:
     the definitions whose body only throws, which are spelled as
-    zero-argument functions ({!Translation_support.thunk_reason}), and the
-    parameters of a member of a recursive group a partner's call passes a
-    closure for ({!Translation_support.partner_closure_params}). *)
+    zero-argument functions ({!Translation_support.thunk_reason}), which
+    parameters of each function it owns, innermost first, settled across
+    calls ({!Ownership.summarize}), and the parameters of a member of a
+    recursive group a partner's call passes a closure for
+    ({!Translation_support.partner_closure_params}). *)
 type program_facts = {
   throwing_values : Ref.Can.Set.t;
+  parameter_ownership : bool list Ref.User.Map.t;
   partner_closure_params : int list Ref.User.Map.t;
 }
 
 (** The facts of a program nothing was analysed for: lowering outside an
     extraction's units, or before its program is frozen. *)
-let no_program_facts = {throwing_values = Ref.Can.Set.empty; partner_closure_params = Ref.User.Map.empty}
+let no_program_facts =
+  { throwing_values = Ref.Can.Set.empty;
+    parameter_ownership = Ref.User.Map.empty;
+    partner_closure_params = Ref.User.Map.empty }
 
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
@@ -460,6 +466,11 @@ let with_program_facts (facts : program_facts) (f : unit -> 'a) : 'a =
 (** Whether the analysis of the program found that the body of the
     definition [r] only throws ({!program_facts}). *)
 let is_throwing_value r = Ref.Can.Set.mem r (!tctx).input.program.throwing_values
+
+(** The ownership of the global [r]'s parameters, innermost first, settled
+    across calls ({!program_facts}): [None] for one the analysis did not
+    settle. *)
+let settled_ownership r = Ref.User.Map.find_opt r (!tctx).input.program.parameter_ownership
 
 (** [generating_at site f] runs [f] with generation at [site]
     ({!input.generating}); the entries below are the only callers. *)
