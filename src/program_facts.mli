@@ -43,7 +43,9 @@ type program = {
       (** The control the recursion plan lowers to ({!Control_ir}). *)
 }
 
-(** [analyze_program p] analyses the normalized program [p]; it writes nothing. *)
+(** [analyze_program p] analyses the normalized program [p].  Its one write
+    is the enum inductives {!Method_registry.create} registers
+    ({!Table.add_enum_inductive}), a property of their declarations. *)
 val analyze_program : Core_phase.normalized Core_phase.program -> program
 
 (** Whether two analyses of a unit observed the same facts: under

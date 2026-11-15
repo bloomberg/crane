@@ -14287,3 +14287,14 @@
   (alias runtest)
   (deps reuse_per_function_off.t.exe)
   (action (run ./reuse_per_function_off.t.exe))))
+
+(subdir sep_ext_method_name_clash
+ (rule
+  (targets sep_ext_method_name_clash.t.exe)
+  (deps SepExtMethodNameClash.vo sep_ext_method_name_clash.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_method_name_clash.t.exe sep_ext_method_name_clash.t.cpp SepExtMethodNameClash.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_method_name_clash.t.exe)
+  (action (run ./sep_ext_method_name_clash.t.exe))))

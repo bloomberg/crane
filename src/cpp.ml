@@ -1413,6 +1413,9 @@ let prepare_structure s =
       | Some reg -> reg
       | None ->
         method_registry_of s );
+  (* Every unit's renaming tables start empty, a registry built once for the
+     whole program ahead of separately extracted units among them. *)
+  Method_registry.reserve_names (get_method_registry ());
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
   (* Whether an inductive is a flat struct, and whether a type is an axiom,
      are properties of their declarations; every reader, before or after the

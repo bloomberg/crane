@@ -462,9 +462,6 @@ let register_into
     (epon_ref : GlobRef.t)
     (this_pos : int)
     ~(ind_tvar_positions : int list) =
-  (* The function is emitted inside its inductive's struct, so the naming layer
-     has to keep its C++ name clear of the members that struct generates. *)
-  Common.reserve_methodified ~ind:epon_ref func_ref;
   RefTbl.replace
     tbl
     func_ref
@@ -1113,6 +1110,13 @@ let compute_returns_any
     tbl
 
 (** {2 Public API} *)
+
+(** Tell the naming layer which functions [reg] emits inside their
+    inductive's struct, whose C++ names must keep clear of the members that
+    struct generates ({!Common.reserve_methodified}). *)
+let reserve_names (reg : t) =
+  RefTbl.iter (fun func_ref (info : method_info) -> Common.reserve_methodified ~ind:info.epon_ref func_ref) reg.methods
+
 
 (** Build the complete method registry from the full extraction structure.
 
