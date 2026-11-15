@@ -1548,8 +1548,7 @@ let unit_pass_names = Pipeline_trace.names (unit_passes ~namespace:None)
 
 (** The steps of {!plan_representation}, in order. *)
 let template_kinds = "template_kinds"
-let install_template_kinds = "install_template_kinds"
-let represent_pass_names = [template_kinds; install_template_kinds]
+let represent_pass_names = [template_kinds]
 
 (** The steps run on the unit's Core once its target is planned, in order. *)
 let plan_foreign_callables = "plan_foreign_callables"
@@ -1572,9 +1571,9 @@ let elaborate_unit elaborations =
        (Core_elaborate.referenced elaborations) )
 
 (** Decide the kinds of the template parameters of the unit's inductives and
-    type aliases, into [plan], and install them for the readers not yet
-    converted.  They are decided from the inductive kinds {!analyze_and_plan}
-    installed, so after it.  Deciding records each as it goes (see
+    type aliases, into [plan].  They are decided from the inductive kinds
+    {!analyze_and_plan} installed, so after it.  Deciding records each as it
+    goes, which is what the readers of {!Tparam_kinds} take (see
     {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
     second time, against the first's, and the two must agree. *)
 let plan_representation plan struc =
@@ -1585,8 +1584,6 @@ let plan_representation plan struc =
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
     && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Cpp_ind.template_kinds struc)))
   then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.");
-  Pipeline_trace.event "represent" install_template_kinds;
-  Install_legacy_plan.install_template_kinds plan;
   plan
 
 (** Whether the unit [struc] declares a reference: an inductive of its, a

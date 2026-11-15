@@ -3,8 +3,8 @@
 
 (** What the template parameters of a generated inductive or alias are, by
     0-based position in its C++ template parameter list.  Planned before
-    anything is rendered ({!Target_plan.template_kinds}), installed by
-    {!Install_legacy_plan.install_template_kinds}, and recorded again when
+    anything is rendered ({!Target_plan.template_kinds}), recorded as each
+    is decided ({!Cpp_ind.template_kinds}), and recorded again when
     the declaration's header is generated
     ({!Plan_templates.hkt_templates}, [Cpp_ind]); emptied by
     [Table.reset_tables]. *)

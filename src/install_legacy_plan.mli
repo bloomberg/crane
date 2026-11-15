@@ -12,10 +12,6 @@
     still take the kind from. *)
 val install : Core.Program.t -> Program_facts.t -> Target_plan.t -> unit
 
-(** [install_template_kinds plan] records the template-parameter kinds [plan]
-    decided, which the inductive kinds {!install} wrote went into deciding. *)
-val install_template_kinds : Target_plan.t -> unit
-
 (** [install_modules modules] records the layout, as
     {!Target_plan.modules} holds it. *)
 val install_modules : Module_plan.t -> unit
@@ -66,8 +62,9 @@ val install_callables :
 val install_instance_methods : (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list -> unit
 
 (** Under [CRANE_CHECK_IR], fail unless every table {!install},
-    {!install_template_kinds}, {!install_modules}, {!install_callables} and
-    {!install_instance_methods} filled still answers what the values say,
+    {!install_modules}, {!install_callables} and
+    {!install_instance_methods} filled, and the template-parameter kinds
+    deciding recorded ({!Tparam_kinds}), still answers what the values say,
     the decided module, global and constructor field names among them; and
     unless the promoted inductives and nested structs rendering printed are
     exactly the planned ones.  Run after the unit is rendered.  A census sees
