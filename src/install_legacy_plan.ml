@@ -20,7 +20,7 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
 let install_program (facts : Program_facts.program) =
   List.iter Table.add_throwing_value facts.throwing_values;
   Ownership.install facts.parameter_ownership;
-  Translation.install_partner_closure_params facts.partner_closure_params;
+  Translation_support.install_partner_closure_params facts.partner_closure_params;
   Recursion_plan.install facts.recursion;
   Lower_control.install facts.control
 

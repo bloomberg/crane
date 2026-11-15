@@ -1260,7 +1260,7 @@ and extract_really_ind env kn mib =
         (* Populate constructor argument names from kernel binder names only.
            [mind_user_lc] has anonymous binders when constructors use [->]
            syntax.  [Arguments_renaming] names are applied later in
-           [Translation.compute_and_register_field_names] for struct field
+           [Translation_support.compute_and_register_field_names] for struct field
            declarations, but NOT for structured-binding variable names (to
            avoid variable-shadowing in nested matches). *)
         let mip_i = mib.mind_packets.(i) in

@@ -389,7 +389,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
               | In_namespace (_, t) | Const t -> norm t
               | Any | Obligation Opaque_type | Variable (Index (_, None)) -> Any
               | Variable (Index (_, Some n) | Named n)
-                when not (List.exists (Id.equal n) (!tctx).current_type_vars) ->
+                when not (List.exists (Id.equal n) (!tctx).lexical.current_type_vars) ->
                 Any
               | t -> t )
             t
@@ -1840,7 +1840,7 @@ let lower_call ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (
   let lex = current_lexenv () in
   let inst =
     Core_elaborate.instantiation ~lex ~expected_ml:slot.expected_ml_ty
-      ~stated_ml:slot.stated_ml_ty ~caller ~scope:(!tctx).current_type_vars use args
+      ~stated_ml:slot.stated_ml_ty ~caller ~scope:(!tctx).lexical.current_type_vars use args
   in
   let plan = plan_call ~lex ?expected_ty env inst in
   call_type_args ~caller ~lex ?expected_ty env id plan

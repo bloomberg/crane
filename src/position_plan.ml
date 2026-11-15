@@ -17,7 +17,7 @@ let push ids lex =
     lex
 
 (* The return type a let's right-hand side is generated under
-   ({!Translation.gen_stmts}' [Core.Expr.Let]): the binder's own type where it
+   ({!Translation_stmts.gen_stmts}' [Core.Expr.Let]): the binder's own type where it
    says one, else the one in force. *)
 let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
   let c = cpp_of_ml env t in
@@ -31,7 +31,7 @@ let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
 let named_env (lex : Lexenv.t) : Common.env = (List.map (fun (b : Lexenv.binder) -> b.eb_id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
 
 (* The slot a coercion's inner term is generated in
-   ({!Translation.gen_expr}'s [Core.Expr.Coerce]): boxed where it crosses from a
+   ({!Translation_expr.gen_crossing}): boxed where it crosses from a
    type that is not a box into one that is, unless the position states a
    type that is not one. *)
 let coerced_slot env ~(pos : Cpp_ir.Lowered.Type.t option) slot ~from ~into =
@@ -95,7 +95,7 @@ let region ~outer ~reads body =
     (* A lambda's body is a region of its own, planned where it begins. *)
     | Core.Expr.Lambda _ -> ()
     | e -> Mlutil.ast_iter (expr ~pos:None ~ret lex) e
-  (* A value a constructor stores ({!Translation.gen_stored_value}). *)
+  (* A value a constructor stores ({!Translation_construct.gen_stored_value}). *)
   and stored ~pos ~ret ~slot lex e =
     match e with
     | Core.Expr.Erased_value _ -> ()
@@ -190,7 +190,7 @@ let region ~outer ~reads body =
         let rec go i = function [] -> None | r :: rest -> if r == a then Some i else go (i + 1) rest in
         go 0 inst.call.regular
       in
-      with_promoted_var_map (plan.cp_instance_promoted @ (!tctx).promoted_var_map) @@ fun () ->
+      with_promoted_var_map (plan.cp_instance_promoted @ (!tctx).lexical.promoted_var_map) @@ fun () ->
       List.iter
         (fun a ->
           match regular_index a with

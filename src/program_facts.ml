@@ -29,7 +29,7 @@ let analyze_program normalized =
   { throwing_values = Structure_analysis.throwing_values struc;
     parameter_ownership = Ownership.summarize ~receiver struc;
     recursive_groups;
-    partner_closure_params = Translation.partner_closure_params recursive_groups struc;
+    partner_closure_params = Translation_support.partner_closure_params recursive_groups struc;
     recursion;
     control =
       Lower_control.lower

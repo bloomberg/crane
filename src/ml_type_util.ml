@@ -1467,7 +1467,7 @@ let primary_tvar_indices (dom : Cpp_ir.Lowered.Type.t list) cod =
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
-    {!Translation.cpp_ir_of_ml_type} but may be needed in function bodies
+    {!Translation_types.cpp_ir_of_ml_type} but may be needed in function bodies
     for [any_cast] when matching on type-indexed inductives with
     wholesale-erased fields.
 

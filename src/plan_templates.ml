@@ -733,7 +733,7 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!Translation.convert_ml_type_to_cpp_type}).
+    pipeline (see {!Translation_types.cpp_ir_of_ml_type}).
 
     @param force_required  Set of tvar indices that must be required (plain
       [typename T]) even if they don't appear in the C++ function type.

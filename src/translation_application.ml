@@ -1,0 +1,2165 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Applications: a call of a global or a local, its arguments generated
+    against the callee's parameters, a class field projected through an
+    instance, and partial applications eta-expanded into closures
+    ({!eta_fun}). *)
+
+open Common
+open Names
+open Table
+open Util
+open Translation_state
+open Ml_type_util
+open Core_query
+open Translation_support
+open Translation_types
+open Translation_calls
+open Translation_knot
+open Translation_lambda
+
+(* The types of the members of the local fixpoint groups being generated
+   that recurse at a ground instance ({!Table.is_erased_fix_group}), as the
+   environment binds them: a call of one is written at its own instance, and
+   its arguments are adapted to the erased parameters. *)
+let erased_member_types : Core.Type.t list ref = State.cell State.Unit []
+
+(* Record the members [ids] of the local fixpoint [occ] -- and the type
+   [let_ty] of the name it is bound to, if any -- in {!erased_member_types}
+   where the group is one.  Kept by identity, so a type recorded for one
+   group is no other binding's. *)
+let register_erased_members ?let_ty occ ids =
+  if Table.is_erased_fix_group occ then
+    erased_member_types :=
+      (match let_ty with Some t -> [t] | None -> []) @ List.map snd (Array.to_list ids) @ !erased_member_types
+
+(* Whether the variable [i] is a member of a group {!erased_member_types}
+   knows, its type erasing a domain. *)
+let erased_member i =
+  match get_env_type_opt i with
+  | Some (Core.Type.Arrow _ as t) ->
+    List.memq t !erased_member_types && List.exists Mlutil.has_unknown (ml_domains t)
+  | _ -> false
+
+(* [expr], the argument [a] to a parameter of type [param_ty] that
+   erased a domain ({!erased_member_types}), adapted to it -- unless it is
+   a variable already of that type, which an adapter would only wrap again at
+   every call that passes it on. *)
+let adapt_to_erased_param env param_ty a expr =
+  match a with
+  | Core.Expr.Bound_variable {index = j; _}
+    when (match get_env_type_opt j with
+          | Some t -> cpp_of_ml env t = cpp_of_ml env param_ty
+          | None -> false) -> expr
+  | _ -> erase_fn_arg_for_param env param_ty a expr
+
+(* [stmts] with the declaration of the local [id] standing for the Core
+   binder [b]. *)
+let declaring id b stmts =
+  List.map
+    (fun (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t ->
+      match s with
+      | Bind_variable (x, Declare (ty, None), e) when Id.equal x id -> Bind_variable (x, Declare (ty, b), e)
+      | s -> s )
+    stmts
+
+(* [made_of occurrence e] is the call [e] recording the Core call it is
+   made of; any other expression unchanged. *)
+let made_of occurrence : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t = function
+  | Call (cs, f, args) -> Call ({cs with occurrence = Some occurrence}, f, args)
+  | e -> e
+
+(* [erased_lambda l ~params ~ret ~body] is the lambda [l] rewritten to
+   take [params] (source order) and return [ret], with [body] doing whatever
+   casting back the erasure of its parameters now needs, and with no template
+   parameters of its own: a polymorphic function object cannot stand where an
+   erased slot deduces its type. *)
+let erased_lambda (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) ~params ~ret ~body : Cpp_ir.Lowered.Expr.t =
+  Lambda {l with type_params = []; params; return_type = ret; body}
+
+(* The instance parameter, the class and its one method, where the variable
+   [i], read at [occ] at the head of an application, is a singleton class's
+   dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
+   {!singleton_dictionary} is the traversal's own reading, checked against
+   it. *)
+let singleton_call env i occ =
+  let live () = Option.map (fun (_, c, m) -> (c, m)) (singleton_dictionary env (Core.Expr.Bound_variable {index = i;
+                                                                                                          occurrence = occ})) in
+  match Core_elaborate.singleton_dictionary_call ~live occ with
+  | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
+  | None -> None
+
+(* Call class field [x] as a static member of the instance struct [inst].
+
+   Rocq hands a projection over already applied where the instance is
+   concrete, so the term is an ordinary application and not the single-branch
+   match a projection through an instance {e variable} extracts to; the C++ is
+   the same either way. *)
+let project_through_instance env (use : Core.Global_use.t) args (projection : Elaborated_call.static_projection) : Cpp_ir.Lowered.Expr.t =
+  let inst = List.nth args projection.instance in
+  let x = use.callee and tys = Mlutil.written_type_args use in
+  let operands =
+    List.filter
+      (fun a ->
+        match a with
+        | Core.Expr.Erased_value _ -> false
+        | _ -> not (is_typeclass_instance_arg ~lex:(current_lexenv ()) a) )
+      args
+  in
+  (* The instance declares each method as a member template over the method's
+     own type variables -- the class's parameters are the instance, not
+     parameters of its methods -- so the call's type arguments minus the
+     class's are the method's.  The class's stand in front of the dictionary
+     in the projection's type, erased.  They are given explicitly rather than
+     deduced: a method declares its continuation as a [std::function], which
+     a closure does not deduce, and [ret] mentions its variable only in its
+     result. *)
+  let targs =
+    let by_var = List.map (fun (v, t) -> (v, cpp_of_ml env t)) (Mlutil.Var_types.bindings tys) in
+    Template_application.to_list
+      (Template_application.plan
+         (Callable_abi.projection projection_abi x)
+         ~instance:(fun _ -> None)
+         ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) )
+  in
+  (* What each operand is written into.  [tys] leads with the carrier, which
+     is how the field's own type numbers the class parameter, so the single
+     substitution that instantiates the method also resolves [m A] -- and
+     without it an operand that spells its type for the first time, a match
+     whose branches have to agree on one return type, is built at whatever
+     the enclosing declaration returns.  An argument is not a tail position,
+     so that is never the right answer; see {!position_cpp_ty}.
+
+     Only a suffix as long as the operand list is safe to read. *)
+  let operand_ml_tys =
+    let doms = projection.domains in
+    let extra = List.length doms - List.length operands in
+    if extra >= 0 then List.filteri (fun i _ -> i >= extra) doms else []
+  in
+  (* The instance is a type: an applied one -- [TFunctor_option
+     TFunctor_box] -- is spelled as the template argument it would be. *)
+  let inst_expr : Cpp_ir.Lowered.Expr.t =
+    match ml_arg_to_template_type env inst with
+    | Some t -> Type_name t
+    | None -> gen_expr env inst
+  in
+  Cpp_ir.Build.call
+    (Scope (inst_expr, Common.id_of_global Term x, targs))
+    (List.mapi
+       (fun i a ->
+         let expected = param_expected_cpp_ty env operand_ml_tys i in
+         let slot =
+           {empty_slot with expected_ml_ty = List.nth_opt operand_ml_tys i}
+         in
+         with_cpp_return_type expected (fun () ->
+             gen_expr ?expected_ty:expected ~slot env a ) )
+       operands )
+
+(** [gen_call_args ~slot ?expected_ty env plan] -- the C++ arguments of the
+    call [plan] describes, each generated against the parameter it is passed
+    at.  The dictionaries' promoted variables are in scope for them. *)
+let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan : Cpp_ir.Lowered.Expr.t list =
+  let {
+    cp_instantiated =
+      {
+        Elaborated_call.call =
+          {Elaborated_call.regular = regular_ml_args; callee_type = fn_ml_ty; _} as call;
+        tys;
+        params = fn_param_ml_tys;
+        params_orig = fn_param_ml_tys_orig;
+        subst_index_of_orig;
+        _
+      };
+    cp_expected_result = expected_result;
+    cp_instance_families = instance_families;
+    cp_tvars = tvars;
+    cp_concrete_tvar_type = concrete_tvar_type;
+    cp_result_tvar_map = result_tvar_map;
+    _
+  } = plan in
+  let leading_params = Elaborated_call.leading_params call in
+  List.mapi (fun i ml_arg : Cpp_ir.Lowered.Expr.t ->
+    match strip_magic ml_arg with
+    | Core.Expr.Erased_value _ -> (
+      (* An erased value, boxed.  At a function-typed parameter it is an
+         erased function -- [bif : obj -> obj -> obj] is [sum1] once [obj]
+         is [Type -> Type] -- which is called, so it is a callable of the
+         declared arity handing back a box. *)
+      match
+        Param_pos.nth fn_param_ml_tys_orig
+          (Param_pos.of_regular ~leading:leading_params i)
+      with
+      | Some pt when count_ml_value_arrows pt > 0 ->
+        Cpp_ir.Build.lambda
+          (List.init (count_ml_value_arrows pt) (fun _ ->
+               ((Reference (Lvalue, Const Auto) : Cpp_ir.Lowered.Type.t), None) ))
+          None
+          [Return (Some Cpp_erasure.empty_box)]
+          ~capture:Stored
+      | _ -> Cpp_erasure.empty_box )
+    | _ ->
+    let ({ap_index = param_index; ap_param = param_ml_ty; ap_expected = arg_expected_ty; ap_ret = ret;
+           ap_tvar_erased = param_tvar_erased; ap_written_by_call = param_written_by_call;
+           ap_deduced_callable = deduced_callable; ap_expected_subst} : argument_position) =
+      argument_position ~local_callable:(local_callable env) env id plan i ml_arg
+    in
+    let param_expected_subst () = ap_expected_subst in
+    (* {b Lambda arity limiting.}  When a lambda argument has more binders
+       than the callee's parameter type has top-level arrows, the extra
+       binders come from the return type being a function (instantiated
+       from a type variable).  For example, [fold_right]'s callback type
+       is [B -> A -> A]; when [A = nat -> nat], the lambda
+       [fun t acc => fun x => body] has 3 binders but the parameter has
+       only 2 arrows.  Flattening all 3 into a single C++ lambda produces
+       a 3-arg function, which doesn't match the 2-arg is_invocable_v constraint.
+
+       Fix: insert an [Core.Expr.Lambda_group_barrier] after the expected number of
+       binders so that [collect_lams] in [gen_expr] stops there.  The
+       inner binders become a returned inner lambda.  We use the
+       {i non-substituted} parameter type to count arrows, because type
+       variable substitution would inflate the count (e.g. [Core.Type.Variable A]
+       becoming [Core.Type.Arrow(nat, nat)] adds a spurious arrow).
+
+       Additionally, annotate the outer lambda with an explicit return
+       type derived from the {i substituted} parameter type's codomain.
+       Without this, the deduced return type is the inner lambda's
+       unique closure type, and [is_invocable_r_v<std::function<...>,
+       closure_type>] may evaluate to [false] in concept checking
+       (C++ lambda-to-[std::function] conversion is not recognized
+       during SFINAE in some implementations). *)
+    let ml_arg, split_ret_ty =
+      match ml_arg with
+      | Core.Expr.Lambda _ ->
+        ( match Param_pos.nth fn_param_ml_tys_orig param_index with
+        | Some param_ty ->
+          let rec count_arrows = function
+            | Core.Type.Arrow {result = rest; _} -> 1 + count_arrows rest
+            | _ -> 0
+          in
+          let expected = count_arrows param_ty in
+          let actual = Mlutil.nb_lams ml_arg in
+          if expected > 0 && actual > expected then
+            let outer_ids, inner_body =
+              Mlutil.collect_n_lams expected ml_arg
+            in
+            let barrier =
+              Mlutil.named_lams outer_ids (Core.Expr.Lambda_group_barrier {value = inner_body;
+                                                                           occurrence = Core.Occurrence.fresh ()})
+            in
+            (* Compute the return type from the substituted param type by
+               stripping [expected] top-level arrows.  The remaining type
+               is the function-typed codomain that the inner lambda
+               implements.
+
+               When the substituted codomain is still a [Core.Type.Variable] (happens
+               when [tys = []] so substitution is a no-op), use the
+               [concrete_tvar_type] computed above — it holds the
+               concrete [T1] type derived from the excess args and the
+               enclosing function's return type. *)
+            let ret_ty =
+              match param_ml_ty with
+              | Some subst_pt ->
+                let rec codomain_after n = function
+                  | Core.Type.Arrow {result = rest; _} when n > 0 ->
+                    codomain_after (n - 1) rest
+                  | ty -> ty
+                in
+                let ret_ml = codomain_after expected subst_pt in
+                ( match resolve_tmeta ret_ml with
+                | Core.Type.Variable _ -> concrete_tvar_type
+                | _ ->
+                  Some (cpp_of_ml env ret_ml) )
+              | None -> None
+            in
+            (barrier, ret_ty)
+          else
+            (ml_arg, None)
+        | None -> (ml_arg, None) )
+      | _ -> (ml_arg, None)
+    in
+    let arg_expected_ml_ty =
+      match param_ml_ty with
+      | Some ml_ty when not (ml_type_contains_erased ml_ty) -> Some ml_ty
+      | _ -> slot.expected_ml_ty
+    in
+    let expr : Cpp_ir.Lowered.Expr.t =
+      with_cpp_return_type ret (fun () ->
+          gen_expr ?expected_ty:arg_expected_ty
+            ~slot:
+              { slot with
+                expected_ml_ty = arg_expected_ml_ty;
+                call_result = expected_result;
+                stated_ml_ty = param_ml_ty }
+            env ml_arg )
+    in
+    (* Annotate the outer lambda with the explicit return type computed
+       during the split, so that C++ concept checking sees the concrete
+       [std::function<...>] return type instead of the raw closure type. *)
+    let expr : Cpp_ir.Lowered.Expr.t =
+      match split_ret_ty, expr with
+      | Some ret_ty, Lambda ({ return_type = None; _ } as l) ->
+        Lambda { l with return_type = Some ret_ty }
+      | _ -> expr
+    in
+    let expr : Cpp_ir.Lowered.Expr.t =
+      match (param_ml_ty, expr) with
+      | Some param_ty, Lambda ({ body = lam_body; _ } as l) ->
+        let param_cpp_ty =
+          cpp_of_ml env param_ty
+        in
+        ( match param_cpp_ty with
+        | Function (_, Shared_pointer inner) ->
+          let rec wrap_stmt : Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t = function
+            | Return (Some e) ->
+              Return (Some (Cpp_ir.Build.call (Allocate (Heap, inner)) [e]))
+            | s -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:wrap_stmt ~type_:Fun.id ()) s
+          in
+          Lambda
+            { l with
+              return_type = Some (Shared_pointer inner);
+              body = List.map wrap_stmt lam_body }
+        | _ -> expr )
+      | _ -> expr
+    in
+    let expr : Cpp_ir.Lowered.Expr.t =
+      match param_ml_ty with
+      | Some param_ty when not deduced_callable ->
+        erase_fn_arg_for_param env param_ty ml_arg expr
+      | _ -> expr
+    in
+    (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no
+       members: unlike every other argument, the receiver cannot arrive as a
+       box at all.  What says that it does is the declaration the receiver
+       came out of -- a method registered as returning [std::any] -- and the
+       parameter's type is what says what the box holds. *)
+    let expr : Cpp_ir.Lowered.Expr.t =
+      let receiver_is_boxed =
+        (* The receiver's own ML type has to say it is gone -- a projection
+           out of a dependent pair is a bare type variable, and extraction
+           leaves a [Core.Type.Erased] behind. *)
+        ( match
+            Option.map (fun t -> cpp_of_ml env t)
+              (infer_ml_body_type (strip_magic ml_arg))
+          with
+        | Some t -> Cpp_ir.Types.prints_as_any t
+        | None -> false )
+        &&
+        (* And it has to have come out of an accessor on a value that
+           carries erasure: a [SigT<std::any, std::any>] hands back a box, a
+           [SigT<List<uint64_t>, List<uint64_t>>] hands back a list.  A call
+           whose arguments are all concrete does not qualify however its ML
+           type reads -- a free template function's result is resolved by
+           the type arguments the call site states. *)
+        match strip_magic ml_arg with
+        | Core.Expr.Apply {callee = g; arguments = rargs} -> (
+          match strip_magic g with
+          | Core.Expr.Global _ -> app_reads_erased_value env rargs
+          | _ -> false )
+        | _ -> false
+      in
+      match Cpp_names.lookup_method_this_pos id with
+      | Some pos
+        when Param_pos.equal (Param_pos.of_receiver pos) param_index
+             && receiver_is_boxed -> (
+        match param_expected_subst () with
+        | Some into when not (Cpp_ir.Types.prints_as_any into) ->
+          coerce ~from:Any ~into expr
+        | _ -> expr )
+      | _ -> expr
+    in
+    let expr : Cpp_ir.Lowered.Expr.t =
+      if param_tvar_erased && not param_written_by_call then
+        (* Say where the value is coming from where the binder's own type
+           says: an argument that is already a box is left alone. *)
+        let from =
+          match ml_arg with
+          | Core.Expr.Bound_variable {index = j; occurrence = occ} -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
+          | _ -> None
+        in
+        coerce ~term:ml_arg ?from ~into:Any expr
+      else expr
+    in
+    (* Wrap void calls as values only when the expression will be used
+       as a value (not in monadic parameter handler which places it in
+       statement position inside a lambda). *)
+    let as_value () =
+      match ml_arg with
+      | a when ml_value_is_void_call a ->
+        (* Don't wrap eta-expanded lambdas (partial applications) — they
+           are function VALUES, not void call results. *)
+        ( match expr with
+        | Lambda _ -> expr
+        | _ -> wrap_void_call_as_value expr )
+      | _ -> expr
+    in
+    (* A bare local variable known to be boxed as [std::any]
+       ({!read_is_boxed}) — e.g. a leaf pulled out of an erased-pair
+       destructure — passed directly to a plain global function whose
+       parameter type is concrete.  Mirrors the equivalent check for
+       non-global callees (~[Core.Expr.Bound_variable j when Escape.IntSet.mem ...] above). *)
+    let ml_arg_is_erased_rel =
+      match ml_arg with
+      | Core.Expr.Bound_variable {index = j; occurrence = occ}
+      | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _} ->
+        read_is_boxed j occ
+      | _ -> false
+    in
+    match param_ml_ty with
+    | Some param_ty
+      when ( ml_body_returns_erased_field ml_arg || ml_arg_is_erased_rel
+           (* A component read out of a pair that was itself recovered from
+              a box is a [std::any] whatever its ML type says, and the
+              emitted expression is the evidence -- see
+              {!yields_boxed_component}. *)
+           || yields_boxed_component (as_value ()) )
+           && not (match param_ty with
+                   | Core.Type.Global_app {head = g; _} -> Table.is_promoted_type_var g
+                   | _ -> false)
+           (* [param_ty] comes from the callee's own (call-site-substituted)
+              type signature, whose [Core.Type.Variable] indices are not anchored to this
+              function's [tvars] scope. When conversion produces an
+              unresolved [Core.Type.Variable (Tv_index (_, None))] (would print as a bogus template
+              parameter like "T3"), we cannot build a meaningful concrete
+              cast here — skip this branch and fall back to [as_value ()]
+              unchanged; a later pass (e.g. [gen_match_branch]'s field
+              substitution) supplies the correct cast at its own,
+              properly-scoped [tvars]. *)
+           && erase_unresolved_tvars (cpp_of_ml env param_ty)
+              = cpp_of_ml env param_ty ->
+      let cpp_ty = cpp_of_ml env param_ty in
+      ( match strip_ns_tglob cpp_ty with
+      | Entity_application (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
+        let list_any_ty : Cpp_ir.Lowered.Type.t =
+          match cpp_ty with
+          | In_namespace (ns_g, _) -> In_namespace (ns_g, Entity_application (g, [Any], []))
+          | _ -> Entity_application (g, [Any], [])
+        in
+        (* [as_value ()] may already have unboxed the erased value to the
+           canonical element-erased shape (the [Core.Expr.Bound_variable] case of [gen_expr]
+           does this for a variable bound to an erased field).  Casting
+           again would re-box that concrete list into a fresh [std::any]
+           only to unbox it — mirror the custom-list branch below and reuse
+           the existing cast.  It may also have gone the whole way and
+           recovered the concrete list already ({!coerce} does this for a
+           value crossing out of a box), in which case there is nothing
+           left to convert. *)
+        ( match as_value () with
+        | Converting_construct (t, _) as recovered when cpp_ty_eq t cpp_ty ->
+          recovered
+        | Any_cast _ as already_cast ->
+          Cpp_erasure.converting_ctor cpp_ty [already_cast]
+        | v ->
+          Cpp_erasure.converting_ctor cpp_ty [Cpp_erasure.unbox list_any_ty v] )
+      | Entity_application (g, [_], _) when Ml_type_util.is_custom_list_global g ->
+        let clean_cpp_ty = clean_self_ns cpp_ty in
+        (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
+           with fully-erased elements at runtime ([deque<pair<any,any>>]).
+           Cast the inner value to that erased representation, matching what
+           [gen_match_branch]'s field substitution stores. *)
+        let erased_ty : Cpp_ir.Lowered.Type.t =
+          (* Canonical erased shape is [deque<std::any>] -- a bare [std::any]
+             per element, not a structure-preserving [deque<pair<any,any>>]
+             (see the matching invariant in [gen_expr]'s [Core.Expr.Bound_variable]/[Core.Expr.Coerce]
+             cases).  Using the structure-preserving erasure here would
+             disagree with a sibling producer for the same Coq list type
+             that already erased to the flat shape, and — when [as_value ()]
+             is itself already an [any_cast] to the flat shape (added by
+             [gen_expr] above) — would additionally double-wrap it in a
+             second, incompatible [any_cast]. *)
+          match clean_cpp_ty with
+          | In_namespace (ns_g, Entity_application (g, [_], _)) ->
+            In_namespace (ns_g, Entity_application (g, [Any], []))
+          | Entity_application (g, [_], _) ->
+            Entity_application (g, [Any], [])
+          | _ -> clean_cpp_ty
+        in
+        let inner = match as_value () with
+          | Any_cast _ as already_cast -> already_cast
+          | v -> Cpp_erasure.unbox erased_ty v
+        in
+        (* When the callee is a REAL function whose parameter has a CONCRETE
+           element type — a wholesale-boxed opaque element
+           ([triples_le_max(const std::deque<rgb>&)]), OR a structural element
+           whose concrete component must be preserved for a POLYMORPHIC/template
+           callee ([nodupKeys<T1>(const std::deque<std::pair<std::string,T1>>&)],
+           whose [std::string] key cannot be erased to [std::any] or template
+           argument deduction fails) — the fully-erased [inner] neither converts
+           nor deduces against it.  Route it through [crane_container_cast],
+           which builds the concrete-element container (unboxing wholesale-boxed
+           elements at runtime; for structural elements it still compiles and
+           lets deduction succeed).
+
+           Inline-custom callees (e.g. [length]'s [.size()]) splice the
+           argument into a template and work on the erased container, and a
+           callee whose parameter element is ALREADY fully erased
+           ([deque<pair<any,any>>]) needs no conversion — both keep [inner]. *)
+        let needs_concrete =
+          (not (Table.is_inline_custom id))
+          &&
+          match strip_ns_tglob clean_cpp_ty with
+          | Entity_application (_, [et], _) ->
+            et <> Cpp_erasure.erase_type_to_any et
+          | _ -> false
+        in
+        if needs_concrete then begin
+          (* When the callee's OWN declared (unsubstituted) parameter type
+             is still generic here (a template function like
+             [nodupKeys<T1>]), its C++ declaration never boxes the element
+             (a bare type variable never recurses).  This call site's
+             [clean_cpp_ty] was built from the call-site-substituted
+             concrete type though, so it may judge the (now concrete,
+             possibly recursive) element as boxed — disagreeing with the
+             generic declaration and breaking template argument deduction.
+             Suppress boxing here to match the declaration. *)
+          let callee_generic_here =
+            match Param_pos.nth fn_param_ml_tys_orig param_index with
+            | Some t -> Ml_type_util.ml_type_contains_tvar t
+            | None -> false
+          in
+          Container_cast (clean_cpp_ty, inner, callee_generic_here)
+        end
+        else inner
+      (* The value is boxed; recover it at the parameter's type.  Going
+         through {!coerce} rather than casting outright keeps the one rule
+         that a destination which is itself a name for the box -- [using sel
+         = std::any] -- is not a recovery target: [any_cast<sel>] reads a box
+         that was never doubly wrapped and throws. *)
+      | _ -> coerce ~from:Any ~into:cpp_ty (as_value ()) )
+    (* Monadic parameter (reified mode only): the callee expects
+       [shared_ptr<ITree<R>>].  If the argument already produces a reified
+       tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
+    | Some param_ty when (!tctx).input.itree_mode = Reified
+        && is_monadic_ml_type param_ty
+        && not (is_reified_monadic_expr ml_arg) ->
+      let r_ml = extract_itree_result_ml param_ty in
+      let r_cpp = cpp_of_ml env r_ml in
+
+      let itree_ty = mk_itree_type r_cpp in
+      (* [expr] is a value unless the thing it calls was void-ified, in
+         which case it is a statement and the tree carries [tt] instead.
+         Only a genuinely valueless result gets the nullary [ret()]: a
+         [unit] one has [monostate] to carry, and a tree spelled
+         [ITree<void>] would not match the [ITree<Unit>] declared for it. *)
+      let no_value = r_cpp = Void || ml_type_is_void r_ml in
+      let as_statement = no_value || ml_expr_is_void_call ml_arg in
+      let ret_expr =
+        if no_value then mk_itree_ret Void []
+        else if as_statement then mk_itree_ret r_cpp [mk_tt_expr ()]
+        else mk_itree_ret_for_value r_cpp r_ml expr
+      in
+      let body : Cpp_ir.Lowered.Stmt.t list =
+        if as_statement then [Expression expr; Return (Some ret_expr)]
+        else [Return (Some ret_expr)]
+      in
+      Cpp_ir.Build.iife (Some itree_ty) body
+    (* Void-ified function reference passed as callback to polymorphic
+       HOF where the ORIGINAL (non-substituted) parameter codomain is a
+       type variable (not concrete unit).  The C++ definition uses a
+       template type parameter constrained with is_invocable_v, so the void
+       function needs wrapping to return std::monostate.  When the original
+       codomain IS concrete unit, the constraint uses void which already
+       accepts void-returning functions. *)
+    | Some param_ty
+      when (match ml_arg with
+            | Core.Expr.Global {callee = r; _}
+            | Core.Expr.Coerce {value = Core.Expr.Global {callee = r; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Global {callee = r; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Global {callee = r; _}; _} -> is_void_ified_ref r
+            | _ -> false)
+           && (match param_ty with Core.Type.Arrow _ -> true | _ -> false)
+           && ml_type_is_unit (ml_codomain param_ty)
+           && (match Param_pos.nth fn_param_ml_tys_orig param_index with
+               | Some orig_pt ->
+                 not (ml_type_is_unit (ml_codomain orig_pt))
+               | None -> false) ->
+      let dom_mls =
+        let rec collect acc = function
+          | Core.Type.Arrow {parameter = t; result = rest} ->
+            ( match resolve_tmeta t with
+            | Core.Type.Erased _ -> collect acc rest
+            | t -> collect (t :: acc) rest )
+          | _ -> List.rev acc
+        in
+        collect [] param_ty
+      in
+      let dom_cpps =
+        List.map
+          (fun t -> cpp_of_ml env t)
+          dom_mls
+      in
+      let params =
+        List.mapi
+          (fun j ty ->
+            ((Reference (Lvalue, Const ty) : Cpp_ir.Lowered.Type.t), Some (Id.of_string (Printf.sprintf "_wa%d" j))))
+          dom_cpps
+      in
+      let args =
+        List.map (fun (_, id) : Cpp_ir.Lowered.Expr.t -> Local (Option.get id)) params
+      in
+      let body : Cpp_ir.Lowered.Stmt.t list =
+        [ Expression (Call (Cpp_ir.Build.signature ~nargs:0 (), expr, args));
+          Return (Some (mk_tt_expr ())) ]
+      in
+      Cpp_ir.Build.lambda params None body ~capture:Runs_in_place
+    | _ -> as_value ()
+  ) regular_ml_args
+
+let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args : Cpp_ir.Lowered.Expr.t =
+  let ml_args = args in
+
+  let rec get_eta_args dom args =
+    match (dom, args) with
+    | _ :: dom, _ :: args -> get_eta_args dom args
+    | _, _ -> dom
+  in
+  (* Save and clear the single-use closure flag so that nested eta_fun calls
+     (from processing args) do not inherit it. The saved value is used when
+     this eta_fun constructs a partial-application lambda. *)
+  let eta_keep_moves = slot.eta_keep_moves in
+  (* Read once: the flag describes this closure, not anything built inside it. *)
+  let slot = {slot with eta_keep_moves = false} in
+  match f with
+  | Core.Expr.Global ({callee = id; _} as use) ->
+    let lowered =
+      lower_call ~caller:!Table.current_decl_ref ~slot ?expected_ty env use args
+    in
+    let plan = lowered.lc_plan in
+    let {
+      cp_instantiated =
+        {
+          Elaborated_call.call =
+            { Elaborated_call.excess = excess_args;
+              primary = primary_ml_args;
+              instances = typeclass_ml_args;
+              regular = regular_ml_args;
+              _ } as call;
+          params_orig = fn_param_ml_tys_orig;
+          subst_index_of_orig;
+          _
+        };
+      cp_tvars = tvars;
+      cp_instance_promoted = instance_promoted_map;
+      _
+    } = plan in
+    let leading_params = Elaborated_call.leading_params call in
+    (* The callee applied to all but the excess args, where that names no
+       local: a function -- a handler [case_] combines -- built from nothing
+       the call can change, as Core decided it
+       ({!Core_elaborate.closed_head_call}). *)
+    let closed_head =
+      (not slot.building_constant) && Core_elaborate.closed_head_call ~lex:(current_lexenv ()) use args
+    in
+    let args =
+      let slot = if closed_head then {slot with building_constant = true} else slot in
+      with_promoted_var_map (instance_promoted_map @ (!tctx).lexical.promoted_var_map)
+        (fun () -> gen_call_args ~slot ?expected_ty env id plan)
+    in
+    let ty = lowered.lc_callee_type
+    and tys = lowered.lc_written
+    and all_type_args = Template_application.to_list lowered.lc_application
+    and written_tvar_args = lowered.lc_written_by_var in
+    (* The callee's declared type at the type arguments the call writes: what
+       C++ checks the arguments against and returns.  A type argument standing
+       for a function type is spelled curried ([Through_tvar]), where the
+       value passed was spelled where it was declared. *)
+    let written_fn_ty =
+      let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
+      (* An inline custom has no signature its type arguments instantiate:
+         its text reads the values as they are ({!call_result_site}). *)
+      if written_tvar_args = [] || is_inline_custom id then None
+      else
+        Option.map
+          (fun t ->
+            let live = cpp_of_ml env t in
+            if Probe.checking () then check_installed_arity id live;
+            Cpp_ir.Types.substitute subst live)
+          (callee_ml_type id)
+    in
+    (* Each argument read at its parameter as the call writes it
+       ({!regroup_crossing}): [pf : pair<fn<R(A, B)>, nat>] passed to
+       [myfst<fn<fn<R(B)>(A)>, nat>].  Only where every argument has its own
+       parameter to line up with: no erased argument, no erased domain, and
+       no receiver -- a method's is read at its struct's own instantiation,
+       not at type arguments the call writes. *)
+    let args =
+      match written_fn_ty with
+      | Some (Cpp_ir.Type.Function (doms, _))
+        when Cpp_names.lookup_method_this_pos id = None
+             && List.length doms >= List.length args
+             && List.length regular_ml_args = List.length args
+             && not (List.exists (function Core.Expr.Erased_value _ -> true | _ -> false) regular_ml_args)
+             && not
+                  (List.exists
+                     (fun t ->
+                       Ml_type_util.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t )
+                     doms ) ->
+        List.map2
+          (fun (ml_arg, a) into ->
+            let crossed = function
+              | Some from -> (
+                (* Keep [a] itself when nothing converts: the caller tests
+                   whether the crossing converts by physical identity. *)
+                match regroup_crossing ~from ~into a with
+                | Cpp_ir.Expr.Convert (t, _) -> (Convert (t, a) : Cpp_ir.Lowered.Expr.t)
+                | _ -> a )
+              | None -> a
+            in
+            (* What the crossing writes depends on the source only through
+               whether it converts. *)
+            let converts t = crossed t != a in
+            crossed (value_cpp_type ~agree:(fun p l -> converts p = converts l) env ml_arg) )
+          (List.combine regular_ml_args args)
+          (List.filteri (fun i _ -> i < List.length args) doms)
+      | _ -> args
+    in
+    (* A class field called with the instance it projects through, where
+       that instance was kept and declares the field as a member template:
+       the instance's own method, at the type arguments the projection's body
+       forwards -- all but the instance's.  The dispatcher is a template
+       forwarding to [_tcI0::bind] that repeats its argument passing, which a
+       C++ compiler is not sure to see through.  A method erased at
+       [std::any] is left to the dispatcher, which does the erasing.  Core
+       decides which calls those are ({!Core_elaborate.member_template_call}). *)
+    let cglob =
+      match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
+      | [inst], [Some inst_ty], _ :: method_targs
+        when Core_elaborate.member_template_call ~lex:(current_lexenv ()) use ml_args ->
+        (Scope (Type_name inst_ty, Common.id_of_global Term id, method_targs) : Cpp_ir.Lowered.Expr.t)
+      | _ ->
+        mk_cppglob
+          ?yields:(glob_yields env id (Mlutil.Var_types.apply tys))
+          id all_type_args
+    in
+    (* Check if this is a typeclass instance used as a type (for :: access).
+       When all args are consumed (domain and args both empty after filtering),
+       return just the type reference, not a function call. This avoids
+       generating numOption<numNat, unsigned int>() instead of numOption<numNat,
+       unsigned int> for qualified access like ::to_nat. *)
+    let id_is_typeclass_instance = ref_returns_typeclass id in
+    (* {b Curried excess args.}  When a call site provides more value args
+       than the callee's ML type has arrows, the extras are curried onto the
+       result: [f(primary_args)(excess_args)].
+
+       This is valid when the callee genuinely returns a function:
+       - Its codomain is a type alias ([Core.Type.Global_app]) that may expand to [Core.Type.Arrow]
+         (e.g. [State S A = S -> A * S]).
+       - Its codomain is a type variable ([Core.Type.Variable]) that, after instantiation
+         with the call-site type args [tys], becomes [Core.Type.Arrow] (e.g.
+         [fold_right] with [B = nat -> nat]).
+       - It is an inlined custom constant (e.g. [fst], [snd]).
+
+       When the codomain is a type variable that instantiates to a
+       non-function type (e.g. [div2_rect] with [T1 = R_div2]), the excess
+       args come from proof-certificate functions ([Function] vernacular
+       [_correct] terms) that are never called at runtime.  We emit an abort
+       placeholder for those. *)
+    (* The callee's instantiation at this call: the explicit type arguments
+       where the site carries them, and otherwise the one its arguments
+       imply. *)
+    let inst_tys =
+      if not (Mlutil.Var_types.is_empty tys) then tys
+      else
+        match find_type_opt id with
+        | Some ml_ty -> tvar_instantiation id ml_ty primary_ml_args
+        | None -> Mlutil.Var_types.empty
+    in
+    (* The callee's codomain as this call instantiates it. *)
+    let instantiated_codomain ml_ty =
+      let cod = ml_codomain ml_ty in
+      if Mlutil.Var_types.is_empty inst_tys then cod else Mlutil.Var_types.apply inst_tys cod
+    in
+    let wrap_excess (base : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+      if excess_args = [] then
+        base
+      else (
+        (* A closed head is built once ({!Cpp_constants}), not at every
+           evaluation of the application: in OCaml it would be a partial
+           application, evaluated where the handler is passed rather than at
+           every event the handler answers. *)
+        let base : Cpp_ir.Lowered.Expr.t =
+          match base with
+          | Call _ when closed_head ->
+            Cpp_ir.Build.call
+              (Runtime (Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r id)))))
+              [base]
+          | _ -> base
+        in
+        let ret_is_chainable =
+          is_inline_custom id
+          ||
+          match find_type_opt id with
+          | Some ml_ty ->
+            let cod = ml_codomain ml_ty in
+            ( match resolve_tmeta cod with
+            | Core.Type.Global_app _ -> true
+            | Core.Type.Arrow _ -> true
+            | Core.Type.Unknown -> true
+            (* A codomain that applies a variable -- [interp]'s [M R], at
+               [M := stateT S m] -- is a function exactly where the variable
+               is instantiated at one, which is the same question as for a
+               bare variable. *)
+            | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; _} | Core.Type.Variable_app _ ->
+              (* Type variable: instantiate with the call-site type args to
+                 determine if the return type is actually a function.
+                 [cod] is already the function's codomain (all arrows
+                 stripped), so after substitution we check [cod_inst]
+                 directly — NOT [ml_codomain cod_inst], which would strip
+                 another layer of arrows and reject valid cases like
+                 [fold_right] instantiated at [A = nat -> nat].
+
+                 When [tys] is empty (the use wrote no type argument, its
+                 types carried as [Core.Expr.Erased_value] in [args] instead),
+                 substitution is a no-op and the [Core.Type.Variable] stays unresolved.
+                 In this case, chain unconditionally: Rocq's type system
+                 guarantees that excess {i value} args (non-[Core.Expr.Erased_value]) can
+                 only exist when the return type instantiates to a function.
+                 Proof-level excess args are already removed by the
+                 [Core.Expr.Erased_value] filter above. *)
+              if Mlutil.Var_types.is_empty inst_tys then
+                true
+              else
+                let cod_inst = Mlutil.Var_types.apply inst_tys cod in
+                ( match resolve_tmeta cod_inst with
+                | Core.Type.Arrow _ -> true
+                | Core.Type.Global_app _ -> true
+                | Core.Type.Erased Core.Erasure_reason.Type_argument -> true
+                | Core.Type.Unknown -> true
+                | _ -> false )
+            | _ -> false )
+          | None -> false
+        in
+        (* The callee hands back a box, so the excess args are applied to a
+           [std::any] and have to go through the erased calling convention.
+           A result pinned down only by a type index is written [std::any] in
+           the declaration however this call site instantiates it, so it
+           counts here just as it does in {!gen_expr}'s [Core.Expr.Apply] case. *)
+        let cod_is_erased =
+          match callee_ml_type id with
+          | Some ml_ty ->
+            ml_erases_to_box env (instantiated_codomain ml_ty)
+            || ( match result_cpp_via_receiver env ml_ty primary_ml_args with
+               | Some c -> is_boxed_source c
+               | None -> false )
+            || result_is_index_only_tvar ml_ty
+          | None -> false
+        in
+        (* The codomain as this call site instantiates it: that is the type
+           the excess args are applied to. *)
+        let cod_inst =
+          match callee_ml_type id with
+          | Some ml_ty -> Some (instantiated_codomain ml_ty)
+          | None -> None
+        in
+        let cod_site = call_result_site id in
+        (* A codomain that stays curried in C++ -- a [std::function] whose
+           result is another [std::function] -- takes only the arguments of
+           its own arrow, so applying every excess arg in one call would
+           overrun it.  The args go in the groups the type accepts them in. *)
+        (* The callee's codomain as the call writes it: its declared type at
+           the written type arguments, which is what C++ returns -- [case_]'s
+           [T2] written [std::function<std::any(std::any)>] where the ML
+           instantiation erased the morphism type. *)
+        let written_cod =
+          let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
+          match
+            Option.map
+              (fun t -> Cpp_ir.Types.substitute subst (cpp_of_ml env t))
+              (callee_ml_type id)
+          with
+          | Some (Cpp_ir.Type.Function (_, c)) -> Some c
+          | _ -> None
+        in
+        (* A group the written type returns boxed, with the rest of the chain
+           still to apply: the box holds what an erased morphism produced, the
+           result type at an index it never instantiated.  That is the type
+           the whole chain is expected to have, as a function of the rest,
+           with this declaration's own variables erased -- a handler combined
+           by [case_], answering at [std::any] where the enclosing handler
+           says [T1].  The chain's value is then read at the expected type. *)
+        let boxed_group_target rest_ml =
+          match (written_cod, expected_ty) with
+          | Some (Cpp_ir.Type.Function (_, c)), Some exp
+            when Cpp_ir.Types.prints_as_any c && not (Cpp_ir.Types.prints_as_any exp) ->
+            let arg_ty a =
+              match a with
+              | Core.Expr.Bound_variable {index = j; occurrence = occ} -> planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
+              | _ -> Option.map (cpp_of_ml env) (ml_ast_type_hint a)
+            in
+            let rest_tys = List.map arg_ty rest_ml in
+            if List.for_all Option.has_some rest_tys then
+              let scope = get_current_type_vars () in
+              let erase_own =
+                Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) ->
+                    match t with
+                    | Variable tv ->
+                      let id = Cpp_ir.Type.variable_spelled tv in
+                      if List.exists (Id.equal id) scope then Any else t
+                    | t -> t )
+              in
+              Some (erase_own (Cpp_ir.Type.Function (List.map Option.get rest_tys, exp)))
+            else None
+          | _ -> None
+        in
+        let rec chain_excess base cod excess =
+          if excess = [] then base
+          else
+            (* A codomain written by name -- [stateT nat (stateT bool m) A],
+               which is [nat -> stateT bool m (nat * A)] -- takes the
+               arguments of the arrows the name stands for, and what is left
+               after them may be another such name. *)
+            let cod = Option.map expand_ml_fun_alias cod in
+            let n_here, cod' =
+              let cod_cpp c =
+                let t = cpp_of_ml env c in
+                Cpp_ir.Types.spell_arrows cod_site t
+              in
+              match Option.map cod_cpp cod with
+              | Some (Function (dom, _)) when List.length dom < List.length excess
+                ->
+                let n = List.length dom in
+                (n, Option.map (ml_drop_arrows n) cod)
+              | _ -> (List.length excess, None)
+            in
+            let here = List.filteri (fun i _ -> i < n_here) excess in
+            let rest = List.filteri (fun i _ -> i >= n_here) excess in
+            chain_excess (Cpp_ir.Build.call base here) cod' rest
+        in
+        (* A domain the codomain spells [std::any] -- the event of a handler
+           that [case_] combined at an erased family -- is opened by code that
+           erased the value type's parameters as well, and so reads it at the
+           all-[std::any] instantiation (see [crane_all_any]).  A generated
+           inductive goes in at that instantiation, through its converting
+           constructor, rather than at the one this call site knows. *)
+        let erase_params_into_boxes excess =
+          let doms =
+            match Option.map (cpp_of_ml env) cod_inst with
+            | Some (Function (dom, _)) -> dom
+            | _ -> []
+          in
+          List.mapi
+            (fun i e ->
+              match (List.nth_opt doms i, List.nth_opt excess_args i) with
+              | Some d, Some (Core.Expr.Bound_variable {index = j;
+                                                        occurrence = occ}) when Cpp_ir.Types.prints_as_any d -> (
+                let unfolded = Option.map (fun t -> strip_ns_tglob (unfold_cpp_typedef env t)) in
+                let is_any (a : Cpp_ir.Lowered.Type.t) = match a with Any -> true | _ -> false in
+                (* Read for the inductive, its arity and namespace, and
+                   whether every argument is already a box. *)
+                let reading t =
+                  match unfolded t with
+                  | Some (Cpp_ir.Type.Entity_application ((GlobRef.IndRef _ as g), (_ :: _ as args), ns)) ->
+                    Some (g, List.length args, ns, List.for_all is_any args)
+                  | _ -> None
+                in
+                match
+                  unfolded
+                    (planned_binder_type_or_derive ~use:"excess argument" ~agree:(fun p l -> reading p = reading l)
+                       env j occ)
+                with
+                | Some (Cpp_ir.Type.Entity_application ((GlobRef.IndRef _ as g), (_ :: _ as args), ns))
+                  when (not (Table.is_custom g))
+                       && not (List.for_all is_any args) ->
+                  Cpp_erasure.converting_ctor (Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)) [e]
+                | _ -> e )
+              | _ -> e )
+            excess
+        in
+        if ret_is_chainable then
+          let excess = List.map (gen_expr ~slot env) excess_args in
+          if cod_is_erased then
+            let applied = apply_erased_callee base excess in
+
+            (* Args applied to a box come back as a box; the codomain at this
+               call's instantiation is what says what that box holds. *)
+            let recovered_at =
+              let from_cod =
+                Option.map
+                  (fun c ->
+                    cpp_of_ml env (ml_drop_arrows (List.length excess) c) )
+                  cod_inst
+              in
+              (* The instantiated codomain does not always name a type to
+                 recover at -- it may itself be erased, the very reason the
+                 application went through the boxed convention.  The position
+                 the call sits in then says what the value is. *)
+              match from_cod with
+              | Some c when states_unboxed_target c -> from_cod
+              | _ -> expected_ty
+            in
+            unbox_into recovered_at applied
+          else
+            (* A codomain instantiated at a type the call erased -- [resum]'s
+               [C a b] at [C := IFun], a category over families -- is a
+               callable whose C++ type only template deduction knows, and it
+               may hand back a box.  The position says what the value is; the
+               tolerant cast passes through one that was never boxed. *)
+            let excess = erase_params_into_boxes excess in
+            let n_first =
+              match written_cod with
+              | Some (Cpp_ir.Type.Function (dom, _)) -> List.length dom
+              | _ -> List.length excess
+            in
+            match
+              if n_first < List.length excess then
+                boxed_group_target (List.filteri (fun i _ -> i >= n_first) excess_args)
+              else None
+            with
+            | Some target ->
+              let here = List.filteri (fun i _ -> i < n_first) excess in
+              let rest = List.filteri (fun i _ -> i >= n_first) excess in
+              let r = Cpp_ir.Build.call (unbox_value target (Cpp_ir.Build.call base here)) rest in
+              ( match expected_ty with
+              | Some exp -> Convert (exp, r)
+              | None -> r )
+            | None ->
+            let r = chain_excess base cod_inst excess in
+            match (Option.map resolve_tmeta cod_inst, expected_ty) with
+            | Some (Core.Type.Erased Core.Erasure_reason.Type_argument), Some t
+              when not (Cpp_ir.Types.prints_as_any t) ->
+              Cpp_erasure.unbox_tolerant t r
+            | _ -> r
+        else
+          Abort ("untranslatable curried proof term", abort_ty expected_ty) )
+    in
+    let primary_result : Cpp_ir.Lowered.Expr.t =
+      match ty with
+      | Function (dom, cod) ->
+        (* Filter domain to exclude type class types (they're now template
+           params) and erased types.  Proof params like wf witnesses may
+           extract as function types containing dummy_type (e.g.
+           Tfun([List<T1>], dummy_type)) rather than plain dummy_type. These
+           entries must be removed to match the ML arg list which already
+           filters out Core.Expr.Erased_value entries. *)
+        (* Only a dummy -- an erased proof or type -- is filtered.  A value
+           parameter whose type erases, [e : a T] at an erased family, prints
+           as [std::any] and is a parameter all the same: dropping it made a
+           call one short look saturated. *)
+        let dom =
+          List.filter
+            (fun t ->
+              (not (Ml_type_util.is_typeclass_type_cpp t))
+              && (not (is_cpp_dummy_type t))
+              && not (is_skipped_cpp_type t) )
+            dom
+        in
+        (* [dom] is the substituted type's, and substitution can erase a
+           parameter the declaration still takes -- an argument given at it
+           is passed, but has no place in [dom] to be counted against, and
+           the call would look saturated one argument early.  Those are
+           discounted; see [subst_index_of_orig]. *)
+        (* What a partial application is missing is what the declaration
+           takes after the given arguments, in the declaration's order.  A
+           parameter whose declared type applies a variable is one of them
+           even where the substitution erased it -- [fused_trigger]'s event
+           [e : F T] at a family [F] erased because it is applied to a section
+           variable -- since the application of an erased family is still a
+           type of values; it takes the box its type erased to. *)
+        let missing_args =
+          let from_dom =
+            get_eta_args dom
+              (List.filteri
+                 (fun i _ ->
+                   subst_index_of_orig
+                     (Param_pos.of_regular ~leading:leading_params i)
+                   <> None )
+                 args )
+          in
+          let rec in_declared_order params from_dom =
+            match params with
+            | [] -> from_dom
+            | (o, t) :: rest ->
+              let applies_a_variable =
+                match resolve_tmeta t with Core.Type.Variable_app _ -> true | _ -> false
+              in
+              ( match (subst_index_of_orig o, from_dom) with
+              | None, _ when applies_a_variable ->
+                Cpp_ir.Type.Any :: in_declared_order rest from_dom
+              | None, _ -> in_declared_order rest from_dom
+              | Some _, d :: from_dom' -> d :: in_declared_order rest from_dom'
+              | Some _, [] -> [] )
+          in
+          (* The parameters past the arguments the call gives. *)
+          let untaken =
+            List.filter
+              (fun (o, _) ->
+                match Param_pos.regular_of ~leading:leading_params o with
+                | Some r -> r >= List.length args
+                | None -> false )
+              (Param_pos.positioned fn_param_ml_tys_orig)
+          in
+          in_declared_order untaken from_dom
+        in
+        (* When excess args exist (from the ML-level arity split above), do
+           NOT eta-expand even if the flattened C++ type has more domain
+           elements than ML args.  The mismatch occurs when the callee's
+           return type is itself a function type (e.g. [fst] returning
+           [Obj -> Path<Obj>]): convert_ml_type_to_cpp_type merges the
+           return-type arrows into the domain, inflating [dom_len] beyond the
+           ML-level arity.  The excess args will be chained by [wrap_excess]
+           below. *)
+        (* A mapping that writes no argument placeholder stands for a value,
+           not for a call that is short of arguments: it renders as-is, and
+           eta-expanding it would state an arity of our own invention.  Its own
+           arity is not even knowable here -- the domain a value parameter
+           erases to is filtered out of [dom] above, so a dictionary taking an
+           erased argument looks one arrow shorter than the parameter it is
+           passed as.  A mapping that does write placeholders is a call, and is
+           eta-expanded to fill them. *)
+        let written_bare =
+          args = []
+          && ( id_is_typeclass_instance
+             || (is_inline_custom id && inline_custom_arg_arity id = Some 0) )
+        in
+        if written_bare then cglob
+        else if missing_args == [] || excess_args <> [] then
+          if is_inline_custom id && args = [] then
+            (* Nothing is missing, so there is nothing to fill: the template
+               renders with what it was given. *)
+            cglob
+          else apply_global id cglob args
+        else
+          (* Substitute promoted type vars in eta-expanded lambda params. When
+             partially applying a function like pick_op<nat_magma>, the domain
+             types may contain [Tpromoted "carrier"] — a promoted type var.
+             We resolve these to the concrete type from the typeclass instance
+             (e.g., unsigned int from nat_magma::carrier). *)
+          let missing_args, cod =
+            if typeclass_ml_args <> [] && missing_args <> [] then
+              let subst_map =
+                List.concat_map
+                  (fun tc_arg ->
+                    match tc_arg with
+                    | Core.Expr.Global {callee = r; _} ->
+                      let bindings = Table.get_instance_promoted_types r in
+                      List.map
+                        (fun (var_name, ml_ty) ->
+                          let cpp_ty =
+                            cpp_of_ml env ml_ty
+                          in
+                          (var_name, cpp_ty) )
+                        bindings
+                    | _ -> [] )
+                  typeclass_ml_args
+              in
+              if subst_map <> [] then
+                let rec subst_promoted : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+                  | Promoted_member name ->
+                    ( match
+                        List.find_opt
+                          (fun (vid, _) -> Id.equal vid name)
+                          subst_map
+                      with
+                    | Some (_, concrete) -> concrete
+                    | None -> Promoted_member name )
+                  | Const t -> Const (subst_promoted t)
+                  | Function (d, c) ->
+                    Function (List.map subst_promoted d, subst_promoted c)
+                  | Shared_pointer t -> Shared_pointer (subst_promoted t)
+                  | t -> t
+                in
+                (List.map subst_promoted missing_args, subst_promoted cod)
+              else
+                (missing_args, cod)
+            else
+              (missing_args, cod)
+          in
+          (* A variable of the callee's the call left free and no caller
+             variable spells alike is the eta-lambda's own to bind (see
+             [eta_tparams]); unnamed, it would read as an erased one. *)
+          let missing_args, cod =
+            let name_free =
+              Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) ->
+                match t with
+                | Variable (Index (i, None))
+                  when not
+                         (List.exists (Id.equal (Common.tvar_id i))
+                            (!tctx).lexical.current_type_vars) ->
+                  Variable (Index (i, Some (Common.tvar_id i)))
+                | t -> t )
+            in
+            (List.map name_free missing_args, name_free cod)
+          in
+          (* The domains the callee's own declaration spells.  [ty] came from
+             the ML type {e this call} instantiates, and a higher-kinded class
+             parameter is erased there, so a parameter the declaration writes
+             [std::optional<T1<std::any>>] arrives as [std::optional<std::any>]
+             -- the carrier is simply gone.  It is not gone from the call,
+             which has already recovered it into [all_type_args]; and the
+             callee's {e uninstantiated} C++ type is where that carrier still
+             has a name to be substituted for.  Substituting the explicit
+             arguments back into it reconstructs what the declaration says,
+             which is the slot each eta parameter has to fit. *)
+          let decl_doms, decl_cod =
+            (* A phantom position written [void] is one the declaration does
+               not use -- [fused_trigger]'s [F], whose only occurrence it
+               relaxed to a deduced parameter -- so in a domain it is erased,
+               and applied it is the erased type ([void<std::any>] is none). *)
+            let subst i =
+              match Scheme.Var.assoc_tvar i written_tvar_args with
+              | Some Cpp_ir.Type.Void -> Some Cpp_ir.Type.Any
+              | t -> t
+            in
+            let collapse_erased_heads =
+              Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) ->
+                  match t with Apply (h, args) -> Cpp_ir.Types.apply h args | t -> t )
+            in
+            match
+              Option.map
+                (fun t ->
+                  collapse_erased_heads
+                    (Cpp_ir.Types.substitute subst (cpp_of_ml env t)) )
+                (callee_ml_type id)
+            with
+            | Some (Function (doms, dcod)) -> (doms, Some dcod)
+            | _ -> ([], None)
+          in
+          (* The eta parameters fill the callee's {e trailing} domains; the
+             arguments the call already has fill the leading ones.  An
+             instantiation may have more arrows than the declaration --
+             [idp] at [A := nat -> nat -> nat] -- and a parameter before the
+             declaration's own domains has no slot there. *)
+          let slot_dom i =
+            let k = List.length decl_doms - List.length missing_args + i in
+            if k < 0 then None else List.nth_opt decl_doms k
+          in
+          let tvars = get_current_type_vars () in
+          let erased_eta_param (ty : Cpp_ir.Lowered.Type.t) =
+            Ml_type_util.has_tany_written ty && not (Cpp_ir.Types.prints_as_any ty)
+            && (match ty with Shared_pointer _ | Function _ -> false | _ -> true)
+          in
+          (* Whether the declaration had anything to say about this call's
+             parameters.  It is the same question for the result, so it is
+             asked once: a declaration that could not refine a single parameter
+             is one whose substitution does not describe this call, and reading
+             the result off it would be reading the same wrong thing. *)
+          let decl_spoke = ref false in
+          let eta_args =
+            List.mapi
+              (fun i ty ->
+                let ty =
+                  match slot_dom i with
+                  | Some slot ->
+                    let refined =
+                      Ml_type_util.refine_param_from_slot ~tvars ~slot ty
+                    in
+                    if refined <> ty then decl_spoke := true;
+                    refined
+                  | None -> ty
+                in
+                let wrapped : Cpp_ir.Lowered.Type.t =
+                  match ty with
+                  | Shared_pointer _ -> Reference (Lvalue, Const ty)
+                  (* A parameter erased in part takes whatever instantiation
+                     the caller has and is read at this one by
+                     [crane_convert] (see [call_args]): a slot spelled
+                     [std::function<std::optional<box<Nat>>(...)>] cannot
+                     call a lambda declared [std::optional<box<std::any>>],
+                     because [std::optional]'s conversion between the two
+                     is disabled by the aggregate [box<std::any>]. *)
+                  | _ when erased_eta_param ty || mentions_unresolved_promoted ty ->
+                    Reference (Lvalue, Const Auto)
+                  | _ -> ty
+                in
+                (wrapped, Some (eta_param_id i)) )
+              missing_args
+          in
+          let eta_arg_reads =
+            List.mapi
+              (fun i ty ->
+                let ty =
+                  match slot_dom i with
+                  | Some slot -> Ml_type_util.refine_param_from_slot ~tvars ~slot ty
+                  | None -> ty
+                in
+                (* The callee spells a field this scope cannot -- its own
+                   instance resolves [state] -- so converting to the spelling
+                   here would convert to the file-scope box; the argument goes
+                   through to the callee's own parameter instead. *)
+                if erased_eta_param ty && not (mentions_unresolved_promoted ty)
+                then fun e : Cpp_ir.Lowered.Expr.t -> Convert (ty, e)
+                else fun e -> e )
+              missing_args
+          in
+          (* A closure's captures are [const] in its body, so a move of one
+             is a copy there and cannot leave the next call a moved-from
+             value.  Where the closure is single-use ([eta_keep_moves], from
+             an [Core.Expr.Let]) it borrows its scope instead and the moves are the
+             enclosing scope's own. *)
+          let eta_vars =
+            List.mapi
+              (fun i _ -> (List.nth eta_arg_reads i) (Local (eta_param_id i)))
+              eta_args
+          in
+          (* The closure may be called many times (it is handed to a fold or
+             a map), and Rocq evaluates a partial application's arguments
+             once, where it is built.  An argument that computes something
+             is therefore bound once outside the closure, which captures
+             the result; left in the body it would be computed again on
+             every call. *)
+          let rec eta_arg_is_cheap (e : Cpp_ir.Lowered.Expr.t) =
+            match e with
+            | Local _ | Entity _ | Literal _ | Enum_value _
+            | Numeral _ | This | Lambda _
+            | Call (_, Runtime (Crane_rt.Constant _), _) ->
+              true
+            | Move e | Dereference e | Member (e, _) | Project (e, _, _)
+            | Access (_, e, _) | Forward (_, e)
+            | Any_cast (_, e) | Tolerant_any_cast (_, e) | Unbox (_, e)
+            | Convert (_, e) | Box (_, e) | Erase_callable (_, e)
+            | Function_value e ->
+              eta_arg_is_cheap e
+            | Call
+                (_, Entity (_, _, Some {inline = Some {shape = Pair_projection _; _}; _}), [e]) ->
+              eta_arg_is_cheap e
+            | _ -> false
+          in
+          let eta_hoisted = ref [] in
+          let args =
+            List.mapi
+              (fun i a : Cpp_ir.Lowered.Expr.t ->
+                if eta_keep_moves || eta_arg_is_cheap a then a
+                else begin
+                  let id = Id.of_string (Printf.sprintf "_pa%d" i) in
+                  eta_hoisted :=
+                    (Bind_variable (id, Declare (Auto, None), a) : Cpp_ir.Lowered.Stmt.t) :: !eta_hoisted;
+                  Local id
+                end )
+              args
+          in
+          let eta_bind_once lam =
+            match List.rev !eta_hoisted with
+            | [] -> lam
+            | decls -> Cpp_ir.Build.iife None (decls @ [Return (Some lam)])
+          in
+          let call_args = args @ eta_vars in
+          (* The result is the callee's, so it is read off the declaration for
+             the same reason the parameters are: what the call returns is
+             [std::optional<T1<std::any>>], not the [std::optional<std::any>]
+             the erased ML type says. *)
+          let cod =
+            match decl_cod with
+            | Some slot when !decl_spoke ->
+              Ml_type_util.refine_param_from_slot ~tvars ~slot cod
+            (* A result the substitution erased outright has no other
+               statement than the declaration's, which is taken whole
+               wherever this scope can spell it. *)
+            | Some slot when Cpp_ir.Types.prints_as_any cod && names_only_scoped_tvars slot
+              ->
+              slot
+            | _ -> cod
+          in
+          (* The call the lambda makes is the application completed, made of
+             the global's use as a saturated one is. *)
+          let call =
+            let made_of occurrence (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+              match e with
+              | Call (cs, f, a) -> Call ({cs with occurrence = Some occurrence}, f, a)
+              | e -> e
+            in
+            (* The number of arguments the callee itself takes.  An
+               inline-custom template stops at its last [%aN] placeholder:
+               arguments past it are dropped when it is rendered, and a
+               placeholder with no argument cannot be rendered at all.  A
+               function whose codomain is a type variable stops at its ML
+               arrows, because its declaration had no way to flatten a
+               codomain it could not see -- the extra arrows only appear at
+               this call site, where the variable is instantiated at a
+               function type. *)
+            let callee_arity =
+              match inline_custom_arg_arity id with
+              | Some _ as a -> a
+              | None -> (
+                match find_type_opt id with
+                | Some ml_ty when codomain_site ml_ty = Through_tvar ->
+                  Some (count_ml_value_arrows ml_ty)
+                | _ -> None )
+            in
+            match callee_arity with
+            | Some arity ->
+              (* The eta parameters first finish filling the callee, and only
+                 what is left over is applied to its result -- which is a
+                 callable, since that is why there were missing arguments to
+                 begin with. *)
+              let k = max 0 (arity - List.length args) in
+              let fill = List.filteri (fun i _ -> i < k) eta_vars in
+              let surplus = List.filteri (fun i _ -> i >= k) eta_vars in
+              (* A call that fills the callee exactly yields the lambda's
+                 result: recorded, so a mapping's [%ret] can name it. *)
+              let yields = if surplus = [] && cod <> Void then Some cod else None in
+              let filled = made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call ?yields cglob (args @ fill)) in
+              (* The surplus goes to the result in the groups its spelling
+                 takes them in ({!call_result_site}). *)
+              apply_at_site (call_result_site id) filled surplus
+            | None -> made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob call_args)
+          in
+          let ret_ty, (body : Cpp_ir.Lowered.Stmt.t list) =
+            if cod = Void then
+              (* Void-returning function: execute for side effects, then
+                 return without a value. *)
+              (None, [Expression call; Return None])
+            else
+              (Some cod, [Return (Some call)])
+          in
+          (* A type variable the eta-lambda's own signature names and the
+             enclosing declaration's head does not is the index the natural
+             transformation quantified over.  Eta-expansion is what introduced
+             it, so eta-expansion is what has to bind it: written nowhere it
+             is a free name, which is how [handle_local_debug]'s index reached
+             C++ as a bare [T2] under a head declaring only [T1].
+
+             Binding it is all that is decided here.  Whether it survives as a
+             [template <typename>] of the lambda or is erased away is
+             {!Translation_support.mk_lambda}'s call, and it turns on whether a parameter
+             deduces it -- which is exactly the difference between an index
+             the event type still carries ([memM<T2>]) and one erasure took
+             out of it (a [LocalE] that is a plain enum). *)
+          let eta_tparams =
+            let named =
+              List.fold_left
+                (fun acc t -> Id.Set.union acc (Cpp_ir.Types.variable_names t))
+                Id.Set.empty
+                (cod :: List.map fst eta_args)
+            in
+            Id.Set.elements
+              (List.fold_left
+                 (fun acc x -> Id.Set.remove x acc)
+                 named
+                 (!tctx).lexical.current_type_vars )
+          in
+          let eta_lambda params ret body ~capture = mk_lambda ~tparams:eta_tparams params ret body ~capture in
+          (* A use site expecting fewer parameters than the callee takes wants
+             a curried closure: the arrows past its arity belong to the
+             element type it is generic in, not to the callable itself. *)
+          ( match expected_ty with
+          | Some (Function (exp_dom, _))
+            when exp_dom <> [] && List.length exp_dom < List.length eta_args ->
+            let n = List.length exp_dom in
+            let outer = List.filteri (fun i _ -> i < n) eta_args in
+            let inner = List.filteri (fun i _ -> i >= n) eta_args in
+            eta_bind_once
+              (Cpp_ir.Build.lambda outer None
+                 [ Return
+                     (Some
+                        (eta_lambda inner ret_ty body
+                           ~capture:Stored ) ) ]
+                 ~capture:Stored )
+          | _ when eta_keep_moves ->
+            eta_lambda eta_args ret_ty body ~capture:Runs_in_place
+          | _ ->
+            (* The arguments are read where the closure is made, and taken
+               by move there when the plan moves them.  The bound arguments
+               are locals of the scope that builds the closure, which ends
+               before the closure is called: it copies them. *)
+            eta_bind_once
+              ( match eta_lambda eta_args ret_ty body ~capture:Stored with
+              | Lambda l as e ->
+                let free = Cpp_ir.Variables.free_in_expr e in
+                let moved =
+                  List.filter
+                    (fun x -> List.exists (Id.equal x) free)
+                    (moved_names env (Ownership_ir.eta_captures (!tctx).lexical.move_plan ml_args))
+                in
+                Lambda {l with moved = moved}
+              | e -> e ) )
+      | _ ->
+        if id_is_typeclass_instance && args = [] then
+          cglob
+        else if is_inline_custom id && args = [] then
+          (* Zero-arg inline custom: return the glob directly so the
+             template string renders as-is, without an appended (). *)
+          cglob
+        else
+          (* A reference to a global {i value} whose C++ type is not a
+             function type (e.g. a state-monad-style [std::function] synonym)
+             is a data member, not a nullary function, so it must not be
+             called.  Only globals whose declaration really takes no C++
+             parameters -- thunks and those whose every parameter is erased --
+             get the [()]. *)
+          apply_global id cglob args
+    in
+    (* Collapse identity inline customs (%a0) at AST level.  This prevents
+       unnecessary IIFE wrapping when a void call passes through an identity
+       wrapper (e.g. Ceval) and then appears in statement position. *)
+    let primary_result =
+      match primary_result with
+      | Call (_, Entity (_, _, Some ci), [single_arg])
+        when (match ci.inline with Some {shape = Identity; _} -> true | _ -> false) ->
+        single_arg
+      | _ -> primary_result
+    in
+    (* Wrap pair-accessor inline custom arguments in any_cast when the
+       argument's ML type is erased.  E.g. [fst vs] where [vs : std::any]
+       generates [any_cast<pair<any,any>>(vs).first] instead of [vs.first].
+       This is the inline-custom analog of the scrutinee any_cast in
+       [gen_custom_cpp_case]. *)
+    let primary_result =
+      match primary_result with
+      | Call (_, (Entity (n, glob_tys, Some ci) as cglob'), [single_arg])
+        when (match ci.inline with
+              | Some {shape = Pair_projection _; _} -> true
+              | _ -> false) ->
+        let arg_ml_erased =
+          (* A variable is erased when its ML type is, or when the C++ type
+             it converts to is [std::any] -- a value-dependent type such as
+             [symbols_semty gamma] is only opaque after conversion. *)
+          let rel_is_erased ty =
+            let ty = resolve_tmeta ty in
+            is_erased_ml_type ty
+            || ml_erases_to_box env ty
+          in
+          let rec has_magic = function
+            (* A coercion around a local variable says nothing on its own: in
+               an instance method the class's associated type has already been
+               specialised, so the variable holds the concrete pair.  Judge by
+               the variable's type when it is known; a coercion is still the
+               only evidence available when it is not. *)
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} -> (
+              match get_env_type_opt i with
+              | Some ty -> rel_is_erased ty
+              | None -> true )
+            | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ -> true
+            | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args} as node ->
+              (* If the callee is itself a pair accessor (.first/.second) and
+                 its product arg was coerced, result is also std::any *)
+              let is_pair_accessor =
+                match Table.find_custom_opt r with
+                | Some s -> (
+                  match Cpp_ir.Foreign.shape_of_text s with
+                  | Pair_projection _ -> true
+                  | _ -> false )
+                | None -> false
+              in
+              if is_pair_accessor then
+                let inner_args =
+                  List.filter (fun x -> match x with Core.Expr.Erased_value _ -> false | _ -> true) args
+                in
+                List.exists has_magic inner_args
+              else
+                glob_declared_cod_erases r
+                (* A declaration that leaves its result a type variable says
+                   nothing on its own; the type this call instantiates it to
+                   does. *)
+                || ( match infer_ml_body_type node with
+                   | Some t -> is_boxed_source (cpp_of_ml env t)
+                   | None -> false )
+            | Core.Expr.Global {callee = r; _} -> glob_declared_cod_erases r
+            | Core.Expr.Bound_variable {index = i; _} -> (
+              match get_env_type_opt i with
+              | Some ty -> rel_is_erased ty
+              | None -> false )
+            | _ -> false
+          in
+          if List.length regular_ml_args > 0 then
+            has_magic (List.nth regular_ml_args 0)
+          else false
+        in
+        if arg_ml_erased then
+          let prod_g_opt =
+            (* The first argument the C++ call passes: erased domains carry no
+               value, so they are not it. *)
+            let first_dom =
+              try
+                match ml_value_domains (Table.find_type n) with
+                | t :: _ -> Some (resolve_tmeta t)
+                | [] -> None
+              with Not_found -> None
+            in
+            match first_dom with
+            | Some (Core.Type.Global_app {head = g; _}) when is_prod_global g -> Some g
+            | _ -> None
+          in
+          ( match prod_g_opt, single_arg with
+          | _, Any_cast (Entity_application (g, cast_args, _), _)
+            when is_prod_global g && cast_args <> []
+                 && List.for_all Cpp_ir.Types.prints_as_any cast_args ->
+            (* The argument arrived already recovered from its box, and at the
+               erased shape [pair<any, any>].  Its components are boxes too, so
+               the accessor's result needs the same recovery at the use site as
+               when this branch inserts the cast itself --
+               {!yields_boxed_component} recognises both shapes. *)
+            primary_result
+          | _, Any_cast _ -> primary_result
+          | Some g, _ when (match glob_tys with
+                            | [_; _] ->
+                              not (List.exists Ml_type_util.has_tany_in_type
+                                     glob_tys)
+                            | _ -> false) ->
+            (* The accessor's own type arguments name both components
+               concretely, so the box can be opened at that very shape --
+               tolerantly, because a producer that deep-erased stored
+               [pair<any,any>], which [crane_any_cast] recovers component by
+               component.  What comes out is concrete, so the accessor's
+               result needs no further recovery. *)
+            Cpp_ir.Build.call cglob'
+              [Cpp_erasure.unbox_tolerant (Entity_application (g, glob_tys, [])) single_arg]
+          | Some g, _ ->
+            (* Tolerantly: the ML type says the argument is a box, but a
+               producer that could name the pair's shape may have emitted the
+               [pair<any, any>] itself rather than a box around it.
+               [crane_any_cast] accepts both -- it opens a box and passes a
+               pair already in hand through -- where a plain [any_cast] would
+               throw on the latter. *)
+            Cpp_ir.Build.call cglob'
+              [ Cpp_erasure.unbox_tolerant (Entity_application (g, [Any; Any], [])) single_arg ]
+          | None, _ -> primary_result )
+        else
+          primary_result
+      | _ -> primary_result
+    in
+    let result = wrap_excess primary_result in
+    (* A saturated call's result read at the type expected of it, where the
+       two differ only in how their arrows are grouped
+       ({!regroup_crossing}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
+       [list (A -> B -> R)]. *)
+    ( match (written_fn_ty, expected_ty) with
+    | Some (Cpp_ir.Type.Function (doms, written_cod)), Some into
+      when excess_args = [] && List.length doms = List.length args ->
+      ( match regroup_crossing ~from:written_cod ~into result with
+      | Cpp_ir.Expr.Convert (t, _) -> Convert (t, result)
+      | _ -> result )
+    | _ -> result )
+  | _ ->
+    (* Non-global callee (e.g., a local variable from Core.Expr.Bound_variable). Filter out Core.Expr.Erased_value
+       args — these are erased type/prop parameters that have no runtime
+       representation. Unlike the Core.Expr.Global case above, there is no use to
+       instantiate here; we only need to drop value-level dummies. *)
+    let args =
+      List.filter
+        (fun x ->
+          match x with
+          | Core.Expr.Erased_value _ -> false
+          | _ -> true )
+        args
+    in
+    (* A class-typed argument is not a value: the concept is met by a type, and
+       the method the callee projects declares it as a template parameter.  It
+       leaves the argument list for the callee's explicit template arguments,
+       which is the only place that parameter can be given. *)
+    let tc_args, _, args = split_instance_args ~lex:(current_lexenv ()) args in
+    let gen_callee () : Cpp_ir.Lowered.Expr.t =
+      match (tc_args, gen_expr env f) with
+      | [], e -> e
+      | _, Scope (b, id, tys) ->
+        Scope (b, id, tys @ List.filter_map (fun a -> ml_arg_to_template_type env a) tc_args)
+      | _, e -> e
+    in
+    (* The callee's own function type, with an alias standing for one expanded
+       -- a single-method class is its method, so [Iter M] {e is} the arrow the
+       call goes through. *)
+    let erased_callee =
+      match f with
+      | Core.Expr.Bound_variable {index = i; _}
+      | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} -> erased_member i
+      | _ -> false
+    in
+    let callee_fun_ml_ty =
+      match f with
+        | Core.Expr.Global ({callee = r; _} as use) when not (Mlutil.Var_types.is_empty (Mlutil.written_type_args use)) ->
+          (match find_type_opt r with
+           | Some ty -> Some (Mlutil.instantiate_written ~reader:"callee_fun_ml_ty" use ty)
+           | None -> infer_ml_body_type f)
+        | _ ->
+          ( match infer_ml_body_type f with
+          | Some ty -> Some ty
+          | None ->
+            (* A local binder typed by name ([c : church]) shows no arrows in
+               the term, so its parameter types can only come from the type the
+               environment recorded at the binding site.  Only an alias is
+               taken: any other binder either carries its arrows in the term or
+               is generalised into a deduced callable, which takes each
+               argument at the type the argument already has. *)
+            ( match f with
+            (* A member of a group recursing at a ground instance takes its
+               arguments adapted to its erased parameters
+               ({!erased_member_types}). *)
+            | Core.Expr.Bound_variable {index = i; _}
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} when erased_callee ->
+              get_env_type_opt i
+            | Core.Expr.Bound_variable {index = i; _}
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} -> (
+              match get_env_type_opt i with
+              | Some (Core.Type.Global_app {head = GlobRef.ConstRef _; _} as ty) -> (
+                match expand_ml_fun_alias ty with
+                | Core.Type.Arrow _ as expanded -> Some expanded
+                | _ -> None )
+              | _ -> None )
+            | _ -> None ) )
+    in
+    let callee_param_tys =
+      (* Erased and class-typed domains take no argument slot, so neither
+         takes a place in the list this indexes [args] by. *)
+      let rec extract_params = function
+        | Core.Type.Arrow {parameter = t; result = rest} ->
+          ( match resolve_tmeta t with
+          | Core.Type.Erased _ -> extract_params rest
+          | t when Table.is_typeclass_type t -> extract_params rest
+          | t -> t :: extract_params rest )
+        | Core.Type.Meta {contents = Some t} -> extract_params t
+        | _ -> []
+      in
+      match callee_fun_ml_ty with Some fty -> extract_params fty | None -> []
+    in
+    let callee_rel_idx = match f with
+      | Core.Expr.Bound_variable {index = i; _}
+      | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} -> Some i
+      | _ -> None
+    in
+    let callee_env_ty =
+      match callee_rel_idx with
+      | Some i -> (try Some (get_env_type i) with _ -> None)
+      | None -> None
+    in
+    let callee_cpp_erased =
+      match f with
+      | Core.Expr.Bound_variable {index = i; occurrence = occ}
+      | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _} ->
+        read_is_boxed i occ
+      | _ -> false
+    in
+    (* A pattern binder whose definition-site field type is a type variable
+       still has a concrete C++ type when the scrutinee instantiates that
+       variable concretely — [populate_erased_field_env] recorded it in
+       [cpp_binder_types] at that concrete type, and the plan does not box
+       it ({!read_is_boxed}).
+       Its erased ML type must not be taken at face value here, or a perfectly
+       concrete [std::function<uint64_t(uint64_t)>] field gets wrapped in an
+       [any_cast] that does not compile. *)
+    let callee_known_concrete =
+      match callee_rel_idx with
+      | Some i when not callee_cpp_erased ->
+        ( match pattern_binder_type i with
+        | Some t -> not (resolves_to_any_type t)
+        | None ->
+          (* Likewise for a parameter of the enclosing function: the ambient
+             environment may still spell its type as the class/section type
+             variable it was abstracted over, while the declaration this body
+             belongs to (e.g. a typeclass instance at a function type) pinned
+             it to a concrete C++ signature. *)
+          ( match parameter_type env i with
+          | Some t ->
+            (not (is_ml_erased_ty t))
+            && not
+                 (resolves_to_any_type
+                    (cpp_ir_of_ml_type env
+                       (get_current_type_vars ())
+                       t ) )
+          | None -> false ) )
+      | _ -> false
+    in
+    (* A callee is only callable through the canonical adapter when nothing
+       with a C++ call operator is left of its type -- which is what
+       [std::any] means here.  The ML type may say so outright ([Core.Type.Erased],
+       [Tunresolved], a bare [Core.Type.Variable]) or only once converted: a type-level
+       [Fixpoint] applied to an argument is a perfectly concrete [Core.Type.Global_app] in
+       Core and still lands on a [using sem = std::any] alias in C++. *)
+    let erases_to_any ty =
+      is_ml_erased_ty ty
+      || ml_erases_to_box env ty
+    in
+    let callee_is_bare_any =
+      callee_cpp_erased
+      || ( (not callee_known_concrete)
+         &&
+         match callee_env_ty with
+         | Some ty -> erases_to_any ty
+         | None -> false )
+      (* Not a local binder: the callee's own inferred type decides. *)
+      || ( callee_rel_idx = None
+         &&
+         match infer_ml_body_type (strip_magic f) with
+         | Some t -> erases_to_any t
+         | None -> false )
+    in
+    let callee_has_erased_params =
+      callee_is_bare_any ||
+      (match callee_env_ty with
+      | Some (Core.Type.Arrow {parameter = param; _}) -> is_ml_erased_ty param
+      | _ -> false) ||
+      (match callee_rel_idx with
+       | Some i ->
+         (match pattern_binder_type i with
+          | Some (Function (params, _)) -> List.exists (fun (p : Cpp_ir.Lowered.Type.t) -> p = Any) params
+          | _ -> false)
+       | None -> false)
+    in
+    (* [has_unresolved_boxed_arg]: set when an argument is statically known to
+       be boxed as [std::any] ({!read_is_boxed}) but the callee's parameter
+       type at this position can't be resolved to a concrete C++ type (it is
+       itself abstract/erased, e.g. a value-dependent type scheme like
+       [S.sem a]).  This happens when the callee is a genuinely-concrete
+       function only at C++ template instantiation time (e.g. a functor
+       parameter instantiated with a concrete inlined function) — the OCaml
+       side cannot know the concrete type to [any_cast] to.  Such calls are
+       routed through the [crane_call_erased] runtime helper instead of a
+       direct call, so the concrete parameter types can be recovered via
+       [std::function] CTAD once C++ instantiates the template. *)
+    let has_unresolved_boxed_arg = ref false in
+    let arg_slot =
+      if callee_has_erased_params then into_box Var_box slot else slot
+    in
+    (* The callee's declared domain at an argument's position, where the
+       binding site recorded a declaration: a lambda is written against it,
+       curried as it says ([fun a _ => k a] for an [A -> cont R B]).  Not one
+       with an erased position, which says less than the lambda's own
+       binders -- a handler the callee takes polymorphically is a function
+       object, not the erased signature. *)
+    let declared_dom i =
+      match
+        match f with
+        | Core.Expr.Bound_variable {index = j; occurrence = occ}
+        | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+        | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+        | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _} ->
+          let respelled = Option.map default_tvar_names in
+          respelled (planned_binder_type ~use:"declared domain" ~agree:(fun p l -> respelled p = respelled l) j occ)
+        | _ -> None
+      with
+      | Some (Cpp_ir.Type.Function (dom, _)) -> (
+        match List.nth_opt dom i with
+        | Some t when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) -> Some t
+        | _ -> None )
+      | _ -> None
+    in
+    let args =
+      List.mapi (fun i x ->
+      let expr =
+        match x with
+        | e when ml_value_is_void_call e ->
+          wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
+        | Core.Expr.Lambda _ ->
+          gen_expr ?expected_ty:(declared_dom i) ~slot:arg_slot env x
+        | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ ->
+          let expected = param_expected_cpp_ty env callee_param_tys i in
+          gen_expr ?expected_ty:expected ~slot:arg_slot env x
+        | Core.Expr.Bound_variable {index = j; occurrence = occ} when read_is_boxed j occ ->
+          let inner = gen_expr ~slot:arg_slot env x in
+          let expected = param_expected_cpp_ty env callee_param_tys i in
+          ( match expected with
+            | Some ty ->
+              Cpp_erasure.unbox (erase_type_args_to_any ty) inner
+            | None ->
+              has_unresolved_boxed_arg := true;
+              inner )
+        | _ -> gen_expr ~slot:arg_slot env x
+      in
+      match List.nth_opt callee_param_tys i with
+      | Some param_ty when erased_callee -> adapt_to_erased_param env param_ty x expr
+      | Some param_ty -> erase_fn_arg_for_param env param_ty x expr
+      | None -> expr) args
+    in
+    (* Detect over-application: when a local variable's C++ type has fewer
+       value-domain arrows than the number of ML args, the call must be split
+       into a primary call and a chained application of excess args. Example: [f
+       : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
+    let n_value_dom =
+      let rel_idx_f = match f with
+        | Core.Expr.Bound_variable {index = i; occurrence = occ}
+        | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _}
+        | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _}
+        | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _} ->
+          Some (i, occ)
+        | _ -> None
+      in
+      match rel_idx_f with
+      | Some (i, occ) ->
+        ( match get_env_type_opt i with
+          | None -> List.length args
+          | Some ty ->
+            let n = count_ml_value_arrows ty in
+            (* The declaration is what says how the arrows are taken.  A
+               parameter the class declares as [A -> m B], whose [m] this
+               instance fixes at something itself arrow-shaped, has one domain
+               in C++ and two arrows in ML; flattened, the call hands both at
+               once to a callable that takes one.  Where the region's plan
+               gives the binder a function type -- a method's parameter at
+               the type its head declares it -- that is the answer, but only
+               where it takes {e fewer}, since a declaration with more
+               domains is the under-application the ML count already
+               handles and a re-derived type is not a declaration. *)
+            let declared = function
+              | Some (Cpp_ir.Type.Function (dom, _)) when List.length dom < n -> List.length dom
+              | _ -> n
+            in
+            let n =
+              declared
+                (planned_binder_type ~use:"call arity"
+                   ~agree:(fun p l -> Int.equal (declared p) (declared l))
+                   i occ )
+            in
+            if n < List.length args && codomain_site ty = Through_tvar then
+              List.length args
+            else n )
+      | None -> List.length args
+    in
+    let n_args = List.length args in
+    (* Lifting every argument onto the template list still leaves a call. *)
+    if n_args = 0 && tc_args = [] then
+      (* All args were erased (Core.Expr.Erased_value): no function call, just the
+         expression itself.  This arises when erased proof arguments
+         (e.g. [le n 0] in [Function]-generated [_rect] bodies) are
+         applied to a local variable — the proofs are filtered out,
+         leaving an empty arg list.  Generating [f()] would be wrong
+         because the C++ type has no 0-arg overload. *)
+      gen_callee ()
+    else if n_args < n_value_dom && n_value_dom > 0 then
+      (* Under-application (partial application due to proof erasure).
+         The callee expects [n_value_dom] args but only [n_args] are
+         provided — the rest were erased proofs in the same
+         [Core.Expr.Apply] that have been filtered out.
+
+         Generate a lambda wrapper that captures the provided args and
+         forwards them along with fresh parameters for the remaining
+         args.  E.g., [f2(n1)] where [f2 : (nat, T1) -> T1] becomes:
+         [[&](T1 _pa0) { return f2(n1, _pa0); }]. *)
+      let remaining_ml_tys =
+        match f with
+        | Core.Expr.Bound_variable {index = i; _} ->
+          ( try
+              let ml_ty = get_env_type i in
+              (* Skip [n_args] non-dummy domain entries to find the
+                 remaining value-domain types. *)
+              let rec skip_and_collect n = function
+                | Core.Type.Arrow {parameter = t; result = rest} ->
+                  ( match resolve_tmeta t with
+                  | Core.Type.Erased _ -> skip_and_collect n rest
+                  | t ->
+                    if n > 0 then skip_and_collect (n - 1) rest
+                    else t :: skip_and_collect 0 rest )
+                | Core.Type.Meta {contents = Some t} -> skip_and_collect n t
+                | _ -> []
+              in
+              skip_and_collect n_args ml_ty
+            with _ -> [] )
+        | _ -> []
+      in
+      if remaining_ml_tys <> [] then
+        let callee = gen_callee () in
+        let pa_params = List.mapi (fun j ml_ty ->
+          let cpp_ty = cpp_of_ml env ml_ty in
+          (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
+          remaining_ml_tys
+        in
+        let pa_exprs = List.map (fun (_, id_opt) : Cpp_ir.Lowered.Expr.t ->
+          Local (Option.get id_opt)) pa_params in
+        (* What the call reads, the function included, is read where the
+           closure is made, and taken by move there when the plan moves it. *)
+        ( match
+            Cpp_ir.Build.lambda pa_params None
+              [Return (Some (Cpp_ir.Build.call callee (args @ pa_exprs)))]
+              ~capture:Stored
+          with
+          | Lambda l ->
+            Lambda
+              {l with moved = moved_names env (Ownership_ir.eta_captures (!tctx).lexical.move_plan (f :: ml_args))}
+          | e -> e )
+      else
+        Cpp_ir.Build.call (gen_callee ()) args
+    else if n_args > n_value_dom && n_value_dom > 0 then
+      let primary = safe_firstn n_value_dom args in
+      let excess = List.skipn n_value_dom args in
+      Call
+        (Cpp_ir.Build.signature ~nargs:0 (),
+          Call (Cpp_ir.Build.signature ~nargs:0 (), gen_callee (), primary),
+          excess )
+    else
+      (* When the callee is a local variable whose ML type is a bare type
+         variable (Core.Type.Variable/Tunresolved), its C++ type is std::any.  std::any
+         is not callable, so we must wrap it with std::any_cast to recover the
+         std::function type before calling.  Both arg and return types
+         default to std::any since the original types are erased.
+         The coercion wrapper is transparent — peel it to find the Core.Expr.Bound_variable. *)
+      let callee_expr = gen_callee () in
+      (* Check whether this call returns [std::any] (erased type) but the
+         enclosing function expects a concrete type, requiring an
+         [std::any_cast<T>] wrapper.  See [ml_codomain_erases_to_any].
+         Two callee forms are handled:
+         - [Core.Expr.Match] single-branch record projection whose field type has a
+           higher-rank codomain (e.g. [apply : forall A, A -> A] stored as
+           [std::function<std::any(std::any)>]).
+         - [Core.Expr.Bound_variable] higher-rank callback whose env-type has a [Core.Type.Variable] codomain
+           guarded by [Core.Type.Erased] (e.g. [f : forall A, A -> A]). *)
+      let result =
+        if !has_unresolved_boxed_arg && not callee_is_bare_any then begin
+          (Tolerant_call (callee_expr, args) : Cpp_ir.Lowered.Expr.t)
+        end
+        else if callee_is_bare_any then
+          apply_erased_curried callee_expr args
+        else Cpp_ir.Build.call callee_expr args
+      in
+      let n = n_args in
+      let erased_cod =
+        (* A callee recovered from a bare [std::any] is called through the
+           canonical [std::function<std::any(std::any...)>] adapter, so its
+           result is a [std::any] no matter what the ML type says. *)
+        callee_is_bare_any
+        ||
+        match f with
+        | Core.Expr.Match {scrutinee_type = case_ty; branches = pv; _} when Array.length pv = 1 ->
+          let {Core.Match.Branch.binders = binds; body = br_body; _} = pv.(0) in
+          let n_binds = List.length binds in
+          let proj_idx =
+            match br_body with
+            | Core.Expr.Bound_variable {index = i; _} when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} when i >= 1 && i <= n_binds ->
+              Some (n_binds - i)
+            | _ -> None
+          in
+          ( match proj_idx with
+          | Some idx ->
+            ( match case_ty with
+            | Core.Type.Global_app {head = r; _} ->
+              let all_ft = Table.record_field_types r in
+              let non_erased = filter_value_types all_ft in
+              ( try ml_codomain_erases_to_any n (List.nth non_erased idx)
+                with _ -> false )
+            | _ -> false )
+          | None -> false )
+        | Core.Expr.Bound_variable {index = i; _} ->
+          (match get_env_type_opt i with Some ty -> ml_codomain_erases_to_any n ty | None -> false)
+        | _ -> false
+      in
+      recover_boxed_result ~boxed:erased_cod ~expected:expected_ty result
+      |> recover_carrier_result ~fun_ty:callee_fun_ml_ty ~n_args:n ~want:(position_cpp_ty expected_ty)
+
+(** The dictionary of a singleton class, the variable [i] read at [occ],
+    applied to [args]: the body of the class's projection, which calls the
+    method on the instance -- a template parameter, so a static member -- at
+    the method's own type variables. *)
+let gen_singleton_dictionary_call env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
+  let inst, class_ref, method_ref = Option.get (singleton_call env i occ) in
+  let ipv = List.length (Table.get_ind_ip_vars class_ref) in
+  let n_own = Ml_type_util.method_tvar_count class_ref (Table.find_type method_ref) in
+  let tvars = get_current_type_vars () in
+  let targs =
+    List.init n_own (fun k ->
+        cpp_ir_of_ml_type env tvars (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                         variable = ipv + 1 + k}))
+  in
+  let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
+  Cpp_ir.Build.call
+    (Scope (Local inst, Common.id_of_global Term method_ref, targs))
+    (List.map (gen_expr env) value_args)
+
+(** A class field projected through the instance [use] applied to [args]
+    names, as Core decided it ({!Core_elaborate.static_projection_call}); a
+    projection missing arguments is eta-expanded over them first. *)
+let gen_instance_projection ~expected_ty ~slot env ~use ~args : Cpp_ir.Lowered.Expr.t =
+  let projection = Option.get (Core_elaborate.static_projection_call ~lex:(current_lexenv ()) use args) in
+  match projection.missing with
+  | [] -> project_through_instance env use args projection
+  | missing ->
+    let k = List.length missing in
+    let call =
+      Core.Expr.Apply {callee = Core.Expr.Global use;
+                       arguments = List.map (Mlutil.ast_lift k) args @ List.init k (fun i -> Core.Expr.fresh_rel (k - i))}
+    in
+    gen_expr ?expected_ty ~slot env
+      (Mlutil.named_lams
+         (List.rev (List.mapi (fun i t -> (Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i)), t)) missing))
+         call )
+
+(** The application of [f] to [args] that no special form claimed: a
+    call, partial or saturated ({!eta_fun}), its result recovered from a box
+    where only a type index pins it down, and the call node recording its
+    signature. *)
+let gen_application ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t list) : Cpp_ir.Lowered.Expr.t =
+  (* A partial application is a callable this position may expect at a
+     different currying than the callee's own arrows give it, so the slot's
+     type travels with it. *)
+  let result = eta_fun ?expected_ty ~slot env f args in
+  (* A callee whose result is only pinned down by a type index hands back a
+     [std::any] (see {!result_is_index_only_tvar}); recover it at the type
+     this position expects. *)
+  let callee_ty =
+    match f with
+    | Core.Expr.Global {callee = r; _} -> callee_ml_type r
+    | Core.Expr.Bound_variable {index = i; _} -> get_env_type_opt i
+    | _ -> None
+  in
+  (* The same type, at the instantiation this call uses: what the call
+     yields is the codomain of *that*, not of the general scheme. *)
+  let callee_ty_inst =
+    match (f, callee_ty) with
+    | Core.Expr.Global use, Some ty ->
+      let value_args =
+        List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args
+      in
+      Some (instantiate_use_at_call use value_args ty)
+    | _ -> callee_ty
+  in
+  (* A callee typed by a function alias ([church]) hands back whatever the
+     alias's codomain erased to; the alias is the only place that says so,
+     since the term itself carries no arrows. *)
+  let alias_result_is_boxed ty =
+    match ty with
+    | Core.Type.Global_app {head = GlobRef.ConstRef _; _} ->
+      ( match expand_ml_fun_alias ty with
+      | Core.Type.Arrow _ as expanded ->
+        ( match ml_codomain expanded with
+        | Core.Type.Variable _ | Core.Type.Unknown -> true
+        | _ -> false )
+      | _ -> false )
+    | _ -> false
+  in
+  (* A binder whose declared C++ type boxes its result -- a rank-2 parameter
+     typed [std::function<std::any(std::any)>], say -- hands back a box
+     however the term's ML type reads.  The assignment made where the binder
+     was bound is the authority on that; only a saturated call reaches the
+     codomain it names. *)
+  let binder_result_is_boxed =
+    match f with
+    | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
+      let n_runtime =
+        List.length (List.filter (fun a -> not (Mlutil.isMLdummy (strip_magic a))) args)
+      in
+      let boxes t =
+        match Option.map (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t)) t with
+        | Some (Cpp_ir.Type.Function (doms, cod)) -> Cpp_ir.Types.prints_as_any cod && List.length doms = n_runtime
+        | _ -> false
+      in
+      boxes (planned_binder_type_or_derive ~use:"callee result" ~agree:(fun p l -> boxes p = boxes l) env i occ)
+    | _ -> false
+  in
+  (* Nor can a global whose declaration boxed its result -- [id] declared
+     at [crane::obj] -- hand back anything else, however this call
+     instantiates it. *)
+  let declared_result_is_boxed =
+    match f with Core.Expr.Global {callee = r; _} -> glob_declared_cod_erases r | _ -> false
+  in
+  let result =
+    if
+      binder_result_is_boxed || declared_result_is_boxed
+      || ( match callee_ty with
+         | Some ty -> result_is_index_only_tvar ty || alias_result_is_boxed ty
+         | None -> false )
+    then unbox_into expected_ty result
+    else result
+  in
+  (* A call of what [f] names is made of this application, which the
+     recursion plan knows by its head: a global's use, or the read of a
+     local function -- read as it is, or through the cast unboxing what
+     it returns. *)
+  let made_of_application (call : Cpp_ir.Lowered.Expr.t) =
+    match (f, call) with
+    | Core.Expr.Global use, Call (_, Entity (r, _, _), _) when Common.globref_equal r use.callee ->
+      made_of (Core.Global_use.occurrence use) call
+    | Core.Expr.Bound_variable {occurrence = occ; _}, Call (_, Local _, _) -> made_of occ call
+    | _ -> call
+  in
+  ( match record_call_sig env callee_ty_inst result with
+  | Any_cast (ty, call) -> Any_cast (ty, made_of_application call)
+  | result -> made_of_application result )

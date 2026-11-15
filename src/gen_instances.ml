@@ -168,20 +168,20 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
   let resolve_mentioned (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Promoted_member v -> (
-      match List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).promoted_var_map with
+      match List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).lexical.promoted_var_map with
       | Some (_, r) -> r
       | None -> t )
     | t -> t
   in
   let concept_args class_ref args =
-    List.map (cpp_ir_of_ml_type (empty_env ()) []) args
+    List.map (Translation_types.cpp_ir_of_ml_type (empty_env ()) []) args
     @ List.map
         (fun v -> resolve_mentioned (Promoted_member v))
         (Table.promoted_type_params class_ref)
   in
   with_promoted_var_map
     ( promoted_var_resolutions @ specialised_arg_resolutions
-    @ (!tctx).promoted_var_map )
+    @ (!tctx).lexical.promoted_var_map )
   @@ fun () ->
   (* The instance's own head spells the same mentioned variables in its
      parameters' constraints -- [requires PI<_tcI2, ptr>] -- and they resolve
@@ -375,7 +375,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                            not (List.exists (Id.equal name) type_var_names)
                          | Variable (Index (_, None)) | Auto -> true
                          | _ -> false )
-                       (cpp_ir_of_ml_type base_env type_var_names t) ) )
+                       (Translation_types.cpp_ir_of_ml_type base_env type_var_names t) ) )
                 have want
           in
           let declared_arg_arities =
@@ -388,7 +388,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
              at ([Declared_at]): the arrows substitution moved into the
              callable's parameter list go back where the signature had them. *)
           let param_cpp_ty n ml_ty =
-            let ty = cpp_ir_of_ml_type base_env type_var_names ml_ty in
+            let ty = Translation_types.cpp_ir_of_ml_type base_env type_var_names ml_ty in
             match
               (if n < Array.length declared_arg_arities then
                  declared_arg_arities.(n)
@@ -443,14 +443,14 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  instance's, so a bare type variable in the return type is
                  already meaningful -- no need to guess it from the last
                  binder. *)
-              cpp_ir_of_ml_type base_env type_var_names ret
+              Translation_types.cpp_ir_of_ml_type base_env type_var_names ret
             | (Core.Type.Variable _) when binders <> [] ->
               (* Unsubstituted Core.Type.Variable — infer from the last lambda binder's type.
                  For op : A -> A -> A with body Core.Expr.Lambda(x, nat, Core.Expr.Lambda(y, nat,
                  ...)), the return type is the same as the parameter type
                  (nat). *)
               let last_param_ty = (List.hd (List.rev binders)).mb_ml_ty in
-              cpp_ir_of_ml_type
+              Translation_types.cpp_ir_of_ml_type
                 base_env
                 type_var_names
                 last_param_ty
@@ -460,7 +460,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  whole type is Core.Type.Variable, so look at the body's type. *)
               Any
             | _ ->
-              cpp_ir_of_ml_type
+              Translation_types.cpp_ir_of_ml_type
                 base_env
                 type_var_names
                 ret
@@ -506,7 +506,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                          slot down as [std::any] is what makes the value
                          boxed, so a [Topaque] here becomes known-boxed. *)
                       let cpp_ty =
-                        materialise_opaque (cpp_ir_of_ml_type base_env type_var_names arg_ty)
+                        materialise_opaque (Translation_types.cpp_ir_of_ml_type base_env type_var_names arg_ty)
                       in
                       (name, arg_ty, cpp_ty) )
                     eta_params
@@ -551,7 +551,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                     match body_arg_types with
                     | Some bargs ->
                       let body_ty = List.nth bargs i in
-                      let body_cpp = cpp_ir_of_ml_type base_env type_var_names body_ty in
+                      let body_cpp = Translation_types.cpp_ir_of_ml_type base_env type_var_names body_ty in
                       let is_boxed : Cpp_ir.Lowered.Type.t -> bool = function
                         | Any | Erased _ -> true
                         | _ -> false
@@ -929,7 +929,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
               List.nth promoted_concrete_types i
             in
             let concrete_cpp_ty =
-              cpp_ir_of_ml_type base_env (alias_tvar_names @ alias_params) concrete_ml_ty
+              Translation_types.cpp_ir_of_ml_type base_env (alias_tvar_names @ alias_params) concrete_ml_ty
             in
             (var_name, alias_params, concrete_cpp_ty) )
         |> List.filter_map (fun (var_name, alias_params, concrete_cpp_ty) ->

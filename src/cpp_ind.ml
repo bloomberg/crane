@@ -95,7 +95,7 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Ml_type_util.has_no_cpp_spelling (Translation.cpp_ir_of_ml_type (empty_env ()) l t) )
+        || Ml_type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds r l t)] else []
 
@@ -785,7 +785,7 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
 let ahead_once ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
   let generated () = Translation_state.generating_in module_ gen in
   let check v ~again =
-    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation.collecting_lifted generated))) then
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation_state.collecting_lifted generated))) then
       CErrors.anomaly
         Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and " ++ str again)
   in
@@ -924,7 +924,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Ml_type_util.has_no_cpp_spelling (Translation.cpp_ir_of_ml_type (empty_env ()) l t)) )
+      not (Ml_type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the Core declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
@@ -982,7 +982,7 @@ let generate scope ~module_ d =
        no earlier element of the header places ({!plan_header_claim}). *)
     let gen () =
       let (gf_entity, gf_env), gf_lifted =
-        Translation.collecting_lifted @@ fun () ->
+        Translation_state.collecting_lifted @@ fun () ->
         match gen_decl_for_pp r a t with
         | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
         | None, _, _ when in_template ~module_ ->
@@ -1263,7 +1263,7 @@ let instance_entity ~module_ r a t =
       ignore (record_entity r (instance_ids r ds) helpers);
       (ds, helpers) )
     ~peek:(fun ((ds, _) as v) -> (ds, planned_claim v))
-    (fun () -> Translation.collecting_lifted (fun () -> instance_decls r a t))
+    (fun () -> Translation_state.collecting_lifted (fun () -> instance_decls r a t))
 
 (** {2 The header's scope of a module} *)
 
@@ -1443,7 +1443,7 @@ let record_methods ~module_ r vars candidates =
     ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
     ~take:(fun ((fields, lifted) as v) -> (fields, header_claim v lifted))
     (fun () ->
-      Translation.collecting_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
+      Translation_state.collecting_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
 
 (** The C++ types of each eponymous record's fields, converted ahead of the
     files, by the record. *)
@@ -1468,7 +1468,7 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
     (fun () ->
       List.map
         (fun (_, ty) ->
-          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation.cpp_ir_of_ml_type (empty_env ()) vars ty)) with
+          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars ty)) with
           | t -> t
           | exception Cpp_ir.Resolve.Owed form ->
             CErrors.anomaly
@@ -1546,7 +1546,7 @@ let header_entity ~module_ d gen =
       ignore (record_entity (decl_entity d) (header_declarations d g) helpers);
       (g, helpers) )
     ~peek:(fun ((g, _) as v) -> (g, planned_claim v))
-    (fun () -> Translation.collecting_lifted gen)
+    (fun () -> Translation_state.collecting_lifted gen)
 
 let finished_header ids ds = finished_group ~what:"a header declaration" ids ds
 

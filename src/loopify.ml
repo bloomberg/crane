@@ -322,7 +322,7 @@ let member_plan ~frames member params =
 
 (** Walk through a statement list and loopify each local fixpoint: the
     implementation lambda of the Y-combinator pair a local [fix] becomes
-    ({!Translation.gen_local_fix_by_ref}), which recurses through its
+    ({!Translation_local_functions.gen_local_fix_by_ref}), which recurses through its
     self-parameter, as the program's recursion plan has it
     ({!planned_local_strategy}).  A [let]-bound lambda cannot name the
     variable it is bound to, so no other lambda recurses.
@@ -341,7 +341,7 @@ let member_plan ~frames member params =
 let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   (* What the enclosing scope binds, which a local fixpoint captures. *)
   let outer_env = collect_type_env body @ outer_env in
-  (* Y-combinator idiom emitted by {!Translation.gen_local_fix_by_ref} for
+  (* Y-combinator idiom emitted by {!Translation_local_functions.gen_local_fix_by_ref} for
      local fixpoints:
      {v
        auto f_impl = [&](auto& _self_f, A... args) { ... _self_f(_self_f, newargs) ... };

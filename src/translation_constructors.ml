@@ -4,7 +4,7 @@
 (** Where each value argument of a constructor is generated: the C++ type
     it is generated against and the slot it fills, decided from the
     constructor, its annotation and the position it is built at.
-    {!Translation.gen_expr} lowers a constructor by these, and
+    {!Translation_construct.gen_construction} lowers a constructor by these, and
     {!Position_plan} plans the coercions it stores by them. *)
 
 open Common
@@ -582,7 +582,7 @@ let record_promoted_map (ty : Core.Type.t) =
   let mentioned =
     match ty with Core.Type.Global_app {head = n; _} -> Table.promoted_type_params n | _ -> []
   in
-  List.filter (fun (v, _) -> List.exists (Id.equal v) mentioned) (!tctx).promoted_var_map
+  List.filter (fun (v, _) -> List.exists (Id.equal v) mentioned) (!tctx).lexical.promoted_var_map
 
 (** [record_field_types r]: the declared types of the fields of the record
     constructor [r]. A record's erased fields (a promoted [Type] field such as [dyn]'s
@@ -952,7 +952,7 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
     | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
     | None -> [] in
   let draft_ctor_temps_for_wrap =
-    ctor_draft_temps env ~promoted_active:((!tctx).promoted_var_map <> [])
+    ctor_draft_temps env ~promoted_active:((!tctx).lexical.promoted_var_map <> [])
       ~return:(current_cpp_return_type ()) ty
   in
   (* The same slots, read off the destination instead of off this

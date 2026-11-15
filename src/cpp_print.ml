@@ -1483,7 +1483,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     ++ str ";"
   | Custom_match ({return_type = typ; scrutinee = t; type_args = tyargs; branches = cases; pieces = Instantiated pieces; _} as cmatch) ->
     (* Scrutinee caching (auto _cs = expr;) is handled during translation
-       in [Translation.gen_custom_cpp_case], which prepends a declaration before this node
+       in [Translation_match.gen_custom_cpp_case], which prepends a declaration before this node
        when the template uses %scrut more than once with a non-trivial
        scrutinee.  The printer writes the pieces. *)
     Common.writes_custom cmatch.inductive;

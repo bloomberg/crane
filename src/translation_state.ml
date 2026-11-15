@@ -3,10 +3,18 @@
 (** Shared mutable state for the Core -> CppIR translation.
 
     Holds the per-declaration translation context ([tctx]) and its accessors,
-    so that the translation core ({!Translation}) and the declaration
+    so that lowering ({!Translation} and its modules) and the declaration
     generators ({!Gen_functions}, {!Gen_instances}, ...) can share this state
     without a dependency cycle.  Mirrors {!Cpp_state}, the pretty-printer's
-    equivalent. *)
+    equivalent.
+
+    The context is split by how each part composes ({!translation_ctx}):
+    {!input}, what a declaration's generator sets before lowering its body
+    and lowering only reads; {!lexical}, what holds for the scope being
+    lowered, extended on entry and restored on exit; and {!threaded}, the
+    counters siblings advance in turn.  What lowering produces for later
+    phases is output, collected apart from the context: the helpers it
+    lifts ({!collecting_lifted}). *)
 
 module IntMap = Map.Make (Int)
 
@@ -69,151 +77,12 @@ type env_binder = Lexenv.binder = {
   eb_role : binder_role;
 }
 
-(** Consolidated mutable state for expression compilation.  All of it but
-    the helpers being lifted ({!lifted_so_far}, which belong to a generation
-    rather than a scope) lives here. *)
-type translation_ctx = {
-  (* Template type variables for the function currently being translated. *)
-  current_type_vars : Id.t list;
-  (* The declaration's template head, verbatim: every parameter it declares,
-     with the kind it declares it at.  Two questions are answered from it and
-     neither can be answered from {!current_type_vars}, which keeps only the
-     names and only the ML-indexed ones:
-
-     - whether an occurrence may be written applied, which turns on [typename]
-       versus [template <typename> class] (see {!is_current_typename_var});
-     - which parameters are the enclosing class instances, which a lifted
-       helper must redeclare because the body it lifts spells them (see
-       {!current_class_temps}).
-
-     Only the emitters that build the head know it, so a scope that does not
-     say leaves this empty and both readers answer negatively. *)
-  current_template_head : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters;
-  (* The Core binders of the parameters of the declaration whose body is
-     being generated ({!Core_binder}), which call sites and matches ask a
-     variable's type as a parameter of: by binder, since every binder the
-     body pushes shifts a parameter's index. *)
-  current_parameters : Core_binder.t list;
-  (* C++ return type of the enclosing function, set by the function and
-     instance generators ({!with_cpp_return_type}). Used to recover erased
-     template type args at call sites where C++ can't deduce them from lambda
-     arguments ({!current_cpp_return_type}). *)
-  current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
-  (* De Bruijn environment: each variable's binder, with its ML type and
-     role. *)
-  env_types : Lexenv.t;
-  (* The definition whose body is being generated
-     ({!Gen_context.begin_body}): what its Core binders are binders of
-     ({!Core_binder}). *)
-  body_owner : GlobRef.t option;
-  (* Whether that body is a function's, generated as one, rather than a
-     constant's initialiser or a member's: Loopify lowers every local
-     fixpoint of a function's body, and only the tail loops of others. *)
-  body_function : bool;
-  (* The local fixpoints, by occurrence, whose members are being generated
-     as helpers lifted out of that body, around the point being generated:
-     a helper's machine may adopt a fixpoint in its flow, a local
-     fixpoint's lambda never does. *)
-  lifted_fixpoints : Core.Occurrence.t list;
-  (* Nesting depth of let ... in expressions; used for unique name
-     generation in nested scopes. *)
-  current_letin_depth : int;
-  (* Which binders the region being generated owns where each is read, and
-     which reads are last uses where their value may be taken
-     ({!Ownership_ir}).  Set where the region's body is generated
-     ({!with_region}), and emptied where a body or a closure begins. *)
-  move_plan : Ownership_ir.t;
-  (* Whether each pattern binder of the region being generated holds a box,
-     as {!Representation_plan} plans it from the region's Core body: by Core
-     site and field.  Set beside {!move_plan} ({!with_region}) in a body;
-     under [CRANE_CHECK_IR] translation checks it against the binder's
-     recorded C++ type. *)
-  representation : (Core_binder.site * int * planned_repr) list;
-  (* Whether the binder each variable read of the region reads holds a box,
-     as {!Representation_plan} plans it: by the read's occurrence.  Set
-     beside {!representation}; the only answer lowering reads
-     ({!Translation_types.read_is_boxed}). *)
-  planned_reads : (Core.Occurrence.t * planned_read) list;
-  (* The C++ type the position each coercion of the region fills is
-     generated against, as {!Position_plan} plans it: by the coercion's
-     occurrence, a region nested in another first.  Set beside
-     {!planned_reads}. *)
-  planned_positions : (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list;
-  (* Counter for generating unique match scrutinee variable names
-     (_mp0, _mp1, ...). Reset at function boundaries. *)
-  match_param_counter : int;
-  (* Maps promoted record fields to their C++ qualified types.
-     Example: "m_carrier" -> Tqualified(Core.Type.Variable "_tcI0", "m_carrier")
-     (prints as: typename _tcI0::m_carrier).
-     Set ({!with_promoted_var_map}) when generating template functions and
-     instances with typeclass parameters. Used by
-     {!Translation.cpp_ir_of_ml_type} to resolve [Tpromoted]
-     markers.  CppIR: type conversion reads it as it is. *)
-  promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
-  (* When true, we are inside a constructor expression (module-level static
-     initializer). Promoted type vars that can't be resolved via
-     promoted_var_map fall back to Tany (std::any) instead of keeping
-     [Tpromoted] markers, because module-level aliases apply. *)
-  in_constructor_expr : bool;
-  (* The template parameter of the polymorphic function object being
-     generated, if any.  Inside such a lambda every erased type denotes that
-     one parameter -- it is the type the rank-2 binder quantified over -- so a
-     producer with nothing else to say about a type argument says the carrier
-     instead of [std::any].  See {!Rank2}. *)
-  rank2_carrier : Id.t option;
-  (* ITree extraction mode: controls whether itree types are erased
-     (Sequential) or preserved as shared_ptr<ITree<R>> (Reified). *)
-  itree_mode : itree_extraction_mode;
-  (* Counter for generating unique _cs / _cs1 / _cs2 cache variable names
-     for Scustom_case scrutinee caching. Reset at function boundaries. *)
-  cs_counter : int;
-  (* Perceus reuse: inside a use_count()==1-guarded reuse arm in
-     gen_cpp_case, the token [tok] (the moved, uniquely-owned storage the
-     match frees) the constructions the arm's plan names
-     ({!Ownership_ir.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
-     instead of the normal factory.  The plan names at most one on any path,
-     so nothing here tracks whether it has been taken. *)
-  reuse_token : Cpp_ir.Lowered.Expr.t option;
-  (* When generating a method body, holds the set of self-references
-     (the inductive type(s) this method belongs to). Merged into the ns
-     argument of convert_ml_type_to_cpp_type so that self-refs inside
-     container types (e.g. List<tree>) get shared_ptr wrapping, matching
-     the struct definition. Empty outside method bodies. *)
-  method_self_ns : Ref.User.Set.t;
-  (* The inductives the body of the module being generated spells bare, as
-     planned ({!Scope_plan.local_inductives}): set where generation enters
-     that module ({!generating_in}), none where it enters no module
-     ({!generating_outside_modules}), and [None] before either, where nothing
-     may ask ({!local_inductives_in_scope}). *)
-  local_inductives : GlobRef.t list option;
-  (* The C++ type of {e every} binder in scope, by de Bruijn index, paired
-      with what decided it.
-
-      A binder is typed once, where it is bound ({!Bbinding}, written by
-      [push_binders]); a pattern match that pins a field down more precisely
-      than its definition-site type says -- matching [SigT<Tag,
-      std::function<any(any)>>] records [Function (\[Any\], Any)] for the
-      function field -- overrides it ({!Bpattern}, written by
-      [populate_erased_field_env]).  Whether a binder is boxed is read off
-      this map rather than tracked beside it, so the two answers cannot drift
-      apart.
-
-      Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
-  cpp_binder_types : (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t;
-  (* The C++ types a declaration's head declares its innermost parameters
-     at, innermost first, beside the depth of the binder stack they were
-     pushed at: what a region generated directly in that scope plans those
-     binders at ({!Representation_plan.region}).  [None] where the head
-     declares none beyond the conversion of their ML types. *)
-  declared_outer : (int * Cpp_ir.Lowered.Type.t option list) option;
-}
-
 (** A pattern binder's representation as {!Representation_plan} plans it:
     whether it holds a box.  [pr_bound_boxed] is whether it holds a box at
     the ML type it is bound at, nothing pinned down: how the reuse arm,
     which declares the same fields again, and a record projection in an
     expression declare it.  That answer rests on no other binder. *)
-and planned_repr = {
+type planned_repr = {
   pr_boxed : bool;
   pr_bound_boxed : bool;
 }
@@ -247,6 +116,178 @@ and itree_extraction_mode = Core_effects.mode =
   | Sequential  (** Default: erase [itree E R] to [R]; bind becomes [;] *)
   | Reified     (** Preserve structure: [itree E R] becomes [shared_ptr<ITree<R>>] *)
 
+(** Where generation is ({!input.generating}). *)
+and generation_site =
+  | In_module of Names.ModPath.t  (** the body of this module *)
+  | Outside_modules  (** a pass over the whole unit or program *)
+
+(** What the generator of a declaration says about the body it lowers, set
+    before lowering starts and not changed by it: the declaration's head,
+    parameters, owner, effect mode and module.  A declaration emitter sets
+    these and restores them on the way out; lowering only reads them. *)
+type input = {
+  (* The declaration's template head, verbatim: every parameter it declares,
+     with the kind it declares it at.  Two questions are answered from it and
+     neither can be answered from {!current_type_vars}, which keeps only the
+     names and only the ML-indexed ones:
+
+     - whether an occurrence may be written applied, which turns on [typename]
+       versus [template <typename> class] (see {!is_current_typename_var});
+     - which parameters are the enclosing class instances, which a lifted
+       helper must redeclare because the body it lifts spells them (see
+       {!current_class_temps}).
+
+     Only the emitters that build the head know it, so a scope that does not
+     say leaves this empty and both readers answer negatively. *)
+  current_template_head : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters;
+  (* The Core binders of the parameters of the declaration whose body is
+     being generated ({!Core_binder}), which call sites and matches ask a
+     variable's type as a parameter of: by binder, since every binder the
+     body pushes shifts a parameter's index. *)
+  current_parameters : Core_binder.t list;
+  (* The definition whose body is being generated
+     ({!Gen_context.begin_body}): what its Core binders are binders of
+     ({!Core_binder}). *)
+  body_owner : GlobRef.t option;
+  (* Whether that body is a function's, generated as one, rather than a
+     constant's initialiser or a member's: Loopify lowers every local
+     fixpoint of a function's body, and only the tail loops of others. *)
+  body_function : bool;
+  (* ITree extraction mode: controls whether itree types are erased
+     (Sequential) or preserved as shared_ptr<ITree<R>> (Reified). *)
+  itree_mode : itree_extraction_mode;
+  (* When generating a method body, holds the set of self-references
+     (the inductive type(s) this method belongs to). Merged into the ns
+     argument of convert_ml_type_to_cpp_type so that self-refs inside
+     container types (e.g. List<tree>) get shared_ptr wrapping, matching
+     the struct definition. Empty outside method bodies. *)
+  method_self_ns : Ref.User.Set.t;
+  (* Where generation is, as far as which inductives it spells bare goes:
+     inside the body of a module, whose planned local inductives
+     ({!Scope_plan.local_inductives}) it spells bare, or outside every
+     module, where it spells none.  Set where generation enters a module
+     ({!generating_in}) or a pass over the whole unit
+     ({!generating_outside_modules}); [None] before either, where nothing
+     may ask ({!local_inductives_in_scope}).  The plan is asked on each
+     read rather than its answer kept here. *)
+  generating : generation_site option;
+}
+
+(** What holds for the scope being lowered: the binders in scope and their
+    types, the type variables and return type of the innermost function,
+    and the plans of the region it is in.  Lowering extends it on entering
+    a scope and restores it on leaving ({!with_field}, {!with_scope}), so a
+    sibling never sees what a scope set. *)
+type lexical = {
+  (* Template type variables for the function currently being translated. *)
+  current_type_vars : Id.t list;
+  (* C++ return type of the enclosing function, set by the function and
+     instance generators ({!with_cpp_return_type}). Used to recover erased
+     template type args at call sites where C++ can't deduce them from lambda
+     arguments ({!current_cpp_return_type}). *)
+  current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
+  (* De Bruijn environment: each variable's binder, with its ML type and
+     role. *)
+  env_types : Lexenv.t;
+  (* The C++ type of {e every} binder in scope, by de Bruijn index, paired
+      with what decided it.
+
+      A binder is typed once, where it is bound ({!Bbinding}, written by
+      [push_binders]); a pattern match that pins a field down more precisely
+      than its definition-site type says -- matching [SigT<Tag,
+      std::function<any(any)>>] records [Function (\[Any\], Any)] for the
+      function field -- overrides it ({!Bpattern}, written by
+      [populate_erased_field_env]).  Whether a binder is boxed is read off
+      this map rather than tracked beside it, so the two answers cannot drift
+      apart.
+
+      Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
+  cpp_binder_types : (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t;
+  (* The C++ types a declaration's head declares its innermost parameters
+     at, innermost first, beside the depth of the binder stack they were
+     pushed at: what a region generated directly in that scope plans those
+     binders at ({!Representation_plan.region}).  [None] where the head
+     declares none beyond the conversion of their ML types. *)
+  declared_outer : (int * Cpp_ir.Lowered.Type.t option list) option;
+  (* Maps promoted record fields to their C++ qualified types.
+     Example: "m_carrier" -> Tqualified(Core.Type.Variable "_tcI0", "m_carrier")
+     (prints as: typename _tcI0::m_carrier).
+     Set ({!with_promoted_var_map}) when generating template functions and
+     instances with typeclass parameters. Used by
+     {!Translation.cpp_ir_of_ml_type} to resolve [Tpromoted]
+     markers.  CppIR: type conversion reads it as it is. *)
+  promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
+  (* When true, we are inside a constructor expression (module-level static
+     initializer). Promoted type vars that can't be resolved via
+     promoted_var_map fall back to Tany (std::any) instead of keeping
+     [Tpromoted] markers, because module-level aliases apply. *)
+  in_constructor_expr : bool;
+  (* The template parameter of the polymorphic function object being
+     generated, if any.  Inside such a lambda every erased type denotes that
+     one parameter -- it is the type the rank-2 binder quantified over -- so a
+     producer with nothing else to say about a type argument says the carrier
+     instead of [std::any].  See {!Rank2}. *)
+  rank2_carrier : Id.t option;
+  (* The local fixpoints, by occurrence, whose members are being generated
+     as helpers lifted out of that body, around the point being generated:
+     a helper's machine may adopt a fixpoint in its flow, a local
+     fixpoint's lambda never does. *)
+  lifted_fixpoints : Core.Occurrence.t list;
+  (* Which binders the region being generated owns where each is read, and
+     which reads are last uses where their value may be taken
+     ({!Ownership_ir}).  Set where the region's body is generated
+     ({!with_region}), and emptied where a body or a closure begins. *)
+  move_plan : Ownership_ir.t;
+  (* Whether each pattern binder of the region being generated holds a box,
+     as {!Representation_plan} plans it from the region's Core body: by Core
+     site and field.  Set beside {!move_plan} ({!with_region}) in a body;
+     under [CRANE_CHECK_IR] translation checks it against the binder's
+     recorded C++ type. *)
+  representation : (Core_binder.site * int * planned_repr) list;
+  (* Whether the binder each variable read of the region reads holds a box,
+     as {!Representation_plan} plans it: by the read's occurrence.  Set
+     beside {!representation}; the only answer lowering reads
+     ({!Translation_types.read_is_boxed}). *)
+  planned_reads : (Core.Occurrence.t * planned_read) list;
+  (* The C++ type the position each coercion of the region fills is
+     generated against, as {!Position_plan} plans it: by the coercion's
+     occurrence, a region nested in another first.  Set beside
+     {!planned_reads}. *)
+  planned_positions : (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list;
+  (* Perceus reuse: inside a use_count()==1-guarded reuse arm in
+     gen_cpp_case, the token [tok] (the moved, uniquely-owned storage the
+     match frees) the constructions the arm's plan names
+     ({!Ownership_ir.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
+     instead of the normal factory.  The plan names at most one on any path,
+     so nothing here tracks whether it has been taken. *)
+  reuse_token : Cpp_ir.Lowered.Expr.t option;
+}
+
+(** What lowering accumulates across siblings within a body: the counters
+    fresh names are numbered by.  One generation advances them and the next
+    reads the advanced value.  A body starts them at zero
+    ({!Gen_context.begin_body}), and so does a closure's body, which is
+    generated as one ({!Translation_support.with_escape_analysis}); a
+    {!with_scope} bracket puts them back, as it puts back the whole
+    context. *)
+type threaded = {
+  (* Counter for generating unique match scrutinee variable names
+     (_mp0, _mp1, ...). Reset at function boundaries. *)
+  match_param_counter : int;
+  (* Counter for generating unique _cs / _cs1 / _cs2 cache variable names
+     for Scustom_case scrutinee caching. Reset at function boundaries. *)
+  cs_counter : int;
+}
+
+(** The translation context, by role.  What lowering produces for later
+    phases is not part of it: the helpers it lifts go to the generation
+    collecting them ({!lifted_so_far}), whatever scope lifted them. *)
+type translation_ctx = {
+  input : input;
+  lexical : lexical;
+  threaded : threaded;
+}
+
 (** The global translation context, reset between top-level declarations.
 
     The record is immutable and the mutability lives in this one [ref], so
@@ -255,32 +296,35 @@ and itree_extraction_mode = Core_effects.mode =
     added later. *)
 let tctx =
   ref
-    {
-        current_type_vars = [];
-        current_template_head = [];
-        current_parameters = [];
-        current_cpp_return_type = None;
-        env_types = Lexenv.empty;
-        body_owner = None;
-        body_function = false;
-        lifted_fixpoints = [];
-        current_letin_depth = 0;
-        move_plan = Ownership_ir.empty;
-        representation = [];
-        planned_reads = [];
-        planned_positions = [];
-        match_param_counter = 0;
-        promoted_var_map = [];
-        in_constructor_expr = false;
-        rank2_carrier = None;
-        itree_mode = Sequential;
-        cs_counter = 0;
-        reuse_token = None;
-        method_self_ns = Ref.User.Set.empty;
-        local_inductives = None;
-        cpp_binder_types = IntMap.empty;
-        declared_outer = None;
-    }
+    { input =
+        { current_template_head = [];
+          current_parameters = [];
+          body_owner = None;
+          body_function = false;
+          itree_mode = Sequential;
+          method_self_ns = Ref.User.Set.empty;
+          generating = None };
+      lexical =
+        { current_type_vars = [];
+          current_cpp_return_type = None;
+          env_types = Lexenv.empty;
+          cpp_binder_types = IntMap.empty;
+          declared_outer = None;
+          promoted_var_map = [];
+          in_constructor_expr = false;
+          rank2_carrier = None;
+          lifted_fixpoints = [];
+          move_plan = Ownership_ir.empty;
+          representation = [];
+          planned_reads = [];
+          planned_positions = [];
+          reuse_token = None };
+      threaded = {match_param_counter = 0; cs_counter = 0} }
+
+(** Update the input, lexical or threaded part of the context. *)
+let set_input f = tctx := { !tctx with input = f (!tctx).input }
+let set_lexical f = tctx := { !tctx with lexical = f (!tctx).lexical }
+let set_threaded f = tctx := { !tctx with threaded = f (!tctx).threaded }
 
 (** [with_field get set v f] runs [f] with one context field set to [v], and
     puts the enclosing value back on the way out however [f] leaves --
@@ -299,25 +343,25 @@ let with_field get set v f =
   set v;
   Fun.protect ~finally:(fun () -> set saved) f
 
-(** Accessors for {!translation_ctx.current_type_vars}: the template type
+(** Accessors for {!lexical.current_type_vars}: the template type
     variables in scope for the function currently being translated.
 
     Reach for {!with_type_vars} first.  These two are for the few scopes whose
     extent is not a lexical one -- opened partway through a declaration
     emitter and closed at each of its exits. *)
 let set_current_type_vars (tvars : Id.t list) =
-  tctx := { !tctx with current_type_vars = tvars }
-let get_current_type_vars () = (!tctx).current_type_vars
-let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
+  set_lexical (fun l -> { l with current_type_vars = tvars })
+let get_current_type_vars () = (!tctx).lexical.current_type_vars
+let clear_current_type_vars () = set_lexical (fun l -> { l with current_type_vars = [] })
 
-(** Accessors for {!translation_ctx.current_template_head}.  Set only by an
+(** Accessors for {!input.current_template_head}.  Set only by an
     emitter that has just built the declaration's template head, and restored
     by it on the way out; every other scope leaves the enclosing answer
     standing rather than guessing at one.  The readers below derive their
     answers from it rather than each keeping a list of their own. *)
 let set_current_template_head (head : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters) =
-  tctx := { !tctx with current_template_head = head }
-let get_current_template_head () = (!tctx).current_template_head
+  set_input (fun i -> { i with current_template_head = head })
+let get_current_template_head () = (!tctx).input.current_template_head
 
 (** Whether the head declares [id] as a plain [typename], so that an applied
     occurrence of it cannot be written. *)
@@ -326,7 +370,7 @@ let is_current_typename_var (id : Id.t) =
     (fun (tt, i) ->
       Id.equal id i
       && match (tt : _ Cpp_ir.Template.Parameter_kind.t) with Typename | Typename_default _ -> true | _ -> false )
-    (!tctx).current_template_head
+    (!tctx).input.current_template_head
 
 (** The head's concept-constrained parameters: the class instances the
     declaration is written against.  A helper lifted out of its body spells
@@ -334,14 +378,14 @@ let is_current_typename_var (id : Id.t) =
 let current_class_temps () =
   List.filter
     (fun (tt, _) -> match (tt : _ Cpp_ir.Template.Parameter_kind.t) with Concept _ -> true | _ -> false)
-    (!tctx).current_template_head
+    (!tctx).input.current_template_head
 
 (** Every type name the current declaration's head puts in scope: its
     ML-indexed type variables and the class instances it is written against.
     A resolved class field names the latter -- [typename StateV<_tcI0>::state]
     -- and is as much this scope's as [T1] is. *)
 let current_scope_type_names () =
-  (!tctx).current_type_vars @ List.map snd (current_class_temps ())
+  (!tctx).lexical.current_type_vars @ List.map snd (current_class_temps ())
 
 (** [with_type_vars tvars f] runs [f] with [tvars] as the type-variable scope,
     and puts the enclosing scope back on the way out however [f] leaves --
@@ -353,30 +397,30 @@ let current_scope_type_names () =
     does not fail: the next conversion quietly numbers its type variables
     against the wrong function. *)
 let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =
-  with_field (fun c -> c.current_type_vars) set_current_type_vars tvars f
+  with_field (fun c -> c.lexical.current_type_vars) set_current_type_vars tvars f
 
 (** [with_cpp_return_type ty f] runs [f] with [ty] as the enclosing
     function's C++ return type -- the type a tail expression is cast to. *)
 let with_cpp_return_type (ty : Cpp_ir.Lowered.Type.t option) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.current_cpp_return_type)
-    (fun t -> tctx := { !tctx with current_cpp_return_type = t })
+    (fun c -> c.lexical.current_cpp_return_type)
+    (fun t -> set_lexical (fun l -> { l with current_cpp_return_type = t }))
     ty f
 
 (** The enclosing function's C++ return type
-    ({!translation_ctx.current_cpp_return_type}). *)
-let current_cpp_return_type () : Cpp_ir.Lowered.Type.t option = (!tctx).current_cpp_return_type
+    ({!lexical.current_cpp_return_type}). *)
+let current_cpp_return_type () : Cpp_ir.Lowered.Type.t option = (!tctx).lexical.current_cpp_return_type
 
 (** Whether the enclosing function returns [void]. *)
 let returns_void () =
-  match (!tctx).current_cpp_return_type with Some Cpp_ir.Type.Void -> true | _ -> false
+  match (!tctx).lexical.current_cpp_return_type with Some Cpp_ir.Type.Void -> true | _ -> false
 
 (** [with_parameters bs f] runs [f] with [bs] as the binders of the
-    declaration's parameters ({!translation_ctx.current_parameters}). *)
+    declaration's parameters ({!input.current_parameters}). *)
 let with_parameters (bs : Core_binder.t list) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.current_parameters)
-    (fun bs -> tctx := { !tctx with current_parameters = bs })
+    (fun c -> c.input.current_parameters)
+    (fun bs -> set_input (fun i -> { i with current_parameters = bs }))
     bs f
 
 (** [with_method_self_ns ns f] runs [f] with [ns] as the inductives whose
@@ -384,22 +428,23 @@ let with_parameters (bs : Core_binder.t list) (f : unit -> 'a) : 'a =
     the same [shared_ptr] wrapping as in the struct definition. *)
 let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.method_self_ns)
-    (fun ns -> tctx := { !tctx with method_self_ns = ns })
+    (fun c -> c.input.method_self_ns)
+    (fun ns -> set_input (fun i -> { i with method_self_ns = ns }))
     ns f
 
-(** [spelling_bare local f] runs [f] with [local] as the inductives spelled
-    bare ({!translation_ctx.local_inductives}); the entries below are the only
-    callers. *)
-let spelling_bare (local : GlobRef.t list) (f : unit -> 'a) : 'a =
-  with_field (fun c -> c.local_inductives) (fun l -> tctx := { !tctx with local_inductives = l }) (Some local) f
+(** [generating_at site f] runs [f] with generation at [site]
+    ({!input.generating}); the entries below are the only callers. *)
+let generating_at (site : generation_site) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.input.generating)
+    (fun g -> set_input (fun i -> { i with generating = g }))
+    (Some site) f
 
 (** [generating_in mp f] runs [f] generating an element of the body of the
-    module [mp], whose planned local inductives it spells bare
-    ({!translation_ctx.local_inductives}). *)
+    module [mp], whose planned local inductives it spells bare. *)
 let generating_in (mp : ModPath.t) (f : unit -> 'a) : 'a =
   match Scope_plan.local_inductives mp with
-  | Some local -> spelling_bare local f
+  | Some _ -> generating_at (In_module mp) f
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
@@ -408,15 +453,21 @@ let generating_in (mp : ModPath.t) (f : unit -> 'a) : 'a =
     every module, where no inductive is spelled bare: a pass over the whole
     unit or program that asks what a type converts to, not how a module
     writes it. *)
-let generating_outside_modules (f : unit -> 'a) : 'a = spelling_bare [] f
+let generating_outside_modules (f : unit -> 'a) : 'a = generating_at Outside_modules f
 
 (** The inductives spelled bare where generation is: the planned ones of the
     module it entered ({!generating_in}), none outside every module
     ({!generating_outside_modules}).  Generation that entered neither has no
     answer. *)
 let local_inductives_in_scope () =
-  match (!tctx).local_inductives with
-  | Some local -> local
+  match (!tctx).input.generating with
+  | Some (In_module mp) -> (
+    match Scope_plan.local_inductives mp with
+    | Some local -> local
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.") )
+  | Some Outside_modules -> []
   | None -> CErrors.anomaly Pp.(str "Crane: generation asked which inductives it spells bare outside every entry.")
 
 (** Whether generation spells the inductive [r] bare, unqualified by its
@@ -431,28 +482,28 @@ let inductive_type r args es : Cpp_ir.Lowered.Type.t =
 
 (** [with_lifted_fixpoint occurrence f] runs [f] generating the members of
     the local fixpoint at [occurrence] as lifted helpers
-    ({!translation_ctx.lifted_fixpoints}). *)
+    ({!lexical.lifted_fixpoints}). *)
 let with_lifted_fixpoint (occurrence : Core.Occurrence.t) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.lifted_fixpoints)
-    (fun os -> tctx := { !tctx with lifted_fixpoints = os })
-    (occurrence :: (!tctx).lifted_fixpoints)
+    (fun c -> c.lexical.lifted_fixpoints)
+    (fun os -> set_lexical (fun l -> { l with lifted_fixpoints = os }))
+    (occurrence :: (!tctx).lexical.lifted_fixpoints)
     f
 
 (** [with_promoted_var_map m f] runs [f] with [m] as the resolution for the
-    promoted type variables in scope -- see {!translation_ctx.promoted_var_map}. *)
+    promoted type variables in scope -- see {!lexical.promoted_var_map}. *)
 let with_promoted_var_map (m : (Id.t * Cpp_ir.Lowered.Type.t) list) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.promoted_var_map)
-    (fun m -> tctx := { !tctx with promoted_var_map = m })
+    (fun c -> c.lexical.promoted_var_map)
+    (fun m -> set_lexical (fun l -> { l with promoted_var_map = m }))
     m f
 
 (** [with_in_constructor_expr b f] runs [f] with
-    {!translation_ctx.in_constructor_expr} set to [b]. *)
+    {!lexical.in_constructor_expr} set to [b]. *)
 let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.in_constructor_expr)
-    (fun b -> tctx := { !tctx with in_constructor_expr = b })
+    (fun c -> c.lexical.in_constructor_expr)
+    (fun b -> set_lexical (fun l -> { l with in_constructor_expr = b }))
     b f
 
 (** [with_rank2_carrier x f] runs [f] with [x] as the carrier of the
@@ -460,20 +511,20 @@ let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
     is the lambda's body, so it has to be put back when that body is done. *)
 let with_rank2_carrier (x : Id.t option) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.rank2_carrier)
-    (fun x -> tctx := { !tctx with rank2_carrier = x })
+    (fun c -> c.lexical.rank2_carrier)
+    (fun x -> set_lexical (fun l -> { l with rank2_carrier = x }))
     x f
 
 (** The carrier of the polymorphic function object being generated, if any. *)
-let get_rank2_carrier () = (!tctx).rank2_carrier
+let get_rank2_carrier () = (!tctx).lexical.rank2_carrier
 
 (** [with_itree_mode m f] runs [f] extracting itree-typed terms in mode [m].
     The mode is a property of the declaration being generated, so it has to be
     put back when that declaration is done. *)
 let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.itree_mode)
-    (fun m -> tctx := { !tctx with itree_mode = m })
+    (fun c -> c.input.itree_mode)
+    (fun m -> set_input (fun i -> { i with itree_mode = m }))
     m f
 
 (** {!Representation_plan.region}, which is translation's to name: it reads
@@ -500,9 +551,9 @@ let plan_positions :
     into the frames entering the machine's entries recorded
     ({!Ownership_ir.Entry_moves}). *)
 let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
-  let outer = Lexenv.type_opt (!tctx).env_types in
+  let outer = Lexenv.type_opt (!tctx).lexical.env_types in
   let p =
-    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~n_outer:(List.length (!tctx).current_type_vars) body
+    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~n_outer:(List.length (!tctx).lexical.current_type_vars) body
   in
   (* The frames a machine enters its entries by are planned with it. *)
   Ownership_ir.Entry_moves.record_plan p;
@@ -512,43 +563,43 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr
      are bound at, not the ones their matches pinned down.  Its plan only adds
      what the enclosing one has no answer for. *)
   let representation, reads, positions =
-    match (!tctx).body_owner with
+    match (!tctx).input.body_owner with
     | Some _ ->
-      let binders, reads = !plan_representation ~outer:(!tctx).env_types body in
+      let binders, reads = !plan_representation ~outer:(!tctx).lexical.env_types body in
       (* A nested region's positions are planned at its own return type,
          which the enclosing walk does not know; they come first. *)
-      let reads = (!tctx).planned_reads @ reads in
-      let positions = !plan_positions ~outer:(!tctx).env_types ~reads body in
-      ((!tctx).representation @ binders, reads, positions @ (!tctx).planned_positions)
+      let reads = (!tctx).lexical.planned_reads @ reads in
+      let positions = !plan_positions ~outer:(!tctx).lexical.env_types ~reads body in
+      ((!tctx).lexical.representation @ binders, reads, positions @ (!tctx).lexical.planned_positions)
     | None -> ([], [], [])
   in
   with_field
-    (fun c -> (c.representation, c.planned_reads, c.planned_positions))
-    (fun (r, rd, ps) -> tctx := { !tctx with representation = r; planned_reads = rd; planned_positions = ps })
+    (fun c -> (c.lexical.representation, c.lexical.planned_reads, c.lexical.planned_positions))
+    (fun (r, rd, ps) -> set_lexical (fun l -> { l with representation = r; planned_reads = rd; planned_positions = ps }))
     (representation, reads, positions)
-  @@ fun () -> with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
+  @@ fun () -> with_field (fun c -> c.lexical.move_plan) (fun p -> set_lexical (fun l -> { l with move_plan = p })) p f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative
     plan of the region being generated ({!Ownership_ir.reuse_arm}). *)
 let with_plan (p : Ownership_ir.t) (f : unit -> 'a) : 'a =
-  with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
+  with_field (fun c -> c.lexical.move_plan) (fun p -> set_lexical (fun l -> { l with move_plan = p })) p f
 
 (** Whether the construction [e] takes the reuse token. *)
 let takes_reuse_token e =
-  Option.has_some (!tctx).reuse_token && Ownership_ir.allocation (!tctx).move_plan e = Reuse
+  Option.has_some (!tctx).lexical.reuse_token && Ownership_ir.allocation (!tctx).lexical.move_plan e = Reuse
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the Perceus reuse token
     of the arm it generates. *)
 let with_reuse_token (tok : Cpp_ir.Lowered.Expr.t option) (f : unit -> 'a) : 'a
     =
   with_field
-    (fun c -> c.reuse_token)
-    (fun t -> tctx := { !tctx with reuse_token = t })
+    (fun c -> c.lexical.reuse_token)
+    (fun t -> set_lexical (fun l -> { l with reuse_token = t }))
     tok f
 
-(** Set {!translation_ctx.current_parameters}. *)
+(** Set {!input.current_parameters}. *)
 let set_current_parameters (bs : Core_binder.t list) =
-  tctx := { !tctx with current_parameters = bs }
+  set_input (fun i -> { i with current_parameters = bs })
 
 (** The helpers lifted so far out of the bodies the innermost
     {!collecting_lifted} is generating, newest first, and [None] outside every
@@ -625,8 +676,8 @@ let push_env_binders (binders : env_binder list) =
       IntMap.fold (fun k v acc -> IntMap.add (k + n) v acc) m IntMap.empty
     else m
   in
-  tctx := { !tctx with cpp_binder_types = shift (!tctx).cpp_binder_types };
-  tctx := { !tctx with env_types = Lexenv.push binders (!tctx).env_types }
+  set_lexical (fun l -> { l with cpp_binder_types = shift l.cpp_binder_types });
+  set_lexical (fun l -> { l with env_types = Lexenv.push binders l.env_types })
 
 (** Prepend value bindings, innermost first. *)
 let push_env_types (ids : (Id.t * Core.Type.t) list) =
@@ -648,23 +699,21 @@ let push_env_parameters (ids : (Id.t * Core.Type.t) list) =
     surviving binder's recorded type then describes some other binder, so a
     concrete value can be read back as a box. *)
 let restore_env_types (saved : Lexenv.t) =
-  let n = Lexenv.depth (!tctx).env_types - Lexenv.depth saved in
-  if n > 0 && not (IntMap.is_empty (!tctx).cpp_binder_types) then
-    tctx :=
-      { !tctx with
-        cpp_binder_types =
-          IntMap.fold
-            (fun k v acc -> if k > n then IntMap.add (k - n) v acc else acc)
-            (!tctx).cpp_binder_types IntMap.empty };
-  tctx := { !tctx with env_types = saved }
+  let n = Lexenv.depth (!tctx).lexical.env_types - Lexenv.depth saved in
+  if n > 0 && not (IntMap.is_empty (!tctx).lexical.cpp_binder_types) then
+    set_lexical (fun l ->
+        { l with
+          cpp_binder_types =
+            IntMap.fold (fun k v acc -> if k > n then IntMap.add (k - n) v acc else acc) l.cpp_binder_types IntMap.empty });
+  set_lexical (fun l -> { l with env_types = saved })
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
 let get_env_type (i : int) : Core.Type.t =
-  (List.nth ((!tctx).env_types :> env_binder list) (pred i)).eb_type
+  (List.nth ((!tctx).lexical.env_types :> env_binder list) (pred i)).eb_type
 
 (** The binder at de Bruijn index [i] (1-based), or [None] when [i] is out of
     range (or non-positive). *)
-let get_env_binder_opt (i : int) : env_binder option = Lexenv.binder (!tctx).env_types i
+let get_env_binder_opt (i : int) : env_binder option = Lexenv.binder (!tctx).lexical.env_types i
 
 (** Like {!get_env_type} but returns [None] instead of raising when [i] is out
     of range (or non-positive). *)
@@ -673,10 +722,10 @@ let get_env_type_opt (i : int) : Core.Type.t option =
 
 (** The ML type of the innermost binder named [id], if any. *)
 let env_type_of_id (id : Id.t) : Core.Type.t option =
-  Option.map (fun b -> b.eb_type) (List.find_opt (fun b -> Id.equal b.eb_id id) ((!tctx).env_types :> env_binder list))
+  Option.map (fun b -> b.eb_type) (List.find_opt (fun b -> Id.equal b.eb_id id) ((!tctx).lexical.env_types :> env_binder list))
 
 (** The lexical environment the traversal is generating code in. *)
-let current_lexenv () : Lexenv.t = (!tctx).env_types
+let current_lexenv () : Lexenv.t = (!tctx).lexical.env_types
 
 (** The Core binder of the variable at de Bruijn index [db] in [env], in the
     definition whose body is being generated ({!Core_binder}): [env] binds
@@ -686,7 +735,7 @@ let current_lexenv () : Lexenv.t = (!tctx).env_types
 let core_binder ?site env db =
   Option.map
     (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db) ?site ())
-    (!tctx).body_owner
+    (!tctx).input.body_owner
 
 (* The de Bruijn index of the innermost name [id] in a list of names,
    innermost first, the first numbered [db]. *)
@@ -711,15 +760,15 @@ let local_binder ?site env id = Option.bind (index_of_name id 1 (fst env)) (core
 
 (** The ML type of the variable at de Bruijn index [i] in [env], where it is
     a parameter of the declaration whose body is being generated
-    ({!translation_ctx.current_parameters}). *)
+    ({!input.current_parameters}). *)
 let parameter_type env i =
   match core_binder env i with
-  | Some b when List.exists (Core_binder.equal b) (!tctx).current_parameters -> get_env_type_opt i
+  | Some b when List.exists (Core_binder.equal b) (!tctx).input.current_parameters -> get_env_type_opt i
   | Some _ | None -> None
 
 (** Reset the environment type stack to empty.
     Also clears {!cpp_binder_types} and the head's declared types
     ([declared_outer]). *)
 let reset_env_types () =
-  tctx := { !tctx with env_types = Lexenv.empty };
-  tctx := { !tctx with cpp_binder_types = IntMap.empty; declared_outer = None }
+  set_lexical (fun l -> { l with env_types = Lexenv.empty });
+  set_lexical (fun l -> { l with cpp_binder_types = IntMap.empty; declared_outer = None })
