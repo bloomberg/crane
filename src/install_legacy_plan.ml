@@ -4,7 +4,6 @@
 
 let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
   Table.set_named_customs facts.used_customs;
-  Table.set_higher_order_projections facts.higher_order_projections;
   Core_effects.install facts.effects;
   List.iter
     (fun ({block; kind; _} : Target_plan.kind_decision) ->
@@ -53,8 +52,6 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
         Pp.(str ("Crane: the installed " ^ what ^ " no longer agree with the plan."))
     in
     if not (Ref.User.Set.equal facts.used_customs (Table.named_customs ())) then fail "named custom references";
-    if not (Ref.User.Set.equal (Table.higher_order_projections ()) facts.higher_order_projections)
-    then fail "higher-order projections";
     List.iter
       (fun ({block; _} : Target_plan.kind_decision) ->
         let installed = Table.inductive_kind_of (Names.GlobRef.IndRef (block, 0)) in

@@ -6,8 +6,11 @@
     application of a unit's frozen program, with the role each of its
     arguments has, elaborated in a lexical environment of the walk's own.
 
-    Transitional.  The roles are installed for the unit, by the occurrence of
-    the use naming the callee ({!Core.Occurrence}), which the annotation
+    Transitional.  The unit's walk ({!structure}) keys the roles by the
+    occurrence of the use naming the callee ({!Core.Occurrence}), and the
+    readers below are handed it as [walk] -- [None] until the unit is
+    walked, where every answer is decided where it is asked.  The
+    occurrence is one the annotation
     rewrites a body goes through before it is translated keep, and emission
     takes a call's roles from there when it translates that application; a
     call translation built itself -- a global a let-bound alias names,
@@ -104,23 +107,18 @@ val referenced : t -> Names.GlobRef.t list
     for an application [t] did not walk. *)
 val roles : t -> Core.Global_use.t -> int -> Elaborated_call.role list option
 
-(** Make [t] the unit's elaborations, the ones {!elaboration} reads.  They
-    are installed before the unit's callables are planned, so planning reads
-    them too; until then every answer below is decided where it is asked. *)
-val install : t -> unit
-
-(** [elaboration ~lex use args] -- the elaboration of the call [use args]
-    while emitting: its arguments in the roles the installed elaborations
+(** [elaboration ~walk ~lex use args] -- the elaboration of the call [use args]
+    while emitting: its arguments in the roles the elaborations [walk]
     have for the application naming its callee by [use], or, where they have
     none, as elaborated here in [lex] -- which under [CRANE_CHECK_IR] is a
     violation: every call emission translates was elaborated from Core.
-    Planning takes the installed roles alike, and elaborates a call they
-    have none for itself, which is no violation there. *)
-val elaboration : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
+    Planning takes the roles alike, and elaborates a call they have none for
+    itself, which is no violation there. *)
+val elaboration : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
-(** [instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args]
+(** [instantiation ~walk ~lex ~expected_ml ~stated_ml ~caller ~scope use args]
     -- the semantic half of the call [use args] while emitting: the
-    instantiation the installed elaborations planned for the application
+    instantiation the elaborations [walk] planned for the application
     naming its callee by [use], at the position the walk gave it, taken at
     the argument nodes being translated ({!Elaborated_call.at_call}); or,
     where they planned none or disagree, {!instantiate} of its
@@ -131,6 +129,7 @@ val elaboration : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elabo
     alike, and instantiates a call it has none for itself, which is no
     violation there. *)
 val instantiation :
+  walk:t option ->
   lex:Lexenv.t ->
   expected_ml:Core.Type.t option ->
   stated_ml:Core.Type.t option ->
@@ -140,83 +139,84 @@ val instantiation :
   Core.Expr.t list ->
   Elaborated_call.instantiated
 
-(** [planned_instantiation use args] -- the instantiation the installed walk
+(** [planned_instantiation ~walk use args] -- the instantiation [walk]
     planned for the call [use args], at its argument nodes, where it planned
     one with the roles it gave the call; none otherwise.  Unlike
     {!instantiation} it neither counts nor checks the lookup: it is for a
     planner reading the walk, not for lowering. *)
-val planned_instantiation : Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.instantiated option
+val planned_instantiation : walk:t option -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.instantiated option
 
-(** [closed_instance_call ~lex use args] -- whether the call [use args]
+(** [closed_instance_call ~walk ~lex use args] -- whether the call [use args]
     builds a typeclass instance from nothing but instance parameters, so
     that it is the same value every time it is evaluated: as the walk
     decided it where it met the application naming its callee by [use],
     from the call and the binders of its own environment.  Where the walk
-    made no single decision there, or is not installed yet, it is decided
+    made no single decision there, or the unit is not walked yet, it is decided
     from the call and [lex]; under [CRANE_CHECK_IR] a planned decision is
     checked against that one. *)
-val closed_instance_call : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
+val closed_instance_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
-(** [static_projection_call ~lex use args] -- where the call [use args]
+(** [static_projection_call ~walk ~lex use args] -- where the call [use args]
     calls a class field as a static member of the instance it projects
     through: which argument that instance is, the member's value
     parameters, and the operands the call leaves out
     ({!Core_query.static_projection}), as the walk decided it where
     it met the application, from the call and the binders of its own
-    environment.  Where the walk made no single decision there, or is not
-    installed yet, it is decided from the call and [lex]; under
+    environment.  Where the walk made no single decision there, or the unit
+    is not walked yet, it is decided from the call and [lex]; under
     [CRANE_CHECK_IR] a planned decision is checked against that one. *)
 val static_projection_call :
-  lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.static_projection option
+  walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.static_projection option
 
-(** [closed_head_call ~lex use args] -- whether the call [use args] applies
+(** [closed_head_call ~walk ~lex use args] -- whether the call [use args] applies
     arguments past its callee's arity to a head, the callee applied to the
     rest, that names no value but instance parameters: a function built from
     nothing the call can change, the same every time the call is evaluated.
     As the walk decided it where it met the application, from the call and
     the binders of its own environment; where the walk made no single
-    decision there, or is not installed yet, decided from the call and
+    decision there, or the unit is not walked yet, decided from the call and
     [lex]; under [CRANE_CHECK_IR] a planned decision is checked against that
     one. *)
-val closed_head_call : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
+val closed_head_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
-(** [member_template_call ~lex use args] -- whether the call [use args]
+(** [member_template_call ~walk ~lex use args] -- whether the call [use args]
     projects a class field through its one dictionary argument, an instance
     Crane kept ({!Core_query.kept_instance_of_projection}), whose class
     declares the field as a member template, so the instance's own method can
     stand for the field's dispatcher.  Decided, and checked, as
     {!closed_head_call} is. *)
-val member_template_call : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
+val member_template_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
-(** [singleton_dictionary_call ~live occ] -- the class and its one method
+(** [singleton_dictionary_call ~walk ~live occ] -- the class and its one method
     where the variable read at the occurrence [occ], at the head of an
     application, is a singleton class's dictionary: as the walk decided it
     for that occurrence, from the binder its environment has for it.  Until
-    the walk is installed it is [live ()], translation's own reading; under
+    the unit is walked it is [live ()], translation's own reading; under
     [CRANE_CHECK_IR] a planned decision is checked against that one. *)
 val singleton_dictionary_call :
+  walk:t option ->
   live:(unit -> (Names.GlobRef.t * Names.GlobRef.t) option) ->
   Core.Occurrence.t ->
   (Names.GlobRef.t * Names.GlobRef.t) option
 
-(** [shared_constant e] -- whether the construction [e] is a closed
+(** [shared_constant ~walk e] -- whether the construction [e] is a closed
     constructor term of a shared variant with fields, built from
     constructors, literals and erased arguments only, so the same value
     every time it is evaluated: as the walk decided it for the
     construction's occurrence.  Where the walk made no single decision
-    there, or is not installed yet, decided from [e]; under [CRANE_CHECK_IR]
+    there, or the unit is not walked yet, decided from [e]; under [CRANE_CHECK_IR]
     a planned decision is checked against that one.  [false] of anything
     but a construction. *)
-val shared_constant : Core.Expr.t -> bool
+val shared_constant : walk:t option -> Core.Expr.t -> bool
 
-(** [match_kind ty branches occ] -- how the match annotated [ty] with
+(** [match_kind ~walk ty branches occ] -- how the match annotated [ty] with
     [branches] at the occurrence [occ] is lowered ({!Match_kind.classify}):
     as the walk decided it for that occurrence.  Where the walk made no
-    single decision there, or is not installed yet, decided from [ty] and
+    single decision there, or the unit is not walked yet, decided from [ty] and
     [branches]; under [CRANE_CHECK_IR] a planned decision is checked against
     that one. *)
-val match_kind : Core.Type.t -> Core.Match.Branch.t array -> Core.Occurrence.t -> Match_kind.t
+val match_kind : walk:t option -> Core.Type.t -> Core.Match.Branch.t array -> Core.Occurrence.t -> Match_kind.t
 
-(** How many calls the unit elaborated ahead, and how many emission found
-    there or elaborated itself. *)
-val report : unit -> string
+(** How many calls the unit's elaborations [t] planned, and how many
+    emission found there or elaborated itself. *)
+val report : t -> string

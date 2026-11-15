@@ -47,9 +47,9 @@
       A phase result: its owner is the extracted program.
     - {b Installed plan facts}, copies of a {!Program_facts} or {!Target_plan}
       value made by [Install_legacy_plan] for readers that cannot reach the
-      plan: [named_refs], [higher_order_projection_set],
-      [instance_promoted_types], [promoted_inductives] (accumulated over the
-      units of an extraction), and the plan's overrides of [inductive_kinds].
+      plan: [named_refs], [instance_promoted_types], [promoted_inductives]
+      (accumulated over the units of an extraction), and the plan's
+      overrides of [inductive_kinds].
     - {b Analysis results registered while a later phase runs}: [flat_inductives]
       and [enum_inductives] (registered by layout and generation, with a
       structural fallback), [shared_variants] (by a Core pass),
@@ -595,16 +595,6 @@ val projection_arity : GlobRef.t -> int
 
 (** Get projection info (inductive and arity). *)
 val projection_info : GlobRef.t -> inductive * int (* arity *)
-
-(** Install the unit's projections used as function values (the
-    [higher_order_projections] field of {!Program_facts.t}). *)
-val set_higher_order_projections : Ref.User.Set.t -> unit
-
-(** The installed projections used as function values. *)
-val higher_order_projections : unit -> Ref.User.Set.t
-
-(** Check if reference is higher-order projection. *)
-val is_higher_order_projection : GlobRef.t -> bool
 
 (** Add promoted type variable. *)
 val add_promoted_type_var : GlobRef.t -> Names.Id.t -> unit

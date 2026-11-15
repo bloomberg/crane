@@ -905,21 +905,13 @@ let structure ~methods struc =
 
 let referenced t = GlobRef.Set_env.elements t.named
 
-let installed = State.cell State.Unit empty
-
 type tally = {found : int; recomputed : int; taken : int; live : int}
 
 let no_tally = {found = 0; recomputed = 0; taken = 0; live = 0}
 let tally = State.cell State.Unit no_tally
 
-(* Whether the unit's elaborations are installed: planning translates
-   bodies before they are. *)
-let walked = State.cell State.Unit false
-
-let install t =
-  installed := t;
-  walked := true;
-  tally := no_tally
+(* The walk [walk] says the unit has had, none before it is walked. *)
+let walk_of walk = Option.default empty walk
 
 (* A body's annotations may be rewritten before it is translated, which
    rebuilds every node, so the use's occurrence is what identifies the
@@ -952,7 +944,8 @@ let extended t (use : Core.Global_use.t) n =
     let occurrence = Core.Global_use.occurrence use in
     List.exists (fun e -> Core.Occurrence.equal e.occurrence occurrence && List.length e.roles < n) entries
 
-let elaboration ~lex (use : Core.Global_use.t) args =
+let elaboration ~walk ~lex (use : Core.Global_use.t) args =
+  let t = walk_of walk in
   let elaborate () = elaborate_arguments ~lex use args in
   let from_core roles =
     let call = of_roles use args roles in
@@ -965,17 +958,17 @@ let elaboration ~lex (use : Core.Global_use.t) args =
   in
   match Common.get_phase () with
   | Common.Plan -> (
-    match roles !installed use (List.length args) with
+    match roles t use (List.length args) with
     | Some roles -> from_core roles
     | None -> elaborate () )
   | Common.Emit -> (
-    match roles !installed use (List.length args) with
+    match roles t use (List.length args) with
     | Some roles ->
       tally := {!tally with found = !tally.found + 1};
       from_core roles
     | None ->
       tally := {!tally with recomputed = !tally.recomputed + 1};
-      if not (extended !installed use (List.length args)) then
+      if not (extended t use (List.length args)) then
         Probe.violation "elaborated calls"
           Pp.(
             str "a call to " ++ str (Table.kername_of_global use.callee)
@@ -1006,8 +999,9 @@ let planned t (use : Core.Global_use.t) n =
       `Planned p
     | entries -> `Ambiguous (List.map (fun (e : entry) -> e.site) entries) )
 
-let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope (use : Core.Global_use.t) args =
-  let call = elaboration ~lex use args in
+let instantiation ~walk ~lex ~expected_ml ~stated_ml ~caller ~scope (use : Core.Global_use.t) args =
+  let call = elaboration ~walk ~lex use args in
+  let t = walk_of walk in
   let live () = instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call in
   let describe what =
     Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
@@ -1025,11 +1019,11 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope (use : Core.Global
   in
   match Common.get_phase () with
   | Common.Plan -> (
-    match planned !installed use (List.length args) with
+    match planned t use (List.length args) with
     | `Planned p -> from_core p
     | `Ambiguous _ | `Unwalked -> live () )
   | Common.Emit -> (
-    match planned !installed use (List.length args) with
+    match planned t use (List.length args) with
     | `Planned p ->
       tally := {!tally with taken = !tally.taken + 1};
       from_core p
@@ -1043,7 +1037,7 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope (use : Core.Global
              ^ " "
            | `Unwalked -> "unwalked ")
           ^ Table.kername_of_global use.callee);
-      if not (extended !installed use (List.length args)) then
+      if not (extended t use (List.length args)) then
         Probe.violation "planned instantiations"
           (describe
              ( match why with
@@ -1051,21 +1045,22 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope (use : Core.Global
              | `Unwalked -> " is translated where Core elaboration did not reach it." ) );
       live () )
 
-let planned_instantiation use args =
+let planned_instantiation ~walk use args =
+  let t = walk_of walk in
   let n = List.length args in
-  match (roles !installed use n, planned !installed use n) with
+  match (roles t use n, planned t use n) with
   | Some roles, `Planned p -> Some (Elaborated_call.at_call p (of_roles use args roles))
   | _ -> None
 
-(* [lookup what ~equal ~live planned] -- the answer the installed walk
+(* [lookup what ~walk ~equal ~live planned] -- the answer the unit's walk
    planned ([planned], [None] where it planned none or its entries
    disagree), checked under [CRANE_CHECK_IR] against [live ()], the answer
    the traversal's own environment gives, which is taken where the walk
-   planned none or is not installed yet. *)
-let lookup what ~equal ~live planned =
+   planned none or [walk] says the unit is not walked yet. *)
+let lookup what ~walk ~equal ~live planned =
   let phase = match Common.get_phase () with Common.Plan -> "plan " | Common.Emit -> "" in
   match planned with
-  | Some _ when not !walked -> live ()
+  | Some _ when Option.is_empty walk -> live ()
   | Some p ->
     Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " planned");
     if Probe.checking () && not (equal p (live ())) then
@@ -1086,8 +1081,8 @@ let same_head (c, m) (c', m') = GlobRef.CanOrd.equal c c' && GlobRef.CanOrd.equa
 (* What every entry the walk made for the application, with [n] arguments,
    naming its callee by [use] says of it ([fact]), if they all say one
    thing. *)
-let entry_fact ~equal fact (use : Core.Global_use.t) n =
-  match Ref.User.Map.find_opt use.callee !installed.calls with
+let entry_fact ~walk ~equal fact (use : Core.Global_use.t) n =
+  match Ref.User.Map.find_opt use.callee (walk_of walk).calls with
   | None -> None
   | Some entries ->
     let occurrence = Core.Global_use.occurrence use in
@@ -1098,56 +1093,56 @@ let entry_fact ~equal fact (use : Core.Global_use.t) n =
            else None )
          entries )
 
-let closed_instance_call ~lex use args =
-  lookup "closed instance calls" ~equal:Bool.equal
+let closed_instance_call ~walk ~lex use args =
+  lookup "closed instance calls" ~walk ~equal:Bool.equal
     ~live:(fun () -> builds_closed_instance ~lex use args)
-    (entry_fact ~equal:Bool.equal (fun e -> e.closed_instance) use (List.length args))
+    (entry_fact ~walk ~equal:Bool.equal (fun e -> e.closed_instance) use (List.length args))
 
-let static_projection_call ~lex use args =
+let static_projection_call ~walk ~lex use args =
   let equal = Option.equal Elaborated_call.same_static_projection in
-  lookup "static projections" ~equal
+  lookup "static projections" ~walk ~equal
     ~live:(fun () -> static_projection ~lex use args)
-    (entry_fact ~equal (fun e -> e.static_projection) use (List.length args))
+    (entry_fact ~walk ~equal (fun e -> e.static_projection) use (List.length args))
 
-let closed_head_call ~lex use args =
-  lookup "closed heads" ~equal:Bool.equal
+let closed_head_call ~walk ~lex use args =
+  lookup "closed heads" ~walk ~equal:Bool.equal
     ~live:(fun () -> closed_head ~lex use (elaborate_arguments ~lex use args))
-    (entry_fact ~equal:Bool.equal (fun e -> e.closed_head) use (List.length args))
+    (entry_fact ~walk ~equal:Bool.equal (fun e -> e.closed_head) use (List.length args))
 
-let member_template_call ~lex use args =
-  lookup "member template projections" ~equal:Bool.equal
+let member_template_call ~walk ~lex use args =
+  lookup "member template projections" ~walk ~equal:Bool.equal
     ~live:(fun () -> member_template_projection ~lex (elaborate_arguments ~lex use args))
-    (entry_fact ~equal:Bool.equal (fun e -> e.member_template) use (List.length args))
+    (entry_fact ~walk ~equal:Bool.equal (fun e -> e.member_template) use (List.length args))
 
-let singleton_dictionary_call ~live occ =
+let singleton_dictionary_call ~walk ~live occ =
   let planned =
-    match List.filter_map (fun (o, h) -> if Core.Occurrence.equal o occ then Some h else None) !installed.dictionary_calls with
+    match List.filter_map (fun (o, h) -> if Core.Occurrence.equal o occ then Some h else None) (walk_of walk).dictionary_calls with
     | [] -> Some None
     | heads -> Option.map Option.make (agreed same_head heads)
   in
-  lookup "singleton dictionary calls" ~equal:(Option.equal same_head) ~live planned
+  lookup "singleton dictionary calls" ~walk ~equal:(Option.equal same_head) ~live planned
 
-let shared_constant = function
+let shared_constant ~walk = function
   | Core.Expr.Construct {constructor = r; occurrence = occ; _} as e ->
     let planned =
-      match GlobRef.Map_env.find_opt r !installed.constructions with
+      match GlobRef.Map_env.find_opt r (walk_of walk).constructions with
       | None -> None
       | Some l ->
         agreed Bool.equal (List.filter_map (fun (o, f) -> if Core.Occurrence.equal o occ then Some f else None) l)
     in
-    lookup "shared constants" ~equal:Bool.equal ~live:(fun () -> is_shared_constant_term e) planned
+    lookup "shared constants" ~walk ~equal:Bool.equal ~live:(fun () -> is_shared_constant_term e) planned
   | _ -> false
 
-let match_kind ty branches occ =
+let match_kind ~walk ty branches occ =
   let planned =
-    match Int.Map.find_opt (Array.length branches) !installed.matches with
+    match Int.Map.find_opt (Array.length branches) (walk_of walk).matches with
     | None -> None
     | Some l -> agreed ( = ) (List.filter_map (fun (o, k) -> if Core.Occurrence.equal o occ then Some k else None) l)
   in
-  lookup "match kinds" ~equal:( = ) ~live:(fun () -> Match_kind.classify ty branches) planned
+  lookup "match kinds" ~walk ~equal:( = ) ~live:(fun () -> Match_kind.classify ty branches) planned
 
-let report () =
-  let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) !installed.calls 0 in
+let report t =
+  let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) t.calls 0 in
   Printf.sprintf
     "elaborated calls: %d planned; emission found %d, elaborated %d itself; took %d instantiations planned, \
      %d instantiated itself"

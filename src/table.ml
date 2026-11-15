@@ -1482,20 +1482,6 @@ let get_type_class_args r =
     (get_class_args_own r)
     (type_globals_reached ~seen:[] r)
 
-(* Table of projections used in higher-order positions (as function values).
-   Projections not in this set are only accessed via record->field syntax and
-   don't need standalone C++ function definitions. *)
-let higher_order_projection_set = ref Ref.User.Set.empty
-
-let () =
-  register_census "higher_order_projections" (fun () ->
-      Ref.User.Set.cardinal !higher_order_projection_set );
-  on_reset (fun () -> higher_order_projection_set := Ref.User.Set.empty)
-
-let set_higher_order_projections s = higher_order_projection_set := s
-let higher_order_projections () = !higher_order_projection_set
-let is_higher_order_projection r = Ref.User.Set.mem r !higher_order_projection_set
-
 (** {2 Table of used axioms} *)
 
 let info_axioms = ref Ref.Can.Set.empty

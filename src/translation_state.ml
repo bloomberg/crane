@@ -142,6 +142,20 @@ let no_program_facts =
     parameter_ownership = Ref.User.Map.empty;
     partner_closure_params = Ref.User.Map.empty }
 
+(** What analysing and planning the unit being extracted decided that
+    lowering reads, set for the extent of the unit
+    ({!with_unit_facts}): the projections used as function values, which
+    are written as standalone functions ({!Program_facts.t}), and the
+    elaborations of the unit's calls ({!Core_elaborate.structure}), [None]
+    until the unit is walked. *)
+type unit_facts = {
+  higher_order_projections : Ref.User.Set.t;
+  elaborations : Core_elaborate.t option;
+}
+
+(** The facts of no unit: lowering outside a unit's extent. *)
+let no_unit_facts = {higher_order_projections = Ref.User.Set.empty; elaborations = None}
+
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
     parameters, owner, effect mode and module.  A declaration emitter sets
@@ -196,6 +210,9 @@ type input = {
      set for the extent of the extraction's units
      ({!with_program_facts}). *)
   program : program_facts;
+  (* What analysing and planning the unit decided ({!unit_facts}), set for
+     the extent of the unit ({!with_unit_facts}). *)
+  unit : unit_facts;
 }
 
 (** What holds for the scope being lowered: the binders in scope and their
@@ -329,7 +346,8 @@ let tctx =
           itree_mode = Sequential;
           method_self_ns = Ref.User.Set.empty;
           generating = None;
-          program = no_program_facts };
+          program = no_program_facts;
+          unit = no_unit_facts };
       lexical =
         { current_type_vars = [];
           current_cpp_return_type = None;
@@ -462,6 +480,22 @@ let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
     analysed for [facts] ({!input.program}). *)
 let with_program_facts (facts : program_facts) (f : unit -> 'a) : 'a =
   with_field (fun c -> c.input.program) (fun p -> set_input (fun i -> { i with program = p })) facts f
+
+(** [with_unit_facts facts f] runs [f] lowering a unit analysed and
+    planned for [facts] ({!input.unit}). *)
+let with_unit_facts (facts : unit_facts) (f : unit -> 'a) : 'a =
+  with_field (fun c -> c.input.unit) (fun u -> set_input (fun i -> { i with unit = u })) facts f
+
+(** The facts of the unit being lowered ({!input.unit}). *)
+let unit_facts () = (!tctx).input.unit
+
+(** Whether the unit uses the projection [r] as a function value, which is
+    then written as a standalone function ({!unit_facts}). *)
+let is_higher_order_projection r = Ref.User.Set.mem r (!tctx).input.unit.higher_order_projections
+
+(** The elaborations of the unit's calls ({!unit_facts}): [None] until the
+    unit is walked. *)
+let elaborations () = (!tctx).input.unit.elaborations
 
 (** Whether the analysis of the program found that the body of the
     definition [r] only throws ({!program_facts}). *)

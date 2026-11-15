@@ -1049,12 +1049,13 @@ let layout_pass_names =
     ({!Core_elaborate.structure}), so that planning the callables reads
     them as emission does, then plan the callable of each
     function and method a render will generate, installing each before the
-    next is decided.  Returns all of them, with the callables assumed of the
-    functions that have no plan, and the elaborations.  Under [CRANE_CHECK_IR] the callables are
+    next is decided.  Hands all of them, with the callables assumed of the
+    functions that have no plan, and the elaborations, to [k], which runs
+    lowering with the elaborations.  Under [CRANE_CHECK_IR] the callables are
     planned a second time with every list reversed, and the two must agree:
     a head is a function of its declaration, not of what was planned before
     it.  Runs in the planning phase, which is the one that names modules. *)
-let plan_layout struc =
+let plan_layout struc k =
   Pipeline_trace.event "layout" prepare_layout;
   let modules = Cpp.prepare_structure struc in
   Install_legacy_plan.install_modules modules;
@@ -1096,7 +1097,8 @@ let plan_layout struc =
       ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods kn ind))
       struc
   in
-  Core_elaborate.install elaborations;
+  Translation_state.with_unit_facts { (Translation_state.unit_facts ()) with elaborations = Some elaborations }
+  @@ fun () ->
   Pipeline_trace.event "layout" plan_callables;
   let ((callables, instance_methods) as planned) = Cpp.plan_callables struc in
   if
@@ -1111,6 +1113,7 @@ let plan_layout struc =
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
   Install_legacy_plan.install_instance_methods instance_methods;
+  k
   ( modules,
     { Target_plan.module_names;
       names;
@@ -1637,10 +1640,13 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     }
   in
   let facts, plan = analyze_and_plan struc in
+  Translation_state.with_unit_facts
+    {higher_order_projections = facts.higher_order_projections; elaborations = None}
+  @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  let modules, representation, callables, assumed, elaborations = plan_layout struc in
+  plan_layout struc @@ fun (modules, representation, callables, assumed, elaborations) ->
   let plan = Target_plan.with_layout plan modules representation callables assumed in
   elaborate_unit elaborations;
   let planned_checkpoint = checkpoint () in
@@ -1708,7 +1714,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Install_legacy_plan.check_installed facts plan;
   check_structure_unchanged planned struc;
   if Pipeline_trace.enabled () then begin
-    Pipeline_trace.event "emit" (Core_elaborate.report ());
+    Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
     Pipeline_trace.event "emit" (Core_effects.report ());
     Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
   end;
@@ -2554,7 +2560,10 @@ let extract_and_compile ~opaque_access file l =
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
-  let _, _, _, _, elaborations = plan_layout struc in
+  Translation_state.with_unit_facts
+    {higher_order_projections = (Program_facts.analyze struc).higher_order_projections; elaborations = None}
+  @@ fun () ->
+  plan_layout struc @@ fun (_, _, _, _, elaborations) ->
   elaborate_unit elaborations;
   end_planning ();
   let ans =

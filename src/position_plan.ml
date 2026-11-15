@@ -79,7 +79,7 @@ let region ~outer ~reads body =
     | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> stmts ~ret lex e
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} -> (
       expr ~pos:None ~ret lex scrut;
-      match Core_elaborate.match_kind typ branches occ with
+      match Core_elaborate.match_kind ~walk:(elaborations ()) typ branches occ with
       | Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
       | Match_kind.Custom ->
         let rty = match Array.to_list branches with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ in
@@ -154,7 +154,7 @@ let region ~outer ~reads body =
       stmts ~ret ~slot (push [(x, t)] lex) b
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} ->
       expr ~pos:None ~ret lex scrut;
-      let slot = match Core_elaborate.match_kind typ branches occ with Match_kind.Record _ -> slot | _ -> empty_slot in
+      let slot = match Core_elaborate.match_kind ~walk:(elaborations ()) typ branches occ with Match_kind.Record _ -> slot | _ -> empty_slot in
       Array.iter (branch ~ret ~slot lex) branches
     | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
       let lex = push (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) lex in
@@ -179,7 +179,7 @@ let region ~outer ~reads body =
      ({!Translation_calls.argument_position}), into the call's slot at the
      parameter's ML type. *)
   and call ~pos ~ret ~slot lex (use : Core.Global_use.t) args =
-    match Core_elaborate.planned_instantiation use args with
+    match Core_elaborate.planned_instantiation ~walk:(elaborations ()) use args with
     | None -> List.iter (expr ~pos:None ~ret lex) args
     | Some inst ->
       let plan =

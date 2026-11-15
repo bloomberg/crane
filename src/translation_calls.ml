@@ -1839,7 +1839,7 @@ let lower_call ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (
   let id = use.callee in
   let lex = current_lexenv () in
   let inst =
-    Core_elaborate.instantiation ~lex ~expected_ml:slot.expected_ml_ty
+    Core_elaborate.instantiation ~walk:(elaborations ()) ~lex ~expected_ml:slot.expected_ml_ty
       ~stated_ml:slot.stated_ml_ty ~caller ~scope:(!tctx).lexical.current_type_vars use args
   in
   let plan = plan_call ~lex ?expected_ty env inst in

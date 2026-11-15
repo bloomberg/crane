@@ -1202,7 +1202,7 @@ let wrapper_element ~module_ se =
   match se with
   | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; _})
     when is_any_inline_custom r || is_eponymous_record_projection r
-         || is_suppressed_projection r || is_registered_method r <> None ->
+         || is_suppressed_projection ~higher_order:Translation_state.is_higher_order_projection r || is_registered_method r <> None ->
     Wrapper_nothing
   | Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = Core.Type.Global_app {head = ty; _}; _}) when is_monad ty ->
     Wrapper_nothing
@@ -1213,7 +1213,7 @@ let wrapper_element ~module_ se =
   | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = a; type_ = t}) ->
     Wrapper_functions (r, fun () -> generated_once ~module_ se (fun () -> [gen_decl_for_pp_dual r a t]))
   | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) -> (
-    match filter_dfix fds with
+    match filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds with
     | [] -> Wrapper_nothing
     | {Core.Recursion.Definition.entity = fd_ref; _} :: _ as fds ->
       Wrapper_functions (fd_ref, fun () -> generated_once ~module_ se (fun () -> gen_dfuns_dual fds)) )
@@ -2867,13 +2867,13 @@ let plan_unmerged_wrappers () : (string * ModPath.t) list =
     | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; _})
       when is_any_inline_custom r
            || is_eponymous_record_projection r
-           || is_suppressed_projection r
+           || is_suppressed_projection ~higher_order:Translation_state.is_higher_order_projection r
            || is_registered_method r <> None ->
       false
     | Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = Core.Type.Global_app {head = ty; _}; _}) when is_monad ty -> false
     | Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = t; _}) when is_typeclass_instance t -> false
     | Core.Module.Structure_item.Declaration (Core.Decl.Value _) -> true
-    | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) -> filter_dfix fds <> []
+    | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) -> filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds <> []
     | _ -> false
   in
   List.filter_map

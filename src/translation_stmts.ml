@@ -372,7 +372,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
-                     occurrence = case_occ} when Core_elaborate.match_kind typ pv case_occ = Match_kind.Custom ->
+                     occurrence = case_occ} when Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ = Match_kind.Custom ->
     gen_custom_cpp_case env k typ t pv case_occ
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Table.is_tt_constructor r
       && returns_void () ->
@@ -398,7 +398,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
-                     occurrence = case_occ} when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
+                     occurrence = case_occ} when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ) ->
     Translation_match.gen_record_match_stmts ~slot env k ast ~typ ~t ~pv ~case_occ
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic
