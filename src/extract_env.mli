@@ -26,16 +26,19 @@
     + {b Extraction} ([mono_environment], [optimize_struct]): Rocq terms to
       the Core structure, simplified.
     + {b Planning}, as values: the unit's {!Program_facts} and its
-      {!Target_plan} -- the inductive kinds, then, once the unit's preparation
-      has run, the template-parameter kinds -- each installed by
-      {!Install_legacy_plan} into the tables unconverted readers consult.
+      {!Target_plan} -- the unit's configuration, bound for the rest of the
+      unit ({!Table.with_unit_config}), the inductive kinds, recorded in the
+      structure ({!Target_plan.record_kinds}), then, once the unit's
+      preparation has run, the template-parameter kinds.
     + {b Layout} ([Common.Plan]): {!Cpp.prepare_structure} runs
       {!Structure_analysis.analyze} and decides the layout ({!Module_plan});
       then the names of every global and module the unit declares and refers
       to are decided ({!Cpp.plan_names}, {!Cpp.plan_referenced_names}), the
       constructor structs' fields and storage, and every generated
       function's callable plan ({!Cpp.plan_callables}).  All go into the
-      target plan, and are installed and frozen.
+      target plan; each decision a reader asks about is bound for the rest
+      of the unit as it is taken, over what the earlier units of a separate
+      extraction decided ({!Accumulated_plan}).
     + {b Emission} ([Common.Emit]): every declaration is generated and
       finished ahead of the files ({!Cpp.generate_ahead}), what the files
       write of it is planned ({!Cpp.plan_file_layout},

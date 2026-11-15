@@ -25,10 +25,11 @@ type entered =
           module declares under their names. *)
   | In_struct  (** A struct's body. *)
   | In_template  (** A class template's body. *)
-  | Function of {owner : GlobRef.t; defines : bool}
+  | Function of {owner : GlobRef.t; defines : bool; scope : Scope_plan.scope option}
       (** A function of the declaration [owner] -- defined, if [defines] --
           which outside every struct body is defined out of line, as a member
-          of the struct its plan's scope names. *)
+          of [scope], the struct its plan's scope names, resolved where the
+          function is written ({!Out_of_line_scope}). *)
 
 (** The scopes entered, innermost first; [[]] is where the declaration is
     written. *)
@@ -114,6 +115,11 @@ type key =
           after the struct being written, so that neither a constraint nor
           an assertion names it inside it.  A {!Holds} answer, asked for
           every type class. *)
+  | Out_of_line_scope of GlobRef.t
+      (** The struct a definition of the declaration written outside every
+          struct body is a member of, as its plan's scope names it: a
+          {!Scope} answer, asked for every function a declaration
+          writes. *)
 
 (** A key described in words, for diagnostics. *)
 val pp_key : key -> Pp.t
@@ -149,7 +155,8 @@ type access =
 (** What a key resolves to: a {!Type_head} a head, an {!Inline_custom}
     the inline text or none, a {!Value_reference} a reference, a
     {!Value_access} an access, a {!Read_by_a_function} or a
-    {!Held_back_concept} whether it holds, anything else a name. *)
+    {!Held_back_concept} whether it holds, an {!Out_of_line_scope} the
+    scope or none, anything else a name. *)
 type value =
   | Name of Cpp_name.t
   | Head of head
@@ -157,6 +164,7 @@ type value =
   | Reference of reference
   | Access of access
   | Holds of bool
+  | Scope of Scope_plan.scope option
 
 (** A reference described in words, for diagnostics. *)
 val pp_reference : reference -> Pp.t
@@ -207,3 +215,7 @@ val find_access : table -> frame -> GlobRef.t -> access lookup
 (** Whether [key], a {!Read_by_a_function} or a {!Held_back_concept},
     holds at [frame]. *)
 val find_holds : table -> frame -> key -> bool lookup
+
+(** The out-of-line scope of the declaration at [frame]
+    ({!Out_of_line_scope}). *)
+val find_scope : table -> frame -> GlobRef.t -> Scope_plan.scope option lookup

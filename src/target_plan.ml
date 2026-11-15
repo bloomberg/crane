@@ -32,6 +32,7 @@ type representation = {
 
 type t = {
   input : Ml_fingerprint.t option;
+  config : Table.unit_config;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
   modules : Module_plan.t;
@@ -273,7 +274,7 @@ let value_use_demotion prior struc =
       struc;
   List.rev !decisions
 
-let plan (_ : Program_facts.t) struc =
+let plan (facts : Program_facts.t) struc =
   let input =
     if Pipeline_trace.enabled () || Sys.getenv_opt "CRANE_CHECK_IR" <> None then
       Some (Ml_fingerprint.structure struc)
@@ -281,6 +282,7 @@ let plan (_ : Program_facts.t) struc =
   in
   let aligned = functor_alignment struc in
   { input;
+    config = Table.unit_config ~names:facts.used_customs;
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
@@ -335,7 +337,8 @@ let kind_equal a b =
 let same_name (r, s) (r', s') = GlobRef.UserOrd.equal r r' && String.equal s s'
 
 let equal a b =
-  List.equal
+  Bool.equal a.config.concurrent b.config.concurrent
+  && List.equal
     (fun d d' -> MutInd.UserOrd.equal d.block d'.block && d.reason = d'.reason && kind_equal d.kind d'.kind)
     a.inductive_kinds b.inductive_kinds
   && List.equal
@@ -372,3 +375,23 @@ let equal a b =
   && List.equal
        (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')
        a.assumed_callables b.assumed_callables
+
+let record_kinds t struc =
+  List.iter
+    (fun {block; kind; _} ->
+      Table.add_inductive_kind block kind;
+      let record kn (ind : Core.Inductive.t) = if MutInd.UserOrd.equal kn block then ind.kind <- kind in
+      Modutil.struct_iter
+        (function Core.Decl.Inductive {entity = kn; definition = ind} -> record kn ind | _ -> ())
+        (function Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> record kn ind | _ -> ())
+        (fun _ -> ())
+        struc )
+    t.inductive_kinds
+
+let check_kinds_recorded t =
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+  List.iter
+    (fun {block; _} ->
+      if not (Option.equal kind_equal (Table.inductive_kind_of (GlobRef.IndRef (block, 0))) (kind_of t block)) then
+        CErrors.anomaly Pp.(str "Crane: the recorded inductive kinds no longer agree with the plan.") )
+    t.inductive_kinds

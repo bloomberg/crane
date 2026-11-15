@@ -397,27 +397,37 @@ val read_by_a_function : Names.GlobRef.t -> bool
 (** {2 Template static accessors} *)
 
 (** The definitions written as function accessors (Meyers singletons)
-    instead of static inline variables, by module path and label, to avoid
-    template static initialisation order problems. *)
-val template_static_accessors : (Names.ModPath.t * Names.Label.t) list ref
+    instead of static inline variables, to avoid template static
+    initialisation order problems: by module path and label, and by the
+    canonical kernel name of a constant, which is what a constant reached
+    through a module alias is. *)
+type accessors
 
-(** Canonical kernel names of template static accessors, which is what a
-    constant reached through a module alias is. Cleared by
-    [reset_cpp_state]. *)
-val template_static_accessor_kns : (Names.KerName.t, unit) Hashtbl.t
+(** No accessors. *)
+val no_accessors : accessors
 
-(** Record the definition at the given module path and label as a template
-    static accessor (Meyers singleton), by adding it to
-    [template_static_accessors].  Idempotent. *)
-val register_template_static_accessor :
-  Names.ModPath.t -> Names.Label.t -> unit
+(** [a] with the definition [lbl] of [mp] an accessor. *)
+val add_accessor : accessors -> Names.ModPath.t -> Names.Label.t -> accessors
 
-(** Whether the definition [lbl] of [mp] is recorded as an accessor. *)
+(** {!add_accessor} for a global reference, which also records the
+    constant's kername for cross-functor matching. *)
+val add_accessor_ref : accessors -> Names.GlobRef.t -> accessors
+
+(** [with_accessors a f] is [f ()] with [a] the accessors: those the
+    unit's plan decided ([Cpp.plan_accessors]), every earlier unit's of a
+    separate extraction, and those its pre-scan of the whole program
+    found. *)
+val with_accessors : accessors -> (unit -> 'a) -> 'a
+
+(** The accessors' module paths and labels, as {!with_accessors} binds
+    them. *)
+val template_static_accessor_names : unit -> (Names.ModPath.t * Names.Label.t) list
+
+(** Whether the constant's canonical kernel name is an accessor's. *)
+val is_template_static_accessor_constant : Names.Constant.t -> bool
+
+(** Whether the definition [lbl] of [mp] is an accessor. *)
 val is_template_static_accessor : Names.ModPath.t -> Names.Label.t -> bool
-
-(** {!register_template_static_accessor} for a global reference, which also
-    records the constant's kername for cross-functor matching. *)
-val register_template_static_accessor_ref : Names.GlobRef.t -> unit
 
 (** {2 Eponymous records} *)
 
@@ -507,9 +517,16 @@ val sn : unit -> std_names
 
 (** {2 Wrapper and scope tables} *)
 
-(** Wrapper struct names that have pending declarations and therefore cannot be
-    merged, with the module each wraps. Cleared by [reset_cpp_state]. *)
-val unmerged_wrappers : (string, Names.ModPath.t) Hashtbl.t
+(** [with_unmerged_wrappers m f] is [f ()] with [m] the wrapper structs that
+    hold declarations and therefore cannot be merged, by struct name, with
+    the module each wraps: the unit's, planned
+    ([Cpp.plan_unmerged_wrappers]), and every earlier unit's of a separate
+    extraction. *)
+val with_unmerged_wrappers : Names.ModPath.t CString.Map.t -> (unit -> 'a) -> 'a
+
+(** The module the unmerged wrapper struct of this name wraps, as
+    {!with_unmerged_wrappers} binds them. *)
+val unmerged_wrapper : string -> Names.ModPath.t option
 
 (** Whether an inductive's struct is written inside a wrapper that holds
     other declarations, and so is spelled [List::list] rather than [List]: a
@@ -525,10 +542,12 @@ type nested_struct_owner =
   | NSref of Names.GlobRef.t
   | NSmodule of Names.ModPath.t
 
-(** C++ names of structs emitted as members of an enclosing struct, mapped to
-    every owner they stand for. A nested struct shadows any global-scope type
-    of the same name. Cleared by [reset_cpp_state]. *)
-val nested_struct_names : (string, nested_struct_owner list) Hashtbl.t
+(** [with_nested_struct_names m f] is [f ()] with [m] the C++ names of the
+    structs emitted as members of an enclosing struct, mapped to every owner
+    they stand for: the unit's, planned ([Cpp.plan_nested_structs]), and
+    every earlier unit's of a separate extraction.  A nested struct shadows
+    any global-scope type of the same name. *)
+val with_nested_struct_names : nested_struct_owner list CString.Map.t -> (unit -> 'a) -> 'a
 
 (** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]. *)
 val rendered_promotions : Names.GlobRef.t list ref
@@ -548,9 +567,10 @@ val printed_nested_structs : (string * nested_struct_owner) list ref
     printed ones. *)
 val printed_nested_struct : string -> nested_struct_owner -> unit
 
-(** Record that an owner was emitted as a nested struct under the given C++
+(** [m] with the owner emitted as a nested struct under the given C++
     name. *)
-val add_nested_struct_name : string -> nested_struct_owner -> unit
+val add_nested_struct_name :
+  nested_struct_owner list CString.Map.t -> string * nested_struct_owner -> nested_struct_owner list CString.Map.t
 
 (** Whether the reference is itself emitted as a struct nested in another. *)
 val is_nested_struct_ref : Names.GlobRef.t -> bool

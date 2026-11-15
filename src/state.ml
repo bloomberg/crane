@@ -26,3 +26,8 @@ let table scope n =
   let t = Hashtbl.create n in
   on_reset scope (fun () -> Hashtbl.reset t);
   t
+
+let bind r v f =
+  let saved = !r in
+  r := v;
+  Fun.protect ~finally:(fun () -> r := saved) f

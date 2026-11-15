@@ -133,9 +133,9 @@ let is_ctor_factory_call = function
     let ty = match yields with Yields t -> t | Untyped -> qualifier in
     let struct_name = Ml_type_util.ctor_struct_name_of_ref c in
     (* A TMC-wrapping constructor has a field behind the pointer -- the hole
-       the recursion writes into -- so it is recorded in [ctor_ptr_fields];
+       the recursion writes into -- so it has pointer fields ({!pointer_fields_of});
        one that has none is no cell. *)
-    if not (Hashtbl.mem ctor_ptr_fields (Common.ctor_owner_key c, struct_name)) then None
+    if not (Option.has_some (pointer_fields_of (Common.ctor_owner_key c, struct_name))) then None
     else Some (c, factory, ty, struct_name, args)
   | _ -> None
 
@@ -145,7 +145,7 @@ let is_ctor_factory_call = function
 let make_cell ~constructor ~factory ~cell_ty ~ctor_name args idx =
   let n_args = List.length args in
   let uptr_idxs =
-    match Hashtbl.find_opt ctor_ptr_fields (Common.ctor_owner_key constructor, ctor_name) with
+    match pointer_fields_of (Common.ctor_owner_key constructor, ctor_name) with
     | Some fields -> fields
     | None -> [Recursive idx]
   in

@@ -266,7 +266,7 @@ let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_
     body of the module whose element is being written
     ({!Module_frame.demoted_around}). *)
 let promoted_at (c : render_ctx) r =
-  Ref.User.Tbl.mem promoted_inductives r
+  is_promoted_inductive r
   &&
   match c.rc_module with
   | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around mp))
@@ -602,9 +602,9 @@ let struct_scopes_for (ctx : render_ctx) r n =
     type.  Naming the global one [::Nat] is unambiguous wherever it appears --
     including inside the global struct itself -- so no other name has to move.
 
-    The nested names come from {!Cpp_state.nested_struct_names}, installed
-    from the plan before anything is printed ({!Install_legacy_plan}); the
-    printer checks, under [CRANE_CHECK_IR], that it printed exactly those. *)
+    The nested names are the plan's, bound before anything is printed
+    ({!Cpp_state.with_nested_struct_names}); the printer checks, under
+    [CRANE_CHECK_IR], that it printed exactly those. *)
 let global_scopes_for r n =
   match r with
   | GlobRef.IndRef _ when not (Cpp_name.is_qualified n) ->
@@ -713,6 +713,18 @@ let holds c key =
     ~read:(function Cpp_resolution.Holds b -> b | _ -> not_answered key)
     ~equal:Bool.equal ~pp:Pp.bool
 
+(** The struct a definition of [owner] written outside every struct body at
+    the position [c] is a member of ({!Cpp_resolution.Out_of_line_scope}). *)
+let out_of_line_scope c owner =
+  let key = Cpp_resolution.Out_of_line_scope owner in
+  answered c key
+    ~find:(fun names frame -> Cpp_resolution.find_scope names frame owner)
+    ~read:(function Cpp_resolution.Scope s -> s | _ -> not_answered key)
+    ~equal:
+      (Option.equal (fun (s : Scope_plan.scope) (s' : Scope_plan.scope) ->
+           ModPath.equal s.module_ s'.module_ && List.equal String.equal s.qualifier s'.qualifier ))
+    ~pp:(function Some s -> Pp.str (Scope_plan.qualifier s) | None -> Pp.str "no scope")
+
 (* {!value_reference} as the resolver answers it at [ctx]: through the
    eponymous template record a member of one is written through; otherwise
    by its name, qualified by the collision wrapper holding it, or with [::]
@@ -750,7 +762,7 @@ let live_access x : Cpp_resolution.access =
   let planned =
     List.exists
       (fun (reg_mp, reg_lbl) -> Label.equal x_lbl reg_lbl && (ModPath.equal x_mp reg_mp || ModPath.equal resolved_x_mp reg_mp))
-      !Cpp_state.template_static_accessors
+      (Cpp_state.template_static_accessor_names ())
   in
   (* A constant reached through a module alias is the target's own, which
      its canonical name says.  One reached through a functor parameter has
@@ -759,10 +771,10 @@ let live_access x : Cpp_resolution.access =
   let accessor =
     planned
     || (match x with
-       | GlobRef.ConstRef c -> Hashtbl.mem Cpp_state.template_static_accessor_kns (Constant.canonical c)
+       | GlobRef.ConstRef c -> Cpp_state.is_template_static_accessor_constant c
        | _ -> false)
     || Common.under_mp_bound x_mp
-       && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) !Cpp_state.template_static_accessors
+       && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) (Cpp_state.template_static_accessor_names ())
   in
   if not accessor then Variable else if Common.under_mp_bound x_mp then Either_form else Accessor
 
@@ -956,7 +968,8 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
   | Enumerator_qualifier (_, r) ->
     Common.file_named_by ~unit_files r
   | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
-  | Custom_text _ | Inline_custom _ | Value_access _ | Read_by_a_function _ | Held_back_concept _ ->
+  | Custom_text _ | Inline_custom _ | Value_access _ | Read_by_a_function _ | Held_back_concept _
+  | Out_of_line_scope _ ->
     None
 
 let struct_definition_name ctx id =
@@ -974,10 +987,9 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
     | Signature _ | Inductive_struct _ -> c
     | In_struct -> {c with rc_in_struct = true}
     | In_template -> {c with rc_in_template = true}
-    | Function {owner; defines} ->
+    | Function {defines; scope; _} ->
       let out_of_line ol_scope = {ol_scope; ol_file_scope_aliases = file_scope_aliases_of c.rc_file} in
-      { c with
-        rc_scope = (if defines && not c.rc_in_struct then Option.map out_of_line (Scope_plan.of_declaration owner) else None) }
+      {c with rc_scope = (if defines && not c.rc_in_struct then Option.map out_of_line scope else None)}
   in
   {c with rc_frame = entered :: c.rc_frame}
 
@@ -1160,7 +1172,8 @@ let rec live_name c (key : Cpp_resolution.key) =
       | Case_label -> (type_head ctx Glob_head r).head
     in
     List.fold_right Cpp_name.within (global_scopes_for r n) n
-  | Type_head _ | Value_reference _ | Value_access _ | Read_by_a_function _ | Held_back_concept _ ->
+  | Type_head _ | Value_reference _ | Value_access _ | Read_by_a_function _ | Held_back_concept _
+  | Out_of_line_scope _ ->
     CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is not a name.")
 
 (* The resolver's namers, which the naming functions shared with the printer
@@ -1187,6 +1200,7 @@ and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   | Value_access r -> Access (live_access r)
   | Read_by_a_function r -> Holds (Cpp_state.read_by_a_function r)
   | Held_back_concept r -> Holds (class_concept_held_back c r)
+  | Out_of_line_scope r -> Scope (Scope_plan.of_declaration r)
   | _ -> Name (live_name c key)
 
 let () =

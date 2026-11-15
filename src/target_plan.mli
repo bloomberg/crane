@@ -9,8 +9,7 @@
     inductives are emitted as, the kinds of their template parameters, the
     layout, the names of the globals the unit declares and of their
     constructors' fields, which of those fields are stored behind the
-    pointer, and the callable plan of every generated function and method.
-    {!Install_legacy_plan} fills the tables unconverted readers consult. *)
+    pointer, and the callable plan of every generated function and method. *)
 
 (** Why an inductive is emitted as a kind other than the one extraction
     classified it as. *)
@@ -73,6 +72,12 @@ type t = {
   input : Ml_fingerprint.t option;
       (** The structure planned, where something reads it: under
           [CRANE_CHECK_IR] or [CRANE_TRACE_PIPELINE]. *)
+  config : Table.unit_config;
+      (** The unit's configuration, from the customs its program names:
+          whether it runs on several threads, which withholds a [Crane
+          NonAtomicRc] or [Crane SingleThreaded] request.  Generation, the
+          finishing passes, the printer and the runtime's spelling read it
+          inside {!Table.with_unit_config}. *)
   inductive_kinds : kind_decision list;
       (** In the order they were decided; a later decision about a block
           supersedes an earlier one. *)
@@ -99,11 +104,26 @@ type t = {
           callable plans. *)
 }
 
-(** [plan facts struc] decides the inductive kinds: functor applications'
-    copies aligned with their functor body's ({!Functor_alignment}), then
-    type classes used as data demoted to records ({!Used_as_value}).  It
-    writes nothing. *)
+(** [plan facts struc] decides the unit's configuration from the customs
+    [facts] says its program names, and the inductive kinds: functor
+    applications' copies aligned with their functor body's
+    ({!Functor_alignment}), then type classes used as data demoted to
+    records ({!Used_as_value}).  It writes nothing. *)
 val plan : Program_facts.t -> Core.Program.t -> t
+
+(** [record_kinds t struc] records each kind [t] decided where an
+    inductive's kind is kept: in its declaration in [struc], the frozen
+    program every reader of the unit takes a declaration from, and in the
+    extracted environment ({!Table.inductive_kind_of}), which answers for
+    an inductive another declaration -- or a later unit of a separate
+    extraction -- names.  The decision is the plan's; the program records
+    its result, as it records any other fact about a declaration, so no
+    reader asks the plan. *)
+val record_kinds : t -> Core.Program.t -> unit
+
+(** Under [CRANE_CHECK_IR], that the extracted environment still records
+    each kind [t] decided ({!record_kinds}). *)
+val check_kinds_recorded : t -> unit
 
 (** [plan] with the template-parameter kinds decided. *)
 val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t

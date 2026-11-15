@@ -681,41 +681,40 @@ let read_by_a_function r =
   | Some s -> Ref.Can.Set.mem r s
   | None -> false
 
-(** Track definitions rendered as function accessors (Meyers singletons) instead
-    of static inline variables, due to template static init ordering. Stores
-    both (modpath, label) pairs for direct matching and canonical KerNames for
-    a constant reached through a module alias. *)
-let template_static_accessors : (ModPath.t * Label.t) list ref =
-  owned_list "template_static_accessors"
-let template_static_accessor_kns : (KerName.t, unit) Hashtbl.t =
-  owned_table "template_static_accessor_kns"
+type accessors = {
+  accessor_names : (ModPath.t * Label.t) list;
+  accessor_constants : KerName.t list;
+}
 
-(** Record a definition as a template static accessor (Meyers singleton).
-    Definitions rendered this way are emitted as inline functions rather than
-    static inline variables to avoid template static init ordering issues.
+let no_accessors = {accessor_names = []; accessor_constants = []}
 
-    Idempotent: the same definition is offered by the pre-scan over the ML
-    structure and again when it is rendered, and the list is searched linearly
-    on every call site's behalf.
-    @param mp module path containing the definition
-    @param lbl label (name) of the definition within the module *)
-let register_template_static_accessor mp lbl =
+let add_accessor a mp lbl =
   let known (mp', lbl') = ModPath.equal mp mp' && Label.equal lbl lbl' in
-  if not (List.exists known !template_static_accessors) then
-    template_static_accessors := (mp, lbl) :: !template_static_accessors
+  if List.exists known a.accessor_names then a else {a with accessor_names = (mp, lbl) :: a.accessor_names}
 
-(** Whether the definition [lbl] of [mp] is recorded as an accessor. *)
-let is_template_static_accessor mp lbl =
-  List.exists (fun (mp', lbl') -> ModPath.equal mp mp' && Label.equal lbl lbl') !template_static_accessors
-
-(** {!register_template_static_accessor} for a global reference, which also
-    records the constant's kername for cross-functor matching. *)
-let register_template_static_accessor_ref r =
-  register_template_static_accessor (Table.modpath_of_r r) (Table.label_of_r r);
+let add_accessor_ref a r =
+  let a = add_accessor a (Table.modpath_of_r r) (Table.label_of_r r) in
   match r with
   | GlobRef.ConstRef c ->
-    Hashtbl.replace template_static_accessor_kns (Constant.canonical c) ()
-  | _ -> ()
+    let kn = Constant.canonical c in
+    if List.mem kn a.accessor_constants then a else {a with accessor_constants = kn :: a.accessor_constants}
+  | _ -> a
+
+(* The accessors, for the extent of a unit ({!with_accessors}). *)
+let accessors = ref no_accessors
+
+let () =
+  Table.register_census "template_static_accessors" (fun () -> List.length !accessors.accessor_names);
+  Table.register_census "template_static_accessor_kns" (fun () -> List.length !accessors.accessor_constants)
+
+let with_accessors a f = State.bind accessors a f
+
+let template_static_accessor_names () = !accessors.accessor_names
+
+let is_template_static_accessor_constant c = List.mem (Constant.canonical c) !accessors.accessor_constants
+
+let is_template_static_accessor mp lbl =
+  List.exists (fun (mp', lbl') -> ModPath.equal mp mp' && Label.equal lbl lbl') !accessors.accessor_names
 
 
 (** Track eponymous type info for method generation. When a module M contains an
@@ -933,8 +932,13 @@ let sn () = !std_names
 (** The wrapper structs that hold declarations of their module's and so
     cannot be merged with the eponymous inductive's struct, by struct name,
     with the module each wraps; planned ({!Cpp.plan_unmerged_wrappers}). *)
-let unmerged_wrappers : (string, ModPath.t) Hashtbl.t =
-  owned_table "unmerged_wrappers"
+let unmerged_wrappers : ModPath.t CString.Map.t ref = ref CString.Map.empty
+
+let () = Table.register_census "unmerged_wrappers" (fun () -> CString.Map.cardinal !unmerged_wrappers)
+
+let with_unmerged_wrappers m f = State.bind unmerged_wrappers m f
+
+let unmerged_wrapper name = CString.Map.find_opt name !unmerged_wrappers
 
 (** Whether the inductive [r] is written inside a wrapper that holds other
     declarations, and so is spelled [List::list] rather than [List].
@@ -949,7 +953,7 @@ let in_unmerged_wrapper_named short r =
   let mp = modpath_of_r r in
   (not (Common.under_mp_bound mp))
   &&
-  match Hashtbl.find_opt unmerged_wrappers (String.capitalize_ascii short) with
+  match unmerged_wrapper (String.capitalize_ascii short) with
   | None -> false
   | Some wrapped ->
     (not (Common.get_force_cross_file_qualification ()))
@@ -964,7 +968,8 @@ let in_unmerged_wrapper r = in_unmerged_wrapper_named (Common.pp_global_name Typ
 type nested_struct_owner = NSref of GlobRef.t | NSmodule of ModPath.t
 
 (** C++ names of the structs emitted as members of an enclosing struct, mapped
-    to every owner they stand for. Installed from the plan before anything is
+    to every owner they stand for, for the extent of a unit
+    ({!with_nested_struct_names}). Bound from the plan before anything is
     printed; the printer checks, under [CRANE_CHECK_IR], that it printed
     exactly these ({!printed_nested_struct}).
 
@@ -975,8 +980,11 @@ type nested_struct_owner = NSref of GlobRef.t | NSmodule of ModPath.t
     [::Name]. One name can map to several references -- sibling modules may
     each declare a type [t] -- which is why the shadowed reference has to be
     identified rather than assumed. *)
-let nested_struct_names : (string, nested_struct_owner list) Hashtbl.t =
-  owned_table "nested_struct_names"
+let nested_struct_names : nested_struct_owner list CString.Map.t ref = ref CString.Map.empty
+
+let () = Table.register_census "nested_struct_names" (fun () -> CString.Map.cardinal !nested_struct_names)
+
+let with_nested_struct_names m f = State.bind nested_struct_names m f
 
 let nested_struct_owner_equal a b =
   match (a, b) with
@@ -1006,23 +1014,17 @@ let printed_nested_structs : (string * nested_struct_owner) list ref = State.cel
 let printed_nested_struct name owner =
   if Probe.checking () then printed_nested_structs := (name, owner) :: !printed_nested_structs
 
-(** Record that [owner] was emitted as a nested struct named [name]. *)
-let add_nested_struct_name name owner =
-  let prev = Option.default [] (Hashtbl.find_opt nested_struct_names name) in
-  if not (List.exists (nested_struct_owner_equal owner) prev) then
-    Hashtbl.replace nested_struct_names name (owner :: prev)
+let add_nested_struct_name m (name, owner) =
+  let prev = Option.default [] (CString.Map.find_opt name m) in
+  if List.exists (nested_struct_owner_equal owner) prev then m else CString.Map.add name (owner :: prev) m
 
 (** Whether [r] is itself emitted as a struct nested inside another one --
     the case where its own name does not reach a use written outside that
     struct, so the reference needs the enclosing struct's qualifier. *)
 let is_nested_struct_ref r =
-  Hashtbl.fold
-    (fun _name owners acc ->
-      acc
-      || List.exists
-           (function NSref r' -> Common.globref_equal r r' | _ -> false)
-           owners )
-    nested_struct_names false
+  CString.Map.exists
+    (fun _name owners -> List.exists (function NSref r' -> Common.globref_equal r r' | _ -> false) owners)
+    !nested_struct_names
 
 (** Whether [r], rendered unqualified as [name], is shadowed by some nested
     struct of the same name. A reference that is itself emitted as a nested
@@ -1036,7 +1038,7 @@ let is_shadowed_global_name name r =
     | NSmodule mp -> ModPath.equal (base_mp mp) (base_mp (modpath_of_r r))
   in
   let may_shadow owner = (not (Common.get_force_cross_file_qualification ())) || same_file owner in
-  match Hashtbl.find_opt nested_struct_names name with
+  match CString.Map.find_opt name !nested_struct_names with
   | Some owners ->
     let owners = List.filter may_shadow owners in
     owners <> [] && not (List.exists (nested_struct_owner_covers r) owners)
@@ -1136,13 +1138,6 @@ let method_returns_any (func_ref : GlobRef.t) : bool =
     scan sibling declarations (like app) that are from the same Rocq module. *)
 let current_structure_decls : (Label.t * Core.Module.Structure_item.t) list ref =
   owned_list ~census:false "current_structure_decls"
-
-(** [promoted_inductives] lives in {!Table} but is reset and censused here,
-    since this is the module that fills it. *)
-let () =
-  on_reset (fun () -> Ref.User.Tbl.clear promoted_inductives);
-  Table.register_census "promoted_inductives" (fun () ->
-      Ref.User.Tbl.length promoted_inductives )
 
 (** Reset all state owned by this module, so that one extraction in a process
     cannot affect the next.  Every cell created by {!owned_table},

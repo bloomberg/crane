@@ -256,16 +256,23 @@ let same_head a b =
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
-(* The installed plans, by callee ({!install}). *)
-let plans : t GlobRef.Map_env.t ref = State.cell State.Extraction GlobRef.Map_env.empty
+(* The plans by callee; the callables a function with no plan is assumed to
+   deduce, by callee; the methods of each instance's struct, by name. *)
+type decided = {
+  plans : t GlobRef.Map_env.t;
+  assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t;
+  instance_methods : (Id.t * t) list Ref.User.Map.t;
+}
 
-(* The callables a function with no plan is assumed to deduce, by callee
-   ({!install}). *)
-let assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t ref =
-  State.cell State.Extraction Ref.User.Map.empty
+let undecided = {plans = GlobRef.Map_env.empty; assumed = Ref.User.Map.empty; instance_methods = Ref.User.Map.empty}
+
+(* The plans read, for the extent {!with_decided} binds them for. *)
+let current = ref undecided
+
+let with_decided d f = State.bind current d f
 
 let () =
-  Table.register_census "callable ABI plans" (fun () -> GlobRef.Map_env.cardinal !plans)
+  Table.register_census "callable ABI plans" (fun () -> GlobRef.Map_env.cardinal !current.plans)
 
 (* The head of [abi], one line, for a violation report. *)
 let describe abi =
@@ -313,18 +320,27 @@ let reproduces old abi =
         ++ str " where its plan, decided " ++ str (phase_name old.phase) ++ str ", says <"
         ++ str (describe old) ++ str ">" )
 
-let install callables assume =
-  plans :=
+let decide ~callables ~assumed ~instance_methods =
+  let plans =
     List.fold_left
       (fun m abi ->
         validated abi;
         match GlobRef.Map_env.find_opt abi.callee m with
         | Some old -> reproduces old abi; m
         | None -> GlobRef.Map_env.add abi.callee abi m )
-      GlobRef.Map_env.empty callables;
-  assumed := List.fold_left (fun m (r, ps) -> Ref.User.Map.add r ps m) Ref.User.Map.empty assume
+      GlobRef.Map_env.empty callables
+  in
+  let assumed = List.fold_left (fun m (r, ps) -> Ref.User.Map.add r ps m) Ref.User.Map.empty assumed in
+  let instance_methods =
+    List.fold_left
+      (fun m (instance, methods) ->
+        List.iter (fun (_, abi) -> validated abi) methods;
+        Ref.User.Map.add instance methods m )
+      Ref.User.Map.empty instance_methods
+  in
+  {plans; assumed; instance_methods}
 
-let lookup r = GlobRef.Map_env.find_opt r !plans
+let lookup r = GlobRef.Map_env.find_opt r !current.plans
 
 let unplanned what =
   CErrors.anomaly Pp.(what ++ str " has no callable plan: planning the callables missed it.")
@@ -334,19 +350,8 @@ let planned r =
   | Some abi -> abi
   | None -> unplanned Pp.(str "the declaration of " ++ GlobRef.print r)
 
-(* The methods of each instance's struct, by name. *)
-let instance_methods : (Id.t * t) list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.Map.empty
-
-let install_instance_methods planned =
-  instance_methods :=
-    List.fold_left
-      (fun m (instance, methods) ->
-        List.iter (fun (_, abi) -> validated abi) methods;
-        Ref.User.Map.add instance methods m )
-      Ref.User.Map.empty planned
-
 let instance_method ~instance name =
-  Option.bind (Ref.User.Map.find_opt instance !instance_methods) (fun methods ->
+  Option.bind (Ref.User.Map.find_opt instance !current.instance_methods) (fun methods ->
       List.find_map (fun (n, abi) -> if Id.equal n name then Some abi else None) methods )
 
 let planned_instance_method ~instance name =
@@ -365,7 +370,7 @@ let check abi =
 let deduces_callable r pos =
   match lookup r with
   | Some abi -> deduces_callable_at abi pos
-  | None -> List.exists (Param_pos.equal pos) (Option.default [] (Ref.User.Map.find_opt r !assumed))
+  | None -> List.exists (Param_pos.equal pos) (Option.default [] (Ref.User.Map.find_opt r !current.assumed))
 
 (* [abi] with [instances] dictionaries in front of its head, as a call
    passing that many writes it. *)

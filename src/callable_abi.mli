@@ -17,8 +17,8 @@
     A callee has one plan, wherever it is generated: a function rendered
     inside a struct and the same function at namespace scope take one head.
     Every plan is decided before anything is rendered, by planning the
-    unit's callables ({!Cpp.plan_callables}), and installed then
-    ({!install}); generating a declaration only checks it ({!check}).
+    unit's callables ({!Cpp.plan_callables}), and bound then
+    ({!with_decided}); generating a declaration only checks it ({!check}).
     Generating a declaration must reproduce its plan exactly, and a
     declaration generated with no plan is one the planning missed.  Both are
     reported under [CRANE_CHECK_IR]. *)
@@ -236,31 +236,43 @@ val validate : t -> string list
 
 (** {2 The frozen map} *)
 
-(** [install callables assumed] makes [callables] the unit's plans, and
-    [assumed] the callables a function of the unit with none is assumed to
-    deduce ({!deduces_callable}).  Done once, before anything is rendered:
-    from here the plans are an immutable program fact.  Under
-    [CRANE_CHECK_IR] a callee planned twice with two heads is an error. *)
-val install :
-  t list -> (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list -> unit
+(** A unit's plans: of its callables, the callables a function of it with
+    none is assumed to deduce ({!deduces_callable}), and its instance
+    structs' methods. *)
+type decided
+
+(** No plans. *)
+val undecided : decided
+
+(** [decide ~callables ~assumed ~instance_methods] are the plans
+    [callables], [assumed], and [instance_methods] -- for each instance,
+    each method's by name.  Under [CRANE_CHECK_IR] a callee planned twice
+    with two heads is an error. *)
+val decide :
+  callables:t list ->
+  assumed:(Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list ->
+  instance_methods:(Names.GlobRef.t * (Names.Id.t * t) list) list ->
+  decided
+
+(** [with_decided d f] is [f ()] reading the plans [d]: bound once they
+    are decided, before anything is rendered, so that from there they are
+    an immutable program fact.  A separate extraction binds the previous
+    unit's while the next is planned up to its own. *)
+val with_decided : decided -> (unit -> 'a) -> 'a
 
 (** Checks the head a declaration is generated with against its plan, adding
     nothing: under [CRANE_CHECK_IR] a different head, or a declaration
     generated with no plan, is an error. *)
 val check : t -> unit
 
-(** The installed plan of a declaration. *)
+(** The plan of a declaration. *)
 val lookup : Names.GlobRef.t -> t option
 
 (** {!lookup} for a declaration that is generated: an anomaly where planning
     made it no plan. *)
 val planned : Names.GlobRef.t -> t
 
-(** [install_instance_methods planned] makes [planned] the plans of the unit's
-    instance structs' methods: for each instance, each method's by name. *)
-val install_instance_methods : (Names.GlobRef.t * (Names.Id.t * t) list) list -> unit
-
-(** The installed plan of the method [name] of [instance]'s struct. *)
+(** The plan of the method [name] of [instance]'s struct. *)
 val instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t option
 
 (** {!instance_method} for a method that is generated: an anomaly where
@@ -272,7 +284,7 @@ val check_instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t -> unit
 
 (** Whether a call to [r] passes the callable it declares at [pos] to a
     deduced [F &&]: as [r]'s plan says ({!deduces_callable_at}), or where it
-    has none as its call sites assume ({!install}). *)
+    has none as its call sites assume ({!decide}). *)
 val deduces_callable : Names.GlobRef.t -> Param_pos.orig Param_pos.pos -> bool
 
 (** The plan of a callable Crane does not generate here -- a custom mapping,
@@ -296,12 +308,12 @@ val foreign :
   t
 
 (** [install_foreign derive callees] makes the {!foreign} plan [derive r]
-    gives each of [callees] with no installed plan of its own, or only a
+    gives each of [callees] with no plan of its own, or only a
     method's, the unit's plan of [r]: planned with no dictionary, before
     anything is rendered.  Replaces the unit's previous foreign plans. *)
 val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
 
-(** The installed plan of [callee], or else its foreign one, with
+(** The plan of [callee], or else its foreign one, with
     [instances] dictionaries: the one {!install_foreign} planned, or where it
     planned none, {!foreign}'s.  Under [CRANE_CHECK_IR] a planned one is
     checked against {!foreign}'s, and emission finding none planned is a

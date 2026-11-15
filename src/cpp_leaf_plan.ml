@@ -126,13 +126,33 @@ module Ir = struct
         | _ -> frame :: List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
       | Function f ->
         let defines = match f.shape with Definition _ -> true | Declaration _ -> false in
-        [Cpp_resolution.Function {owner = fst f.path.outer; defines} :: frame]
+        let owner = fst f.path.outer in
+        [Cpp_resolution.Function {owner; defines; scope = Scope_plan.of_declaration owner} :: frame]
       | Struct s -> [frame; entered frame (Cpp_resolution.Inductive_struct s.ref_ :: template_body s.type_params)]
       | Member_definition m ->
         [frame; entered frame (template_body m.type_params @ [Cpp_resolution.Inductive_struct m.owner])]
       | Merged_struct_members s ->
         [frame; entered frame ((Cpp_resolution.In_struct :: template_body s.type_params) @ [Inductive_struct s.ref_])]
       | Variable _ | Concept _ | Static_assert _ | Type_alias _ | Struct_forward_declaration _ | Enum _ -> [frame]
+    in
+    decl [] d
+
+  (** The out-of-line scope of each function [d] writes, asked at the frame
+      the function is written at, which is where the declaration printer
+      enters its {!Cpp_resolution.Function} frame from. *)
+  let function_scopes (d : decl) =
+    let rec decl frame (d : decl) =
+      match d with
+      | Template (_, _, inner) -> decl frame inner
+      | Namespace (None, decls) -> List.concat_map (decl frame) decls
+      | Namespace (Some w, members) -> (
+        match members with
+        | [Struct _] when w.merges -> []
+        | _ -> List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
+      | Function f -> [(frame, Cpp_resolution.Out_of_line_scope (fst f.path.outer))]
+      | Struct _ | Member_definition _ | Merged_struct_members _ | Variable _ | Concept _ | Static_assert _
+      | Type_alias _ | Struct_forward_declaration _ | Enum _ ->
+        []
     in
     decl [] d
 
@@ -396,7 +416,7 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
   let names_through n = head_names_into_a_struct (unqualified_head n) in
   match d with
   | Function {path = {outer; inner}; return_type; shape = Declaration params; _} ->
-    let ctx = next (Function {owner = fst outer; defines = false}) ctx in
+    let ctx = next (Function {owner = fst outer; defines = false; scope = Scope_plan.of_declaration (fst outer)}) ctx in
     let path = outer :: inner in
     if List.exists (fun (n, _) -> names_through (global_name ctx Type n)) path then Some true
     else any_type ctx ((return_type :: List.map snd params) @ List.concat_map snd path)
@@ -1299,6 +1319,7 @@ let declaration_names d =
   let frames = Ir.declaration_frames d and defined = Ir.defined_types d in
   global_names frames (Ir.declaration_globals d)
   @ List.concat_map (fun frame -> List.map (fun key -> (frame, key)) defined) frames
+  @ Ir.function_scopes d
 
 let unprinted_names : Cpp_ast.declaration -> _ = function
   | Declaration {decl; _} | Absorbed {decl; _} -> declaration_names decl

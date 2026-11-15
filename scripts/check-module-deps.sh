@@ -66,7 +66,7 @@ rules=(
 # fourth argument, bin/printer_reads lists every edge by which the printer
 # reaches that value of Table, not one chain: all of them must go for the
 # read to.
-PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name std_lib register_census modpath_of_r"
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name std_lib"
 # Facts the printer reads that planning should hand it: none left.
 PRINTER_TABLE_PENDING=""
 
@@ -94,14 +94,15 @@ done
 # Nor does it read a plan's tables as global cells: what a plan decided for
 # a declaration reaches the printer on the declaration's leaf, resolved
 # (Cpp_resolution's keys).  What it may still reach of the plan modules is
-# listed, by module: the spelling configuration, and what the position the
-# printer enters is derived from (Cpp_names.next: the out-of-line scope of
-# a function and the file-scope names that withhold its qualifier) and the
-# spelling of that scope (Scope_plan.qualifier).  PENDING only shrinks.
+# listed, by module: the spelling configuration, what the position the
+# printer enters is derived from (Cpp_names.next: the file-scope names that
+# withhold a function's qualifier; its out-of-line scope is resolved, on the
+# function's frame) and the spelling of that scope (Scope_plan.qualifier).
+# PENDING only shrinks.
 PRINTER_PLAN_ALLOWED=(
   "Cpp_state : file_start pp_tvar sn file_scope_aliases_of"
-  "Module_plan : is_namespace_scope_ref"
-  "Scope_plan : of_declaration qualifier"
+  "Module_plan : "
+  "Scope_plan : qualifier"
 )
 PRINTER_PLAN_PENDING=(
   "Cpp_state : "

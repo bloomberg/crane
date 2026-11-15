@@ -8,7 +8,7 @@ type entered =
   | Inductive_struct of GlobRef.t
   | In_struct
   | In_template
-  | Function of {owner : GlobRef.t; defines : bool}
+  | Function of {owner : GlobRef.t; defines : bool; scope : Scope_plan.scope option}
 type frame = entered list
 type definition = Enum_definition | Struct_definition | Alias_definition
 type enumerator_site = Enumerator_value | Case_label
@@ -36,6 +36,7 @@ type key =
   | Enumerator_qualifier of enumerator_site * GlobRef.t
   | Read_by_a_function of GlobRef.t
   | Held_back_concept of GlobRef.t
+  | Out_of_line_scope of GlobRef.t
 
 let pp_key k =
   let global what r = Pp.(str what ++ str " " ++ GlobRef.print r) in
@@ -64,6 +65,7 @@ let pp_key k =
   | Enumerator_qualifier (Case_label, r) -> global "the enum a case label names of" r
   | Read_by_a_function r -> global "whether a function reads" r
   | Held_back_concept r -> global "whether the concept is held back of" r
+  | Out_of_line_scope r -> global "the out-of-line scope of" r
 
 (* Total orders on frames and keys, for the table's map. *)
 let compare_entered a b =
@@ -75,7 +77,18 @@ let compare_entered a b =
     | c -> c )
   | Inductive_struct a, Inductive_struct b -> GlobRef.UserOrd.compare a b
   | Function a, Function b -> (
-    match GlobRef.UserOrd.compare a.owner b.owner with 0 -> Bool.compare a.defines b.defines | c -> c )
+    match GlobRef.UserOrd.compare a.owner b.owner with
+    | 0 -> (
+      match Bool.compare a.defines b.defines with
+      | 0 ->
+        Option.compare
+          (fun (s : Scope_plan.scope) (s' : Scope_plan.scope) ->
+            match ModPath.compare s.module_ s'.module_ with
+            | 0 -> List.compare String.compare s.qualifier s'.qualifier
+            | c -> c )
+          a.scope b.scope
+      | c -> c )
+    | c -> c )
   | _ -> Int.compare (rank a) (rank b)
 
 let compare_kind (a : Common.kind) b = compare a b
@@ -103,6 +116,7 @@ let compare_key a b =
     | Read_by_a_function _ -> 18
     | Held_back_concept _ -> 19
     | Module_in_expression _ -> 20
+    | Out_of_line_scope _ -> 21
   in
   let global ka ra kb rb = match compare_kind ka kb with 0 -> GlobRef.UserOrd.compare ra rb | c -> c in
   match (a, b) with
@@ -123,7 +137,8 @@ let compare_key a b =
   | Value_access a, Value_access b
   | Built_struct a, Built_struct b
   | Read_by_a_function a, Read_by_a_function b
-  | Held_back_concept a, Held_back_concept b ->
+  | Held_back_concept a, Held_back_concept b
+  | Out_of_line_scope a, Out_of_line_scope b ->
     GlobRef.UserOrd.compare a b
   | Enumerator_qualifier (sa, a), Enumerator_qualifier (sb, b) -> (
     match compare sa sb with 0 -> GlobRef.UserOrd.compare a b | c -> c )
@@ -151,6 +166,7 @@ type value =
   | Reference of reference
   | Access of access
   | Holds of bool
+  | Scope of Scope_plan.scope option
 
 let pp_reference = function
   | Named_value {name; type_arguments} ->
@@ -169,13 +185,14 @@ let name_of key = function
   | Name n -> n
   | Head _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is a type's head, not a name.")
   | Inline _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is an inline custom answer, not a name.")
-  | Reference _ | Access _ | Holds _ -> not_a key "a name"
+  | Reference _ | Access _ | Holds _ | Scope _ -> not_a key "a name"
 
 let head_of key = function Head h -> h | _ -> not_a key "a type's head"
 let inline_of key = function Inline text -> text | _ -> not_a key "an inline custom answer"
 let reference_of key = function Reference r -> r | _ -> not_a key "a value reference"
 let access_of key = function Access a -> a | _ -> not_a key "an access"
 let holds_of key = function Holds b -> b | _ -> not_a key "whether it holds"
+let scope_of key = function Scope s -> s | _ -> not_a key "a scope"
 
 type table = Unresolved_table | Resolved of value Map.t
 
@@ -202,3 +219,4 @@ let find_inline t frame r = lookup inline_of t frame (Inline_custom r)
 let find_reference t frame r = lookup reference_of t frame (Value_reference r)
 let find_access t frame r = lookup access_of t frame (Value_access r)
 let find_holds t frame key = lookup holds_of t frame key
+let find_scope t frame r = lookup scope_of t frame (Out_of_line_scope r)
