@@ -6,7 +6,10 @@
 open Names
 open Grammar
 
+(** Whether [x] is among [xs]. *)
 let mem x xs = List.exists (Id.equal x) xs
+
+(** [xs] without the variables in [bound]. *)
 let without bound xs = List.filter (fun x -> not (mem x bound)) xs
 
 (** The variables an expression refers to without binding them, in the
@@ -168,12 +171,14 @@ let evaluates_operands : type p. p Expr.t -> bool = function
   | _ -> true
 
 (** [lambda_needs_capture params body] is [(needs_capture, uses_this)]:
-    whether a lambda of these parameters and this body names a variable it
-    neither binds nor declares -- its own, or one a nested lambda names --
-    and so must capture, and whether it names the enclosing [this]. *)
+    whether a lambda of these parameters and this body must capture, as it
+    names a variable it neither binds nor declares (its own, or one a nested
+    lambda names) or names the enclosing [this]; and whether it names
+    [this]. *)
 let lambda_needs_capture : type p. (p Type.t * Id.t option) list -> p Stmt.t list -> bool * bool =
  fun params body ->
-  let names ps = List.fold_left (fun acc (_, x) -> match x with Some id -> Id.Set.add id acc | None -> acc) Id.Set.empty ps in
+  let names ps =
+    List.fold_left (fun acc (_, x) -> match x with Some id -> Id.Set.add id acc | None -> acc) Id.Set.empty ps in
   let uses_this = ref false in
   let rec collect_from_expr (refs, decls) (e : p Expr.t) =
     match e with
@@ -221,7 +226,8 @@ let lambda_needs_capture : type p. (p Type.t * Id.t option) list -> p Stmt.t lis
           (fun acc (br : p Match.branch) ->
             let refs', decls' = List.fold_left collect_from_expr acc br.extra_conditions in
             let branch_decls =
-              let d = List.fold_left (fun d (fb : p Match.field_binding) -> Id.Set.add fb.name d) decls' br.field_bindings in
+              let d =
+                List.fold_left (fun d (fb : p Match.field_binding) -> Id.Set.add fb.name d) decls' br.field_bindings in
               match br.var with Some id -> Id.Set.add id d | None -> d
             in
             List.fold_left collect_from_stmt (refs', branch_decls) br.body )

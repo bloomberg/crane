@@ -2,8 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** ControlIR: a function's control as it is implemented, before any C++
-    is chosen for it.  The terms it does not change stay Core ({!Core.Expr.t}); what it
-    makes explicit is where control goes.
+    is chosen for it.  The terms it does not change stay Core
+    ({!Core.Expr.t}); what it makes explicit is where control goes.
 
     It holds the loops of direct tail recursion: a function that recurses
     only by tail calls is a [Loop] over its parameters, each of its
@@ -17,7 +17,8 @@
     into the function -- a partner's copy spliced into its body among them
     ({!Recursion_plan.splice_partners}) -- is an [Entry] of the function's
     machine rather than a machine of its own, for two machines cannot unwind
-    each other's stack.  {!Lower_control} produces them. *)
+    each other's stack.  {!Lower_control} produces them from a recursive
+    Core body, and {!Control_to_cpp_ir} lowers them to CppIR. *)
 
 (** A function's control. *)
 type t =
@@ -46,8 +47,8 @@ and let_ = {
   body : t;
 }
 
-(** A match whose branches carry control, the [Core.Expr.Match] of Core it stands
-    for with each branch's body in ControlIR. *)
+(** A match whose branches carry control: the [Core.Expr.Match] it stands
+    for, with each branch's body in ControlIR. *)
 and match_ = {
   scrutinee_type : Core.Type.t;
   scrutinee : Core.Expr.t;

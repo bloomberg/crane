@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Core terms ({!Grammar.Expr}). *)
+(** [Core.Expr]: Core terms, and two helpers for building and reading them. *)
 
 include Grammar.Expr
 

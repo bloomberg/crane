@@ -122,7 +122,7 @@ val infer_owned_params :
     where element [i] is [true] when the parameter at de Bruijn index [i+1] is
     used only as a case scrutinee but its extracted sub-bindings escape into
     constructors.  Callers should only OR this into [infer_owned_params] for
-    parameters whose ML type maps to a non-trivially-copyable value type (e.g.,
+    parameters whose Core type maps to a non-trivially-copyable value type (e.g.,
     custom [prod]), NOT for shared_ptr-backed types ([list], cofix, etc.). *)
 val infer_sub_bindings_escape_params : int -> Core.Expr.t -> bool list
 
@@ -139,7 +139,7 @@ val returns_receiver_field : this_pos:int -> Core.Expr.t -> bool
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)
-module IntSet = Mlutil.IntSet
+module IntSet = Core_util.IntSet
 
 (** [free_rels depth t] returns free de Bruijn indices in [t], shifted by
     [depth]. An index [i > depth] contributes [i - depth].

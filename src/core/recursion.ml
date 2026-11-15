@@ -1,9 +1,11 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Definitions of a recursive declaration group, and local recursive
-    groups ({!Grammar.Recursion}). *)
+(** [Core.Recursion]: the definitions of a top-level recursive declaration
+    group ([Core.Decl.Recursive_group]), and local recursive groups (the
+    payload of [Core.Expr.Fixpoint] and [Core.Expr.Cofixpoint]). *)
 
+(** One definition of a top-level recursive group. *)
 module Definition = struct
   include Grammar.Recursion.Definition
 
@@ -11,8 +13,11 @@ module Definition = struct
   let map_body f fd = {fd with body = f fd.body}
 end
 
+(** One function of a local recursive group: name, type and body. *)
 module Member = Grammar.Recursion.Member
 
+(** A local recursive group: its members, the one selected, and its
+    occurrence; built only through {!make} and the functions here. *)
 module Group = struct
   include Grammar.Recursion.Group
 
@@ -26,6 +31,7 @@ module Group = struct
   (** A group of one member, which it selects. *)
   let singleton name type_ body occurrence = make ~selected:0 [|{Member.name; type_; body}|] occurrence
 
+  (** The number of members. *)
   let length g = Array.length g.members
 
   (** Each member's name and type, in binding order. *)
@@ -44,7 +50,8 @@ module Group = struct
     make ~selected:g.selected (Array.map2 (fun (m : Member.t) body -> {m with body}) g.members bodies) g.occurrence
 
   (** [g] with [f] applied to each body. *)
-  let map_bodies f g = make ~selected:g.selected (Array.map (fun (m : Member.t) -> {m with body = f m.body}) g.members) g.occurrence
+  let map_bodies f g =
+    make ~selected:g.selected (Array.map (fun (m : Member.t) -> {m with body = f m.body}) g.members) g.occurrence
 
   (** [g] with [h] applied to each body, in order, and then [f] to each
       member's type, in order. *)

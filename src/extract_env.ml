@@ -391,7 +391,7 @@ and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
      (* Fall back to expanding the signature *)
      extract_msignature_spec env mp mb.mod_delta mb.mod_type
 
-(** Recursively extracts a module structure to ML declarations. When all=false,
+(** Recursively extracts a module structure to Core declarations. When all=false,
     only extracts needed declarations based on dependency analysis. Evaluation
     order (last to first) ensures correct dependencies. *)
 let rec extract_structure access env mp reso ~all = function
@@ -537,7 +537,7 @@ and extract_msignature access env mp reso ~all = function
                               parameter_type = extract_mbody_spec env mp1 mtb;
                               body = extract_msignature access env' mp reso ~all me}
 
-(** Builds the ML module structure for a given module body. Extracts both the
+(** Builds the Core module structure for a given module body. Extracts both the
     implementation and type signature. *)
 and extract_module access env mp ~all mb =
   (* A module has an empty [mod_expr] when : - it is a module variable (for
@@ -611,7 +611,7 @@ and extract_module access env mp ~all mb =
   {Core.Module.expr = impl; type_ = typ}
 
 (** Extracts a monomorphic environment for the given references and module
-    paths. Computes which declarations are needed and builds ML structures. *)
+    paths. Computes which declarations are needed and builds Core structures. *)
 let mono_environment ~opaque_access refs mpl =
   Visit.reset ();
   List.iter Visit.add_ref refs;
@@ -1104,7 +1104,8 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
   Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
-  let acc = {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
+  let acc =
+    {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
   Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
@@ -1135,7 +1136,8 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
       ( Target_plan.same_callables callables callables'
       && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
-  let assumed = Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
+  let assumed =
+    Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
   Pipeline_trace.event "layout" decide_callables;
   let acc = {acc with callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
   Accumulated_plan.bind acc @@ fun () ->
@@ -1435,13 +1437,13 @@ let core_passes to_appear : Core.Program.t Pipeline_trace.pass list =
        declarations, final from here; the method registry {!Normalize} builds
        already asks. *)
     effect_ "shared_variants" Structure_analysis.register_shared_variants;
-    pass "dedup" Ml_dedup.structure;
-    pass "specialize" Ml_specialize.structure;
-    pass "knot" Ml_knot.structure;
+    pass "dedup" Core_dedup.structure;
+    pass "specialize" Core_specialize.structure;
+    pass "knot" Core_knot.structure;
     pass "fix_shape" Fix_shape.structure;
     pass "fresh_occurrences" Fresh_occurrences.structure;
     effect_ "local_types" Local_types.structure;
-    effect_ "ir_check" Ml_ir_check.structure ]
+    effect_ "ir_check" Core_check.structure ]
 
 let core_pass_names = Pipeline_trace.names (core_passes ([], []))
 
@@ -1472,8 +1474,8 @@ let normalize_pass_names = Pipeline_trace.names normalize_passes
 let observed_fingerprint ~stage struc =
   if Pipeline_trace.enabled () then
     Pipeline_trace.event stage
-      ("fingerprint " ^ Ml_fingerprint.to_hex (Ml_fingerprint.structure struc));
-  if Pipeline_trace.enabled () || Probe.checking () then Some (Ml_fingerprint.elements struc)
+      ("fingerprint " ^ Core.Fingerprint.to_hex (Core.Fingerprint.structure struc));
+  if Pipeline_trace.enabled () || Probe.checking () then Some (Core.Fingerprint.elements struc)
   else None
 
 (** Report the elements rendering changed, and under [CRANE_CHECK_IR] fail
@@ -1488,8 +1490,8 @@ let check_structure_unchanged planned struc =
     (fun before ->
       let changed =
         List.filter_map
-          (fun ((l, fp), (_, fp')) -> if Ml_fingerprint.equal fp fp' then None else Some l)
-          (List.combine before (Ml_fingerprint.elements struc))
+          (fun ((l, fp), (_, fp')) -> if Core.Fingerprint.equal fp fp' then None else Some l)
+          (List.combine before (Core.Fingerprint.elements struc))
       in
       List.iter
         (fun l -> Pipeline_trace.event "emit" ("changed by rendering: " ^ Label.to_string l))
@@ -1625,7 +1627,8 @@ let check_against_plan (plan : Target_plan.t) =
     in
     Target_plan.check_kinds_recorded plan;
     List.iter
-      (fun (r, kinds) -> if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then fail "template-parameter kinds")
+      (fun (r, kinds) -> if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then
+        fail "template-parameter kinds")
       plan.template_kinds;
     List.iter
       (fun (mp, s) ->
@@ -1637,7 +1640,7 @@ let check_against_plan (plan : Target_plan.t) =
       (plan.representation.names @ plan.representation.referenced_names);
     List.iter
       (fun (c, ids) ->
-        let ctor = Ml_type_util.ctor_struct_name_of_ref c in
+        let ctor = Type_util.ctor_struct_name_of_ref c in
         List.iteri
           (fun j id ->
             if not (Id.equal (Common.lookup_ctor_field_name ~owner:c ctor j) id) then fail "constructor field names" )
@@ -1664,7 +1667,8 @@ let check_against_plan (plan : Target_plan.t) =
           fail ("promoted inductives: planned but not rendered " ^ Pp.string_of_ppcmds (GlobRef.print r)) )
       promoted;
     let planned = plan.representation.nested_structs and printed = !Cpp_state.printed_nested_structs in
-    List.iter (fun x -> if not (mem x planned) then fail ("nested structs: printed but not planned " ^ describe x)) printed;
+    List.iter
+      (fun x -> if not (mem x planned) then fail ("nested structs: printed but not planned " ^ describe x)) printed;
     if printed <> [] then
       List.iter
         (fun x -> if not (mem x printed) then fail ("nested structs: planned but not printed " ^ describe x))
@@ -1700,9 +1704,13 @@ let declares struc =
     ignore struc;
   fun r -> Ref.User.Set.mem r !declared
 
-(** Renders an entire ML structure to C++ header and implementation files:
-    plans the unit, renders each file once, then writes and formats them. *)
-let print_structure_to_file ?(namespace = None) ?(unit_includes = []) ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
+(** Renders an entire Core structure to C++ header and implementation files:
+    plans the unit over what the units before it decided ([earlier], bound
+    for the whole unit), renders each file once, checks the result against
+    the plan, then writes and formats them.  Returns what the next unit of
+    a separate extraction starts from ({!Accumulated_plan.for_next_unit}). *)
+let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
+  ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
     (fn, si, mo) dry (core : Core_phase.normalized Core_phase.program) =
   let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
@@ -1715,9 +1723,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = []) ?(earlier 
   reset_renaming_tables ();
   let unsafe_needs =
     {
-      Backend.mldummy = struct_ast_search Mlutil.isMLdummy struc;
-      tdummy = struct_type_search Mlutil.isTdummy struc;
-      tunknown = struct_type_search (( == ) Core.Type.Unknown) struc;
+      Backend.erased_values = struct_ast_search Core_util.is_erased_value struc;
+      erased_types = struct_type_search Core_util.is_erased_type struc;
+      unknown_types = struct_type_search (( == ) Core.Type.Unknown) struc;
       magic = false;
     }
   in
@@ -2188,7 +2196,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   let decl_names = function
     | Core.Decl.Type_alias {entity = r; _} -> [ref_label r]
     | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-      List.map (fun (fd : Core.Recursion.Definition.t) -> ref_label fd.entity) (Mlutil.term_defs d)
+      List.map (fun (fd : Core.Recursion.Definition.t) -> ref_label fd.entity) (Core_util.term_defs d)
     | Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
       Array.to_list (Array.map (fun (ip : Core.Inductive.Packet.t) -> Id.to_string ip.name) ind.packets)
   in
@@ -2239,7 +2247,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
             let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
             if in_template && not is_function then
               accessors := Cpp_state.add_accessor_ref !accessors r )
-          (Mlutil.term_defs d)
+          (Core_util.term_defs d)
       | Core.Module.Structure_item.Module m ->
         let has_params = match m.expr with
           | Core.Module.Expr.Functor _ -> true
@@ -2331,13 +2339,14 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   let program_reads = ref Ref.Can.Set.empty in
   Modutil.struct_iter
     (fun d ->
-      let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Mlutil.term_defs d) in
+      let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core_util.term_defs d) in
       Modutil.decl_iter_references
         (fun r -> if not (List.exists (Ref.Can.equal r) own) then program_reads := Ref.Can.Set.add r !program_reads)
         ignore ignore d)
     ignore ignore struc;
   Cpp_state.note_program_reads !program_reads;
-  (* Generic traversal of Core.Program.t: walks Core.Module.Expr.Structure/Core.Module.Expr.Functor/Core.Module.Expr.Apply
+  (* Generic traversal of Core.Program.t: walks
+     Core.Module.Expr.Structure/Core.Module.Expr.Functor/Core.Module.Expr.Apply
      and calls [visit ~in_struct elem] on each structure element. *)
   let iter_structure visit struc =
     let rec walk_elem ~in_struct = function
@@ -2376,7 +2385,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
         (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
           if (match ty with Core.Type.Arrow _ -> false | _ -> true) then
             accessors := Cpp_state.add_accessor !accessors (Table.modpath_of_r r) (Table.label_of_r r) )
-        (Mlutil.term_defs d)
+        (Core_util.term_defs d)
     | _ -> ()
   ) struc;
   (* Each unit is planned with what the units before it planned. *)
@@ -2641,7 +2650,7 @@ let extract_and_compile ~opaque_access file l =
 
 (** {2 Extraction of one decl to stdout} *)
 
-(** Renders the single ML declaration [decl], of the module [mp], to C++
+(** Renders the single Core declaration [decl], of the module [mp], to C++
     output, once the unit [struc] it belongs to is planned. *)
 let print_one_decl struc mp decl =
   let d = descr () in

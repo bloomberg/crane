@@ -90,7 +90,8 @@ let invocations ~params (body : stmt list) tparam (dom : ty list) =
     | _ -> Some Mutable_lvalue
   in
   let bind env x c = Id.Map.add x c env in
-  let constify = Id.Map.map (Option.map (function Value_category.Mutable_lvalue -> Value_category.Const_lvalue | c -> c)) in
+  let constify =
+    Id.Map.map (Option.map (function Value_category.Mutable_lvalue -> Value_category.Const_lvalue | c -> c)) in
   let rec category env : expr -> Value_category.t option = function
     | Local x -> ( try Id.Map.find x env with Not_found -> None)
     | Move _ -> Some Xvalue

@@ -46,8 +46,12 @@
       what was generated ({!Cpp_ind.generated_once}).  Emission decides
       nothing but the names of the helpers it lifts out of bodies; the table
       census taken after planning is compared after emission
-      ([check_no_late_decisions]), and what it generated against what the
-      unit declares ({!Unit_program.check_against_plan}).
+      ([check_no_late_decisions]), what it generated against what the unit
+      declares ({!Unit_program.check_against_plan}), and, under
+      [CRANE_CHECK_IR], what the tables and the renders record against the
+      target plan ([check_against_plan]: the inductive and
+      template-parameter kinds, the decided names, the promoted inductives
+      and nested structs rendered).
     + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
       with the preamble its body demanded, then formatted.
 

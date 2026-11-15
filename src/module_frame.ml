@@ -80,7 +80,7 @@ let method_candidates epon_ref sel ~enclosing =
             | Some c -> c :: acc
             | None -> acc
           else acc )
-        acc (Mlutil.term_defs d)
+        acc (Core_util.term_defs d)
     | _ -> acc
   in
   let candidates = List.fold_left candidates_of (List.fold_left candidates_of [] sel) enclosing in
@@ -104,7 +104,7 @@ let method_candidates epon_ref sel ~enclosing =
                     str "the registry's scan made " ++ GlobRef.print r ++ str " a method of " ++ GlobRef.print epon_ref
                     ++ str ", which its module's frame does not" )
               | _ -> () )
-            (Mlutil.term_defs d)
+            (Core_util.term_defs d)
         | _ -> () )
       sel;
   candidates
@@ -118,8 +118,9 @@ let concept_collision mp sel =
   List.exists
     (fun (_, se) ->
       match se with
-      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn;
-                                                                     definition = ({Core.Inductive.kind = Core.Inductive.Kind.Type_class _; _} as ind)}) ->
+      | Core.Module.Structure_item.Declaration
+        (Core.Decl.Inductive
+          {entity = kn; definition = ({Core.Inductive.kind = Core.Inductive.Kind.Type_class _; _} as ind)}) ->
         List.exists
           (fun (r, _) -> Option.equal String.equal (concept_name r) (Some (Common.emitted_module_name mp)))
           (inductive_refs kn ind)
@@ -135,7 +136,10 @@ let concept_collision mp sel =
    for the module is the one the inductive's struct is generated with. *)
 let promoted mp sel eponymous_type =
   let has_submodules = List.exists (function _, Core.Module.Structure_item.Module _ -> true | _ -> false) sel in
-  let inductives = List.length (List.filter (function _, Core.Module.Structure_item.Declaration (Core.Decl.Inductive _) -> true | _ -> false) sel) in
+  let inductives =
+    List.length
+      (List.filter
+        (function _, Core.Module.Structure_item.Declaration (Core.Decl.Inductive _) -> true | _ -> false) sel) in
   match eponymous_type with
   | Some epon when (not (Scope_plan.nested mp)) && (not has_submodules) && inductives <= 1 ->
     List.find_map

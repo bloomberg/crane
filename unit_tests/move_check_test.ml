@@ -112,7 +112,8 @@ let () =
     [Structured_binding ([id "a0"], alternative "t"); Return (Some (reuse [Move (v "t"); Move (v "a0")]))]
     ["t"];
   check "two bindings into one local, one moved and the other read"
-    [Structured_binding ([id "a0"; id "a1"], alternative "t"); Expression (push [Move (v "a0")]); Return (Some (v "a1"))]
+    [Structured_binding ([id "a0"; id "a1"], alternative "t"); Expression (push [Move (v "a0")]);
+      Return (Some (v "a1"))]
     [];
   check "a binding into a computed value"
     [ Structured_binding ([id "a0"], mk_call (v "f") [v "t"]);
@@ -123,7 +124,8 @@ let () =
     [match_ "t" ["a0"] [Expression (push [Move (v "t")]); Return (Some (v "a0"))]]
     ["t"];
   check "a match's field read after a binding of the same name"
-    [match_ "t" ["a0"] [Structured_binding ([id "a0"], mk_call (v "f") []); Expression (push [Move (v "t")]); Return (Some (v "a0"))]]
+    [match_ "t" ["a0"]
+      [Structured_binding ([id "a0"], mk_call (v "f") []); Expression (push [Move (v "t")]); Return (Some (v "a0"))]]
     [];
   check "a reference declared to a field, read after its local is moved"
     [ Bind_variable (id "r", Declare (Reference (Lvalue, Auto), None), field "t" "a0");
@@ -155,7 +157,8 @@ let () =
         (match found with Some n -> string_of_int n | None -> "no plan's") expected;
       exit 1 )
   in
-  convention "as the plan has them" [(id "a", tree); (id "b", cref)] [Return (Some (mk_call (v "g") [Move (v "a"); v "b"]))] 0;
+  convention "as the plan has them" [(id "a", tree); (id "b", cref)]
+    [Return (Some (mk_call (v "g") [Move (v "a"); v "b"]))] 0;
   convention "an owned parameter declared by reference" [(id "a", cref); (id "b", cref)] [] 1;
   convention "a lent parameter moved out of" [(id "a", tree); (id "b", cref)] [Return (Some (Move (v "b")))] 1;
   convention "a lent parameter's name declared again and moved"

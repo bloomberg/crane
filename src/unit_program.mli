@@ -2,25 +2,29 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A unit's program: what it generated and what that finished as, one
-    value keyed by one kind of id.
+    value keyed by one kind of id.  It sits at CppIR finishing: lowering
+    (the Translation_* modules, driven by {!Cpp_ind}) fills it, the
+    finishing passes ({!Cpp_pipeline}) turn its declarations into resolved
+    CppIR, and the printer's renders read it.
 
     The walk ahead of the files generates every declaration the files write,
     and records each source declaration's generation as an {!entity}
     ({!record_ahead}), with the helpers lifted out of its bodies
     ({!record_lifted_ahead}); nothing records a helper as it is lifted.  An
     entity names the declarations its generation gives to finish by their
-    {!id}.  The driver then finishes all of them at once ({!finish}), each
-    {!Cpp_pipeline.finish}ed once under its id, and installs the program
-    ({!install}); nothing else finishes a declaration.  A file's render
-    finds what it writes by id ({!find}): it takes the generation it writes
-    from the walk ahead of the files, and numbers its declarations as the
-    walk did.
+    {!id}.  {!Cpp.generate_ahead} then finishes all of them at once
+    ({!finish}), each {!Cpp_pipeline.finish}ed once under its id, and
+    installs the program ({!install}); nothing else finishes a declaration.
+    A file's render finds what it writes by id ({!find}): it takes the
+    generation it writes from the walk ahead of the files, and numbers its
+    declarations as the walk did.
 
     Each file's render records the entities it takes ({!record}).
     {!check_against_ahead} holds them to the entities and declarations
     generated ahead, and {!check_against_plan} holds every unit to
     "emission generates what the unit declares, and the helpers lifted out
-    of it".  Both run once a unit's files are written ([Extract_env]).
+    of it".  Both run once a unit's files are rendered, before they are
+    written ([Extract_env.print_structure_to_file]).
 
     It is a top-level module rather than a member of a [src/cpp_ir/]
     directory on purpose: a directory is one node of the dependency graph,
@@ -33,12 +37,13 @@
 (** Whose generation a declaration belongs to: a source declaration's, or a
     helper lifted out of one. *)
 type owner =
-  | Source of Entity_id.t
-  | Generated of Generated_entity_id.t
+  | Source of Entity_id.t  (** a declaration of the unit's Core program *)
+  | Generated of Generated_entity_id.t  (** a helper lifted out of a body *)
 
 (** Source entities before helpers, each kind by its own order. *)
 val compare_owner : owner -> owner -> int
 
+(** The owner's entity id, for diagnostics. *)
 val pp_owner : owner -> Pp.t
 
 (** Sets of owners, ordered by {!compare_owner}. *)
@@ -61,6 +66,7 @@ type id = {
   part : part;
 }
 
+(** The owner, then [#n] for its [n]th declaration or [#methods]. *)
 val pp_id : id -> Pp.t
 
 (** {2 Generations} *)

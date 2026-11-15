@@ -210,7 +210,7 @@ let lookup_typedef_unchecked kn =
   | None -> None
 
 (** Cache of constant type schemes, keyed by constant. *)
-let cst_types = ref (Cmap_env.empty : (constant_body * Ml_schema.t) Cmap_env.t)
+let cst_types = ref (Cmap_env.empty : (constant_body * Core.Schema.t) Cmap_env.t)
 
 (** Initialize the constant type scheme cache table. *)
 let init_cst_types () = cst_types := Cmap_env.empty
@@ -249,13 +249,13 @@ let () = on_reset init_inductives
 
 let () = register_census "inductives" (fun () -> !inductives_added)
 
-let add_ind kn mib ml_ind =
-  inductives := Mindmap_env.add kn (mib, ml_ind) !inductives;
+let add_ind kn mib core_ind =
+  inductives := Mindmap_env.add kn (mib, core_ind) !inductives;
   incr inductives_added
 
 let lookup_ind kn mib =
   match Mindmap_env.find_opt kn !inductives with
-  | Some (mib0, ml_ind) when mib == mib0 -> Some ml_ind
+  | Some (mib0, core_ind) when mib == mib0 -> Some core_ind
   | _ -> None
 
 (** Lookup inductive extraction info without safety checks, may raise Not_found.
@@ -357,7 +357,7 @@ let inductive_kind_of r =
     Mindmap_env.find_opt kn !inductive_kinds
   | ConstRef _ | VarRef _ -> None
 
-(* A definition's ML type, keyed by the definition: measured over the test
+(* A definition's Core type, keyed by the definition: measured over the test
    corpus, every definition registered under two names -- a module alias, an
    [Include] -- registers the same type under each, up to the names of the
    definitions it mentions. *)
@@ -647,13 +647,13 @@ let itree_header = Runtime "itree_header"
 
 let needs_itree_header () = demanded "itree_header"
 
-(** Check if an ML type is a coinductive type by inspecting its global
+(** Check if a Core type is a coinductive type by inspecting its global
     reference. *)
 let is_coinductive_type = function
   | Core.Type.Global_app {head = r; _} -> is_coinductive r
   | _ -> false
 
-(** The fields of a record or type class, each paired with its ML type, in
+(** The fields of a record or type class, each paired with its Core type, in
     declaration order.  Prefer this to zipping {!get_record_fields} against
     {!record_field_types}: the latter is read straight off [constructor_argument_types] and still
     holds the implicit arguments field selection dropped, so the two lists can
@@ -668,21 +668,21 @@ let get_record_field_bindings r =
 
 (** The field references of a record or type class.  Anything else has none:
     {!record_fields_of_type} asks this of whatever a [Core.Type.Global_app] carries, and an
-    ML type may perfectly well be headed by a constant. *)
+    Core type may perfectly well be headed by a constant. *)
 let get_record_fields r =
   List.map (fun (f : Core.Record.Field.t) -> f.projection) (get_record_field_bindings r)
 
-(** {!get_record_field_bindings} for a record named by an ML type. *)
+(** {!get_record_field_bindings} for a record named by a Core type. *)
 let record_field_bindings_of_type = function
   | Core.Type.Global_app {head = r; _} -> get_record_field_bindings r
   | _ -> []
 
-(** Get record fields from an ML type, filtering by extracting from Core.Type.Global_app. *)
+(** Get record fields from a Core type, filtering by extracting from Core.Type.Global_app. *)
 let record_fields_of_type = function
   | Core.Type.Global_app {head = r; _} -> get_record_fields r
   | _ -> []
 
-(** Get the ML types of record/typeclass fields in order, with parameter
+(** Get the Core types of record/typeclass fields in order, with parameter
     substitution applied. *)
 let record_field_types r =
   let open GlobRef in
@@ -1192,7 +1192,7 @@ let make_refset_can_with_functor_fallback ~name () =
 (** Value-dependent type schemes: constants (typically Module Type
     [Parameter]s) whose kind takes a VALUE argument, e.g.
     [sym_semty : sym -> Type].  A type family applied to a runtime value is not
-    representable as a C++ type, so [convert_ml_type_to_cpp_type] erases it to
+    representable as a C++ type, so [convert_core_type_to_cpp_type] erases it to
     [std::any] rather than emitting [typename M::sym_semty].  Detected at
     extraction time via [type_sign_vl] (more signature slots than type vars);
     see {!make_refset_can_with_functor_fallback} for why functor-parameter
@@ -1201,10 +1201,11 @@ let (_, add_value_dep_type_scheme, is_value_dep_type_scheme)
   =
   make_refset_can_with_functor_fallback ~name:"value_dep_type_schemes" ()
 
-(* Table of promoted type bindings for typeclass instances. Maps an instance
+(* Promoted type bindings for typeclass instances. Maps an instance
    ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
-   nat)], so that call sites can substitute promoted Tvars with concrete types
-   during eta expansion. *)
+   nat)], so that call sites can substitute promoted type variables with
+   concrete types during eta expansion.  Bound for a unit's extent
+   ({!with_instance_promoted_types}), not reset. *)
 let instance_promoted_types =
   ref (GlobRef.Map.empty : (Names.Id.t * Core.Type.t) list GlobRef.Map.t)
 
@@ -1232,7 +1233,7 @@ type class_arg = Carg of GlobRef.t * class_arg list | Carg_unknown
 
 (* The class an instance instantiates, and the instances that class is applied
    to.  [PIV : @PI ProvenanceV PointerV] records [(PI, [Carg (ProvenanceV, []);
-   Carg (PointerV, [Carg_unknown])])].  None of this survives into the ML type,
+   Carg (PointerV, [Carg_unknown])])].  None of this survives into the Core type,
    where the class stands alone as [PI]; the Rocq type is the only place it is
    visible, so it is taken there. *)
 let instance_class_shapes =
@@ -1254,7 +1255,7 @@ let get_instance_class_shape r = GlobRef.Map.find_opt r !instance_class_shapes
 
 (* The instances a declaration's type applies to its own class binders, each
    argument given by the binder's ordinal among them.  [get_size : forall {Pa :
-   Params}, @memM Pa (@MemStateV Pa) nat] records [(MemStateV, [0])]: the ML
+   Params}, @memM Pa (@MemStateV Pa) nat] records [(MemStateV, [0])]: the Core
    type keeps [memM] and neither of its dictionary arguments, and a body that
    only forwards to another declaration names no instance either. *)
 let context_instance_apps =
@@ -1273,7 +1274,7 @@ let get_context_instance_apps r =
 (* The class instances an inductive's constructor field types name.
 
    [Variant dval := DPtr (p : @ptr ProvenanceV PointerV)] depends on
-   [PointerV], and on whatever [PointerV] is applied to, through nothing the ML
+   [PointerV], and on whatever [PointerV] is applied to, through nothing the Core
    inductive keeps: the dictionary is erased and [ptr] arrives applied to no
    arguments.  Recorded in the same shape as {!instance_class_shapes} -- a
    {!class_arg} -- so that one reader serves both. *)
@@ -1295,7 +1296,7 @@ let get_class_args_own r =
 
    An inductive declared under a [Context {IP : IPtr}] may carry a field whose
    type is a field of that context variable -- [DPtr (p : ptr)].  The
-   dictionary is erased, so the ML inductive has no parameter for it and the
+   dictionary is erased, so the Core inductive has no parameter for it and the
    field's type resolves to the file-scope [using ptr = std::any;]: the
    emitted struct claims to be one type when it is one per instance.  The
    names it mentions are what it is really parameterised by, and they are
@@ -2092,7 +2093,7 @@ let flag_of_int n =
 
 (* For the moment, we allow by default everything except : - the type-unsafe
    optimization [opt_case_idg], which anyway cannot be activated currently (cf
-   [Mlutil.branch_as_fun]) - the linear let and beta reduction [opt_lin_let] and
+   [Core_util.branch_as_fun]) - the linear let and beta reduction [opt_lin_let] and
    [opt_lin_beta] (may lead to complexity blow-up, subsumed by finer reductions
    when inlining recursors). *)
 
@@ -2856,7 +2857,8 @@ let modfile_mps = ref MPmap.empty
 (** Inductives that have been "promoted" into their own namespace struct
     (e.g. [String.string] → [namespace String { struct String { ... }; }]).
     Referenced by both [Translation] and the [Cpp_state]/[Cpp_print] pipeline
-    so it lives here to avoid a dependency cycle. *)
+    so it lives here to avoid a dependency cycle.  Bound for a unit's extent
+    ({!with_promoted_inductives}), not reset. *)
 let promoted_inductives = ref Ref.User.Set.empty
 
 let () = register_census "promoted_inductives" (fun () -> Ref.User.Set.cardinal !promoted_inductives)
@@ -3053,7 +3055,7 @@ let is_flat_inductive_packet kn (ind : Core.Inductive.t) i =
     registry (populated by [Cpp.prepare_structure] before rendering).  If not found
     there — which can happen for functor-parameterized inductives whose
     module-path kn differs across instantiation sites — falls back to
-    looking up the ML inductive in the inductives cache and running the same
+    looking up the Core inductive in the inductives cache and running the same
     structural check used in [gen_ind_header_v2]. *)
 let is_flat_inductive r =
   if is_flat_inductive_registered r then true
@@ -3667,7 +3669,9 @@ let warn_undeclared_mapped_type =
       ++ prlist_with_sep pr_comma str names
       ++ strbrk " but has no From clause, so no header declaring "
       ++ str (if List.length names > 1 then "them" else "it")
-      ++ strbrk " is included on its behalf: it compiles only where another mapping in use happens to import one. Name the header with From \"...\".")
+      ++ strbrk
+           (" is included on its behalf: it compiles only where another mapping in use happens to import one. "
+           ^ "Name the header with From \"...\".") )
 
 let check_type_mapping_header r s imports =
   match Foreign_template.declared_type_names s with
@@ -4077,7 +4081,7 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
 
 (* A numeral format is documented as a numeric-literal formatting directive, but
    it is rendered by textual [%n] substitution and emitted verbatim as C++
-   ([CPPraw]).  Without a syntax guard a format could smuggle arbitrary C++
+   (the text of a CppIR [Numeral]).  Without a syntax guard a format could smuggle arbitrary C++
    (statements, string/char literals, lambdas, comments, extra placeholders)
    into generated code (CWE-94, source injection).  Restrict it to a numeric
    literal wrapper: exactly one [%n] placeholder and, apart from that, only

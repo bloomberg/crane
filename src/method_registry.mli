@@ -124,7 +124,7 @@ val reserve_names : t -> unit
 val lookup : t -> GlobRef.t -> method_info option
 
 (** [cpp_arg_pos ty pos] is [pos] -- an argument position among the arrows of
-    the ML type [ty] -- counted instead among the arguments that reach C++.
+    the Core type [ty] -- counted instead among the arguments that reach C++.
     An erased or [void] argument is passed nothing, and a dictionary becomes a
     template parameter, so the two numberings drift apart. *)
 val cpp_arg_pos : Core.Type.t -> int -> int
@@ -219,8 +219,8 @@ val renumber_body : renumbering -> Core.Expr.t -> Core.Expr.t
       wrappers, and [Core.Expr.Fixpoint] and [Core.Expr.Cofixpoint] bodies to find all tail positions.
 
     {b What does NOT count as "direct return" (and is safe):}
-    - Using the first argument for field access: [MLproj(arg, field)] translates
-      to [this->field].
+    - Using the first argument for field access: a projection of [field] out
+      of [arg] (a [Core.Expr.Match] on it) translates to [this->field].
     - Passing the first argument to another function: [Core.Expr.Apply(f, [arg])]
       translates to [f(this)].
     - Pattern matching on the first argument: [Core.Expr.Match(arg, ...)] translates to
@@ -239,7 +239,7 @@ val renumber_body : renumbering -> Core.Expr.t -> Core.Expr.t
 val body_safe_for_method :
   ?this_pos:int -> ?ret_has_shared_epon:bool -> Core.Expr.t -> bool
 
-(** Check if the return type of an ML arrow type contains [ref].
+(** Check if the return type of a Core arrow type contains [ref].
 
     Extracts the return type from a curried [Core.Type.Arrow] chain and recursively checks
     whether [ref] appears anywhere in it (including inside type arguments).
@@ -249,10 +249,10 @@ val body_safe_for_method :
     [return shared_from_this()]: when the return type references the eponymous
     inductive, the C++ return type will contain [shared_ptr].
     @param ref the inductive [GlobRef.t] to search for in the return type
-    @param ty the full curried ML type (arrow chain) of the function
+    @param ty the full curried Core type (arrow chain) of the function
     @return [true] if the final return type (after stripping all [Core.Type.Arrow] layers)
       contains [ref] anywhere recursively; [false] otherwise *)
-val ml_return_type_has_ref : GlobRef.t -> Core.Type.t -> bool
+val core_return_type_has_ref : GlobRef.t -> Core.Type.t -> bool
 
 (** {2 Module-level helpers} *)
 
@@ -317,8 +317,8 @@ val find_all_module_inductives :
     Type-class inductives are excluded because they are rendered as C++ concepts
     rather than structs, so methods on them would not make sense.
 
-    Scans only [Core.Module.Structure_item.Declaration (Core.Decl.Inductive ...)] entries in the given list; does not recurse
-    into sub-modules.
+    Scans only [Core.Module.Structure_item.Declaration (Core.Decl.Inductive
+    ...)] entries in the given list; does not recurse into sub-modules.
 
     @param module_name the module name to match against (case-insensitive)
     @param decls the module's declaration list

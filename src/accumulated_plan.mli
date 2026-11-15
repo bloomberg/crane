@@ -33,9 +33,10 @@ type t = {
       (** The concrete types each instance gives its class's promoted
           variables. *)
   callables : Callable_abi.decided;
-      (** The callable plans: a unit's replace the previous unit's once
-          decided, so until then a unit is planned with the previous
-          unit's. *)
+      (** The unit's callable plans, from its [decide_callables] pass on;
+          none before it.  They are not carried to the next unit: a callee
+          another unit defines is planned as foreign
+          ({!Callable_abi.install_foreign}). *)
 }
 
 (** What the first unit of an extraction starts from: [accessors], those
@@ -50,6 +51,6 @@ val start : accessors:Cpp_state.accessors -> t
 val bind : t -> (unit -> 'a) -> 'a
 
 (** What the next unit of the extraction starts from, once a unit planned
-    [t]: [t] without the layout facts that belong to one unit
-    ({!Module_plan.for_next_unit}). *)
+    [t]: [t] without the facts that belong to one unit, the per-unit
+    layout ({!Module_plan.for_next_unit}) and the callable plans. *)
 val for_next_unit : t -> t

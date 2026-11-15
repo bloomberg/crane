@@ -234,7 +234,7 @@ val equal : t -> t -> bool
     declared twice. *)
 val validate : t -> string list
 
-(** {2 The frozen map} *)
+(** {2 The decided plans} *)
 
 (** A unit's plans: of its callables, the callables a function of it with
     none is assumed to deduce ({!deduces_callable}), and its instance
@@ -246,8 +246,9 @@ val undecided : decided
 
 (** [decide ~callables ~assumed ~instance_methods] are the plans
     [callables], [assumed], and [instance_methods] -- for each instance,
-    each method's by name.  Under [CRANE_CHECK_IR] a callee planned twice
-    with two heads is an error. *)
+    each method's by name -- as one value, read once bound
+    ({!with_decided}).  When checking, a plan {!validate} rejects, or a
+    callee planned twice with two heads, is a violation. *)
 val decide :
   callables:t list ->
   assumed:(Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list ->
@@ -257,7 +258,8 @@ val decide :
 (** [with_decided d f] is [f ()] reading the plans [d]: bound once they
     are decided, before anything is rendered, so that from there they are
     an immutable program fact.  A separate extraction binds the previous
-    unit's while the next is planned up to its own. *)
+    unit's while the next is planned up to its own
+    ({!Accumulated_plan.bind}). *)
 val with_decided : decided -> (unit -> 'a) -> 'a
 
 (** Checks the head a declaration is generated with against its plan, adding
@@ -318,8 +320,9 @@ val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
     planned none, {!foreign}'s.  Under [CRANE_CHECK_IR] a planned one is
     checked against {!foreign}'s, and emission finding none planned is a
     violation: every callee a body names is planned before bodies are
-    generated.  A method's call is still planned against its foreign one: it is written as its function's call would be, then
-    printed on the receiver without the variables the receiver carries or
+    generated.  A method's call is still planned against its foreign one: it is
+    written as its function's call would be, then printed on the receiver
+    without the variables the receiver carries or
     {!dropped_positions}. *)
 val plan :
   ?omitted:(Scheme.Var.t -> omission option) ->
@@ -358,14 +361,14 @@ val dropped_positions : Names.GlobRef.t -> int list
     planned method. *)
 val method_params : Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option
 
-(** The callee's ML type the plan was made against: the ML-shaped signature
-    beside the declared one ({!Core.Signature.t}), before the head's relaxations,
+(** The callee's Core type the plan was made against: the plain type
+    beside the declared signature ({!Core.Signature.t}), before the head's relaxations,
     in the callee's own variables, which a call's C++ head is rebuilt from
     at the call's instantiation.  [None] for a global with no recorded
     type. *)
-val ml_type : t -> Core.Type.t option
+val core_type : t -> Core.Type.t option
 
-(** [planned_ml_type r] -- {!Core.Type.t} of the unit's plan of [r], installed,
+(** [planned_core_type r] -- {!core_type} of the unit's plan of [r], decided,
     foreign or a projection's, without planning one; [None] where none is
     planned. *)
-val planned_ml_type : Names.GlobRef.t -> Core.Type.t option option
+val planned_core_type : Names.GlobRef.t -> Core.Type.t option option

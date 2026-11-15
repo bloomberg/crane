@@ -332,8 +332,8 @@ let find_reuse_candidates (pv : Core.Match.Branch.t array) =
     | _ -> false
   in
   let tail_conses body =
-    List.filter_map (function Core.Expr.Construct {constructor = r;
-                                                   arguments = args; _} -> Some (r, args) | _ -> None) (tail_constructions body)
+    List.filter_map (function Core.Expr.Construct {constructor = r; arguments = args; _} -> Some (r, args) | _ -> None)
+      (tail_constructions body)
   in
   let cands = ref [] in
   Array.iteri
@@ -462,7 +462,7 @@ let infer_sub_bindings_escape_params n_params body =
 (** {2 Projections} *)
 
 let returns_receiver_field ~this_pos fn =
-  let params, body = Mlutil.collect_lams fn in
+  let params, body = Core_util.collect_lams fn in
   let receiver = List.length params - this_pos in
   let bare = Core.Expr.strip_crossings in
   List.length params = 1
@@ -479,7 +479,7 @@ let returns_receiver_field ~this_pos fn =
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)
-module IntSet = Mlutil.IntSet
+module IntSet = Core_util.IntSet
 
 (** Compute free de Bruijn indices in [t], shifted by [depth]. An index
     [i > depth] in [t] contributes [i - depth] to the result. *)

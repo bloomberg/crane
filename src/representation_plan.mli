@@ -4,12 +4,18 @@
 (** Whether a binder holds a box, planned from Core ahead of lowering: each
     binder's representation is either a value or a box ([std::any]), and the
     plan decides which from the Core body of a region before translation
-    lowers it.
+    lowers it.  It runs once per region, from
+    {!Translation_state.with_region} through the
+    {!Translation_state.plan_representation} hook, and its answers are kept
+    in {!Translation_state.lexical.representation} and
+    {!Translation_state.lexical.planned_reads}; {!Position_plan} reads the
+    latter.
 
     Lowering also records a C++ type for each binder, and reads whether it
     is a box off that ({!Translation_types.binder_is_boxed}) only to hold
-    the plan to it under [CRANE_CHECK_IR].  The plan reaches an answer for every pattern binder of a region from the
-    region's Core body alone -- the ML types its binders are bound at, the
+    the plan to it under [CRANE_CHECK_IR].  The plan reaches an answer for
+    every pattern binder of a region from the region's Core body alone
+ -- the Core types its binders are bound at, the
     type each match is annotated with, the constructors' declared fields, the
     scope's type variables -- by the same decisions lowering makes
     ({!Translation_types.match_scrutinee_type},
@@ -30,7 +36,7 @@
     constructor stores into an erased field, rewritten as lowering rewrites
     it ({!Translation_types.erased_fn_lambda}), at the constructor's own
     drafted instantiation; one passed to a global, refined against the
-    parameter's ML type at the call's reading
+    parameter's Core type at the call's reading
     ({!Translation_types.slot_refined_lambda},
     {!Core_elaborate.instantiate}).  Its parameters are declared and assigned
     as lowering declares them ({!Translation_types.lambda_binder_emitted},
@@ -42,7 +48,7 @@
     (a record's only where it returns a function, a custom constructor's
     signature where it erased only its domain); the region's return type for
     a lambda the region is.  None reads what the position states beyond the
-    term: the destination's C++ type, the ML type the call's position
+    term: the destination's C++ type, the Core type the call's position
     expects, whether it is a box.
 
     Every variable read of the region is planned too, whatever bound the
@@ -59,7 +65,7 @@
     is the region's; its outer binders at the types the head of the
     declaration being generated declares them at, where it declares them
     directly in [outer] ([declared_outer] in {!Translation_state}), the rest
-    at the ML types [outer] gives them, converted.  Each read is planned at
+    at the Core types [outer] gives them, converted.  Each read is planned at
     the C++ type of its binder too.  A binder's recorded C++ type is never
     read. *)
 val region :

@@ -5,9 +5,13 @@
     before anything is rendered -- where declarations live and what they are
     called.  These are backend decisions, part of a unit's target plan
     ({!Target_plan.t.modules}), not observations about the program.  Decided by
-    {!Cpp.prepare_structure}, and bound ({!with_layout}) before anything is
-    rendered, read-only afterwards -- which is what makes it safe to read
-    from a [.cpp] body printed before the [.h] that declares the names. *)
+    {!Cpp.prepare_structure} and completed by
+    {!Cpp.plan_concept_prerequisites}; each decision is folded into the
+    layout the extraction has accumulated ({!extend}, the [modules] field of
+    {!Accumulated_plan.t}) and bound ({!with_layout}, through
+    {!Accumulated_plan.bind}) before anything is rendered, read-only
+    afterwards -- which is what makes it safe to read from a [.cpp] body
+    printed before the [.h] that declares the names. *)
 
 open Names
 

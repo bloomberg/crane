@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** LowerControl: the {!Control_ir} of a normalized program, from its Core
+(** The {!Control_ir} of a normalized program, lowered from its Core
     bodies and its recursion plan.  It runs after {!Recursion_plan} has
     chosen each function's strategy and before translation, whose loop
     lowering reads the loops it decided ({!loop}, {!Loop_facts}).

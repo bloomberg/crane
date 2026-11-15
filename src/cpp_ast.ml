@@ -289,7 +289,8 @@ let starts_with_doc_comment t =
 let rec join ~following = function
   | [] -> []
   | [t] -> [t]
-  | t :: rest -> t :: Text (if starts_with_doc_comment (following rest) then Pp.fnl () else cut2 ()) :: join ~following rest
+  | t :: rest ->
+    t :: Text (if starts_with_doc_comment (following rest) then Pp.fnl () else cut2 ()) :: join ~following rest
 
 (* A module's members are read one at a time; a joined list as everything
    after the break. *)
@@ -384,7 +385,8 @@ let schedule ~templates ~forwards u =
   let u_sections = List.map (fill_wrappers u.wrapper_bodies) (sections u) in
   let template_slots = Hashtbl.create 16 and placed_in = Hashtbl.create 16 in
   let struct_slots = ref [] and defined_in = Hashtbl.create 16 in
-  let struct_slot r = List.find_map (fun (r', slot) -> if GlobRef.UserOrd.equal r r' then Some slot else None) !struct_slots in
+  let struct_slot r =
+    List.find_map (fun (r', slot) -> if GlobRef.UserOrd.equal r r' then Some slot else None) !struct_slots in
   let count = ref 0 in
   (* Where each template and constrained struct is first needed, from the
      innermost chunk at namespace scope [top], the innermost member [member]
@@ -424,7 +426,8 @@ let schedule ~templates ~forwards u =
               Hashtbl.add template_slots slot name ) )
           | None -> () )
         needs.templates;
-      List.iter (fun r -> if Option.is_empty (struct_slot r) then struct_slots := (r, top) :: !struct_slots) needs.names;
+      List.iter
+        (fun r -> if Option.is_empty (struct_slot r) then struct_slots := (r, top) :: !struct_slots) needs.names;
       needs.defines
   in
   List.iter (fun t -> ignore (first_uses ~top:None ~member:None ~scope:None t)) u_sections;
@@ -437,7 +440,8 @@ let schedule ~templates ~forwards u =
     List.filter_map
       (fun f ->
         match struct_slot f.struct_ with
-        | Some (Some k') when k' = k && not (List.exists (GlobRef.UserOrd.equal f.struct_) (Hashtbl.find defined_in k)) ->
+        | Some (Some k') when k' = k
+          && not (List.exists (GlobRef.UserOrd.equal f.struct_) (Hashtbl.find defined_in k)) ->
           Some f.forward_declaration
         | _ -> None )
       forwards
@@ -504,7 +508,8 @@ let map_leaves ?(head = fun _ h -> h) f t =
 
 (* Each name written as [here] names it where it is written. *)
 let resolve_module_ref here (m : module_ref) = {m with name = Resolved (here (Cpp_resolution.Module m.path))}
-let resolve_declared_module here (m : declared_module) = {m with name = Resolved (here (Cpp_resolution.Module_declared m.declares))}
+let resolve_declared_module here (m : declared_module) =
+  {m with name = Resolved (here (Cpp_resolution.Module_declared m.declares))}
 
 let resolve_template_param here = function
   | Typename (Type_variable _) as p -> p
@@ -518,7 +523,8 @@ let resolve_template_param here = function
 (* Whether a struct's head names anything resolving it names. *)
 let head_names {template; name; base = _} =
   (match name with Named _ -> false | Module_struct _ -> true)
-  || List.exists (function Typename (Type_variable _) -> false | Typename (Module_parameter _) | Constrained _ -> true) template
+  || List.exists
+    (function Typename (Type_variable _) -> false | Typename (Module_parameter _) | Constrained _ -> true) template
 
 (* The head [h] of a struct written as [spelling] says, its names resolved
    there. *)

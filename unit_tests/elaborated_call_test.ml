@@ -45,7 +45,8 @@ let () =
   check "a partial application passes what it has" (partial.primary = [a] && partial.excess = []);
   let g = r "g" in
   Table.add_type g (Core.Type.Arrow {parameter = nat;
-                                     result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
+                                     result = Core.Type.Arrow
+                                       {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = nat;
                                                                                          result = nat}}});
   let eta = elaborate g [a; Core.Expr.Erased_value Core.Erasure_reason.Type_argument; b] in
@@ -100,7 +101,12 @@ let () =
   let unit = ModPath.MPfile (DirPath.make [Id.of_string "U"]) in
   let elaborated =
     Core_elaborate.structure ~methods:(fun _ _ -> [])
-      [(unit, [(Label.make "d", Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r "d"; body = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = [a]}; type_ = nat}))])]
+      [(unit,
+          [(Label.make "d",
+              Core.Module.Structure_item.Declaration
+                (Core.Decl.Value
+                  {entity = r "d";
+                    body = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = [a]}; type_ = nat}))])]
   in
   (* The walk's result is a value: what it planned is read off it, with
      nothing installed. *)
@@ -126,12 +132,12 @@ let () =
      translated, which a rewrite rebuilt. *)
   let a' = match a with Core.Expr.Global u -> Core.Expr.Global (Core.Global_use.map_types Fun.id u) | e -> e in
   let inst =
-    Core_elaborate.instantiation ~walk ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None ~scope:[]
+    Core_elaborate.instantiation ~walk ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
       rewritten [a']
   in
   check "a call's instantiation is the one planned, at the arguments translated"
     (Elaborated_call.same_instantiation inst
-       (Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None ~scope:[]
+       (Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
           (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty rewritten [a']) )
     && List.equal ( == ) inst.call.args [a']
     && Core_elaborate.report elaborated
@@ -145,7 +151,8 @@ let () =
   let f = r "pk" in
   let a1 = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1} in
   Table.add_type f (Core.Type.Arrow {parameter = a1;
-                                     result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
+                                     result = Core.Type.Arrow
+                                       {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = a1;
                                                                                          result = a1}}});
   let scheme = Scheme.Id.fresh f ~arity:1 in
@@ -157,12 +164,12 @@ let () =
   in
   let a = declare "ka" nat and b = declare "kb" nat in
   let inst =
-    Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None
+    Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None
       ~scope:[] (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty use [a; b])
   in
   check "the callee's type is instantiated at the reading"
-    (inst.callee_type_at_call = Core.Type.Arrow {parameter = nat;
-                                                 result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
+    (inst.callee_type_at_call = Core.Type.Arrow
+      {parameter = nat; result = Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                            result = Core.Type.Arrow {parameter = nat;
                                                                                                      result = nat}}});
   check "the declared parameters are the callee's own, its erased domain none of them"
@@ -173,7 +180,7 @@ let () =
     (Option.bind (inst.subst_index_of_orig (Param_pos.of_regular ~leading:0 0)) (Param_pos.nth inst.params)
     = Some nat);
   check "a call at its arity keeps the reading it was elaborated with"
-    (Mlutil.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))
+    (Core_util.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))
 
 (* A function generated as a method of its inductive is generated, and its
    calls elaborated, at its variables renumbered so the inductive's come

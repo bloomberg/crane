@@ -193,7 +193,7 @@ let own_value ty value =
     | Core.Expr.Tuple _ | Core.Expr.UInt63 _ | Core.Expr.Numeral _ | Core.Expr.Float64 _ | Core.Expr.String _ -> true
     | _ -> false
   in
-  fresh && (not (Ml_type_util.is_prod_ml_type ty)) && closure_free value
+  fresh && (not (Type_util.is_prod_core_type ty)) && closure_free value
 
 exception Not_walked
 
@@ -224,7 +224,7 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
   in
   let recycle env result (into : Term.continue_into) field =
     ( match result with
-    | Some ty when into.cells <> [] && Mlutil.eq_ml_type ty cursor_type -> ()
+    | Some ty when into.cells <> [] && Core_util.eq_core_type ty cursor_type -> ()
     | Some _ | None -> raise Not_walked );
     let cells_read_first =
       List.concat
@@ -276,7 +276,8 @@ let plan ~pointer_fields ~in_place (l : Term.loop) =
 
 let positioned c positions =
   let at i =
-    List.find_map (fun (k, p) -> if Option.equal Int.equal p (Some i) then Some k else None) (List.mapi (fun k p -> (k, p)) positions)
+    List.find_map (fun (k, p) -> if Option.equal Int.equal p (Some i) then Some k else None)
+      (List.mapi (fun k p -> (k, p)) positions)
   in
   Option.map
     (fun parameter ->

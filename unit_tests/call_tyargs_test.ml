@@ -12,8 +12,12 @@ let check name cond =
     exit 1 )
 
 let callee = Names.GlobRef.VarRef (Names.Id.of_string "f")
-let nat = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
-let bool = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "bool"); type_arguments = []; index_arguments = []}
+let nat =
+  Core.Type.Global_app
+    {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
+let bool =
+  Core.Type.Global_app
+    {head = Names.GlobRef.VarRef (Names.Id.of_string "bool"); type_arguments = []; index_arguments = []}
 let binder = Scheme.Binder.of_position 0
 
 let source () =
@@ -36,7 +40,7 @@ let () =
     in
     let t = Call_tyargs.of_use use in
     check "starts as what the use wrote"
-      (Mlutil.Var_types.equal (Call_tyargs.by_variable t) (Mlutil.written_type_args use));
+      (Core_util.Var_types.equal (Call_tyargs.by_variable t) (Core_util.written_type_args use));
     check "a variable is a hole unless the use wrote a readable type"
       (List.for_all
          (fun (v, s) ->
@@ -47,7 +51,7 @@ let () =
       (List.for_all
          (fun (v, s) -> Call_tyargs.is_unwritten t v = (s = Scheme.Not_written))
          sources );
-    let spoken = List.map fst (Mlutil.Var_types.bindings (Call_tyargs.by_variable t)) in
+    let spoken = List.map fst (Core_util.Var_types.bindings (Call_tyargs.by_variable t)) in
     let within v = List.exists (Scheme.Var.equal v) spoken in
     check "interior holes and the variables beyond partition by the extent"
       (List.for_all within (Call_tyargs.interior_holes t)
@@ -69,16 +73,16 @@ let () =
     let before = Call_tyargs.by_variable t in
     List.iter
       (fun (j, ty) ->
-        match Mlutil.Var_types.find before j with
+        match Core_util.Var_types.find before j with
         | Some (Core.Type.Erased _) | None -> ()
         | Some b -> check "a known variable keeps its type" (b = ty) )
-      (Mlutil.Var_types.bindings after);
+      (Core_util.Var_types.bindings after);
     check "no resolution is an erased placeholder"
       (List.for_all
          (fun v ->
            Call_tyargs.is_hole r v
            || (not (Call_tyargs.is_hole t v))
-           || match Mlutil.Var_types.find after v with
+           || match Core_util.Var_types.find after v with
               | Some (Core.Type.Erased _) | None -> false
               | Some _ -> true )
          (Call_tyargs.vars t) );
@@ -108,12 +112,12 @@ let () =
     check "a variable is found where the callee's type spells it"
       (List.for_all
          (fun v ->
-           Mlutil.Var_types.find tys v = Mlutil.Var_types.find_tvar tys (Scheme.Var.ordinal v) )
+           Core_util.Var_types.find tys v = Core_util.Var_types.find_tvar tys (Scheme.Var.ordinal v) )
          (Call_tyargs.vars r) );
     let other = List.hd (Scheme.Var.all (Scheme.Id.fresh callee ~arity)) in
     check "another scheme's variable is never read as this one's"
-      ( Mlutil.Var_types.is_empty tys
-      || match Mlutil.Var_types.find tys other with
+      ( Core_util.Var_types.is_empty tys
+      || match Core_util.Var_types.find tys other with
          | exception Invalid_argument _ -> true
          | _ -> false )
   done

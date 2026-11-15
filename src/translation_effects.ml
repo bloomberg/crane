@@ -2,15 +2,16 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Monadic effects: [ret] and [bind] of a monad mapped to an effect
     ({!Core_effects}), sequenced as statements in sequential mode and kept
-    as interaction-tree constructors in reified mode. *)
+    as interaction-tree constructors in reified mode.  One of the modules
+    lowering Core bodies to CppIR that {!Translation} drives. *)
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Table
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Translation_support
 open Translation_types
 open Translation_knot
@@ -19,7 +20,7 @@ open Translation_knot
     in expression position: the returned value in sequential mode, an
     [ITree<R>::ret] in reified mode. *)
 let gen_return_expr env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
-  let ret_tys = Mlutil.written_type_args use in
+  let ret_tys = Core_util.written_type_args use in
   if not (is_sequential_effect Core_effects.Return use) then begin
     (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
     let t = Common.last (a1 :: l) in
@@ -33,12 +34,12 @@ let gen_return_expr env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
          extraction could not read says nothing. *)
       let r_cpp =
         let value_var =
-          match List.rev (Ml_type_util.ml_value_domains (find_type r)) with
+          match List.rev (Type_util.core_value_domains (find_type r)) with
           | Core.Type.Variable {variable = j; _} :: _ -> Some j
           | _ -> None
         in
-        match Option.bind value_var (Mlutil.Var_types.find_tvar ret_tys) with
-        | Some r_ml when not (Mlutil.isTdummy r_ml) -> cpp_of_ml env r_ml
+        match Option.bind value_var (Core_util.Var_types.find_tvar ret_tys) with
+        | Some r_core when not (Core_util.is_erased_type r_core) -> cpp_of_core env r_core
         | _ -> Void
       in
       mk_itree_ret r_cpp [inner]
@@ -61,17 +62,18 @@ let gen_bind_expr env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
     [a1 :: a2 :: l], in statement position ending in [k]: the action's
     statements, its result bound for the continuation in sequential mode, the
     [bind] call as an expression in reified mode. *)
-let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2 ~l : Cpp_ir.Lowered.Stmt.t list =
-  let bind_tys = Mlutil.written_type_args use in
+let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
+  ~l : Cpp_ir.Lowered.Stmt.t list =
+  let bind_tys = Core_util.written_type_args use in
   (* The action's result type: the argument written for the variable the
      continuation takes, [A] in [bind : forall A B, M A -> (A -> M B) -> M
      B].  One extraction could not read ({!Extraction.observe_type_arg}: a
      type constructor such as an HKT carrier) says nothing. *)
   let action_result_ty =
-    match List.rev (Ml_type_util.ml_value_domains (find_type r)) with
+    match List.rev (Type_util.core_value_domains (find_type r)) with
     | Core.Type.Arrow {parameter = Core.Type.Variable {variable = j; _}; _} :: _ -> (
-      match Mlutil.Var_types.find_tvar bind_tys j with
-      | Some t when not (Mlutil.isTdummy t) -> Some t
+      match Core_util.Var_types.find_tvar bind_tys j with
+      | Some t when not (Core_util.is_erased_type t) -> Some t
       | _ -> None )
     | _ -> None
   in
@@ -80,12 +82,12 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     inline_iife k ((gen_expr ~slot env ast))
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
-    let a_ml, f = Common.last_two (a1 :: a2 :: l) in
-    let a = gen_expr env a_ml in
+    let a_core, f = Common.last_two (a1 :: a2 :: l) in
+    let a = gen_expr env a_core in
     let ids', f = collect_lams f in
   let ids, env =
     push_vars'
-      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids')
+      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids')
       env
   in
   push_binders env ids;
@@ -97,14 +99,14 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   | _ -> () );
   (
   match ids with
-  | (x, ml_ty) :: _ ->
-    let ty = cpp_of_ml env ml_ty in
-    if (match ty with Void | Obligation Unresolved_type -> true | _ -> false) || ml_type_is_unit ml_ty then
+  | (x, core_ty) :: _ ->
+    let ty = cpp_of_core env core_ty in
+    if (match ty with Void | Obligation Unresolved_type -> true | _ -> false) || core_type_is_unit core_ty then
       (* Unit/void bind result: execute the action for side effects,
          then declare the variable as Unit::e_TT so the continuation
          can reference it if needed. *)
       let action_is_pure_ret =
-        match a_ml with
+        match a_core with
         | Core.Expr.Apply {callee = Core.Expr.Global use; _} -> is_effect Core_effects.Return use
         | _ -> false
       in
@@ -116,14 +118,14 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       in
       (* Generate the continuation first, then check if the variable is
          actually referenced in the generated C++ (unit-match elimination
-         and Ret-in-void optimization may drop ML-level references). *)
+         and Ret-in-void optimization may drop Core-level references). *)
       let body = gen_stmts ~slot env k f in
-      let cpp_ty = cpp_of_ml env ml_ty in
+      let cpp_ty = cpp_of_core env core_ty in
       let decl : Cpp_ir.Lowered.Stmt.t list =
         if not (stmts_reference_var x body) then []
-        else if ml_type_is_unit ml_ty && not (is_cpp_unit_type cpp_ty) then
+        else if core_type_is_unit core_ty && not (is_cpp_unit_type cpp_ty) then
           []
-        else if ml_type_is_unit ml_ty then
+        else if core_type_is_unit core_ty then
           [Bind_variable (x, Declare (cpp_ty, bound_by_bind env), mk_tt_expr ())]
         else
           []
@@ -166,9 +168,9 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         match action_result_ty with
         | Some ty ->
           let cpp_ty =
-            cpp_of_ml env ty
+            cpp_of_core env ty
           in
-          if cpp_ty = Void || cpp_ty = Obligation Unresolved_type || ml_type_is_unit ty then
+          if cpp_ty = Void || cpp_ty = Obligation Unresolved_type || core_type_is_unit ty then
             None
           else
             Some (cpp_ty, Ownership_ir.worth_moving ty)
@@ -187,8 +189,11 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   end
 
 (** [ret] of an effect monad, [use] applied to [a1 :: l], in statement
-    position ending in [k]. *)
-let gen_return_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l : Cpp_ir.Lowered.Stmt.t list =
+    position ending in [k]: [k] of the returned value (a bare [return;] in a
+    function returning [void]) in sequential mode, [k] of the whole term
+    lowered as an [ITree<R>::ret] in reified mode. *)
+let gen_return_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l :
+  Cpp_ir.Lowered.Stmt.t list =
   if not (is_sequential_effect Core_effects.Return use) then begin
     (* Reified mode: Ret is a constructor call, not desugared. *)
     inline_iife k ((gen_expr ~slot env ast))

@@ -10,7 +10,7 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
 
@@ -88,7 +88,8 @@ let count_keep_params sign =
 
 (** True when [i] (an index into a class's [type_variables]) is a real C++ template
     type parameter.  Everything else — the promoted [Type]-valued fields past
-    the [Core.Signature.Argument.Runtime] parameters, and any [Core.Signature.Argument.Runtime] parameter that is itself a type
+    the [Core.Signature.Argument.Runtime] parameters, and any
+    [Core.Signature.Argument.Runtime] parameter that is itself a type
     constructor ([M : Type -> Type]) — becomes an associated type of the
     instance, spelled [typename I::name]. *)
 let is_class_tparam class_ref i =
@@ -99,38 +100,39 @@ let is_class_tparam class_ref i =
     template binds. *)
 let hkt_alias_param_name i = Generated_name.indexed "A" i
 
-(* Re-exports of {!Ml_type_util} helpers the declaration generators read
+(* Re-exports of {!Type_util} helpers the declaration generators read
    through this module. *)
-let recover_method_quantifier = Ml_type_util.recover_method_quantifier
+let recover_method_quantifier = Type_util.recover_method_quantifier
 
-let method_tvar_count = Ml_type_util.method_tvar_count
+let method_tvar_count = Type_util.method_tvar_count
 
-let hkt_carrier_fixed_args = Ml_type_util.hkt_carrier_fixed_args
+let hkt_carrier_fixed_args = Type_util.hkt_carrier_fixed_args
 
 (** Render a type CONSTRUCTOR argument as an alias template body: the [list] of
     [Instance ListContainer : Container list] becomes [List<_A0>], to be
     emitted as [template <typename _A0> using C = List<_A0>;].  The element
     types are fresh type variables numbered from [base], so the caller must
     append {!hkt_alias_param_name} entries to the type-variable list it passes
-    to [cpp_ir_of_ml_type]. *)
-let hkt_carrier_alias base arity ml_ty =
+    to [cpp_ir_of_core_type]. *)
+let hkt_carrier_alias base arity core_ty =
   let is_lambda =
-    match ml_ty with
+    match core_ty with
     | Core.Type.Global_app {head = r; type_arguments = args; _} ->
-      Mlutil.writes_binder ~constructors:(Mlutil.constructor_params r) args
-    | Core.Type.Variable_app {arguments = args; _} -> Mlutil.writes_binder args
-    | _ -> Mlutil.type_has_hole ml_ty
+      Core_util.writes_binder ~constructors:(Core_util.constructor_params r) args
+    | Core.Type.Variable_app {arguments = args; _} -> Core_util.writes_binder args
+    | _ -> Core_util.type_has_hole core_ty
   in
-  match ml_ty with
+  match core_ty with
   (* A carrier with a hole is a type-level lambda whose binder is the hole:
      [stateT S m] reaches here as [S -> m (S * _)], and an alias of an
      applied type, [EOUP Z := EOU (MaybePoison Z)], as [EOU (MaybePoison _)].
      The alias applies it to its parameter. *)
   | _ when arity = 1 && is_lambda ->
     ( [hkt_alias_param_name 0],
-      Mlutil.fill_type_hole (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) ml_ty )
+      Core_util.fill_type_hole
+        (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) core_ty )
   | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = es} ->
-    let kept = hkt_carrier_fixed_args arity ml_ty in
+    let kept = hkt_carrier_fixed_args arity core_ty in
     let params =
       max arity (max (List.length args) (Table.get_type_scheme_arity r))
       - List.length kept
@@ -140,7 +142,7 @@ let hkt_carrier_alias base arity ml_ty =
           @ List.init params (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                            variable = base + 1 + i}); index_arguments = es} )
   | Core.Type.Variable_app {head = j; arguments = args} ->
-    let kept = hkt_carrier_fixed_args arity ml_ty in
+    let kept = hkt_carrier_fixed_args arity core_ty in
     let params = max arity (List.length args) - List.length kept in
     ( List.init params hkt_alias_param_name,
       Core.Type.Variable_app {head = j; arguments = kept
@@ -150,7 +152,7 @@ let hkt_carrier_alias base arity ml_ty =
   | _ when arity = 1 ->
     (* An unnamed carrier is the identity constructor: [F<_A0> = _A0]. *)
     ([hkt_alias_param_name 0], Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = (base + 1)})
-  | _ -> ([], ml_ty)
+  | _ -> ([], core_ty)
 
 (** The concrete types a class's associated types take in an instance, read off
     the instance's class arguments ([Container list] gives [C = List<_A0>]).
@@ -203,7 +205,7 @@ let class_promoted_vars_arities class_ref =
 let class_promoted_vars class_ref =
   List.map fst (class_promoted_vars_arities class_ref)
 
-(** A class's fields paired with their ML types, as extraction recorded the
+(** A class's fields paired with their Core types, as extraction recorded the
     pairing. *)
 let class_fields_with_types = Table.get_record_field_bindings
 
@@ -258,7 +260,7 @@ let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
 
     [PIV : @PI ProvenanceV PointerV] owns no type of its own: [ptr] belongs to
     [PointerV] and [prov] to [ProvenanceV].  Both are given concretely, so
-    neither becomes a template parameter and neither survives into the ML type
+    neither becomes a template parameter and neither survives into the Core type
     -- the class stands there alone as [PI] -- and their promoted variables
     keep their names while losing the path that gave them meaning, falling back
     to the file-scope [using prov = std::any;].  The variables that {e do}
@@ -334,7 +336,7 @@ let instance_arg_resolutions ~own_instances inst_ref =
     inductive whose constructor fields name an instance -- see
     {!Table.get_type_class_args}.  [boxed : @dval natIPtr] is what says which
     [IPtr] the [ptr] inside [dval] belongs to, and the only thing that does:
-    the ML type keeps neither the argument nor the dependence. *)
+    the Core type keeps neither the argument nor the dependence. *)
 let ind_type_resolutions r =
   match Table.get_instance_class_shape r with
   | Some (head, arg_shapes) ->
@@ -430,7 +432,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     let ok = ref true in
     let rec go t =
       (match t with Core.Expr.Bound_variable _ -> ok := false | _ -> ());
-      Mlutil.ast_iter go t
+      Core_util.ast_iter go t
     in
     go e;
     !ok
@@ -445,7 +447,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | None -> (
       match Table.find_type r with
       | ty -> (
-        match Mlutil.type_simpl (Ml_type_util.ml_codomain ty) with
+        match Core_util.type_simpl (Type_util.core_codomain ty) with
         | Core.Type.Global_app {head = c; _} when Table.is_typeclass c -> Some c
         | _ -> None )
       | exception Not_found -> None )
@@ -467,7 +469,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | None -> []
     | Some ty ->
       let binders, _ = collect_lams b in
-      let doms = Ml_type_util.ml_domains ty in
+      let doms = Type_util.core_domains ty in
       let tc_names = ref (Translation_support.collect_typeclass_param_ids ty) in
       let outer_first =
         List.mapi
@@ -498,7 +500,7 @@ let promoted_resolutions_of_body ?r ?ty b =
       match t with
       | Core.Expr.Lambda {body = b; _} -> go (depth + 1) b
       | Core.Expr.Let {value = a; body = b; _} -> go depth a; go (depth + 1) b
-      | _ -> Mlutil.ast_iter (go depth) t
+      | _ -> Core_util.ast_iter (go depth) t
     in
     go 0 e;
     !ok
@@ -514,7 +516,7 @@ let promoted_resolutions_of_body ?r ?ty b =
            && leading <> [] && spellable d (Core_query.strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (Translation_calls.ml_arg_to_template_type (env_at d) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type (env_at d) (Core_query.strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
@@ -533,14 +535,14 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk_at (d + Array.length ids)) funs
-    | e' -> Mlutil.ast_iter (walk_at d) e'
+    | e' -> Core_util.ast_iter (walk_at d) e'
   in
   let rec walk e =
         match Core_query.strip_magic e with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
       when instance_class r <> None && closed (Core_query.strip_magic e) ->
       Option.iter (add r)
-        (Translation_calls.ml_arg_to_template_type (empty_env ()) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type (empty_env ()) (Core_query.strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -556,7 +558,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           | _ -> walk a )
         args
     | Core.Expr.Global {callee = r; _} -> add r (Entity_application (r, [], []))
-    | _ -> Mlutil.ast_iter walk e
+    | _ -> Core_util.ast_iter walk e
   in
   walk b;
   (if leading <> [] then
@@ -581,11 +583,11 @@ let promoted_resolutions_of_body ?r ?ty b =
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            Core.Expr.Apply {callee = Core.Expr.Global (Mlutil.open_reference inst);
+            Core.Expr.Apply {callee = Core.Expr.Global (Core_util.open_reference inst);
                              arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
           in
           Option.iter (add_at class_ref inst)
-            (Translation_calls.ml_arg_to_template_type
+            (Translation_calls.core_arg_to_template_type
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )
@@ -606,7 +608,7 @@ let type_resolutions_of_referenced_globals b =
     ( match Core_query.strip_magic e with
     | Core.Expr.Global {callee = r; _} -> found := !found @ ind_type_resolutions r
     | _ -> () );
-    Mlutil.ast_iter walk e
+    Core_util.ast_iter walk e
   in
   walk b;
   drop_ambiguous !found

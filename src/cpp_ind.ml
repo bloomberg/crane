@@ -47,7 +47,8 @@ type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
 
 
 (** Print the declarations an entry point answered with. *)
-let pp_decls ctx (ds : rendered) = Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_leaf_plan.write_decl ctx env d) ds)
+let pp_decls ctx (ds : rendered) =
+  Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_leaf_plan.write_decl ctx env d) ds)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
@@ -95,7 +96,7 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Ml_type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t) )
+        || Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds r l t)] else []
 
@@ -306,7 +307,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
           | Core.Module.Structure_item.Declaration d ->
             List.iter
               (fun (fd : Core.Recursion.Definition.t) -> consider fd.entity fd.body fd.type_)
-              (Mlutil.term_defs d)
+              (Core_util.term_defs d)
           | _ -> () )
         !current_structure_decls;
       (* A call to a method of any type is rendered on its receiver, so only
@@ -785,7 +786,8 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
 let ahead_once ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
   let generated () = Translation_state.generating_in module_ gen in
   let check v ~again =
-    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation_state.collecting_lifted generated))) then
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None
+      && not (same v (fst (Translation_state.collecting_lifted generated))) then
       CErrors.anomaly
         Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and " ++ str again)
   in
@@ -924,7 +926,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Ml_type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t)) )
+      not (Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the Core declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
@@ -1376,7 +1378,8 @@ let names_into_a_struct_as_written ~file spelling decl =
 
 let write_unprinted ~file spelling u =
   at_spelling ~file spelling (fun ctx ->
-      Cpp_leaf_plan.print_unprinted ctx ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
+      Cpp_leaf_plan.print_unprinted ctx ~modtype_concept:Cpp_concepts.pp_modtype_concept
+        ~assertion:Cpp_concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list
@@ -1385,7 +1388,8 @@ let render_section ctx (groups : section) =
   List.map
     (fun {source; declarations} ->
       Cpp_ast.elements ~source
-        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_leaf_plan.unprinted ctx ~module_:source env d) declarations)) )
+        (Cpp_ast.concat Pp.fnl
+          (List.map (fun (env, d) -> Cpp_leaf_plan.unprinted ctx ~module_:source env d) declarations)) )
     groups
 
 (** The concept of each class, generated ahead of the files in the module
@@ -1469,11 +1473,13 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
     (fun () ->
       List.map
         (fun (f : Core.Record.Field.t) ->
-          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars f.type_)) with
+          match Cpp_ir.Resolve.type_
+            (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) with
           | t -> t
           | exception Cpp_ir.Resolve.Owed form ->
             CErrors.anomaly
-              Pp.(str "Crane: a record field type " ++ str form ++ str ", which only a lowered declaration may hold, survived resolution") )
+              Pp.(str "Crane: a record field type " ++ str form
+                  ++ str ", which only a lowered declaration may hold, survived resolution") )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)

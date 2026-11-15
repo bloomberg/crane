@@ -1,6 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Why extraction erased an argument or subterm ({!Grammar.Erasure_reason}). *)
+(** [Core.Erasure_reason]: why extraction erased an argument or subterm (a
+    type argument, a proof, or a user-configured implicit), as carried by
+    [Core.Type.Erased] and [Core.Expr.Erased_value]. *)
 
 include Grammar.Erasure_reason

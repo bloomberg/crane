@@ -268,7 +268,7 @@ let lifted_views ~module_ ?(may_hoist = true) ((_, d) as placed : Unit_program.i
     Anything else a member's type can name -- a Rocq definition used as a type,
     which reaches C++ as a [using] alias at the point it was defined -- is not.
 
-    Read off the members' ML types rather than the rendered text, because the
+    Read off the members' Core types rather than the rendered text, because the
     text cannot tell [tbl] the alias from [a] the parameter. *)
 let module_members_name_only_inductives sel =
   let rec ty_ok = function
@@ -283,7 +283,7 @@ let module_members_name_only_inductives sel =
     (fun (_, se) ->
       match se with
       | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
-        List.for_all (fun (fd : Core.Recursion.Definition.t) -> ty_ok fd.type_) (Mlutil.term_defs d)
+        List.for_all (fun (fd : Core.Recursion.Definition.t) -> ty_ok fd.type_) (Core_util.term_defs d)
       (* Only a function declaration is being judged here.  Everything else a
          module holds -- an inductive, a type alias, a submodule -- is either
          rendered somewhere other than this struct or shows up in its text as a
@@ -424,7 +424,8 @@ let dbg_lifted =
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable ~module_ spec)
             (Pp.string_of_ppcmds
-               (Cpp_leaf_plan.read_decl (Cpp_ind.spelling_position ~file:Intf (Element_of module_)) (empty_env ()) spec) )
+               (Cpp_leaf_plan.read_decl (Cpp_ind.spelling_position ~file:Intf (Element_of module_))
+                 (empty_env ()) spec) )
         else "splits=no"
       in
       Feedback.msg_notice
@@ -488,10 +489,12 @@ let declared_classes sel =
   List.concat_map
     (fun (l, se) ->
       match se with
-      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn;
-                                                                     definition = ({Core.Inductive.kind = Core.Inductive.Kind.Type_class fields; _} as ind)}) ->
+      | Core.Module.Structure_item.Declaration
+        (Core.Decl.Inductive
+          {entity = kn; definition = ({Core.Inductive.kind = Core.Inductive.Kind.Type_class fields; _} as ind)}) ->
         List.init (Array.length ind.packets) (fun i -> (l, GlobRef.IndRef (kn, i), fields))
-      | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _}) when Table.singleton_class_method r <> None ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _})
+        when Table.singleton_class_method r <> None ->
         [(l, r, Table.get_record_field_bindings r)]
       | _ -> [] )
     sel
@@ -518,8 +521,8 @@ let inductives_declared_in mp sel =
   List.concat_map
     (fun (_, se) ->
       match se with
-      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn;
-                                                                     definition = ind}) when (not (modular ())) || ModPath.equal (MutInd.modpath kn) mp ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind})
+        when (not (modular ())) || ModPath.equal (MutInd.modpath kn) mp ->
         List.init (Array.length ind.packets) (fun i -> GlobRef.IndRef (kn, i))
       | _ -> [] )
     sel
@@ -602,7 +605,8 @@ let element_decl ~module_ ~homed ctx env (d : Cpp_ir.Resolved.Decl.t) =
     declarations, the declaration [d] writing them, as planned
     ({!file_layout}): each by its name, with the module. *)
 let homed_at ~is_header d =
-  if is_header then List.filter_map (fun h -> if h.home == d then Some (h.wrapper_ref, h.wrapped) else None) !file_layout.wrapper_homes
+  if is_header then
+    List.filter_map (fun h -> if h.home == d then Some (h.wrapper_ref, h.wrapped) else None) !file_layout.wrapper_homes
   else []
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
@@ -1023,7 +1027,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                     (List.map
                        (fun h ->
                          Cpp_ast.seq
-                           [ Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false (Cpp_ind.helper_placed h)));
+                           [ Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ())
+                             (fst (lifted_views ~module_ ~may_hoist:false (Cpp_ind.helper_placed h)));
                              Cpp_ast.text (fnl ()) ] )
                        method_helpers )
                 in
@@ -1069,7 +1074,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                   ~fields body
               in
               let assertion, held = concept_assertion ctx mp m.type_ in
-              ( Cpp_ast.seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp; assertion],
+              ( Cpp_ast.seq
+                [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp; assertion],
                 held )
         else if this_promoted && promoted_template then
           (* A promoted template's members are all defined inline in the
@@ -1129,7 +1135,8 @@ and pp_module_body ~is_header f ctx mp sel =
       Probe.violation "header scopes"
         Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " is written in another scope than its plan says")
     | None ->
-      Probe.violation "header scopes" Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
+      Probe.violation "header scopes"
+        Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
   end;
   let old_structure_decls = !current_structure_decls in
   current_structure_decls := sel;
@@ -1204,9 +1211,11 @@ let wrapper_element ~module_ se =
   match se with
   | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; _})
     when is_any_inline_custom r || is_eponymous_record_projection r
-         || is_suppressed_projection ~higher_order:Translation_state.is_higher_order_projection r || is_registered_method r <> None ->
+         || is_suppressed_projection ~higher_order:Translation_state.is_higher_order_projection r
+           || is_registered_method r <> None ->
     Wrapper_nothing
-  | Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = Core.Type.Global_app {head = ty; _}; _}) when is_monad ty ->
+  | Core.Module.Structure_item.Declaration
+    (Core.Decl.Value {type_ = Core.Type.Global_app {head = ty; _}; _}) when is_monad ty ->
     Wrapper_nothing
   | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
                                                              body = a;
@@ -1217,8 +1226,8 @@ let wrapper_element ~module_ se =
   | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) -> (
     match filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds with
     | [] -> Wrapper_nothing
-    | {Core.Recursion.Definition.entity = fd_ref; _} :: _ as fds ->
-      Wrapper_functions (fd_ref, fun () -> generated_once ~module_ se (fun () -> gen_dfuns_dual fds)) )
+    | {Core.Recursion.Definition.entity; _} :: _ as fds ->
+      Wrapper_functions (entity, fun () -> generated_once ~module_ se (fun () -> gen_dfuns_dual fds)) )
   | _ -> Wrapper_nothing
 
 (** Process a wrapper module in dual-pass mode (header vs implementation).
@@ -1354,7 +1363,8 @@ let module_plan_of_analysis
                 | Some n -> n
                 | None ->
                   CErrors.anomaly
-                    Pp.(str "Crane: the eponymous record " ++ GlobRef.print record ++ str " is not an extracted inductive.") )
+                    Pp.(str "Crane: the eponymous record " ++ GlobRef.print record
+                        ++ str " is not an extracted inductive.") )
               | _ ->
                 CErrors.anomaly
                   Pp.(str "Crane: the eponymous record " ++ GlobRef.print record ++ str " is not an inductive.")
@@ -1383,8 +1393,8 @@ let module_plan_of_analysis
               (fun (_l, se) ->
                 match se with
                 | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _}) -> Some r
-                | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
-                                                                           type_ = t; _}) when is_typeclass_instance t -> Some r
+                | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; type_ = t; _})
+                  when is_typeclass_instance t -> Some r
                 | _ -> None )
               mi.sels )
           wrapped;
@@ -1432,7 +1442,8 @@ let prepare_structure s =
               Table.add_flat_inductive r )
           ind.packets
       | Core.Decl.Type_alias {entity = r;
-                              body = Core.Type.Axiom; _} when (not (is_any_inline_custom r)) && Table.singleton_class_method r = None ->
+                              body = Core.Type.Axiom; _} when (not (is_any_inline_custom r))
+                                && Table.singleton_class_method r = None ->
         Cpp_erasure.register_axiom_type r;
         Table.add_erased_type_const r
       | _ -> () )
@@ -1516,7 +1527,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
   let in_header_scope scope k = setting header scope k in
   let modtypes ~module_ mp ~params sel =
     List.filter_map
-      (function l, Core.Module.Structure_item.Module_type m -> Some (MPdot (mp, l), modtype ~module_ (MPdot (mp, l)) ~params m) | _ -> None)
+      (function l, Core.Module.Structure_item.Module_type m ->
+        Some (MPdot (mp, l), modtype ~module_ (MPdot (mp, l)) ~params m) | _ -> None)
       sel
   in
   (* A module's frame, as the render enters its body: the eponymous state
@@ -1564,12 +1576,12 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
         | body -> (params, body)
       in
       let params, body = split [] me in
-      (match body with Core.Module.Expr.Structure {path = body_mp;
-                                                   items = sel} -> ignore (modtypes ~module_ body_mp ~params sel) | _ -> ());
+      (match body with Core.Module.Expr.Structure {path = body_mp; items = sel} ->
+        ignore (modtypes ~module_ body_mp ~params sel) | _ -> ());
       in_header_scope {!header with in_struct = true} (fun () -> module_expr body)
     | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sel; _} as me; _} ->
       in_module_frame ~module_ (MPdot (module_, l)) sel (fun () -> module_expr me)
-    | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr ml_mod_expr
+    | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
     | Core.Module.Structure_item.Module_type m -> ignore (modtype ~module_ (MPdot (module_, l)) ~params:[] m)
   and module_expr = function
     | Core.Module.Expr.Structure {path = mp; items = sel} ->
@@ -1650,7 +1662,8 @@ let plan_callables ?(reversed = false) s =
     | Core.Decl.Type_alias _ -> ()
   in
   walk_as_rendered ~reversed
-    ~decl:(fun ~wrapper ~module_:_ -> function Core.Module.Structure_item.Declaration d -> plan_decl ~wrapper d | _ -> ())
+    ~decl:(fun ~wrapper ~module_:_ -> function Core.Module.Structure_item.Declaration d ->
+        plan_decl ~wrapper d | _ -> ())
     s;
   (List.rev !plans, List.rev !instance_plans)
 
@@ -1666,14 +1679,16 @@ let merged_eponymous_record (frame : Module_frame.t) =
     the eponymous record of a module of frame [frame], if it gives any. *)
 let eponymous_record_methods (frame : Module_frame.t) =
   Option.map
-    (fun (r, _, (packet : Core.Inductive.Packet.t)) -> (r, packet.type_variables, record_method_candidates frame.method_candidates))
+    (fun (r, _, (packet : Core.Inductive.Packet.t)) ->
+      (r, packet.type_variables, record_method_candidates frame.method_candidates))
     (merged_eponymous_record frame)
 
 (** Convert the types of the fields the header writes for the eponymous
     record of a module of frame [frame], if it writes any. *)
 let convert_eponymous_record_fields ~module_ frame =
   Option.iter
-    (fun (r, fields, (packet : Core.Inductive.Packet.t)) -> ignore (Cpp_ind.record_field_types ~module_ r packet.type_variables fields))
+    (fun (r, fields, (packet : Core.Inductive.Packet.t)) ->
+      ignore (Cpp_ind.record_field_types ~module_ r packet.type_variables fields))
     (merged_eponymous_record frame)
 
 (** [generating_ahead f] runs [f], the walk that generates every
@@ -1738,8 +1753,10 @@ let structure_module_names s =
     let {Cpp_ast.functor_; args} = application_of me in
     List.map module_ (functor_ :: args)
   in
-  let rec functor_params = function Core.Module.Type.Functor {parameter_type = mt;
-                                                              result = rest; _} -> concept mt @ functor_params rest | _ -> [] in
+  let rec functor_params =
+    function
+    | Core.Module.Type.Functor {parameter_type = mt; result = rest; _} -> concept mt @ functor_params rest
+    | _ -> [] in
   let rec elems ~in_struct mp sel =
     List.concat_map
       (function
@@ -1753,7 +1770,8 @@ let structure_module_names s =
     | Core.Module.Expr.Structure {path = body_mp; items = sel} ->
       (if Module_frame.concept_collision mp sel then [] else concept mt) @ elems ~in_struct:true body_mp sel
     | Core.Module.Expr.Path target -> (
-      match functor_params mt with [] when is_modfile target && in_struct -> [] | ps -> Cpp_resolution.Module target :: ps )
+      match functor_params mt with [] when is_modfile target && in_struct -> []
+        | ps -> Cpp_resolution.Module target :: ps )
   and functor_body mp = function
     | Core.Module.Expr.Functor {parameter_type = param; body; _} -> concept param @ functor_body mp body
     | Core.Module.Expr.Structure {path = body_mp; items = sel} -> elems ~in_struct:true body_mp sel
@@ -1790,7 +1808,8 @@ let customs_written_ahead () =
     @ List.concat_map Cpp_leaf_plan.type_globals (Cpp_ind.generated_record_field_types ())
   in
   let keys =
-    Cpp_leaf_plan.global_names [[]] globals @ List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())
+    Cpp_leaf_plan.global_names [[]] globals
+      @ List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())
   in
   List.fold_left
     (fun customs -> function _, Cpp_resolution.Custom_text r -> Ref.User.Set.add r customs | _ -> customs)
@@ -2033,7 +2052,8 @@ let plan_file_layout s =
   let defines ~lifted at mp env d =
     let pass = if lifted then 0 else 1 in
     forward :=
-      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d)) :: !forward;
+      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d))
+        :: !forward;
     types := List.fold_right GlobRef.Set.add (Cpp_leaf_plan.file_scope_types d) !types
   in
   let element_at mp = Cpp_ind.spelling_position ~file:Intf (Element_of mp) in
@@ -2102,16 +2122,20 @@ let plan_file_layout s =
       lifted_specs = in_writing_order specs;
       member_defs = in_writing_order member_defs;
       forward_decls =
-        List.filter_map (fun (_, (f : Cpp_leaf_plan.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_tree) forward;
+        List.filter_map
+          (fun (_, (f : Cpp_leaf_plan.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_tree)
+            forward;
       promoted_imports;
       constrained_decls =
         List.filter_map
-          (fun (lifted, (f : Cpp_leaf_plan.forward_declaration)) -> if lifted && f.fwd_constrained then Some f else None)
+          (fun (lifted, (f : Cpp_leaf_plan.forward_declaration)) -> if lifted && f.fwd_constrained
+            then Some f else None)
           forward;
       wrapper_homes =
         List.fold_left
           (fun acc (at, own, h) ->
-            if at <= own && not (List.exists (fun h' -> ModPath.equal h'.wrapped h.wrapped) acc) then acc @ [h] else acc )
+            if at <= own && not (List.exists (fun h' -> ModPath.equal h'.wrapped h.wrapped) acc)
+              then acc @ [h] else acc )
           []
           (List.stable_sort (fun (i, _, _) (j, _, _) -> Int.compare i j) (List.rev !homes)) };
   let aliases =
@@ -2185,13 +2209,15 @@ let plan_ctor_aliases s =
           (fun (r, fields, (packet : Core.Inductive.Packet.t)) ->
             let vl = packet.type_variables in
             found :=
-              Cpp_leaf_plan.ctor_aliases_of_fields at ~vl r (Cpp_ind.record_field_types ~module_ r vl fields) :: !found )
+              Cpp_leaf_plan.ctor_aliases_of_fields at ~vl r
+                (Cpp_ind.record_field_types ~module_ r vl fields) :: !found )
           (merged_eponymous_record frame);
         Option.iter
           (fun (r, vars, candidates) ->
             let fields, hs = Cpp_ind.record_methods ~module_ r vars candidates in
             if fields <> [] then written at [Cpp_ind.finished_record_methods r vars fields];
-            written at (List.map (fun h -> fst (lifted_views ~module_ ~may_hoist:false h)) (Cpp_ind.helpers_placed hs)) )
+            written at
+              (List.map (fun h -> fst (lifted_views ~module_ ~may_hoist:false h)) (Cpp_ind.helpers_placed hs)) )
           (eponymous_record_methods frame)
       end
     in
@@ -2215,7 +2241,7 @@ let declarations s =
       (fun (_, se) ->
         match se with
         | Core.Module.Structure_item.Declaration d -> [d]
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr ml_mod_expr
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
         | Core.Module.Structure_item.Module_type _ -> [] )
       sel
   and module_expr = function
@@ -2298,7 +2324,7 @@ let plan_referenced_names s =
     | Core.Pattern.Tuple ps -> List.iter pattern ps
     | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> ()
   and term a =
-    Mlutil.ast_iter term a;
+    Core_util.ast_iter term a;
     match a with
     | Core.Expr.Global ({callee; _} as use) ->
       name Term callee;
@@ -2398,8 +2424,10 @@ let promoted_inductive mp sel =
   let module_name =
     String.lowercase_ascii (Table.escape_reserved_struct_name (Common.emitted_module_name mp))
   in
-  let inductives = List.filter_map (function _, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn;
-                                                                                                             definition = ind}) -> Some (kn, ind) | _ -> None) sel in
+  let inductives =
+    List.filter_map
+      (function _, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+        Some (kn, ind) | _ -> None) sel in
   if List.exists (function _, Core.Module.Structure_item.Module _ -> true | _ -> false) sel then None
   else
     match inductives with
@@ -2463,24 +2491,24 @@ let plan_accessors s =
       match ty with
       | Core.Type.Global_app {head = m; _} when is_monad m -> false
       | _ -> (
-        match Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty with
+        match Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty with
         | Function _ -> false
         | _ when Translation_support.thunk_reason r = Some Throws -> false
         | cty ->
           in_template
           || in_struct
-             && (Ml_type_util.get_tvars cty <> [] || Common.get_force_cross_file_qualification ()) )
+             && (Type_util.get_tvars cty <> [] || Common.get_force_cross_file_qualification ()) )
   in
   let rec elems ~in_struct ~in_template sel =
     List.concat_map
       (fun (_, se) ->
         match se with
-        | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
-                                                                   type_ = ty; _}) when accessor ~in_struct ~in_template r ty -> [r]
+        | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; type_ = ty; _})
+          when accessor ~in_struct ~in_template r ty -> [r]
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = mp;
                                                                                             items = sel}; _} ->
           elems ~in_struct:true ~in_template:(Scope_plan.templated mp) sel
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr ml_mod_expr
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> [] )
       sel
   and module_expr = function
@@ -2511,7 +2539,8 @@ let plan_visibility s =
     List.fold_left
       (fun acc (_, se) ->
         match se with
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr outer [] ml_mod_expr acc
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} ->
+          module_expr outer [] core_mod_expr acc
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> acc )
       acc sel
   and module_expr outer params me acc =
@@ -2559,7 +2588,9 @@ let declared_at s mp =
       | MPdot (parent, l) -> (
         match struct_at parent with
         | Some (_, _, sel) -> (
-          match List.assoc_opt l sel with Some (Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _}) -> body [] ml_mod_expr | _ -> None )
+          match List.assoc_opt l sel with Some
+            (Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _}) ->
+              body [] core_mod_expr | _ -> None )
         | None -> None )
       | MPfile _ | MPbound _ -> None )
   in
@@ -2619,7 +2650,7 @@ let plan_bodies ~start ~enter s =
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = mp;
                                                                                             items = sel'}; _} ->
           body (enter state ~frame:(Some (MPdot (body_mp, l))) mp sel') mp sel' acc
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr state ml_mod_expr acc
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr state core_mod_expr acc
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> acc )
       acc sel
   and module_expr state me acc =
@@ -2660,7 +2691,8 @@ let plan_local_inductives s =
 (** The module frames around each module's body ({!Scope_plan.frames}),
     innermost first, as the render enters them. *)
 let plan_frames =
-  plan_bodies ~start:(fun ~wrapper:_ -> []) ~enter:(fun frames ~frame _ _ -> Option.cata (fun m -> m :: frames) frames frame)
+  plan_bodies ~start:(fun ~wrapper:_ -> [])
+    ~enter:(fun frames ~frame _ _ -> Option.cata (fun m -> m :: frames) frames frame)
 
 (** The scope of each module the unit emits as a struct
     ({!Scope_plan}): how a definition of one of its members, written out of
@@ -2771,7 +2803,7 @@ let plan_nested_structs s =
         past_parameters b
       | b -> b
     in
-    match Ml_type_util.ml_return_type ty with
+    match Type_util.core_return_type ty with
     | Core.Type.Global_app {head = cls; _} when Table.is_typeclass cls -> (
       match (Table.singleton_class_method cls, past_parameters body) with
       | Some _, _ | None, Core.Expr.Construct _ -> true
@@ -2876,10 +2908,12 @@ let plan_unmerged_wrappers () : (string * ModPath.t) list =
            || is_suppressed_projection ~higher_order:Translation_state.is_higher_order_projection r
            || is_registered_method r <> None ->
       false
-    | Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = Core.Type.Global_app {head = ty; _}; _}) when is_monad ty -> false
+    | Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = Core.Type.Global_app {head = ty; _}; _})
+      when is_monad ty -> false
     | Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = t; _}) when is_typeclass_instance t -> false
     | Core.Module.Structure_item.Declaration (Core.Decl.Value _) -> true
-    | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) -> filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds <> []
+    | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) ->
+      filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds <> []
     | _ -> false
   in
   List.filter_map
@@ -2894,7 +2928,9 @@ let plan_pointer_fields s =
   List.concat_map
     (function
       | Core.Decl.Inductive {entity = kn;
-                             definition = ({Core.Inductive.kind = (Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive) as kind; _} as ind)} ->
+                             definition =
+                               ({Core.Inductive.kind = (Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive)
+                                   as kind; _} as ind)} ->
         List.concat
           (List.mapi
              (fun i (p : Core.Inductive.Packet.t) ->
@@ -2907,10 +2943,11 @@ let plan_pointer_fields s =
                         let c = GlobRef.ConstructRef ((kn, i), j + 1) in
                         match
                           Gen_decls.constructor_pointer_fields ~name
-                            ~is_coinductive:(kind = Core.Inductive.Kind.Coinductive) vars p.constructor_argument_types.(j)
+                            ~is_coinductive:(kind = Core.Inductive.Kind.Coinductive) vars
+                              p.constructor_argument_types.(j)
                         with
                         | [] -> []
-                        | fields -> [(name, Ml_type_util.ctor_struct_name_of_ref ~fallback_idx:j c, fields)] )) )
+                        | fields -> [(name, Type_util.ctor_struct_name_of_ref ~fallback_idx:j c, fields)] )) )
              (Array.to_list ind.packets) )
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ | Core.Decl.Value _ | Core.Decl.Recursive_group _ -> [] )
     (declarations s)
@@ -2920,9 +2957,9 @@ let plan_module_names s =
     List.concat_map
       (fun (l, se) ->
         match se with
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} ->
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} ->
           let mp = MPdot (parent, l) in
-          (mp, Common.emitted_module_name mp) :: module_expr mp ml_mod_expr
+          (mp, Common.emitted_module_name mp) :: module_expr mp core_mod_expr
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> [] )
       sel
   and module_expr mp = function
@@ -2936,7 +2973,9 @@ let plan_field_names s =
   List.concat_map
     (function
       | Core.Decl.Inductive {entity = kn;
-                             definition = ({Core.Inductive.kind = Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive; _} as ind)} ->
+                             definition =
+                               ({Core.Inductive.kind = Core.Inductive.Kind.Inductive
+                                   | Core.Inductive.Kind.Coinductive; _} as ind)} ->
         List.concat
           (List.mapi
              (fun i (p : Core.Inductive.Packet.t) ->
@@ -2950,7 +2989,7 @@ let plan_field_names s =
                      in
                      ( c,
                        Translation_support.compute_and_register_field_names ~owner:c
-                         (Ml_type_util.ctor_struct_name_of_ref ~fallback_idx:j c)
+                         (Type_util.ctor_struct_name_of_ref ~fallback_idx:j c)
                          (Translation_support.augment_with_args_renaming c consarg_names)
                          consarg_names
                          (List.length p.constructor_argument_types.(j)) ) ) )
@@ -3083,7 +3122,7 @@ let concept_prereqs ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
             | Core.Module.Structure_item.Declaration d ->
               List.fold_left
                 (fun acc (fd : Core.Recursion.Definition.t) -> add_type_refs acc fd.Core.Recursion.Definition.type_)
-                acc (Mlutil.term_defs d)
+                acc (Core_util.term_defs d)
             | _ -> acc )
           acc
           (wrapper_sels (Cpp_names.wrapper_spelling r)) )
@@ -3155,7 +3194,9 @@ let concept_prereqs ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
 
 (** Whether an element is a function, which a wrapper module writes into its
     struct. *)
-let is_func_decl (_, se) = match se with Core.Module.Structure_item.Declaration (Core.Decl.Value _ | Core.Decl.Recursive_group _) -> true | _ -> false
+let is_func_decl (_, se) =
+  match se with Core.Module.Structure_item.Declaration
+    (Core.Decl.Value _ | Core.Decl.Recursive_group _) -> true | _ -> false
 
 (** [plan] with the concept prerequisites of [s] ({!concept_prereqs}), asked
     in the visibility the files are written in, once the wrappers holding
@@ -3178,8 +3219,8 @@ let plan_concept_prerequisites (plan : Module_plan.t) s =
           List.concat_map
             (fun (l, se) ->
               match se with
-              | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn;
-                                                                             definition = ind}) when Names.Label.Set.mem l labels ->
+              | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind})
+                when Names.Label.Set.mem l labels ->
                 List.init (Array.length ind.packets) (fun i -> GlobRef.IndRef (kn, i))
               | _ -> [] )
             sel
@@ -3347,12 +3388,14 @@ let do_struct_with_decl_tracking ~is_header f s =
     else
       List.filter_map
         (fun h ->
-          Option.map (fun w -> (h.wrapper, w.wr_specs)) (List.find_opt (fun w -> ModPath.equal w.wr_module h.wrapped) parts) )
+          Option.map (fun w -> (h.wrapper, w.wr_specs))
+            (List.find_opt (fun w -> ModPath.equal w.wr_module h.wrapped) parts) )
         !file_layout.wrapper_homes
   in
   let place ~wrapper_bodies ctx ~source ((l, se) as x) =
     let defined = if is_header then declarations [(source, [x])] else [] in
-    let homed = List.filter_map (fun h -> if List.memq h.home defined then Some h.wrapper else None) !file_layout.wrapper_homes in
+    let homed =
+      List.filter_map (fun h -> if List.memq h.home defined then Some h.wrapper else None) !file_layout.wrapper_homes in
     let element = element_position source ctx in
     let {text = p; concepts = c; asserts = _} = element_of source (f element ~module_:source x) in
     if is_header && Probe.checking () then begin
@@ -3394,7 +3437,8 @@ let do_struct_with_decl_tracking ~is_header f s =
           Probe.violation "concept prerequisites"
             Pp.(
               str "the element " ++ Names.Label.print l ++ str " of the module " ++ str (ModPath.to_string source)
-              ++ str " is a member of a struct written ahead of the concepts, outside it, and nothing stands in for it" );
+              ++ str
+                " is a member of a struct written ahead of the concepts, outside it, and nothing stands in for it" );
         (Cpp_ast.elements ~source (Cpp_ast.concat Pp.fnl stand_ins), moved) )
     else (p, {nothing_moved with concepts = c})
   in
@@ -3476,7 +3520,8 @@ let do_struct_with_decl_tracking ~is_header f s =
              hold its declarations, and has ({!file_layout}). *)
           let wrapper_pp, wrapper_moved =
             let specs = wrapper_specs name in
-            if (not is_header) || Cpp_ast.body_is_empty specs || List.exists (fun h -> ModPath.equal h.wrapped mp) !file_layout.wrapper_homes then
+            if (not is_header) || Cpp_ast.body_is_empty specs
+              || List.exists (fun h -> ModPath.equal h.wrapped mp) !file_layout.wrapper_homes then
               (Cpp_ast.empty, nothing_moved)
             else
               let struct_pp = pp_wrapper_struct name specs in
@@ -3532,17 +3577,19 @@ let do_struct_with_decl_tracking ~is_header f s =
                constant is no complete-class context: a function of the child
                it calls has to be declared ahead of it, which Rocq's order
                already ensures. *)
-            let flattened (l, se) = match se with Core.Module.Structure_item.Module _ -> is_colliding_child l se | _ -> false in
+            let flattened (l, se) =
+              match se with Core.Module.Structure_item.Module _ -> is_colliding_child l se | _ -> false in
             let child ctx enclosure ~keep (_, se) =
               match se with
-              | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = inner_mp;
-                                                                                                  items = inner_sel}; _} ->
+              | Core.Module.Structure_item.Module
+                {Core.Module.expr = Core.Module.Expr.Structure {path = inner_mp; items = inner_sel}; _} ->
                 let stays, moved = gathered (List.map (place_in inner_mp ctx) (List.filter keep inner_sel)) in
                 (Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp stays), moved)
               | _ -> (Cpp_ast.empty, nothing_moved)
             in
             let body ctx enclosure ~keep sel =
-              let stays, moved = gathered (List.map (fun x -> if flattened x then child ctx enclosure ~keep x else f ctx x) sel) in
+              let stays, moved =
+                gathered (List.map (fun x -> if flattened x then child ctx enclosure ~keep x else f ctx x) sel) in
               (Cpp_ast.module_body mp stays, moved)
             in
             if is_header then (
@@ -3556,7 +3603,8 @@ let do_struct_with_decl_tracking ~is_header f s =
                  a class's generated as a module's are ({!walk_as_rendered}). *)
               let class_concept (l, r, fields) =
                 let d = generated_concept ~module_:mp r fields in
-                let concept = class_concept_element (element_position mp {top with rc_in_struct = true}) ~module_:mp r d in
+                let concept =
+                  class_concept_element (element_position mp {top with rc_in_struct = true}) ~module_:mp r d in
                 Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); concept])
               in
               let concepts_moved =
@@ -3569,10 +3617,13 @@ let do_struct_with_decl_tracking ~is_header f s =
                         ([concept], moved)
                       | _ -> (List.map class_concept (declared_classes [x]), nothing_moved)
                     in
-                    {moved with concepts = moved.concepts @ List.filter (fun pp -> not (Cpp_ast.is_empty pp)) concepts} )
+                    {moved with concepts = moved.concepts
+                      @ List.filter (fun pp -> not (Cpp_ast.is_empty pp)) concepts} )
                   sel
               in
-              let sel = List.filter (fun (_, se) -> match se with Core.Module.Structure_item.Module_type _ -> false | _ -> true) sel in
+              let sel =
+                List.filter
+                  (fun (_, se) -> match se with Core.Module.Structure_item.Module_type _ -> false | _ -> true) sel in
               let body, body_moved =
                 let inside = {top with rc_in_struct = true} in
                 body inside In_enclosing_scope ~keep:is_func_decl sel

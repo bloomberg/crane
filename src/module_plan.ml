@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The module plan and the tables it is installed into.  See
+(** The module plan and the layout its facts are folded into.  See
     [module_plan.mli]. *)
 
 open Names

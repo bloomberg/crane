@@ -198,7 +198,7 @@ val local_frame_machine :
 
 (** What the ControlIR loop of a local fixpoint's function says of each
     parameter its lambda takes -- the loop's parameters that are not void
-    ({!Ml_type_util.void_binder}), the last first, the reverse of the
+    ({!Type_util.void_binder}), the last first, the reverse of the
     source order the lambda keeps them in: whether some Continue changes it
     ({!Control_ir.Term.invariant_parameters}), and whether every Continue passes
     it a value stored in what the caller passed for it

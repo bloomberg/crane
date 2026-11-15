@@ -207,7 +207,8 @@ val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
     recorded in [p]'s splices: splicing again leaves a function decided as
     it is, so normalizing the result again rewrites nothing. *)
 val splice_partners :
-  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Core_phase.normalizing -> Core_phase.normalizing
+  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Core_phase.normalizing ->
+    Core_phase.normalizing
 
 (** Whether functions of types [a] and [b] yield one type, once every
     abbreviation is unfolded and a variable of the definition's scheme is

@@ -7,14 +7,14 @@
 open Names
 
 (** Which "unsafe" backend features an extracted program requires, so the
-    preamble can emit the corresponding helpers: [mldummy] for
-    {!Core.Expr.Erased_value} values, [tdummy] for {!Core.Type.Erased}
-    types, [tunknown] for {!Core.Type.Unknown} types, and [magic] for
+    preamble can emit the corresponding helpers: [erased_values] for
+    {!Core.Expr.Erased_value} values, [erased_types] for {!Core.Type.Erased}
+    types, [unknown_types] for {!Core.Type.Unknown} types, and [magic] for
     {!Core.Expr.Coerce} coercions. *)
 type unsafe_needs = {
-  mldummy : bool;
-  tdummy : bool;
-  tunknown : bool;
+  erased_values : bool;
+  erased_types : bool;
+  unknown_types : bool;
   magic : bool;
 }
 

@@ -42,7 +42,7 @@ let check_instantiation owners r inst =
       ( "is instantiated at the scheme of "
       ^ Pp.string_of_ppcmds (GlobRef.print owner) );
   let tys = solution_types inst in
-  if List.exists Mlutil.type_has_meta tys then
+  if List.exists Core_util.type_has_meta tys then
     violation r "holds a metavariable in its frozen instantiation";
   List.iter
     (fun h ->
@@ -50,7 +50,7 @@ let check_instantiation owners r inst =
       | None -> Hashtbl.add owners h inst
       | Some inst' when inst' = inst -> ()
       | Some inst' ->
-        let show i = String.concat ", " (List.map Mlutil.debug_ml_type (solution_types i)) in
+        let show i = String.concat ", " (List.map Core_util.debug_core_type (solution_types i)) in
         violation r
           (Printf.sprintf
              "shares hole _%d with a different use (%s against %s); a copied use was not freshened"

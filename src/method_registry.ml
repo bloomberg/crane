@@ -57,14 +57,14 @@ type t = {
 
 (** {2 Return type helpers} *)
 
-(** Check if the return type of an ML arrow type contains [ref].
+(** Check if the return type of a Core arrow type contains [ref].
 
     Used to determine whether [replace_return_this_stmt] will be applied during
     method generation: when the return type contains the eponymous inductive
     reference, the C++ return type will contain [shared_ptr], and
     [replace_return_this_stmt] will convert [return this] to
     [return shared_from_this()]. *)
-let ml_return_type_has_ref ref ty =
+let core_return_type_has_ref ref ty =
   let rec get_return = function
     | Core.Type.Arrow {result = rest; _} -> get_return rest
     | t -> t
@@ -99,7 +99,7 @@ type renumbering = {
    Tvar2 -> 1; Tvar1 is the function's own and becomes position 2, its
    template parameter T1. *)
 let renumbering ~num_ind_vars ~this_pos ty =
-  let all_args, _ = Ml_type_util.get_args_and_ret [] ty in
+  let all_args, _ = Type_util.get_args_and_ret [] ty in
   let ind_tvar_map =
     match List.nth_opt all_args this_pos with
     | Some (Core.Type.Global_app {type_arguments = tvar_args; _}) ->
@@ -117,9 +117,10 @@ let renumbering ~num_ind_vars ~this_pos ty =
               tvar_args ) )
     | _ -> List.init num_ind_vars (fun i -> (i + 1, i + 1))
   in
-  let ind_tvar_set = Mlutil.IntSet.of_list (List.map fst ind_tvar_map) in
+  let ind_tvar_set = Core_util.IntSet.of_list (List.map fst ind_tvar_map) in
   let extra =
-    List.filter (fun i -> not (Mlutil.IntSet.mem i ind_tvar_set)) (Mlutil.IntSet.elements (Mlutil.ml_tvars ty))
+    List.filter (fun i -> not (Core_util.IntSet.mem i ind_tvar_set))
+      (Core_util.IntSet.elements (Core_util.core_tvars ty))
   in
   let renamed = (not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)) || extra <> [] in
   let full = ind_tvar_map @ List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra in
@@ -145,7 +146,7 @@ let renumber_type r ty =
   in
   if r.renamed then go ty else ty
 
-let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body else body
+let renumber_body r body = if r.renamed then Core_util.remap_tvars r.rename body else body
 
 (** {2 Body safety check} *)
 
@@ -163,7 +164,7 @@ let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body el
     When [~ret_has_shared_epon] is [true], the function is considered safe even
     if it returns [this] directly, because [replace_return_this_stmt] (in
     [gen_single_method]) will convert [return this] to
-    [return shared_from_this()].  This flag should be set when the ML return
+    [return shared_from_this()].  This flag should be set when the Core return
     type contains the eponymous inductive wrapped in [shared_ptr].
 
     Note: we only check for DIRECT returns of the first argument. Using the
@@ -276,8 +277,8 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
     Type-class inductives are excluded because they become C++ concepts rather
     than structs, so attaching methods to them does not apply.
 
-    Only searches [Core.Module.Structure_item.Declaration (Core.Decl.Inductive ...)] entries at the current level; does not
-    recurse into sub-modules. *)
+    Only searches [Core.Module.Structure_item.Declaration (Core.Decl.Inductive
+    ...)] entries at the current level; does not recurse into sub-modules. *)
 let find_eponymous_inductive module_name_str decls =
   let lowercase_module = String.lowercase_ascii module_name_str in
   List.find_map
@@ -430,26 +431,26 @@ let find_best_inductive ind_refs ty =
     template parameter or skipped outright -- the three the method's own
     parameter list filters out. *)
 let arg_reaches_cpp d =
-  (not (Mlutil.isTdummy d))
-  && (not (Ml_type_util.ml_type_is_void d))
-  && not (Ml_type_util.ml_type_is_instance d)
+  (not (Core_util.is_erased_type d))
+  && (not (Type_util.core_type_is_void d))
+  && not (Type_util.core_type_is_instance d)
 
-(** Number of value parameters in a curried ML type: the arrows whose domain
+(** Number of value parameters in a curried Core type: the arrows whose domain
     reaches C++ as a parameter. *)
-let ml_value_arity ty =
-  List.length (List.filter arg_reaches_cpp (Ml_type_util.ml_domains ty))
+let core_value_arity ty =
+  List.length (List.filter arg_reaches_cpp (Type_util.core_domains ty))
 
 (** [pos] counted among the arguments C++ is given, rather than among all the
-    arrows of the ML type.
+    arrows of the Core type.
 
-    {!find_epon_arg_pos} answers in ML numbering, which is what reading the
-    body wants -- a de Bruijn index is an ML notion.  A call site is C++, and
+    {!find_epon_arg_pos} answers in Core numbering, which is what reading the
+    body wants -- a de Bruijn index is a Core notion.  A call site is C++, and
     the two numberings drift apart the moment an argument is erased: a helper
-    taking a [ReSum] dictionary and then its event has its receiver at ML
+    taking a [ReSum] dictionary and then its event has its receiver at Core
     position 1 and at C++ position 0, and a printer told 1 reaches past the
     receiver for it. *)
 let cpp_arg_pos ty pos =
-  let doms = Ml_type_util.ml_domains ty in
+  let doms = Type_util.core_domains ty in
   List.length
     (List.filter arg_reaches_cpp (List.filteri (fun i _ -> i < pos) doms))
 
@@ -513,7 +514,7 @@ let file_calls modpath decls =
     (fun (_l, se) ->
       match se with
       | Core.Module.Structure_item.Declaration d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) (Mlutil.term_defs d)
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) (Core_util.term_defs d)
       | _ -> () )
     decls;
   fun body ->
@@ -557,9 +558,9 @@ let method_receiver ~func epon_ref body ty =
   match find_epon_arg_pos epon_ref ty with
   | Some (pos, _) as r
     when body_safe_for_method ~this_pos:pos
-           ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
+           ~ret_has_shared_epon:(core_return_type_has_ref epon_ref ty)
            body ->
-    let params, inner = Mlutil.collect_lams body in
+    let params, inner = Core_util.collect_lams body in
     let consumed () =
       Table.should_reuse func && Table.is_shared_variant epon_ref
       && Escape.is_reuse_scrutinee (List.length params - pos) inner
@@ -710,7 +711,7 @@ let register_methods_for_epon
     (* Helper to add a candidate to both the method table and candidates
        table *)
     let add_candidate r body ty pos ind_tvar_positions =
-      register_into ~arity:(ml_value_arity ty) tbl r epon_ref
+      register_into ~arity:(core_value_arity ty) tbl r epon_ref
         (cpp_arg_pos ty pos) ~ind_tvar_positions;
       let existing =
         match Ref.User.Tbl.find_opt cands epon_ref with
@@ -742,7 +743,7 @@ let register_methods_for_epon
                 | Some (pos, ind_tvar_positions) ->
                   consider r body ty pos ind_tvar_positions
                 | _ -> () )
-            (Mlutil.term_defs d)
+            (Core_util.term_defs d)
         | _ -> () )
       decls;
     if top_level_siblings then begin
@@ -819,7 +820,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     in check ty
   in
   let add_candidate ind_ref r body ty pos ind_tvar_positions =
-    register_into ~arity:(ml_value_arity ty) tbl r ind_ref
+    register_into ~arity:(core_value_arity ty) tbl r ind_ref
       (cpp_arg_pos ty pos) ~ind_tvar_positions;
     let existing = match Ref.User.Tbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
@@ -863,7 +864,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     | Core.Module.Structure_item.Declaration d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) -> process_func fd.entity fd.body fd.type_)
-        (Mlutil.term_defs d)
+        (Core_util.term_defs d)
     | _ -> ()
   ) decls
 
@@ -1043,7 +1044,7 @@ and pre_register_methods_from_module_expr
 
     The algorithm: 1. Build a mapping from each inductive [GlobRef] to its
     parameter variable names (the [type_variables] that correspond to kept parameters).
-    2. For each registered method, find its ML type in the structure, extract
+    2. For each registered method, find its Core type in the structure, extract
     the return type, and ask [ret_is_erased] whether it has a C++ spelling. 3.
     If it does not, set [returns_any = true] in the method's entry.
 
@@ -1055,7 +1056,7 @@ let compute_returns_any
     ~(ret_is_erased : Id.t list -> Core.Type.t -> bool) tbl
     (s : Core.Program.t) =
   (* Step 1: In a single walk of the structure, build (a) IndRef -> param_vars
-     for all inductives and (b) a term-ref -> ML type index so step 2 can look
+     for all inductives and (b) a term-ref -> Core type index so step 2 can look
      up each method's type in O(1) instead of re-walking the whole structure
      per method. *)
   let ind_param_vars : Id.t list Ref.User.Tbl.t = Ref.User.Tbl.create 32 in
@@ -1078,7 +1079,7 @@ let compute_returns_any
         | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
           List.iter
             (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace method_types fd.entity fd.type_)
-            (Mlutil.term_defs d)
+            (Core_util.term_defs d)
         | Core.Module.Structure_item.Module m ->
           ( match m.expr with
           | Core.Module.Expr.Structure {path = _mp; items = inner_sel} -> collect_from_sel inner_sel
@@ -1087,7 +1088,7 @@ let compute_returns_any
       sel
   in
   List.iter (fun (_mp, sel) -> collect_from_sel sel) s;
-  (* Step 2: For each registered method, find its ML type and check whether the
+  (* Step 2: For each registered method, find its Core type and check whether the
      return type is erased. *)
   RefTbl.iter
     (fun func_ref info ->
@@ -1099,13 +1100,13 @@ let compute_returns_any
           | Core.Type.Arrow {result = t2; _} -> get_return_type t2
           | ret -> ret
         in
-        (* Step 3: Look up this method's ML type (indexed in step 1) and check
+        (* Step 3: Look up this method's Core type (indexed in step 1) and check
            whether its return type is erased. *)
         ( match Ref.User.Tbl.find_opt method_types func_ref with
         | None -> ()
         | Some ty ->
-          let ret_ml = get_return_type ty in
-          if ret_is_erased param_vars ret_ml then
+          let ret_core = get_return_type ty in
+          if ret_is_erased param_vars ret_core then
             RefTbl.replace tbl func_ref {info with returns_any = true} ) )
     tbl
 

@@ -18,19 +18,20 @@ let call f = Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomor
                               arguments = [Core.Expr.fresh_rel 1]}
 let calling fs = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
                                    parameter_type = nat;
-                                   body = List.fold_left (fun b f -> Core.Expr.Let {binder = Core.Binder_name.Anonymous;
-                                                                                    binder_type = nat;
-                                                                                    value = call f;
-                                                                                    body = b;
-                                                                                    occurrence = Core.Occurrence.fresh ()}) (Core.Expr.fresh_rel 1) fs}
+                                   body = List.fold_left
+                                     (fun b f ->
+                                       Core.Expr.Let
+                                         {binder = Core.Binder_name.Anonymous; binder_type = nat; value = call f;
+                                           body = b; occurrence = Core.Occurrence.fresh ()}) (Core.Expr.fresh_rel 1) fs}
 let fd name fs = {Core.Recursion.Definition.entity = r name;
                   body = calling fs;
                   type_ = Core.Type.Arrow {parameter = nat; result = nat}}
-let term name fs = (Label.make name, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r name;
-                                                                                              body = calling fs;
-                                                                                              type_ = Core.Type.Arrow {parameter = nat;
-                                                                                                                       result = nat}}))
-let fix fds = (Label.make "fix", Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.of_list_exn fds)))
+let term name fs =
+  (Label.make name,
+    Core.Module.Structure_item.Declaration
+      (Core.Decl.Value {entity = r name; body = calling fs; type_ = Core.Type.Arrow {parameter = nat; result = nat}}))
+let fix fds =
+  (Label.make "fix", Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.of_list_exn fds)))
 let names = Option.map (List.map (function GlobRef.VarRef id -> Id.to_string id | _ -> "?"))
 
 let program =

@@ -25,7 +25,8 @@ let visit ~expr ~stmt : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr; st
 (* Whether [stmts] can return, other than from a lambda nested in them. *)
 let has_return (stmts : stmt list) =
   let exception Found in
-  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = ignore}
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = ignore}
   and expr (e : expr) = match e with Lambda _ -> () | _ -> Cpp_ir.Children.expr v e
   and stmt (s : stmt) = match s with Return _ -> raise_notrace Found | _ -> Cpp_ir.Children.stmt v s in
   match List.iter stmt stmts with () -> false | exception Found -> true
@@ -72,7 +73,9 @@ let rename_ids f stmts =
         { lf with
           name = f lf.name;
           captured = keys lf.captured;
-          encoding = (match lf.encoding with Self_passing selves -> Self_passing (List.map f selves) | (Knot | Lowered) as e -> e) }
+          encoding =
+            (match lf.encoding with Self_passing selves -> Self_passing (List.map f selves)
+              | (Knot | Lowered) as e -> e) }
       in
       Cpp_ir.Map.expr (m ())
         (Lambda
@@ -95,7 +98,8 @@ let rename_ids f stmts =
         let branch (b : _ Cpp_ir.Stmt.Match.branch) : _ Cpp_ir.Stmt.Match.branch =
           { b with
             var = Option.map f b.var;
-            field_bindings = List.map (fun (fb : _ Cpp_ir.Stmt.Match.field_binding) -> {fb with name = f fb.name}) b.field_bindings }
+            field_bindings = List.map
+              (fun (fb : _ Cpp_ir.Stmt.Match.field_binding) -> {fb with name = f fb.name}) b.field_bindings }
         in
         Match (sc, List.map branch branches, default)
       | Custom_match c ->
@@ -155,7 +159,8 @@ let straight_line ex =
    {!budget}. *)
 let size_stmts (l : stmt list) =
   let n = ref 0 in
-  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = ignore}
+  let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+    {expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = ignore}
   and expr e =
     incr n;
     Cpp_ir.Children.expr v e
@@ -273,7 +278,7 @@ let specialize_local_records fresh stmts =
          those. *)
       let live_fields =
         List.filter_map
-          (fun {Core.Record.Field.projection = fr; type_ = ty} -> if Mlutil.isTdummy ty then None else Some fr)
+          (fun {Core.Record.Field.projection = fr; type_ = ty} -> if Core_util.is_erased_type ty then None else Some fr)
           (Table.get_record_field_bindings record)
       in
       let field_lambda r =
@@ -295,7 +300,8 @@ let specialize_local_records fresh stmts =
       (* Every use of [p] in [rest] is the receiver of such a call. *)
       let only_calls =
         let ok = ref true in
-        let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor = {expr = (fun e -> fe e); stmt = (fun s -> fs s); type_ = ignore}
+        let rec v : Cpp_ir.Lowered.phase Cpp_ir.Children.visitor =
+          {expr = (fun e -> fe e); stmt = (fun s -> fs s); type_ = ignore}
         and fe (e : expr) =
           match call_target e with
           | Some (_, args) -> List.iter fe args
@@ -313,7 +319,9 @@ let specialize_local_records fresh stmts =
       in
       let captured =
         List.fold_left
-          (fun acc -> function Some (l : lambda) -> IdSet.union acc (IdSet.of_list (V.free_in_body l.body)) | None -> acc)
+          (fun acc -> function
+            | Some (l : lambda) -> IdSet.union acc (IdSet.of_list (V.free_in_body l.body))
+            | None -> acc)
           IdSet.empty lambdas
       in
       if only_calls && lambdas_ok && IdSet.is_empty (IdSet.inter captured (V.assigned rest)) then

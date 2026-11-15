@@ -9,7 +9,7 @@
 
     - an argument's place among the call's regular arguments, the class
       dictionaries partitioned out of it ([int]);
-    - a position of the {e declared} parameter list ({!orig}): the callee's ML
+    - a position of the {e declared} parameter list ({!orig}): the callee's Core
       domains with the [Core.Type.Erased] ones dropped, dictionary parameters included,
       erased ones too;
     - a position of the {e instantiated} list ({!subst}): the same after the
@@ -32,7 +32,7 @@ type 'k pos
 (** A parameter list of kind ['k]. *)
 type 'k params
 
-(** The value parameters of an ML function type: its domains up the arrow
+(** The value parameters of a Core function type: its domains up the arrow
     spine, definitional-class aliases expanded, the [Core.Type.Erased] ones dropped.
     [~expand] expands an alias that stands for a function type. *)
 val orig_params :

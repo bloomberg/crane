@@ -41,20 +41,35 @@ let () =
     ( lbl "F",
       Core.Module.Structure_item.Module
         { Core.Module.expr =
-            Core.Module.Expr.Functor {parameter = MBId.make (dir "Top") (Id.of_string "X"); parameter_type = Core.Module.Type.Path (mp "S"); body = Core.Module.Expr.Structure {path = mp "F"; items = [(lbl "Cl", Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = body_kn; definition = ind (Core.Inductive.Kind.Type_class [field])}))]}};
+            Core.Module.Expr.Functor
+              {parameter = MBId.make (dir "Top") (Id.of_string "X"); parameter_type = Core.Module.Type.Path (mp "S");
+                body = Core.Module.Expr.Structure
+                  {path = mp "F";
+                    items =
+                      [(lbl "Cl",
+                          Core.Module.Structure_item.Declaration
+                            (Core.Decl.Inductive
+                              {entity = body_kn; definition = ind (Core.Inductive.Kind.Type_class [field])}))]}};
           type_ = Core.Module.Type.Path (mp "S") } )
   in
   let app_elem =
     ( lbl "FN",
       Core.Module.Structure_item.Module
-        { Core.Module.expr = Core.Module.Expr.Apply {functor_ = Core.Module.Expr.Path (mp "F"); argument = Core.Module.Expr.Path (mp "N")};
-          type_ = Core.Module.Type.Signature {path = mp "FN"; items = [(lbl "Cl", Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Inductive {entity = app_kn; definition = app_ind}))]} } )
+        { Core.Module.expr = Core.Module.Expr.Apply
+          {functor_ = Core.Module.Expr.Path (mp "F"); argument = Core.Module.Expr.Path (mp "N")};
+          type_ = Core.Module.Type.Signature
+            {path = mp "FN";
+              items =
+                [(lbl "Cl",
+                    Core.Module.Signature_item.Declaration
+                      (Core.Signature.Declaration.Inductive {entity = app_kn; definition = app_ind}))]} } )
   in
   let struc = [(mp "Top", [functor_elem; app_elem])] in
   let facts = Program_facts.analyze struc in
   let plan = Target_plan.plan facts struc in
   check "the application takes the body's kind"
-    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn) (Some (Core.Inductive.Kind.Type_class [field])));
+    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn)
+      (Some (Core.Inductive.Kind.Type_class [field])));
   check "the body is not re-decided" (Target_plan.kind_of plan body_kn = None);
   check "planning writes nothing into the structure"
     (match app_ind.kind with Core.Inductive.Kind.Record _ -> true | _ -> false);
@@ -64,7 +79,13 @@ let () =
   let use =
     ( lbl "use",
       Core.Module.Structure_item.Declaration
-        (Core.Decl.Value {entity = GlobRef.VarRef (Id.of_string "use"); body = Core.Expr.Erased_value Core.Erasure_reason.Proof; type_ = Core.Type.Global_app {head = GlobRef.IndRef (kn "L" "list", 0); type_arguments = [Core.Type.Global_app {head = GlobRef.IndRef (app_kn, 0); type_arguments = []; index_arguments = []}]; index_arguments = []}}) )
+        (Core.Decl.Value
+          {entity = GlobRef.VarRef (Id.of_string "use"); body = Core.Expr.Erased_value Core.Erasure_reason.Proof;
+            type_ = Core.Type.Global_app
+              {head = GlobRef.IndRef (kn "L" "list", 0);
+                type_arguments =
+                  [Core.Type.Global_app {head = GlobRef.IndRef (app_kn, 0); type_arguments = []; index_arguments = []}];
+                    index_arguments = []}}) )
   in
   let struc = [(mp "Top", [functor_elem; app_elem; use])] in
   let plan = Target_plan.plan facts struc in

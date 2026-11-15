@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A recursive function specialized to the lambda a definition passes it.
-    See [ml_specialize.mli]. *)
+    See [core_specialize.mli]. *)
 
 open Names
 
@@ -41,10 +41,10 @@ let body_of defs (use : Core.Global_use.t) =
   if Table.is_custom g then None
   else
     let at body ty =
-      let n = Mlutil.type_maxvar ty in
+      let n = Core_util.type_maxvar ty in
       if n = 0 then Some body
-      else if Mlutil.written_covers use n then
-        Some (Mlutil.instantiate_body ~reader:"ml_specialize.body_of" use body)
+      else if Core_util.written_covers use n then
+        Some (Core_util.instantiate_body ~reader:"core_specialize.body_of" use body)
       else None
     in
     match Ref.User.Map.find_opt g defs with
@@ -77,7 +77,7 @@ let rec is_value = function
    parameter is read more than once.  Arguments past [b]'s lambdas stay
    applied; [None] if there are fewer arguments than lambdas. *)
 let instantiate b args =
-  let params, body = Mlutil.collect_lams b in
+  let params, body = Core_util.collect_lams b in
   let n = List.length params in
   if List.length args < n then None
   else
@@ -89,9 +89,9 @@ let instantiate b args =
       | (a, (id, ty)) :: rest ->
         (* [a] lives outside every lambda; here it is under the [n - i - 1]
            still bound outside the one being instantiated. *)
-        let a = Mlutil.ast_lift (n - i - 1) a in
+        let a = Core_util.ast_lift (n - i - 1) a in
         let body' =
-          if is_value a || Mlutil.nb_occur_match body <= 1 then Mlutil.ast_subst a body
+          if is_value a || Core_util.nb_occur_match body <= 1 then Core_util.ast_subst a body
           else Core.Expr.Let {binder = id; binder_type = ty; value = a; body; occurrence = Core.Occurrence.fresh ()}
         in
         go body' (i + 1) rest
@@ -109,8 +109,8 @@ let known_ctor defs e =
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} -> (
     match body_of defs use with
     | Some b -> (
-      match (snd (Mlutil.collect_lams b), instantiate b args) with
-      | Core.Expr.Construct _, Some e' -> Some (Mlutil.normalize e')
+      match (snd (Core_util.collect_lams b), instantiate b args) with
+      | Core.Expr.Construct _, Some e' -> Some (Core_util.normalize e')
       | _ -> None )
     | None -> None )
   | Core.Expr.Global use -> (
@@ -120,9 +120,9 @@ let known_ctor defs e =
 (* [e] with each [let] of a value read at most once substituted: a
    constructor bound by a beta-reduction is then matched where it is used. *)
 let rec subst_value_lets e =
-  match Mlutil.ast_map subst_value_lets e with
-  | Core.Expr.Let {value = c; body = b; _} when is_value c && Mlutil.nb_occur_match b <= 1 ->
-    Mlutil.ast_subst c b
+  match Core_util.ast_map subst_value_lets e with
+  | Core.Expr.Let {value = c; body = b; _} when is_value c && Core_util.nb_occur_match b <= 1 ->
+    Core_util.ast_subst c b
   | e -> e
 
 (** {1 Rewrites} *)
@@ -135,7 +135,7 @@ let fuel = 16
    pushed into a match argument where that lets a branch unfold.  [shrunk]
    is set when anything is rewritten. *)
 let rec reduce defs shrunk fuel e =
-  let e = Mlutil.ast_map (reduce defs shrunk fuel) e in
+  let e = Core_util.ast_map (reduce defs shrunk fuel) e in
   match e with
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = g; _} as use); arguments = args} when fuel > 0 -> (
     match unfold defs shrunk fuel use args with
@@ -158,7 +158,7 @@ and unfold defs shrunk fuel use args =
       | None -> None
       | Some e ->
         let e' = settle defs (fuel - 1) e in
-        if Mlutil.ast_size e' < Mlutil.ast_size (Core.Expr.Apply {callee = Core.Expr.Global use;
+        if Core_util.ast_size e' < Core_util.ast_size (Core.Expr.Apply {callee = Core.Expr.Global use;
                                                                   arguments = args}) then (
           shrunk := true;
           Some e' )
@@ -170,7 +170,7 @@ and unfold defs shrunk fuel use args =
 and settle defs fuel e =
   let rec go n e =
     let changed = ref false in
-    let simplify e = Mlutil.normalize (subst_value_lets e) in
+    let simplify e = Core_util.normalize (subst_value_lets e) in
     let e' = simplify (reduce defs changed fuel (simplify e)) in
     if !changed && n > 0 then go (n - 1) e' else e'
   in
@@ -194,10 +194,10 @@ and push defs shrunk fuel use args =
       Array.map
         (fun ({Core.Match.Branch.binders = ids; result_type = bty; body = b; _} as br) ->
           let k = List.length ids in
-          let lift = List.map (Mlutil.ast_lift k) in
+          let lift = List.map (Core_util.ast_lift k) in
           let call = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = lift before @ [b] @ lift after} in
           let call' = settle defs fuel call in
-          if Mlutil.ast_size call' < Mlutil.ast_size call then (
+          if Core_util.ast_size call' < Core_util.ast_size call then (
             any := true;
             {br with Core.Match.Branch.body = call'} )
           else
@@ -205,7 +205,7 @@ and push defs shrunk fuel use args =
                result of a match, typed by the branch -- and is passed by
                name, so it keeps that type rather than taking one from the
                parameter it now meets. *)
-            let lift1 = List.map (Mlutil.ast_lift (k + 1)) in
+            let lift1 = List.map (Core_util.ast_lift (k + 1)) in
             { br with
               Core.Match.Branch.body =
                 Core.Expr.Let
@@ -228,7 +228,7 @@ and push defs shrunk fuel use args =
 
 (* The parameters of [fd], outermost first, and its body under them. *)
 let params_of (fd : Core.Recursion.Definition.t) =
-  let ps, body = Mlutil.collect_lams fd.body in
+  let ps, body = Core_util.collect_lams fd.body in
   (List.rev ps, body)
 
 (* Whether every occurrence of [f] in its body [b], under its [k] parameters,
@@ -243,13 +243,13 @@ let static_param f k j b =
       | _ -> raise_notrace No );
       List.iter (walk d) a
     | Core.Expr.Global {callee = g; _} when same g f -> raise_notrace No
-    | _ -> ignore (Mlutil.ast_map_lift (fun d e -> walk d e; e) d e)
+    | _ -> ignore (Core_util.ast_map_lift (fun d e -> walk d e; e) d e)
   in
   try walk 0 b; true with No -> false
 
 (* [ty]'s arrow at position [j] dropped, and its domains, outermost first. *)
 let rec drop_domain j ty =
-  match (j, Mlutil.ml_resolve ty) with
+  match (j, Core_util.core_resolve ty) with
   | 0, Core.Type.Arrow {result = c; _} -> Some c
   | j, Core.Type.Arrow {parameter = d; result = c} ->
     Option.map (fun c -> Core.Type.Arrow {parameter = d; result = c}) (drop_domain (j - 1) c)
@@ -260,7 +260,7 @@ let rec drop_domain j ty =
 let rec domains n ty =
   if n = 0 then Some []
   else
-    match Mlutil.ml_resolve ty with
+    match Core_util.core_resolve ty with
     | Core.Type.Arrow {parameter = d; result = c} -> Option.map (fun ds -> d :: ds) (domains (n - 1) c)
     | _ -> None
 
@@ -274,9 +274,9 @@ let specialize f (fd : Core.Recursion.Definition.t) use args =
   match List.find_opt (fun (j, a) -> candidate j a) (List.mapi (fun j a -> (j, a)) args) with
   | None -> None
   | Some (j, lam) -> (
-    if not (Mlutil.written_covers use (Mlutil.type_maxvar fd.type_)) then None
+    if not (Core_util.written_covers use (Core_util.type_maxvar fd.type_)) then None
     else
-      let inst = Mlutil.instantiate_written ~reader:"ml_specialize.specialize" use in
+      let inst = Core_util.instantiate_written ~reader:"core_specialize.specialize" use in
       let fty = inst fd.type_ in
       match (drop_domain j fty, domains k fty) with
       | Some spec_ty, Some doms ->
@@ -287,15 +287,15 @@ let specialize f (fd : Core.Recursion.Definition.t) use args =
           | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = a} when same g f ->
             let a = List.map (self d) a in
             Core.Expr.Apply {callee = Core.Expr.fresh_rel (d + k); arguments = List.filteri (fun i _ -> i <> j) a}
-          | _ -> Mlutil.ast_map_lift self d e
+          | _ -> Core_util.ast_map_lift self d e
         in
         let b_rec =
-          Mlutil.instantiate_body ~reader:"ml_specialize.specialize" use (self 0 fd.body)
+          Core_util.instantiate_body ~reader:"core_specialize.specialize" use (self 0 fd.body)
         in
         let q i = Core.Expr.fresh_rel (k - 1 - i) in
         let args_b =
           List.init k (fun i ->
-              if i < j then q i else if i = j then Mlutil.ast_lift k lam else q (i - 1))
+              if i < j then q i else if i = j then Core_util.ast_lift k lam else q (i - 1))
         in
         let qs =
           List.rev
@@ -308,7 +308,7 @@ let specialize f (fd : Core.Recursion.Definition.t) use args =
              is a value, so it is substituted for its parameter. *)
           let body = Option.get (instantiate b_rec args_b) in
           Core.Expr.Fixpoint
-            (Core.Recursion.Group.singleton fid spec_ty (Mlutil.named_lams qs body) (Core.Occurrence.fresh ()))
+            (Core.Recursion.Group.singleton fid spec_ty (Core_util.named_lams qs body) (Core.Occurrence.fresh ()))
         in
         let rest = List.filteri (fun i _ -> i <> j) args in
         Some (if rest = [] then fix else Core.Expr.Apply {callee = fix; arguments = rest})
@@ -317,7 +317,7 @@ let specialize f (fd : Core.Recursion.Definition.t) use args =
 (** The declaration [r := body] with its call specialized and simplified,
     when that shrinks it. *)
 let decl defs r body ty =
-  let ps, inner = Mlutil.collect_lams body in
+  let ps, inner = Core_util.collect_lams body in
   match inner with
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use);
                      arguments = args} when not (Table.is_custom r) -> (
@@ -327,13 +327,13 @@ let decl defs r body ty =
       | None -> None
       | Some spec ->
         let shrunk = ref false in
-        let spec = reduce defs shrunk fuel (Mlutil.normalize spec) in
+        let spec = reduce defs shrunk fuel (Core_util.normalize spec) in
         (* Only as the definition's own fixpoint: a fixpoint left local is
            translated without the whole-body suspension a corecursive one
            calling itself outside its constructors needs. *)
         if not !shrunk then None
         else
-          match Modutil.decl_of_term r (Mlutil.named_lams ps spec) ty with
+          match Modutil.decl_of_term r (Core_util.named_lams ps spec) ty with
           | Core.Decl.Recursive_group _ as d -> Some d
           | _ -> None )
     | _ -> None )
@@ -347,7 +347,8 @@ let structure struc =
         match se with
         | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body; type_ = ty}) -> (
           match decl defs r body ty with Some d -> (lbl, Core.Module.Structure_item.Declaration d) | None -> (lbl, se) )
-        | Core.Module.Structure_item.Module ({Core.Module.expr = Core.Module.Expr.Structure {path = mp; items = l}; _} as m)
+        | Core.Module.Structure_item.Module
+          ({Core.Module.expr = Core.Module.Expr.Structure {path = mp; items = l}; _} as m)
           ->
           let expr = Core.Module.Expr.Structure {path = mp; items = elems l} in
           (lbl, Core.Module.Structure_item.Module {m with Core.Module.expr})

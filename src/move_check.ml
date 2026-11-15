@@ -325,7 +325,8 @@ let backend x = String.length (Id.to_string x) > 0 && (Id.to_string x).[0] = '_'
 
 (* The locals [ss] declares as pointers, in any scope. *)
 let pointers ss =
-  let rec is_pointer : ty -> bool = function Pointer _ -> true | Const t | In_namespace (_, t) -> is_pointer t | _ -> false in
+  let rec is_pointer : ty -> bool =
+    function Pointer _ -> true | Const t | In_namespace (_, t) -> is_pointer t | _ -> false in
   let found = ref [] in
   let rec fe e = Cpp_ir.Map.expr (rw ()) e
   and fs (s : stmt) =
@@ -397,7 +398,8 @@ let passing_violations (passing : Callable_abi.passing list) params body =
            match (p, ty) with
            | Forwarded, Reference (Forwarding, _) -> []
            | Forwarded, _ -> ["the plan forwards " ^ name ^ ", declared otherwise"]
-           | (Owned | Borrowed), Reference (Forwarding, _) -> ["the declaration forwards " ^ name ^ ", the plan does not"]
+           | (Owned | Borrowed), Reference (Forwarding, _) ->
+             ["the declaration forwards " ^ name ^ ", the plan does not"]
            | Owned, _ when declared_by_reference ty -> ["the plan owns " ^ name ^ ", declared by reference"]
            | Borrowed, _
              when declared_by_reference ty && List.exists (Id.equal x) !moved
@@ -533,12 +535,15 @@ let check_by_reference_closures owner ss =
         if not (by_reference l) then
           report Pp.(str "the local fixpoint " ++ Id.print lf.name ++ str " copies what its plan reads by reference");
         List.iter
-          (fun x -> report Pp.(str "the local fixpoint lambda " ++ Id.print x ++ str " reads its scope by reference and escapes it"))
+          (fun x ->
+            report
+              Pp.(str "the local fixpoint lambda " ++ Id.print x ++ str " reads its scope by reference and escapes it"))
           (escaping ~group ~callees [x] rest);
         stmt s;
         go (x :: reading) rest
       | (Bind_variable (x, Declare _, (Lambda l as e)) as s) :: rest
-        when by_reference l && List.exists (fun y -> List.exists (Id.equal y) reading) (Cpp_ir.Variables.free_in_expr e) ->
+        when by_reference l
+          && List.exists (fun y -> List.exists (Id.equal y) reading) (Cpp_ir.Variables.free_in_expr e) ->
         List.iter
           (fun x ->
             report

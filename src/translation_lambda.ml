@@ -2,21 +2,23 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Lambdas lowered to C++ closures: which binders become parameters, what
     the closure captures and by which mode, how it passes its parameters,
-    and the return type it is written against. *)
+    and the return type it is written against.  One of the modules lowering Core
+    bodies to CppIR that {!Translation} drives; it calls back into
+    expression and statement lowering through {!Translation_knot}. *)
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
 open Translation_calls
 open Translation_knot
 
-(* The names of the variables at the de Bruijn indices [is] a closure
+(** The names of the variables at the de Bruijn indices [is] a closure
    captures, in the order a capture list spells them; a class instance is a
    template parameter, not a value it captures. *)
 let capture_names env is =
@@ -25,16 +27,16 @@ let capture_names env is =
        (fun id -> not (Common.is_tc_instance_id id))
        (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
 
-(* The names of the variables [captures] says a closure takes by move. *)
+(** The names of the variables [captures] says a closure takes by move. *)
 let moved_names env captures =
   capture_names env (List.filter_map (function i, Ownership_ir.Capture.By_move -> Some i | _ -> None) captures)
 
-(* A local fixpoint's wrapper parameter, of ML type [ty], forwarded to the
+(** A local fixpoint's wrapper parameter, of Core type [ty], forwarded to the
    impl: its one read, a move where the wrapper takes it by value. *)
 let forwarded ~by_value ty (v : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  if by_value && Ownership_ir.worth_moving ty && not (ml_type_is_unit ty) then Move v else v
+  if by_value && Ownership_ir.worth_moving ty && not (core_type_is_unit ty) then Move v else v
 
-(* Whether a lambda generated as [passing] says owns each parameter it
+(** Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
 let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.filter_map Fun.id passing)
 
@@ -107,7 +109,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
        [(pair, list) -> list].  Writing the missing binders here instead
        makes the body a saturated call, so that expansion never fires.
 
-       The binders are given no ML type on purpose: the derivation below
+       The binders are given no Core type on purpose: the derivation below
        reads an erased parameter's type out of [expected_ty]'s domain at
        the same index, which is the only place that says what it is. *)
     (* [extend n] -- the binders the expected signature takes that the term
@@ -137,7 +139,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         None
       else if k = 0 then None
       else if
-        (* The expected C++ arity has to be backed by the same number of ML
+        (* The expected C++ arity has to be backed by the same number of Core
            domains that genuinely carry a value.  A reified tree's
            continuation is typed [unit -> itree ...] and takes one
            [std::monostate]: the value carries nothing but the slot is real,
@@ -146,11 +148,11 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         let rec leading i ty =
           i = 0
           ||
-          match resolve_tmeta ty with
+          match resolve_meta ty with
           | Core.Type.Arrow {parameter = a; result = b} -> real a && leading (i - 1) b
           | _ -> false
         in
-        not (match slot.expected_ml_ty with Some ty -> leading n ty | None -> false)
+        not (match slot.expected_core_ty with Some ty -> leading n ty | None -> false)
       then None
       else if
         (* A binder is only worth writing if the slot says what it is.  The
@@ -172,7 +174,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
               (fun i ->
                 match List.nth_opt doms i with
                 | Some t ->
-                  (not (Ml_type_util.has_tany_written t))
+                  (not (Type_util.has_tany_written t))
                   && Id.Set.for_all
                        (fun nm -> List.exists (Id.equal nm) tvars)
                        (Cpp_ir.Types.variable_names t)
@@ -209,9 +211,9 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
      {!Translation_types.slot_refined_lambda}. *)
   let binders_left_open = List.exists (fun (_, ty) -> has_open_meta ty) args in
   let args, a =
-    slot_refined_lambda env ~expected_ml_ty:(if boxed slot then None else slot.expected_ml_ty) args a
+    slot_refined_lambda env ~expected_core_ty:(if boxed slot then None else slot.expected_core_ty) args a
   in
-  let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
+  let lam_params = List.map (fun (x, y) -> (id_of_binder_name x, y)) args in
   let args, env = push_vars' lam_params env in
   let saved_env_types = (!tctx).lexical.env_types in
   push_binders env args;
@@ -328,7 +330,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           (fun j ((id, _, _) as arg) ->
             let unused =
               match List.nth_opt emitted_binder_indices j with
-              | Some i -> not (Mlutil.ast_occurs (i + 1) a)
+              | Some i -> not (Core_util.ast_occurs (i + 1) a)
               | None -> false
             in
             let param_cpp_ty, body_subst =
@@ -345,7 +347,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          slot ({!binder_emitted}) is the common case. *)
       let arity_only =
         List.filteri
-          (fun i _ -> not (Mlutil.ast_occurs (i + 1) a))
+          (fun i _ -> not (Core_util.ast_occurs (i + 1) a))
           args_with_owned
         |> List.map (fun (id, _, _) -> id)
       in
@@ -391,32 +393,32 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       let () =
         let declared =
           List.combine
-            (List.mapi (fun j (id, ml_ty, _) -> (j, (id, ml_ty)))
+            (List.mapi (fun j (id, core_ty, _) -> (j, (id, core_ty)))
                filtered_args_with_owned )
             cpp_arg_info
-          |> List.map (fun ((j, (id, ml_ty)), (ty, _, _)) ->
-               (id, lambda_param_assigned ~slot_dom:(slot_dom_cpp_ty j) ml_ty ty))
+          |> List.map (fun ((j, (id, core_ty)), (ty, _, _)) ->
+               (id, lambda_param_assigned ~slot_dom:(slot_dom_cpp_ty j) core_ty ty))
         in
         assign_binder_types env
           ~cpp:(List.map (fun (id, _) -> List.assoc_opt id declared) args)
           args
       in
-      let body_expected_ml_ty =
+      let body_expected_core_ty =
         let rec strip_arrows n ty =
           if n = 0 then Some ty
-          else match resolve_tmeta ty with
+          else match resolve_meta ty with
                | Core.Type.Arrow {result = cod; _} -> strip_arrows (n - 1) cod
                | _ -> None
         in
-        (match slot.expected_ml_ty with
+        (match slot.expected_core_ty with
         | Some fn_ty ->
           (match strip_arrows n_all_params fn_ty with
           | Some cod ->
-            (match resolve_tmeta cod with
+            (match resolve_meta cod with
             | Core.Type.Erased _ | Core.Type.Unknown
-            | Core.Type.Meta {contents = None} | Core.Type.Open _ -> slot.expected_ml_ty
+            | Core.Type.Meta {contents = None} | Core.Type.Open _ -> slot.expected_core_ty
             | _ -> Some cod)
-          | None -> slot.expected_ml_ty)
+          | None -> slot.expected_core_ty)
         | None -> None)
       in
       (* Generate the body, then check if the body returns a lambda (this
@@ -453,13 +455,14 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
              parameter fixes, so the enclosing function's return type is
              not merely unhelpful here -- it is the wrong answer, and the
              body would spell it in place of the carrier.  What the body
-             does return is the lambda's own ML codomain read at the
+             does return is the lambda's own Core codomain read at the
              carrier: the rank-2 variable is erased in that type, and the
              carrier is the name the parameter gave it back. *)
           let ret =
-            match (body_expected_ml_ty, rank2_carrier) with
-            | Some ml_ty, Some x -> Some (Rank2.at_carrier x (cpp_ir_of_ml_type env (get_current_type_vars ()) ml_ty))
-            | Some ml_ty, None -> Some (cpp_ir_of_ml_type env (get_current_type_vars ()) ml_ty)
+            match (body_expected_core_ty, rank2_carrier) with
+            | Some core_ty, Some x ->
+              Some (Rank2.at_carrier x (cpp_ir_of_core_type env (get_current_type_vars ()) core_ty))
+            | Some core_ty, None -> Some (cpp_ir_of_core_type env (get_current_type_vars ()) core_ty)
             | None, _ -> None
           in
           with_cpp_return_type ret f
@@ -491,7 +494,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
             with_lam_return_type (fun () ->
               with_region ~owned:lambda_owned a (fun () ->
                 gen_stmts
-                  ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
+                  ~slot:{slot with expected_core_ty = body_expected_core_ty}
                   env
                   (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x))
                   a ) ) )
@@ -517,7 +520,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       let cpp_args, body_stmts =
         match a with
         | Core.Expr.Fixpoint fix_group | Core.Expr.Cofixpoint fix_group when List.length filtered_args <= 1 ->
-          let fix_lam_params, _ = Mlutil.collect_lams (Core.Recursion.Group.selected_member fix_group).body in
+          let fix_lam_params, _ = Core_util.collect_lams (Core.Recursion.Group.selected_member fix_group).body in
           let fix_value_params =
             List.filter
               (fun (_, ty) -> is_runtime_binder_type ty)
@@ -538,9 +541,9 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
             else
               let extra_cpp_params =
                 List.mapi
-                  (fun i (_, ml_ty) ->
+                  (fun i (_, core_ty) ->
                     let bare =
-                      cpp_of_ml env ml_ty
+                      cpp_of_core env core_ty
                     in
                     let param_ty : Cpp_ir.Lowered.Type.t =
                       match bare with
@@ -571,11 +574,10 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                 modify_last_return body_stmts ) )
         | _ -> (cpp_args, body_stmts)
       in
-      (* The return type annotation is left as [None]; loopify's
-         [infer_saved_type] infers it from the body when computing frame
-         struct field types.  Annotating here caused regressions for inner
-         lambdas whose bodies return further closures (the inferred type
-         became [std::function<...>] instead of the plain return type). *)
+      (* The return type annotation is left as [None], for C++ to deduce.
+         Annotating here caused regressions for inner lambdas whose bodies
+         return further closures (the inferred type became
+         [std::function<...>] instead of the plain return type). *)
       let body_stmts =
         match carrier with
         | None -> body_stmts
@@ -622,7 +624,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       let branch_join =
         if not dropped_type_binder then None
         else
-          match List.map (cpp_of_ml env) (leaf_rtys a) with
+          match List.map (cpp_of_core env) (leaf_rtys a) with
           | t :: (_ :: _ as rest) ->
             let j = List.fold_left join t rest in
             if Cpp_ir.Types.prints_as_any j || not (names_only_scoped_tvars j) then None
@@ -671,24 +673,24 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
     (* All lambda params are dummy (type abstractions). Skip the lambda
        wrapper and generate the body expression directly. However, when the
        body is a reference to a template function (detectable by having
-       Core.Type.Erased-typed leading params in its ML type), we must wrap it in a
+       Core.Type.Erased-typed leading params in its Core type), we must wrap it in a
        generic forwarding lambda — C++ cannot pass overloaded or template
        function names as first-class values. *)
     ( match a with
     | Core.Expr.Global ({callee = r; _} as use) ->
-      let tys_inner = Mlutil.written_type_args use in
-      let ml_ty =
-        match callee_ml_type r with
+      let tys_inner = Core_util.written_type_args use in
+      let core_ty =
+        match callee_core_type r with
         | Some ty -> ty
         | None -> Core.Type.Unknown
       in
       let has_dummy_prefix t =
-        match ml_domains t with d :: _ -> erased_by_extraction d | [] -> false
+        match core_domains t with d :: _ -> erased_by_extraction d | [] -> false
       in
-      let non_dummy_param_tys = ml_value_domains ml_ty in
+      let non_dummy_param_tys = core_value_domains core_ty in
       (* A callee taking no value parameter -- [base (A : Type) : nat] -- is
          a value, declared as one: nothing to forward. *)
-      if has_dummy_prefix ml_ty && non_dummy_param_tys <> [] then
+      if has_dummy_prefix core_ty && non_dummy_param_tys <> [] then
         (* The function is a template that had type-level leading params. We
            need a forwarding lambda because C++ can't pass template function
            names as first-class values.
@@ -709,12 +711,12 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         else
         let arg_ids = List.init n field_param_id in
         let arg_vars = List.map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) arg_ids in
-        (* Collect all tvars from the ML type *)
+        (* Collect all tvars from the Core type *)
         let all_tvars_set =
           List.fold_left
             collect_tvars_set
             IntSet.empty
-            (non_dummy_param_tys @ [ml_ty])
+            (non_dummy_param_tys @ [core_ty])
         in
         let all_tvars = IntSet.elements all_tvars_set in
         (* Tvars deducible from non-function value params *)
@@ -741,14 +743,14 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         let local_tvars =
           List.init (List.fold_left max 0 all_tvars) (fun k -> local_tvar (k + 1))
         in
-        let local_ty ty = template_arg_of_ml_type ~site:Through_tvar env local_tvars ty in
+        let local_ty ty = template_arg_of_core_type ~site:Through_tvar env local_tvars ty in
         let local_var j : Cpp_ir.Lowered.Type.t = Variable (Index (j, Some (local_tvar j))) in
         (* A forwarding parameter, and the argument that forwards it. *)
         let forwarding : Cpp_ir.Lowered.Type.t = Reference (Forwarding, Auto) in
         let forward (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t = Forward (Type_of x, x) in
         (* What the callee returns once given its value arguments, in the
            lambda's own variables. *)
-        let result_ml = Ml_type_util.ml_drop_arrows n ml_ty in
+        let result_core = Type_util.core_drop_arrows n core_ty in
         (* The lambda returns what the call does: its type where every
            variable in it is named, [decltype(auto)] -- the call's own
            answer -- where one is not. *)
@@ -756,7 +758,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let ret : Cpp_ir.Lowered.Type.t =
             match ret with
             | Some t
-              when (not (Ml_type_util.has_unnamed_tvar t)) && not (Cpp_ir.Types.prints_as_any t)
+              when (not (Type_util.has_unnamed_tvar t)) && not (Cpp_ir.Types.prints_as_any t)
               ->
               t
             | _ -> Decltype_auto
@@ -799,7 +801,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let ret =
             Cpp_ir.Types.substitute
               (fun i -> if IntSet.mem i deducible_set then Some (local_var i) else Some invoke_result)
-              (local_ty result_ml)
+              (local_ty result_core)
           in
           lambda ~ret
             (List.map local_tvar deducible_tvars)
@@ -815,10 +817,10 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
              [interp] calling a named handler [h] with an event.  Every
              variable is then written as the box it is, and a parameter
              that mentions one is read at that erased type. *)
-          let own_index = Mlutil.Var_types.is_empty tys_inner && all_tvars <> [] in
+          let own_index = Core_util.Var_types.is_empty tys_inner && all_tvars <> [] in
           let at_own_index ty =
-            Ml_type_util.resolve_tvars_to_any
-              (cpp_ir_of_ml_type env [] ty)
+            Type_util.resolve_tvars_to_any
+              (cpp_ir_of_core_type env [] ty)
           in
           let mentions_tvar ty =
             not (IntSet.is_empty (collect_tvars_set IntSet.empty ty))
@@ -829,7 +831,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                 match ty with
                 | Core.Type.Arrow _ -> forwarding
                 | _ when IntSet.is_empty (spelled_tvars_of IntSet.empty ty) ->
-                  Reference (Lvalue, Const (cpp_ir_of_ml_type env [] ty))
+                  Reference (Lvalue, Const (cpp_ir_of_core_type env [] ty))
                 | _ when own_index -> Reference (Lvalue, Const Auto)
                 | _ -> forwarding )
               non_dummy_param_tys
@@ -849,8 +851,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let by_var =
             List.map
               (fun (v, ty) ->
-                (Scheme.Var.ordinal v, cpp_ir_of_ml_type env inner_tvars ty) )
-              (Mlutil.Var_types.bindings tys_inner)
+                (Scheme.Var.ordinal v, cpp_ir_of_core_type env inner_tvars ty) )
+              (Core_util.Var_types.bindings tys_inner)
           in
           (* An erased argument is left to deduction -- unless nothing can
              deduce it: [h : getE ~> itree noE] quantifies an index the
@@ -868,7 +870,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let ret =
             Cpp_ir.Types.substitute
               (fun i -> List.assoc_opt i by_var)
-              (cpp_ir_of_ml_type env [] result_ml)
+              (cpp_ir_of_core_type env [] result_core)
           in
           lambda ~ret [] params
             (Cpp_ir.Build.call (mk_cppglob r (written_at_variables r by_var)) fwd_args)
@@ -887,14 +889,14 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          continuations which expect std::function, not the result of
          calling the function. *)
       if (!tctx).input.itree_mode = Reified
-         && List.exists (fun (_, ty) -> ml_type_is_unit_or_void ty) lam_params then
+         && List.exists (fun (_, ty) -> core_type_is_unit_or_void ty) lam_params then
         f
       else
         Cpp_ir.Build.call f [] )
   | _ ->
-    let ml_arity =
-      match slot.expected_ml_ty with
-      | Some ty -> count_ml_value_arrows ty
+    let core_arity =
+      match slot.expected_core_ty with
+      | Some ty -> count_core_value_arrows ty
       | None -> 0
     in
     (* Whether any branch of the lambda's own body returns a closure.  Only
@@ -917,4 +919,4 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         !found
       | _ -> false
     in
-    eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda ~arity:(List.length filtered_args) f )
+    eta_expand_to_expected ?expected_ty ~core_arity ~returns_a_lambda ~arity:(List.length filtered_args) f )

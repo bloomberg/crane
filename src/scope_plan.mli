@@ -2,11 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The scopes a definition written outside its struct's body is a member of,
-    part of the {!Target_plan}: for each module the unit emits as a struct, how a definition of one of its members, written
-    out of line, names that struct.  Planned from the layout and the names
-    before anything is rendered ({!Cpp.plan_scopes}), bound for the unit
-    ({!with_plan}), and read by declaration: where a definition goes is a question about the
-    definition, not about where a printer happens to be. *)
+    part of the {!Target_plan}: for each module the unit emits as a struct, how
+    a definition of one of its members, written out of line, names that struct.
+    Planned from the layout and the names before anything is rendered
+    ({!Cpp.plan_scopes}), bound for the unit ({!with_plan}), and read by
+    declaration: where a definition goes is a question about the definition, not
+    about where a printer happens to be. *)
 
 open Names
 

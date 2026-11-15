@@ -27,7 +27,7 @@ let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
                           type_arguments = args; _} when abbreviations && not (Table.is_custom r) -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some t -> value_inductive ~abbreviations (Mlutil.type_subst_list args t)
+    | Some t -> value_inductive ~abbreviations (Core_util.type_subst_list args t)
     | None -> false )
   | Core.Type.Meta {contents = Some t} -> value_inductive ~abbreviations t
   | _ -> false
@@ -133,11 +133,13 @@ let unpointable ~pointer_fields ~in_place ~pointed (l : Term.loop) =
     | Let b -> walk (copied (kind ~in_place env b.value) :: env) b.body
     | Match m ->
       let k = kind ~in_place env m.scrutinee in
-      List.iter (fun (b : Term.branch) -> walk (branch_binders ~pointer_fields m.scrutinee_type k b @ env) b.body) m.branches
+      List.iter
+        (fun (b : Term.branch) -> walk (branch_binders ~pointer_fields m.scrutinee_type k b @ env) b.body) m.branches
     | Return _ -> ()
     | Continue c | Continue_into {next = c; _} ->
       List.iteri
-        (fun i a -> if not (pointable (kind ~in_place env a)) && not (mem (c.target, i) !bad) then bad := (c.target, i) :: !bad)
+        (fun i a -> if not (pointable (kind ~in_place env a)) && not (mem (c.target, i) !bad) then
+          bad := (c.target, i) :: !bad)
         c.arguments
     | Resume r ->
       walk env r.value;
@@ -146,7 +148,8 @@ let unpointable ~pointer_fields ~in_place ~pointed (l : Term.loop) =
       walk (Option.cata (fun _ -> [Fresh]) [] e.name @ env) e.scope;
       (* The entered body runs from frames: what it reads of the scope was
          kept in them. *)
-      walk (List.rev (params e.entered) @ List.init (named e.entered) (fun _ -> Fresh) @ List.map kept env) e.entered.body
+      walk
+        (List.rev (params e.entered) @ List.init (named e.entered) (fun _ -> Fresh) @ List.map kept env) e.entered.body
   in
   walk (List.rev (params l)) l.body;
   !bad
@@ -173,7 +176,8 @@ let plan ~pointer_fields ~in_place ~holdable (l : Term.loop) =
   let levels = entered_levels l in
   (* What a frame cannot hold by pointer is held by value from the start. *)
   let unholdable =
-    List.filter_map (fun i -> if holdable (Own i) then None else Some (l.loop, i)) (List.init (List.length l.parameters) Fun.id)
+    List.filter_map (fun i -> if holdable (Own i) then None else Some (l.loop, i))
+      (List.init (List.length l.parameters) Fun.id)
     @ List.filter_map
         (fun (((loop : Term.loop), index), level) ->
           if holdable (Entered {loop; index; level}) then None else Some (loop.loop, index) )

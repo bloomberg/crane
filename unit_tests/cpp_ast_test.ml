@@ -58,24 +58,29 @@ let unit_of ?(prologue = []) ?(wrapper_bodies = []) sections =
 
 (* The text, without whitespace: breaks and separators are formatting. *)
 let text ?(templates = []) ?(forwards = []) sections =
-  let doc = Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates ~forwards (unit_of ~prologue:[Cpp_ast.text (Pp.str "P")] sections)) in
+  let doc =
+    Cpp_ast.print ~write:(fun _ _ -> Pp.str "?")
+      (Cpp_ast.schedule ~templates ~forwards (unit_of ~prologue:[Cpp_ast.text (Pp.str "P")] sections)) in
   String.to_seq (Pp.string_of_ppcmds doc)
   |> Seq.filter (fun c -> not (List.mem c [' '; '\n'; '\t']))
   |> String.of_seq
 
 let top = Cpp_ast.top_level
-let struct_named ?(layout = Cpp_ast.Block) name = Cpp_ast.Struct {head = {template = []; name = Named name; base = None}; layout}
+let struct_named ?(layout = Cpp_ast.Block) name = Cpp_ast.Struct
+  {head = {template = []; name = Named name; base = None}; layout}
 
 let () =
   let unit = [top (Cpp_ast.text (Pp.str "a")); top (leaf ~templates:["T"] "b"); top (leaf ~templates:["T"] "c")] in
   check_text "a template goes in front of the first chunk writing it" (text ~templates:[template "T"] unit) "Pa<T>bc";
   check_text "a template nothing writes is declared nowhere" (text ~templates:[template "U"] unit) "Pabc";
-  let nested = [top (Cpp_ast.seq [Cpp_ast.text (Pp.str "s{"); top (leaf ~templates:["T"] "x"); Cpp_ast.text (Pp.str "}")])] in
+  let nested =
+    [top (Cpp_ast.seq [Cpp_ast.text (Pp.str "s{"); top (leaf ~templates:["T"] "x"); Cpp_ast.text (Pp.str "}")])] in
   check_text "a template goes in front of the innermost chunk" (text ~templates:[template "T"] nested) "Ps{<T>x}";
   let struct_ = struct_named "M" in
   let body = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y"); Cpp_ast.empty; leaf ~templates:["T"] "z"] in
   let homed = [top (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.text (Pp.str "f")) body)] in
-  check_text "a homed template goes in front of the member writing it" (text ~templates:[template ~homed:true "T"] homed) "PstructM{fy<T>z};";
+  check_text "a homed template goes in front of the member writing it"
+    (text ~templates:[template ~homed:true "T"] homed) "PstructM{fy<T>z};";
   let inner = ModPath.MPdot (m, Label.make "N") in
   let nested =
     Cpp_ast.module_ struct_
@@ -94,7 +99,8 @@ let () =
       (Cpp_ast.module_body mp [leaf ~templates:["T"] "u"; leaf ~templates:["T"] "v"])
   in
   check_text "a homed template goes in front of the first member writing it in each module struct"
-    (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [sibling "A"; sibling "B"])]) "PstructA{<T>uv};structB{<T>uv};";
+    (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [sibling "A"; sibling "B"])])
+      "PstructA{<T>uv};structB{<T>uv};";
   let out_of_line name =
     Cpp_ast.module_ Out_of_line
       (Cpp_ast.module_body (ModPath.MPdot (m, Label.make name)) [leaf ~templates:["T"] (name ^ "u")])
@@ -103,17 +109,21 @@ let () =
     (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [out_of_line "A"; out_of_line "B"])]) "P<T>AuBu";
   check_text "an unhomed template is declared once"
     (text ~templates:[template "T"] [top (sibling "A"); top (sibling "B")]) "P<T>structA{uv};structB{uv};";
-  check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>structM{fyz};";
+  check_text "an unhomed template written in a member goes at namespace scope"
+    (text ~templates:[template "T"] homed) "P<T>structM{fyz};";
   check_text "a homed template goes in front of its home's member defined out of line"
     (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.module_ Out_of_line body)]) "Py<T>z";
-  check "a struct with no members is written" (not (Cpp_ast.is_empty (Cpp_ast.module_ struct_ (Cpp_ast.module_body m []))));
+  check "a struct with no members is written"
+    (not (Cpp_ast.is_empty (Cpp_ast.module_ struct_ (Cpp_ast.module_body m []))));
   check "a body with no members and no struct writes nothing"
     (Cpp_ast.is_empty (Cpp_ast.module_ In_enclosing_scope (Cpp_ast.module_body m [Cpp_ast.empty])));
   let documented =
     Cpp_ast.module_ In_enclosing_scope
       (Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;"); leaf ~templates:["T"] "/// z"])
   in
-  let printed = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[]
+  let printed =
+    Pp.string_of_ppcmds
+      (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[]
     (unit_of [documented]))) in
   check_text "a member opening with a doc comment follows a newline, whatever is due in front of it"
     (String.sub printed 0 6) "y;\n<T>";
@@ -121,9 +131,13 @@ let () =
         ~templates:[template "A"; template ~holder:true "H"; template "B"]
         [top (leaf ~templates:["B"; "A"; "H"] "d")]) "P<H><A><B>d";
   let fwd = [top (leaf ~names:["S"] "e"); top (leaf ~names:["S"] ~defines:["S"] "f")] in
-  check_text "a forward declaration goes in front of the first chunk naming its struct" (text ~forwards:[forward "S"] fwd) "Pfwd:Sef";
-  check_text "no forward declaration is due where the first chunk naming the struct defines it" (text ~forwards:[forward "S"] (List.rev fwd)) "Pfe";
-  check_text "forward declarations go in front of templates" (text ~templates:[template "T"] ~forwards:[forward "S"] [top (leaf ~templates:["T"] ~names:["S"] "g")]) "Pfwd:S<T>g";
+  check_text "a forward declaration goes in front of the first chunk naming its struct"
+    (text ~forwards:[forward "S"] fwd) "Pfwd:Sef";
+  check_text "no forward declaration is due where the first chunk naming the struct defines it"
+    (text ~forwards:[forward "S"] (List.rev fwd)) "Pfe";
+  check_text "forward declarations go in front of templates"
+    (text ~templates:[template "T"] ~forwards:[forward "S"] [top (leaf ~templates:["T"] ~names:["S"] "g")])
+      "Pfwd:S<T>g";
   let raw t = Pp.string_of_ppcmds (Cpp_ast.to_pp t) in
   let one = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;")] in
   check_text "a struct closes its members on a line of its own"
@@ -176,7 +190,8 @@ let () =
     in
     String.of_seq
       (Seq.filter (fun c -> not (List.mem c [' '; '\n']))
-         (String.to_seq (Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates:[] ~forwards (unit_of sections))))))
+         (String.to_seq
+           (Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates:[] ~forwards (unit_of sections))))))
   in
   check_text "a declaration not yet printed is spelled as an element of the module of the group around it"
     (spelled [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
@@ -193,7 +208,8 @@ let () =
     (spelled
        [ top
            (Cpp_ast.elements ~source:m
-              (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.elements ~source:m (fields ())) (Cpp_ast.module_body inner [unprinted ()])) ) ])
+              (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.elements ~source:m (fields ()))
+                (Cpp_ast.module_body inner [unprinted ()])) ) ])
     "struct M {\nE(F.M)M(F.M.N)\n};";
   check_text "a homed template a struct's fields write goes in front of the member holding the struct"
     (text ~templates:[template ~homed:true "T"]
@@ -206,7 +222,8 @@ let () =
                      ~fields:(Cpp_ast.elements ~source:m (fields ~templates:["T"] ()))
                      (Cpp_ast.module_body inner [leaf "w"]) ]) ) ])
     "PstructM{y<T>structN{?w};};";
-  let forward_leaf s = Cpp_ast.elements ~source:inner (Cpp_ast.forward_declaration (Common.empty_env ()) (Defined_enum (ref_of s))) in
+  let forward_leaf s =
+    Cpp_ast.elements ~source:inner (Cpp_ast.forward_declaration (Common.empty_env ()) (Defined_enum (ref_of s))) in
   check_text "a forward declaration in the prologue is printed as the tree spells it"
     (Pp.string_of_ppcmds
        (Cpp_ast.print ~write:(fun spelling _ -> Pp.str ("fwd " ^ spelling_text spelling))
@@ -218,7 +235,8 @@ let () =
        [top (leaf ~names:["S"] "e")])
     "fwdE(F.M.N)e";
   let synthesised declared_in =
-    Cpp_ast.synthesised_template ~tyctors:[] {name = "S"; holder = None; declared_in; body = Cpp_ir.Type.Any; vars = []; planned = ""}
+    Cpp_ast.synthesised_template ~tyctors:[]
+      {name = "S"; holder = None; declared_in; body = Cpp_ir.Type.Any; vars = []; planned = ""}
   in
   check_text "a synthesised template is spelled as declared in its home, wherever it is placed"
     (spelled ~templates:[{(template "S") with declaration = synthesised (In_struct_of inner)}]
@@ -243,7 +261,8 @@ let () =
   in
   check_text "a joined declaration printed opening a doc comment follows a newline" (joined_as "/// d") "x;\n/// d";
   check "any other joined declaration follows a break"
-    (let s = joined_as "d" in String.starts_with ~prefix:"x;" s && String.ends_with ~suffix:"d" s && not (String.contains s '\n'));
+    (let s = joined_as "d" in
+      String.starts_with ~prefix:"x;" s && String.ends_with ~suffix:"d" s && not (String.contains s '\n'));
   check "nothing joined is nothing" (Cpp_ast.is_empty (Cpp_ast.joined [Cpp_ast.empty; Cpp_ast.empty]));
   check_text "one thing joined is that thing" (raw (Cpp_ast.joined [Cpp_ast.empty; leaf "x;"])) "x;";
   let t s = Cpp_ast.text (Pp.str s) in
@@ -259,12 +278,16 @@ let () =
       deferred_members = [t "m"];
       wrapper_bodies = [] }
   in
-  let printed u = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[] ~forwards:[] u)) in
+  let printed u =
+    Pp.string_of_ppcmds
+      (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[] ~forwards:[] u)) in
   let squeezed u = String.of_seq (Seq.filter (fun c -> not (List.mem c [' '; '\n'])) (String.to_seq (printed u))) in
   check_text "a unit writes its forward declarations, then its sections in order, skipping empty groups"
     (squeezed full) "f1f2e1e2pc1c2hbd1d2m";
   check "erased aliases are separated by a line break"
-    (let s = printed {full with forward_declarations = []; concept_prerequisites = []; concepts = []; hoisted_structs = []; body = Cpp_ast.empty;
+    (let s = printed
+      {full with forward_declarations = []; concept_prerequisites = []; concepts = []; hoisted_structs = [];
+        body = Cpp_ast.empty;
                      deferred_definitions = []; deferred_members = []} in
      String.starts_with ~prefix:"e1\ne2" s);
   check "a unit with nothing in it writes nothing" (printed (unit_of []) = "");
@@ -275,22 +298,27 @@ let () =
   check "no concepts are no group" (Cpp_ast.is_empty (Cpp_ast.concept_group After_struct []));
   let wrapper = Cpp_ast.wrapper_struct ~name:"W" ~module_:inner ~fields:(t "f;") in
   let filled bodies = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?")
-      (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[] (unit_of ~wrapper_bodies:bodies [top wrapper]))) in
+      (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[]
+        (unit_of ~wrapper_bodies:bodies [top wrapper]))) in
   check_text "a wrapper struct is filled in with its module's body, after its own members"
     (filled [("W", Cpp_ast.module_body inner [t "y;"; leaf ~templates:["T"] "z;"])])
     "struct W {\nf;y;<T>z;\n};";
   let refused_fill bodies = match filled bodies with exception Invalid_argument _ -> true | _ -> false in
   check "a wrapper struct with no body is refused" (refused_fill []);
-  check "a wrapper struct given another module's body is refused" (refused_fill [("W", Cpp_ast.module_body m [t "y;"])]);
+  check "a wrapper struct given another module's body is refused"
+    (refused_fill [("W", Cpp_ast.module_body m [t "y;"])]);
   check "a wrapper struct is a struct its module declares"
     (match Cpp_ast.declared wrapper with [Struct_of mp] -> ModPath.equal mp inner | _ -> false);
   check "the wrapper structs of a tree are listed in the order written"
-    (Cpp_ast.wrapper_structs (Cpp_ast.seq [wrapper; top (Cpp_ast.wrapper_struct ~name:"V" ~module_:m ~fields:Cpp_ast.empty)]) = ["W"; "V"]);
+    (Cpp_ast.wrapper_structs
+      (Cpp_ast.seq [wrapper; top (Cpp_ast.wrapper_struct ~name:"V" ~module_:m ~fields:Cpp_ast.empty)]) = ["W"; "V"]);
   check "a wrapper struct not filled in is not printed"
     (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
   let ref_text = function GlobRef.VarRef id -> Id.to_string id | _ -> "?" in
   let resolve spelling (frame : Cpp_resolution.frame) (key : Cpp_resolution.key) =
-    let named what = Cpp_resolution.Name (Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'')) in
+    let named what =
+      Cpp_resolution.Name
+        (Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'')) in
     match key with
     | Module mp -> named (ModPath.to_string mp)
     | Module_declared mp -> named ("declared " ^ ModPath.to_string mp)
@@ -307,9 +335,11 @@ let () =
   let resolved_text sections =
     let write spelling (u : Cpp_ast.unprinted) =
       match u.declaration with
-      | Module_alias {target = Module_named {name = Resolved n; _}; _} -> Pp.str (spelling_text spelling ^ "=" ^ Cpp_name.to_string n)
+      | Module_alias {target = Module_named {name = Resolved n; _}; _} ->
+        Pp.str (spelling_text spelling ^ "=" ^ Cpp_name.to_string n)
       | Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "unresolved"
-      | Assertion {concept = Of_class {name = Resolved c; _}; subject = Instance {instance = {name = Resolved i; _}; _}} ->
+      | Assertion
+        {concept = Of_class {name = Resolved c; _}; subject = Instance {instance = {name = Resolved i; _}; _}} ->
         Pp.str (Cpp_name.to_string c ^ "<" ^ Cpp_name.to_string i ^ ">")
       | Modtype_concept _ ->
         let at frame =
@@ -321,10 +351,13 @@ let () =
         Pp.str (at [] ^ " " ^ at [signature] ^ " " ^ at [signature; signature])
       | _ -> Pp.str (spelling_text spelling)
     in
-    Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~requested ~resolve ~resolve_head:resolve (Cpp_ast.seq sections)))
+    Pp.string_of_ppcmds
+      (Cpp_ast.print_tree ~write
+        (Cpp_ast.resolve_tree ~requested ~resolve ~resolve_head:resolve (Cpp_ast.seq sections)))
   in
   (let r = ref_of "t" in
-   let head : Cpp_resolution.head = {outer = [Cpp_name.Class "S"]; head = Cpp_name.unqualified "t"; typename = false; templated = true} in
+   let head : Cpp_resolution.head =
+     {outer = [Cpp_name.Class "S"]; head = Cpp_name.unqualified "t"; typename = false; templated = true} in
    let table =
      Cpp_resolution.resolve
        (fun _ key -> match key with Type_head _ -> Head head | _ -> Name (Cpp_name.unqualified "n"))
@@ -348,7 +381,8 @@ let () =
     (Pp.string_of_ppcmds
        (Cpp_ast.print_tree
           ~write:(fun _ (u : Cpp_ast.unprinted) ->
-            match u.declaration with Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "u" | _ -> Pp.str "r")
+            match u.declaration with Module_alias {target = Module_named {name = Unresolved; _}; _} ->
+              Pp.str "u" | _ -> Pp.str "r")
           (Cpp_ast.elements ~source:m alias) ))
     "u";
   let functor_struct =
@@ -356,7 +390,8 @@ let () =
       (Struct
          { head =
              { template =
-                 [ Constrained {concept = Cpp_ast.concept_ref m; args = [Cpp_ast.module_ref m]; param = Cpp_ast.module_ref inner};
+                 [ Constrained
+                   {concept = Cpp_ast.concept_ref m; args = [Cpp_ast.module_ref m]; param = Cpp_ast.module_ref inner};
                    Typename (Type_variable (Id.of_string "T")) ];
                name = Module_struct (Cpp_ast.declared_module inner);
                base = None };
@@ -373,7 +408,8 @@ let () =
   let var s = GlobRef.VarRef (Id.of_string s) in
   let assertion =
     Cpp_ast.assertion
-      {concept = Of_class (Cpp_ast.global_ref (var "C")); subject = Instance {instance = Cpp_ast.global_ref (var "I"); args = []}}
+      {concept = Of_class (Cpp_ast.global_ref (var "C"));
+        subject = Instance {instance = Cpp_ast.global_ref (var "I"); args = []}}
   in
   check_text "the class concept and the instance an assertion names are resolved where it is written"
     (resolved_text [top (Cpp_ast.elements ~source:m assertion)])
@@ -419,6 +455,7 @@ let () =
   check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.rc_scope = None);
   let o = Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) start in
   check "a function defined outside every struct body is a member of the scope its frame carries"
-    (match o.rc_scope with Some {ol_scope; _} -> Scope_plan.equal ol_scope {module_ = m; qualifier = ["M"]} | None -> false);
+    (match o.rc_scope with Some {ol_scope; _} ->
+      Scope_plan.equal ol_scope {module_ = m; qualifier = ["M"]} | None -> false);
   check "entering scopes one after another is entering each in turn"
     (Cpp_names.entering_from start [In_struct; In_template] Fun.id = t)

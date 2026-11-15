@@ -69,7 +69,7 @@ let holes t = List.filter (is_hole t) (vars t)
 
 (* The last variable known or written unreadably. *)
 let last_spoken t =
-  Mlutil.last_var
+  Core_util.last_var
     (List.filter_map
        (fun (v, s) ->
          match s with
@@ -140,7 +140,7 @@ let resolved_from e t =
     t.slots
 
 let by_variable t =
-  Mlutil.Var_types.through (last_spoken t) (fun v ->
+  Core_util.Var_types.through (last_spoken t) (fun v ->
       match slot t v with
       | Known (ty, _) -> ty
       | Unreadable | Unwritten -> Core.Type.Erased Core.Erasure_reason.Type_argument )

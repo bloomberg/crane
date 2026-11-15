@@ -48,8 +48,8 @@ let on_list ?(result = lst) scrutinee body =
                                                occurrence = Core.Occurrence.fresh ()})};
           { binders = [(id "x", nat); (id "xs", lst)];
             result_type = result;
-            pattern = Core.Pattern.Constructor {constructor = cons;
-                                                fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
+            pattern = Core.Pattern.Constructor
+              {constructor = cons; fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
             body } ] }
 
 let cells_read_first (s : Reuse_cursor.step) =
@@ -62,13 +62,16 @@ let steps_of = function
 
 let releases = function
   | Some (c : Reuse_cursor.t) ->
-    List.filter_map (fun (s : Reuse_cursor.step) -> match s.action with Release -> Some s.turn | Recycle _ -> None) c.steps
+    List.filter_map
+      (fun (s : Reuse_cursor.step) -> match s.action with Release -> Some s.turn | Recycle _ -> None) c.steps
   | None -> []
 
 let () =
   (* map: cons (g x) (f xs) walks [l] on to its tail, reading nothing first. *)
   let o = Core.Occurrence.fresh () in
-  let map = on_list (Core.Expr.fresh_rel 1) (Continue_into {cells = [cell [app "g" [Core.Expr.fresh_rel 2]]]; next = continue_ o [Core.Expr.fresh_rel 1]}) in
+  let map =
+    on_list (Core.Expr.fresh_rel 1)
+      (Continue_into {cells = [cell [app "g" [Core.Expr.fresh_rel 2]]]; next = continue_ o [Core.Expr.fresh_rel 1]}) in
   ( match plan map with
   | Some c ->
     check "map walks its one parameter" (c.parameter = 0);
@@ -77,7 +80,10 @@ let () =
 
   (* suffix_sums: cons (sum l) (f xs) reads the list whole after the steal. *)
   let o = Core.Occurrence.fresh () in
-  let whole = on_list (Core.Expr.fresh_rel 1) (Continue_into {cells = [cell [app "sum" [Core.Expr.fresh_rel 3]]]; next = continue_ o [Core.Expr.fresh_rel 1]}) in
+  let whole =
+    on_list (Core.Expr.fresh_rel 1)
+      (Continue_into
+        {cells = [cell [app "sum" [Core.Expr.fresh_rel 3]]]; next = continue_ o [Core.Expr.fresh_rel 1]}) in
   check "the outermost cell reads the walked list first" (steps_of (plan whole) = [(o, [(0, 0)], [])]);
 
   (* let s = sum l in cons s (f xs): the let is evaluated where it stands,
@@ -101,7 +107,9 @@ let () =
   (* let s = fun _ => sum l in cons (s x) (f xs): the closure reads the list
      when it is called, after the steal. *)
   let o, closure =
-    under_let ~ty:(Core.Type.Arrow {parameter = nat; result = nat}) (Core.Expr.Lambda {parameter = id "_"; parameter_type = nat; body = app "sum" [Core.Expr.fresh_rel 4]}) (Core.Expr.Apply {callee = Core.Expr.fresh_rel 1; arguments = [Core.Expr.fresh_rel 3]})
+    under_let ~ty:(Core.Type.Arrow {parameter = nat; result = nat})
+      (Core.Expr.Lambda {parameter = id "_"; parameter_type = nat; body = app "sum" [Core.Expr.fresh_rel 4]})
+        (Core.Expr.Apply {callee = Core.Expr.fresh_rel 1; arguments = [Core.Expr.fresh_rel 3]})
   in
   check "a let holding a closure reads what it captures later" (steps_of (plan closure) = [(o, [(0, 0)], [])]);
 
@@ -110,7 +118,9 @@ let () =
   let o = Core.Occurrence.fresh () in
   let stutter =
     on_list (Core.Expr.fresh_rel 1)
-      (Continue_into {cells = [cell [app "S" [Core.Expr.fresh_rel 2]]; cell [Core.Expr.fresh_rel 2]]; next = continue_ o [Core.Expr.fresh_rel 1]})
+      (Continue_into
+        {cells = [cell [app "S" [Core.Expr.fresh_rel 2]]; cell [Core.Expr.fresh_rel 2]];
+          next = continue_ o [Core.Expr.fresh_rel 1]})
   in
   check "an inner cell reads the rebuilt cell first" (steps_of (plan stutter) = [(o, [(1, 0)], [])]);
 
@@ -175,13 +185,16 @@ let () =
                { binders = [];
                  result_type = lst;
                  pattern = Core.Pattern.Wildcard;
-                 body = Continue (continue_ skipped [app "add" [Core.Expr.fresh_rel 4; Core.Expr.fresh_rel 2]; Core.Expr.fresh_rel 1]) } ] })
+                 body = Continue
+                   (continue_ skipped
+                     [app "add" [Core.Expr.fresh_rel 4; Core.Expr.fresh_rel 2]; Core.Expr.fresh_rel 1]) } ] })
   in
   check "a released cell's element is read first"
     (steps_of (plan ~parameters:[(id "acc", nat); (id "l", lst)] count_skip) = [(kept, [], []); (skipped, [], [0])]);
 
   (* drop_all: every turn walking on builds nothing -- nothing to recycle. *)
-  let drop_all = on_list (Core.Expr.fresh_rel 1) (Continue (continue_ (Core.Occurrence.fresh ()) [Core.Expr.fresh_rel 1])) in
+  let drop_all =
+    on_list (Core.Expr.fresh_rel 1) (Continue (continue_ (Core.Occurrence.fresh ()) [Core.Expr.fresh_rel 1])) in
   check "a loop recycling nothing has no cursor" (plan drop_all = None);
 
   (* swap: two cells a turn walks on to a field of the second cell. *)
@@ -220,7 +233,8 @@ let () =
                  body = Continue_into {cells = [cell [Core.Expr.fresh_rel 2]];
                                        next = continue_ (Core.Occurrence.fresh ()) [Core.Expr.fresh_rel 3]} } ] })
   in
-  check "a turn passing the walked list on as it is takes no step" (List.map (fun (t, _, _) -> t) (steps_of (plan kept)) = [o]);
+  check "a turn passing the walked list on as it is takes no step"
+    (List.map (fun (t, _, _) -> t) (steps_of (plan kept)) = [o]);
 
   (* Two parameters each walked on: no one cursor. *)
   let both =

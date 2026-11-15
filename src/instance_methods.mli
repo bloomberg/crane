@@ -84,13 +84,13 @@ val subst_promoted_tvars : instance -> Core.Type.t -> Core.Type.t
 
 (** One method of an instance, elaborated. *)
 type method_ = {
-  field_ml_ty : Core.Type.t;
+  field_core_ty : Core.Type.t;
       (** The field's type with the method's own quantifier recovered, its
           variables numbered past every variable of the instance. *)
   subst_args : Core.Type.t list;
       (** The class arguments substituted into it, a higher-kinded carrier's
           eta-expanded arguments taken off. *)
-  subst_ty : Core.Type.t;  (** {!field_ml_ty} at {!subst_args}. *)
+  subst_ty : Core.Type.t;  (** {!field_core_ty} at {!subst_args}. *)
   n_method_tvars : int;  (** How many variables the method quantifies itself. *)
   declared_arity : int;  (** How many value arrows the class declared it at. *)
   body : Core.Expr.t;
@@ -103,11 +103,11 @@ type method_ = {
     result. *)
 val args_and_ret : method_ -> Core.Type.t list * Core.Type.t
 
-(** {!args_and_ret} of {!method_.field_ml_ty}, the class's own statement. *)
+(** {!args_and_ret} of {!method_.field_core_ty}, the class's own statement. *)
 val declared_args_and_ret : method_ -> Core.Type.t list * Core.Type.t
 
-(** [prepare_method inst method_ref field_ml_ty field_body] -- the method
-    [method_ref] of [inst], declared by the class at [field_ml_ty], whose field
+(** [prepare_method inst method_ref field_core_ty field_body] -- the method
+    [method_ref] of [inst], declared by the class at [field_core_ty], whose field
     the instance's record fills with [field_body].  With [freshen] (the
     default) the body's open annotations are given identities of their own,
     which each generation of the method needs. *)

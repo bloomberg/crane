@@ -1,15 +1,23 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Local functions: a local fixpoint as a loop, a Y-combinator closure or
-    a by-reference group ({!gen_fix}), and a let-bound lambda or fixpoint
-    lifted out of the body as a helper declaration. *)
+(** Lowering of local functions to CppIR: a local fixpoint declared in
+    place as a loop ({!local_fix_stmts}), a Y-combinator closure
+    ({!gen_local_fix_ycomb}) or a by-reference group
+    ({!gen_local_fix_by_ref}), each member's body lowered by {!gen_fix};
+    and a let-bound lambda or fixpoint lifted out of the body as a helper
+    declaration ({!gen_let_lambda}, {!gen_let_fix}, {!gen_applied_fix}).
+
+    Sits between {!Translation_effects} and {!Translation_stmts} in the
+    chain of lowering modules; its entry points are called from
+    {!Translation_stmts.gen_stmts}, and it lowers the bodies it declares by
+    calling back up through {!Translation_knot}. *)
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
@@ -17,14 +25,14 @@ open Translation_knot
 open Translation_lambda
 open Translation_application
 
-(* The binders of the local fixpoint [occ], as the source has them, each
+(** The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
    member's parameters, as [compiled], what {!gen_fix} made of each member,
    has them, and with them the Core binders of the locals of [env] the fixpoint
    [fix], generated under [env], reads, by name. *)
 let local_fix_binders env fix occ ids compiled =
   let read = ref [] in
-  Mlutil.ast_iter_rel_applied (fun n i _ -> if i > n then read := (i - n) :: !read) fix;
+  Core_util.ast_iter_rel_applied (fun n i _ -> if i > n then read := (i - n) :: !read) fix;
   let captured =
     List.filter_map
       (fun db ->
@@ -36,16 +44,18 @@ let local_fix_binders env fix occ ids compiled =
   List.mapi (fun j ((x, _), (_, _, _, params)) -> (x, (occ, j), params, captured))
     (List.combine (Array.to_list ids) compiled)
 
-(* The local fixpoint bound to [binder], the function [member] of a Core
+(** The local fixpoint bound to [binder], the function [member] of a Core
    fixpoint whose parameters stand for the Core binders [params] and that
    reads the locals [captured] stand for, in the declaration being
    generated, called [name] and encoded as [encoding]. *)
 let local_fixpoint ~name ~encoding (binder, member, _, captured) : Cpp_ir.Expr.Local_fixpoint.t option =
   Some {binder; name; member; captured; encoding}
 
+(** The Core binders of the parameters of a member of
+    {!local_fix_binders}. *)
 let fixpoint_parameters (_, _, params, _) = params
 
-(* The statements a local fixpoint is declared by: for a fixpoint of one
+(** The statements a local fixpoint is declared by: for a fixpoint of one
    member, its loop, lowered from its ControlIR, where it is one
    ({!Control_to_cpp_ir.local_loop}), and otherwise the Y-combinator
    [self_passing ()] -- the impl lambdas [impl_stmts], taking their
@@ -82,8 +92,10 @@ let local_fix_stmts selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowered.S
 let local_passing ~closures funs =
   let n_fix = Array.length funs in
   let member f =
-    let lam_ids, inner = Mlutil.collect_lams f in
-    let flags = if closures then [] else Escape.infer_owned_params ~callee_flags:settled_ownership (List.length lam_ids + n_fix) inner in
+    let lam_ids, inner = Core_util.collect_lams f in
+    let flags =
+      if closures then [] else
+        Escape.infer_owned_params ~callee_flags:settled_ownership (List.length lam_ids + n_fix) inner in
     (* [lam_ids] is innermost first, and the plan outermost first. *)
     List.rev
       (List.mapi
@@ -94,12 +106,12 @@ let local_passing ~closures funs =
   in
   Array.to_list (Array.map member funs)
 
-(* Record that the functions [binders] name pass their parameters as
+(** Record that the functions [binders] name pass their parameters as
    [passing] says, each the plan of the one at its position. *)
 let record_local_passing ~binders passing =
   List.iter2 (fun (_, member, _, _) t -> Ownership_ir.Local_passing.record member t) binders passing
 
-(* Record that the functions [binders] name hold their captures as
+(** Record that the functions [binders] name hold their captures as
    [captures] says, each the modes of the one at its position: what
    {!Move_check} holds their lambdas to. *)
 let record_local_captures ~binders captures =
@@ -110,8 +122,8 @@ let record_local_captures ~binders captures =
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.
 
-    Replaces the [shared_ptr<std::function>] pattern with a generic-lambda
-    self-passing pattern:
+    Uses a generic-lambda self-passing pattern rather than a
+    [shared_ptr<std::function>]:
     {v
       auto go_impl = [=](auto &_self, A... args) mutable -> R {
         ... _self(_self, args) ...
@@ -142,7 +154,7 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
   record_local_captures ~binders captures;
   let moved = List.map (moved_names env) captures in
   let ret_ty ty : Cpp_ir.Lowered.Type.t option =
-    match cpp_of_ml env ty with
+    match cpp_of_core env ty with
     | Function (_, t) ->
       ( match t with
       | Variable (Index (_, None)) -> None
@@ -150,7 +162,7 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
     | _ -> None
   in
   (* Create self-parameter IDs and impl IDs for each fixpoint. *)
-  let selves = local_fix_selves (cpp_of_ml env) renamed_ids funs_with_params in
+  let selves = local_fix_selves (cpp_of_core env) renamed_ids funs_with_params in
   let self_ids = List.map (fun s -> s.self_id) selves in
   let impl_ids =
     List.map
@@ -168,7 +180,7 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
         let orig_params =
           List.map
             (fun (id, ty) ->
-              (cpp_of_ml env ty, Some id))
+              (cpp_of_core env ty, Some id))
             args
         in
         Bind_variable
@@ -224,7 +236,7 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
         let orig_params =
           List.map
             (fun (id, ty) ->
-              (cpp_of_ml env ty, Some id))
+              (cpp_of_core env ty, Some id))
             args
         in
         (* The wrapper reads each parameter once, to forward it. *)
@@ -232,7 +244,8 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
           List.map (fun (id, ty) -> forwarded ~by_value:true ty (Local id)) args @ impl_vars_rev
         in
         let rty = ret_ty fty in
-        let call : Cpp_ir.Lowered.Expr.t = Call (Cpp_ir.Build.signature ~nargs:0 (), Local impl_id, List.rev fwd_args) in
+        let call : Cpp_ir.Lowered.Expr.t =
+          Call (Cpp_ir.Build.signature ~nargs:0 (), Local impl_id, List.rev fwd_args) in
         let wrapper_body : Cpp_ir.Lowered.Stmt.t list =
           match rty with
           | None -> [Expression call]
@@ -258,7 +271,8 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
   let wrapper_stmts =
     match List.rev (wrapper_stmts : Cpp_ir.Lowered.Stmt.t list) with
     | Bind_variable (id, d, Lambda l) :: rest ->
-      List.rev ((Bind_variable (id, d, Lambda {l with moved = List.sort Id.compare impl_ids}) : Cpp_ir.Lowered.Stmt.t) :: rest)
+      List.rev
+        ((Bind_variable (id, d, Lambda {l with moved = List.sort Id.compare impl_ids}) : Cpp_ir.Lowered.Stmt.t) :: rest)
     | _ -> wrapper_stmts
   in
   let deref_subst stmts = stmts in
@@ -275,7 +289,7 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
 
     Uses a Y-combinator pattern to avoid [std::function] type erasure
     overhead (heap allocation, virtual dispatch).  Parameters are passed
-    by value (same as the old pattern) to preserve move/mutation semantics.
+    by value to preserve move/mutation semantics.
 
     Generated C++:
     {v
@@ -287,21 +301,22 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
       };
     v}
 
-    @return [(decls, defs)] — declaration and definition statement lists.
+    @return [(decls, defs)], declaration and definition statement lists;
+    [defs] is empty.
     @see gen_local_fix_ycomb for the escaping-fixpoint alternative. *)
 let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_params =
   record_local_passing ~binders passing;
   record_local_captures ~binders captures;
   let owned_flags_per_fun = List.map owned_flags passing in
   let ret_ty ty : Cpp_ir.Lowered.Type.t option =
-    match cpp_of_ml env ty with
+    match cpp_of_core env ty with
     | Function (_, t) ->
       ( match t with
       | Variable (Index (_, None)) -> None
       | _ -> Some t )
     | _ -> None
   in
-  let selves = local_fix_selves (cpp_of_ml env) renamed_ids funs_with_params in
+  let selves = local_fix_selves (cpp_of_core env) renamed_ids funs_with_params in
   let self_ids = List.map (fun s -> s.self_id) selves in
   let impl_ids =
     List.map
@@ -319,7 +334,7 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
           List.map2
             (fun (id, ty) owned ->
               let cpp_ty =
-                cpp_of_ml env ty
+                cpp_of_core env ty
               in
               ( wrap_param_by_ownership ~is_owned:owned cpp_ty,
                 Some id ))
@@ -348,7 +363,7 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
           List.map2
             (fun (id, ty) owned ->
               let cpp_ty =
-                cpp_of_ml env ty
+                cpp_of_core env ty
               in
               ( wrap_param_by_ownership ~is_owned:owned cpp_ty,
                 Some id ))
@@ -362,7 +377,8 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
           @ impl_vars_rev
         in
         let rty = ret_ty fty in
-        let call : Cpp_ir.Lowered.Expr.t = Call (Cpp_ir.Build.signature ~nargs:0 (), Local _impl_id, List.rev fwd_args) in
+        let call : Cpp_ir.Lowered.Expr.t =
+          Call (Cpp_ir.Build.signature ~nargs:0 (), Local _impl_id, List.rev fwd_args) in
         let wrapper_body : Cpp_ir.Lowered.Stmt.t list =
           match rty with
           | None -> [Expression call]
@@ -386,14 +402,11 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
   let self_passing () = impl_stmts @ wrapper_stmts in
   (local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params, [])
 
-(* How the lambda of each function of the local fixpoint [fix] holds each
+(** How the lambda of each function of the local fixpoint [fix] holds each
    variable it captures, generated as closures or else [in_place]
    ({!Ownership_ir.captures_by_member}). *)
 let fix_captures ~in_place fix = Ownership_ir.captures_by_member ~in_place (!tctx).lexical.move_plan fix
 
-(* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
-   does whether [let _ : ty := a] binds the closure [a] to a local, which the
-   plan owns and moves. *)
 (** Report, under [CRANE_CHECK_IR], a let-bound lambda [what] that reached
     translation other than as it is generated: Core puts every one so
     before ({!Normalize.let_lambdas}), and translation only binds or lifts
@@ -402,6 +415,9 @@ let ungenerated_let_lambda what =
   if Probe.checking () then
     Probe.violation "let-bound lambda" Pp.(str "Core_phase.normalize left " ++ str what ++ str " to translation")
 
+(** Under [CRANE_CHECK_IR], the region's plan must have decided as translation
+    does whether [let _ : ty := a] binds the closure [a] to a local
+    ([local]), which the plan owns and moves; a violation otherwise. *)
 let check_closure_local ty a ~local =
   if Probe.checking () then
     match Ownership_ir.closure_local (!tctx).lexical.move_plan ty a with
@@ -413,7 +429,7 @@ let check_closure_local ty a ~local =
               (if local then "a local" else "no local") ) )
     | _ -> ()
 
-(* Under [CRANE_CHECK_IR], the local fixpoint [name], whose group Core takes
+(** Under [CRANE_CHECK_IR], the local fixpoint [name], whose group Core takes
    to hold copies where [closures] says so ({!Analyze_closures}), must be
    one its generated code lets escape just as much: named, after its binding
    or in its own bodies, other than as the function a call applies, or
@@ -427,7 +443,8 @@ let check_fixpoint_escape name ~closures generated_escapes =
              ( if closures then " escapes in Core but nowhere in its generated code"
                else " escapes in its generated code but nowhere in Core" ) )
 
-(* The helper [r] lifted out of a body: the function returning [ret] that
+(** The helper [r] lifted out of a body: the function returning [ret] that
+
    takes [params], last first as {!build_lifted_cpp_params} gives them,
    standing for the Core binders [binders], with body [body], under the
    template parameters [tparams]. *)
@@ -444,12 +461,17 @@ let lifted_definition ~binders ~ret r params body tparams : Cpp_ir.Lowered.Decl.
           binders;
           loop = None } )
 
-(** Generate a fixpoint (recursive function) definition. Handles both single and
-    mutually recursive functions. [all_fix_ids] contains names of all mutual
-    fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
+(** Lower the body of member [fix_idx] of a fixpoint group, the member
+    [(n, ty)] with lambda [f], under the group's names [all_fix_ids] (array
+    order; empty for a single fixpoint, which is then [(n, ty)] alone).
+    Returns the member's renamed name and type, its runtime parameters, its
+    lowered body statements and its parameters' Core binders.  [by_value]:
+    every parameter is owned (the group holds copies); [local] or [lifted]
+    names the occurrence or the helper whose machine plans the frames the
+    body saves. *)
 let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
-  let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids in
+  let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
      mutual fixpoints, all_fix_ids contains all fixpoint names in array order.
      For single fixpoints, all_fix_ids is empty and we use [(n,ty)].
@@ -489,7 +511,7 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
       ~owned:(fun i ->
         let flag l = Option.default false (List.nth_opt l i) in
         let ty = snd (List.nth binders i) in
-        (not (void_binder ty)) && (by_value || flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type ty)) )
+        (not (void_binder ty)) && (by_value || flag fix_owned_base || (flag fix_sub_esc && is_prod_core_type ty)) )
       ~ty:(fun i -> snd (List.nth binders i))
   in
   (* The body returns the fixpoint's own codomain, not the enclosing
@@ -498,7 +520,7 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
      function around it builds from two calls. *)
   let fix_return_type =
     let n_values = List.length (List.filter (fun (_, t) -> not (erased_by_extraction t)) ids) in
-    match Option.map (cpp_of_ml env) (ml_codomain_after n_values ty) with
+    match Option.map (cpp_of_core env) (core_codomain_after n_values ty) with
     | Some t when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) -> Some t
     | _ -> current_cpp_return_type ()
   in
@@ -511,7 +533,8 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     | Some occ, _ when n_fix_funs = 1 -> (
       match
         Control_to_cpp_ir.local_resumes ~owner:(!tctx).input.body_owner ~function_:(!tctx).input.body_function
-          ~lifted:(!tctx).lexical.lifted_fixpoints ~member:(occ, fix_idx) ~depth:(List.length (fst env)) ~arity:n_lam_params
+          ~lifted:(!tctx).lexical.lifted_fixpoints ~member:(occ, fix_idx)
+            ~depth:(List.length (fst env)) ~arity:n_lam_params
       with
       | Some (resumes, certain) -> (Some resumes, Some certain)
       | None -> (None, None) )
@@ -525,7 +548,8 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     ( (renamed_n, ty),
       ids,
       with_cpp_return_type fix_return_type (fun () ->
-          with_region ~owned:owned_params ?resumes ?certain f (fun () -> gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) f) ),
+          with_region ~owned:owned_params ?resumes ?certain f
+            (fun () -> gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) f) ),
       parameter_binders env ids )
   in
   restore_env_types saved_env_types;
@@ -535,7 +559,8 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     the fixpoint lifted as template helpers where it has type variables of
     its own, otherwise declared in place, as a loop, a by-reference group or
     a Y-combinator closure. *)
-let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ : Cpp_ir.Lowered.Stmt.t list =
+let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b
+  ~let_occ : Cpp_ir.Lowered.Stmt.t list =
   (* Special case for let-fix: the let binding name is the fix function name *)
   Local_types.check_minted ids;
   let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -547,7 +572,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
   let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
   let outer_tvars = get_current_type_vars () in
   let n_outer = List.length outer_tvars in
-  let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+  let has_extra_tvars = Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
   check_closure_local let_ty fix_term ~local:(not has_extra_tvars);
   if has_extra_tvars then (
     (* Lift the polymorphic inner fixpoint to a top-level function. Build tvar
@@ -558,7 +583,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
     let all_temps = Cpp_ir.Build.typenames all_tvar_names in
     (* The body being lifted was written against the enclosing declaration's
        class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
-       concept-constrained parameter is not an ML type variable, so
+       concept-constrained parameter is not a Core type variable, so
        [fix_tvar_indices] cannot mention one.  Carry the head's own
        instances over, ahead of the type variables and explicit at every
        reference: nothing deduces a class instance from an argument. *)
@@ -595,7 +620,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
     let ungeneralised = lifted_fix_ungeneralised_params funs in
     List.iteri
       (fun i ((_, fix_ty), params, body, param_binders) ->
-        let cpp_ty = cpp_ir_of_ml_type env all_tvar_names fix_ty in
+        let cpp_ty = cpp_ir_of_core_type env all_tvar_names fix_ty in
         let cod = match cpp_ty with Function (_, cod) -> cod | _ -> cpp_ty in
         (* The callables a recursive call would instantiate the helper at
            without end take a [crane::fn]. *)
@@ -603,7 +628,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
         let cpp_params, all_temps_with_funs =
           build_lifted_cpp_params
             ~non_fwd_source_indices
-            (cpp_ir_of_ml_type env all_tvar_names)
+            (cpp_ir_of_core_type env all_tvar_names)
             all_temps
             (List.map (fun (n, t, _) -> (n, t)) free_vars @ params)
         in
@@ -636,7 +661,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
     let call_type_args =
       lifted_call_type_args ~class_args ~env ~outer_tvars
            ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(0))
-           ~param_ml_tys:
+           ~param_core_tys:
              ( match List.nth_opt funs_compiled x with
              | Some (_, params, _, _) -> List.map snd params
              | None -> [] )
@@ -646,7 +671,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
     let extra_args = List.rev free_args in
     List.map (fun st -> local_var_subst_stmt ~extra_args fix_name lifted_call st) result )
   else
-    (* No extra Tvars — proceed with local fixpoint approach.
+    (* No extra type variables: proceed with local fixpoint approach.
 
        Three sub-steps:
        1. Compile all mutual fixpoint bodies via {!gen_fix}.
@@ -674,7 +699,10 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
       | None -> false
     in
     let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
-    let closures = kept_by_frame || Analyze_closures.group ~effects:(!tctx).input.unit.effects ~n_outer ~continuation:b ~cofix ids funs = Closures in
+    let closures =
+      kept_by_frame
+        || Analyze_closures.group ~effects:(!tctx).input.unit.effects ~n_outer ~continuation:b ~cofix
+          ids funs = Closures in
     let funs_compiled =
       Array.to_list
         (Array.mapi
@@ -735,7 +763,8 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
 
 (** [let x = a in b] with [a] a lambda, ending in [k]: a polymorphic lambda
     lifted out of the body as a helper, the others bound as closures. *)
-let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~t ~a ~b ~let_occ : Cpp_ir.Lowered.Stmt.t list =
+let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~t ~a ~b ~let_occ :
+  Cpp_ir.Lowered.Stmt.t list =
   (* Check if this is a polymorphic lambda that should be lifted to a
      top-level template function. *)
   let outer_tvars = get_current_type_vars () in
@@ -758,21 +787,21 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       if expanded != a then ungenerated_let_lambda "a lambda bound as a value short of its type's arrows";
       expanded
     in
-    let x' = cpp_id_of_id (id_of_mlid x) in
+    let x' = cpp_id_of_id (id_of_binder_name x) in
     let renamed_ids, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd renamed_ids) in
     if x == Core.Binder_name.Anonymous then (
       push_binders env [(x_renamed, t)];
       gen_stmts ~slot env' k b )
-    else if (!tctx).input.itree_mode = Reified && is_monadic_ml_type t then begin
+    else if (!tctx).input.itree_mode = Reified && is_monadic_core_type t then begin
       (* Monadic let-binding (reified mode): wrap RHS in an ITree IIFE so
          the variable has type [shared_ptr<ITree<R>>]. *)
       push_binders env [(x_renamed, t)];
-      let r_ml = extract_itree_result_ml t in
-      let r_cpp = cpp_of_ml env r_ml in
+      let r_core = extract_itree_result_core t in
+      let r_cpp = cpp_of_core env r_core in
 
       let reified_ty = mk_itree_type r_cpp in
-      let ret_k v : Cpp_ir.Lowered.Stmt.t = Return (Some (mk_itree_ret_for_value r_cpp r_ml v)) in
+      let ret_k v : Cpp_ir.Lowered.Stmt.t = Return (Some (mk_itree_ret_for_value r_cpp r_core v)) in
       let body_stmts = gen_stmts env ret_k a in
       let iife = Cpp_ir.Build.iife (Some reified_ty) body_stmts in
       (* Shift owned vars for the continuation *)
@@ -780,13 +809,14 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         gen_stmts ~slot env' k b
       in
       (* Generate the assignment with reified type *)
-      [(Bind_variable (x_renamed, Declare (reified_ty, core_binder ~site:(Binding let_occ) env' 1), iife) : Cpp_ir.Lowered.Stmt.t)] @ cont
+      [(Bind_variable (x_renamed, Declare (reified_ty, core_binder ~site:(Binding let_occ) env' 1), iife) :
+          Cpp_ir.Lowered.Stmt.t)] @ cont
     end else
       let afun v : Cpp_ir.Lowered.Stmt.t = Bind_variable (x_renamed, Existing, v) in
       let asgn = gen_stmts env afun a in
       (* When the RHS was a pair accessor on an erased argument (e.g.
          snd vs where vs : std::any), the result is std::any at runtime
-         even though the ML type says prod(...).  Override to Core.Type.Erased so
+         even though the Core type says prod(...).  Override to Core.Type.Erased so
          downstream pair accessor calls (fst tail) detect erasure. *)
       let t_for_env = if stmts_yield_boxed asgn then Core.Type.Erased Core.Erasure_reason.Type_argument else t in
       (* Push env_types AFTER generating the value expression [a]. *)
@@ -796,12 +826,12 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       | [Bind_variable (_, Existing, e)] ->
         Bind_variable
           ( x_renamed,
-            Declare (cpp_of_ml env t, core_binder ~site:(Binding let_occ) env' 1),
+            Declare (cpp_of_core env t, core_binder ~site:(Binding let_occ) env' 1),
             e )
         :: gen_cont ()
       | _ ->
         (Declare
-          (x_renamed, cpp_of_ml env t, core_binder ~site:(Binding let_occ) env' 1) : Cpp_ir.Lowered.Stmt.t)
+          (x_renamed, cpp_of_core env t, core_binder ~site:(Binding let_occ) env' 1) : Cpp_ir.Lowered.Stmt.t)
         :: asgn
         @ gen_cont ()
   in
@@ -810,12 +840,12 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   (match decision with
   | Bound -> gen_normal_letin ()
   | At_instance inst ->
-    let subst = Mlutil.type_subst_list inst in
+    let subst = Core_util.type_subst_list inst in
     ungenerated_let_lambda "a lambda used at one instance";
     with_plan (Ownership_ir.bound_at_instance (!tctx).lexical.move_plan ~let_:let_occ) (fun () ->
         gen_stmts ~slot env k (Core.Expr.Let {binder = x;
                                               binder_type = subst t;
-                                              value = Mlutil.ast_map_types subst a;
+                                              value = Core_util.ast_map_types subst a;
                                               body = b;
                                               occurrence = let_occ}) )
   | Inlined b ->
@@ -825,7 +855,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     (* Lift the polymorphic lambda to a top-level template function. *)
     let params, body = collect_lams a in
     let n_params = List.length params in
-    let x' = cpp_id_of_id (id_of_mlid x) in
+    let x' = cpp_id_of_id (id_of_binder_name x) in
 
     (* 1. Collect free variables in the lambda body *)
     let free_indices = List.sort Int.compare (collect_free_rels n_params body) in
@@ -852,7 +882,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     (* The body being lifted was written against the enclosing
        declaration's class instances -- it spells [typename
        _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an
-       ML type variable, so [tvar_indices] cannot mention one.  Carry the
+       Core type variable, so [tvar_indices] cannot mention one.  Carry the
        head's own instances over, ahead of the type variables and explicit
        at every reference: nothing deduces a class instance. *)
     let class_temps = current_class_temps () in
@@ -866,29 +896,29 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     (* 3. Generate the lifted function name *)
     let lifted_ref = lifted_ref (Lifted.Let let_occ) x' in
 
-    (* 4. Substitution helper for call sites: replace CPPfun_call(CPPvar x',
-       args) with CPPfun_call(CPPglob(lifted_ref, []), free_var_cpps @
-       args) *)
+    (* 4. Substitution helper for call sites: replace a call [Call (_, Local
+       x', args)] with a call of [Entity (lifted_ref, [])] on
+       [free_var_cpps @ args]. *)
     (* The lifted function is a template over the binder's type
        arguments, so a parameter declared at one of them is a template
        parameter C++ has to deduce.  A closure has no name to deduce, and
        so cannot agree with the same parameter as settled by another
        argument; {!name_fn_arg_for_tvar_param} names it. *)
-    (* {!Mlutil.collect_lams} hands the binders back innermost-first, so
+    (* {!Core_util.collect_lams} hands the binders back innermost-first, so
        the source order these are read in is the reverse of [params]. *)
-    let param_ml_tys =
+    let param_core_tys =
       List.rev
         (List.filter_map
            (fun (_, ty) ->
              if is_runtime_binder_type ty then Some ty else None )
            params )
     in
-    let n_actual_params = List.length param_ml_tys in
-    (* [args] in source order, as [param_ml_tys] is. *)
+    let n_actual_params = List.length param_core_tys in
+    (* [args] in source order, as [param_core_tys] is. *)
     let name_lifted_args args =
       List.mapi
         (fun i a ->
-          match List.nth_opt param_ml_tys i with
+          match List.nth_opt param_core_tys i with
           | Some ty -> name_fn_arg_for_tvar_param ty a
           | None -> a )
         args
@@ -905,7 +935,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         (* The lifted template's parameters come from the lambda, so its
            arity is the lambda's. *)
         mk_arity_call
-          ~params:(List.map (cpp_of_ml env) param_ml_tys)
+          ~params:(List.map (cpp_of_core env) param_core_tys)
           ~saturated:(fun here ->
             Call (opaque (), lifted, List.rev (free_args @ List.rev (name_lifted_args here))) )
           (List.map sub args)
@@ -977,7 +1007,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
           (* Push lambda params into env for body compilation *)
           let param_ids =
             List.map
-              (fun (ml_id, ty) -> (cpp_id_of_id (id_of_mlid ml_id), ty))
+              (fun (core_id, ty) -> (cpp_id_of_id (id_of_binder_name core_id), ty))
               params
           in
           (* For free variables, we need to adjust de Bruijn indices in the body.
@@ -1030,7 +1060,8 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     in
 
     (* 7. Now substitute free variable references in compiled body: Free
-       vars in the body were compiled as CPPvar(name_from_outer_env). In the
+       vars in the body were compiled as [Local name_from_outer_env]. In the
+
        lifted function, they become parameters. The names are the same, so
        no substitution of the body is needed — the free var params have the
        same names as the outer scope variables. *)
@@ -1044,11 +1075,11 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
           lam_param_ids
     in
     let cpp_params, all_temps_with_funs =
-      build_lifted_cpp_params (cpp_ir_of_ml_type lam_env extended_tvar_names) all_temps all_lifted_params
+      build_lifted_cpp_params (cpp_ir_of_core_type lam_env extended_tvar_names) all_temps all_lifted_params
     in
 
     (* Get return type from the let-binding type *)
-    let cpp_ty = cpp_ir_of_ml_type lam_env extended_tvar_names t in
+    let cpp_ty = cpp_ir_of_core_type lam_env extended_tvar_names t in
     let cod =
       (* [collect_lams] stops at the first non-lambda, so a let-bound
          [fix] keeps its own binders: the helper takes fewer parameters
@@ -1067,9 +1098,9 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
          An [auto]-returning template with more than one instantiation in
          the same translation unit is then used before any of them is
          defined. *)
-      let ml_dom, _ = Mlutil.type_decomp t in
+      let core_dom, _ = Core_util.type_decomp t in
       let value_dom =
-        List.filter is_runtime_binder_type ml_dom
+        List.filter is_runtime_binder_type core_dom
       in
       if List.length value_dom > n_params then (Auto : Cpp_ir.Lowered.Type.t)
       else
@@ -1109,7 +1140,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     let call_type_args =
       lifted_call_type_args ~class_args ~env ~outer_tvars
            ~head:(List.map snd all_temps_with_funs)
-           ~all_tvar_names ~binder_ty:t ~param_ml_tys
+           ~all_tvar_names ~binder_ty:t ~param_core_tys
     in
     List.map
       (subst_lifted_call_stmt x_lifted
@@ -1120,7 +1151,8 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
 (** A local fixpoint [fix_term] applied to [args] in place, ending in [k]:
     lifted as template helpers where it has type variables of its own,
     otherwise declared in place and called. *)
-let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~ids ~funs ~occ ~fix_term ~args : Cpp_ir.Lowered.Stmt.t list =
+let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~ids ~funs ~occ ~fix_term ~args :
+  Cpp_ir.Lowered.Stmt.t list =
   Local_types.check_minted ids;
   let ids, funs = Local_types.recover_fix_codomains ids funs in
   register_erased_members occ ids;
@@ -1134,7 +1166,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
   let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
   let outer_tvars = get_current_type_vars () in
   let n_outer = List.length outer_tvars in
-  let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+  let has_extra_tvars = Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
   (* The arguments the plan reads before the call, its parameters being
      bound to them in order ({!Ownership_ir.evaluated_first}), each
      evaluated into a local of its own ahead of everything the call
@@ -1151,14 +1183,15 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
            let e =
              match List.nth_opt params i with
              | Some (_, (Core.Type.Arrow _ as ty))
-               when Table.is_erased_fix_group occ && List.exists Mlutil.has_unknown (ml_domains ty) ->
+               when Table.is_erased_fix_group occ && List.exists Core_util.has_unknown (core_domains ty) ->
                adapt_to_erased_param env ty a e
              | _ -> e
            in
            match (List.mem i first, List.nth_opt params i) with
            | true, Some (_, ty) ->
              let id = Id.of_string (Printf.sprintf "_arg%d" i) in
-             evaluated := !evaluated @ [(Bind_variable (id, Declare (cpp_of_ml env ty, None), e) : Cpp_ir.Lowered.Stmt.t)];
+             evaluated := !evaluated
+               @ [(Bind_variable (id, Declare (cpp_of_core env ty, None), e) : Cpp_ir.Lowered.Stmt.t)];
              if Ownership_ir.worth_moving ty then (Move (Local id) : Cpp_ir.Lowered.Expr.t) else Local id
            | _ -> e )
          args )
@@ -1170,7 +1203,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
       let all_temps = Cpp_ir.Build.typenames all_tvar_names in
       (* The body being lifted was written against the enclosing declaration's
          class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
-         concept-constrained parameter is not an ML type variable, so
+         concept-constrained parameter is not a Core type variable, so
          [fix_tvar_indices] cannot mention one.  Carry the head's own
          instances over, ahead of the type variables and explicit at every
          reference: nothing deduces a class instance from an argument. *)
@@ -1199,13 +1232,13 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
       let ungeneralised = lifted_fix_ungeneralised_params funs in
       List.iteri
         (fun i ((_, fix_ty), params, body, param_binders) ->
-          let cpp_ty = cpp_ir_of_ml_type env extended_tvar_names fix_ty in
+          let cpp_ty = cpp_ir_of_core_type env extended_tvar_names fix_ty in
           let cod = match cpp_ty with Function (_, cod) -> cod | _ -> cpp_ty in
           let non_fwd_source_indices = ungeneralised.(i) in
           let cpp_params, all_temps_with_funs =
             build_lifted_cpp_params
               ~non_fwd_source_indices
-              (cpp_ir_of_ml_type env extended_tvar_names)
+              (cpp_ir_of_core_type env extended_tvar_names)
               all_temps
               params
           in
@@ -1223,7 +1256,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
       let call_type_args =
         lifted_call_type_args ~class_args ~env ~outer_tvars
              ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(x))
-             ~param_ml_tys:
+             ~param_core_tys:
                ( match List.nth_opt funs_compiled x with
                | Some (_, params, _, _) -> List.map snd params
                | None -> [] )
@@ -1248,7 +1281,8 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
         Array.to_list
           (Array.mapi
              (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~local:occ ~fix_idx:i ids.(i) f )
+               gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~local:occ
+                 ~fix_idx:i ids.(i) f )
              funs )
       in
       let renamed_ids =
@@ -1283,9 +1317,9 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
         in
         let pa_params =
           List.mapi
-            (fun j (_, ml_ty) ->
+            (fun j (_, core_ty) ->
               let cpp_ty =
-                cpp_of_ml env ml_ty
+                cpp_of_core env core_ty
               in
               (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
             remaining_params
@@ -1331,7 +1365,8 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
 
 (** A local fixpoint [fix_term] not applied, ending in [k]: it escapes, so
     it is a Y-combinator closure. *)
-let gen_standalone_fix env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~ids ~funs ~occ ~fix_term : Cpp_ir.Lowered.Stmt.t list =
+let gen_standalone_fix env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~ids ~funs ~occ ~fix_term :
+  Cpp_ir.Lowered.Stmt.t list =
   (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
      RHS of a let-binding.  Since the fixpoint value itself is returned (not
      called in place), it will always escape.  Use the Y-combinator pattern:

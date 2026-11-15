@@ -733,7 +733,7 @@ let reset_renaming_tables () = do_cleanup ()
     it is the caller's cue to look for a collision. *)
 let modular_rename_ex ?(global_scope = false) id =
   let s = ascii_of_id id in
-  let s = Mlutil.unreserve_leading_underscore s in
+  let s = Core_util.unreserve_leading_underscore s in
   let is_kw =
     is_reserved_cpp_name s || (global_scope && is_reserved_at_global_scope s)
   in
@@ -764,8 +764,9 @@ let inductive_names_of_sel sel =
       match se with
       (* A type class becomes a concept, which is hoisted to namespace scope
          rather than nested, so it never competes for a member name. *)
-      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = _kn;
-                                                                     definition = {Core.Inductive.kind = Core.Inductive.Kind.Type_class _; _}}) -> []
+      | Core.Module.Structure_item.Declaration
+        (Core.Decl.Inductive
+          {entity = _kn; definition = {Core.Inductive.kind = Core.Inductive.Kind.Type_class _; _}}) -> []
       | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = _kn; definition = ind}) ->
         Array.to_list
           (Array.map (fun (p : Core.Inductive.Packet.t) -> modular_rename p.name) ind.packets)
@@ -797,7 +798,8 @@ let member_names_of_sel sel =
         | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {definition = ind; _}) ->
           Array.to_list (Array.map (fun (p : Core.Inductive.Packet.t) -> name p.name) ind.packets)
         | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) ->
-          List.map (fun (fd : Core.Recursion.Definition.t) -> name (Label.to_id (label_of_r fd.entity))) (Core.Nonempty.to_list fds)
+          List.map (fun (fd : Core.Recursion.Definition.t) -> name (Label.to_id (label_of_r fd.entity)))
+            (Core.Nonempty.to_list fds)
         | Core.Module.Structure_item.Declaration _ -> [name (Label.to_id l)]
         | Core.Module.Structure_item.Module _ | Core.Module.Structure_item.Module_type _ -> [name (Label.to_id l)]
       in
@@ -843,7 +845,8 @@ let unmergeable_inductive_names_of_sel sel =
   let self_typed =
     List.filter_map
       (fun (_l, se) ->
-        match se with Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = t; _}) -> type_head t | _ -> None )
+        match se with Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = t; _}) ->
+          type_head t | _ -> None )
       sel
   in
   List.concat_map
@@ -1548,7 +1551,7 @@ let check_extract_ascii () =
     String.equal (find_custom @@ ascii_type_ref ()) char_type
   with Not_found -> false
 
-(** Check if a list of ML AST nodes consists entirely of nullary constructors
+(** Check if a list of Core expressions consists entirely of nullary constructors
     (used for char list → string optimization). *)
 let is_list_cons l =
   List.for_all
@@ -1620,7 +1623,7 @@ let check_extract_string () =
     arguments.
     @param empty_string_ref      Library key for the [EmptyString] constructor
     @param string_constructor_ref Library key for the [String] constructor
-    @return [true] iff the ML expression is a statically-known string literal *)
+    @return [true] iff the Core expression is a statically-known string literal *)
 let rec is_native_string_rec empty_string_ref string_constructor_ref = function
   (* "EmptyString" constructor *)
   | Core.Expr.Construct {constructor = gr; arguments = []; _} -> Rocqlib.check_ref empty_string_ref gr

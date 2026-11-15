@@ -29,7 +29,7 @@
     other.  A definition no rewrite shrinks is left exactly as it was.
 
     One of the Core passes run before the program is frozen
-    ([core_passes] in [extract_env.ml]), after {!Ml_dedup}. *)
+    ([core_passes] in [extract_env.ml]), after {!Core_dedup}. *)
 
 (** Every top-level definition of the structure, those inside its modules
     included, specialized and simplified where that shrinks it. *)

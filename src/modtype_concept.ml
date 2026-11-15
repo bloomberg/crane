@@ -52,7 +52,8 @@ let resolved what resolve x =
   | x -> x
   | exception Cpp_ir.Resolve.Owed form ->
     CErrors.anomaly
-      Pp.(str "Crane: " ++ str what ++ str ": " ++ str form ++ str ", which only a lowered declaration may hold, survived resolution")
+      Pp.(str "Crane: " ++ str what ++ str ": " ++ str form
+          ++ str ", which only a lowered declaration may hold, survived resolution")
 
 let ir_type = resolved "a type written outside every finished declaration" Cpp_ir.Resolve.type_
 let ir_expr = resolved "a value in a module type's concept" Cpp_ir.Resolve.expr
@@ -113,15 +114,15 @@ let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
   | Function (dom, cod) -> Function (args dom, concept_type signature cod)
   | ty -> Plain (ir_type ty)
 
-(* The domains and codomain of an ML arrow type. *)
+(* The domains and codomain of a Core arrow type. *)
 let rec arrows = function
   | Core.Type.Arrow {parameter = arg; result = rest} ->
     let args, ret = arrows rest in
     (arg :: args, ret)
   | ret -> ([], ret)
 
-(* An ML type as translation converts it, outside any function. *)
-let convert t = Translation_types.cpp_ir_of_ml_type (Common.empty_env ()) [] t
+(* A Core type as translation converts it, outside any function. *)
+let convert t = Translation_types.cpp_ir_of_core_type (Common.empty_env ()) [] t
 
 (* The requirements one specification of the signature at [Core.Signature.t]
    asks of [M]; none for an inline custom, whose mapping stands in for the
@@ -144,7 +145,7 @@ let requirements signature = function
          ind.packets )
   (* A polymorphic value is a member template, which a requires-expression
      cannot name without choosing its arguments: it asks nothing. *)
-  | Core.Signature.Declaration.Value {type_ = t; _} when Ml_type_util.has_tvar t -> []
+  | Core.Signature.Declaration.Value {type_ = t; _} when Type_util.has_tvar t -> []
   | Core.Signature.Declaration.Value {entity = r; type_ = t; _} -> (
     let args, ret = arrows t in
     let result = convert ret in

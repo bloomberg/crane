@@ -26,4 +26,5 @@ let () =
   check "two branches of one match are two sites" (not (Core_binder.same_site first second));
   check "one branch of two matches is two sites" (not (Core_binder.same_site first elsewhere));
   check "a pattern is not a let" (not (Core_binder.same_site bound first || Core_binder.same_site first bound));
-  check "a binder recording no site is told apart from none" (Core_binder.same_site (at ()) first && Core_binder.same_site bound (at ()))
+  check "a binder recording no site is told apart from none"
+    (Core_binder.same_site (at ()) first && Core_binder.same_site bound (at ()))

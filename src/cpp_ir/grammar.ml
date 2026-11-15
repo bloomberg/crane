@@ -1,8 +1,12 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** CppIR: the structured C++ program, before names are resolved and
-    declarations are scheduled.
+(** CppIR: the structured C++ program.  Lowering builds it from Core and
+    ControlIR (the [Translation_*] modules, {!Control_to_cpp_ir}) at the
+    [lowered] phase; CppIR finishing ({!Cpp_pipeline}) rewrites it until it
+    owes nothing, and {!Resolve} restates it at the [resolved] phase.  Names
+    are resolved and declarations scheduled only after that, when
+    {!Cpp_leaf_plan} and {!Cpp_resolution} turn it into {!Cpp_ast}.
 
     Every family is phase-indexed.  A [lowered] program may still owe
     decisions that resolution makes -- a type with no C++ spelling yet, a
@@ -143,6 +147,7 @@ end =
   Precondition
 
 and Binary_operator : sig
+  (** A binary operator: [==], [!=], [&&], [||], [=]. *)
   type t =
     | Equal
     | Not_equal
@@ -153,6 +158,7 @@ end =
   Binary_operator
 
 and Unary_operator : sig
+  (** A unary operator: [!], or [&] taking an address. *)
   type t =
     | Not
     | Address_of
@@ -345,6 +351,7 @@ end =
   Numeral
 
 and Literal : sig
+  (** A literal value. *)
   type t =
     | String of Pstring.t
     | Uint63 of Uint63.t
@@ -751,6 +758,7 @@ end =
   Foreign
 
 and Value_category : sig
+  (** The value category of an expression, an lvalue split by [const]. *)
   type t =
     | Mutable_lvalue
     | Const_lvalue
@@ -800,6 +808,7 @@ end =
   Constexpr
 
 and Visibility : sig
+  (** The access specifier a struct member is written under. *)
   type t =
     | Public
     | Private

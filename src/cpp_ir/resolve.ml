@@ -5,18 +5,28 @@
 
     Each function rebuilds its argument constructor for constructor; a form
     only a lowered value may hold ({!Grammar.lowered}) has no resolved
-    counterpart, and raises {!Owed} naming it. *)
+    counterpart, and raises {!Owed} naming it.  {!Cpp_pipeline} applies
+    {!decl} to each declaration once CppIR finishing has discharged every
+    {!Representation_obligation}, and turns {!Owed} into an anomaly. *)
 
 open Grammar
 
+(** The lowered phase index. *)
 type l = lowered
+
+(** The resolved phase index. *)
 type r = resolved
 
 (** The lowered-only form a value still holds. *)
 exception Owed of string
 
+(** [owed form] raises {!Owed} naming [form]. *)
 let owed form = raise_notrace (Owed form)
+
+(** [list f xs] is [List.map f xs]. *)
 let list = List.map
+
+(** [opt f o] is [Option.map f o]. *)
 let opt = Option.map
 
 (** [type_ t] is [t] at the resolved phase; raises {!Owed} at an
@@ -53,22 +63,29 @@ let rec type_ : l Type.t -> r Type.t = function
   | Obligation Opaque_type -> owed "an opaque type"
   | Obligation _ -> owed "a type obligation"
 
+(** [foreign f] is the instantiated mapping [f] at the resolved phase. *)
 and foreign (f : l Foreign.t) : r Foreign.t =
-  {custom = f.custom; types = list type_ f.types; values = list expr f.values; yields = opt type_ f.yields; pieces = f.pieces}
+  {custom = f.custom; types = list type_ f.types; values = list expr f.values;
+    yields = opt type_ f.yields; pieces = f.pieces}
 
+(** [custom c] is a mapped global's metadata at the resolved phase. *)
 and custom (c : l Foreign.custom) : r Foreign.custom = {inline = c.inline; custom_yields = opt type_ c.custom_yields}
 
+(** [signature s] is a call's signature at the resolved phase. *)
 and signature (s : l Call.signature) : r Call.signature =
   { yields = (match s.yields with Yields t -> Yields (type_ t) | Untyped -> Untyped);
     params = (match s.params with Types ts -> Types (list type_ ts) | Unknown -> Unknown);
     constructs = s.constructs;
     occurrence = s.occurrence }
 
+(** [capture c] is a written capture; raises {!Owed} at one not yet
+    decided ({!Capture.Runs_in_place}, {!Capture.Stored}). *)
 and capture : l Capture.t -> r Capture.t = function
   | Written w -> Written w
   | Runs_in_place -> owed "a capture that runs in place"
   | Stored -> owed "a stored capture"
 
+(** [lambda l] is [l] at the resolved phase. *)
 and lambda (l : l Lambda.t) : r Lambda.t =
   { params = list (fun (t, x) -> (type_ t, x)) l.params;
     type_params = l.type_params;
@@ -79,6 +96,8 @@ and lambda (l : l Lambda.t) : r Lambda.t =
     binders = l.binders;
     fixpoint = l.fixpoint }
 
+(** [aggregate a] is the aggregate initialisation [a] at the resolved
+    phase. *)
 and aggregate : 'n. ('n, l) Aggregate.t -> ('n, r) Aggregate.t =
  fun a -> {struct_ = a.struct_; type_args = list type_ a.type_args; values = list expr a.values}
 
@@ -163,13 +182,17 @@ and expr : l Expr.t -> r Expr.t = function
   | Variant_get_if (t, e) -> Variant_get_if (type_ t, expr e)
   | Foreign (u, f) -> Foreign (u, foreign f)
 
+(** [binding b] is the binding [b] at the resolved phase. *)
 and binding : l Binding.t -> r Binding.t = function
   | Declare (t, b) -> Declare (type_ t, b)
   | Existing -> Existing
   | Declare_static t -> Declare_static (type_ t)
 
+(** [custom_match m] is [m] at the resolved phase; raises {!Owed} if its
+    template is not instantiated. *)
 and custom_match (m : l Custom_match.t) : r Custom_match.t =
-  let param (p : l Custom_match.param) : r Custom_match.param = {name = p.name; type_ = type_ p.type_; binder = p.binder} in
+  let param (p : l Custom_match.param) : r Custom_match.param =
+    {name = p.name; type_ = type_ p.type_; binder = p.binder} in
   { return_type = type_ m.return_type;
     scrutinee = expr m.scrutinee;
     type_args = list type_ m.type_args;
@@ -179,8 +202,11 @@ and custom_match (m : l Custom_match.t) : r Custom_match.t =
     template = m.template;
     inductive = m.inductive;
     hold = m.hold;
-    pieces = (match m.pieces with Instantiated ps -> Instantiated ps | Uninstantiated -> owed "an uninstantiated custom match") }
+    pieces =
+      (match m.pieces with Instantiated ps -> Instantiated ps
+        | Uninstantiated -> owed "an uninstantiated custom match") }
 
+(** [match_branch b] is the branch [b] at the resolved phase. *)
 and match_branch (b : l Match.branch) : r Match.branch =
   let field (f : l Match.field_binding) : r Match.field_binding =
     {name = f.name; type_ = type_ f.type_; used = f.used; binder = f.binder}
@@ -191,6 +217,7 @@ and match_branch (b : l Match.branch) : r Match.branch =
     extra_conditions = list expr b.extra_conditions;
     body = stmts b.body }
 
+(** [stmts ss] is each of [ss] at the resolved phase. *)
 and stmts ss = list stmt ss
 
 (** [stmt s] is [s] at the resolved phase; raises {!Owed} at an
@@ -214,7 +241,8 @@ and stmt : l Stmt.t -> r Stmt.t = function
     let (Convertible (a, b)) = s.test in
     If_constexpr {test = Convertible (type_ a, type_ b); then_ = stmts s.then_; else_ = stmts s.else_}
   | If_declaration s ->
-    If_declaration {name = s.name; type_ = type_ s.type_; init = expr s.init; then_ = stmts s.then_; else_ = stmts s.else_}
+    If_declaration
+      {name = s.name; type_ = type_ s.type_; init = expr s.init; then_ = stmts s.then_; else_ = stmts s.else_}
   | Foreign_text s -> Foreign_text s
   | Comment s -> Comment s
   | Local_struct (x, fs) -> Local_struct (x, list (fun (f, t) -> (f, type_ t)) fs)
@@ -234,24 +262,36 @@ and stmt : l Stmt.t -> r Stmt.t = function
         opt stmts d )
   | Foreign_block _ -> owed "an uninstantiated mapping block"
 
+(** [parameter_kind k] is [k] at the resolved phase; raises {!Owed} at a
+    callable parameter's declared constraint
+    ({!Parameter_kind.Callable_declared}). *)
 let parameter_kind : l Parameter_kind.t -> r Parameter_kind.t = function
   | Typename -> Typename
   | Typename_default t -> Typename_default (type_ t)
   | Template n -> Template n
   | Callable_declared _ -> owed "a callable parameter's declared constraint"
   | Invocable (is, t) ->
-    Invocable (list (fun (i : l Invocation.t) : r Invocation.t -> {callable = i.callable; args = list (fun (c, t) -> (c, type_ t)) i.args}) is, type_ t)
+    Invocable
+      (list
+        (fun (i : l Invocation.t) : r Invocation.t ->
+          {callable = i.callable; args = list (fun (c, t) -> (c, type_ t)) i.args}) is, type_ t)
   | Concept (r, ts) -> Concept (r, list type_ ts)
 
+(** [parameters ps] is the template parameter list [ps] at the resolved
+    phase. *)
 let parameters ps : r Template.parameters = list (fun (k, x) -> (parameter_kind k, x)) ps
 
+(** [constexpr c] is a decided eligibility; raises {!Owed} at
+    {!Constexpr.Undecided}. *)
 let constexpr : l Constexpr.t -> r Constexpr.t = function
   | Eligible -> Eligible
   | Ineligible -> Ineligible
   | Undecided -> owed "an undecided constexpr"
 
+(** [typed ps] restates the type of each [(name, type)] pair in [ps]. *)
 let typed ps = list (fun (x, t) -> (x, type_ t)) ps
 
+(** [method_ m] is the member function [m] at the resolved phase. *)
 let method_ (m : l Method.t) : r Method.t =
   { name = m.name;
     globref = m.globref;
@@ -269,10 +309,13 @@ let method_ (m : l Method.t) : r Method.t =
     receiver_binder = m.receiver_binder;
     loop = m.loop }
 
+(** [out_of_line o] is the out-of-line member [o] at the resolved phase. *)
 let out_of_line : l Out_of_line.t -> r Out_of_line.t = function
   | Method m -> Method (method_ m)
   | Destructor ss -> Destructor (stmts ss)
 
+(** [field f] is the struct member [f] at the resolved phase, a nested
+    struct's members included. *)
 let rec field : l Field.t -> r Field.t = function
   | Data (x, t) -> Data (x, type_ t)
   | Entity_data (r, t) -> Entity_data (r, type_ t)
@@ -293,8 +336,11 @@ let rec field : l Field.t -> r Field.t = function
   | Deleted_default_constructor -> Deleted_default_constructor
   | Defaulted_special_members -> Defaulted_special_members
 
+(** [member m] is [m] at the resolved phase, its visibility and section
+    kept. *)
 and member (f, v, s) : r Field.member = (field f, v, s)
 
+(** [struct_ s] is [s] at the resolved phase. *)
 let struct_ (s : l Struct.t) : r Struct.t =
   { ref_ = s.ref_;
     fields = list member s.fields;
@@ -302,8 +348,11 @@ let struct_ (s : l Struct.t) : r Struct.t =
     constraint_ = opt expr s.constraint_;
     needs_shared_from_this = s.needs_shared_from_this }
 
+(** [path_entry e] is an entry of a function's qualified name at the
+    resolved phase. *)
 let path_entry (r, ts) = (r, list type_ ts)
 
+(** [function_ f] is [f] at the resolved phase. *)
 let function_ (f : l Function.t) : r Function.t =
   { path = {outer = path_entry f.path.outer; inner = list path_entry f.path.inner};
     return_type = type_ f.return_type;
@@ -326,9 +375,11 @@ let rec decl : l Decl.t -> r Decl.t = function
   | Variable v -> Variable {ref_ = v.ref_; type_ = type_ v.type_; init = expr v.init; constexpr = constexpr v.constexpr}
   | Concept (r, e) -> Concept (r, expr e)
   | Static_assert (e, m) -> Static_assert (expr e, m)
-  | Type_alias a -> Type_alias {type_params = parameters a.type_params; name = a.name; rhs = opt type_ a.rhs; note = a.note}
+  | Type_alias a ->
+    Type_alias {type_params = parameters a.type_params; name = a.name; rhs = opt type_ a.rhs; note = a.note}
   | Struct_forward_declaration (ps, r) -> Struct_forward_declaration (parameters ps, r)
   | Merged_struct_members s -> Merged_struct_members (struct_ s)
   | Member_definition m ->
-    Member_definition {owner = m.owner; enclosing = m.enclosing; type_params = parameters m.type_params; member = out_of_line m.member}
+    Member_definition
+      {owner = m.owner; enclosing = m.enclosing; type_params = parameters m.type_params; member = out_of_line m.member}
   | Enum e -> Enum {ref_ = e.ref_; ctors = e.ctors; rocq_names = e.rocq_names; type_params = parameters e.type_params}

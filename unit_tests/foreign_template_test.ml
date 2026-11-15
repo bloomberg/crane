@@ -43,7 +43,8 @@ let () =
   let standard s = standard_names_written (term_template s) in
   check "standard: a call" (standard "std::max(%a0, %a1)" = [("std::max", "algorithm")]);
   check "standard: each once, sorted"
-    (standard "std::move(%a0) + std::to_string(std::move(%a1))" = [("std::move", "utility"); ("std::to_string", "string")]);
+    (standard "std::move(%a0) + std::to_string(std::move(%a1))" =
+      [("std::move", "utility"); ("std::to_string", "string")]);
   check "standard: a nested namespace" (standard "std::chrono::milliseconds(%a0)" = [("std::chrono", "chrono")]);
   check "standard: not another std" (standard "crane::std::max(%a0) + mystd::max(%a1)" = []);
   check "standard: an unknown name" (standard "std::frobnicate(%a0)" = []);

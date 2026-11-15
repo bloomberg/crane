@@ -14,6 +14,7 @@ type t
     the occurrence of what it copies. *)
 val fresh : unit -> t
 
+(** Physical identity: whether the two are one occurrence. *)
 val equal : t -> t -> bool
 
 (** [shared iter]: the occurrences [iter] visits more than once, each

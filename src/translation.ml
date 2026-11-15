@@ -19,7 +19,7 @@ let () = Translation_types.type_term_arg := fun env a -> gen_expr env a
 let () = Translation_state.plan_representation := Representation_plan.region
 let () = Translation_state.plan_positions := Position_plan.region
 
-(** [with_method_ns_for_locals () f] runs [f] with the module's local
+(** [with_method_ns_for_locals ?base f] runs [f] with the module's local
     inductives added to {!Translation_state.method_self_ns}, and puts the
     enclosing namespace back on the way out however [f] leaves.
 
@@ -49,4 +49,4 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
     because it is a question about C++ types, and the registry is deliberately
     kept below the type translation. *)
 let return_type_is_erased (param_vars : Id.t list) (ret : Core.Type.t) : bool =
-  Ml_type_util.type_is_erased (Translation_types.cpp_ir_of_ml_type (Common.empty_env ()) param_vars ret)
+  Type_util.type_is_erased (Translation_types.cpp_ir_of_core_type (Common.empty_env ()) param_vars ret)

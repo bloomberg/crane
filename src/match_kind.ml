@@ -29,11 +29,16 @@ let classify ty branches =
     | [|{Core.Match.Branch.binders = ids; body = body; _}|] when Table.record_fields_of_type ty <> [] ->
       let n = List.length ids in
       let body =
-        match (match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _} | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b) with
+        match (match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _}
+            | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b) with
         | Core.Expr.Bound_variable {index = i; _} when i <= n -> Projection {field = n - i; application = Read}
         | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = i; _}; _} when i <= n ->
           Projection {field = n - i; application = Call}
-        | Core.Expr.Apply {callee = (Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _}); _}
+        | Core.Expr.Apply
+          {callee =
+            (Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+              | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+              | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _}); _}
           when i <= n ->
           Projection {field = n - i; application = Coerced_call}
         | _ -> Destructure

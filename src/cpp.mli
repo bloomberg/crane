@@ -136,7 +136,7 @@ val plan_module_names : Core.Program.t -> (Names.ModPath.t * string) list
 val plan_field_names : Core.Program.t -> (Names.GlobRef.t * Names.Id.t list) list
 
 (** The inductives promoted to their eponymous module's struct, which the
-    module's struct then is ({!Table.promote_inductive}): those of the
+    module's struct then is ({!Table.with_promoted_inductives}): those of the
     modules outside a functor's body, which the implementation renders
     outside every struct. *)
 val plan_promoted_inductives : Core.Program.t -> Names.GlobRef.t list

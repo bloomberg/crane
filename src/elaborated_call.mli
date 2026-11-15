@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A global call as Core elaborates it, before anything about its C++ is
-    decided (docs/Pipeline-Disentangling-Plan.md, section 3.4): its callee,
+    decided (its C++ half is planned by translation): its callee,
     the role each argument the call gives the callee has, and the call's
     reading of the callee's scheme variables.  It holds no C++ type and no
     template argument.
@@ -82,16 +82,16 @@ val leading_params : t -> int
 val dictionary_filled : t -> bool
 
 (** A call whose reading of its callee's scheme variables is complete, and
-    the callee's types at that reading: section 3.4's [ElaboratedCall], the
-    semantic half of planning a call ({!Core_elaborate.instantiate}).  It
-    holds no C++ type, and is decided before, and without, anything about
+    the callee's types at that reading: the semantic half of planning a
+    call ({!Core_elaborate.instantiate}).  It holds no C++ type, and is
+    decided before, and without, anything about
     the call's C++: the C++ half of planning
     ({!Translation_calls.plan_call}) reads it and adds to it, never the
     other way.
 
     Planned ahead of translation by the Core walk
     ({!Core_elaborate.structure}), in the walk's lexical environment and
-    with the ML types it gives the call's position, and taken at the
+    with the Core types it gives the call's position, and taken at the
     argument nodes translation meets ({!at_call}).  Transitional: a call
     translation builds itself is instantiated where it is translated, in the
     traversal's environment and position. *)
@@ -101,7 +101,7 @@ type instantiated = private {
       (** The scheme variables as the call reads them in the end: {!call}'s
           reading, plus a partial application's variables resolved for the
           lambda it is eta-expanded into. *)
-  tys : Mlutil.Var_types.t;  (** {!reading} as substitutions take it ({!Call_tyargs.by_variable}). *)
+  tys : Core_util.Var_types.t;  (** {!reading} as substitutions take it ({!Call_tyargs.by_variable}). *)
   callee_type_at_call : Core.Type.t;  (** The callee's type at {!reading}. *)
   params : Param_pos.subst Param_pos.params;  (** The parameters of {!callee_type_at_call}. *)
   params_orig : Param_pos.orig Param_pos.params;  (** The parameters the callee declares. *)
@@ -118,7 +118,7 @@ type instantiated = private {
 val instantiate :
   t ->
   reading:Call_tyargs.t ->
-  at_call:(Mlutil.Var_types.t -> Core.Type.t -> Core.Type.t) ->
+  at_call:(Core_util.Var_types.t -> Core.Type.t -> Core.Type.t) ->
   expand:(Core.Type.t -> Core.Type.t) ->
   erased:(Core.Type.t -> bool) ->
   instantiated

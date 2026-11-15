@@ -93,7 +93,8 @@ let requirement_names frame : Modtype_concept.requirement -> _ = function
   | Inductive_member {member; _} -> [(frame, Cpp_resolution.Short (Type, member))]
   | Type_member {member; _} -> [(frame, Unmapped (Type, member))]
   | Instance_member {value; class_; arguments} ->
-    (frame, Cpp_resolution.Unmapped (Term, value)) :: (frame, Short (Type, class_)) :: concept_types_names frame arguments
+    (frame, Cpp_resolution.Unmapped (Term, value)) :: (frame, Short (Type, class_))
+      :: concept_types_names frame arguments
   | Nullary_member {value; result} -> (frame, Cpp_resolution.Unmapped (Term, value)) :: concept_type_names frame result
   | Function_member {value; parameters; result} ->
     (frame, Cpp_resolution.Unmapped (Term, value)) :: concept_types_names frame (result :: parameters)
@@ -273,7 +274,9 @@ let rec pp_constraint ctx names frame : Modtype_concept.constraint_ -> Pp.t list
       | Requirement req -> (hoisted, pp_requirement ctx names frame req :: reqs)
       | Nested (path, c) ->
         let inner, nested = pp_constraint ctx names frame c in
-        let def = pp_concept_def (Cpp_name.pp (name_in ctx names frame (Modtype_concept_declared path))) (concept_body_pp nested) in
+        let def =
+          pp_concept_def (Cpp_name.pp (name_in ctx names frame (Modtype_concept_declared path)))
+            (concept_body_pp nested) in
         (def :: List.rev_append inner hoisted, reqs)
     in
     let hoisted, reqs = List.fold_left item ([], []) items in

@@ -88,7 +88,7 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     builds (see the typing note on {!Core.Expr.t}), so it knows its type
     without reconstruction.  So does a fully applied global, from its declared
     codomain as the call instantiates it
-    ({!Translation_types.ml_app_result_type}).  A recursive call, its head a
+    ({!Translation_types.core_app_result_type}).  A recursive call, its head a
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
 let rec tail_result_type = function
@@ -98,7 +98,7 @@ let rec tail_result_type = function
   | Core.Expr.Boxed_value {value = b; _}
   | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type b
   | Core.Expr.Construct {result_type = ty; _} -> Some ty
-  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_types.ml_app_result_type f args
+  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_types.core_app_result_type f args
   | Core.Expr.Match {branches = brs; _} ->
     Array.fold_left
       (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type b)
@@ -123,13 +123,14 @@ let rec tail_result_type = function
     [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
     integer literals, and its call site supplies the argument. *)
 let recover_fix_codomain ((id, ty) : Names.Id.t * Core.Type.t) (body : Core.Expr.t) =
-  let dom, cod = Mlutil.type_decomp ty in
+  let dom, cod = Core_util.type_decomp ty in
   match cod with
-  | Core.Type.Variable {variable = i; _} when not (List.exists (fun t -> Mlutil.IntSet.mem i (Mlutil.ml_tvars t)) dom) -> (
+  | Core.Type.Variable {variable = i; _}
+    when not (List.exists (fun t -> Core_util.IntSet.mem i (Core_util.core_tvars t)) dom) -> (
     match tail_result_type body with
     | Some t ->
-      let subst = Ml_type_util.subst_tvars_type [(i, t)] in
-      ((id, subst ty), Ml_type_util.map_types_in_ast subst body)
+      let subst = Type_util.subst_tvars_type [(i, t)] in
+      ((id, subst ty), Type_util.map_types_in_ast subst body)
     | None -> ((id, ty), body) )
   | _ -> ((id, ty), body)
 
@@ -143,7 +144,7 @@ let recover_fix_codomains ids funs =
    anything is minted -- a variable already standing for the result type is
    no longer asking what the body builds. *)
 let fill_codomain_hole (_, ty) body =
-  match snd (Mlutil.type_decomp ty) with
+  match snd (Core_util.type_decomp ty) with
   | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type body)
   | _ -> ()
 
@@ -227,14 +228,15 @@ let rec expr ~outer = function
     mint t;
     iter_annotations mint a;
     expr ~outer b
-  | e -> Mlutil.ast_iter (expr ~outer) e
+  | e -> Core_util.ast_iter (expr ~outer) e
 
 let structure =
   Modutil.struct_iter
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
-          (fun (fd : Core.Recursion.Definition.t) -> expr ~outer:(Mlutil.IntSet.fold max (Mlutil.ml_tvars fd.type_) 0) fd.body)
-          (Mlutil.term_defs d)
+          (fun (fd : Core.Recursion.Definition.t) ->
+            expr ~outer:(Core_util.IntSet.fold max (Core_util.core_tvars fd.type_) 0) fd.body)
+          (Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     ignore ignore

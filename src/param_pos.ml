@@ -15,7 +15,7 @@ let collect ~expand ty =
   let rec go ty =
     match expand ty with
     | Core.Type.Arrow {parameter = t; result = rest} -> (
-      match Ml_type_util.resolve_tmeta t with
+      match Type_util.resolve_meta t with
       | Core.Type.Erased _ -> go rest
       | t -> t :: go rest )
     | _ -> []
@@ -49,7 +49,7 @@ let source_index binder_tys o =
   let rec go i k = function
     | [] -> None
     | t :: rest -> (
-      match Ml_type_util.resolve_tmeta t with
+      match Type_util.resolve_meta t with
       | Core.Type.Erased _ -> go (i + 1) k rest
       | _ when k = o -> Some i
       | _ -> go (i + 1) (k + 1) rest )
@@ -57,7 +57,7 @@ let source_index binder_tys o =
   go 0 0 binder_tys
 
 let of_source_index binder_tys i =
-  let erased t = match Ml_type_util.resolve_tmeta t with Core.Type.Erased _ -> true | _ -> false in
+  let erased t = match Type_util.resolve_meta t with Core.Type.Erased _ -> true | _ -> false in
   let rec go j k = function
     | [] -> None
     | t :: _ when j = i -> if erased t then None else Some k

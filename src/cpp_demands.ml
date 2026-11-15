@@ -294,7 +294,8 @@ let of_modtype_concept (c : Modtype_concept.t) =
     | Parameter t | Plain t -> need (of_type t)
     | Foreign {pieces; arguments; _} ->
       List.iter
-        (function Cpp_ir.Foreign.Type_argument i | Element (i, _) -> Option.iter cty (List.nth_opt arguments i) | _ -> ())
+        (function Cpp_ir.Foreign.Type_argument i
+          | Element (i, _) -> Option.iter cty (List.nth_opt arguments i) | _ -> ())
         pieces
     | Global (r, args) ->
       need (of_type (Entity_application (r, [], [])));

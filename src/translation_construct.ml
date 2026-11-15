@@ -2,14 +2,16 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Constructor applications and the values they store: a constructor's
     factory call or aggregate, a custom constructor's template, and each
-    argument generated against the field it fills ({!gen_stored_value}). *)
+    argument generated against the field it fills ({!gen_stored_value}).  One of the modules lowering Core
+    bodies to CppIR that {!Translation} drives; it calls back into
+    expression and statement lowering through {!Translation_knot}. *)
 
 open Common
 open Names
 open Table
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
@@ -19,7 +21,7 @@ open Translation_knot
 open Translation_lambda
 open Translation_application
 
-(* The name a hoisted constant is declared under (see {!Cpp_constants}): a
+(** The name a hoisted constant is declared under (see {!Cpp_constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
    [nat] -- [pos_10], [z_neg_5], [pos] past twenty digits -- and [k]
    otherwise. *)
@@ -76,9 +78,15 @@ let constant_name e =
 let gen_stored_value ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e : Cpp_ir.Lowered.Expr.t =
   match e with
   | Core.Expr.Erased_value _ -> Cpp_erasure.empty_box
-  | e when ml_value_is_void_call e -> wrap_void_call_as_value (gen_expr ~slot env e)
+  | e when core_value_is_void_call e -> wrap_void_call_as_value (gen_expr ~slot env e)
   | _ -> gen_expr ?expected_ty ~slot env e
 
+(** The constructor [r] of a custom-extracted inductive at [ty] applied to
+    [ts]: the user's constructor template instantiated at the type arguments
+    the slot and annotation agree on, each argument generated against the
+    field it fills and boxed where that field is erased (never for a
+    pass-through constructor such as ["%a0"], which has no field storage),
+    and an identity template collapsed to its one argument. *)
 let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) env (ty : Core.Type.t)
     r ts : Cpp_ir.Lowered.Expr.t =
   let slot = into_erased_return slot in
@@ -117,14 +125,14 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
        std::any_cast<unsigned int>(...)  // cast to concrete type
 
      Setting [in_constructor_expr] makes unresolvable promoted vars (those
-     NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
+     NOT in [promoted_var_map]) fall back to [Any] = [std::any].
 
      We do NOT clear [promoted_var_map] here: inside template functions,
      promoted vars must resolve to qualified types (e.g., typename _tcI0::Obj)
      so that constructor type args match the function's declared return type.
      At module level, [promoted_var_map] is already empty, so the
      [in_constructor_expr] fallback handles it naturally. *)
-  (* Inside a polymorphic function object the erased type the ML annotation
+  (* Inside a polymorphic function object the erased type the Core annotation
      withheld is the lambda's own template parameter, so a type-argument list
      erasure left empty says the carrier rather than printing [std::any] for a
      value the parameter has already pinned down.  See {!Rank2}. *)
@@ -148,13 +156,13 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
   let args =
     List.rev (List.mapi (fun i e ->
       let a = custom_field env c ~slot r i e in
-      let e = a.ca_term and new_expected = a.ca_expected_ml and erased_fn_slot = a.ca_erased_fn_slot in
+      let e = a.ca_term and new_expected = a.ca_expected_core and erased_fn_slot = a.ca_erased_fn_slot in
       let result =
         with_cpp_return_type a.ca_ret (fun () -> gen_ctor_arg ?expected_ty:a.ca_expected ~slot:a.ca_slot e)
       in
 
       (* Where this argument is stored, as far as its representation goes:
-         [Some Tany] when the slot is erased and the value has to be boxed
+         [Some [Any]] when the slot is erased and the value has to be boxed
          into it, [None] when it is stored as itself. *)
       let field_slot =
         (* A pass-through constructor (registered as ["%a0"]) has no field
@@ -167,7 +175,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
             ( match List.nth_opt ctor_temps_at_slot (j - 1) with
               (* The slot's real type may be a value-dependent erased type's
                  own alias (e.g. [pred_ty = crane::obj]) rather than the bare
-                 [Tany] node, so unfold it before comparing -- otherwise a
+                 [Any] node, so unfold it before comparing -- otherwise a
                  function value stored there is never boxed at all, and the
                  declaration's constraint on the callable (still stated
                  against its concrete, un-erased signature) never gets
@@ -176,7 +184,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
                 ( match result with
                   (* A lambda that is not a function value is a generated IIFE,
                      not a callable being stored. *)
-                  | Lambda _ when not (ml_expr_is_function_value e) -> None
+                  | Lambda _ when not (core_expr_is_function_value e) -> None
                   | _ -> Some Cpp_ir.Type.Any )
               (* A slot that kept a concrete result but erased its domain
                  ([std::function<uint64_t(std::any)>], a pair component whose
@@ -205,7 +213,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
              the same situation. *)
           let field_is_concrete =
             match List.nth_opt field_types_for_wrap i with
-            | Some (Core.Type.Global_app _ as ft) -> not (Cpp_ir.Types.prints_as_any (cpp_of_ml env ft))
+            | Some (Core.Type.Global_app _ as ft) -> not (Cpp_ir.Types.prints_as_any (cpp_of_core env ft))
             | _ -> false
           in
           (* Don't box when building a custom LIST cons whose element cpp type
@@ -218,8 +226,8 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
             is_list_cons_ctor
             &&
             match new_expected with
-            | Some ml_fty ->
-              ( match cpp_of_ml env ml_fty with
+            | Some core_fty ->
+              ( match cpp_of_core env core_fty with
                 | Entity_application (_, _ :: _, _) -> true
                 | _ -> false )
             | None -> false
@@ -253,7 +261,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
      variables whose types extraction failed to unify with a non-reducible
      dependent computation (see [recover_pattern_var_types_from_scrutinee])
      — fall back to [ty_args_for_expected], already computed above via
-     [deep_resolve]/[expected_ml_ty] for the very same
+     [deep_resolve]/[expected_core_ty] for the very same
      purpose (recovering nil's element type in a pair).  Without this, a
      "cons" production whose own return type stayed unresolved loses its
      [list] template argument entirely, so [cpp_print.ml] can't substitute
@@ -272,7 +280,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
        are the ones both sides agree on. *)
     | Core.Type.Global_app {head = n; type_arguments = tys; index_arguments = sc}
       when List.length ty_args_for_expected = List.length tys
-           && List.exists (ml_type_contains_erased ~in_arrows:true) tys ->
+           && List.exists (core_type_contains_erased ~in_arrows:true) tys ->
       Core.Type.Global_app {head = n; type_arguments = ty_args_for_expected; index_arguments = sc}
     | Core.Type.Global_app _ -> ty
     | _ when ty_args_for_expected <> [] ->
@@ -312,14 +320,14 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
           (* Not an inductive ref - keep all type args *)
           tys
       in
-      (* Step 2: Convert ML types to C++ types.  The enclosing type-variable
+      (* Step 2: Convert Core types to C++ types.  The enclosing type-variable
          names matter: inside a member template a [Core.Type.Variable] is one of the
          method's own parameters ([_A0]), not an anonymous [T2].  The
          arguments instantiate an {i inductive's} parameters, so a stored
          function type keeps the flat arity its declaration is written at
          ([~site:Declared]); currying here would make the instantiation
          disagree with the type the declaration spells. *)
-      let temps = template_params_of_ml ~site:Declared env tys in
+      let temps = template_params_of_core ~site:Declared env tys in
       let temps = filter_erased_type_args temps in
       let temps = ind_promoted_type_args n @ temps in
       (* Step 2b: Recover type args from the return type when unresolved metas
@@ -333,7 +341,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
         if temps = [] && tys <> []
         then
           let from_expected =
-            match slot.expected_ml_ty with
+            match slot.expected_core_ty with
             | Some (Core.Type.Global_app {head = exp_r; type_arguments = exp_tys; _})
               when Names.GlobRef.CanOrd.equal exp_r n
                    && List.length exp_tys = List.length tys ->
@@ -381,29 +389,29 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
         match r with
         | GlobRef.ConstructRef ((kn, _), _) ->
           let ind = GlobRef.IndRef (kn, 0) in
-          Ml_type_util.is_custom_list_global ind
+          Type_util.is_custom_list_global ind
         | _ -> false
       in
-      let rec ml_ty_all_dummy = function
+      let rec core_ty_all_dummy = function
         | Core.Type.Erased _ -> true
-        | Core.Type.Global_app {type_arguments = (_ :: _ as args); _} -> List.for_all ml_ty_all_dummy args
-        | Core.Type.Meta {contents = Some t} -> ml_ty_all_dummy t
+        | Core.Type.Global_app {type_arguments = (_ :: _ as args); _} -> List.for_all core_ty_all_dummy args
+        | Core.Type.Meta {contents = Some t} -> core_ty_all_dummy t
         | _ -> false
       in
-      (* [hollow_container] fires when the list's ML element annotation is all
+      (* [hollow_container] fires when the list's Core element annotation is all
          [Core.Type.Erased] (extraction couldn't reduce it, e.g. an opaque alias like
          [symbol_semty]).  Collapsing to bare [std::any] is only correct when
          the concrete C++ element type ([temps]) is ITSELF erased — i.e. a
          sibling production for the same erased list would build [deque<any>]
          and the two must agree.  When [temps] recovers a fully-concrete
-         element type despite the hollow ML annotation (e.g. an abstract
+         element type despite the hollow Core annotation (e.g. an abstract
          [frame] seen through a module type, which still resolves to the
          concrete [typename D::Defs::frame]), the list is a genuine
          [deque<frame>] flowing into a concretely-typed consumer, so the
          concrete element type must be preserved. *)
       let hollow_container =
-        is_custom_list && List.exists ml_ty_all_dummy tys
-        && List.exists Ml_type_util.has_erased_type_in_type temps
+        is_custom_list && List.exists core_ty_all_dummy tys
+        && List.exists Type_util.has_erased_type_in_type temps
       in
       let temps =
         if hollow_container && temps <> [] then
@@ -450,7 +458,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
   let slot = into_erased_return slot in
   let ty = refined_by_slot slot ty in
   (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
-     NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
+     NOT in [promoted_var_map]) fall back to [Any] = [std::any].
 
      For non-record constructors (fds = []), we keep [promoted_var_map] so
      that template type annotations (e.g., SigT<..., Path<typename
@@ -474,9 +482,9 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
      [deque<std::any>].  Shared by the value-type-variant factory path
      ([gen_and_wrap]) and the record/aggregate path.  Mirrors [eta_fun]'s
      function-argument container-cast path. *)
-  let container_cast_erased_field ml_ft ml_arg (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  let container_cast_erased_field core_ft core_arg (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
     let is_erased_rel =
-      match ml_arg with
+      match core_arg with
       | Core.Expr.Bound_variable {index = j; occurrence = occ}
       | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
       | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
@@ -486,13 +494,13 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
     in
     if not is_erased_rel then expr
     else begin
-      let ct = cpp_of_ml env ml_ft in
+      let ct = cpp_of_core env core_ft in
       let clean_ct =
         clean_self_ns ct
       in
-      match strip_ns_tglob clean_ct with
+      match strip_ns_global_app clean_ct with
       | Entity_application (g, [elem_ty], _)
-        when Ml_type_util.is_custom_list_global g
+        when Type_util.is_custom_list_global g
              && not (resolves_to_any_type elem_ty) ->
         (* [expr] came out as the erased [deque<std::any>] from the
            Core.Expr.Bound_variable/Core.Expr.Coerce path; rebuild it as the concrete element container. *)
@@ -520,7 +528,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             | None -> tys )
           | _ -> tys
         in
-        (* Resolve Tunresolved type args from constructor element types. For
+        (* Resolve Core.Type.Unknown type args from constructor element types. For
            cons(elem, rest), elem's type provides the list's type param. *)
         let has_unknown =
           List.exists
@@ -564,7 +572,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
           else
             tys
         in
-        let temps = template_params_of_ml ~site:Declared env tys in
+        let temps = template_params_of_core ~site:Declared env tys in
         (* Where the position expects this very inductive, it -- not the
            constructor's own type annotation -- says how the arguments are
            spelled.  An element type that reached the slot through one of
@@ -590,7 +598,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
         (* For inductives with dependent parameters (e.g. sigT where the
            second param's type references the first), the dependent type arg
            extracts as a bare reference to the same inductive as an earlier
-           arg.  Erase the duplicate to Tany to avoid mismatched template
+           arg.  Erase the duplicate to [Any] to avoid mismatched template
            instantiations. *)
         let temps =
           if Table.has_dependent_params n then
@@ -622,12 +630,12 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
               | _ -> temps
           else temps
         in
-        (* When all template params resolved to Tany (all type args were
+        (* When all template params resolved to [Any] (all type args were
            unresolved Core.Type.Meta), try to recover the concrete element type from
            an expected type threaded down from an enclosing constructor.
            Example: the pair (Fr [...], []) has a concrete pair annotation
            with second type arg list(parser_frame); when generating the nil
-           for the second slot, [expected_ml_ty] = list(parser_frame),
+           for the second slot, [expected_core_ty] = list(parser_frame),
            so we produce List<Parser_frame>::nil() instead of List<any>::nil(). *)
         let temps =
           (* Treat unnamed Tvars (Core.Type.Variable(_, None)) as erased: they become
@@ -640,7 +648,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             (* Resolve any metas in the expected type before matching.
                The let-binding type may be Core.Type.Meta{Some Core.Type.Global_app(...)} so we
                need to unwrap the meta to get the concrete Core.Type.Global_app. *)
-            let expected_resolved = Option.map resolve_tmeta slot.expected_ml_ty
+            let expected_resolved = Option.map resolve_meta slot.expected_core_ty
             in
             (match expected_resolved with
             | Some (Core.Type.Global_app {head = exp_n; type_arguments = exp_tys; _})
@@ -652,7 +660,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                  to std::any by the constructor-expression shortcut. *)
               let recovered =
                 with_in_constructor_expr false (fun () ->
-                    template_params_of_ml ~site:Declared env exp_tys )
+                    template_params_of_core ~site:Declared env exp_tys )
               in
               if List.for_all (fun t -> not (Cpp_ir.Types.prints_as_any t)) recovered
               then recovered
@@ -691,7 +699,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
         let temps =
           let slot_erases_something =
             match expected_ty with
-            | Some e -> Ml_type_util.has_tany_in_type (unfold_cpp_typedef env e)
+            | Some e -> Type_util.has_tany_in_type (unfold_cpp_typedef env e)
             | None -> true
           in
           if boxed slot && not slot_erases_something then temps
@@ -753,7 +761,9 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             Type_member (Entity_application (r, [], []), Id.of_string fname),
             List.rev args )
     in
-    (* [CPPfun_call] stores args reversed; [List.rev_map] compensates. *)
+    (* [gen_ctor_call] is handed its arguments last first, as the
+       [List.rev (List.mapi ...)] at its call builds them, and reverses them
+       into the source order a [Call] holds. *)
     let gen_ctor_arg ?expected_ty ?(slot = slot) e =
       gen_stored_value ?expected_ty ~slot env e
     in
@@ -761,7 +771,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
        resolves to an owning pointer type (because T is in method_self_ns),
        the generated arg expression is a bare T value.  Wrap it so the
        field's stored type matches. *)
-    let ty_ml_tparams = c.rc_ty_ml_tparams in
+    let ty_core_tparams = c.rc_ty_core_tparams in
     (* The result type of a function-valued constructor field whose declared
        type is [Core.Type.Variable i].  The [Core.Expr.Construct]'s own type arguments say what [i]
        stands for -- [nat -> nat], say -- so peeling off the [n_params]
@@ -773,15 +783,15 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
        arguments do not reach that far, as for a type-INDEXED inductive,
        which has none; each caller then supplies its own default. *)
     let field_fun_ret_ty i n_params =
-      match if i >= 1 then List.nth_opt ty_ml_tparams (i - 1) else None with
+      match if i >= 1 then List.nth_opt ty_core_tparams (i - 1) else None with
       | None -> None
-      | Some actual_ml_ty -> (
-        match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
-        | Some ret_ml -> Some (strip_cpp_ref_const (cpp_of_ml env ret_ml))
+      | Some actual_core_ty -> (
+        match strip_arrows_n n_params (resolve_meta actual_core_ty) with
+        | Some ret_core -> Some (strip_cpp_ref_const (cpp_of_core env ret_core))
         | None -> None )
     in
     let ctor_temps = c.rc_ctor_temps and field_types = c.rc_field_types in
-    let wrap_if_needed_for_field ft ml_e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+    let wrap_if_needed_for_field ft core_e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
       match ft with
       | Core.Type.Variable {variable = i; _} ->
         ( try
@@ -811,7 +821,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                 if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Const (Reference (Lvalue, Cpp_ir.Type.Any)), orig_id)
                 else (orig_ty, orig_id)
               ) params in
-              let ml_concrete_param_tys =
+              let core_concrete_param_tys =
                 let rec collect_lam_tys = function
                   | Core.Expr.Lambda {parameter_type = ty; body; _} -> ty :: collect_lam_tys body
                   | Core.Expr.Coerce {value = inner; _}
@@ -820,14 +830,14 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                     collect_lam_tys inner
                   | _ -> []
                 in
-                collect_lam_tys ml_e
+                collect_lam_tys core_e
               in
-              let expand_ml_type ml_ty =
+              let expand_core_type core_ty =
                 let abbrev r = match r with
                   | GlobRef.ConstRef kn -> Table.lookup_typedef_unchecked kn
                   | _ -> None
                 in
-                Mlutil.type_expand abbrev ml_ty
+                Core_util.type_expand abbrev core_ty
               in
               (* Canonical erased shape for a list-typed erased param is
                  [deque<std::any>] -- a bare [std::any] per element, not a
@@ -839,20 +849,20 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                  [std::bad_any_cast] at runtime.  See the matching
                  invariant in [gen_expr]'s [Core.Expr.Bound_variable]/[Core.Expr.Coerce] cases. *)
               let erase_custom_list_elems : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-                | Entity_application (g, _ :: _, ns) when Ml_type_util.is_custom_list_global g ->
+                | Entity_application (g, _ :: _, ns) when Type_util.is_custom_list_global g ->
                   Entity_application (g, [Cpp_ir.Type.Any], ns)
                 | t -> t
               in
-              let ml_body_ret_ty =
+              let core_body_ret_ty =
                 let rec get_body = function
                   | Core.Expr.Lambda {body; _} -> get_body body
                   | Core.Expr.Coerce {value = inner; _}
                   | Core.Expr.Boxed_value {value = inner; _}
                   | Core.Expr.Lambda_group_barrier {value = inner; _} ->
                     get_body inner
-                  | body -> infer_ml_body_type body
+                  | body -> infer_core_body_type body
                 in
-                get_body ml_e
+                get_body core_e
               in
               let erase_inner_tparams : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
                 | Entity_application (g, (_ :: _), ns) when is_list_global g ->
@@ -878,18 +888,18 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                   else
                     let concrete_ty =
                       let from_annotation =
-                        match List.nth_opt ml_concrete_param_tys j with
-                        | Some ml_ty ->
-                          let expanded = expand_ml_type ml_ty in
-                          let ct = cpp_of_ml env expanded in
+                        match List.nth_opt core_concrete_param_tys j with
+                        | Some core_ty ->
+                          let expanded = expand_core_type core_ty in
+                          let ct = cpp_of_core env expanded in
                           erase_custom_list_elems (strip_cpp_ref_const ct)
                         | None -> bare
                       in
                       if not (resolves_to_any_type from_annotation) then from_annotation
                       else begin
-                        let ret_ct = match ml_body_ret_ty with
-                          | Some ret_ml ->
-                            let ct = cpp_of_ml env ret_ml in
+                        let ret_ct = match core_body_ret_ty with
+                          | Some ret_core ->
+                            let ct = cpp_of_core env ret_core in
                             strip_cpp_ref_const ct
                           | None -> Cpp_ir.Type.Any
                         in
@@ -945,15 +955,15 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
               let rec is_custom_list_cons = function
                 | Core.Expr.Construct {constructor = GlobRef.ConstructRef ((kn, _), _); _} ->
                   let ind = GlobRef.IndRef (kn, 0) in
-                  Ml_type_util.is_custom_list_global ind
+                  Type_util.is_custom_list_global ind
                 | Core.Expr.Coerce {value = inner; _}
                 | Core.Expr.Boxed_value {value = inner; _}
                 | Core.Expr.Lambda_group_barrier {value = inner; _} ->
                   is_custom_list_cons inner
                 | _ -> false
               in
-              if is_custom_list_cons ml_e then begin
-                gen_ctor_arg ~slot:(into_box Var_box slot) ml_e
+              if is_custom_list_cons core_e then begin
+                gen_ctor_arg ~slot:(into_box Var_box slot) core_e
               end else begin
                 (* A non-lambda FUNCTION value (e.g. a forwarded callback
                    parameter [f]) stored into an erased field must be wrapped
@@ -965,7 +975,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                    that [any_cast] throws at runtime.
 
                    The domain/codomain of such a function are typically
-                   value-dependent (erased to [std::any] in the generic ML
+                   value-dependent (erased to [std::any] in the generic Core
                    type), so the concrete argument types needed for the
                    [any_cast] inside the adapter are only known at C++
                    instantiation.  Rather than reconstruct them here, defer to
@@ -975,7 +985,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                    (unbox each argument, box the result). *)
                 (* Wrap via the [crane_erase_fn] runtime helper (emitted as
                    [#include "crane_fn.h"] in the header preamble). *)
-                box_for_any_slot Var_box ml_e expr
+                box_for_any_slot Var_box core_e expr
               end )
           | Function (param_tys, ret_ty) when List.exists (fun t -> t = Cpp_ir.Type.Any) param_tys ->
             ( match expr with
@@ -993,18 +1003,18 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                   else (orig_ty, orig_id)
                 else (orig_ty, orig_id)
               ) params in
-              let ml_body_ret_ty =
+              let core_body_ret_ty =
                 let rec get_body = function
                   | Core.Expr.Lambda {body; _} -> get_body body
                   | Core.Expr.Coerce {value = inner; _}
                   | Core.Expr.Boxed_value {value = inner; _}
                   | Core.Expr.Lambda_group_barrier {value = inner; _} ->
                     get_body inner
-                  | body -> infer_ml_body_type body
+                  | body -> infer_core_body_type body
                 in
-                get_body ml_e
+                get_body core_e
               in
-              let ml_concrete_param_tys =
+              let core_concrete_param_tys =
                 let rec collect_lam_tys = function
                   | Core.Expr.Lambda {parameter_type = ty; body; _} -> ty :: collect_lam_tys body
                   | Core.Expr.Coerce {value = inner; _}
@@ -1013,7 +1023,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                     collect_lam_tys inner
                   | _ -> []
                 in
-                collect_lam_tys ml_e
+                collect_lam_tys core_e
               in
               let cast_bindings = List.filter_map (fun (j, (_orig_ty, orig_id)) ->
                 if j < List.length param_tys && List.nth param_tys j = Cpp_ir.Type.Any then
@@ -1022,18 +1032,18 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                   | Some id ->
                     let concrete_ty =
                       let from_annotation =
-                        match List.nth_opt ml_concrete_param_tys j with
-                        | Some ml_ty ->
-                          let ct = cpp_of_ml env ml_ty in
+                        match List.nth_opt core_concrete_param_tys j with
+                        | Some core_ty ->
+                          let ct = cpp_of_core env core_ty in
                           strip_cpp_ref_const ct
                         | None -> Cpp_ir.Type.Any
                       in
                       if not (resolves_to_any_type from_annotation) then
                         from_annotation
                       else begin
-                        let ret_ct = match ml_body_ret_ty with
-                        | Some ret_ml ->
-                          let ct = cpp_of_ml env ret_ml in
+                        let ret_ct = match core_body_ret_ty with
+                        | Some ret_core ->
+                          let ct = cpp_of_core env ret_core in
                           strip_cpp_ref_const ct
                         | None -> Cpp_ir.Type.Any
                         in
@@ -1107,7 +1117,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                defer the adaptation to the runtime helper, which deduces the
                callable's signature and unboxes each argument.  The field's
                own codomain stays concrete. *)
-            | _ when ml_expr_is_function_value ml_e ->
+            | _ when core_expr_is_function_value core_e ->
               Erase_callable (At_signature ret_ty, expr)
             | _ -> expr )
           | _ -> expr
@@ -1138,10 +1148,11 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             | _ -> expr )
       | ft ->
         (* Handle arrow types containing erased type variables.
-           E.g. field type Core.Type.Arrow(Core.Type.Variable 1, Core.Type.Global_app(nat)) where Core.Type.Variable 1 is erased:
-           the concrete lambda [](uint64_t x){return x*x;} must become
-           [](std::any _a0){return any_cast<uint64_t>(_a0) * any_cast<uint64_t>(_a0);}
-           so it matches the factory param std::function<uint64_t(std::any)>. *)
+           E.g. field type Core.Type.Arrow(Core.Type.Variable 1,
+           Core.Type.Global_app(nat)) where Core.Type.Variable 1 is erased: the
+           concrete lambda [](uint64_t x){return x*x;} must become [](std::any
+           _a0){return any_cast<uint64_t>(_a0) * any_cast<uint64_t>(_a0);} so it
+           matches the factory param std::function<uint64_t(std::any)>. *)
         let tvar_is_erased i =
           try match List.nth ctor_temps (i - 1) with
             | Any -> true | _ -> false
@@ -1166,26 +1177,26 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
              capture = cap; _ } as lam)
           when ft_has_erased_tvar ft ->
           let params = List.rev params in
-          let rec collect_tarr = function
+          let rec collect_arrows = function
             | Core.Type.Arrow {parameter = a; result = rest} ->
-              let (ps, r) = collect_tarr rest in (a :: ps, r)
+              let (ps, r) = collect_arrows rest in (a :: ps, r)
             | t -> ([], t)
           in
-          let (ml_param_tys, ml_ret_ty) = collect_tarr ft in
+          let (core_param_tys, core_ret_ty) = collect_arrows ft in
           (* The field's type is written in the inductive's variables, not
              this scope's: [k : X -> T] names the constructor's third
              parameter, which this call instantiates through [ctor_temps]. *)
-          let erase_ml_ty t =
+          let erase_core_ty t =
             match t with
             | Core.Type.Variable {variable = i; _} when tvar_is_erased i -> Cpp_ir.Type.Any
             | Core.Type.Unknown -> Cpp_ir.Type.Any
             | _ ->
                 Cpp_ir.Types.substitute
                    (fun i -> if i >= 1 then List.nth_opt ctor_temps (i - 1) else None)
-                   (cpp_of_ml env t)
+                   (cpp_of_core env t)
           in
-          let erased_param_tys = List.map erase_ml_ty ml_param_tys in
-          let erased_ret_ty = erase_ml_ty ml_ret_ty in
+          let erased_param_tys = List.map erase_core_ty core_param_tys in
+          let erased_ret_ty = erase_core_ty core_ret_ty in
           let n_params = List.length params in
           (* Build new params with std::any for erased positions, and add
              any_cast let-bindings for each erased parameter at the start
@@ -1203,7 +1214,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             (erased_ty, orig_id)
           ) params in
           (* Extract concrete parameter types from the Core lambda *)
-          let ml_concrete_param_tys =
+          let core_concrete_param_tys =
             let rec collect_lam_tys = function
               | Core.Expr.Lambda {parameter_type = ty; body; _} -> ty :: collect_lam_tys body
               | Core.Expr.Coerce {value = inner; _}
@@ -1212,18 +1223,18 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                 collect_lam_tys inner
               | _ -> []
             in
-            collect_lam_tys ml_e
+            collect_lam_tys core_e
           in
           let cast_bindings = List.filter_map (fun (j, (_orig_ty, orig_id)) ->
             if j < List.length erased_param_tys
                && List.nth erased_param_tys j = Cpp_ir.Type.Any then
               match orig_id with
               | Some id ->
-                (* Get concrete type from ML lambda param, not C++ lambda *)
+                (* Get concrete type from the Core lambda param, not the C++ lambda *)
                 let concrete_ty =
-                  match List.nth_opt ml_concrete_param_tys j with
-                  | Some ml_ty ->
-                    let ct = cpp_of_ml env ml_ty in
+                  match List.nth_opt core_concrete_param_tys j with
+                  | Some core_ty ->
+                    let ct = cpp_of_core env core_ty in
                     strip_cpp_ref_const ct
                   | None -> strip_cpp_ref_const (fst (List.nth params j))
                 in
@@ -1245,7 +1256,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                     In_namespace (ns_g, Entity_application (g, [Cpp_ir.Type.Any], ns))
                   | t -> t
                 in
-                (* [Topaque] is no more castable than [Tany]: both print
+                (* [Obligation Opaque_type] is no more castable than [Any]: both print
                    as [std::any], and neither names a representation to
                    recover the parameter into. *)
                 if (not (Cpp_ir.Types.prints_as_any concrete_ty)) && concrete_ty <> Cpp_ir.Type.Auto
@@ -1282,18 +1293,18 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
            there are no parameters here to rewrite, so defer to the runtime
            helper, which deduces the callable's signature and unboxes each
            argument.  The field's codomain stays concrete. *)
-        | Core.Type.Arrow _, _ when ft_has_erased_tvar ft && ml_expr_is_function_value ml_e ->
+        | Core.Type.Arrow _, _ when ft_has_erased_tvar ft && core_expr_is_function_value core_e ->
           let rec codomain = function
             | Core.Type.Arrow {result = rest; _} -> codomain rest
             | t -> t
           in
-          let ret_ty = cpp_of_ml env (codomain ft) in
+          let ret_ty = cpp_of_core env (codomain ft) in
           let expr = erased_fn_instantiation expr in
           Erase_callable (At_signature (if Cpp_ir.Types.prints_as_any ret_ty then Cpp_ir.Type.Any else ret_ty), expr)
         (* A field erased whole -- [den t], whatever [t] the call names --
            holds a function as the canonical callable it is read back as. *)
         | _ when ft_has_erased_tvar ft ->
-          box_for_any_slot (box_kind_of_cpp_type (cpp_of_ml env ft)) ml_e expr
+          box_for_any_slot (box_kind_of_cpp_type (cpp_of_core env ft)) core_e expr
         | _ -> expr )
     in
     let gen_and_wrap i e =
@@ -1327,9 +1338,9 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
       let shares_child =
         Table.non_atomic_rc ()
         && (match expr with Local _ -> true | _ -> false)
-        && match ft_opt, resolve_tmeta ty with
+        && match ft_opt, resolve_meta ty with
            | Some ft, Core.Type.Global_app {head = n_ind; _} ->
-             (match resolve_tmeta ft with
+             (match resolve_meta ft with
               | Core.Type.Global_app {head = g; _} -> globref_equal g n_ind
               | _ -> false)
              && (not (Table.is_coinductive n_ind))
@@ -1364,7 +1375,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
            instance member template a recovered [Core.Type.Variable 3] is the method's
            own [_A0], and an empty name list spells it as the anonymous
            [T3] -- a free name where the erasure at least compiled. *)
-        let temps = ind_promoted_type_args n @ template_params_of_ml ~site:Through_tvar env tys in
+        let temps = ind_promoted_type_args n @ template_params_of_core ~site:Through_tvar env tys in
         if Table.is_coinductive n then
           Cpp_ir.Build.call
             (Allocate (Heap, Entity_application (n, temps, [])))
@@ -1404,8 +1415,8 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                 | Some e -> container_cast_erased_field ft e expr
                 | None -> expr
               in
-              let storage_ty = cpp_ir_of_ml_type env ~ns:(Ref.User.Set.singleton n) tvars ft in
-              let api_ty = cpp_of_ml env ft in
+              let storage_ty = cpp_ir_of_core_type env ~ns:(Ref.User.Set.singleton n) tvars ft in
+              let api_ty = cpp_of_core env ft in
               (* A closure written at the concrete domain does not convert
                  to the erased signature the field is declared at, nor is it
                  the canonical callable a field erased whole ([den t] at a

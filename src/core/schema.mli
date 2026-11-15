@@ -1,11 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A constant's Core type scheme, with the layout of the source binders
-    its variables come from.
+(** [Core.Schema]: a constant's Core type scheme, with the layout of the
+    source binders its variables come from.  Extraction builds one per
+    constant it types ({!make}) and the tables register it, so every use of
+    the constant ([Core.Global_use]) instantiates the same identity.
 
-    The body mentions [Core.Type.Variable 1 .. Core.Type.Variable (arity)]; {!Scheme.Var.of_tvar} names
-    them.  The layout has one entry per binder of the declaration's Rocq
+    The body mentions [Core.Type.Variable 1 .. Core.Type.Variable (arity)];
+    {!Scheme.Var.of_tvar} names them.  The layout has one entry per binder of the declaration's Rocq
     product spine, in source order -- value and proof binders included, so a
     call's arguments walk it in lockstep with no projection to a "type-level"
     sublist.  A binder's role (whether a call passes an argument for it) and
@@ -16,7 +18,7 @@
 (** Whether a call passes an argument for a binder. *)
 type binder_role =
   | Value  (** a call passes an argument *)
-  | Erased of Core.Erasure_reason.t  (** erased, for this reason; no argument *)
+  | Erased of Erasure_reason.t  (** erased, for this reason; no argument *)
 
 (** One binder of the layout. *)
 type binder_info = {
@@ -29,7 +31,7 @@ type binder_info = {
     extracted with, if erased, and the provisional variable number it was
     given, if it was a type binder. *)
 type raw_binder = {
-  raw_erased : Core.Erasure_reason.t option;
+  raw_erased : Erasure_reason.t option;
   raw_tvar : int option;
 }
 
@@ -37,14 +39,14 @@ type raw_binder = {
 type t
 
 (** The largest schematic variable [ty] mentions, [0] if none. *)
-val max_tvar : Core.Type.t -> int
+val max_tvar : Type.t -> int
 
 (** [make owner body layout] finalizes a scheme: every binder [layout]
     numbers is a variable, whether or not [body] mentions it -- the scheme
     quantifies what the source quantifies, and which of those survive into
     the body is a fact about the body -- and the identity is fresh.  Raises
     [Invalid_argument] if two binders claim one variable. *)
-val make : Names.GlobRef.t -> Core.Type.t -> raw_binder list -> t
+val make : Names.GlobRef.t -> Type.t -> raw_binder list -> t
 
 (** The scheme's identity, fresh at {!make}. *)
 val id : t -> Scheme.Id.t
@@ -53,7 +55,7 @@ val id : t -> Scheme.Id.t
 val owner : t -> Names.GlobRef.t
 
 (** The type, its variables [Core.Type.Variable 1 .. Core.Type.Variable (arity)]. *)
-val body : t -> Core.Type.t
+val body : t -> Type.t
 
 (** The number of variables it quantifies. *)
 val arity : t -> int
@@ -77,7 +79,7 @@ val with_roles : (binder_info -> binder_role) -> t -> t
 
 (** Replaces the body with an equivalent spelling (an expansion of its
     abbreviations), keeping the identity and the layout. *)
-val with_body : Core.Type.t -> t -> t
+val with_body : Type.t -> t -> t
 
 (** The scheme's invariants, as a list of violations: the body names no
     variable past the arity, every variable has exactly one source binder,

@@ -8,7 +8,7 @@ let carrier_name = Generated_name.id "X"
 
 let quantifies_erased_type ty =
   let rec go ty =
-    match Ml_type_util.resolve_tmeta ty with
+    match Type_util.resolve_meta ty with
     | Core.Type.Unknown -> true
     | Core.Type.Global_app {type_arguments = args; _} | Core.Type.Variable_app {arguments = args; _} ->
       List.exists go args

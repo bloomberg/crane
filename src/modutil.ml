@@ -10,17 +10,17 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Traversal, search, and optimization functions over Core module structures.
-*)
+(* Traversal, search, and optimization functions over Core module
+   structures.  See [modutil.mli]. *)
 
 open Names
 open ModPath
 open CErrors
 open Util
 open Table
-open Mlutil
+open Core_util
 
-(** {1 Functions upon ML modules} *)
+(** {1 Functions upon Core modules} *)
 
 (* Note: a syntax like [(F M) with ...] is actually legal, see for instance bug
    #4720. Hence the code below tries to handle [Core.Module.Type.Signature], maybe not in a perfect
@@ -99,7 +99,8 @@ let struct_functions struc =
                                                                    type_ = ty}) ->
           acc := (r, b, ty) :: !acc
         | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) ->
-          Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> acc := (fd.entity, fd.body, fd.type_) :: !acc) fds
+          Core.Nonempty.iter
+            (fun (fd : Core.Recursion.Definition.t) -> acc := (fd.entity, fd.body, fd.type_) :: !acc) fds
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = l; _}; _} -> elems l
         | _ -> () )
       l
@@ -125,7 +126,7 @@ let record_iter_references do_term = function
     List.iter (fun (f : Core.Record.Field.t) -> Option.iter do_term f.projection) l
   | _ -> ()
 
-(** Iterate over all GlobRef.t occurring in an ML type. *)
+(** Iterate over all GlobRef.t occurring in a Core type. *)
 let type_iter_references do_type t =
   let rec iter = function
     | Core.Type.Global_app {head = r; type_arguments = l; _} ->
@@ -149,7 +150,7 @@ let patt_iter_references do_cons p =
   in
   iter p
 
-(** Iterate over term, constructor, and type references in an ML AST.
+(** Iterate over term, constructor, and type references in a Core term.
     [prune a] returning [true] skips [a] entirely (neither its own references
     nor those of its subterms are visited).  Used to drop subtrees that later
     passes fold away, e.g. numeral-converter applications. *)
@@ -209,7 +210,7 @@ let ind_iter_references do_term do_cons do_type kn (ind : Core.Inductive.t) =
   if lang () == Cpp then record_iter_references do_term ind.kind;
   Array.iteri (fun i -> packet_iter (kn, i)) ind.packets
 
-(** Iterate over all references in an ML declaration.
+(** Iterate over all references in a Core declaration.
     See {!ast_iter_references} for the meaning of [prune]. *)
 let decl_iter_references ?prune do_term do_cons do_type =
   let type_iter = type_iter_references do_type
@@ -228,7 +229,7 @@ let decl_iter_references ?prune do_term do_cons do_type =
       Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> ast_iter fd.body) fds;
       Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> type_iter fd.type_) fds
 
-(** Iterate over all references in an ML specification. *)
+(** Iterate over all references in a Core specification. *)
 let spec_iter_references do_term do_cons do_type = function
   | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} ->
     ind_iter_references do_term do_cons do_type kn ind
@@ -316,9 +317,10 @@ let rec msig_of_ms = function
                                                                                  body = Some t})) :: msig_of_ms ms
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: ms ->
     List.map
-      (fun (fd : Core.Recursion.Definition.t) -> (l, Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Value {entity = fd.entity;
-                                                                                                                               body = fd.body;
-                                                                                                                               type_ = fd.type_})))
+      (fun (fd : Core.Recursion.Definition.t) ->
+        (l,
+          Core.Module.Signature_item.Declaration
+            (Core.Signature.Declaration.Value {entity = fd.entity; body = fd.body; type_ = fd.type_})))
       (Core.Nonempty.to_list fds)
     @ msig_of_ms ms
   | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: ms ->
@@ -377,13 +379,14 @@ let get_decl_in_structure r struc =
 
 (** {2 Optimization of a Core.Program.t} *)
 
-(* Some transformations of ML terms. [optimize_struct] simplifies all beta
+(* Some transformations of Core terms. [optimize_struct] simplifies all beta
     redexes (when the argument does not occur, it is just thrown away; when it
     occurs exactly once it is substituted; otherwise a let-in redex is created
     for clarity) and iota redexes, plus some other optimizations. *)
 
-(** Convert member [i] of a Core.Decl.Recursive_group group to an Core.Expr.Fixpoint term for inlining. *)
-let dfix_to_mlfix fds i =
+(** Convert member [i] of a [Core.Decl.Recursive_group] to a
+    [Core.Expr.Fixpoint] term, for inlining. *)
+let fixpoint_of_group fds i =
   let fds = Core.Nonempty.to_list fds in
   let rv = Array.of_list (List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) fds) in
   let rec make_subst n s =
@@ -435,7 +438,7 @@ let decl_of_term r a t =
     when singleton_instance_class r = None ->
     (* Each call of itself is a use of its own, told apart from the others
        by its occurrence. *)
-    let c = Mlutil.ast_subst_each (fun () -> Core.Expr.Global (Mlutil.self_reference r)) c in
+    let c = Core_util.ast_subst_each (fun () -> Core.Expr.Global (Core_util.self_reference r)) c in
     unify_binders_with_signature t c;
     Core.Decl.Recursive_group (Core.Nonempty.singleton {Core.Recursion.Definition.entity = r; body = c; type_ = t})
     (* The self-reference instantiates [r] at its own type variables
@@ -471,7 +474,7 @@ let rec optim_se top to_appear s = function
     List.iteri
       (fun i (fd : Core.Recursion.Definition.t) ->
         if inline fd.entity fake_body then
-          s := Ref.User.Map.add fd.entity (dfix_to_mlfix fds i) !s )
+          s := Ref.User.Map.add fd.entity (fixpoint_of_group fds i) !s )
       (Core.Nonempty.to_list fds);
     let fds = Core.Nonempty.map (Core.Recursion.Definition.map_body dump_unused_vars) fds in
     (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: optim_se top to_appear s lse

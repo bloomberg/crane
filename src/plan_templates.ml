@@ -14,7 +14,7 @@
 
 open Names
 open Util
-open Ml_type_util
+open Type_util
 
 (** A C++ type, and a template parameter list, as a head is planned in. *)
 type head_type = Cpp_ir.Lowered.Type.t
@@ -63,21 +63,21 @@ let applied_tvar_arities (cty : head_type) =
 (** Re-declare as template template parameters those entries of [temps] that
     [cty] applies to arguments; see {!applied_tvar_arities}.
 
-    [ml_ty], when given, vetoes the promotion for a variable whose ML type does
-    not demand the higher kind ({!Ml_type_util.higher_kinded_ml_tvars}: applied
+    [core_ty], when given, vetoes the promotion for a variable whose Core type does
+    not demand the higher kind ({!Type_util.higher_kinded_core_tvars}: applied
     to something erasure left behind, or written where a generated constructor
     expects a template name).  Being applied is not on its own a reason to be
     higher-kinded -- when neither holds, the application
     can be taken back off, which {!deapply_plain_tvars} then does -- and the
     C++ type read here has not been through the relaxations, so it is not the
     place to look for the occurrence that would justify the higher kind. *)
-let with_applied_tvars ?ml_ty (cty : head_type) (temps : head_params) : head_params =
+let with_applied_tvars ?core_ty (cty : head_type) (temps : head_params) : head_params =
   let arities = applied_tvar_arities cty in
   let arities =
-    match ml_ty with
+    match core_ty with
     | None -> arities
     | Some ty ->
-      let hk = Ml_type_util.higher_kinded_ml_tvars [ty] in
+      let hk = Type_util.higher_kinded_core_tvars [ty] in
       let veto = ref [] in
       head_type_exists
         (fun t ->
@@ -96,7 +96,7 @@ let with_applied_tvars ?ml_ty (cty : head_type) (temps : head_params) : head_par
          be.  Added after the veto, which speaks only about applications. *)
       List.iter
         (fun (i, arity) -> Hashtbl.replace arities (Common.tvar_id i) arity)
-        (Ml_type_util.hkt_arg_ml_tvar_arities [ty]);
+        (Type_util.hkt_arg_core_tvar_arities [ty]);
       arities
   in
   if Hashtbl.length arities = 0 then temps
@@ -123,16 +123,16 @@ let with_applied_tvars ?ml_ty (cty : head_type) (temps : head_params) : head_par
 (** Template parameter list for a declaration whose parameters [vars] are used
     by the types [tys] -- an inductive's constructor fields, or the body of a
     type alias -- with the kinds of its positions.  The arities are read off
-    the ML types rather than the converted C++ ones because the parameter list
+    the Core types rather than the converted C++ ones because the parameter list
     has to be fixed before the types are converted.  [applied], when given,
     is the rendered C++ body of a type alias, read instead of [tys] for the
     arities and for which parameters are phantom.  Returns the parameter list
     and its {!Tparam_kinds.t}; records nothing ({!hkt_templates} records). *)
 let template_kinds ?(applied : head_type option) vars tys =
-  (* Read from the rendered type where there is one: the ML body still applies
+  (* Read from the rendered type where there is one: the Core body still applies
      a variable that erasure removed, and the parameter list has to agree with
      what the users of this name can see.  See
-     {!Ml_type_util.rendered_tvar_arities}. *)
+     {!Type_util.rendered_tvar_arities}. *)
   let arities =
     match applied with
     | Some a ->
@@ -140,7 +140,7 @@ let template_kinds ?(applied : head_type option) vars tys =
          payloads below: applied only at erased or variable arguments --
          [IFun E F := forall T, E T -> F T], whose [T] erases -- is a family,
          and a family is a plain parameter. *)
-      let arities = Ml_type_util.rendered_tvar_arities a in
+      let arities = Type_util.rendered_tvar_arities a in
       let demanded = Hashtbl.create 4 in
       let rec scan : head_type -> unit = function
         | Apply (Variable (Index (i, _)), tys) ->
@@ -187,7 +187,7 @@ let template_kinds ?(applied : head_type option) vars tys =
         | _ -> ()
       in
       List.iter scan tys;
-      let arities = Ml_type_util.applied_ml_tvar_arities tys in
+      let arities = Type_util.applied_core_tvar_arities tys in
       Hashtbl.filter_map_inplace
         (fun i a -> if Hashtbl.mem demanded i then Some a else None)
         arities;
@@ -200,7 +200,7 @@ let template_kinds ?(applied : head_type option) vars tys =
      template of every use site for a position that holds nothing.  It is a
      plain parameter defaulted to [void], and {!Table.is_phantom_type_param}
      is what makes the use sites agree. *)
-  let rendered = Option.map Ml_type_util.get_rendered_tvar_indices applied in
+  let rendered = Option.map Type_util.get_rendered_tvar_indices applied in
   let rendered_in_cpp i =
     match rendered with None -> true | Some l -> List.mem i l
   in
@@ -238,8 +238,8 @@ let template_kinds ?(applied : head_type option) vars tys =
   (* Applied in the definition and still plain: a family position. *)
   let applied_at_all =
     match applied with
-    | Some a -> Ml_type_util.rendered_tvar_arities a
-    | None -> Ml_type_util.applied_ml_tvar_arities tys
+    | Some a -> Type_util.rendered_tvar_arities a
+    | None -> Type_util.applied_core_tvar_arities tys
   in
   ( temps,
     { Tparam_kinds.template_templates =
@@ -485,7 +485,7 @@ let relax_applied_param (temps : head_params) (signature : Callable_abi.signatur
         pick (List.length !fresh)
       in
       (* One name per distinct application, not per occurrence: two positions
-         spelled [T1<std::any>] came from the one ML type and denote the one
+         spelled [T1<std::any>] came from the one Core type and denote the one
          C++ type, and giving them separate deduced parameters would let a
          call deduce them apart.  Sharing is also what lets the body be
          rewritten: it spells the application the same way the parameter did,
@@ -649,7 +649,7 @@ let default_unmentioned_temps (temps : head_params) (signature : Callable_abi.si
   in
   (* Only the arguments a type actually writes count: an argument in a
      position nothing writes is no more deducible than one that is not there. *)
-  let prune = Ml_type_util.prune_unwritten_args in
+  let prune = Type_util.prune_unwritten_args in
   let has_tvar id ty = head_type_exists (is_tvar id) (prune ty) in
   let mentions id =
     let has = has_tvar id in
@@ -723,32 +723,32 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
 (** Build template parameter list with phantom detection.
 
     Type variables represented concretely in the generated signature (i.e.
-    {!Ml_type_util.primary_tvar_indices}) are emitted as plain [typename T].
+    {!Type_util.primary_tvar_indices}) are emitted as plain [typename T].
     All others (phantom tvars from erased HKT positions or custom-template
     positions that the C++ compiler cannot deduce) are emitted with a [void]
     default ([typename T = void]), except the leading run every call site
-    spells out ({!Ml_type_util.explicit_tvar_prefix}), which stays required.
+    spells out ({!Type_util.explicit_tvar_prefix}), which stays required.
     Applied variables then become template template parameters
     ({!with_applied_tvars}).
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!Translation_types.cpp_ir_of_ml_type}).
+    pipeline (see {!Translation_types.cpp_ir_of_core_type}).
 
     @param force_required  Set of tvar indices that must be required (plain
       [typename T]) even if they don't appear in the C++ function type.
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies.
-    @param also_declared  Set of tvar indices the ML type has but the C++
+    @param also_declared  Set of tvar indices the Core type has but the C++
       type may not spell; each is declared, as a defaulted phantom unless
       it is primary.
-    @param ml_ty  The ML type of the declaration, passed to
+    @param core_ty  The Core type of the declaration, passed to
       {!with_applied_tvars} to veto higher kinds it does not demand. *)
 let phantom_aware_temps
-    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?ml_ty (cty : head_type)
+    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?core_ty (cty : head_type)
     tvars : head_params =
   (* The leading phantoms are spelled out at every call site
-     ({!Ml_type_util.explicit_tvar_prefix}), so they need no default.  A
+     ({!Type_util.explicit_tvar_prefix}), so they need no default.  A
      default there would let a call that supplies nothing silently pick
      [void] instead of failing to compile. *)
   let undefault n (temps : head_params) : head_params =
@@ -760,17 +760,17 @@ let phantom_aware_temps
       temps
   in
   undefault (explicit_tvar_prefix ~force_required cty)
-  @@ with_applied_tvars ?ml_ty cty
+  @@ with_applied_tvars ?core_ty cty
   @@
   match cty with
   | Function (dom, cod) ->
     let tvars_indexed = get_tvars_indexed cty in
     let primary = primary_tvar_indices dom cod in
     let primary = IntSet.union primary force_required in
-    (* [also_declared] is every variable the ML type has, which is not every
+    (* [also_declared] is every variable the Core type has, which is not every
        variable the C++ type spells: an erased one is written nowhere in the
        signature, yet the body and the call sites still number their arguments
-       by the ML type.  Declared as a defaulted phantom, the numbering lines up
+       by the Core type.  Declared as a defaulted phantom, the numbering lines up
        and nothing is demanded of a use site that supplies nothing. *)
     let extra =
       IntSet.fold (fun i acc ->

@@ -1,15 +1,17 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What loop lowering ({!Control_to_cpp_ir}, Loopify) reads of the
+(** What loop lowering ({!Control_to_cpp_ir}, {!Loopify}) reads of the
     analysis of the program and of the unit being lowered: the input of the
-    finishing passes that turn recursion into loops, as {!Translation_state}'s
-    is lowering's.  Those passes may not depend on translation, nor can
-    translation name the plans' types ({!Recursion_plan} reads translation's
-    suspension rules), so the facts are set here, for the extent of the
-    program's units and then of each unit, by the driver that analysed
-    them; outside that extent every fact is that of a program that defines
-    nothing. *)
+    passes that turn recursion into loops (ControlIR), as
+    {!Translation_state}'s is lowering's.  Those passes may not depend on
+    translation, nor can translation name the plans' types
+    ({!Recursion_plan} reads translation's suspension rules), so the facts
+    are set here, for the extent of the program's units
+    ([Extract_env.freeze], from {!Program_facts.analyze_program}) and then
+    of each unit ([Extract_env.print_structure_to_file], from
+    {!Program_facts.analyze}); outside that extent every fact is that of a
+    program that defines nothing. *)
 
 type t = {
   recursion : Recursion_plan.t;  (** how each function recurses *)

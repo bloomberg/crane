@@ -31,7 +31,7 @@ type representation = {
 }
 
 type t = {
-  input : Ml_fingerprint.t option;
+  input : Core.Fingerprint.t option;
   config : Table.unit_config;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
@@ -50,10 +50,10 @@ let decided decisions kn =
 
 let kind_of t kn = decided t.inductive_kinds kn
 
-(** The kind [ind] has once [decisions] are installed. *)
+(** The kind [ind] has once [decisions] apply. *)
 let kind_after decisions kn (ind : Core.Inductive.t) = Option.default ind.kind (decided decisions kn)
 
-(** {!Table.is_typeclass}, once [decisions] are installed. *)
+(** {!Table.is_typeclass}, once [decisions] apply. *)
 let is_typeclass_after decisions r =
   let of_block kn =
     match decided decisions kn with
@@ -205,7 +205,8 @@ let value_use_demotion prior struc =
     let scan_field =
       match kind_after prior kn ind with Core.Inductive.Kind.Type_class _ -> scan_type | _ -> scan_arg
     in
-    Array.iter (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter scan_field) p.constructor_argument_types) ind.packets
+    Array.iter
+      (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter scan_field) p.constructor_argument_types) ind.packets
   in
   (* A class value a definition computes from data is data: the struct an
      instance is otherwise emitted as is fixed at compile time, so it cannot
@@ -237,7 +238,7 @@ let value_use_demotion prior struc =
      natalg]] is a [list alg] whether or not any declaration's type says so. *)
   let scan_body body =
     ignore
-      (Mlutil.ast_map_types
+      (Core_util.ast_map_types
          (fun t ->
            scan_type t;
            t )
@@ -251,7 +252,7 @@ let value_use_demotion prior struc =
         (fun (fd : Core.Recursion.Definition.t) ->
           scan_term_type fd.type_;
           scan_body fd.body )
-        (Mlutil.term_defs d)
+        (Core_util.term_defs d)
   in
   let scan_spec = function
     | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> scan_ind kn ind
@@ -277,7 +278,7 @@ let value_use_demotion prior struc =
 let plan (facts : Program_facts.t) struc =
   let input =
     if Pipeline_trace.enabled () || Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-      Some (Ml_fingerprint.structure struc)
+      Some (Core.Fingerprint.structure struc)
     else None
   in
   let aligned = functor_alignment struc in
@@ -286,7 +287,9 @@ let plan (facts : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {module_names = []; names = []; referenced_names = []; field_names = []; pointer_fields = []; unmerged_wrappers = [];
+    representation =
+      {module_names = []; names = []; referenced_names = []; field_names = []; pointer_fields = [];
+        unmerged_wrappers = [];
         promoted_inductives = [];
         accessors = [];
         nested_structs = [];
@@ -331,7 +334,8 @@ let kind_equal a b =
   | Core.Inductive.Kind.Record f, Core.Inductive.Kind.Record f'
   | Core.Inductive.Kind.Type_class f, Core.Inductive.Kind.Type_class f' ->
     fields_equal f f'
-  | (Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _), _ -> false
+  | (Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Record _
+  | Core.Inductive.Kind.Type_class _), _ -> false
 
 (* The same global under the same name. *)
 let same_name (r, s) (r', s') = GlobRef.UserOrd.equal r r' && String.equal s s'
@@ -368,7 +372,7 @@ let equal a b =
   && List.equal
        (fun (r, bs) (r', bs') ->
          GlobRef.UserOrd.equal r r'
-         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Mlutil.eq_ml_type t t') bs bs' )
+         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Core_util.eq_core_type t t') bs bs' )
        a.representation.instance_promoted_types b.representation.instance_promoted_types
   && same_callables a.callables b.callables
   && same_instance_methods a.instance_methods b.instance_methods

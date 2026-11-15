@@ -4,12 +4,20 @@
 (** The C++ type each coercion's position is generated against, planned
     from Core ahead of lowering.
 
-    A coercion ([Core.Expr.Coerce], [Core.Expr.Boxed_value], [Core.Expr.Lambda_group_barrier]) is lowered against the type of the position it
-    fills: the parameter a global call passes it at, the return type of the
-    region whose result it is, a constructor's field.  The plan walks a
-    region's Core body and gives each coercion's occurrence that type, by
-    the decisions lowering makes for each position
-    ({!Translation_calls.plan_call}, {!Translation_calls.argument_position},
+    It runs once per region (a body, or a lambda's body), from
+    {!Translation_state.with_region} through the
+    {!Translation_state.plan_positions} hook, after {!Representation_plan}
+    has planned the region's reads; lowering then reads the answers from
+    {!Translation_state.lexical.planned_positions}.
+
+
+    A coercion ([Core.Expr.Coerce], [Core.Expr.Boxed_value],
+    [Core.Expr.Lambda_group_barrier]) is lowered against the type of the
+    position it fills: the parameter a global call passes it at, the return type
+    of the region whose result it is, a constructor's field.  The plan walks a
+    region's Core body and gives each coercion's occurrence that type, by the
+    decisions lowering makes for each position ({!Translation_calls.plan_call},
+    {!Translation_calls.argument_position},
     {!Translation_constructors.regular_field},
     {!Translation_constructors.record_field},
     {!Translation_constructors.custom_field}), carrying the slot each value

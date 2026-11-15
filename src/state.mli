@@ -6,7 +6,12 @@
     {!Table.reset_tables} and {!Cpp_state.reset_cpp_state} reset the
     [Extraction] scope when a command starts;
     {!Common.reset_renaming_tables} resets the [Unit] scope, at the start of
-    an extraction and before each generated file. *)
+    an extraction and before each generated file.
+
+    A cell holding a plan value is not enrolled: it is bound for the
+    dynamic extent the value is good for ({!bind}), as
+    {!Accumulated_plan.bind} binds what the earlier units of a separate
+    extraction decided for the whole of a unit. *)
 
 (** How long a cell's contents are good for.
     - [Extraction]: one [Crane Extraction] command.

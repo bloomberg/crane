@@ -83,4 +83,4 @@ val resolved_from : evidence -> t -> bool
     to the last variable known or written unreadably, a hole before it
     spelled [Core.Type.Erased Core.Erasure_reason.Type_argument] -- the erased placeholder the erasure filters
     leave to deduction. *)
-val by_variable : t -> Mlutil.Var_types.t
+val by_variable : t -> Core_util.Var_types.t

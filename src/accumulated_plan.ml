@@ -37,4 +37,4 @@ let bind t f =
   Table.with_instance_promoted_types t.instance_promoted_types @@ fun () ->
   Callable_abi.with_decided t.callables f
 
-let for_next_unit t = {t with modules = Module_plan.for_next_unit t.modules}
+let for_next_unit t = {t with modules = Module_plan.for_next_unit t.modules; callables = Callable_abi.undecided}

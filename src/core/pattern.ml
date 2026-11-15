@@ -1,7 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Core match patterns ({!Grammar.Pattern}). *)
+(** [Core.Pattern]: the patterns of a [Core.Expr.Match] branch, and the one
+    shape extraction builds ({!binding_all}). *)
 
 include Grammar.Pattern
 

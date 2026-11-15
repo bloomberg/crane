@@ -3,7 +3,11 @@
 
 (** What printing a term writes, asked of its structure rather than of its
     rendering: the variables a body's text reads, and whether an expression
-    is written with a leading prefix pointer operator. *)
+    is written with a leading prefix pointer operator.  The printer
+    ({!Cpp_print}) asks the first to name only the parameters a body reads,
+    and checks the second against its output under [CRANE_CHECK_IR];
+    {!Cpp_erasure} asks the second to parenthesise a match template's
+    scrutinee. *)
 
 open Names
 open Grammar
@@ -30,9 +34,9 @@ let custom_match_text (m : 'p Custom_match.t) =
   | Owned when Foreign_template.structured_binding m.template <> None -> Foreign_template.bound_by_value m.template
   | Owned | Borrowed -> m.template
 
-(* Whether an inline mapping, as printed, spells its value argument [i]: a
-   callee is printed applied to all of them, a template spells exactly the
-   [%a{i}] it names. *)
+(** [inline_spells_arg t i] is whether the inline mapping [t], as printed,
+    spells its value argument [i]: a callee is printed applied to all of
+    them, a template spells exactly the [%a{i}] it names. *)
 let inline_spells_arg (t : Foreign.template) =
   match t.form with
   | Bare_callee -> fun _ -> true
@@ -43,8 +47,9 @@ let inline_spells_arg (t : Foreign.template) =
 (** [vars] without the variables in [bound]. *)
 let without bound vars = List.filter (fun v -> not (List.exists (Id.equal v) bound)) vars
 
-(* What the [decltype]s in the types [visit] hands its argument read; a
-   type constructor, of which only the head is written, is not entered. *)
+(** [in_types visit] is the variables the [decltype]s read in the types
+    [visit] hands its argument; a type constructor, of which only the head
+    is written, is not entered. *)
 let rec in_types : type p. ((p Type.t -> unit) -> unit) -> Id.t list =
  fun visit ->
   let acc = ref [] in
@@ -57,7 +62,8 @@ let rec in_types : type p. ((p Type.t -> unit) -> unit) -> Id.t list =
   visit go;
   !acc
 
-(* The variables the text of [e] reads. *)
+(** The variables the text of [e] reads, the [decltype]s in its types
+    included. *)
 and expr : type p. p Expr.t -> Id.t list =
  fun e ->
   let types = in_types (fun f -> Children.expr {Children.expr = ignore; stmt = ignore; type_ = f} e) in
@@ -69,14 +75,18 @@ and expr : type p. p Expr.t -> Id.t list =
   | Call (_, (Entity (_, _, Some {inline = Some t; _}) as f), args) ->
     let spells = inline_spells_arg t in
     expr f @ List.concat (List.mapi (fun i a -> if spells i then expr a else []) args)
-  | Foreign (_, fr) -> List.concat (List.mapi (fun i a -> if List.mem (Foreign.Value i) fr.pieces then expr a else []) fr.values)
+  | Foreign (_, fr) ->
+    List.concat (List.mapi (fun i a -> if List.mem (Foreign.Value i) fr.pieces then expr a else []) fr.values)
   | Lambda l -> without (List.filter_map snd l.params) (body l.body)
   | e ->
     let found = ref [] in
-    Children.expr {Children.expr = (fun e -> found := !found @ expr e); stmt = (fun s -> found := !found @ stmt s); type_ = ignore} e;
+    Children.expr
+      {Children.expr = (fun e -> found := !found @ expr e); stmt = (fun s -> found := !found @ stmt s); type_ = ignore}
+        e;
     !found
 
-(* The variables the text of [s] reads. *)
+(** The variables the text of [s] reads, the [decltype]s in its types
+    included. *)
 and stmt : type p. p Stmt.t -> Id.t list =
  fun s ->
   let types = in_types (fun f -> Children.stmt {Children.expr = ignore; stmt = ignore; type_ = f} s) in
@@ -107,7 +117,8 @@ and stmt : type p. p Stmt.t -> Id.t list =
     @ List.concat_map
         (fun (br : p Match.branch) ->
           let bound =
-            List.map (fun (f : p Match.field_binding) -> f.name) br.field_bindings @ Option.cata (fun v -> [v]) [] br.var
+            List.map (fun (f : p Match.field_binding) -> f.name) br.field_bindings
+              @ Option.cata (fun v -> [v]) [] br.var
           in
           without bound (List.concat_map expr br.extra_conditions @ body br.body) )
         branches
@@ -121,8 +132,8 @@ and stmt : type p. p Stmt.t -> Id.t list =
     []
   | Foreign_block b -> List.concat_map expr b.values
 
-(* The variables the text of a statement list reads, excluding those a
-   statement declares from the statements after it. *)
+(** The variables the text of a statement list reads, excluding those a
+    statement declares from the statements after it. *)
 and body : type p. p Stmt.t list -> Id.t list =
  fun stmts ->
   let rec go defined = function
@@ -146,14 +157,16 @@ let reads_as_printed b =
   let read = body b in
   fun id -> List.exists (Id.equal id) read
 
-(* A conjunction under a disjunction, or the reverse, is parenthesised
-   where it is written. *)
+(** [parenthesised_operand op e] is whether [e], an operand of [op], is
+    written parenthesised: a conjunction under a disjunction, or the
+    reverse. *)
 let parenthesised_operand (op : Binary_operator.t) (e : 'p Expr.t) =
   match e with
   | Binary (And, _, _) -> op = Or
   | Binary (Or, _, _) -> op = And
   | _ -> false
 
+(** Whether the text [s] begins with [*] or [&]. *)
 let starts_with_pointer_operator s = s <> "" && (s.[0] = '*' || s.[0] = '&')
 
 (** Whether [e] is written with a leading prefix pointer operator, [*] or
@@ -167,10 +180,11 @@ let rec written_with_leading_pointer_operator : type p. p Expr.t -> bool = funct
   | Foreign ((Constant | Call), fr) -> foreign_written_with_leading_pointer_operator fr
   | _ -> false
 
-(* A mapping's text begins with its first non-empty piece; a value spliced
-   there begins as it is written, unless it is a string literal (written as
-   the string object it stands for) or parenthesised for a member access
-   following it. *)
+(** Whether the instantiated mapping [fr] is written with a leading prefix
+    pointer operator.  A mapping's text begins with its first non-empty
+    piece; a value spliced there begins as it is written, unless it is a
+    string literal (written as the string object it stands for) or
+    parenthesised for a member access following it. *)
 and foreign_written_with_leading_pointer_operator : type p. p Foreign.t -> bool =
  fun fr ->
   let rec first : Foreign.piece list -> bool = function

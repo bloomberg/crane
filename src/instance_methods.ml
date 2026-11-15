@@ -6,7 +6,7 @@
 
 open Names
 open Util
-open Ml_type_util
+open Type_util
 open Core_query
 
 type layers = {
@@ -19,21 +19,24 @@ type layers = {
 let layers ty body =
   (* For parameterized instances, strip Core.Type.Arrow/Core.Expr.Lambda layers to get to the inner
      typeclass type and constructor body. Example: numOption has type
-     Core.Type.Arrow(Core.Type.Erased, Core.Type.Arrow(Core.Type.Global_app(Numeric,[A],[]), Core.Type.Global_app(Numeric,[option A],[])))
-     and body Core.Expr.Lambda(_, Core.Type.Erased, Core.Expr.Lambda(_, Core.Type.Global_app(Numeric,...), Core.Expr.Construct(...))) *)
+     Core.Type.Arrow(Core.Type.Erased,
+     Core.Type.Arrow(Core.Type.Global_app(Numeric,[A],[]),
+     Core.Type.Global_app(Numeric,[option A],[]))) and body Core.Expr.Lambda(_,
+     Core.Type.Erased, Core.Expr.Lambda(_, Core.Type.Global_app(Numeric,...),
+     Core.Expr.Construct(...))) *)
   let rec strip_outer_layers ty body tc_acc lam_acc =
     let stop ty body =
       {inner_ty = ty; inner_body = body; dictionaries = List.rev tc_acc; lam_params = List.rev lam_acc}
     in
     match (ty, body) with
     | Core.Type.Arrow {parameter = arg_ty;
-                       result = rest_ty}, Core.Expr.Lambda {parameter = ml_id;
+                       result = rest_ty}, Core.Expr.Lambda {parameter = core_id;
                                                             parameter_type = lam_ty;
                                                             body = rest_body} ->
       if erased_by_extraction arg_ty then
         (* Erased type parameter -- skip (template params are inferred from
            type variables in the return type) *)
-        strip_outer_layers rest_ty rest_body tc_acc ((Mlutil.id_of_mlid ml_id, lam_ty) :: lam_acc)
+        strip_outer_layers rest_ty rest_body tc_acc ((Core_util.id_of_binder_name core_id, lam_ty) :: lam_acc)
       else if parameter_role arg_ty = Dictionary then
         (* The binder is typed by the class, as the instance's type writes
            it: a singleton class's binder is annotated with the class
@@ -47,13 +50,17 @@ let layers ty body =
       when erased_by_extraction arg_ty || Table.is_typeclass_type arg_ty ->
       (* An instance eta-reduced past its own parameters -- [TFunctor_pair
          := ft_pair] -- takes them all the same. *)
-      let arg = if erased_by_extraction arg_ty then Core.Expr.Erased_value Core.Erasure_reason.Type_argument else Core.Expr.fresh_rel 1 in
+      let arg =
+        if erased_by_extraction arg_ty then Core.Expr.Erased_value Core.Erasure_reason.Type_argument else
+          Core.Expr.fresh_rel 1 in
       let applied =
-        match Mlutil.ast_lift 1 body with
+        match Core_util.ast_lift 1 body with
         | Core.Expr.Apply {callee = f; arguments = args} -> Core.Expr.Apply {callee = f; arguments = args @ [arg]}
         | f -> Core_normalize.apply f [arg]
       in
-      let body = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = arg_ty; body = applied} in
+      let body =
+        Core.Expr.Lambda
+          {parameter = Core.Binder_name.Source (Id.of_string "x"); parameter_type = arg_ty; body = applied} in
       strip_outer_layers ty body tc_acc lam_acc
     | _ -> stop ty body
   in
@@ -70,12 +77,12 @@ let record_body name class_ref inner_ty lam_params inner_body =
   let as_method m = function
     | Core.Expr.Fixpoint {members = [|{body = c; _}|]; _} | Core.Expr.Cofixpoint {members = [|{body = c; _}|]; _}
       when lam_params = [] ->
-      let n_class = Ml_type_util.projection_class_arity m in
+      let n_class = Type_util.projection_class_arity m in
       let erased = List.init n_class (fun _ -> Core.Expr.Erased_value Core.Erasure_reason.Type_argument) in
-      Mlutil.ast_subst
+      Core_util.ast_subst
         (Core.Expr.Apply
-           { callee = Core.Expr.Global (Mlutil.open_reference m);
-             arguments = erased @ [Core.Expr.Global (Mlutil.open_reference name)] })
+           { callee = Core.Expr.Global (Core_util.open_reference m);
+             arguments = erased @ [Core.Expr.Global (Core_util.open_reference name)] })
         c
     | b -> b
   in
@@ -90,7 +97,7 @@ let record_body name class_ref inner_ty lam_params inner_body =
 
 let record_type_args (cons_ty : Core.Type.t) type_args =
   let erased t =
-    match resolve_tmeta t with
+    match resolve_meta t with
     | Core.Type.Unknown | Core.Type.Erased _ -> true
     | _ -> false
   in
@@ -137,7 +144,7 @@ let instance_tvars ty inner_ty =
     in
     List.fold_left vars [] dict_tys
   in
-  let rec collect_ml_tvars acc = function
+  let rec collect_core_tvars acc = function
     | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i} ->
       if List.mem i acc then
         acc
@@ -151,10 +158,10 @@ let instance_tvars ty inner_ty =
       let acc =
         if List.mem i acc || List.mem i dict_vars then acc else i :: acc
       in
-      List.fold_left collect_ml_tvars acc tys
-    | Core.Type.Arrow {parameter = t1; result = t2} -> collect_ml_tvars (collect_ml_tvars acc t1) t2
-    | Core.Type.Global_app {type_arguments = tys; _} -> List.fold_left collect_ml_tvars acc tys
-    | Core.Type.Meta {contents = Some t} -> collect_ml_tvars acc t
+      List.fold_left collect_core_tvars acc tys
+    | Core.Type.Arrow {parameter = t1; result = t2} -> collect_core_tvars (collect_core_tvars acc t1) t2
+    | Core.Type.Global_app {type_arguments = tys; _} -> List.fold_left collect_core_tvars acc tys
+    | Core.Type.Meta {contents = Some t} -> collect_core_tvars acc t
     | _ -> acc
   in
   (* A variable a dictionary parameter mentions is one of the instance's too,
@@ -169,14 +176,14 @@ let instance_tvars ty inner_ty =
   match inner_ty with
   | Core.Type.Global_app {type_arguments = type_args; _} ->
     List.sort compare
-      (List.fold_left collect_ml_tvars []
+      (List.fold_left collect_core_tvars []
          (type_args @ List.concat_map constraint_args dict_tys))
   | _ -> []
 
 let tvar_count ~instance_tvars ty type_args =
   List.fold_left
-    (fun n t -> max n (Mlutil.type_maxvar t))
-    (max (List.length instance_tvars) (Mlutil.type_maxvar ty))
+    (fun n t -> max n (Core_util.type_maxvar t))
+    (max (List.length instance_tvars) (Core_util.type_maxvar ty))
     type_args
 
 type instance = {
@@ -224,7 +231,7 @@ let subst_promoted_tvars {type_args; tvar_count = nb_sign_keeps; _} ty =
     ty
 
 type method_ = {
-  field_ml_ty : Core.Type.t;
+  field_core_ty : Core.Type.t;
   subst_args : Core.Type.t list;
   subst_ty : Core.Type.t;
   n_method_tvars : int;
@@ -233,10 +240,10 @@ type method_ = {
 }
 
 let args_and_ret m = split_at_arity m.declared_arity m.subst_ty
-let declared_args_and_ret m = split_at_arity m.declared_arity m.field_ml_ty
+let declared_args_and_ret m = split_at_arity m.declared_arity m.field_core_ty
 
 let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instance_tvar_count} as inst)
-    method_ref field_ml_ty field_body =
+    method_ref field_core_ty field_body =
   (* Strip coercion wrappers from the field body -- promoted dependent
      records produce Core.Expr.Coerce due to Core.Type.Variable/Core.Type.Global_app mismatches. *)
   let rec strip_magic = function
@@ -253,13 +260,13 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      invented parameters ([layers]) after {!Core_normalize.structure} ran:
      canonical again only once its spines are read again. *)
   let field_body = Core_normalize.spine (strip_magic field_body) in
-  let field_body = if freshen then Mlutil.freshen_metas field_body else field_body in
+  let field_body = if freshen then Core_util.freshen_metas field_body else field_body in
   (* The class field's type loses the method's own quantifier; give it back
      before renumbering and substituting.  The instance's class arguments are
      substituted into the result further down ([subst_ty]), which gives the
      concrete type (e.g. [bool] for [eqb : A -> A -> bool]). *)
-  let field_ml_ty =
-    recover_method_quantifier class_ref method_ref field_ml_ty
+  let field_core_ty =
+    recover_method_quantifier class_ref method_ref field_core_ty
   in
   (* The field numbers its own [forall A] right after the class's
      parameters, and the instance numbers its binders from one as
@@ -272,13 +279,13 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
     max (List.length (Table.get_ind_ip_vars class_ref))
       instance_tvar_count
   in
-  let n_method_tvars = method_tvar_count class_ref field_ml_ty in
-  let field_ml_ty =
+  let n_method_tvars = method_tvar_count class_ref field_core_ty in
+  let field_core_ty =
     let nclass = List.length (Table.get_ind_ip_vars class_ref) in
     let own =
       List.sort compare
         (List.filter (fun i -> i > nclass)
-           (collect_tvars [] field_ml_ty))
+           (collect_tvars [] field_core_ty))
     in
     let sub =
       List.mapi
@@ -287,8 +294,8 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
         own
     in
     if List.for_all (fun (i, t) -> t = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i}) sub
-    then field_ml_ty
-    else subst_tvars_type sub field_ml_ty
+    then field_core_ty
+    else subst_tvars_type sub field_core_ty
   in
   (* Extraction eta-expands a type-constructor argument, so the
      carrier arrives as [option<_>] rather than the bare [option] the
@@ -301,13 +308,13 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      itself applied to the element.  Dropping the trailing argument
      keeps one occurrence and loses the other, and what comes out is a
      [stateT] short a template argument.  Applying a hole is filling
-     it -- every occurrence at once -- which {!Mlutil.apply_ml_type}
+     it -- every occurrence at once -- which {!Core_util.apply_core_type}
      already does, so there is nothing to contract here. *)
   let subst_args =
     List.mapi
       (fun i t ->
         match t with
-        | _ when Mlutil.type_has_hole t -> t
+        | _ when Core_util.type_has_hole t -> t
         | Core.Type.Global_app {head = r; type_arguments = _ :: _; index_arguments = es}
           when Table.is_hkt_param class_ref i ->
           (* Only the eta-expanded arguments come off: a carrier that
@@ -327,15 +334,15 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
           | [] -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = j}
           | fixed -> Core.Type.Variable_app {head = j; arguments = fixed} )
         | t -> t )
-      (Ml_type_util.instance_type_args type_args)
+      (Type_util.instance_type_args type_args)
   in
-  let subst_ty = Mlutil.type_subst_list subst_args field_ml_ty in
+  let subst_ty = Core_util.type_subst_list subst_args field_core_ty in
   (* The concept requires the field at the arity the class declared it
      at, so an instance whose type argument is itself a function type
      ([Instance : D (nat -> nat)]) may not absorb the arrows that
      arrived with the substitution as further parameters: they belong
      to the value the accessor returns. *)
-  let declared_arity = count_ml_value_arrows field_ml_ty in
+  let declared_arity = count_core_value_arrows field_core_ty in
   let method_args_and_ret () = split_at_arity declared_arity subst_ty in
   (* The declared signature numbers the method's own type variables
      after every parameter of the class, while the body -- extracted
@@ -351,7 +358,7 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
       let body_tvars =
         let acc = ref [] in
         ignore
-          (Mlutil.ast_map_types
+          (Core_util.ast_map_types
              (fun t ->
                acc := collect_tvars !acc t;
                t )
@@ -375,7 +382,7 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
       if List.for_all (fun (i, t) -> t = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                              variable = i}) subst
       then field_body
-      else Mlutil.ast_map_types (subst_tvars_type subst) field_body
+      else Core_util.ast_map_types (subst_tvars_type subst) field_body
   in
   (* An instance method may have been eta-reduced below the arity its
      class field declares ([cmap A B f x := f x] extracts to
@@ -446,13 +453,15 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
         | Core.Expr.Lambda {parameter = id; parameter_type = ty; body = rest} ->
           Core.Expr.Lambda {parameter = id; parameter_type = ty; body = expand rest}
         | inner ->
-          let inner = Mlutil.ast_lift missing inner in
+          let inner = Core_util.ast_lift missing inner in
           let args =
             List.init missing (fun i -> Core.Expr.fresh_rel (missing - i))
           in
           List.fold_left
             (fun acc (i, ty) ->
-              Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i)); parameter_type = ty; body = acc} )
+              Core.Expr.Lambda
+                {parameter = Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i));
+                  parameter_type = ty; body = acc} )
             (Core_normalize.apply inner args)
             (List.rev (List.mapi (fun i t -> (i, t)) missing_tys))
       in
@@ -463,14 +472,14 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      them exactly as the parameter and return types are resolved: left
      alone they would render as the concept's template parameter [T1],
      which is not in scope inside the instance struct. *)
-  let field_body = Mlutil.ast_map_types (subst_promoted_tvars inst) field_body in
+  let field_body = Core_util.ast_map_types (subst_promoted_tvars inst) field_body in
   (* The body was extracted at the class's erased field type, so its
      [Core.Expr.Match] and [Core.Expr.Construct] annotations say [option _] where the
      declared signature says [option A].  Push the declared type back
      down, or the body would spell [Option<std::any>] against a value
      the signature typed [Option<_A0>]. *)
-  let field_body = Mlutil.recover_erased_types subst_ty field_body in
-  {field_ml_ty; subst_args; subst_ty; n_method_tvars; declared_arity; body = field_body}
+  let field_body = Core_util.recover_erased_types subst_ty field_body in
+  {field_core_ty; subst_args; subst_ty; n_method_tvars; declared_arity; body = field_body}
 
 type param = {
   binder : Core.Binder_name.t;
@@ -499,7 +508,7 @@ let params m =
     | Core.Expr.Lambda _ when n >= m.declared_arity -> (List.rev acc, body)
     | Core.Expr.Lambda {parameter = binder; parameter_type = binder_ty; body = rest}
       when is_erasable_binder_ty binder_ty
-           && (rem > m.declared_arity - n || not (Mlutil.ast_occurs 1 rest)) ->
+           && (rem > m.declared_arity - n || not (Core_util.ast_occurs 1 rest)) ->
       (* An erased binder is no parameter, but it is still a binder: dropping
          it would shift every de Bruijn index the body uses to name the ones
          that remain.
@@ -531,11 +540,12 @@ let eta_call m inner_body =
        ones in the application, so the body receives every argument it
        expects. *)
     let nparams = List.length arg_types in
-    let ml_rels =
+    let core_rels =
       let real_idx = ref nparams in
       List.map
         (fun t ->
-          if erased_by_extraction t || Table.is_typeclass_type t then Core.Expr.Erased_value Core.Erasure_reason.Type_argument
+          if erased_by_extraction t || Table.is_typeclass_type t then
+            Core.Expr.Erased_value Core.Erasure_reason.Type_argument
           else begin
             let r = Core.Expr.fresh_rel !real_idx in
             decr real_idx;
@@ -545,7 +555,7 @@ let eta_call m inner_body =
     in
     let params = List.mapi (fun i t -> (Id.of_string ("a" ^ string_of_int i), t)) arg_types in
     (* The body's de Bruijn indices lifted over the new parameters. *)
-    Some (params, Core_normalize.apply (Mlutil.ast_lift nparams inner_body) ml_rels)
+    Some (params, Core_normalize.apply (Core_util.ast_lift nparams inner_body) core_rels)
 
 let methods name body ty =
   let {inner_ty; inner_body; lam_params; _} = layers ty body in

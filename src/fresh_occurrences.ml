@@ -12,7 +12,7 @@ let fix_occurrence occ =
   occ'
 
 let rec term e =
-  match Mlutil.ast_map term e with
+  match Core_util.ast_map term e with
   | Core.Expr.Bound_variable {index = i; _} -> Core.Expr.fresh_rel i
   | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
     Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; occurrence = Core.Occurrence.fresh ()}
