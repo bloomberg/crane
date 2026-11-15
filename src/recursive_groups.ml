@@ -87,6 +87,3 @@ let in_group t r r' =
 
 let equal = Map.equal (List.equal Ref.User.equal)
 
-let current : t ref = State.cell State.Extraction empty
-let install t = current := t
-let installed () = !current

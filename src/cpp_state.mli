@@ -99,19 +99,6 @@ val clear_valid_output_modules : unit -> unit
 
 (** {2 Wrappers} *)
 
-(** Global registry of wrapper names that were not merged. *)
-val global_unmerged_wrappers : (string, unit) Hashtbl.t
-
-(** Record that the given wrapper struct name must stay unmerged across
-    extraction passes, so references use the qualified form. *)
-val mark_global_unmerged : string -> unit
-
-(** [true] if the wrapper struct name was marked by [mark_global_unmerged]. *)
-val is_global_unmerged : string -> bool
-
-(** Empty [global_unmerged_wrappers]. *)
-val clear_global_unmerged : unit -> unit
-
 (** {2 Preamble} *)
 
 (** [#include "m.h"] for the module, followed by a newline; nothing if

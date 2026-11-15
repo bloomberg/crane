@@ -397,26 +397,6 @@ let set_valid_output_modules mps =
 
 let clear_valid_output_modules () = Hashtbl.clear valid_output_modules
 
-(** The wrapper struct names that stay unmerged across the passes of a
-    separate extraction ({!mark_global_unmerged}). *)
-let global_unmerged_wrappers : (string, unit) Hashtbl.t =
-  owned_table "global_unmerged_wrappers"
-
-(** Record that wrapper [name] must remain unmerged across extraction passes.
-    Used in separate extraction so that inter-module references use the
-    unmerged (qualified) form even for modules processed in a prior pass.
-    @param name the C++ wrapper struct name to mark as unmerged *)
-let mark_global_unmerged name =
-  Hashtbl.replace global_unmerged_wrappers name ()
-
-(** Check whether wrapper [name] was recorded as globally unmerged.
-    @param name the C++ wrapper struct name to query
-    @return [true] if [name] must use the unmerged (qualified) name form *)
-let is_global_unmerged name =
-  Hashtbl.mem global_unmerged_wrappers name
-
-let clear_global_unmerged () =
-  Hashtbl.clear global_unmerged_wrappers
 
 (** Pretty-print an open directive for a module. *)
 let pp_open mp =
