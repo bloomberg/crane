@@ -36,10 +36,3 @@ val in_group : t -> GlobRef.t -> GlobRef.t -> bool
 
 (** Same groups, member for member. *)
 val equal : t -> t -> bool
-
-(** Make [t] the extraction's recursive groups, for the passes that still
-    read them from a table. *)
-val install : t -> unit
-
-(** The groups last {!install}ed in this extraction, {!empty} before. *)
-val installed : unit -> t

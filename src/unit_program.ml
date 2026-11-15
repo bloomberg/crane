@@ -100,10 +100,26 @@ type t = {
   promoted : Names.Id.t list;
       (** The promoted type variables the finished declarations write, in
           the order finished. *)
+  entry_point : entry_point option;
+      (** The [main] a generation called for an [int main()] wrapper
+          around, if one did. *)
+}
+
+and entry_point = {
+  entry_name : Names.Id.t;
+  entry_struct : Names.Id.t option;
+  entry_runs_tree : bool;
 }
 
 let empty =
-  {entities = []; lifted = []; declarations = []; by_id = Id_map.empty; demands = []; globals = []; promoted = []}
+  { entities = [];
+    lifted = [];
+    declarations = [];
+    by_id = Id_map.empty;
+    demands = [];
+    globals = [];
+    promoted = [];
+    entry_point = None }
 
 let entities t = List.rev t.entities
 let declarations t = t.declarations
@@ -216,6 +232,10 @@ let check_finished t =
   end
 
 let install t = program := t
+
+let record_entry_point e = program := { !program with entry_point = Some e }
+
+let entry_point () = !program.entry_point
 
 let installed_globals () = !program.globals
 

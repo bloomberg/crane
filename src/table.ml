@@ -647,22 +647,6 @@ let itree_header = Runtime "itree_header"
 
 let needs_itree_header () = demanded "itree_header"
 
-(** Track if a main function returning a monad was encountered.
-    Stores (function_name, return_type, struct_qualifier, needs_run) for
-    wrapper generation.  [needs_run] is true only in reified ITree mode;
-    when the monad is erased (sequential mode), the wrapper calls [_main()]
-    directly without [->run()]. *)
-let main_function_tree : (Id.t * Core.Type.t * Id.t option * bool) option ref = ref None
-
-let set_main_function name ret_type struct_name needs_run =
-  main_function_tree := Some (name, ret_type, struct_name, needs_run)
-
-let get_main_function () = !main_function_tree
-
-let reset_main_function () = main_function_tree := None
-
-let () = on_reset reset_main_function
-
 (** Check if an ML type is a coinductive type by inspecting its global
     reference. *)
 let is_coinductive_type = function
@@ -3342,13 +3326,10 @@ let find_custom_drain_opt r = Ref.Can.Map.find_opt r !custom_drains
 (* Set of inductives that recurse *through* a boxed-element container (e.g.
    [json_value] with a [list json_value] field). Populated during inductive
    codegen; an element type that structurally mentions one of these is
-   incomplete at a container-naming site and must be boxed everywhere. Not
-   persisted: recomputed within each extraction run. *)
-let boxed_recursive_inds = Summary.ref Ref.User.Set.empty ~name:"CraneExtrBoxedRec"
-
-(* Recomputed within each extraction run (see its definition); cleared so a
+   incomplete at a container-naming site and must be boxed everywhere.  A
+   result of generation, not configuration: emptied at each extraction, so a
    prior run's boxing decisions don't leak into the next. *)
-let () = on_reset (fun () -> boxed_recursive_inds := Ref.User.Set.empty)
+let boxed_recursive_inds = State.cell State.Extraction Ref.User.Set.empty
 
 let () =
   register_census "boxed_recursive_inds" (fun () ->
@@ -3950,24 +3931,26 @@ let is_void v = Ref.Can.Map.mem v !void_ty
 
 let is_ghost g = Ref.Can.Map.mem g !ghost_tm
 
-(** Cached GlobRef for Rocq's [unit] type and [tt] constructor. *)
-let unit_type_ref : GlobRef.t option ref = ref None
-let tt_ctor_ref : GlobRef.t option ref = ref None
+(** Caches of the GlobRefs Rocq registers for [unit] and [tt], filled on the
+    first lookup that finds them: a lookup is a function of the loaded
+    libraries, so they are never emptied. *)
+let unit_type_cache : GlobRef.t option ref = ref None
+let tt_ctor_cache : GlobRef.t option ref = ref None
 
 let resolve_unit_type () =
-  match !unit_type_ref with
+  match !unit_type_cache with
   | Some r -> Some r
   | None ->
     (try let r = Rocqlib.lib_ref "core.unit.type" in
-         unit_type_ref := Some r; Some r
+         unit_type_cache := Some r; Some r
      with _ -> None)
 
 let resolve_tt_ctor () =
-  match !tt_ctor_ref with
+  match !tt_ctor_cache with
   | Some r -> Some r
   | None ->
     (try let r = Rocqlib.lib_ref "core.unit.tt" in
-         tt_ctor_ref := Some r; Some r
+         tt_ctor_cache := Some r; Some r
      with _ -> None)
 
 let is_unit_type r =

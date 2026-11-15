@@ -1751,8 +1751,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
          [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
          calls [_main()->run()] to execute the ITree; in sequential mode (monad
          erased) it just calls [_main()] directly. *)
-      ( match Table.get_main_function () with
-      | Some (main_name, _ret_ml_ty, struct_qual, needs_run) ->
+      ( match Unit_program.entry_point () with
+      | Some {entry_name = main_name; entry_struct = struct_qual; entry_runs_tree = needs_run} ->
         let qualified_name =
           match struct_qual with
           | Some sn -> Id.print sn ++ str "::" ++ Id.print main_name
@@ -2059,7 +2059,6 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
     ~finally:(fun () ->
       Cpp_state.clear_global_method_registry ();
       Cpp_state.clear_valid_output_modules ();
-      Cpp_state.clear_global_unmerged ();
       Common.clear_non_output_modules () )
   @@ fun () ->
   (* Descend through applications/functors to the underlying struct body,
@@ -2117,40 +2116,6 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
      after A in topo order) which would create circular C++ #include cycles. *)
   let topo_index : (ModPath.t, int) Hashtbl.t = Hashtbl.create 64 in
   List.iteri (fun i (mp, _) -> Hashtbl.replace topo_index mp i) struc;
-  let rec pre_scan_unmerged sel =
-    let refs_unmerged_functor (me : Core.Module.Expr.t) =
-      let rec get_base : Core.Module.Expr.t -> bool = function
-        | Core.Module.Expr.Apply {functor_ = me2; _} -> get_base me2
-        | Core.Module.Expr.Path mp ->
-          let lbl = match mp with
-            | ModPath.MPdot (_, l) -> Some (String.capitalize_ascii (Label.to_string l))
-            | _ -> None
-          in
-          (match lbl with Some n -> Cpp_state.is_global_unmerged n | None -> false)
-        | Core.Module.Expr.Functor {body = me2; _} -> get_base me2
-        | Core.Module.Expr.Structure _ -> false
-      in get_base me
-    in
-    List.iter (fun (l, se) ->
-      match se with
-      | Core.Module.Structure_item.Module { Core.Module.expr = Core.Module.Expr.Path _; _ } -> ()
-      | Core.Module.Structure_item.Module m ->
-        let subs = module_substructs m.expr in
-        let has_funcs = List.exists (fun (_, se') ->
-          match se' with
-          | Core.Module.Structure_item.Declaration (Core.Decl.Value _ | Core.Decl.Recursive_group _) -> true
-          | _ -> false
-        ) subs in
-        let is_unmerged_apply = refs_unmerged_functor m.expr in
-        if has_funcs || is_unmerged_apply then begin
-          let name = String.capitalize_ascii (Label.to_string l) in
-          Cpp_state.mark_global_unmerged name
-        end;
-        pre_scan_unmerged subs
-      | _ -> ()
-    ) sel
-  in
-  List.iter (fun (_, sel) -> pre_scan_unmerged sel) struc;
   let modtype_table : (ModPath.t, Core.Module.Type.t) Hashtbl.t = Hashtbl.create 16 in
   let rec collect_modtypes mp_prefix sel =
     List.iter (fun (l, se) ->
