@@ -345,7 +345,8 @@ let rec scope ~group ~depth ?expected e =
       and ids = Core.Recursion.Group.functions rec_group
       and bodies = Core.Recursion.Group.bodies rec_group
       and occ = rec_group.occurrence in
-      Core.Expr.Cofixpoint (Core.Recursion.Group.of_arrays ~selected:i ids (Array.map (inner ~group (Array.length ids)) bodies) occ)
+      Core.Expr.Cofixpoint
+        (Core.Recursion.Group.of_arrays ~selected:i ids (Array.map (inner ~group (Array.length ids)) bodies) occ)
     | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
       Core.Expr.Coerce {source_type = from;
                         target_type = into;
@@ -426,13 +427,15 @@ let body ~effects ~splices ~globals ty b =
                 splices} ~depth:0 b
 
 let decl ~effects ~splices ~methods = function
-  | Core.Decl.Recursive_group fds when Core.Nonempty.exists (fun (fd : Core.Recursion.Definition.t) -> loopified ~methods fd.entity) fds ->
+  | Core.Decl.Recursive_group fds when Core.Nonempty.exists (fun (fd : Core.Recursion.Definition.t) ->
+    loopified ~methods fd.entity) fds ->
     (* A group is normalized whole: loopification inlines one member's
        partners into it, whether or not they are loopified themselves. *)
     let globals = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core.Nonempty.to_list fds) in
     Core.Decl.Recursive_group
       (Core.Nonempty.map
-         (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = body ~effects ~splices ~globals fd.type_ fd.body})
+         (fun (fd : Core.Recursion.Definition.t) ->
+           {fd with Core.Recursion.Definition.body = body ~effects ~splices ~globals fd.type_ fd.body} )
          fds)
   | Core.Decl.Value {entity = r; body = b; type_ = ty} when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
@@ -465,7 +468,10 @@ let eta_expand =
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
       Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
-      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body}) fds)
+      Core.Decl.Recursive_group
+        (Core.Nonempty.map
+           (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body})
+           fds )
     | d -> d )
 
 let let_lambdas =
@@ -475,7 +481,8 @@ let let_lambdas =
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
-           (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = Core_elaborate.generated_definition fd.type_ fd.body})
+           (fun (fd : Core.Recursion.Definition.t) ->
+             {fd with Core.Recursion.Definition.body = Core_elaborate.generated_definition fd.type_ fd.body} )
            fds)
     | d -> d )
 

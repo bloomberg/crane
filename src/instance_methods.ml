@@ -71,9 +71,11 @@ let record_body name class_ref inner_ty lam_params inner_body =
     | Core.Expr.Fixpoint {members = [|{body = c; _}|]; _} | Core.Expr.Cofixpoint {members = [|{body = c; _}|]; _}
       when lam_params = [] ->
       let n_class = Ml_type_util.projection_class_arity m in
+      let erased = List.init n_class (fun _ -> Core.Expr.Erased_value Core.Erasure_reason.Type_argument) in
       Mlutil.ast_subst
-        (Core.Expr.Apply {callee = Core.Expr.Global (Mlutil.open_reference m); arguments = List.init n_class (fun _ -> Core.Expr.Erased_value Core.Erasure_reason.Type_argument)
-             @ [Core.Expr.Global (Mlutil.open_reference name)]})
+        (Core.Expr.Apply
+           { callee = Core.Expr.Global (Mlutil.open_reference m);
+             arguments = erased @ [Core.Expr.Global (Mlutil.open_reference name)] })
         c
     | b -> b
   in

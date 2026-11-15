@@ -173,7 +173,7 @@ let own_value ty value =
     | Core.Expr.Float64 _
     | Core.Expr.String _ -> true
   in
-  let rec head = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> head e | e -> e in
+  let head = Core.Expr.strip_crossings in
   (* A custom computes a value of its own unless its text binds the result
      itself or yields its argument, or a field of it, as an lvalue. *)
   let computes r =

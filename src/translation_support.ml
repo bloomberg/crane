@@ -1943,7 +1943,7 @@ let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
     ~is_self_call:(fun depth f ->
       (* A coercion around the self-reference (extraction inserts one when the
          fixpoint's type was generalised) must not hide the recursive call. *)
-      let rec strip = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e in
+      let strip = Core.Expr.strip_crossings in
       match strip f with
       | Core.Expr.Bound_variable {index = db; _} -> db = base_self_db + depth
       | _ -> false )
@@ -2058,7 +2058,7 @@ let closure_feedback_params ~callee bodies =
   let scan self body =
     let params, body = collect_lams body in
     let n = List.length params in
-    let rec strip = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e in
+    let strip = Core.Expr.strip_crossings in
     let rec walk locals e =
       match e with
       | Core.Expr.Apply {callee = f; arguments = args} ->

@@ -1323,7 +1323,8 @@ let concept_placement plan c =
 let planned_visibility mp =
   match Scope_plan.visibility mp with
   | Some v -> v
-  | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
+  | None ->
+    CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
 
 (* The position a declaration spelled [spelling] is written at in [file],
    a function of the plan alone: nothing installed around it reaches it. *)

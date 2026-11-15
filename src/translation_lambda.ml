@@ -379,7 +379,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          signature it will be given. *)
       let carrier =
         match rank2_carrier with
-        | Some x when List.exists (Cpp_ir.Types.exists (Cpp_ir.Type.is_variable_named x)) (List.map fst cpp_args) -> Some x
+        | Some x when List.exists (Cpp_ir.Types.exists (Cpp_ir.Type.is_variable_named x)) (List.map fst cpp_args) ->
+          Some x
         | _ -> None
       in
       (* The parameters' declared C++ types are only known here, after

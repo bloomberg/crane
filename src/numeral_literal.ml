@@ -4,7 +4,7 @@
 open Names
 open Ml_type_util
 
-let rec strip_magic = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip_magic e | e -> e
+let strip_magic = Core.Expr.strip_crossings
 
 let registered_constructor name = function
   | GlobRef.ConstructRef (ind, idx) when Rocqlib.has_ref name && Rocqlib.check_ref name (GlobRef.IndRef ind) ->

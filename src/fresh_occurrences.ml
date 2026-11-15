@@ -34,7 +34,8 @@ let rec term e =
 let decl = function
   | Core.Decl.Value {entity = r; body = b; type_ = ty} -> Core.Decl.Value {entity = r; body = term b; type_ = ty}
   | Core.Decl.Recursive_group fds ->
-    Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = term fd.body}) fds)
+    Core.Decl.Recursive_group
+      (Core.Nonempty.map (Core.Recursion.Definition.map_body term) fds)
   | d -> d
 
 let structure = Modutil.map_struct_decls decl

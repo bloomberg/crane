@@ -632,7 +632,7 @@ let ref_is_instance r =
 (** Strip [Core.Expr.Coerce], [Core.Expr.Boxed_value] and [Core.Expr.Lambda_group_barrier] wrappers recursively — each
     is a transparent coercion in the ML AST and should be ignored by
     numeral-folding traversals. *)
-let rec strip_magic = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip_magic e | e -> e
+let strip_magic = Core.Expr.strip_crossings
 
 (** A dictionary as an argument, without what only wraps it: coercions, and
     the lambdas over a singleton class method's erased type arguments that

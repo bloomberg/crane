@@ -1718,7 +1718,10 @@ let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
   in
   let typ =
     match t with
-    | Core.Expr.Bound_variable {index = i; _} | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ->
+    | Core.Expr.Bound_variable {index = i; _}
+    | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+    | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+    | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ->
       (* Scrutinee is a variable reference — use its concrete type, the one
          its binder was given, a parameter's as much as a let's.  Unwrap Core.Type.Meta
          wrappers since env_types may store types in Core.Type.Meta form. *)
@@ -1887,7 +1890,8 @@ let rec type_shape : Cpp_ir.Lowered.Type.t -> string = function
   | Obligation Opaque_type -> "opaque"
   | Const t -> "const " ^ type_shape t
   | Reference (_, t) -> "ref " ^ type_shape t
-  | Entity_application (g, args, _) -> Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
+  | Entity_application (g, args, _) ->
+    Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
   | Variable (Index (i, Some id)) -> "T" ^ string_of_int i ^ ":" ^ Id.to_string id
   | Variable (Index (i, None)) -> "T" ^ string_of_int i
   | Variable (Named id) -> "N:" ^ Id.to_string id
@@ -3117,7 +3121,8 @@ let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Typ
     ({!planned_binder_type_or_derive}). *)
 let value_cpp_type ~agree env e =
   match strip_magic e with
-  | Core.Expr.Bound_variable {index = j; occurrence = occ} -> planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
+  | Core.Expr.Bound_variable {index = j; occurrence = occ} ->
+    planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
   | Core.Expr.Global ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
     Option.map (cpp_of_ml env) (callee_ml_type r)
   | _ -> None
@@ -3467,7 +3472,10 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
     | _ -> None
   in
   let scrut_is_trivial_ml = match t with
-    | Core.Expr.Bound_variable _ | Core.Expr.Coerce {value = Core.Expr.Bound_variable _; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable _; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable _; _} -> true
+    | Core.Expr.Bound_variable _
+    | Core.Expr.Coerce {value = Core.Expr.Bound_variable _; _}
+    | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable _; _}
+    | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable _; _} -> true
     | _ -> false
   in
   let needs_pair_any_cast =

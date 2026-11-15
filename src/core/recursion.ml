@@ -4,7 +4,13 @@
 (** Definitions of a recursive declaration group, and local recursive
     groups ({!Grammar.Recursion}). *)
 
-module Definition = Grammar.Recursion.Definition
+module Definition = struct
+  include Grammar.Recursion.Definition
+
+  (** [fd] with [f] applied to its body. *)
+  let map_body f fd = {fd with body = f fd.body}
+end
+
 module Member = Grammar.Recursion.Member
 
 module Group = struct

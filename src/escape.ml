@@ -383,7 +383,10 @@ let is_reuse_scrutinee k body =
   let rec scan d = function
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; _} ->
       ( match scrut with
-      | Core.Expr.Bound_variable {index = j; _} | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _} ->
+      | Core.Expr.Bound_variable {index = j; _}
+      | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _} ->
         if j > d && j - d = k && recyclable typ
            && find_reuse_candidates branches <> []
         then found := true
@@ -464,7 +467,7 @@ let infer_sub_bindings_escape_params n_params body =
 let returns_receiver_field ~this_pos fn =
   let params, body = Mlutil.collect_lams fn in
   let receiver = List.length params - this_pos in
-  let rec bare = function Core.Expr.Coerce {value = a; _} | Core.Expr.Boxed_value {value = a; _} | Core.Expr.Lambda_group_barrier {value = a; _} -> bare a | a -> a in
+  let bare = Core.Expr.strip_crossings in
   List.length params = 1
   &&
   match bare body with

@@ -8,7 +8,7 @@
 type group = Lifted | In_place | Closures
 
 (* The function an application applies, under any coercion. *)
-let rec callee = function Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _} | Core.Expr.Lambda_group_barrier {value = f; _} -> callee f | f -> f
+let callee = Core.Expr.strip_crossings
 
 let arity f = List.length (fst (Mlutil.collect_lams f))
 
@@ -31,8 +31,8 @@ and escapes ~n_outer k t =
   in
   let rec go k = function
     | Core.Expr.Bound_variable {index = i; _} -> i = k
-    | Core.Expr.Apply {callee = f;
-                       arguments = args} when (match callee f with Core.Expr.Bound_variable {index = i; _} -> i = k | _ -> false) ->
+    | Core.Expr.Apply {callee = f; arguments = args}
+      when (match callee f with Core.Expr.Bound_variable {index = i; _} -> i = k | _ -> false) ->
       List.exists (go k) args
     | Core.Expr.Apply {callee = Core.Expr.Fixpoint g; arguments = args}
       when List.length args >= arity (Core.Recursion.Group.selected_member g).body && in_place_group ~cofix:false g ->

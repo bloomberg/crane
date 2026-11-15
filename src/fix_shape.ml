@@ -38,10 +38,16 @@ let thunk_nullary_cofix x ids funs occ =
         Core.Expr.Apply {callee = f; arguments = [tt_v]}
       | t -> Mlutil.ast_map_lift call_self k t
     in
-    let thunk f = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "u"); parameter_type = unit_ty; body = call_self 1 (Mlutil.ast_lift 1 f)} in
+    let thunk f =
+      Core.Expr.Lambda
+        { parameter = Core.Binder_name.Source (Id.of_string "u");
+          parameter_type = unit_ty;
+          body = call_self 1 (Mlutil.ast_lift 1 f) }
+    in
     let ids = Array.map (fun (id, ty) -> (id, Core.Type.Arrow {parameter = unit_ty; result = ty})) ids in
-    Core.Expr.Apply {callee = Core.Expr.Cofixpoint (Core.Recursion.Group.of_arrays ~selected:x ids (Array.map thunk funs) occ);
-                     arguments = [tt_v]}
+    Core.Expr.Apply
+      { callee = Core.Expr.Cofixpoint (Core.Recursion.Group.of_arrays ~selected:x ids (Array.map thunk funs) occ);
+        arguments = [tt_v] }
   | _ -> CErrors.anomaly (Pp.str "Fix_shape: a parameterless local cofixpoint needs unit")
 
 (* Bottom-up: every fixpoint's functions get their [let]s floated, then a
@@ -60,7 +66,11 @@ let rec expr e =
 let decl = function
   | Core.Decl.Value {entity = r; body = b; type_ = ty} -> Core.Decl.Value {entity = r; body = expr b; type_ = ty}
   | Core.Decl.Recursive_group fds ->
-    Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = expr (float_lets_under_lams fd.body)}) fds)
+    Core.Decl.Recursive_group
+      (Core.Nonempty.map
+         (fun (fd : Core.Recursion.Definition.t) ->
+           {fd with Core.Recursion.Definition.body = expr (float_lets_under_lams fd.body)} )
+         fds )
   | d -> d
 
 let structure = Modutil.map_struct_decls decl

@@ -386,7 +386,9 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
     (* Generate throw statement for unreachable/absurd cases (e.g., empty
        match) *)
     [Throw msg]
-  | Core.Expr.Coerce {value = Core.Expr.Runtime_error msg; _} | Core.Expr.Boxed_value {value = Core.Expr.Runtime_error msg; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Runtime_error msg; _} ->
+  | Core.Expr.Coerce {value = Core.Expr.Runtime_error msg; _}
+  | Core.Expr.Boxed_value {value = Core.Expr.Runtime_error msg; _}
+  | Core.Expr.Lambda_group_barrier {value = Core.Expr.Runtime_error msg; _} ->
     (* Handle Core.Expr.Runtime_error wrapped in a coercion *)
     [Throw msg]
   | Core.Expr.Match {scrutinee_type = typ;

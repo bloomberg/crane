@@ -152,7 +152,8 @@ let preserving_meta_supply f =
     annotation an unsolved metavariable becomes ({!Core.Type.Open}). *)
 let new_meta _ =
   incr meta_count;
-  if Core.Extracted.Meta.is_frozen () then Core.Type.Open (Core.Open.fresh !meta_count) else Core.Type.Meta (Core.Extracted.Meta.fresh !meta_count)
+  if Core.Extracted.Meta.is_frozen () then Core.Type.Open (Core.Open.fresh !meta_count)
+  else Core.Type.Meta (Core.Extracted.Meta.fresh !meta_count)
 
 (** Structural equality on ML types. *)
 let rec eq_ml_type t1 t2 =
@@ -440,7 +441,8 @@ let rec type_occurs alpha t =
 (** {2 Most General Unificator} *)
 
 let rec mgu = function
-  | Core.Type.Meta (m : Core.Extracted.Meta.t), Core.Type.Meta (m' : Core.Extracted.Meta.t) when Int.equal m.id m'.id -> ()
+  | Core.Type.Meta (m : Core.Extracted.Meta.t), Core.Type.Meta (m' : Core.Extracted.Meta.t) when Int.equal m.id m'.id ->
+    ()
   | Core.Type.Meta m, t | t, Core.Type.Meta (m : Core.Extracted.Meta.t) ->
     ( match m.contents with
     | Some u -> mgu (u, t)
@@ -1060,8 +1062,12 @@ let rec eq_ml_ast t1 t2 =
   | Core.Expr.Runtime_error e1, Core.Expr.Runtime_error e2 -> String.equal e1 e2
   | Core.Expr.Erased_value k1, Core.Expr.Erased_value k2 -> k1 == k2
   | Core.Expr.Axiom_value _, Core.Expr.Axiom_value _ -> true (* ignore the name of the axiom *)
-  | ( (Core.Expr.Coerce {value = t1; _} | Core.Expr.Boxed_value {value = t1; _} | Core.Expr.Lambda_group_barrier {value = t1; _}),
-      (Core.Expr.Coerce {value = t2; _} | Core.Expr.Boxed_value {value = t2; _} | Core.Expr.Lambda_group_barrier {value = t2; _}) ) ->
+  | ( ( Core.Expr.Coerce {value = t1; _}
+      | Core.Expr.Boxed_value {value = t1; _}
+      | Core.Expr.Lambda_group_barrier {value = t1; _} ),
+      ( Core.Expr.Coerce {value = t2; _}
+      | Core.Expr.Boxed_value {value = t2; _}
+      | Core.Expr.Lambda_group_barrier {value = t2; _} ) ) ->
     eq_ml_ast t1 t2
   | Core.Expr.UInt63 i1, Core.Expr.UInt63 i2 -> Uint63.equal i1 i2
   | Core.Expr.Numeral {inductive = r1; value = n1}, Core.Expr.Numeral {inductive = r2; value = n2} ->
@@ -1486,7 +1492,8 @@ let ast_map_lift f n = function
                      scrutinee = f n a;
                      branches = Array.map (ast_map_lift_branch f n) v;
                      occurrence = occ}
-  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map_bodies (f (Core.Recursion.Group.length g + n)) g)
+  | Core.Expr.Fixpoint g ->
+    Core.Expr.Fixpoint (Core.Recursion.Group.map_bodies (f (Core.Recursion.Group.length g + n)) g)
   | Core.Expr.Cofixpoint g ->
     Core.Expr.Cofixpoint (Core.Recursion.Group.map_bodies (f (Core.Recursion.Group.length g + n)) g)
   | Core.Expr.Apply {callee = a; arguments = l} -> Core.Expr.Apply {callee = f n a; arguments = List.map (f n) l}
@@ -2424,7 +2431,9 @@ let rec simpl o = function
     (* Dummy fixpoint *)
   (* An exception never yields a value, so there is no representation gap for
      a coercion around it to describe. *)
-  | Core.Expr.Coerce {value = (Core.Expr.Runtime_error _ as e); _} | Core.Expr.Boxed_value {value = (Core.Expr.Runtime_error _ as e); _} | Core.Expr.Lambda_group_barrier {value = (Core.Expr.Runtime_error _ as e); _} -> e
+  | Core.Expr.Coerce {value = (Core.Expr.Runtime_error _ as e); _}
+  | Core.Expr.Boxed_value {value = (Core.Expr.Runtime_error _ as e); _}
+  | Core.Expr.Lambda_group_barrier {value = (Core.Expr.Runtime_error _ as e); _} -> e
   | Core.Expr.Lambda _ as e ->
     ( match atomic_eta_red e with
     | Some e' -> e'

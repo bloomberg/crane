@@ -26,7 +26,11 @@ let modules p = List.map (fun ((mp, _) as m) -> (mp, { p with structure = [m] })
     type definitions. *)
 let iter_types f p =
   let visit_body b = ignore (Mlutil.ast_map_types (fun t -> f t; t) b) in
-  let visit_ind (ind : Core.Inductive.t) = Array.iter (fun (pk : Core.Inductive.Packet.t) -> Array.iter (List.iter f) pk.constructor_argument_types) ind.packets in
+  let visit_ind (ind : Core.Inductive.t) =
+    Array.iter
+      (fun (pk : Core.Inductive.Packet.t) -> Array.iter (List.iter f) pk.constructor_argument_types)
+      ind.packets
+  in
   Modutil.struct_iter
     (function
       | Core.Decl.Inductive {definition = ind; _} -> visit_ind ind
@@ -105,13 +109,19 @@ let zonk p =
     | Core.Type.String -> t
   and body e = Mlutil.ast_map_types ty e in
   let inductive (ind : Core.Inductive.t) =
-    Array.iter (fun (pk : Core.Inductive.Packet.t) -> Array.iteri (fun i ts -> pk.constructor_argument_types.(i) <- List.map ty ts) pk.constructor_argument_types) ind.packets
+    Array.iter
+      (fun (pk : Core.Inductive.Packet.t) ->
+        Array.iteri (fun i ts -> pk.constructor_argument_types.(i) <- List.map ty ts) pk.constructor_argument_types )
+      ind.packets
   in
   let decl = function
     | Core.Decl.Value {entity = r; body = b; type_ = t} -> Core.Decl.Value {entity = r; body = body b; type_ = ty t}
     | Core.Decl.Recursive_group fds ->
-      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = body fd.body;
-                                                                                               type_ = ty fd.type_}) fds)
+      Core.Decl.Recursive_group
+        (Core.Nonempty.map
+           (fun (fd : Core.Recursion.Definition.t) ->
+             {fd with Core.Recursion.Definition.body = body fd.body; type_ = ty fd.type_} )
+           fds )
     | Core.Decl.Type_alias {entity = r; parameters = vars; body = t} ->
       Core.Decl.Type_alias {entity = r; parameters = vars; body = ty t}
     | Core.Decl.Inductive {definition = ind; _} as d -> inductive ind; d
@@ -230,8 +240,11 @@ let iter_occurrences f p =
               | Core.Expr.Let {occurrence = o; _} -> f fd.entity "let" o
               | Core.Expr.Match {occurrence = o; _} -> f fd.entity "match" o
               | Core.Expr.Construct {occurrence = o; _} -> f fd.entity "construction" o
-              | Core.Expr.Coerce {occurrence = o; _} | Core.Expr.Boxed_value {occurrence = o; _} | Core.Expr.Lambda_group_barrier {occurrence = o; _} -> f fd.entity "coercion" o
-              | Core.Expr.Fixpoint {occurrence = o; _} | Core.Expr.Cofixpoint {occurrence = o; _} -> f fd.entity "local fixpoint" o
+              | Core.Expr.Coerce {occurrence = o; _}
+              | Core.Expr.Boxed_value {occurrence = o; _}
+              | Core.Expr.Lambda_group_barrier {occurrence = o; _} -> f fd.entity "coercion" o
+              | Core.Expr.Fixpoint {occurrence = o; _}
+              | Core.Expr.Cofixpoint {occurrence = o; _} -> f fd.entity "local fixpoint" o
               | Core.Expr.Global use -> f fd.entity "use" (Core.Global_use.occurrence use)
               | _ -> () );
               Mlutil.ast_iter walk e

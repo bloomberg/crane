@@ -458,7 +458,7 @@ let rec optim_se top to_appear s = function
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: lse ->
     let fds =
       Core.Nonempty.map
-        (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = normalize (ast_glob_subst !s fd.body)})
+        (Core.Recursion.Definition.map_body (fun b -> normalize (ast_glob_subst !s b)))
         fds
     in
     (* This fake body ensures that no fixpoint will be auto-inlined: a
@@ -473,7 +473,7 @@ let rec optim_se top to_appear s = function
         if inline fd.entity fake_body then
           s := Ref.User.Map.add fd.entity (dfix_to_mlfix fds i) !s )
       (Core.Nonempty.to_list fds);
-    let fds = Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = dump_unused_vars fd.body}) fds in
+    let fds = Core.Nonempty.map (Core.Recursion.Definition.map_body dump_unused_vars) fds in
     (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: optim_se top to_appear s lse
   | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: lse ->
     let m = {m with Core.Module.expr = optim_me to_appear s m.expr} in

@@ -3274,7 +3274,8 @@ let extract_constant_spec env kn cb =
       Core.Signature.Declaration.Type {entity = r;
                                        parameters = vl;
                                        body = Some (Core.Type.Erased Core.Erasure_reason.Type_argument)}
-    | Logic, Default -> Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = Core.Type.Erased Core.Erasure_reason.Proof}
+    | Logic, Default ->
+      Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = Core.Type.Erased Core.Erasure_reason.Proof}
     | Info, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
       (* A type scheme with more signature slots than type variables takes at
@@ -3312,7 +3313,8 @@ let extract_constant_spec env kn cb =
         | Some p ->
           let body = fake_match_projection env p in
           mk_spec (EConstr.of_constr body) )
-      | _ -> Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = type_expunge env t} )
+      | _ ->
+        Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = type_expunge env t} )
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
 (** Extracts a module-level "with type" constraint. *)

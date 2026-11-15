@@ -40,7 +40,8 @@ let classify_inductive (kn : MutInd.t) (i : int) (ind : Core.Inductive.t) : Kind
     let projections = List.map (fun (f : Core.Record.Field.t) -> f.projection) fields in
     if Module_plan.is_eponymous_record ind_ref then Eponymous_record projections
     else Record projections
-  | Core.Inductive.Kind.Type_class fields -> Type_class (List.map (fun (f : Core.Record.Field.t) -> f.projection) fields)
+  | Core.Inductive.Kind.Type_class fields ->
+    Type_class (List.map (fun (f : Core.Record.Field.t) -> f.projection) fields)
 
 (** Creates a name resolution cache from an ML structure. Pre-computes type
     classifications for every inductive at top level or in a module structure,

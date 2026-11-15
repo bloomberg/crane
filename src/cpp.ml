@@ -536,7 +536,8 @@ let file_local_inductives (analysis : Structure_analysis.t) =
         match se with
         | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           List.init (Array.length ind.packets) (fun i -> GlobRef.IndRef (kn, i))
-        | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sub; _}; _} -> all sub
+        | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sub; _}; _} ->
+          all sub
         | _ -> [] )
       sel
   in
@@ -789,7 +790,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
             | Core.Module.Expr.Apply _ -> written (Cpp_ast.derived_functor ~template mp (Applied (application_of body)))
             | Core.Module.Expr.Path base ->
               written (Cpp_ast.derived_functor ~template mp (Module_named (Cpp_ast.module_ref base)))
-            | Core.Module.Expr.Functor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.")
+            | Core.Module.Expr.Functor _ ->
+              CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.")
           in
           { text = struct_def; concepts = concepts @ body_concepts; asserts }
       | Core.Module.Expr.Apply _ ->

@@ -208,7 +208,15 @@ and push defs shrunk fuel use args =
             let lift1 = List.map (Mlutil.ast_lift (k + 1)) in
             { br with
               Core.Match.Branch.body =
-                Core.Expr.Let {binder = Core.Binder_name.Source (Id.of_string "step"); binder_type = bty; value = b; body = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = lift1 before @ [Core.Expr.fresh_rel 1] @ lift1 after}; occurrence = Core.Occurrence.fresh ()} } )
+                Core.Expr.Let
+                  { binder = Core.Binder_name.Source (Id.of_string "step");
+                    binder_type = bty;
+                    value = b;
+                    body =
+                      Core.Expr.Apply
+                        { callee = Core.Expr.Global use;
+                          arguments = lift1 before @ [Core.Expr.fresh_rel 1] @ lift1 after };
+                    occurrence = Core.Occurrence.fresh () } } )
         brs
     in
     if !any then (
@@ -339,10 +347,10 @@ let structure struc =
         match se with
         | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body; type_ = ty}) -> (
           match decl defs r body ty with Some d -> (lbl, Core.Module.Structure_item.Declaration d) | None -> (lbl, se) )
-        | Core.Module.Structure_item.Module ({Core.Module.expr = Core.Module.Expr.Structure {path = mp;
-                                                                                             items = l}; _} as m) ->
-          (lbl, Core.Module.Structure_item.Module {m with Core.Module.expr = Core.Module.Expr.Structure {path = mp;
-                                                                                                         items = elems l}})
+        | Core.Module.Structure_item.Module ({Core.Module.expr = Core.Module.Expr.Structure {path = mp; items = l}; _} as m)
+          ->
+          let expr = Core.Module.Expr.Structure {path = mp; items = elems l} in
+          (lbl, Core.Module.Structure_item.Module {m with Core.Module.expr})
         | se -> (lbl, se))
       l
   in
