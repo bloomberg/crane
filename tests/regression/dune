@@ -14298,3 +14298,14 @@
   (alias runtest)
   (deps sep_ext_method_name_clash.t.exe)
   (action (run ./sep_ext_method_name_clash.t.exe))))
+
+(subdir sep_ext_nested_struct_name
+ (rule
+  (targets sep_ext_nested_struct_name.t.exe)
+  (deps SepExtNestedStructName.vo sep_ext_nested_struct_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nested_struct_name.t.exe sep_ext_nested_struct_name.t.cpp SepExtNestedStructName.cpp NestedLib.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nested_struct_name.t.exe)
+  (action (run ./sep_ext_nested_struct_name.t.exe))))
