@@ -14,7 +14,7 @@ To install OCaml (at least 4.14.0) and Rocq (at least 9.0.0, and below 9.1). You
 make build && make install
 ```
 
-You will also need [Clang](https://clang.llvm.org/) 19 or higher to run the tests, and [clang-format](https://clang.llvm.org/docs/ClangFormat.html) for standard formatting.
+You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated code is C++26, `-std=c++2c`) to run the tests, and [clang-format](https://clang.llvm.org/docs/ClangFormat.html) for standard formatting.
 
 To run the tests, use:
 
@@ -54,7 +54,7 @@ Crane Extraction "Foo" Foo.
 Now run:
 
 ```bash
-rocq compile Foo.v && clang++ -c -std=c++23 -I<crane>/theories/cpp Foo.cpp -o Foo.o
+rocq compile Foo.v && clang++ -c -std=c++2c -I<crane>/theories/cpp Foo.cpp -o Foo.o
 ```
 
 This creates `Foo.h` and `Foo.cpp` from the Rocq file, then compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution.

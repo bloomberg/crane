@@ -21,7 +21,7 @@ FINISHING="Cpp_pipeline Cpp_constraints Loopify Loopify_analysis Loopify_tail Lo
 PRINTER_FINISHING=${FINISHING/ Cpp_erasure/}
 
 # Core elaboration plans calls, matches and spines before translation runs,
-# on Core terms, their ML types and the table: it reaches no translation
+# on Core terms, their Core types and the table: it reaches no translation
 # module and no C++ representation.  It renumbers a method's body as the
 # registry does (Method_registry, which reads only the table), so that one
 # is allowed.  Ml_type_util, which it opens, depends on CppIR, so the rule is about these modules' own code.

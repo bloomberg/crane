@@ -618,10 +618,10 @@ which the frame stack supplies as heap frames rather than C++ stack frames.
 The outcome is decided by a postcondition rather than by whether a bail-out
 announced itself — the transformed body is re-classified, and a surviving
 self-call is a decline whatever the strategy claimed — so a silent bail-out
-cannot hide. A function may be transformed more than once per unit (by the
-implementation and header passes) and only one result is emitted, so
-outcomes are collected silently and each name is collapsed to its best outcome
-at the end of the real run, after inner lambdas have been linearised too.
+cannot hide. Outcomes are collected silently and printed once per unit, one
+line per function: the last outcome recorded, which describes the emitted
+code (a member of a recursive group is recorded again once the whole group is
+lowered).
 
 `scripts/loopify-coverage.sh` sweeps the test corpus and diffs the declines
 against the tracked `tests/loopify-coverage.golden`; `--accept` rewrites the
@@ -630,21 +630,24 @@ passes.
 
 ### Shapes that still decline
 
-Of the recursive functions in the test corpus, twelve decline, in two classes.
+`tests/loopify-coverage.golden` lists every decline in the test corpus, in
+three classes.
 
-**Recursion that crosses a closure boundary (10).** The self-call sits inside a
-lambda or is threaded through a `std::function` accumulator, and the frame
-transform correctly refuses to rewrite it: the lambda may be invoked later, or
-elsewhere, so its call cannot simply become a frame push. This covers a local
-fixpoint mutually recursive with its enclosing function — liftable by hand to a
-top-level sibling, at which point the existing mutual-recursion inlining
-applies — and genuine continuation-passing shapes, which would need the
-continuation defunctionalised.
+**A self-call survived the transform.** Most declines. The self-call sits
+inside a lambda, a continuation, or a function passed over the children of a
+nested inductive, and the transform correctly refuses to rewrite it: the
+lambda may be invoked later, or elsewhere, so its call cannot simply become a
+frame push. Continuation-passing shapes would need the continuation
+defunctionalised.
 
-**Value-type receiver (2).** A frame stores the receiver as a raw pointer, and a
-value receiver is a temporary whose address does not outlive the frame.
-Supporting it needs a mode in which the frame owns the receiver by value, as it
-already does for ordinary parameters.
+**Needs a second machine entry.** The self-call is inside a local fixpoint or
+a spliced partner's body that the function's machine cannot yet enter. Lifting
+the local fixpoint by hand to a top-level sibling avoids it.
+
+**Value-type receiver.** A recursive call passes a value-type receiver, whose
+address cannot be stored in a frame. Supporting it needs a mode in which the
+frame owns the receiver by value, as it already does for ordinary
+parameters.
 
 ---
 
@@ -719,9 +722,14 @@ Crane Extraction "trees" Trees.
 Enable the Perceus-style in-place reuse pass. At a match on an owned recursive
 value whose arm rebuilds a constructor of the same type, the matched cell is
 written in place instead of a fresh one being allocated — provided the value is
-uniquely owned. Uniqueness is checked at run time (`use_count() == 1`), so the
-rewrite is safe even where the analysis cannot prove exclusivity statically:
-a shared cell simply takes the allocating path.
+uniquely owned. Uniqueness is checked at run time, so the rewrite is safe even
+where the analysis cannot prove exclusivity statically: a shared cell simply
+takes the allocating path.
+
+A recyclable cell needs a reusable control block, so the rewrite fires only
+under [`Set Crane NonAtomicRc`](#set-crane-nonatomicrc) (`crane::rc`) or for a
+type under `Set Crane SharedVariant`. Coinductive types and matches on enums
+are never rewritten, and the arm must rebuild exactly the scrutinee's type.
 
 ### Global flag
 
@@ -742,11 +750,12 @@ A per-function setting overrides the global flag.
 
 ### Interaction with loopification
 
-Reuse and [loopification](#set-crane-loopify--crane-loopify) are mutually
-exclusive per declaration: where a function is loopified, the reuse rewrite does
-not apply to it, because the loopified body no longer holds the matched cell in
-a form the rewrite can claim. Loopification wins, since stack safety is the
-stronger guarantee. If you want reuse for a particular function, exclude it from
+The match rewrite does not apply in a function that is
+[loopified](#set-crane-loopify--crane-loopify): loopification owns that shape,
+since stack safety is the stronger guarantee. Under `Set Crane Reuse` with
+`Set Crane NonAtomicRc`, a tail-modulo-cons loop that owns its input recycles
+cells itself instead: each turn rebuilds its output cell in the input cell it
+frees. If you want the match rewrite for a particular function, exclude it from
 loopification with `Crane NoLoopify`.
 
 ---
