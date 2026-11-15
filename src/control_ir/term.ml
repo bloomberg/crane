@@ -277,8 +277,8 @@ let rebuilt ~pointer_fields ~in_place (l : loop) i =
         || Array.exists
              (fun {Core.Match.Branch.binders = ids; body = b; _} -> go (depth + List.length ids) b)
              branches
-      | Core.Expr.Fixpoint {functions = ids;
-                            bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+      | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+        let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
         Array.exists (go (depth + Array.length ids)) funs
       | Core.Expr.Apply {callee = f; arguments = args} -> go depth f || List.exists (go depth) args
       | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (go depth) args

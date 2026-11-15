@@ -2569,11 +2569,8 @@ and extract_fix ?tys env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
   let mle = Array.fold_left Mlenv.push_type mle metas in
   let ei = Array.map2 (extract_maybe_term env sg mle) metas ci in
   let ids = Array.mapi (fun i x -> (id_of_name x.binder_name, metas.(i))) fi in
-  if is_cofix then Core.Expr.Cofixpoint {selected = i;
-                                         functions = ids;
-                                         bodies = ei;
-                                         occurrence = Core.Occurrence.fresh ()}
-  else Core.Expr.Fixpoint {selected = i; functions = ids; bodies = ei; occurrence = Core.Occurrence.fresh ()}
+  let group = Core.Recursion.Group.of_arrays ~selected:i ids ei (Core.Occurrence.fresh ()) in
+  if is_cofix then Core.Expr.Cofixpoint group else Core.Expr.Fixpoint group
 
 (** {1 ML declarations} *)
 

@@ -207,7 +207,8 @@ let classify ~effects ~callee body =
     | Core.Expr.Lambda_group_barrier {value = a; _} ->
       walk ~tail a
     | Core.Expr.Lambda _ -> ()
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
       Array.iter
         (fun f ->
           let n, b = split_params 0 f in
@@ -298,8 +299,8 @@ let modulo_cons_chains ~effects ~member ~bodies self =
         Array.fold_left
           (fun n {Core.Match.Branch.binders = ids; body = b; _} -> n + under (List.length ids) b)
           (calls ~depth s) branches
-      | Core.Expr.Fixpoint {functions = ids;
-                            bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+      | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+        let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
         Array.fold_left (fun n b -> n + under (Array.length ids) b) 0 funs
       | e ->
         let n = ref 0 in
@@ -392,7 +393,8 @@ let rec iter_scoped f lex e =
     iter_scoped f lex s;
     Array.iter (fun {Core.Match.Branch.binders = ids;
                      body = b; _} -> iter_scoped f (bind (List.rev ids) lex) b) branches
-  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     (* The last function of the group is the innermost binder. *)
     let lex = bind (List.rev_map (fun (g, ty) -> (Core.Binder_name.Source g, ty)) (Array.to_list ids)) lex in
     Array.iter (iter_scoped f lex) funs
@@ -442,8 +444,8 @@ let value_levels ~heads ~depth e =
     | Core.Expr.Match {scrutinee = s; branches; _} ->
       go d s;
       Array.iter (fun {Core.Match.Branch.binders = ids; body = b; _} -> go (d + List.length ids) b) branches
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (go (d + Array.length ids)) funs
     | e -> Mlutil.ast_iter (go d) e
   in
@@ -608,8 +610,8 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       targets ~depth e <> []
       ||
       match e with
-      | Core.Expr.Fixpoint {functions = ids;
-                            bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+      | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+        let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
         Array.exists
           (fun f ->
             let arity, b = split_params 0 f in
@@ -732,7 +734,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
          the body are the copy's, a member of the fixpoint at that level. *)
       let targets, heads, fixpoints, captures =
         match a with
-        | Core.Expr.Fixpoint {functions = [|_|]; bodies = [|_|]; occurrence = occ; _} when entered occ ->
+        | Core.Expr.Fixpoint {members = [|_|]; occurrence = occ; _} when entered occ ->
           let level = depth in
           let rec entering ~depth:d = function
             | Core.Expr.Coerce {value = e; _}
@@ -771,11 +773,10 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     | Core.Expr.Match {scrutinee = s; branches; _} ->
       go depth s;
       Array.iter (fun {Core.Match.Branch.binders = ids; body = b; _} -> go (depth + List.length ids) b) branches
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs;
-                          occurrence = occ; _} | Core.Expr.Cofixpoint {functions = ids;
-                                                                       bodies = funs;
-                                                                       occurrence = occ; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group
+      and funs = Core.Recursion.Group.bodies rec_group
+      and occ = rec_group.occurrence in
       (* The member [m] is bound at level [depth + m], the last innermost. *)
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
@@ -820,8 +821,8 @@ let flow_fixpoints ~names depth body =
       mentions depth s
       || Array.exists (fun {Core.Match.Branch.binders = ids;
                             body = b; _} -> mentions (depth + List.length ids) b) branches
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.exists (mentions (depth + Array.length ids)) funs
     | e ->
       let found = ref false in
@@ -830,11 +831,10 @@ let flow_fixpoints ~names depth body =
   in
   let found = ref [] in
   let rec flow depth = function
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs;
-                          occurrence = occ; _} | Core.Expr.Cofixpoint {functions = ids;
-                                                                       bodies = funs;
-                                                                       occurrence = occ; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group
+      and funs = Core.Recursion.Group.bodies rec_group
+      and occ = rec_group.occurrence in
       if Array.exists (mentions (depth + Array.length ids)) funs then found := occ :: !found
     | Core.Expr.Lambda _ -> ()
     | Core.Expr.Let {value = a; body = b; _} ->
@@ -860,7 +860,8 @@ let rec iter_under f depth e =
   | Core.Expr.Match {scrutinee = s; branches; _} ->
     iter_under f depth s;
     Array.iter (fun {Core.Match.Branch.binders = ids; body = b; _} -> iter_under f (depth + List.length ids) b) branches
-  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     Array.iter (iter_under f (depth + Array.length ids)) funs
   | e -> Mlutil.ast_iter (iter_under f depth) e
 
@@ -968,11 +969,10 @@ let local_groups ~effects defs =
       let bound = bound_calls body in
       iter_scoped
         (fun lex -> function
-          | Core.Expr.Fixpoint {functions = ids;
-                                bodies = funs;
-                                occurrence = occ; _} | Core.Expr.Cofixpoint {functions = ids;
-                                                                             bodies = funs;
-                                                                             occurrence = occ; _} ->
+          | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+            let ids = Core.Recursion.Group.functions rec_group
+            and funs = Core.Recursion.Group.bodies rec_group
+            and occ = rec_group.occurrence in
             plan ~bound r lex ids funs occ
           | _ -> ())
         lex body )
@@ -1281,10 +1281,7 @@ let adopt_calls (def : Core.Recursion.Definition.t) sites body =
   | copy, inner ->
     let name = Names.Id.of_string (Names.Id.to_string (Table.safe_basename_of_global partner) ^ "_entry") in
     let entered = Core.Occurrence.fresh () in
-    let fixpoint = Core.Expr.Fixpoint {selected = 0;
-                                       functions = [|(name, def.type_)|];
-                                       bodies = [|copy|];
-                                       occurrence = entered} in
+    let fixpoint = Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:0 ([|(name, def.type_)|]) ([|copy|]) entered) in
     Ok (Mlutil.named_lams params (Core.Expr.Let {binder = Core.Binder_name.Source name;
                                                  binder_type = def.type_;
                                                  value = fixpoint;

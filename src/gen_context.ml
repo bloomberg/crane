@@ -530,8 +530,8 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
       walk_at d sc;
       Array.iter (fun {Core.Match.Branch.binders = ids; body = br; _} -> walk_at (d + List.length ids) br) pv
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk_at (d + Array.length ids)) funs
     | e' -> Mlutil.ast_iter (walk_at d) e'
   in

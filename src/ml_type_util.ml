@@ -716,16 +716,8 @@ let rec map_types_in_ast (f : Core.Type.t -> Core.Type.t) = function
               pattern = pat;
               body = map_types_in_ast f body } )
           brs; occurrence = occ}
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies = funs; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i;
-                        functions = Array.map (fun (n, ty) -> (n, f ty)) ids;
-                        bodies = Array.map (map_types_in_ast f) funs;
-                        occurrence = occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = funs; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i;
-                          functions = Array.map (fun (n, ty) -> (n, f ty)) ids;
-                          bodies = Array.map (map_types_in_ast f) funs;
-                          occurrence = occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map f (map_types_in_ast f) g)
+  | Core.Expr.Cofixpoint g -> Core.Expr.Cofixpoint (Core.Recursion.Group.map f (map_types_in_ast f) g)
   | Core.Expr.Apply {callee = fn; arguments = args} ->
     Core.Expr.Apply {callee = map_types_in_ast f fn; arguments = List.map (map_types_in_ast f) args}
   | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->

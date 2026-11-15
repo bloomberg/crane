@@ -2316,7 +2316,8 @@ let plan_referenced_names s =
       List.iter (Option.iter (name Term)) (Table.record_fields_of_type t);
       Array.iter (fun {Core.Match.Branch.pattern = p; _} -> pattern p) brs
     | Core.Expr.Lambda {parameter_type = t; _} | Core.Expr.Let {binder_type = t; _} -> ty t
-    | Core.Expr.Fixpoint {functions = fs; _} | Core.Expr.Cofixpoint {functions = fs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let fs = Core.Recursion.Group.functions rec_group in
       Array.iter (fun (_, t) -> ty t) fs
     | Core.Expr.Coerce {source_type = a; target_type = b; _} ->
       ty a;

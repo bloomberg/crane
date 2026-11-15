@@ -1051,15 +1051,12 @@ let rec eq_ml_ast t1 t2 =
                      scrutinee = c1;
                      branches = p1; _}, Core.Expr.Match {scrutinee_type = t2; scrutinee = c2; branches = p2; _} ->
     eq_ml_type t1 t2 && eq_ml_ast c1 c2 && Array.equal eq_ml_branch p1 p2
-  | ( (Core.Expr.Fixpoint {selected = i1;
-                           functions = id1;
-                           bodies = t1; _} | Core.Expr.Cofixpoint {selected = i1; functions = id1; bodies = t1; _}),
-      (Core.Expr.Fixpoint {selected = i2;
-                           functions = id2;
-                           bodies = t2; _} | Core.Expr.Cofixpoint {selected = i2; functions = id2; bodies = t2; _}) ) ->
-    Int.equal i1 i2
-    && Array.equal Id.equal (Array.map fst id1) (Array.map fst id2)
-    && Array.equal eq_ml_ast t1 t2
+  | ( (Core.Expr.Fixpoint g1 | Core.Expr.Cofixpoint g1),
+      (Core.Expr.Fixpoint g2 | Core.Expr.Cofixpoint g2) ) ->
+    Int.equal g1.selected g2.selected
+    && Array.equal (fun (m1 : Core.Recursion.Member.t) (m2 : Core.Recursion.Member.t) -> Id.equal m1.name m2.name)
+         g1.members g2.members
+    && Array.equal eq_ml_ast (Core.Recursion.Group.bodies g1) (Core.Recursion.Group.bodies g2)
   | Core.Expr.Runtime_error e1, Core.Expr.Runtime_error e2 -> String.equal e1 e2
   | Core.Expr.Erased_value k1, Core.Expr.Erased_value k2 -> k1 == k2
   | Core.Expr.Axiom_value _, Core.Expr.Axiom_value _ -> true (* ignore the name of the axiom *)
@@ -1129,9 +1126,9 @@ let ast_iter_rel_applied f =
     | Core.Expr.Match {scrutinee = a; branches = v; _} ->
       iter n a;
       Array.iter (fun {Core.Match.Branch.binders = l; body = t; _} -> iter (n + List.length l) t) v
-    | Core.Expr.Fixpoint {functions = ids; bodies = v; _} | Core.Expr.Cofixpoint {functions = ids; bodies = v; _} ->
-      let k = Array.length ids in
-      Array.iter (iter (n + k)) v
+    | Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g ->
+      let k = Core.Recursion.Group.length g in
+      Array.iter (fun (m : Core.Recursion.Member.t) -> iter (n + k) m.body) g.members
     | Core.Expr.Apply {callee = a; arguments = l} ->
       iter n a;
       List.iter (iter n) l
@@ -1168,10 +1165,8 @@ let ast_map f = function
     Core.Expr.Let {binder = i; binder_type = t; value = f a; body = f b; occurrence = occ}
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = a; branches = v; occurrence = occ} ->
     Core.Expr.Match {scrutinee_type = typ; scrutinee = f a; branches = Array.map (ast_map_branch f) v; occurrence = occ}
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i; functions = ids; bodies = Array.map f v; occurrence = occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = Array.map f v; occurrence = occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map_bodies f g)
+  | Core.Expr.Cofixpoint g -> Core.Expr.Cofixpoint (Core.Recursion.Group.map_bodies f g)
   | Core.Expr.Apply {callee = a; arguments = l} -> Core.Expr.Apply {callee = f a; arguments = List.map f l}
   | Core.Expr.Construct {result_type = typ; constructor = c; arguments = l; occurrence = occ} ->
     Core.Expr.Construct {result_type = typ; constructor = c; arguments = List.map f l; occurrence = occ}
@@ -1217,16 +1212,8 @@ let rec ast_map_types f = function
                      scrutinee = ast_map_types f a;
                      branches = Array.map branch v;
                      occurrence = occ}
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i;
-                        functions = Array.map (fun (id, t) -> (id, f t)) ids;
-                        bodies = Array.map (ast_map_types f) v;
-                        occurrence = occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i;
-                          functions = Array.map (fun (id, t) -> (id, f t)) ids;
-                          bodies = Array.map (ast_map_types f) v;
-                          occurrence = occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map f (ast_map_types f) g)
+  | Core.Expr.Cofixpoint g -> Core.Expr.Cofixpoint (Core.Recursion.Group.map f (ast_map_types f) g)
   | Core.Expr.Apply {callee = a; arguments = l} ->
     Core.Expr.Apply {callee = ast_map_types f a; arguments = List.map (ast_map_types f) l}
   | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
@@ -1499,16 +1486,9 @@ let ast_map_lift f n = function
                      scrutinee = f n a;
                      branches = Array.map (ast_map_lift_branch f n) v;
                      occurrence = occ}
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i;
-                        functions = ids;
-                        bodies = Array.map (f (Array.length ids + n)) v;
-                        occurrence = occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i;
-                          functions = ids;
-                          bodies = Array.map (f (Array.length ids + n)) v;
-                          occurrence = occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map_bodies (f (Core.Recursion.Group.length g + n)) g)
+  | Core.Expr.Cofixpoint g ->
+    Core.Expr.Cofixpoint (Core.Recursion.Group.map_bodies (f (Core.Recursion.Group.length g + n)) g)
   | Core.Expr.Apply {callee = a; arguments = l} -> Core.Expr.Apply {callee = f n a; arguments = List.map (f n) l}
   | Core.Expr.Construct {result_type = typ; constructor = c; arguments = l; occurrence = occ} ->
     Core.Expr.Construct {result_type = typ; constructor = c; arguments = List.map (f n) l; occurrence = occ}
@@ -1541,10 +1521,8 @@ let ast_iter f = function
   | Core.Expr.Match {scrutinee = a; branches = v; _} ->
     f a;
     Array.iter (ast_iter_branch f) v
-  | Core.Expr.Fixpoint {selected = i;
-                        functions = ids;
-                        bodies = v; _} | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = v; _} ->
-    Array.iter f v
+  | Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g ->
+    Array.iter (fun (m : Core.Recursion.Member.t) -> f m.body) g.members
   | Core.Expr.Apply {callee = a; arguments = l} ->
     f a;
     List.iter f l
@@ -1596,9 +1574,9 @@ let nb_occur_match =
           0
           v
     | Core.Expr.Let {value = a; body = b; _} -> nb k a + nb (k + 1) b
-    | Core.Expr.Fixpoint {functions = ids; bodies = v; _} | Core.Expr.Cofixpoint {functions = ids; bodies = v; _} ->
-      let k = k + Array.length ids in
-      Array.fold_left (fun r a -> r + nb k a) 0 v
+    | Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g ->
+      let k = k + Core.Recursion.Group.length g in
+      Array.fold_left (fun r (m : Core.Recursion.Member.t) -> r + nb k m.body) 0 g.members
     | Core.Expr.Lambda {body = a; _} -> nb (k + 1) a
     | Core.Expr.Apply {callee = a; arguments = l} -> List.fold_left (fun r a -> r + nb k a) (nb k a) l
     | Core.Expr.Construct {arguments = l; _} | Core.Expr.Tuple l -> List.fold_left (fun r a -> r + nb k a) 0 l
@@ -1650,12 +1628,14 @@ let dump_unused_vars a =
                                                            scrutinee = e';
                                                            branches = br';
                                                            occurrence = occ}
-    | Core.Expr.Fixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-      let v' = ren_fix env ids v in
-      if v' == v then a else Core.Expr.Fixpoint {selected = i; functions = ids; bodies = v'; occurrence = occ}
-    | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = v; occurrence = occ} ->
-      let v' = ren_fix env ids v in
-      if v' == v then a else Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = v'; occurrence = occ}
+    | Core.Expr.Fixpoint g ->
+      let v = Core.Recursion.Group.bodies g in
+      let v' = ren_fix env v in
+      if v' == v then a else Core.Expr.Fixpoint (Core.Recursion.Group.with_bodies g v')
+    | Core.Expr.Cofixpoint g ->
+      let v = Core.Recursion.Group.bodies g in
+      let v' = ren_fix env v in
+      if v' == v then a else Core.Expr.Cofixpoint (Core.Recursion.Group.with_bodies g v')
     | Core.Expr.Apply {callee = b; arguments = l} ->
       let b' = ren env b
       and l' = List.Smart.map (ren env) l in
@@ -1686,8 +1666,8 @@ let dump_unused_vars a =
      |Core.Expr.UInt63 _ | Core.Expr.Numeral _
      |Core.Expr.Float64 _
      |Core.Expr.String _ -> a
-  and ren_fix env ids v =
-    let env' = List.init (Array.length ids) (fun _ -> ref false) @ env in
+  and ren_fix env v =
+    let env' = List.init (Array.length v) (fun _ -> ref false) @ env in
     Array.Smart.map (ren env') v
   and ren_branch env ({Core.Match.Branch.binders = ids; body = b; _} as tr) =
     let occs = List.map (fun _ -> ref false) ids in
@@ -1734,8 +1714,8 @@ let rec ast_size e =
   | Core.Expr.Construct {arguments = a; _} | Core.Expr.Tuple a -> ast_sizes a
   | Core.Expr.Match {scrutinee = s; branches = brs; _} ->
     Array.fold_left (fun n (br : Core.Match.Branch.t) -> n + ast_size br.body) (ast_size s) brs
-  | Core.Expr.Fixpoint {bodies = bs; _} | Core.Expr.Cofixpoint {bodies = bs; _} ->
-    Array.fold_left (fun n b -> n + ast_size b) 0 bs
+  | Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g ->
+    Array.fold_left (fun n (m : Core.Recursion.Member.t) -> n + ast_size m.body) 0 g.members
   | _ -> 0
 
 and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
@@ -2439,10 +2419,8 @@ let rec simpl o = function
       simpl o (ast_subst c e)
     else
       Core.Expr.Let {binder = id; binder_type = t; value = simpl o c; body = e; occurrence = occ}
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies = c; occurrence = occ} ->
-    simpl_fix o i ids c (fun c -> Core.Expr.Fixpoint {selected = i; functions = ids; bodies = c; occurrence = occ})
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = c; occurrence = occ} ->
-    simpl_fix o i ids c (fun c -> Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = c; occurrence = occ})
+  | Core.Expr.Fixpoint g -> simpl_fix o g (fun g -> Core.Expr.Fixpoint g)
+  | Core.Expr.Cofixpoint g -> simpl_fix o g (fun g -> Core.Expr.Cofixpoint g)
     (* Dummy fixpoint *)
   (* An exception never yields a value, so there is no representation gap for
      a coercion around it to describe. *)
@@ -2457,9 +2435,11 @@ let rec simpl o = function
     applications into let/case. Invariant: argument list [a] is non-empty. *)
 (* A fixpoint group rebuilt by [fix] from new bodies, or its selected body
    alone when that body does not recurse. *)
-and simpl_fix o i ids c fix =
-  let n = Array.length ids in
-  if ast_occurs_itvl 1 n c.(i) then fix (Array.map (simpl o) c) else simpl o (ast_lift (-n) c.(i))
+and simpl_fix o g fix =
+  let n = Core.Recursion.Group.length g in
+  let selected = (Core.Recursion.Group.selected_member g).body in
+  if ast_occurs_itvl 1 n selected then fix (Core.Recursion.Group.map_bodies (simpl o) g)
+  else simpl o (ast_lift (-n) selected)
 
 and simpl_app o a = function
   | Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = ty; body = t} ->
@@ -2728,45 +2708,38 @@ let sign_of_args a =
 
 (** Removes all dummy (erased) bindings and arguments from an ML AST. *)
 let rec kill_dummy = function
-  | Core.Expr.Fixpoint {selected = i; functions = fi; bodies = c; occurrence = occ} ->
-    kill_dummy_fix_term i c (fun c -> Core.Expr.Fixpoint {selected = i; functions = fi; bodies = c; occurrence = occ})
-  | Core.Expr.Cofixpoint {selected = i; functions = fi; bodies = c; occurrence = occ} ->
-    kill_dummy_fix_term i c (fun c -> Core.Expr.Cofixpoint {selected = i; functions = fi; bodies = c; occurrence = occ})
-  | Core.Expr.Apply {callee = Core.Expr.Fixpoint {selected = i; functions = fi; bodies = c; occurrence = occ};
-                     arguments = a} ->
-    kill_dummy_fix_app i c (fun c -> Core.Expr.Fixpoint {selected = i; functions = fi; bodies = c; occurrence = occ}) a
-  | Core.Expr.Apply {callee = Core.Expr.Cofixpoint {selected = i; functions = fi; bodies = c; occurrence = occ};
-                     arguments = a} ->
-    kill_dummy_fix_app i c (fun c -> Core.Expr.Cofixpoint {selected = i;
-                                                           functions = fi;
-                                                           bodies = c;
-                                                           occurrence = occ}) a
+  | Core.Expr.Fixpoint g ->
+    kill_dummy_fix_term g.selected (Core.Recursion.Group.bodies g) (fun c ->
+        Core.Expr.Fixpoint (Core.Recursion.Group.with_bodies g c) )
+  | Core.Expr.Cofixpoint g ->
+    kill_dummy_fix_term g.selected (Core.Recursion.Group.bodies g) (fun c ->
+        Core.Expr.Cofixpoint (Core.Recursion.Group.with_bodies g c) )
+  | Core.Expr.Apply {callee = Core.Expr.Fixpoint g; arguments = a} ->
+    kill_dummy_fix_app g.selected (Core.Recursion.Group.bodies g)
+      (fun c -> Core.Expr.Fixpoint (Core.Recursion.Group.with_bodies g c))
+      a
+  | Core.Expr.Apply {callee = Core.Expr.Cofixpoint g; arguments = a} ->
+    kill_dummy_fix_app g.selected (Core.Recursion.Group.bodies g)
+      (fun c -> Core.Expr.Cofixpoint (Core.Recursion.Group.with_bodies g c))
+      a
   | Core.Expr.Let {binder = id;
                    binder_type = t;
-                   value = Core.Expr.Fixpoint {selected = i; functions = fi; bodies = c; occurrence = occ};
+                   value = Core.Expr.Fixpoint g;
                    body = e;
                    occurrence = let_occ} ->
-    kill_dummy_fix_let i c (fun c -> Core.Expr.Fixpoint {selected = i;
-                                                         functions = fi;
-                                                         bodies = c;
-                                                         occurrence = occ}) (fun b e -> Core.Expr.Let {binder = id;
-                                                                                                       binder_type = t;
-                                                                                                       value = b;
-                                                                                                       body = e;
-                                                                                                       occurrence = let_occ}) e
+    kill_dummy_fix_let g.selected (Core.Recursion.Group.bodies g)
+      (fun c -> Core.Expr.Fixpoint (Core.Recursion.Group.with_bodies g c))
+      (fun b e -> Core.Expr.Let {binder = id; binder_type = t; value = b; body = e; occurrence = let_occ})
+      e
   | Core.Expr.Let {binder = id;
                    binder_type = t;
-                   value = Core.Expr.Cofixpoint {selected = i; functions = fi; bodies = c; occurrence = occ};
+                   value = Core.Expr.Cofixpoint g;
                    body = e;
                    occurrence = let_occ} ->
-    kill_dummy_fix_let i c (fun c -> Core.Expr.Cofixpoint {selected = i;
-                                                           functions = fi;
-                                                           bodies = c;
-                                                           occurrence = occ}) (fun b e -> Core.Expr.Let {binder = id;
-                                                                                                         binder_type = t;
-                                                                                                         value = b;
-                                                                                                         body = e;
-                                                                                                         occurrence = let_occ}) e
+    kill_dummy_fix_let g.selected (Core.Recursion.Group.bodies g)
+      (fun c -> Core.Expr.Cofixpoint (Core.Recursion.Group.with_bodies g c))
+      (fun b e -> Core.Expr.Let {binder = id; binder_type = t; value = b; body = e; occurrence = let_occ})
+      e
   | Core.Expr.Let {binder = id; binder_type = t; value = c; body = e; occurrence = occ} ->
     ( try
         let k, c = kill_dummy_lams [] (kill_dummy_hd c) in
@@ -2941,7 +2914,7 @@ let general_optimize_fix f ids n args m c occ =
   let new_f = anonym_tmp_lams (Core.Expr.Apply {callee = Core.Expr.fresh_rel (n + m + 1);
                                                 arguments = args_f}) new_tys in
   let new_c = named_lams ids (normalize (Core.Expr.Apply {callee = ast_subst new_f c; arguments = args})) in
-  Core.Expr.Fixpoint {selected = 0; functions = [|f|]; bodies = [|new_c|]; occurrence = occ}
+  Core.Expr.Fixpoint (Core.Recursion.Group.singleton (fst f) (snd f) new_c occ)
 
 (** Optimizes fixpoint definitions by inlining small recursive calls and
     eta-reducing. *)
@@ -2957,11 +2930,8 @@ let optimize_fix a =
       match
         a'
       with
-      | Core.Expr.Fixpoint {functions = [|f|];
-                            bodies = [|c|];
-                            occurrence = occ; _} | Core.Expr.Cofixpoint {functions = [|f|];
-                                                                         bodies = [|c|];
-                                                                         occurrence = occ; _} ->
+      | Core.Expr.Fixpoint {members = [|f|]; occurrence = occ; _}
+      | Core.Expr.Cofixpoint {members = [|f|]; occurrence = occ; _} ->
         (* The fixpoint calls itself under the definition's binders, passing
            each on -- a binder erasure kept, a type binder under
            Conservative Types, as the dummy it stands for, as extraction
@@ -2970,19 +2940,16 @@ let optimize_fix a =
           List.rev (List.mapi (fun i (_, ty) -> match ty with Core.Type.Erased k -> Core.Expr.Erased_value k | _ -> Core.Expr.fresh_rel (i + 1)) ids)
         in
         let new_f = Core.Expr.Apply {callee = Core.Expr.fresh_rel (n + 1); arguments = args} in
-        let new_c = named_lams ids (normalize (ast_subst new_f c)) in
-        Core.Expr.Fixpoint {selected = 0; functions = [|f|]; bodies = [|new_c|]; occurrence = occ}
+        let new_c = named_lams ids (normalize (ast_subst new_f f.body)) in
+        Core.Expr.Fixpoint (Core.Recursion.Group.singleton f.name f.type_ new_c occ)
       | Core.Expr.Apply {callee = a'; arguments = args} ->
         let m = List.length args in
         ( match a' with
         | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _
           when test_eta_args_lift 0 n args && not (ast_occurs_itvl 1 m a') -> a'
-        | Core.Expr.Fixpoint {functions = [|f|];
-                              bodies = [|c|];
-                              occurrence = occ; _} | Core.Expr.Cofixpoint {functions = [|f|];
-                                                                           bodies = [|c|];
-                                                                           occurrence = occ; _} ->
-          (try general_optimize_fix f ids n args m c occ with Impossible -> a)
+        | Core.Expr.Fixpoint {members = [|f|]; occurrence = occ; _}
+        | Core.Expr.Cofixpoint {members = [|f|]; occurrence = occ; _} ->
+          (try general_optimize_fix (f.name, f.type_) ids n args m f.body occ with Impossible -> a)
         | _ -> a )
       | _ -> a
 
@@ -2999,7 +2966,7 @@ let rec ml_size = function
   | Core.Expr.Lambda {body = t; _} -> 1 + ml_size t
   | Core.Expr.Construct {arguments = l; _} | Core.Expr.Tuple l -> ml_size_list l
   | Core.Expr.Match {scrutinee = t; branches = pv; _} -> 1 + ml_size t + ml_size_branch ml_size pv
-  | Core.Expr.Fixpoint {bodies = f; _} | Core.Expr.Cofixpoint {bodies = f; _} -> ml_size_array f
+  | Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g -> ml_size_array (Core.Recursion.Group.bodies g)
   | Core.Expr.Let {body = t; _} -> ml_size t
   | Core.Expr.Coerce {value = t; _}
   | Core.Expr.Boxed_value {value = t; _}
@@ -3060,10 +3027,10 @@ let rec non_stricts add cand = function
   | Core.Expr.Let {value = t1; body = t2; _} ->
     let cand = non_stricts false cand t1 in
     pop 1 (non_stricts add (lift 1 cand) t2)
-  | Core.Expr.Fixpoint {functions = i; bodies = f; _} | Core.Expr.Cofixpoint {functions = i; bodies = f; _} ->
-    let n = Array.length i in
+  | Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g ->
+    let n = Core.Recursion.Group.length g in
     let cand = lift n cand in
-    let cand = Array.fold_left (non_stricts false) cand f in
+    let cand = Array.fold_left (non_stricts false) cand (Core.Recursion.Group.bodies g) in
     pop n cand
   | Core.Expr.Match {scrutinee = t; branches = v; _} ->
     (* The only interesting case: for a variable to be non-strict, *)
@@ -3195,16 +3162,8 @@ let remap_tvars f =
                 pattern = pat;
                 body = remap_ast body } )
             branches; occurrence = occ}
-    | Core.Expr.Fixpoint {selected = idx; functions = ids_tys; bodies; occurrence = occ} ->
-      Core.Expr.Fixpoint {selected = idx;
-                          functions = Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys;
-                          bodies = Array.map remap_ast bodies;
-                          occurrence = occ}
-    | Core.Expr.Cofixpoint {selected = idx; functions = ids_tys; bodies; occurrence = occ} ->
-      Core.Expr.Cofixpoint {selected = idx;
-                            functions = Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys;
-                            bodies = Array.map remap_ast bodies;
-                            occurrence = occ}
+    | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map remap_type remap_ast g)
+    | Core.Expr.Cofixpoint g -> Core.Expr.Cofixpoint (Core.Recursion.Group.map remap_type remap_ast g)
     | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
       Core.Expr.Coerce {source_type = from; target_type = into; value = remap_ast a; occurrence = mocc}
     | Core.Expr.Boxed_value {value = a; occurrence = mocc} ->

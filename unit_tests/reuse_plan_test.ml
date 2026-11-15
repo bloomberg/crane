@@ -282,7 +282,7 @@ let () =
     let s = Core.Expr.fresh_rel 1 in
     let at = Core.Occurrence.fresh () in
     let fix =
-      Core.Expr.Fixpoint {selected = 0; functions = [|(Id.of_string "f", Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = lst; result = lst}})|]; bodies = [|Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "l"); parameter_type = lst; body}}|]; occurrence = at}
+      Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Id.of_string "f") (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = lst; result = lst}}) (Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "l"); parameter_type = lst; body}}) at)
     in
     let root = Core.Expr.Apply {callee = fix; arguments = [call "len" [Core.Expr.fresh_rel 1]; s]} in
     let read = match s with Core.Expr.Bound_variable {occurrence = o; _} -> o | _ -> assert false in
@@ -381,7 +381,7 @@ let () =
 let () =
   let modes ?in_place () =
     let fix =
-      Core.Expr.Fixpoint {selected = 0; functions = [|(Id.of_string "f", Core.Type.Arrow {parameter = nat; result = lst})|]; bodies = [|Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = call "h" [Core.Expr.fresh_rel 3]}|]; occurrence = Core.Occurrence.fresh ()}
+      Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Id.of_string "f") (Core.Type.Arrow {parameter = nat; result = lst}) (Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = call "h" [Core.Expr.fresh_rel 3]}) (Core.Occurrence.fresh ()))
     in
     let root = call "g" [fix] in
     Ownership_ir.captures_by_member ?in_place (Ownership_ir.region ~owned:[1] ~n_outer:0 root) fix

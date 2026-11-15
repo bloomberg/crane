@@ -82,8 +82,9 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
         | Core.Expr.Match {scrutinee = s; branches; _} ->
           walk depth s;
           Array.iter (fun {Core.Match.Branch.binders = ids; body = b; _} -> walk (depth + List.length ids) b) branches
-        | Core.Expr.Fixpoint {functions = ids;
-                              bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+        | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+          let ids = Core.Recursion.Group.functions rec_group
+          and funs = Core.Recursion.Group.bodies rec_group in
           Array.iter (walk (depth + Array.length ids)) funs
         | e -> Mlutil.ast_iter (walk depth) e
     in
@@ -116,11 +117,9 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     in
     match e with
     | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {selected = 0;
-                                                     functions = [|_|];
-                                                     bodies = [|fix|];
+                                                     members = [|{body = fix; _}|];
                                                      occurrence = o} | Core.Expr.Cofixpoint {selected = 0;
-                                                                                             functions = [|_|];
-                                                                                             bodies = [|fix|];
+                                                                                             members = [|{body = fix; _}|];
                                                                                              occurrence = o});
                        arguments = args}
       when adopts o ->
@@ -130,11 +129,9 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     | Core.Expr.Let {binder = x;
                      binder_type = ty;
                      value = (Core.Expr.Fixpoint {selected = 0;
-                                                  functions = [|_|];
-                                                  bodies = [|fix|];
+                                                  members = [|{body = fix; _}|];
                                                   occurrence = o} | Core.Expr.Cofixpoint {selected = 0;
-                                                                                          functions = [|_|];
-                                                                                          bodies = [|fix|];
+                                                                                          members = [|{body = fix; _}|];
                                                                                           occurrence = o} as a);
                      body = b; _}
       when adopts o -> (
@@ -218,13 +215,9 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
 let rec fixpoints wanted acc e =
   let acc =
     match e with
-    | (Core.Expr.Fixpoint {functions = ids;
-                           bodies = funs;
-                           occurrence = occ; _} | Core.Expr.Cofixpoint {functions = ids;
-                                                                        bodies = funs;
-                                                                        occurrence = occ; _})
-      when List.exists (Core.Occurrence.equal occ) wanted ->
-      (occ, Array.map snd ids, funs) :: acc
+    | (Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g) when List.exists (Core.Occurrence.equal g.occurrence) wanted ->
+      (g.occurrence, Array.map (fun (m : Core.Recursion.Member.t) -> m.type_) g.members, Core.Recursion.Group.bodies g)
+      :: acc
     | _ -> acc
   in
   let acc = ref acc in

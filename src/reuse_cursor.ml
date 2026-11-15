@@ -54,8 +54,8 @@ let reads env e =
       Array.fold_left
         (fun acc {Core.Match.Branch.binders = ids; body = b; _} -> go (depth + List.length ids) acc b)
         (go depth acc s) branches
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.fold_left (go (depth + Array.length ids)) acc funs
     | Core.Expr.Apply {callee = f; arguments = args} -> List.fold_left (go depth) acc (f :: args)
     | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.fold_left (go depth) acc args

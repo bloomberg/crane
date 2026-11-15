@@ -29,16 +29,14 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
      {!position_cpp_ty} falls back to. *)
   match ast with
   | Core.Expr.Let {binder_type = let_ty;
-                   value = ((Core.Expr.Fixpoint {selected = x;
-                                                 functions = ids;
-                                                 bodies = funs;
-                                                 occurrence = occ} | Core.Expr.Cofixpoint {selected = x;
-                                                                                           functions = ids;
-                                                                                           bodies = funs;
-                                                                                           occurrence = occ}) as fix_term);
+                   value = ((Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group) as fix_term);
                    body = b;
                    occurrence = let_occ; _}
     as _whole ->
+    let x = rec_group.selected
+    and ids = Core.Recursion.Group.functions rec_group
+    and funs = Core.Recursion.Group.bodies rec_group
+    and occ = rec_group.occurrence in
     Translation_local_functions.gen_let_fix ~slot env k ~let_ty ~x ~ids ~funs ~occ ~fix_term ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; occurrence = let_occ} ->
     Translation_local_functions.gen_let_lambda ~slot env k ~x ~t ~a ~b ~let_occ
@@ -345,22 +343,18 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
             @ gen_stmts ~slot env' k b
       in
       result
-  | Core.Expr.Apply {callee = ((Core.Expr.Fixpoint {selected = x;
-                                                    functions = ids;
-                                                    bodies = funs;
-                                                    occurrence = occ} | Core.Expr.Cofixpoint {selected = x;
-                                                                                              functions = ids;
-                                                                                              bodies = funs;
-                                                                                              occurrence = occ}) as fix_term);
+  | Core.Expr.Apply {callee = ((Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group) as fix_term);
                      arguments = args} ->
+    let x = rec_group.selected
+    and ids = Core.Recursion.Group.functions rec_group
+    and funs = Core.Recursion.Group.bodies rec_group
+    and occ = rec_group.occurrence in
     Translation_local_functions.gen_applied_fix ~slot env k ~x ~ids ~funs ~occ ~fix_term ~args
-  | Core.Expr.Fixpoint {selected = x;
-                        functions = ids;
-                        bodies = funs;
-                        occurrence = occ} | Core.Expr.Cofixpoint {selected = x;
-                                                                  functions = ids;
-                                                                  bodies = funs;
-                                                                  occurrence = occ} as fix_term ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group as fix_term ->
+    let x = rec_group.selected
+    and ids = Core.Recursion.Group.functions rec_group
+    and funs = Core.Recursion.Group.bodies rec_group
+    and occ = rec_group.occurrence in
     Translation_local_functions.gen_standalone_fix env k ~x ~ids ~funs ~occ ~fix_term
   (* | Core.Expr.Apply (Core.Expr.Global {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (Core.Expr.Apply (a1, a2::[])) *)

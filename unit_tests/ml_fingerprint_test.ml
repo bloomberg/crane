@@ -40,8 +40,8 @@ let () =
   check "fix and cofix differ"
     (not
        (same
-          (term id_ty (Core.Expr.Fixpoint {selected = 0; functions = [|(Names.Id.of_string "f", id_ty)|]; bodies = [|lam|]; occurrence = Core.Occurrence.fresh ()}))
-          (term id_ty (Core.Expr.Cofixpoint {selected = 0; functions = [|(Names.Id.of_string "f", id_ty)|]; bodies = [|lam|]; occurrence = Core.Occurrence.fresh ()}))));
+          (term id_ty (Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Names.Id.of_string "f") id_ty lam (Core.Occurrence.fresh ()))))
+          (term id_ty (Core.Expr.Cofixpoint (Core.Recursion.Group.singleton (Names.Id.of_string "f") id_ty lam (Core.Occurrence.fresh ()))))));
   check "list boundaries are encoded"
     (not
        (same

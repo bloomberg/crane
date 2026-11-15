@@ -299,10 +299,8 @@ let specialize f (fd : Core.Recursion.Definition.t) use args =
           (* [b_rec] has exactly [k] lambdas, and the lambda among [args_b]
              is a value, so it is substituted for its parameter. *)
           let body = Option.get (instantiate b_rec args_b) in
-          Core.Expr.Fixpoint {selected = 0;
-                              functions = [|(fid, spec_ty)|];
-                              bodies = [|Mlutil.named_lams qs body|];
-                              occurrence = Core.Occurrence.fresh ()}
+          Core.Expr.Fixpoint
+            (Core.Recursion.Group.singleton fid spec_ty (Mlutil.named_lams qs body) (Core.Occurrence.fresh ()))
         in
         let rest = List.filteri (fun i _ -> i <> j) args in
         Some (if rest = [] then fix else Core.Expr.Apply {callee = fix; arguments = rest})

@@ -31,8 +31,14 @@ let () =
                               body = Core.Expr.fresh_rel 1} in
   let fine = [term "f" lam (Core.Type.Arrow {parameter = nat; result = nat})] in
   check "a well-formed program freezes" (not (refused fine));
-  check "a local group selecting a missing member is refused"
-    (refused [term "h" (Core.Expr.Fixpoint {selected = 2; functions = [|(Id.of_string "go", nat)|]; bodies = [|lam|]; occurrence = Core.Occurrence.fresh ()}) nat]);
+  check "a local group selecting a missing member cannot be made"
+    (match Core.Recursion.Group.of_arrays ~selected:2 [|(Id.of_string "go", nat)|] [|lam|] (Core.Occurrence.fresh ()) with
+     | _ -> false
+     | exception Invalid_argument _ -> true);
+  check "an empty local group cannot be made"
+    (match Core.Recursion.Group.make ~selected:0 [||] (Core.Occurrence.fresh ()) with
+     | _ -> false
+     | exception Invalid_argument _ -> true);
   check "a declaration made twice is refused" (refused (fine @ fine));
   let read = Core.Expr.fresh_rel 1 in
   let f = Core.Expr.Global (Core.Global_use.monomorphic (r "f")) in
@@ -175,12 +181,9 @@ let () =
   let list t = Core.Type.Global_app {head = r "list"; type_arguments = [t]; index_arguments = []} in
   let go = Id.of_string "go" in
   let group m =
-    Core.Expr.Fixpoint {selected = 0;
-                        functions = [|(go, Core.Type.Arrow {parameter = list (Core.Type.Meta m); result = nat})|];
-                        bodies = [|Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+    Core.Expr.Fixpoint (Core.Recursion.Group.singleton go (Core.Type.Arrow {parameter = list (Core.Type.Meta m); result = nat}) (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
                                                      parameter_type = list (Core.Type.Meta m);
-                                                     body = Core.Expr.fresh_rel 1}|];
-                        occurrence = Core.Occurrence.fresh ()}
+                                                     body = Core.Expr.fresh_rel 1}) (Core.Occurrence.fresh ()))
   in
   let a = Core.Extracted.Meta.fresh 11 and b = Core.Extracted.Meta.fresh 12 and c = Core.Extracted.Meta.fresh 13 and d = Core.Extracted.Meta.fresh 14 in
   let body =

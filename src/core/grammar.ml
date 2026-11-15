@@ -307,23 +307,9 @@ and Expr : sig
         (** [occurrence] tells this match apart from every other one in the
             program, kept by a pass rebuilding it as a let's is: the binders
             of one branch at one level in two matches are still two. *)
-    | Fixpoint of {
-        selected : int;
-        functions : (Id.t * Type.t) array;
-        bodies : t array;
-        occurrence : Occurrence.t;
-      }
-        (** A block of mutually recursive functions: the function selected,
-            the group's binders and bodies, and the occurrence telling this
-            fixpoint apart from every other one in the program: a pass
-            rebuilding it keeps it, so the plan made of the fixpoint and the
-            code made of it name one fixpoint. *)
-    | Cofixpoint of {
-        selected : int;
-        functions : (Id.t * Type.t) array;
-        bodies : t array;
-        occurrence : Occurrence.t;
-      }  (** A block of mutually corecursive functions, as [Fixpoint]. *)
+    | Fixpoint of Recursion.Group.t  (** a block of mutually recursive functions *)
+    | Cofixpoint of Recursion.Group.t
+        (** a block of mutually corecursive functions *)
     | Runtime_error of string  (** raised for an unrealisable term *)
     | Erased_value of Erasure_reason.t  (** the value of an erased slot *)
     | Axiom_value of string  (** a value left abstract by an axiom *)
@@ -490,8 +476,67 @@ and Recursion : sig
       type_ : Type.t;
     }
   end
-end =
-  Recursion
+
+  module Member : sig
+    (** One function of a local recursive group: the name it is bound to,
+        its type and its body. *)
+    type t = {
+      name : Id.t;
+      type_ : Type.t;
+      body : Expr.t;
+    }
+  end
+
+  module Group : sig
+    (** A block of local mutually (co)recursive functions, the value of an
+        {!Expr.Fixpoint} or {!Expr.Cofixpoint}: its [members], in binding
+        order -- the last is the innermost binder, so in every body the
+        member [i] of [n] is read as [Bound_variable (n - i)] -- the member
+        [selected] the block evaluates to, by its position, and the
+        occurrence telling this block apart from every other one in the
+        program: a pass rebuilding it keeps it, so the plan made of the
+        block and the code made of it name one block.  Built only through
+        {!make}, so a group has a member and selects one it has. *)
+    type t = private {
+      selected : int;
+      members : Member.t array;
+      occurrence : Occurrence.t;
+    }
+
+    (** [make ~selected members occurrence]; raises [Invalid_argument] when
+        [members] is empty or has no member [selected]. *)
+    val make : selected:int -> Member.t array -> Occurrence.t -> t
+  end
+end = struct
+  module Definition = struct
+    type t = {
+      entity : GlobRef.t;
+      body : Expr.t;
+      type_ : Type.t;
+    }
+  end
+
+  module Member = struct
+    type t = {
+      name : Id.t;
+      type_ : Type.t;
+      body : Expr.t;
+    }
+  end
+
+  module Group = struct
+    type t = {
+      selected : int;
+      members : Member.t array;
+      occurrence : Occurrence.t;
+    }
+
+    let make ~selected members occurrence =
+      if selected < 0 || selected >= Array.length members then
+        invalid_arg "Core.Recursion.Group.make: no such member";
+      {selected; members; occurrence}
+  end
+end
 
 and Decl : sig
   (** A concrete, defined top-level entity. *)

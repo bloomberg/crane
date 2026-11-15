@@ -146,30 +146,6 @@ let check_zonked p =
   iter_types walk p;
   Table.iter_types walk
 
-(** Every local recursive group is nonempty and selects a member it has (a
-    top-level group is nonempty by its type). *)
-let check_recursive_groups p =
-  let rec check_body = function
-    | Core.Expr.Fixpoint {selected = i;
-                          functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {selected = i;
-                                                                    functions = ids;
-                                                                    bodies = funs; _} as e ->
-      if Array.length ids <> Array.length funs || Array.length ids = 0 then
-        fail "has a local recursive group whose names and bodies disagree";
-      if i < 0 || i >= Array.length ids then fail "selects a recursive function its group lacks";
-      Mlutil.ast_iter check_body e
-    | e -> Mlutil.ast_iter check_body e
-  in
-  Modutil.struct_iter
-    (function
-      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Mlutil.term_defs d)
-      | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
-    (fun _ -> ())
-    (fun _ -> ())
-    p.structure
-
 (** No reference is declared twice. *)
 let check_declared_once p =
   let declared = ref Ref.User.Set.empty in
@@ -287,7 +263,6 @@ let freeze p =
   let p = zonk p in
   Core.Extracted.Meta.freeze ();
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
-    check_recursive_groups p;
     check_declared_once p;
     check_instantiations p;
     check_zonked p;

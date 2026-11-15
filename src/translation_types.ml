@@ -2563,8 +2563,8 @@ let body_reads_members_of_binder body =
       || Array.exists
            (fun {Core.Match.Branch.binders = ids; body = br; _} -> reads (depth + List.length ids) br)
            pv
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.exists (reads (depth + Array.length ids)) funs
     | e ->
       let found = ref false in
@@ -2593,8 +2593,8 @@ let binder_matched_at body =
     | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
       walk depth sc;
       Array.iter (fun {Core.Match.Branch.binders = ids; body = br; _} -> walk (depth + List.length ids) br) pv
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk (depth + Array.length ids)) funs
     | e -> Mlutil.ast_iter (walk depth) e
   in

@@ -25,10 +25,9 @@ let rec term e =
   | Core.Expr.Boxed_value {value = a; _} -> Core.Expr.Boxed_value {value = a; occurrence = Core.Occurrence.fresh ()}
   | Core.Expr.Lambda_group_barrier {value = a; _} ->
     Core.Expr.Lambda_group_barrier {value = a; occurrence = Core.Occurrence.fresh ()}
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = fix_occurrence occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = fix_occurrence occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.with_occurrence g (fix_occurrence g.occurrence))
+  | Core.Expr.Cofixpoint g ->
+    Core.Expr.Cofixpoint (Core.Recursion.Group.with_occurrence g (fix_occurrence g.occurrence))
   | Core.Expr.Global use -> Core.Expr.Global (Core.Global_use.refresh use)
   | e -> e
 

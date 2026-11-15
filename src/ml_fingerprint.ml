@@ -95,8 +95,8 @@ and expr w = function
     tag w "Expr.Construct"; type_ w ty; globref w r; list w (expr w) args
   | Core.Expr.Tuple args -> tag w "Expr.Tuple"; list w (expr w) args
   | Core.Expr.Match {scrutinee_type = ty; scrutinee = a; branches = brs; _} -> tag w "Expr.Match"; type_ w ty; expr w a; array w (branch w) brs
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; _} -> tag w "Expr.Fixpoint"; fix w i ids bodies
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; _} -> tag w "Expr.Cofixpoint"; fix w i ids bodies
+  | Core.Expr.Fixpoint g -> tag w "Expr.Fixpoint"; fix w g
+  | Core.Expr.Cofixpoint g -> tag w "Expr.Cofixpoint"; fix w g
   | Core.Expr.Runtime_error s -> tag w "Expr.Runtime_error"; str w s
   | Core.Expr.Erased_value k -> tag w "Expr.Erased_value"; erasure_reason w k
   | Core.Expr.Axiom_value s -> tag w "Expr.Axiom_value"; str w s
@@ -109,10 +109,10 @@ and expr w = function
   | Core.Expr.Persistent_array {elements = xs; default = d} -> tag w "Expr.Persistent_array"; array w (expr w) xs; expr w d
   | Core.Expr.Numeral {inductive = r; value = n} -> tag w "Expr.Numeral"; globref w r; str w (Z.to_string n)
 
-and fix w i ids bodies =
-  int w i;
-  array w (fun (x, ty) -> id w x; type_ w ty) ids;
-  array w (expr w) bodies
+and fix w (g : Core.Recursion.Group.t) =
+  int w g.selected;
+  array w (fun (m : Core.Recursion.Member.t) -> id w m.name; type_ w m.type_) g.members;
+  array w (fun (m : Core.Recursion.Member.t) -> expr w m.body) g.members
 
 and branch w {Core.Match.Branch.binders; result_type; pattern = pat; body} =
   list w (fun (x, t) -> binder_name w x; type_ w t) binders;

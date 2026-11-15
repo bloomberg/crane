@@ -156,7 +156,8 @@ let region ~outer ~reads body =
       expr ~pos:None ~ret lex scrut;
       let slot = match Core_elaborate.match_kind typ branches occ with Match_kind.Record _ -> slot | _ -> empty_slot in
       Array.iter (branch ~ret ~slot lex) branches
-    | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
       let lex = push (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) lex in
       Array.iter (expr ~pos:None ~ret lex) defs
     (* A sequential bind is its action, generated at no position, then its

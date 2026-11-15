@@ -35,10 +35,8 @@ let rec canonical self body =
               pattern = p;
               body = canonical self b } )
           brs; occurrence = occ}
-  | Core.Expr.Fixpoint {selected = i; functions = fns; bodies; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i; functions = Array.map (fun _ -> (Id.of_string "f", Core.Type.Unknown)) fns; bodies = Array.map (canonical self) bodies; occurrence = occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = fns; bodies; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i; functions = Array.map (fun _ -> (Id.of_string "f", Core.Type.Unknown)) fns; bodies = Array.map (canonical self) bodies; occurrence = occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (canonical_group self g)
+  | Core.Expr.Cofixpoint g -> Core.Expr.Cofixpoint (canonical_group self g)
   | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
     Core.Expr.Coerce {source_type = from; target_type = into; value = canonical self a; occurrence = mocc}
   | Core.Expr.Boxed_value {value = a; occurrence = mocc} ->
@@ -46,6 +44,11 @@ let rec canonical self body =
   | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
     Core.Expr.Lambda_group_barrier {value = canonical self a; occurrence = mocc}
   | e -> Mlutil.ast_map (canonical self) e
+
+(* A group's members, all named [f] at no type. *)
+and canonical_group self g =
+  Core.Recursion.Group.map (fun _ -> Core.Type.Unknown) (canonical self) g
+  |> Core.Recursion.Group.map_names (fun _ -> Id.of_string "f")
 
 (* A forwarder with [body]'s parameters, calling [target] at its own type
    variables, in order. *)

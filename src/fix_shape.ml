@@ -40,10 +40,7 @@ let thunk_nullary_cofix x ids funs occ =
     in
     let thunk f = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "u"); parameter_type = unit_ty; body = call_self 1 (Mlutil.ast_lift 1 f)} in
     let ids = Array.map (fun (id, ty) -> (id, Core.Type.Arrow {parameter = unit_ty; result = ty})) ids in
-    Core.Expr.Apply {callee = Core.Expr.Cofixpoint {selected = x;
-                                                    functions = ids;
-                                                    bodies = Array.map thunk funs;
-                                                    occurrence = occ};
+    Core.Expr.Apply {callee = Core.Expr.Cofixpoint (Core.Recursion.Group.of_arrays ~selected:x ids (Array.map thunk funs) occ);
                      arguments = [tt_v]}
   | _ -> CErrors.anomaly (Pp.str "Fix_shape: a parameterless local cofixpoint needs unit")
 
@@ -51,12 +48,13 @@ let thunk_nullary_cofix x ids funs occ =
    cofixpoint none of whose functions is a lambda is thunked. *)
 let rec expr e =
   match Mlutil.ast_map expr e with
-  | Core.Expr.Fixpoint {selected = x; functions = ids; bodies = funs; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = x; functions = ids; bodies = Array.map float_lets_under_lams funs; occurrence = occ}
-  | Core.Expr.Cofixpoint {selected = x; functions = ids; bodies = funs; occurrence = occ} ->
-    let funs = Array.map float_lets_under_lams funs in
-    if Array.for_all (function Core.Expr.Lambda _ -> false | _ -> true) funs then thunk_nullary_cofix x ids funs occ
-    else Core.Expr.Cofixpoint {selected = x; functions = ids; bodies = funs; occurrence = occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map_bodies float_lets_under_lams g)
+  | Core.Expr.Cofixpoint g ->
+    let g = Core.Recursion.Group.map_bodies float_lets_under_lams g in
+    let funs = Core.Recursion.Group.bodies g in
+    if Array.for_all (function Core.Expr.Lambda _ -> false | _ -> true) funs then
+      thunk_nullary_cofix g.selected (Core.Recursion.Group.functions g) funs g.occurrence
+    else Core.Expr.Cofixpoint g
   | e -> e
 
 let decl = function

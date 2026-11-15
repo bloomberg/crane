@@ -128,7 +128,8 @@ let closure_reads d t =
       List.fold_left (go d') acc (default :: Array.to_list elems)
     | Core.Expr.Lambda {body = b; _} -> go (d' + 1) acc b
     | Core.Expr.Let {value = a; body = b; _} -> go (d' + 1) (go d' acc a) b
-    | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
       Array.fold_left (go (d' + Array.length fs)) acc defs
     | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       Array.fold_left
@@ -339,7 +340,8 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
   | Core.Expr.Persistent_array {elements = elems; default} -> frees parents d (default :: Array.to_list elems)
   | Core.Expr.Lambda {body; _} -> whole (closure_under parents d ~n:1 body)
   | Core.Expr.Let {value = a; body = b; _} -> Levels.union (free parents d a) (under parents d ~n:1 b)
-  | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
     let n = Array.length fs in
     let parents' = bind parents d ~n in
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
@@ -376,7 +378,8 @@ and whole s = Levels.map storage s
    a function template, or inlined at its uses, instead. *)
 let closure_local ~n_outer ty a =
   match a with
-  | Core.Expr.Fixpoint {functions = ids; _} | Core.Expr.Cofixpoint {functions = ids; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group in
     not (Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
   | Core.Expr.Lambda _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
   | _ -> false
@@ -1378,7 +1381,8 @@ let moved_captures p closure =
    functions reading each variable, by index at [fix]. *)
 let moved_captures_by_member p fix =
   match fix with
-  | Core.Expr.Fixpoint {bodies = funs; _} | Core.Expr.Cofixpoint {bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let funs = Core.Recursion.Group.bodies rec_group in
     let n = Array.length funs in
     let reads =
       Array.map
@@ -1432,7 +1436,8 @@ let captures ?(in_place = false) p closure =
 
 let captures_by_member ?(in_place = false) p fix =
   match fix with
-  | Core.Expr.Fixpoint {bodies = funs; _} | Core.Expr.Cofixpoint {bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let funs = Core.Recursion.Group.bodies rec_group in
     let n = Array.length funs in
     let moved = if in_place then List.map (fun _ -> []) (Array.to_list funs) else moved_captures_by_member p fix in
     List.map2
