@@ -1336,7 +1336,7 @@ let gen_dfun ~minted n b cty ty temps =
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
-  let saved_promoted_var_map = (!tctx).promoted_var_map in
+  let saved_promoted_var_map = (!tctx).lexical.promoted_var_map in
   (* Extend, never replace.  This declaration's own instance parameters answer
      first -- a variable they declare is the one the body is written in -- but
      what {!with_body_resolutions} read from the body and from the declarations
@@ -1345,9 +1345,7 @@ let gen_dfun ~minted n b cty ty temps =
      natIPtr)] has none, and replacing the map dropped the answer on the way
      in, so the body spelled the file-scope erased alias in a scope that knew
      the instance perfectly well. *)
-  tctx :=
-    { !tctx with
-      promoted_var_map = scope.bs_promoted_var_resolutions @ saved_promoted_var_map };
+  set_lexical (fun l -> { l with promoted_var_map = scope.bs_promoted_var_resolutions @ saved_promoted_var_map });
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
@@ -1446,8 +1444,8 @@ let gen_dfun ~minted n b cty ty temps =
   in
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
-  let saved_return_type = (!tctx).current_cpp_return_type in
-  tctx := { !tctx with current_cpp_return_type = Some scope.bs_cod };
+  let saved_return_type = (!tctx).lexical.current_cpp_return_type in
+  set_lexical (fun l -> { l with current_cpp_return_type = Some scope.bs_cod });
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default CPPabort throw. *)
@@ -1513,9 +1511,9 @@ let gen_dfun ~minted n b cty ty temps =
       set_current_parameters [];
       definition b
   in
-  tctx := { !tctx with current_cpp_return_type = saved_return_type };
+  set_lexical (fun l -> { l with current_cpp_return_type = saved_return_type });
   Table.current_decl_ref := saved_decl_ref;
-  tctx := { !tctx with promoted_var_map = saved_promoted_var_map };
+  set_lexical (fun l -> { l with promoted_var_map = saved_promoted_var_map });
   set_current_template_head saved_template_head;
   (* {b Entry point detection for monadic [main].}
 

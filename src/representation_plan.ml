@@ -219,11 +219,11 @@ let reads_boxed_component scope a =
 let region ~outer body =
   let found = ref [] in
   let reads = ref [] in
-  let promoted_active = (!tctx).promoted_var_map <> [] in
+  let promoted_active = (!tctx).lexical.promoted_var_map <> [] in
   let return = current_cpp_return_type () in
-  let type_vars = (!tctx).current_type_vars in
-  let ns = (!tctx).method_self_ns in
-  let reified = (!tctx).itree_mode = Reified in
+  let type_vars = (!tctx).lexical.current_type_vars in
+  let ns = (!tctx).input.method_self_ns in
+  let reified = (!tctx).input.itree_mode = Reified in
   let parameters ?slot_ty ~body ids scope = push_parameters ?slot_ty ~ns ~tvars:type_vars ~reified ~body ids scope in
   let is_lambda a = match strip_magic a with Core.Expr.Lambda _ -> true | _ -> false in
   (* A lambda stored in a constructor's field is written against [slot]
@@ -391,7 +391,7 @@ let region ~outer body =
                        arguments = args} when List.exists is_lambda args ->
       let call = Core_elaborate.elaborate_arguments ~lex:scope.lex use args in
       let inst =
-        Core_elaborate.instantiate ~lex:scope.lex ~expected_ml:None ~stated_ml:None ~caller:(!tctx).body_owner
+        Core_elaborate.instantiate ~lex:scope.lex ~expected_ml:None ~stated_ml:None ~caller:(!tctx).input.body_owner
           ~scope:type_vars call
       in
       let leading = Elaborated_call.leading_params call in
@@ -484,7 +484,7 @@ let region ~outer body =
     | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
       let scope = push Kfix (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) scope in
       if
-        Ml_type_util.own_type_variables ~n_outer:(List.length (!tctx).current_type_vars)
+        Ml_type_util.own_type_variables ~n_outer:(List.length (!tctx).lexical.current_type_vars)
           (List.map snd (Array.to_list fs))
       then
         Array.iter
@@ -506,7 +506,7 @@ let region ~outer body =
      declares them, as {!Translation_types.assign_binder_types} records a
      declared type; the rest at the conversion of their ML types. *)
   let declared =
-    match (!tctx).declared_outer with
+    match (!tctx).lexical.declared_outer with
     | Some (d, tys) when Int.equal d depth -> tys
     | _ -> []
   in
@@ -535,12 +535,12 @@ let check ?(as_bound = false) ~site ~field ~live () =
     Pp.(
       str "field " ++ int field
       ++ str (if as_bound then " of a pattern, declared as bound" else " of a pattern")
-      ++ (match (!tctx).body_owner with Some r -> str " in " ++ Names.GlobRef.print r | None -> mt ())
+      ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ Names.GlobRef.print r | None -> mt ())
       ++ str ": lowering "
       ++ str (if live then "boxes" else "does not box")
       ++ str ", the plan " ++ str planned)
   in
-  match List.find_opt (fun (s, f, _) -> Int.equal f field && Core_binder.equal_site s site) (!tctx).representation with
+  match List.find_opt (fun (s, f, _) -> Int.equal f field && Core_binder.equal_site s site) (!tctx).lexical.representation with
   | Some (_, _, {pr_boxed; pr_bound_boxed}) ->
     let pr_boxed = if as_bound then pr_bound_boxed else pr_boxed in
     let agrees = pr_boxed = live in

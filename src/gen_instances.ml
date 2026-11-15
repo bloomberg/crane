@@ -168,7 +168,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
   let resolve_mentioned (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Promoted_member v -> (
-      match List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).promoted_var_map with
+      match List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).lexical.promoted_var_map with
       | Some (_, r) -> r
       | None -> t )
     | t -> t
@@ -181,7 +181,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
   in
   with_promoted_var_map
     ( promoted_var_resolutions @ specialised_arg_resolutions
-    @ (!tctx).promoted_var_map )
+    @ (!tctx).lexical.promoted_var_map )
   @@ fun () ->
   (* The instance's own head spells the same mentioned variables in its
      parameters' constraints -- [requires PI<_tcI2, ptr>] -- and they resolve

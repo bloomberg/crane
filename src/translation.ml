@@ -36,7 +36,7 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
         if Table.has_recursive_fields g && not (Table.is_enum_inductive g)
         then Ref.User.Set.add g acc
         else acc)
-      (Option.default (!Translation_state.tctx).method_self_ns base)
+      (Option.default (!Translation_state.tctx).input.method_self_ns base)
       (Translation_state.local_inductives_in_scope ())
   in
   Translation_state.with_method_self_ns full_ns f

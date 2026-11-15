@@ -69,7 +69,7 @@ val region :
   * (Core.Occurrence.t * Translation_state.planned_read) list
 
 (** [check ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless the
-    region's plan ({!Translation_state.translation_ctx.representation}) boxes
+    region's plan ({!Translation_state.lexical.representation}) boxes
     the pattern binder of field [field] bound at [site] exactly when lowering
     does ([live]).  A binder the plan has no answer for is a violation too.
     [as_bound]: the binder is declared at the type it is bound at, nothing

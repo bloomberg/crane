@@ -530,7 +530,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
     (* Monadic parameter (reified mode only): the callee expects
        [shared_ptr<ITree<R>>].  If the argument already produces a reified
        tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
-    | Some param_ty when (!tctx).itree_mode = Reified
+    | Some param_ty when (!tctx).input.itree_mode = Reified
         && is_monadic_ml_type param_ty
         && not (is_reified_monadic_expr ml_arg) ->
       let r_ml = extract_itree_result_ml param_ty in
@@ -653,7 +653,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     in
     let args =
       let slot = if closed_head then {slot with building_constant = true} else slot in
-      with_promoted_var_map (instance_promoted_map @ (!tctx).promoted_var_map)
+      with_promoted_var_map (instance_promoted_map @ (!tctx).lexical.promoted_var_map)
         (fun () -> gen_call_args ~slot ?expected_ty env id plan)
     in
     let ty = lowered.lc_callee_type
@@ -1175,7 +1175,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                 | Variable (Index (i, None))
                   when not
                          (List.exists (Id.equal (Common.tvar_id i))
-                            (!tctx).current_type_vars) ->
+                            (!tctx).lexical.current_type_vars) ->
                   Variable (Index (i, Some (Common.tvar_id i)))
                 | t -> t )
             in
@@ -1426,7 +1426,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               (List.fold_left
                  (fun acc x -> Id.Set.remove x acc)
                  named
-                 (!tctx).current_type_vars )
+                 (!tctx).lexical.current_type_vars )
           in
           let eta_lambda params ret body ~capture = mk_lambda ~tparams:eta_tparams params ret body ~capture in
           (* A use site expecting fewer parameters than the callee takes wants
@@ -1459,7 +1459,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                 let moved =
                   List.filter
                     (fun x -> List.exists (Id.equal x) free)
-                    (moved_names env (Ownership_ir.eta_captures (!tctx).move_plan ml_args))
+                    (moved_names env (Ownership_ir.eta_captures (!tctx).lexical.move_plan ml_args))
                 in
                 Lambda {l with moved = moved}
               | e -> e ) )
@@ -1962,7 +1962,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           with
           | Lambda l ->
             Lambda
-              {l with moved = moved_names env (Ownership_ir.eta_captures (!tctx).move_plan (f :: ml_args))}
+              {l with moved = moved_names env (Ownership_ir.eta_captures (!tctx).lexical.move_plan (f :: ml_args))}
           | e -> e )
       else
         Cpp_ir.Build.call (gen_callee ()) args

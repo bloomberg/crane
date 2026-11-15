@@ -359,7 +359,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
               | _ -> []
             in
             if from_ret <> [] then from_ret
-            else if (!tctx).promoted_var_map <> [] then
+            else if (!tctx).lexical.promoted_var_map <> [] then
               Option.default temps (promoted_tys_of_arity (List.length tys))
             else temps
         else temps
@@ -461,7 +461,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
      so lambda parameters assigned to record fields must also use std::any. *)
   with_in_constructor_expr true @@ fun () ->
   (* A record's arm narrows the map below; the scope puts it back. *)
-  with_promoted_var_map (!tctx).promoted_var_map @@ fun () ->
+  with_promoted_var_map (!tctx).lexical.promoted_var_map @@ fun () ->
   (* When an erased argument (a value-dependent leaf boxed as [std::any],
      holding a custom list whose elements are fully erased —
      [deque<std::any>] — at runtime) flows into a constructor/record field
@@ -724,8 +724,8 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
            ({!Ownership_ir.allocation}), call the [<factory>__reuse] variant
            with the token appended (stored last = printed first, matching
            the [_tok] leading parameter). *)
-        ( match (!tctx).reuse_token with
-        | Some tok when Ownership_ir.allocation (!tctx).move_plan construction = Reuse ->
+        ( match (!tctx).lexical.reuse_token with
+        | Some tok when Ownership_ir.allocation (!tctx).lexical.move_plan construction = Reuse ->
           let args = args @ [Cpp_ir.Expr.Move tok] in
           Call
             ( ctor_sig args,
@@ -734,11 +734,11 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
               List.rev args )
         | _ ->
           if
-            suspends_constructor ~self:(!tctx).body_owner ~binder_type:get_env_type_opt n ts
+            suspends_constructor ~self:(!tctx).input.body_owner ~binder_type:get_env_type_opt n ts
           then
             (* The arguments are read where the thunk is made, and taken
                by move there when the plan moves them. *)
-            let moved = moved_names env (Ownership_ir.eta_captures (!tctx).move_plan ts) in
+            let moved = moved_names env (Ownership_ir.eta_captures (!tctx).lexical.move_plan ts) in
             suspend_ctor ~moved type_expr (Id.of_string ctor_struct) (List.rev args)
           else
             Call
@@ -791,7 +791,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             let inner_g = match inner with
               | Entity_application (g, _, _) -> Some g | _ -> None in
             ( match inner_g with
-            | Some g when Ref.User.Set.mem g (!tctx).method_self_ns ->
+            | Some g when Ref.User.Set.mem g (!tctx).input.method_self_ns ->
               Cpp_ir.Build.call (Allocate (Heap, inner)) [expr]
             | _ -> expr )
           | ct when Cpp_ir.Types.prints_as_any ct
@@ -1347,7 +1347,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
        of the struct like any other inductive's (see
        {!ind_promoted_type_args}), so its fields spell them resolved, and so
        must everything built for them here. *)
-    tctx := { !tctx with promoted_var_map = record_promoted_map ty };
+    set_lexical (fun l -> { l with promoted_var_map = record_promoted_map ty });
     let nstempmod args : Cpp_ir.Lowered.Expr.t =
       match ty with
       | Core.Type.Global_app {head = n; type_arguments = tys; _} ->

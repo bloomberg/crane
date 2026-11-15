@@ -44,7 +44,7 @@ let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.f
     and its body as statements returning its result. *)
 let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   (* What the lambda takes by move as it is made. *)
-  let moved_captures = moved_names env (Ownership_ir.captures (!tctx).move_plan a) in
+  let moved_captures = moved_names env (Ownership_ir.captures (!tctx).lexical.move_plan a) in
   (* Whether a binder becomes a C++ parameter: see
      {!Translation_types.lambda_binder_emitted}. *)
   let binder_emitted ~body binders i ty = lambda_binder_emitted env ~expected_ty ~body binders i ty in
@@ -213,7 +213,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
   in
   let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
   let args, env = push_vars' lam_params env in
-  let saved_env_types = (!tctx).env_types in
+  let saved_env_types = (!tctx).lexical.env_types in
   push_binders env args;
   (* Infer owned/borrowed for each lambda parameter using escape analysis.
 
@@ -332,8 +332,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
               | None -> false
             in
             let param_cpp_ty, body_subst =
-              lambda_param_cpp_type env ~ns:(!tctx).method_self_ns ~tvars ~rank2_carrier
-                ~reified:((!tctx).itree_mode = Reified) ~n_params:n_all_params ~body:a ~unused
+              lambda_param_cpp_type env ~ns:(!tctx).input.method_self_ns ~tvars ~rank2_carrier
+                ~reified:((!tctx).input.itree_mode = Reified) ~n_params:n_all_params ~body:a ~unused
                 ~slot_dom:(slot_dom_cpp_ty j) arg
             in
             (param_cpp_ty, Some id, body_subst) )
@@ -890,7 +890,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          object rather than an IIFE. This is needed for itree_bind
          continuations which expect std::function, not the result of
          calling the function. *)
-      if (!tctx).itree_mode = Reified
+      if (!tctx).input.itree_mode = Reified
          && List.exists (fun (_, ty) -> ml_type_is_unit_or_void ty) lam_params then
         f
       else

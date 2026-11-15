@@ -64,8 +64,8 @@ let local_fix_stmts selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowered.S
         body = List.map flat body }
     in
     match
-      Control_to_cpp_ir.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
-        ~lifted:(!tctx).lifted_fixpoints ~member
+      Control_to_cpp_ir.local_loop ~owner:(!tctx).input.body_owner ~function_:(!tctx).input.body_function
+        ~lifted:(!tctx).lexical.lifted_fixpoints ~member
         ~tparams:(get_current_template_head ()) ~name:fix_id lam
     with
     | Some loop -> [loop]
@@ -389,7 +389,7 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
 (* How the lambda of each function of the local fixpoint [fix] holds each
    variable it captures, generated as closures or else [in_place]
    ({!Ownership_ir.captures_by_member}). *)
-let fix_captures ~in_place fix = Ownership_ir.captures_by_member ~in_place (!tctx).move_plan fix
+let fix_captures ~in_place fix = Ownership_ir.captures_by_member ~in_place (!tctx).lexical.move_plan fix
 
 (* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
    does whether [let _ : ty := a] binds the closure [a] to a local, which the
@@ -404,7 +404,7 @@ let ungenerated_let_lambda what =
 
 let check_closure_local ty a ~local =
   if Probe.checking () then
-    match Ownership_ir.closure_local (!tctx).move_plan ty a with
+    match Ownership_ir.closure_local (!tctx).lexical.move_plan ty a with
     | Some planned when planned <> local ->
       Probe.violation "ownership plan"
         (Pp.str
@@ -461,7 +461,7 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
   let n_fix_funs = List.length fix_names in
   let fix_names_db_order = List.rev fix_names in
   let renamed_fix_ids, env = push_vars' (ids @ fix_names_db_order) env in
-  let saved_env_types = (!tctx).env_types in
+  let saved_env_types = (!tctx).lexical.env_types in
   push_binders env renamed_fix_ids;
   (* Extract the renamed name for THIS fixpoint function. fix_names_db_order
      is reversed from the array order, so fix array index i corresponds to
@@ -510,13 +510,13 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     match (local, lifted) with
     | Some occ, _ when n_fix_funs = 1 -> (
       match
-        Control_to_cpp_ir.local_resumes ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
-          ~lifted:(!tctx).lifted_fixpoints ~member:(occ, fix_idx) ~depth:(List.length (fst env)) ~arity:n_lam_params
+        Control_to_cpp_ir.local_resumes ~owner:(!tctx).input.body_owner ~function_:(!tctx).input.body_function
+          ~lifted:(!tctx).lexical.lifted_fixpoints ~member:(occ, fix_idx) ~depth:(List.length (fst env)) ~arity:n_lam_params
       with
       | Some (resumes, certain) -> (Some resumes, Some certain)
       | None -> (None, None) )
     | _, Some r when n_fix_funs = 1 ->
-      ( Control_to_cpp_ir.lifted_resumes r ~owner:(!tctx).body_owner ~depth:(List.length (fst env))
+      ( Control_to_cpp_ir.lifted_resumes r ~owner:(!tctx).input.body_owner ~depth:(List.length (fst env))
           ~arity:n_lam_params,
         None )
     | _ -> (None, None)
@@ -670,7 +670,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
       List.exists (( <> ) []) (fix_captures ~in_place:true fix_term)
       &&
       match core_binder ~site:(Binding let_occ) env 0 with
-      | Some b -> Ownership_ir.kept_by_frame (!tctx).move_plan b
+      | Some b -> Ownership_ir.kept_by_frame (!tctx).lexical.move_plan b
       | None -> false
     in
     let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
@@ -764,7 +764,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     if x == Core.Binder_name.Anonymous then (
       push_binders env [(x_renamed, t)];
       gen_stmts ~slot env' k b )
-    else if (!tctx).itree_mode = Reified && is_monadic_ml_type t then begin
+    else if (!tctx).input.itree_mode = Reified && is_monadic_ml_type t then begin
       (* Monadic let-binding (reified mode): wrap RHS in an ITree IIFE so
          the variable has type [shared_ptr<ITree<R>>]. *)
       push_binders env [(x_renamed, t)];
@@ -812,7 +812,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   | At_instance inst ->
     let subst = Mlutil.type_subst_list inst in
     ungenerated_let_lambda "a lambda used at one instance";
-    with_plan (Ownership_ir.bound_at_instance (!tctx).move_plan ~let_:let_occ) (fun () ->
+    with_plan (Ownership_ir.bound_at_instance (!tctx).lexical.move_plan ~let_:let_occ) (fun () ->
         gen_stmts ~slot env k (Core.Expr.Let {binder = x;
                                               binder_type = subst t;
                                               value = Mlutil.ast_map_types subst a;
@@ -990,7 +990,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
           in
           let body_params_for_env = free_var_params @ param_ids in
           let body_param_ids, body_env = push_vars' body_params_for_env env in
-          let saved_env_types = (!tctx).env_types in
+          let saved_env_types = (!tctx).lexical.env_types in
           push_binders env body_param_ids;
 
           (* Now compile the body. The body's de Bruijn indices: Core.Expr.Bound_variable 1..n_params
@@ -1139,7 +1139,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
      bound to them in order ({!Ownership_ir.evaluated_first}), each
      evaluated into a local of its own ahead of everything the call
      makes. *)
-  let first = Ownership_ir.evaluated_first (!tctx).move_plan occ in
+  let first = Ownership_ir.evaluated_first (!tctx).lexical.move_plan occ in
   let evaluated = ref [] in
   let gen_args args =
     let params = List.rev (fst (collect_lams funs.(x))) in

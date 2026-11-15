@@ -24,7 +24,7 @@ let promoted_var_binding var_id =
   let r = Option.map snd
     (List.find_opt
        (fun (n, _) -> Id.equal n var_id)
-       (!tctx).promoted_var_map ) in
+       (!tctx).lexical.promoted_var_map ) in
   r
 
 (** [ind_promoted_type_args g] -- the leading template arguments a mention of
@@ -58,7 +58,7 @@ let rec strip_param_wrappers : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = 
     A binding-site assignment does not overwrite such an entry: the
     instantiation the branch pinned down is the more precise of the two. *)
 let pinned_by_pattern i =
-  match IntMap.find_opt i (!tctx).cpp_binder_types with
+  match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
   | Some (_, Bpattern) -> true
   | _ -> false
 
@@ -90,7 +90,7 @@ let recover_carrier_result ~fun_ty ~n_args ~(want : Cpp_ir.Lowered.Type.t option
     instantiation a pattern match pinned down where there is one, and
     otherwise the type assigned where the binder was bound. *)
 let binder_cpp_type i : Cpp_ir.Lowered.Type.t option =
-  Option.map fst (IntMap.find_opt i (!tctx).cpp_binder_types)
+  Option.map fst (IntMap.find_opt i (!tctx).lexical.cpp_binder_types)
 
 (** Wrap [expr] in the [crane_erase_fn] runtime helper, adapting it to the
     erased representation [shape] names (see {!Cpp_ir.Expr.Erase_shape}). *)
@@ -334,7 +334,7 @@ let rec is_trivial_scrut : Cpp_ir.Lowered.Expr.t -> bool = function
     field read out of an erased carrier is the type the value {e would} have
     had, not the [std::any] it is actually stored as. *)
 let pattern_binder_type i : Cpp_ir.Lowered.Type.t option =
-  match IntMap.find_opt i (!tctx).cpp_binder_types with
+  match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
   | Some (t, Bpattern) -> Some t
   | _ -> None
 
@@ -791,10 +791,10 @@ let apply_erased_callee callee arg_exprs =
   apply_erased_curried ~box:true callee arg_exprs
 
 (** Save the current binder-type state for later restoration. *)
-let save_erased_env () : binder_env = (!tctx).cpp_binder_types
+let save_erased_env () : binder_env = (!tctx).lexical.cpp_binder_types
 
 (** Restore binder-type state saved by {!save_erased_env}. *)
-let restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
+let restore_erased_env saved = set_lexical (fun l -> { l with cpp_binder_types = saved })
 
 (** [promoted_tys_of_arity n] is the concrete types the enclosing scope's
     promoted type variables stand for, when there are exactly [n] of them and
@@ -803,7 +803,7 @@ let restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
     more than the erased annotation it would replace. *)
 let promoted_tys_of_arity n =
   match List.filter_map (fun (_, t) -> if Cpp_ir.Types.prints_as_any t then None else Some t)
-          (!tctx).promoted_var_map
+          (!tctx).lexical.promoted_var_map
   with
   | tys when List.length tys = n -> Some tys
   | _ -> None
@@ -1009,7 +1009,7 @@ let rec cpp_ir_of_ml_type
            type aliases are always std::any and non-Type promoted vars (like
            [base_category]) have no alias at all.  Otherwise keep the marker
            for concept generation and signature printing. *)
-        if (!tctx).in_constructor_expr then Any
+        if (!tctx).lexical.in_constructor_expr then Any
         else Promoted_member var_id )
     | None -> Any )
   | Core.Type.Global_app {head = g; _} when Table.is_value_dep_type_scheme g ->
@@ -1541,15 +1541,13 @@ let glob_declared_cod_erases r =
     describes the runtime value. *)
 let record_binder_type i (t : Cpp_ir.Lowered.Type.t) =
   let boxed_by_pattern =
-    match IntMap.find_opt i (!tctx).cpp_binder_types with
+    match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
     | Some (Obligation Opaque_type, Bpattern) -> false
     | Some (t', Bpattern) -> resolves_to_any_type t'
     | _ -> false
   in
   if not boxed_by_pattern then
-    tctx :=
-      { !tctx with
-        cpp_binder_types = IntMap.add i (t, Bpattern) (!tctx).cpp_binder_types }
+    set_lexical (fun l -> { l with cpp_binder_types = IntMap.add i (t, Bpattern) l.cpp_binder_types })
 
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down
@@ -1850,12 +1848,12 @@ let read_is_boxed i occ =
   let describe live planned =
     Pp.(
       str "a read"
-      ++ (match (!tctx).body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+      ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
       ++ str ": lowering "
       ++ str (if live then "boxes" else "does not box")
       ++ str " its binder, the plan " ++ str planned)
   in
-  match List.assq_opt occ (!tctx).planned_reads with
+  match List.assq_opt occ (!tctx).lexical.planned_reads with
   | Some {rd_boxed; rd_kind} ->
     ( if Probe.checking () then
         let live = live () in
@@ -1872,7 +1870,7 @@ let read_is_boxed i occ =
     CErrors.anomaly
       Pp.(
         str "a read of " ++ int i
-        ++ (match (!tctx).body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+        ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
         ++ str " is in no representation plan of the region it is lowered in")
 
 (** [planned_binder_type ~use ~agree i occ] -- the C++ type the region's
@@ -1908,7 +1906,7 @@ let rec type_shape : Cpp_ir.Lowered.Type.t -> string = function
 
 let planned_binder_type ~use ~agree i occ =
   let show = function Some t -> type_shape t | None -> "none" in
-  match List.assq_opt occ (!tctx).planned_reads with
+  match List.assq_opt occ (!tctx).lexical.planned_reads with
   | Some {rd_type; rd_kind; _} ->
     ( if Probe.checking () then
         let live = binder_cpp_type i in
@@ -1916,12 +1914,12 @@ let planned_binder_type ~use ~agree i occ =
         Probe.hit "repr-type" (fun () ->
             use ^ (if agrees then " agree " else " disagree ") ^ binder_kind_name rd_kind ^ " plan " ^ show rd_type
             ^ " live " ^ show live
-            ^ (match (!tctx).body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> ""));
+            ^ (match (!tctx).input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> ""));
         if not agrees then
           Probe.violation "variable read binder type"
             Pp.(
               str "a read for " ++ str use
-              ++ (match (!tctx).body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+              ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
               ++ str ": lowering's binder is " ++ str (show live) ++ str ", the plan's "
               ++ str (show rd_type)) );
     rd_type
@@ -1929,7 +1927,7 @@ let planned_binder_type ~use ~agree i occ =
     CErrors.anomaly
       Pp.(
         str "a read of " ++ int i
-        ++ (match (!tctx).body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+        ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
         ++ str " is in no representation plan of the region it is lowered in")
 
 (** [planned_position occ ~live] -- the C++ type the position of the
@@ -1939,8 +1937,8 @@ let planned_binder_type ~use ~agree i occ =
     region it is lowered in does not reach is an anomaly. *)
 let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
   let show = function Some t -> type_shape t | None -> "none" in
-  let owner () = match (!tctx).body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
-  match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).planned_positions with
+  let owner () = match (!tctx).input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
+  match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).lexical.planned_positions with
   | Some (_, planned) ->
     if Probe.checking () then begin
       let agrees = planned = live in
@@ -1966,7 +1964,7 @@ let reads_erased_pair_component env t =
     | [Core.Expr.Coerce {source_type = from; occurrence = occ; _}] -> (
       Cpp_ir.Types.prints_as_any (cpp_of_ml env from)
       &&
-      match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).planned_positions with
+      match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).lexical.planned_positions with
       | Some (_, Some (Cpp_ir.Type.Entity_application (g, _ :: _, _))) -> is_prod_global g
       | _ -> false )
     | _ -> false )
@@ -2058,10 +2056,7 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
       | Some t
         when t <> Obligation Opaque_type && not (is_cpp_dummy_type t)
              && not (pinned_by_pattern (j + 1)) ->
-        tctx :=
-          { !tctx with
-            cpp_binder_types =
-              IntMap.add (j + 1) (t, Bbinding) (!tctx).cpp_binder_types }
+        set_lexical (fun l -> { l with cpp_binder_types = IntMap.add (j + 1) (t, Bbinding) l.cpp_binder_types })
       | _ -> ())
     ids
 
@@ -2101,7 +2096,7 @@ let push_binders ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
     reads its binders' types by de Bruijn index, so a name pushed without its
     type makes every lookup beneath it read the binder one further out. *)
 let with_binders ?cpp env ids f =
-  let saved = (!tctx).env_types in
+  let saved = (!tctx).lexical.env_types in
   push_binders ?cpp env ids;
   Fun.protect ~finally:(fun () -> restore_env_types saved) f
 

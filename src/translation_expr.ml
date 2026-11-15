@@ -28,7 +28,7 @@ open Translation_stmts
     ({!Ml_type_util.index_only_result_tvar}): [Some 1] in [eval : expr A ->
     A]. *)
 let own_index_only_result () =
-  Option.bind (Option.bind (!tctx).body_owner find_type_opt) Ml_type_util.index_only_result_tvar
+  Option.bind (Option.bind (!tctx).input.body_owner find_type_opt) Ml_type_util.index_only_result_tvar
 
 (** Under [CRANE_CHECK_IR], that the variable at de Bruijn index [i] is one
     binder to both of the scopes translation keeps: [env], which names it, and
@@ -89,11 +89,11 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     let move_candidate =
       (not (Common.is_tc_instance_id x))
       &&
-      match Ownership_ir.use ~boxed:boxed_read (!tctx).move_plan occ with
+      match Ownership_ir.use ~boxed:boxed_read (!tctx).lexical.move_plan occ with
       | Some ((Share | Clone | Copy) as copy) ->
         (* The copy the plan names is the one the variable's declaration
            makes, where Core says what its type is. *)
-        ( if Probe.checking () && Ownership_ir.read_is_typed (!tctx).move_plan occ then
+        ( if Probe.checking () && Ownership_ir.read_is_typed (!tctx).lexical.move_plan occ then
             match binder_cpp_type i with
             (* [auto] says nothing of the type it deduces. *)
             | Some Cpp_ir.Type.(Auto | Const Auto | Reference (_, (Auto | Const Auto))) -> ()

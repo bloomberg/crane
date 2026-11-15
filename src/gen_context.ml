@@ -45,15 +45,9 @@ let begin_body ~owner ?(function_ = false) () =
     Pipeline_trace.event "body"
       (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Table.safe_pr_global owner));
   tctx :=
-    { !tctx with
-      match_param_counter = 0;
-      cs_counter = 0;
-      body_owner = Some owner;
-      body_function = function_;
-      current_letin_depth = 0;
-      move_plan = Ownership_ir.empty;
-      representation = [];
-      planned_reads = [] }
+    { input = { (!tctx).input with body_owner = Some owner; body_function = function_ };
+      lexical = { (!tctx).lexical with move_plan = Ownership_ir.empty; representation = []; planned_reads = [] };
+      threaded = { match_param_counter = 0; cs_counter = 0 } }
 
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type
     stack holding exactly [params] (innermost binder first, as returned by
@@ -73,18 +67,16 @@ let begin_body ~owner ?(function_ = false) () =
     on to {!Translation_types.push_binders} and recorded as the head's declared
     ones ([declared_outer] in {!Translation_state}). *)
 let with_method_env_types ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(outer = []) env params f =
-  let saved_env_types = (!tctx).env_types in
+  let saved_env_types = (!tctx).lexical.env_types in
   let saved_erased = Translation_types.save_erased_env () in
-  let saved_declared = (!tctx).declared_outer in
+  let saved_declared = (!tctx).lexical.declared_outer in
   reset_env_types ();
   Translation_types.push_parameters env outer;
   Translation_types.push_binders ~cpp env params;
-  tctx :=
-    { !tctx with
-      declared_outer = (if cpp = [] then None else Some (Lexenv.depth (!tctx).env_types, cpp)) };
+  set_lexical (fun l -> { l with declared_outer = (if cpp = [] then None else Some (Lexenv.depth l.env_types, cpp)) });
   Fun.protect
     ~finally:(fun () ->
-      tctx := { !tctx with env_types = saved_env_types; declared_outer = saved_declared };
+      set_lexical (fun l -> { l with env_types = saved_env_types; declared_outer = saved_declared });
       Translation_types.restore_erased_env saved_erased )
     f
 
@@ -626,7 +618,7 @@ let type_resolutions_of_referenced_globals b =
     whatever else the body mentions. *)
 let with_body_resolutions r b f =
   with_promoted_var_map
-    ( (!tctx).promoted_var_map
+    ( (!tctx).lexical.promoted_var_map
     @ promoted_resolutions_of_body ~r ?ty:(try Some (Table.find_type r) with Not_found -> None) b
     @ ind_type_resolutions r
     @ type_resolutions_of_referenced_globals b )

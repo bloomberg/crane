@@ -34,7 +34,7 @@ let moved_out (base : Cpp_ir.Lowered.Expr.t) = match base with Move _ -> true | 
    ({!Ownership_ir.takes_record}); under [CRANE_CHECK_IR], the code reading
    it from [base] must agree. *)
 let record_taken ~is_typeclass t base =
-  let taken = (not is_typeclass) && Ownership_ir.takes_record (!tctx).move_plan t in
+  let taken = (not is_typeclass) && Ownership_ir.takes_record (!tctx).lexical.move_plan t in
   if Probe.checking () && taken <> moved_out base then
     Probe.violation "ownership plan"
       (Pp.str
@@ -47,7 +47,7 @@ let record_taken ~is_typeclass t base =
    moved out of the record into a local of its own is the body's.  A field
    copied out of a record still held is not: it may be read in place. *)
 let with_fields_plan case asgns f =
-  with_plan (Ownership_ir.fields_by_value (!tctx).move_plan ~case ~by_value:(List.map snd asgns)) f
+  with_plan (Ownership_ir.fields_by_value (!tctx).lexical.move_plan ~case ~by_value:(List.map snd asgns)) f
 
 (** Generate a single branch of an {!Smatch} if/else-if pattern match chain.
 
@@ -620,8 +620,8 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     (* Allocate a unique [_m] name for this match level.  All branches of
        the same match reuse this name (each [if (auto* _m = ...)] creates
        its own scope); nested matches get the next name ([_m0], [_m1]). *)
-    let match_i = (!tctx).match_param_counter in
-    tctx := { !tctx with match_param_counter = match_i + 1 };
+    let match_i = (!tctx).threaded.match_param_counter in
+    set_threaded (fun t -> { t with match_param_counter = match_i + 1 });
     let sname =
       Id.of_string
         ( if match_i = 0 then "_m"
@@ -642,7 +642,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     (* Whether this match may consume the scrutinee.  A shared value is
        matched by borrowing all the same -- its fields are count bumps away --
        and is consumed only by block reuse below. *)
-    let scrut_consumable = Ownership_ir.owns_scrutinee (!tctx).move_plan t in
+    let scrut_consumable = Ownership_ir.owns_scrutinee (!tctx).lexical.move_plan t in
     let scrut_is_owned = scrut_consumable && not scrut_is_shared in
     (* Build variant accessor.  All inductives (including coinductives)
        are value types and use [scrut.v()] (dot access).  Exception:
@@ -690,7 +690,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
       | {Core.Match.Branch.binders = ids; result_type = rty; pattern = p; body = body} :: cs ->
       match p with
       | Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _} ->
-        let saved_env_types = (!tctx).env_types in
+        let saved_env_types = (!tctx).lexical.env_types in
         let saved_erased = save_erased_env () in
         let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
@@ -850,7 +850,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
           in
           (match reused_cell with
           | Some reused_cell ->
-            let saved_env_types = (!tctx).env_types in
+            let saved_env_types = (!tctx).lexical.env_types in
             push_binders env ids';
             if Probe.checking () then
               List.iteri
@@ -922,7 +922,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
             let body_stmts =
               with_reuse_token (Some tok) (fun () ->
                   with_plan
-                    (Ownership_ir.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx
+                    (Ownership_ir.reuse_arm (!tctx).lexical.move_plan ~scrutinee:t ~branch:branch_idx
                        ~constructor:tail_ctor)
                     (fun () -> gen_stmts env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) )
             in
@@ -1040,7 +1040,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
   in
   (* Whether the match binds the pair's components by value, moving them out:
      asked while [t] is still the Core scrutinee. *)
-  let pair_by_value = Ownership_ir.pair_by_value (!tctx).move_plan t pv in
+  let pair_by_value = Ownership_ir.pair_by_value (!tctx).lexical.move_plan t pv in
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)
@@ -1063,10 +1063,10 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
      boxed scrutinee at the return type -- [any_cast<step_result>] on what is
      a [bool]. *)
   let t =
-    let saved_ret = (!tctx).current_cpp_return_type in
-    tctx := { !tctx with current_cpp_return_type = Some typ_ir };
+    let saved_ret = (!tctx).lexical.current_cpp_return_type in
+    set_lexical (fun l -> { l with current_cpp_return_type = Some typ_ir });
     let t = gen_expr ?expected_ty:scrut_expected env t in
-    tctx := { !tctx with current_cpp_return_type = saved_ret };
+    set_lexical (fun l -> { l with current_cpp_return_type = saved_ret });
     t
   in
   let pair_g_opt = cs.cs_pair in
@@ -1149,8 +1149,8 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
      a temporary to avoid double evaluation. *)
   let scrut, cache_prefix =
     if scrut_uses > 1 && not (is_trivial_scrut t) then begin
-      let n = (!tctx).cs_counter in
-      tctx := { !tctx with cs_counter = n + 1 };
+      let n = (!tctx).threaded.cs_counter in
+      set_threaded (fun t -> { t with cs_counter = n + 1 });
       let cache_id = Common.scrutinee_cache_id n in
       match lift_iife_assignment cache_id None t with
       | Some stmts -> (Cpp_ir.Expr.Local cache_id, stmts)
@@ -1202,7 +1202,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
       in
       let ids' = custom_branch_binders env ~fix_a_fired ~scrut_ml_typ ~ml_typ r ids' in
       let n_pat_vars = List.length ids in
-      let saved_env_types = (!tctx).env_types in
+      let saved_env_types = (!tctx).lexical.env_types in
       push_binders env ids';
       (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
          at runtime (i.e. outer [typ] was erased, not just magic-wrapped),
@@ -1477,8 +1477,8 @@ let record_read_once env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Lowere
   let scrut = gen_expr env t in
   if is_typeclass || is_trivial_scrut scrut then (scrut, [])
   else
-    let n = (!tctx).cs_counter in
-    tctx := { !tctx with cs_counter = n + 1 };
+    let n = (!tctx).threaded.cs_counter in
+    set_threaded (fun t -> { t with cs_counter = n + 1 });
     let cache_id = Common.scrutinee_cache_id n in
     ( Move (Local cache_id),
       match lift_iife_assignment cache_id None scrut with
@@ -1774,7 +1774,7 @@ let gen_record_projection ~expected_ty ~slot env (ml_e : Core.Expr.t) ~typ ~t ~p
          environment is pushed alongside [env'] wherever they are read:
          without it, a binder's type is some other binder's. *)
       let under_branch_binders f =
-        let saved_env_types = (!tctx).env_types in
+        let saved_env_types = (!tctx).lexical.env_types in
         let saved_erased = save_erased_env () in
         push_binders env branch_binders;
         Fun.protect

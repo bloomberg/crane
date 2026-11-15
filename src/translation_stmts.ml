@@ -81,14 +81,14 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       in
       rhs @ decl @ body )
     else
-      let depth = (!tctx).current_letin_depth in
-      tctx := { !tctx with current_letin_depth = depth + 1 };
       (* Where a machine resumes at this let, which of what its frame keeps
          the save moves is the plan's: the machine reads it by the let's
          binder. *)
-      ( match (Ownership_ir.save_moves (!tctx).move_plan let_occ, core_binder ~site:(Binding let_occ) env' 1) with
-      | Some moved, Some binder -> Ownership_ir.Frame_save.record binder moved
-      | _ -> () );
+      let () =
+        match (Ownership_ir.save_moves (!tctx).lexical.move_plan let_occ, core_binder ~site:(Binding let_occ) env' 1) with
+        | Some moved, Some binder -> Ownership_ir.Frame_save.record binder moved
+        | _ -> ()
+      in
       (* What the continuation reads, in the right-hand side's coordinates. *)
       let cont_free = Escape.free_rels 1 b in
       let asgn =
@@ -275,7 +275,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
          moved there is bound as [const T&], saving a [shared_ptr] count
          bump; the plan does not own such a binder, so it is never moved
          from.  Only for [shared_ptr] types. *)
-      let use_const_ref = Ownership_ir.projects_in_place (!tctx).move_plan t a in
+      let use_const_ref = Ownership_ir.projects_in_place (!tctx).lexical.move_plan t a in
       let result =
         match asgn with
           | [Bind_variable (_, Existing, e)] ->
@@ -374,11 +374,11 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Table.is_tt_constructor r
       && returns_void () ->
     (* tt (unit constructor) in tail position of a void-returning function *)
-    if (!tctx).itree_mode = Reified then [k (mk_itree_ret Void [])]
+    if (!tctx).input.itree_mode = Reified then [k (mk_itree_ret Void [])]
     else
       [Return None]
   | Core.Expr.Global {callee = r; _} when is_ghost r ->
-    if (!tctx).itree_mode = Reified then
+    if (!tctx).input.itree_mode = Reified then
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
          returns shared_ptr<ITree<void>>. *)

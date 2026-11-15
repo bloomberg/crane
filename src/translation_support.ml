@@ -298,7 +298,7 @@ let effect_of (use : Core.Global_use.t) =
   if Probe.checking () then begin
     let here =
       Option.map
-        (fun operation -> {Core_effects.operation; mode = (!tctx).itree_mode})
+        (fun operation -> {Core_effects.operation; mode = (!tctx).input.itree_mode})
         (Core_effects.operation_of use.callee)
     in
     match (found, here) with
@@ -971,7 +971,7 @@ let mk_itree_ret_for_value (r_cpp : Cpp_ir.Lowered.Type.t) r_ml v =
     [shared_ptr<ITree<R>>] so the tree can be passed as a first-class value.
     Does nothing in sequential mode or when [ml_ty] is not monadic. *)
 let reify_monadic_param_type ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-  if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then begin
+  if is_monadic_ml_type ml_ty && (!tctx).input.itree_mode = Reified then begin
     let r_ty : Cpp_ir.Lowered.Type.t =
       match cpp_ty with
       | Entity_application (_, _ :: r :: _, _) -> r
@@ -1355,12 +1355,12 @@ let with_escape_analysis f =
   with_scope @@ fun () ->
   tctx :=
     { !tctx with
-      current_letin_depth = 0;
-      move_plan = Ownership_ir.empty;
-      match_param_counter = 0;
-      cs_counter = 0;
-      in_constructor_expr = false;
-      current_cpp_return_type = inner_return_type };
+      lexical =
+        { (!tctx).lexical with
+          move_plan = Ownership_ir.empty;
+          in_constructor_expr = false;
+          current_cpp_return_type = inner_return_type };
+      threaded = {match_param_counter = 0; cs_counter = 0} };
   f ()
 
 (** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
@@ -2574,7 +2574,7 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
     abstractions over types erasure removes. *)
 let rec core_lent_by_reference ty =
   match resolve_tmeta ty with
-  | ty when is_monadic_ml_type ty && (!tctx).itree_mode = Reified -> Some true
+  | ty when is_monadic_ml_type ty && (!tctx).input.itree_mode = Reified -> Some true
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     Some ((not (Table.is_enum_inductive r)) && not (Table.is_custom_scalar_ref r))
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = args; _}

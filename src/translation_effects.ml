@@ -92,7 +92,7 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   let bound_by_bind env = core_binder ~site:(Binding (Core.Global_use.occurrence use)) env 1 in
   (* Where a machine resumes at the continuation's parameter, which of
      what its frame keeps the save moves is the plan's, as at a let. *)
-  ( match (ids, Ownership_ir.save_moves (!tctx).move_plan (Core.Global_use.occurrence use)) with
+  ( match (ids, Ownership_ir.save_moves (!tctx).lexical.move_plan (Core.Global_use.occurrence use)) with
   | _ :: _, Some moved -> Option.iter (fun b -> Ownership_ir.Frame_save.record b moved) (bound_by_bind env)
   | _ -> () );
   (

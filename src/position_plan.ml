@@ -190,7 +190,7 @@ let region ~outer ~reads body =
         let rec go i = function [] -> None | r :: rest -> if r == a then Some i else go (i + 1) rest in
         go 0 inst.call.regular
       in
-      with_promoted_var_map (plan.cp_instance_promoted @ (!tctx).promoted_var_map) @@ fun () ->
+      with_promoted_var_map (plan.cp_instance_promoted @ (!tctx).lexical.promoted_var_map) @@ fun () ->
       List.iter
         (fun a ->
           match regular_index a with
