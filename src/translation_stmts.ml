@@ -17,21 +17,19 @@ open Util
 open Translation_state
 open Type_util
 open Core_query
-open Translation_support
-open Translation_types
 open Translation_knot
 open Translation_match
 
 (** [gen_stmts ?slot env k e] -- [e] lowered as statements, the value it
     computes handed to [k] (a [return], an assignment).  [slot] is
     {!Translation_expr.gen_expr}'s, carried into the tail positions. *)
-let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast :
+let rec gen_stmts ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast :
     Cpp_ir.Lowered.Stmt.t list =
   (* Statements open a position of their own and state no type for it: the
      value a [return] here carries goes to the enclosing function, not to the
      position the caller's expression was being built for.  What a tail
      statement lands in is {!with_cpp_return_type}, which
-     {!position_cpp_ty} falls back to. *)
+     {!Translation_coerce.position_cpp_ty} falls back to. *)
   match ast with
   | Core.Expr.Let {binder_type = let_ty;
                    value = ((Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group) as fix_term);
@@ -58,7 +56,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
        names come from [env], the avoid set from [env']. *)
     let env_rhs = (fst env, snd env') in
     if x == Core.Binder_name.Anonymous then (
-      push_binders env [(x_renamed, t)];
+      Translation_binders.push_binders env [(x_renamed, t)];
       gen_stmts ~slot env' k b )
     else if core_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
@@ -66,7 +64,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
       let rhs = gen_stmts env_rhs (fun e -> Expression e) a in
-      push_binders env [(x_renamed, t)];
+      Translation_binders.push_binders env [(x_renamed, t)];
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun (s : Cpp_ir.Lowered.Stmt.t) ->
         match s with
@@ -80,9 +78,12 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
         gen_stmts ~slot env' k b
       in
       let decl : Cpp_ir.Lowered.Stmt.t list =
-        if stmts_reference_var x_renamed body then
-          let cpp_ty = cpp_of_core env t in
-          [Bind_variable (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), mk_tt_expr ())]
+        if Translation_lifting.stmts_reference_var x_renamed body then
+          let cpp_ty = Translation_types.cpp_of_core env t in
+          [ Bind_variable
+              ( x_renamed,
+                Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1),
+                Translation_monadic.mk_tt_expr () ) ]
         else []
       in
       rhs @ decl @ body )
@@ -252,7 +253,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
            is a tree over [arg]'s family, whatever family the function
            returns into. *)
         let rhs_result =
-          let c = cpp_of_core env t_effective in
+          let c = Translation_types.cpp_of_core env t_effective in
           (* A binder erasure took the whole type from -- [nt_semty x], a
              type computed from a value -- holds a box, and its value is
              one; read at the function's result instead, it is cast to a
@@ -260,7 +261,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
           if Cpp_ir.Types.prints_as_any c then Some c
           else if core_type_contains_erased t_effective then current_cpp_return_type ()
           else
-            match spell_in_scope c with
+            match Translation_types.spell_in_scope c with
             | Some _ as t -> t
             | None -> current_cpp_return_type ()
         in
@@ -268,7 +269,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
           gen_stmts
             ~slot:
               { slot with
-                repr = Native;
+                Translation_slot.repr = Native;
                 expected_core_ty = Some t_effective;
                 eta_keep_moves = is_single_use_partial_app }
             env_rhs afun a )
@@ -276,8 +277,10 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
-      let t_for_env = if stmts_yield_boxed asgn then Core.Type.Erased Core.Erasure_reason.Type_argument else t in
-      push_binders env [(x_renamed, t_for_env)];
+      let t_for_env =
+        if Translation_erasure.stmts_yield_boxed asgn then Core.Type.Erased Core.Erasure_reason.Type_argument else t
+      in
+      Translation_binders.push_binders env [(x_renamed, t_for_env)];
       (* Const-ref binding: a record field projected out of a variable not
          moved there is bound as [const T&], saving a [shared_ptr] count
          bump; the plan does not own such a binder, so it is never moved
@@ -286,7 +289,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       let result =
         match asgn with
           | [Bind_variable (_, Existing, e)] ->
-            let cpp_ty = cpp_of_core env t in
+            let cpp_ty = Translation_types.cpp_of_core env t in
             (* When the type contains [Any] (from erased carrier projections) but
                the generated expression is a lambda with concrete types, derive
                the std::function type from the lambda's parameter and return
@@ -328,7 +331,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
               if use_const_ref then Reference (Lvalue, Const cpp_ty)
               else cpp_ty
             in
-            begin match extract_block_template e with
+            begin match Translation_cpp_build.extract_block_template e with
             | Some (ref, tmpl, args, tys) ->
               (Foreign_block
                 { custom = ref;
@@ -345,7 +348,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
               :: gen_stmts ~slot env' k b
             end
           | _ ->
-            let cpp_ty = cpp_of_core env t in
+            let cpp_ty = Translation_types.cpp_of_core env t in
             ((Declare (x_renamed, cpp_ty, core_binder ~site:(Binding let_occ) env' 1) : Cpp_ir.Lowered.Stmt.t) :: asgn)
             @ gen_stmts ~slot env' k b
       in
@@ -364,9 +367,10 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
     and occ = rec_group.occurrence in
     Translation_local_functions.gen_standalone_fix env k ~x ~ids ~funs ~occ ~fix_term
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
-                     arguments = a1 :: a2 :: l} when is_effect Core_effects.Bind use ->
+                     arguments = a1 :: a2 :: l} when Translation_monadic.is_effect Core_effects.Bind use ->
     Translation_effects.gen_bind_stmts ~slot env k ast ~r ~use ~a1 ~a2 ~l
-  | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = a1 :: l} when is_effect Core_effects.Return use ->
+  | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = a1 :: l}
+    when Translation_monadic.is_effect Core_effects.Return use ->
     Translation_effects.gen_return_stmts ~slot env k ast ~use ~a1 ~l
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
@@ -377,7 +381,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Table.is_tt_constructor r
       && returns_void () ->
     (* tt (unit constructor) in tail position of a void-returning function *)
-    if (!tctx).input.itree_mode = Reified then [k (mk_itree_ret Void [])]
+    if (!tctx).input.itree_mode = Reified then [k (Translation_monadic.mk_itree_ret Void [])]
     else
       [Return None]
   | Core.Expr.Global {callee = r; _} when is_ghost r ->
@@ -385,7 +389,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
          returns shared_ptr<ITree<void>>. *)
-      [k (mk_itree_ret Void [])]
+      [k (Translation_monadic.mk_itree_ret Void [])]
     else
       [Return None]
   | Core.Expr.Runtime_error msg ->
@@ -412,7 +416,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       | Core.Expr.Coerce {value = Core.Expr.Apply {callee = f; arguments = args}; _}
       | Core.Expr.Boxed_value {value = Core.Expr.Apply {callee = f; arguments = args}; _}
       | Core.Expr.Lambda_group_barrier {value = Core.Expr.Apply {callee = f; arguments = args}; _} ->
-        core_callee_is_void f
+        Translation_monadic.core_callee_is_void f
         (* Only treat as void if fully applied — partial applications
            return a function value, not void. *)
         && ( match f with
@@ -429,7 +433,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_expr ~slot ?expected_ty:(position_cpp_ty None) env t in
+      let e = gen_expr ~slot ?expected_ty:(Translation_coerce.position_cpp_ty None) env t in
       if returns_void () then
         [Expression e; Return None]
       else
@@ -441,13 +445,13 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
           [Expression e]
         | _ ->
           [(Expression e : Cpp_ir.Lowered.Stmt.t)]
-          @ inline_iife k ((mk_tt_expr ()))
+          @ Translation_cpp_build.inline_iife k ((Translation_monadic.mk_tt_expr ()))
     end
     else begin
       (* Whether this continuation is the function's result rather than a
          binding.  Probing [k] is how the void case above already asks. *)
       let k_returns = match k (Literal (Int 0)) with Return _ -> true | _ -> false in
-      let e = gen_expr ~slot ?expected_ty:(position_cpp_ty None) env t in
+      let e = gen_expr ~slot ?expected_ty:(Translation_coerce.position_cpp_ty None) env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its Core type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
@@ -456,11 +460,11 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       let e =
         match current_cpp_return_type () with
         | Some rt when k_returns -> (
-          match slot_repr_of_cpp_type rt with
-          | Boxed Family_box -> deep_box_list t e
+          match Translation_types.slot_repr_of_cpp_type rt with
+          | Boxed Family_box -> Translation_coerce.deep_box_list t e
           | Boxed Var_box -> e
-          | Native -> recover_boxed_component rt e )
+          | Native -> Translation_coerce.recover_boxed_component rt e )
         | _ -> e
       in
-      inline_iife k (e)
+      Translation_cpp_build.inline_iife k (e)
     end

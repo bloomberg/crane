@@ -14,9 +14,6 @@ open Util
 open Translation_state
 open Type_util
 open Core_query
-open Translation_support
-open Translation_types
-open Translation_calls
 open Translation_knot
 open Translation_lambda
 
@@ -51,9 +48,9 @@ let adapt_to_erased_param env param_ty a expr =
   match a with
   | Core.Expr.Bound_variable {index = j; _}
     when (match get_env_type_opt j with
-          | Some t -> cpp_of_core env t = cpp_of_core env param_ty
+          | Some t -> Translation_types.cpp_of_core env t = Translation_types.cpp_of_core env param_ty
           | None -> false) -> expr
-  | _ -> erase_fn_arg_for_param env param_ty a expr
+  | _ -> Translation_coerce.erase_fn_arg_for_param env param_ty a expr
 
 (** [stmts] with the declaration of the local [id] standing for the Core
    binder [b]. *)
@@ -82,12 +79,12 @@ let erased_lambda (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) ~params ~ret ~
 (** The instance parameter, the class and its one method, where the variable
    [i], read at [occ] at the head of an application, is a singleton class's
    dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
-   {!singleton_dictionary} is the traversal's own reading, checked against
+   {!Translation_calls.singleton_dictionary} is the traversal's own reading, checked against
    it. *)
 let singleton_call env i occ =
   let live () =
     Option.map (fun (_, c, m) -> (c, m))
-      (singleton_dictionary env (Core.Expr.Bound_variable {index = i; occurrence = occ})) in
+      (Translation_calls.singleton_dictionary env (Core.Expr.Bound_variable {index = i; occurrence = occ})) in
   match Core_elaborate.singleton_dictionary_call ~walk:(elaborations ()) ~live occ with
   | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
   | None -> None
@@ -119,10 +116,10 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
      a closure does not deduce, and [ret] mentions its variable only in its
      result. *)
   let targs =
-    let by_var = List.map (fun (v, t) -> (v, cpp_of_core env t)) (Core_util.Var_types.bindings tys) in
+    let by_var = List.map (fun (v, t) -> (v, Translation_types.cpp_of_core env t)) (Core_util.Var_types.bindings tys) in
     Template_application.to_list
       (Template_application.plan
-         (Callable_abi.projection projection_abi x)
+         (Callable_abi.projection Translation_calls.projection_abi x)
          ~instance:(fun _ -> None)
          ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) )
   in
@@ -132,7 +129,7 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
      without it an operand that spells its type for the first time, a match
      whose branches have to agree on one return type, is built at whatever
      the enclosing declaration returns.  An argument is not a tail position,
-     so that is never the right answer; see {!position_cpp_ty}.
+     so that is never the right answer; see {!Translation_coerce.position_cpp_ty}.
 
      Only a suffix as long as the operand list is safe to read. *)
   let operand_core_tys =
@@ -143,7 +140,7 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
   (* The instance is a type: an applied one -- [TFunctor_option
      TFunctor_box] -- is spelled as the template argument it would be. *)
   let inst_expr : Cpp_ir.Lowered.Expr.t =
-    match core_arg_to_template_type env inst with
+    match Translation_calls.core_arg_to_template_type env inst with
     | Some t -> Type_name t
     | None -> gen_expr env inst
   in
@@ -151,9 +148,9 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
     (Scope (inst_expr, Common.id_of_global Term x, targs))
     (List.mapi
        (fun i a ->
-         let expected = param_expected_cpp_ty env operand_core_tys i in
+         let expected = Translation_types.param_expected_cpp_ty env operand_core_tys i in
          let slot =
-           {empty_slot with expected_core_ty = List.nth_opt operand_core_tys i}
+           {Translation_slot.empty_slot with Translation_slot.expected_core_ty = List.nth_opt operand_core_tys i}
          in
          with_cpp_return_type expected (fun () ->
              gen_expr ?expected_ty:expected ~slot env a ) )
@@ -164,7 +161,7 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
     the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
 let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan : Cpp_ir.Lowered.Expr.t list =
   let {
-    cp_instantiated =
+    Translation_calls.cp_instantiated =
       {
         Elaborated_call.call =
           {Elaborated_call.regular = regular_core_args; callee_type = fn_core_ty; _} as call;
@@ -202,10 +199,10 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
           ~capture:Stored
       | _ -> Cpp_erasure.empty_box )
     | _ ->
-    let ({ap_index = param_index; ap_param = param_core_ty; ap_expected = arg_expected_ty; ap_ret = ret;
-           ap_tvar_erased = param_tvar_erased; ap_written_by_call = param_written_by_call;
-           ap_deduced_callable = deduced_callable; ap_expected_subst} : argument_position) =
-      argument_position ~local_callable:(local_callable env) env id plan i core_arg
+    let ({Translation_calls.ap_index = param_index; ap_param = param_core_ty; ap_expected = arg_expected_ty;
+           ap_ret = ret; ap_tvar_erased = param_tvar_erased; ap_written_by_call = param_written_by_call;
+           ap_deduced_callable = deduced_callable; ap_expected_subst} : Translation_calls.argument_position) =
+      Translation_calls.argument_position ~local_callable:(Translation_calls.local_callable env) env id plan i core_arg
     in
     let param_expected_subst () = ap_expected_subst in
     (* {b Lambda arity limiting.}  When a lambda argument has more binders
@@ -272,7 +269,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
                 ( match resolve_meta ret_core with
                 | Core.Type.Variable _ -> concrete_tvar_type
                 | _ ->
-                  Some (cpp_of_core env ret_core) )
+                  Some (Translation_types.cpp_of_core env ret_core) )
               | None -> None
             in
             (barrier, ret_ty)
@@ -284,14 +281,14 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
     let arg_expected_core_ty =
       match param_core_ty with
       | Some core_ty when not (core_type_contains_erased core_ty) -> Some core_ty
-      | _ -> slot.expected_core_ty
+      | _ -> slot.Translation_slot.expected_core_ty
     in
     let expr : Cpp_ir.Lowered.Expr.t =
       with_cpp_return_type ret (fun () ->
           gen_expr ?expected_ty:arg_expected_ty
             ~slot:
               { slot with
-                expected_core_ty = arg_expected_core_ty;
+                Translation_slot.expected_core_ty = arg_expected_core_ty;
                 call_result = expected_result;
                 stated_core_ty = param_core_ty }
             env core_arg )
@@ -309,7 +306,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
       match (param_core_ty, expr) with
       | Some param_ty, Lambda ({ body = lam_body; _ } as l) ->
         let param_cpp_ty =
-          cpp_of_core env param_ty
+          Translation_types.cpp_of_core env param_ty
         in
         ( match param_cpp_ty with
         | Function (_, Shared_pointer inner) ->
@@ -328,7 +325,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
     let expr : Cpp_ir.Lowered.Expr.t =
       match param_core_ty with
       | Some param_ty when not deduced_callable ->
-        erase_fn_arg_for_param env param_ty core_arg expr
+        Translation_coerce.erase_fn_arg_for_param env param_ty core_arg expr
       | _ -> expr
     in
     (* A methodified callee is spelled [recv.f(rest)], and [std::any] has no
@@ -342,7 +339,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
            out of a dependent pair is a bare type variable, and extraction
            leaves a [Core.Type.Erased] behind. *)
         ( match
-            Option.map (fun t -> cpp_of_core env t)
+            Option.map (fun t -> Translation_types.cpp_of_core env t)
               (infer_core_body_type (strip_magic core_arg))
           with
         | Some t -> Cpp_ir.Types.prints_as_any t
@@ -357,7 +354,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         match strip_magic core_arg with
         | Core.Expr.Apply {callee = g; arguments = rargs} -> (
           match strip_magic g with
-          | Core.Expr.Global _ -> app_reads_erased_value env rargs
+          | Core.Expr.Global _ -> Translation_erasure.app_reads_erased_value env rargs
           | _ -> false )
         | _ -> false
       in
@@ -367,7 +364,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
              && receiver_is_boxed -> (
         match param_expected_subst () with
         | Some into when not (Cpp_ir.Types.prints_as_any into) ->
-          coerce ~from:Any ~into expr
+          Translation_coerce.coerce ~from:Any ~into expr
         | _ -> expr )
       | _ -> expr
     in
@@ -378,10 +375,10 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         let from =
           match core_arg with
           | Core.Expr.Bound_variable {index = j; occurrence = occ} ->
-            planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
+            Translation_binders.planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
           | _ -> None
         in
-        coerce ~term:core_arg ?from ~into:Any expr
+        Translation_coerce.coerce ~term:core_arg ?from ~into:Any expr
       else expr
     in
     (* Wrap void calls as values only when the expression will be used
@@ -389,16 +386,16 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
        statement position inside a lambda). *)
     let as_value () =
       match core_arg with
-      | a when core_value_is_void_call a ->
+      | a when Translation_monadic.core_value_is_void_call a ->
         (* Don't wrap eta-expanded lambdas (partial applications) — they
            are function VALUES, not void call results. *)
         ( match expr with
         | Lambda _ -> expr
-        | _ -> wrap_void_call_as_value expr )
+        | _ -> Translation_monadic.wrap_void_call_as_value expr )
       | _ -> expr
     in
     (* A bare local variable known to be boxed as [std::any]
-       ({!read_is_boxed}) — e.g. a leaf pulled out of an erased-pair
+       ({!Translation_binders.read_is_boxed}) — e.g. a leaf pulled out of an erased-pair
        destructure — passed directly to a plain global function whose
        parameter type is concrete.  Mirrors the equivalent check for
        non-global callees (~[Core.Expr.Bound_variable j when Escape.IntSet.mem ...] above). *)
@@ -408,17 +405,17 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
       | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
       | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
       | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _} ->
-        read_is_boxed j occ
+        Translation_binders.read_is_boxed j occ
       | _ -> false
     in
     match param_core_ty with
     | Some param_ty
-      when ( core_body_returns_erased_field core_arg || core_arg_is_erased_rel
+      when ( Translation_erasure.core_body_returns_erased_field core_arg || core_arg_is_erased_rel
            (* A component read out of a pair that was itself recovered from
               a box is a [std::any] whatever its Core type says, and the
               emitted expression is the evidence -- see
-              {!yields_boxed_component}. *)
-           || yields_boxed_component (as_value ()) )
+              {!Translation_erasure.yields_boxed_component}. *)
+           || Translation_erasure.yields_boxed_component (as_value ()) )
            && not (match param_ty with
                    | Core.Type.Global_app {head = g; _} -> Table.is_promoted_type_var g
                    | _ -> false)
@@ -431,10 +428,10 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
               unchanged; a later pass (e.g. [gen_match_branch]'s field
               substitution) supplies the correct cast at its own,
               properly-scoped [tvars]. *)
-           && erase_unresolved_tvars (cpp_of_core env param_ty)
-              = cpp_of_core env param_ty ->
-      let cpp_ty = cpp_of_core env param_ty in
-      ( match strip_ns_global_app cpp_ty with
+           && Translation_types.erase_unresolved_tvars (Translation_types.cpp_of_core env param_ty)
+              = Translation_types.cpp_of_core env param_ty ->
+      let cpp_ty = Translation_types.cpp_of_core env param_ty in
+      ( match Translation_conversion.strip_ns_global_app cpp_ty with
       | Entity_application (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
         let list_any_ty : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
@@ -447,7 +444,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
            again would re-box that concrete list into a fresh [std::any]
            only to unbox it — mirror the custom-list branch below and reuse
            the existing cast.  It may also have gone the whole way and
-           recovered the concrete list already ({!coerce} does this for a
+           recovered the concrete list already ({!Translation_coerce.coerce} does this for a
            value crossing out of a box), in which case there is nothing
            left to convert. *)
         ( match as_value () with
@@ -458,7 +455,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         | v ->
           Cpp_erasure.converting_ctor cpp_ty [Cpp_erasure.unbox list_any_ty v] )
       | Entity_application (g, [_], _) when Type_util.is_custom_list_global g ->
-        let clean_cpp_ty = clean_self_ns cpp_ty in
+        let clean_cpp_ty = Translation_conversion.clean_self_ns cpp_ty in
         (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
            with fully-erased elements at runtime ([deque<pair<any,any>>]).
            Cast the inner value to that erased representation, matching what
@@ -503,7 +500,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         let needs_concrete =
           (not (Table.is_inline_custom id))
           &&
-          match strip_ns_global_app clean_cpp_ty with
+          match Translation_conversion.strip_ns_global_app clean_cpp_ty with
           | Entity_application (_, [et], _) ->
             et <> Cpp_erasure.erase_type_to_any et
           | _ -> false
@@ -527,32 +524,32 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         end
         else inner
       (* The value is boxed; recover it at the parameter's type.  Going
-         through {!coerce} rather than casting outright keeps the one rule
+         through {!Translation_coerce.coerce} rather than casting outright keeps the one rule
          that a destination which is itself a name for the box -- [using sel
          = std::any] -- is not a recovery target: [any_cast<sel>] reads a box
          that was never doubly wrapped and throws. *)
-      | _ -> coerce ~from:Any ~into:cpp_ty (as_value ()) )
+      | _ -> Translation_coerce.coerce ~from:Any ~into:cpp_ty (as_value ()) )
     (* Monadic parameter (reified mode only): the callee expects
        [shared_ptr<ITree<R>>].  If the argument already produces a reified
        tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
     | Some param_ty when (!tctx).input.itree_mode = Reified
         && is_monadic_core_type param_ty
-        && not (is_reified_monadic_expr core_arg) ->
-      let r_core = extract_itree_result_core param_ty in
-      let r_cpp = cpp_of_core env r_core in
+        && not (Translation_monadic.is_reified_monadic_expr core_arg) ->
+      let r_core = Translation_monadic.extract_itree_result_core param_ty in
+      let r_cpp = Translation_types.cpp_of_core env r_core in
 
-      let itree_ty = mk_itree_type r_cpp in
+      let itree_ty = Translation_monadic.mk_itree_type r_cpp in
       (* [expr] is a value unless the thing it calls was void-ified, in
          which case it is a statement and the tree carries [tt] instead.
          Only a genuinely valueless result gets the nullary [ret()]: a
          [unit] one has [monostate] to carry, and a tree spelled
          [ITree<void>] would not match the [ITree<Unit>] declared for it. *)
       let no_value = r_cpp = Void || core_type_is_void r_core in
-      let as_statement = no_value || core_expr_is_void_call core_arg in
+      let as_statement = no_value || Translation_monadic.core_expr_is_void_call core_arg in
       let ret_expr =
-        if no_value then mk_itree_ret Void []
-        else if as_statement then mk_itree_ret r_cpp [mk_tt_expr ()]
-        else mk_itree_ret_for_value r_cpp r_core expr
+        if no_value then Translation_monadic.mk_itree_ret Void []
+        else if as_statement then Translation_monadic.mk_itree_ret r_cpp [Translation_monadic.mk_tt_expr ()]
+        else Translation_monadic.mk_itree_ret_for_value r_cpp r_core expr
       in
       let body : Cpp_ir.Lowered.Stmt.t list =
         if as_statement then [Expression expr; Return (Some ret_expr)]
@@ -571,7 +568,8 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
             | Core.Expr.Global {callee = r; _}
             | Core.Expr.Coerce {value = Core.Expr.Global {callee = r; _}; _}
             | Core.Expr.Boxed_value {value = Core.Expr.Global {callee = r; _}; _}
-            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Global {callee = r; _}; _} -> is_void_ified_ref r
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Global {callee = r; _}; _} ->
+              Translation_monadic.is_void_ified_ref r
             | _ -> false)
            && (match param_ty with Core.Type.Arrow _ -> true | _ -> false)
            && core_type_is_unit (core_codomain param_ty)
@@ -591,7 +589,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
       in
       let dom_cpps =
         List.map
-          (fun t -> cpp_of_core env t)
+          (fun t -> Translation_types.cpp_of_core env t)
           dom_core_tys
       in
       let params =
@@ -605,7 +603,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
       in
       let body : Cpp_ir.Lowered.Stmt.t list =
         [ Expression (Call (Cpp_ir.Build.signature ~nargs:0 (), expr, args));
-          Return (Some (mk_tt_expr ())) ]
+          Return (Some (Translation_monadic.mk_tt_expr ())) ]
       in
       Cpp_ir.Build.lambda params None body ~capture:Runs_in_place
     | _ -> as_value ()
@@ -622,7 +620,8 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
     [std::function<std::any(std::any...)>] adapter where the callee's type
     erases to [std::any], and its result recovered from a box where the
     callee's codomain is erased. *)
-let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args : Cpp_ir.Lowered.Expr.t =
+let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args :
+    Cpp_ir.Lowered.Expr.t =
   let core_args = args in
 
   let rec get_eta_args dom args =
@@ -633,17 +632,17 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
   (* Save and clear the single-use closure flag so that nested eta_fun calls
      (from processing args) do not inherit it. The saved value is used when
      this eta_fun constructs a partial-application lambda. *)
-  let eta_keep_moves = slot.eta_keep_moves in
+  let eta_keep_moves = slot.Translation_slot.eta_keep_moves in
   (* Read once: the flag describes this closure, not anything built inside it. *)
-  let slot = {slot with eta_keep_moves = false} in
+  let slot = {slot with Translation_slot.eta_keep_moves = false} in
   match f with
   | Core.Expr.Global ({callee = id; _} as use) ->
     let lowered =
-      lower_call ~caller:!Table.current_decl_ref ~slot ?expected_ty env use args
+      Translation_calls.lower_call ~caller:!Table.current_decl_ref ~slot ?expected_ty env use args
     in
-    let plan = lowered.lc_plan in
+    let plan = lowered.Translation_calls.lc_plan in
     let {
-      cp_instantiated =
+      Translation_calls.cp_instantiated =
         {
           Elaborated_call.call =
             { Elaborated_call.excess = excess_args;
@@ -665,18 +664,18 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        the call can change, as Core decided it
        ({!Core_elaborate.closed_head_call}). *)
     let closed_head =
-      (not slot.building_constant)
+      (not slot.Translation_slot.building_constant)
         && Core_elaborate.closed_head_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args
     in
     let args =
-      let slot = if closed_head then {slot with building_constant = true} else slot in
+      let slot = if closed_head then {slot with Translation_slot.building_constant = true} else slot in
       with_promoted_var_map (instance_promoted_map @ (!tctx).lexical.promoted_var_map)
         (fun () -> gen_call_args ~slot ?expected_ty env id plan)
     in
-    let ty = lowered.lc_callee_type
-    and tys = lowered.lc_written
-    and all_type_args = Template_application.to_list lowered.lc_application
-    and written_tvar_args = lowered.lc_written_by_var in
+    let ty = lowered.Translation_calls.lc_callee_type
+    and tys = lowered.Translation_calls.lc_written
+    and all_type_args = Template_application.to_list lowered.Translation_calls.lc_application
+    and written_tvar_args = lowered.Translation_calls.lc_written_by_var in
     (* The callee's declared type at the type arguments the call writes: what
        C++ checks the arguments against and returns.  A type argument standing
        for a function type is spelled curried ([Through_tvar]), where the
@@ -684,18 +683,18 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     let written_fn_ty =
       let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
       (* An inline custom has no signature its type arguments instantiate:
-         its text reads the values as they are ({!call_result_site}). *)
+         its text reads the values as they are ({!Translation_calls.call_result_site}). *)
       if written_tvar_args = [] || is_inline_custom id then None
       else
         Option.map
           (fun t ->
-            let live = cpp_of_core env t in
-            if Probe.checking () then check_installed_arity id live;
+            let live = Translation_types.cpp_of_core env t in
+            if Probe.checking () then Translation_calls.check_installed_arity id live;
             Cpp_ir.Types.substitute subst live)
           (callee_core_type id)
     in
     (* Each argument read at its parameter as the call writes it
-       ({!regroup_crossing}): [pf : pair<fn<R(A, B)>, nat>] passed to
+       ({!Translation_coerce.regroup_crossing}): [pf : pair<fn<R(A, B)>, nat>] passed to
        [myfst<fn<fn<R(B)>(A)>, nat>].  Only where every argument has its own
        parameter to line up with: no erased argument, no erased domain, and
        no receiver -- a method's is read at its struct's own instantiation,
@@ -718,7 +717,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               | Some from -> (
                 (* Keep [a] itself when nothing converts: the caller tests
                    whether the crossing converts by physical identity. *)
-                match regroup_crossing ~from ~into a with
+                match Translation_coerce.regroup_crossing ~from ~into a with
                 | Cpp_ir.Expr.Convert (t, _) -> (Convert (t, a) : Cpp_ir.Lowered.Expr.t)
                 | _ -> a )
               | None -> a
@@ -726,7 +725,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             (* What the crossing writes depends on the source only through
                whether it converts. *)
             let converts t = crossed t != a in
-            crossed (value_cpp_type ~agree:(fun p l -> converts p = converts l) env core_arg) )
+            crossed (Translation_coerce.value_cpp_type ~agree:(fun p l -> converts p = converts l) env core_arg) )
           (List.combine regular_core_args args)
           (List.filteri (fun i _ -> i < List.length args) doms)
       | _ -> args
@@ -740,13 +739,17 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        [std::any] is left to the dispatcher, which does the erasing.  Core
        decides which calls those are ({!Core_elaborate.member_template_call}). *)
     let cglob =
-      match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
+      match
+        ( plan.Translation_calls.cp_instantiated.call.instances,
+          plan.Translation_calls.cp_instance_type_args,
+          all_type_args )
+      with
       | [inst], [Some inst_ty], _ :: method_targs
         when Core_elaborate.member_template_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use core_args ->
         (Scope (Type_name inst_ty, Common.id_of_global Term id, method_targs) : Cpp_ir.Lowered.Expr.t)
       | _ ->
         mk_cppglob
-          ?yields:(glob_yields env id (Core_util.Var_types.apply tys))
+          ?yields:(Translation_calls.glob_yields env id (Core_util.Var_types.apply tys))
           id all_type_args
     in
     (* Check if this is a typeclass instance used as a type (for :: access).
@@ -855,9 +858,9 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
         let cod_is_erased =
           match callee_core_type id with
           | Some core_ty ->
-            core_erases_to_box env (instantiated_codomain core_ty)
-            || ( match result_cpp_via_receiver env core_ty primary_core_args with
-               | Some c -> is_boxed_source c
+            Translation_erasure.core_erases_to_box env (instantiated_codomain core_ty)
+            || ( match Translation_calls.result_cpp_via_receiver env core_ty primary_core_args with
+               | Some c -> Translation_erasure.is_boxed_source c
                | None -> false )
             || result_is_index_only_tvar core_ty
           | None -> false
@@ -869,7 +872,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           | Some core_ty -> Some (instantiated_codomain core_ty)
           | None -> None
         in
-        let cod_site = call_result_site id in
+        let cod_site = Translation_calls.call_result_site id in
         (* A codomain that stays curried in C++ -- a [std::function] whose
            result is another [std::function] -- takes only the arguments of
            its own arrow, so applying every excess arg in one call would
@@ -882,7 +885,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
           match
             Option.map
-              (fun t -> Cpp_ir.Types.substitute subst (cpp_of_core env t))
+              (fun t -> Cpp_ir.Types.substitute subst (Translation_types.cpp_of_core env t))
               (callee_core_type id)
           with
           | Some (Cpp_ir.Type.Function (_, c)) -> Some c
@@ -902,8 +905,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             let arg_ty a =
               match a with
               | Core.Expr.Bound_variable {index = j; occurrence = occ} ->
-                planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
-              | _ -> Option.map (cpp_of_core env) (core_ast_type_hint a)
+                Translation_binders.planned_binder_type_or_derive ~use:"argument's type" ~agree:( = ) env j occ
+              | _ -> Option.map (Translation_types.cpp_of_core env) (Translation_ctor_args.core_ast_type_hint a)
             in
             let rest_tys = List.map arg_ty rest_core in
             if List.for_all Option.has_some rest_tys then
@@ -930,7 +933,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             let cod = Option.map expand_core_fun_alias cod in
             let n_here, cod' =
               let cod_cpp c =
-                let t = cpp_of_core env c in
+                let t = Translation_types.cpp_of_core env c in
                 Cpp_ir.Types.spell_arrows cod_site t
               in
               match Option.map cod_cpp cod with
@@ -952,7 +955,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
            constructor, rather than at the one this call site knows. *)
         let erase_params_into_boxes excess =
           let doms =
-            match Option.map (cpp_of_core env) cod_inst with
+            match Option.map (Translation_types.cpp_of_core env) cod_inst with
             | Some (Function (dom, _)) -> dom
             | _ -> []
           in
@@ -961,7 +964,10 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               match (List.nth_opt doms i, List.nth_opt excess_args i) with
               | Some d, Some (Core.Expr.Bound_variable {index = j;
                                                         occurrence = occ}) when Cpp_ir.Types.prints_as_any d -> (
-                let unfolded = Option.map (fun t -> strip_ns_global_app (unfold_cpp_typedef env t)) in
+                let unfolded =
+                  Option.map (fun t ->
+                      Translation_conversion.strip_ns_global_app (Translation_types.unfold_cpp_typedef env t) )
+                in
                 let is_any (a : Cpp_ir.Lowered.Type.t) = match a with Any -> true | _ -> false in
                 (* Read for the inductive, its arity and namespace, and
                    whether every argument is already a box. *)
@@ -973,8 +979,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                 in
                 match
                   unfolded
-                    (planned_binder_type_or_derive ~use:"excess argument" ~agree:(fun p l -> reading p = reading l)
-                       env j occ)
+                    (Translation_binders.planned_binder_type_or_derive ~use:"excess argument"
+                       ~agree:(fun p l -> reading p = reading l) env j occ)
                 with
                 | Some (Cpp_ir.Type.Entity_application ((GlobRef.IndRef _ as g), (_ :: _ as args), ns))
                   when (not (Table.is_custom g))
@@ -987,7 +993,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
         if ret_is_chainable then
           let excess = List.map (gen_expr ~slot env) excess_args in
           if cod_is_erased then
-            let applied = apply_erased_callee base excess in
+            let applied = Translation_coerce.apply_erased_callee base excess in
 
             (* Args applied to a box come back as a box; the codomain at this
                call's instantiation is what says what that box holds. *)
@@ -995,7 +1001,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               let from_cod =
                 Option.map
                   (fun c ->
-                    cpp_of_core env (core_drop_arrows (List.length excess) c) )
+                    Translation_types.cpp_of_core env (core_drop_arrows (List.length excess) c) )
                   cod_inst
               in
               (* The instantiated codomain does not always name a type to
@@ -1003,10 +1009,10 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                  application went through the boxed convention.  The position
                  the call sits in then says what the value is. *)
               match from_cod with
-              | Some c when states_unboxed_target c -> from_cod
+              | Some c when Translation_coerce.states_unboxed_target c -> from_cod
               | _ -> expected_ty
             in
-            unbox_into recovered_at applied
+            Translation_coerce.unbox_into recovered_at applied
           else
             (* A codomain instantiated at a type the call erased -- [resum]'s
                [C a b] at [C := IFun], a category over families -- is a
@@ -1027,7 +1033,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             | Some target ->
               let here = List.filteri (fun i _ -> i < n_first) excess in
               let rest = List.filteri (fun i _ -> i >= n_first) excess in
-              let r = Cpp_ir.Build.call (unbox_value target (Cpp_ir.Build.call base here)) rest in
+              let r = Cpp_ir.Build.call (Translation_coerce.unbox_value target (Cpp_ir.Build.call base here)) rest in
               ( match expected_ty with
               | Some exp -> Convert (exp, r)
               | None -> r )
@@ -1039,7 +1045,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               Cpp_erasure.unbox_tolerant t r
             | _ -> r
         else
-          Abort ("untranslatable curried proof term", abort_ty expected_ty) )
+          Abort ("untranslatable curried proof term", Translation_cpp_build.abort_ty expected_ty) )
     in
     let primary_result : Cpp_ir.Lowered.Expr.t =
       match ty with
@@ -1128,7 +1134,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
         let written_bare =
           args = []
           && ( id_is_typeclass_instance
-             || (is_inline_custom id && inline_custom_arg_arity id = Some 0) )
+             || (is_inline_custom id && Translation_calls.inline_custom_arg_arity id = Some 0) )
         in
         if written_bare then cglob
         else if missing_args == [] || excess_args <> [] then
@@ -1136,7 +1142,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             (* Nothing is missing, so there is nothing to fill: the template
                renders with what it was given. *)
             cglob
-          else apply_global id cglob args
+          else Translation_calls.apply_global id cglob args
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
@@ -1154,7 +1160,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                       List.map
                         (fun (var_name, core_ty) ->
                           let cpp_ty =
-                            cpp_of_core env core_ty
+                            Translation_types.cpp_of_core env core_ty
                           in
                           (var_name, cpp_ty) )
                         bindings
@@ -1227,7 +1233,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               Option.map
                 (fun t ->
                   collapse_erased_heads
-                    (Cpp_ir.Types.substitute subst (cpp_of_core env t)) )
+                    (Cpp_ir.Types.substitute subst (Translation_types.cpp_of_core env t)) )
                 (callee_core_type id)
             with
             | Some (Function (doms, dcod)) -> (doms, Some dcod)
@@ -1276,7 +1282,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                      call a lambda declared [std::optional<box<std::any>>],
                      because [std::optional]'s conversion between the two
                      is disabled by the aggregate [box<std::any>]. *)
-                  | _ when erased_eta_param ty || mentions_unresolved_promoted ty ->
+                  | _ when erased_eta_param ty || Translation_types.mentions_unresolved_promoted ty ->
                     Reference (Lvalue, Const Auto)
                   | _ -> ty
                 in
@@ -1295,7 +1301,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                    instance resolves [state] -- so converting to the spelling
                    here would convert to the file-scope box; the argument goes
                    through to the callee's own parameter instead. *)
-                if erased_eta_param ty && not (mentions_unresolved_promoted ty)
+                if erased_eta_param ty && not (Translation_types.mentions_unresolved_promoted ty)
                 then fun e : Cpp_ir.Lowered.Expr.t -> Convert (ty, e)
                 else fun e -> e )
               missing_args
@@ -1363,7 +1369,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             (* A result the substitution erased outright has no other
                statement than the declaration's, which is taken whole
                wherever this scope can spell it. *)
-            | Some slot when Cpp_ir.Types.prints_as_any cod && names_only_scoped_tvars slot
+            | Some slot when Cpp_ir.Types.prints_as_any cod && Translation_types.names_only_scoped_tvars slot
               ->
               slot
             | _ -> cod
@@ -1386,11 +1392,11 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                this call site, where the variable is instantiated at a
                function type. *)
             let callee_arity =
-              match inline_custom_arg_arity id with
+              match Translation_calls.inline_custom_arg_arity id with
               | Some _ as a -> a
               | None -> (
                 match find_type_opt id with
-                | Some core_ty when codomain_site core_ty = Through_tvar ->
+                | Some core_ty when Translation_calls.codomain_site core_ty = Cpp_ir.Types.Through_tvar ->
                   Some (count_core_value_arrows core_ty)
                 | _ -> None )
             in
@@ -1408,8 +1414,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               let yields = if surplus = [] && cod <> Void then Some cod else None in
               let filled = made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call ?yields cglob (args @ fill)) in
               (* The surplus goes to the result in the groups its spelling
-                 takes them in ({!call_result_site}). *)
-              apply_at_site (call_result_site id) filled surplus
+                 takes them in ({!Translation_calls.call_result_site}). *)
+              Translation_coerce.apply_at_site (Translation_calls.call_result_site id) filled surplus
             | None -> made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob call_args)
           in
           let ret_ty, (body : Cpp_ir.Lowered.Stmt.t list) =
@@ -1429,7 +1435,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
 
              Binding it is all that is decided here.  Whether it survives as a
              [template <typename>] of the lambda or is erased away is
-             {!Translation_support.mk_lambda}'s call, and it turns on whether a parameter
+             {!Translation_cpp_build.mk_lambda}'s call, and it turns on whether a parameter
              deduces it -- which is exactly the difference between an index
              the event type still carries ([memM<T2>]) and one erasure took
              out of it (a [LocalE] that is a plain enum). *)
@@ -1446,7 +1452,9 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                  named
                  (!tctx).lexical.current_type_vars )
           in
-          let eta_lambda params ret body ~capture = mk_lambda ~tparams:eta_tparams params ret body ~capture in
+          let eta_lambda params ret body ~capture =
+            Translation_cpp_build.mk_lambda ~tparams:eta_tparams params ret body ~capture
+          in
           (* A use site expecting fewer parameters than the callee takes wants
              a curried closure: the arrows past its arity belong to the
              element type it is generic in, not to the callable itself. *)
@@ -1495,7 +1503,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
              called.  Only globals whose declaration really takes no C++
              parameters -- thunks and those whose every parameter is erased --
              get the [()]. *)
-          apply_global id cglob args
+          Translation_calls.apply_global id cglob args
     in
     (* Collapse identity inline customs (%a0) at AST level.  This prevents
        unnecessary IIFE wrapping when a void call passes through an identity
@@ -1525,7 +1533,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           let rel_is_erased ty =
             let ty = resolve_meta ty in
             is_erased_core_type ty
-            || core_erases_to_box env ty
+            || Translation_erasure.core_erases_to_box env ty
           in
           let rec has_magic = function
             (* A coercion around a local variable says nothing on its own: in
@@ -1557,14 +1565,14 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                 in
                 List.exists has_magic inner_args
               else
-                glob_declared_cod_erases r
+                Translation_erasure.glob_declared_cod_erases r
                 (* A declaration that leaves its result a type variable says
                    nothing on its own; the type this call instantiates it to
                    does. *)
                 || ( match infer_core_body_type node with
-                   | Some t -> is_boxed_source (cpp_of_core env t)
+                   | Some t -> Translation_erasure.is_boxed_source (Translation_types.cpp_of_core env t)
                    | None -> false )
-            | Core.Expr.Global {callee = r; _} -> glob_declared_cod_erases r
+            | Core.Expr.Global {callee = r; _} -> Translation_erasure.glob_declared_cod_erases r
             | Core.Expr.Bound_variable {index = i; _} -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
@@ -1598,7 +1606,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                erased shape [pair<any, any>].  Its components are boxes too, so
                the accessor's result needs the same recovery at the use site as
                when this branch inserts the cast itself --
-               {!yields_boxed_component} recognises both shapes. *)
+               {!Translation_erasure.yields_boxed_component} recognises both shapes. *)
             primary_result
           | _, Any_cast _ -> primary_result
           | Some g, _ when (match glob_tys with
@@ -1631,12 +1639,12 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     let result = wrap_excess primary_result in
     (* A saturated call's result read at the type expected of it, where the
        two differ only in how their arrows are grouped
-       ({!regroup_crossing}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
+       ({!Translation_coerce.regroup_crossing}): [wrap<fn<fn<R(B)>(A)>>(f)] stored as a
        [list (A -> B -> R)]. *)
     ( match (written_fn_ty, expected_ty) with
     | Some (Cpp_ir.Type.Function (doms, written_cod)), Some into
       when excess_args = [] && List.length doms = List.length args ->
-      ( match regroup_crossing ~from:written_cod ~into result with
+      ( match Translation_coerce.regroup_crossing ~from:written_cod ~into result with
       | Cpp_ir.Expr.Convert (t, _) -> Convert (t, result)
       | _ -> result )
     | _ -> result )
@@ -1657,12 +1665,12 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        the method the callee projects declares it as a template parameter.  It
        leaves the argument list for the callee's explicit template arguments,
        which is the only place that parameter can be given. *)
-    let tc_args, _, args = split_instance_args ~lex:(current_lexenv ()) args in
+    let tc_args, _, args = Translation_calls.split_instance_args ~lex:(current_lexenv ()) args in
     let gen_callee () : Cpp_ir.Lowered.Expr.t =
       match (tc_args, gen_expr env f) with
       | [], e -> e
       | _, Scope (b, id, tys) ->
-        Scope (b, id, tys @ List.filter_map (fun a -> core_arg_to_template_type env a) tc_args)
+        Scope (b, id, tys @ List.filter_map (fun a -> Translation_calls.core_arg_to_template_type env a) tc_args)
       | _, e -> e
     in
     (* The callee's own function type, with an alias standing for one expanded
@@ -1746,22 +1754,22 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _}
       | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _}
       | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; occurrence = occ}; _} ->
-        read_is_boxed i occ
+        Translation_binders.read_is_boxed i occ
       | _ -> false
     in
     (* A pattern binder whose definition-site field type is a type variable
        still has a concrete C++ type when the scrutinee instantiates that
        variable concretely — [populate_erased_field_env] recorded it in
        [cpp_binder_types] at that concrete type, and the plan does not box
-       it ({!read_is_boxed}).
+       it ({!Translation_binders.read_is_boxed}).
        Its erased Core type must not be taken at face value here, or a perfectly
        concrete [std::function<uint64_t(uint64_t)>] field gets wrapped in an
        [any_cast] that does not compile. *)
     let callee_known_concrete =
       match callee_rel_idx with
       | Some i when not callee_cpp_erased ->
-        ( match pattern_binder_type i with
-        | Some t -> not (resolves_to_any_type t)
+        ( match Translation_binders.pattern_binder_type i with
+        | Some t -> not (Translation_types.resolves_to_any_type t)
         | None ->
           (* Likewise for a parameter of the enclosing function: the ambient
              environment may still spell its type as the class/section type
@@ -1772,8 +1780,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           | Some t ->
             (not (is_core_erased_ty t))
             && not
-                 (resolves_to_any_type
-                    (cpp_ir_of_core_type env
+                 (Translation_types.resolves_to_any_type
+                    (Translation_types.cpp_ir_of_core_type env
                        (get_current_type_vars ())
                        t ) )
           | None -> false ) )
@@ -1787,7 +1795,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        Core and still lands on a [using sem = std::any] alias in C++. *)
     let erases_to_any ty =
       is_core_erased_ty ty
-      || core_erases_to_box env ty
+      || Translation_erasure.core_erases_to_box env ty
     in
     let callee_is_bare_any =
       callee_cpp_erased
@@ -1810,13 +1818,13 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       | _ -> false) ||
       (match callee_rel_idx with
        | Some i ->
-         (match pattern_binder_type i with
+         (match Translation_binders.pattern_binder_type i with
           | Some (Function (params, _)) -> List.exists (fun (p : Cpp_ir.Lowered.Type.t) -> p = Any) params
           | _ -> false)
        | None -> false)
     in
     (* [has_unresolved_boxed_arg]: set when an argument is statically known to
-       be boxed as [std::any] ({!read_is_boxed}) but the callee's parameter
+       be boxed as [std::any] ({!Translation_binders.read_is_boxed}) but the callee's parameter
        type at this position can't be resolved to a concrete C++ type (it is
        itself abstract/erased, e.g. a value-dependent type scheme like
        [S.sem a]).  This happens when the callee is a genuinely-concrete
@@ -1828,7 +1836,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        [std::function] CTAD once C++ instantiates the template. *)
     let has_unresolved_boxed_arg = ref false in
     let arg_slot =
-      if callee_has_erased_params then into_box Var_box slot else slot
+      if callee_has_erased_params then Translation_slot.into_box Var_box slot else slot
     in
     (* The callee's declared domain at an argument's position, where the
        binding site recorded a declaration: a lambda is written against it,
@@ -1843,8 +1851,10 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
         | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
         | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
         | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _} ->
-          let respelled = Option.map default_tvar_names in
-          respelled (planned_binder_type ~use:"declared domain" ~agree:(fun p l -> respelled p = respelled l) j occ)
+          let respelled = Option.map Translation_types.default_tvar_names in
+          respelled
+            (Translation_binders.planned_binder_type ~use:"declared domain"
+               ~agree:(fun p l -> respelled p = respelled l) j occ)
         | _ -> None
       with
       | Some (Cpp_ir.Type.Function (dom, _)) -> (
@@ -1857,19 +1867,19 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       List.mapi (fun i x ->
       let expr =
         match x with
-        | e when core_value_is_void_call e ->
-          wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
+        | e when Translation_monadic.core_value_is_void_call e ->
+          Translation_monadic.wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
         | Core.Expr.Lambda _ ->
           gen_expr ?expected_ty:(declared_dom i) ~slot:arg_slot env x
         | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ ->
-          let expected = param_expected_cpp_ty env callee_param_tys i in
+          let expected = Translation_types.param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
-        | Core.Expr.Bound_variable {index = j; occurrence = occ} when read_is_boxed j occ ->
+        | Core.Expr.Bound_variable {index = j; occurrence = occ} when Translation_binders.read_is_boxed j occ ->
           let inner = gen_expr ~slot:arg_slot env x in
-          let expected = param_expected_cpp_ty env callee_param_tys i in
+          let expected = Translation_types.param_expected_cpp_ty env callee_param_tys i in
           ( match expected with
             | Some ty ->
-              Cpp_erasure.unbox (erase_type_args_to_any ty) inner
+              Cpp_erasure.unbox (Translation_erasure.erase_type_args_to_any ty) inner
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
@@ -1877,7 +1887,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       in
       match List.nth_opt callee_param_tys i with
       | Some param_ty when erased_callee -> adapt_to_erased_param env param_ty x expr
-      | Some param_ty -> erase_fn_arg_for_param env param_ty x expr
+      | Some param_ty -> Translation_coerce.erase_fn_arg_for_param env param_ty x expr
       | None -> expr) args
     in
     (* Detect over-application: when a local variable's C++ type has fewer
@@ -1915,11 +1925,11 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             in
             let n =
               declared
-                (planned_binder_type ~use:"call arity"
+                (Translation_binders.planned_binder_type ~use:"call arity"
                    ~agree:(fun p l -> Int.equal (declared p) (declared l))
                    i occ )
             in
-            if n < List.length args && codomain_site ty = Through_tvar then
+            if n < List.length args && Translation_calls.codomain_site ty = Cpp_ir.Types.Through_tvar then
               List.length args
             else n )
       | None -> List.length args
@@ -1968,7 +1978,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       if remaining_core_tys <> [] then
         let callee = gen_callee () in
         let pa_params = List.mapi (fun j core_ty ->
-          let cpp_ty = cpp_of_core env core_ty in
+          let cpp_ty = Translation_types.cpp_of_core env core_ty in
           (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
           remaining_core_tys
         in
@@ -2016,7 +2026,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           (Tolerant_call (callee_expr, args) : Cpp_ir.Lowered.Expr.t)
         end
         else if callee_is_bare_any then
-          apply_erased_curried callee_expr args
+          Translation_coerce.apply_erased_curried callee_expr args
         else Cpp_ir.Build.call callee_expr args
       in
       let n = n_args in
@@ -2054,8 +2064,9 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           (match get_env_type_opt i with Some ty -> core_codomain_erases_to_any n ty | None -> false)
         | _ -> false
       in
-      recover_boxed_result ~boxed:erased_cod ~expected:expected_ty result
-      |> recover_carrier_result ~fun_ty:callee_fun_core_ty ~n_args:n ~want:(position_cpp_ty expected_ty)
+      Translation_coerce.recover_boxed_result ~boxed:erased_cod ~expected:expected_ty result
+      |> Translation_coerce.recover_carrier_result ~fun_ty:callee_fun_core_ty ~n_args:n
+           ~want:(Translation_coerce.position_cpp_ty expected_ty)
 
 (** The dictionary of a singleton class, the variable [i] read at [occ],
     applied to [args]: the body of the class's projection, which calls the
@@ -2068,7 +2079,7 @@ let gen_singleton_dictionary_call env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
   let tvars = get_current_type_vars () in
   let targs =
     List.init n_own (fun k ->
-        cpp_ir_of_core_type env tvars (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+        Translation_types.cpp_ir_of_core_type env tvars (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                          variable = ipv + 1 + k}))
   in
   let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
@@ -2122,7 +2133,7 @@ let gen_application ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t
       let value_args =
         List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args
       in
-      Some (instantiate_use_at_call use value_args ty)
+      Some (Translation_calls.instantiate_use_at_call use value_args ty)
     | _ -> callee_ty
   in
   (* A callee typed by a function alias ([church]) hands back whatever the
@@ -2151,18 +2162,20 @@ let gen_application ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t
         List.length (List.filter (fun a -> not (Core_util.is_erased_value (strip_magic a))) args)
       in
       let boxes t =
-        match Option.map (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t)) t with
+        match Option.map (fun t -> Translation_types.unfold_cpp_typedef env (strip_cpp_ref_const t)) t with
         | Some (Cpp_ir.Type.Function (doms, cod)) -> Cpp_ir.Types.prints_as_any cod && List.length doms = n_runtime
         | _ -> false
       in
-      boxes (planned_binder_type_or_derive ~use:"callee result" ~agree:(fun p l -> boxes p = boxes l) env i occ)
+      boxes
+        (Translation_binders.planned_binder_type_or_derive ~use:"callee result" ~agree:(fun p l -> boxes p = boxes l)
+           env i occ)
     | _ -> false
   in
   (* Nor can a global whose declaration boxed its result -- [id] declared
      at [crane::obj] -- hand back anything else, however this call
      instantiates it. *)
   let declared_result_is_boxed =
-    match f with Core.Expr.Global {callee = r; _} -> glob_declared_cod_erases r | _ -> false
+    match f with Core.Expr.Global {callee = r; _} -> Translation_erasure.glob_declared_cod_erases r | _ -> false
   in
   let result =
     if
@@ -2170,7 +2183,7 @@ let gen_application ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t
       || ( match callee_ty with
          | Some ty -> result_is_index_only_tvar ty || alias_result_is_boxed ty
          | None -> false )
-    then unbox_into expected_ty result
+    then Translation_coerce.unbox_into expected_ty result
     else result
   in
   (* A call of what [f] names is made of this application, which the
@@ -2184,6 +2197,6 @@ let gen_application ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t
     | Core.Expr.Bound_variable {occurrence = occ; _}, Call (_, Local _, _) -> made_of occ call
     | _ -> call
   in
-  ( match record_call_sig env callee_ty_inst result with
+  ( match Translation_calls.record_call_sig env callee_ty_inst result with
   | Any_cast (ty, call) -> Any_cast (ty, made_of_application call)
   | result -> made_of_application result )

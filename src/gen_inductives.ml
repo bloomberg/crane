@@ -281,7 +281,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let extra_tvars = List.map snd extra_remap in
   let extra_tvar_names = List.mapi (fun i _ -> tvar_id (i + 1)) extra_tvars in
   let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
-  let subst_extra_tvars = Translation_support.make_subst_extra_tvars num_ind_vars extra_tvar_map in
+  let subst_extra_tvars = Translation_tvars.make_subst_extra_tvars num_ind_vars extra_tvar_map in
 
   (* For type conversion in method contexts, use ns = {name} so that
      self-references INSIDE container types get shared_ptr wrapping
@@ -327,7 +327,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
   reset_env_types ();
-  Translation_types.push_parameters env all_ids;
+  Translation_binders.push_parameters env all_ids;
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
@@ -371,7 +371,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      not where a self-call passes something else for it, nor where a closure
      holds on to it. *)
   let ungeneralised =
-    Translation_support.ungeneralised_callable_params ~self_ref:func_ref
+    Translation_callable_params.ungeneralised_callable_params ~self_ref:func_ref
       ~suspended:(Table.is_coinductive_type ret_ty) n_method_params inner_body
   in
   let params_with_idx =
@@ -434,13 +434,13 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
         let wrapped : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
           | Function _ when generalised -> Reference (Forwarding, Variable (Named (fun_tparam_id i)))
-          | _ -> Translation_support.wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
+          | _ -> Translation_ownership.wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
         in
         (id, wrapped) )
       params_with_idx param_ids_with_pos
   in
   let passing =
-    List.map2 (fun (_, ty) (_, _, _, owned, _) -> Translation_support.param_passing ~owned ty) params params_with_idx
+    List.map2 (fun (_, ty) (_, _, _, owned, _) -> Translation_ownership.param_passing ~owned ty) params params_with_idx
   in
 
   {
@@ -618,7 +618,7 @@ let method_head vars s =
 let method_plan func_ref s h =
   let scheme = Core_util.reference_scheme func_ref in
   Callable_abi.of_head ~minted:s.ms_minted
-    ~omitted:(Translation_support.type_arg_omission func_ref)
+    ~omitted:(Translation_tvars.type_arg_omission func_ref)
     ~deduced_callables:s.ms_deduced_callables ~passing:s.ms_passing
     ~receiver:
       { dropped =
@@ -680,7 +680,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method =
-    Translation_support.suspends_whole func_ref ret_ty (snd (collect_lams body))
+    Translation_suspension.suspends_whole func_ref ret_ty (snd (collect_lams body))
   in
   let method_k x : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_method then
@@ -700,7 +700,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      push_vars' puts at the front of the environment).
      Only track ownership for non-trivial types (inductives). *)
   let owned_params =
-    Translation_support.owned_parameters (List.length method_owned_flags)
+    Translation_ownership.owned_parameters (List.length method_owned_flags)
       ~owned:(fun i ->
         (* The receiver at [this_pos] is the const [this], borrowed: a move of
            it copies, and a reuse arm would try to consume it via v_mut() on a
@@ -710,7 +710,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         (not (this_arg_id <> None && i = method_n_params - 1 - this_pos))
         &&
         match List.assoc_opt (Common.get_db_name (i + 1) env) params with
-        | Some ty -> not (Translation_support.declared_by_reference ty)
+        | Some ty -> not (Translation_ownership.declared_by_reference ty)
         | None -> List.nth method_owned_flags i )
       ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
@@ -824,7 +824,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
     finish_fn_body
-      (if Translation_support.core_type_is_void_call ty then Void else ret_cpp)
+      (if Translation_monadic.core_type_is_void_call ty then Void else ret_cpp)
       (List.map (tvar_subst_stmt extended_vars) stmts)
   in
 
@@ -1391,8 +1391,8 @@ let gen_ind_header_v2
           if 0 < Array.length consarg_names then consarg_names.(0) else [] in
         let n_fields = List.length tys_list in
         let field_ids =
-          Translation_support.compute_and_register_field_names ~owner:c cname_str
-            (Translation_support.augment_with_args_renaming c ctor_consarg_names)
+          Translation_naming.compute_and_register_field_names ~owner:c cname_str
+            (Translation_naming.augment_with_args_renaming c ctor_consarg_names)
             ctor_consarg_names n_fields in
         let erase_if_needed (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
           if vars = [] then
@@ -1428,7 +1428,7 @@ let gen_ind_header_v2
                  (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
                  tys_list)
         in
-        let factory_name = Id.of_string (Translation_support.factory_name_of_ctor c) in
+        let factory_name = Id.of_string (Translation_naming.factory_name_of_ctor c) in
         let factory_params =
           List.mapi (fun j ty -> (List.nth field_ids j, value_ty vars ty)) tys_list
         in
@@ -1517,8 +1517,8 @@ let gen_ind_header_v2
                in
                let n_fields = List.length tys_list in
                let field_ids =
-                 Translation_support.compute_and_register_field_names ~owner:c ctor_struct_name
-                   (Translation_support.augment_with_args_renaming c ctor_consarg_names)
+                 Translation_naming.compute_and_register_field_names ~owner:c ctor_struct_name
+                   (Translation_naming.augment_with_args_renaming c ctor_consarg_names)
                    ctor_consarg_names n_fields
                in
                let fields =
@@ -2701,7 +2701,7 @@ let gen_ind_header_v2
          (e.g., Cons → cons).  If this collides with a C++ keyword, the
          type's own name or a type its module declares, the factory falls
          back to PascalCase with trailing underscore (e.g., Char → Char_).
-         See {!Translation_support.factory_name_of_ctor}.
+         See {!Translation_naming.factory_name_of_ctor}.
 
          Move semantics: parameters use the "sink parameter" idiom (passed by
          value, std::move'd into the struct initializer unless trivially
@@ -2712,7 +2712,7 @@ let gen_ind_header_v2
       let mk_factory_methods ret_ty build i tys_list =
         let c = cnames.(i) in
         let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
-        let fname = Translation_support.factory_name_of_ctor ~fallback_idx:i c in
+        let fname = Translation_naming.factory_name_of_ctor ~fallback_idx:i c in
         let factory_name = Id.of_string fname in
         (* Convert Core types both as public API types and constructor storage
            types.  Public APIs remain value-shaped (empty ns); storage uses
@@ -2827,14 +2827,14 @@ let gen_ind_header_v2
                         let arg_var : Cpp_ir.Lowered.Expr.t = Local (Id.of_string ("x" ^ string_of_int k)) in
                         if _storage_arg = api_arg then arg_var
                         else
-                          Translation_support.gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
+                          Translation_conversion.gen_type_conversion_expr ~src_ty:_storage_arg ~dst_ty:api_arg
                             arg_var )
                       (List.combine storage_args api_args)
                   in
                   let call = B.call var call_args in
                   let ret =
                     if storage_ret = api_ret then call
-                    else Translation_support.gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
+                    else Translation_conversion.gen_type_conversion_expr ~src_ty:api_ret ~dst_ty:storage_ret call
                   in
                   (* The lambda's result is the storage-side type by
                      construction -- [ret] is the call converted into it.  Say
@@ -2845,13 +2845,13 @@ let gen_ind_header_v2
                 | _ when storage_ty = api_ty -> E.Move local
                 | _ ->
                   sink_converted api_ty var
-                    (Translation_support.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
+                    (Translation_conversion.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
               end
               | Shared_pointer inner ->
                 let arg = if is_coinductive then var else E.Move var in
                 let converted =
                   if inner = api_ty then arg
-                  else Translation_support.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
+                  else Translation_conversion.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
                 (* A single factory call.  For arena-eligible types this is
                    the runtime-arena-aware factory ([Arena_scoped]:
@@ -2867,7 +2867,7 @@ let gen_ind_header_v2
                 else E.Move local
               | _ ->
                 sink_converted api_ty var
-                  (Translation_support.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
+                  (Translation_conversion.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
         (* Under [Crane NonAtomicRc], a field holding the inductive itself
@@ -3161,7 +3161,7 @@ let gen_ind_header_v2
                       in
                       (* A translation result, converted where the branch
                          takes it. *)
-                      Translation_support.gen_type_conversion_expr
+                      Translation_conversion.gen_type_conversion_expr
 
                         (* Every inductive generated into this same scope --
                            the type itself, its mutual siblings, and any other

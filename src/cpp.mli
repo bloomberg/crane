@@ -131,7 +131,7 @@ val plan_module_names : Core.Program.t -> (Names.ModPath.t * string) list
     generates -- an inductive's, not a class's or a
     record's, nor a custom type's -- decided from the binder names the
     constructor was declared with
-    ({!Translation_support.compute_and_register_field_names}), once the
+    ({!Translation_naming.compute_and_register_field_names}), once the
     constructors' names are. *)
 val plan_field_names : Core.Program.t -> (Names.GlobRef.t * Names.Id.t list) list
 

@@ -53,7 +53,7 @@ let begin_body ~owner ?(function_ = false) () =
     stack holding exactly [params] (innermost binder first, as returned by
     {!push_vars'}), restoring the ambient stack afterwards.  [env] is the
     type-variable scope the parameters' C++ types are assigned in; see
-    {!Translation_types.push_binders}.
+    {!Translation_binders.push_binders}.
 
     An instance method's body is generated outside any enclosing function, so
     without this the stack still describes whatever was translated last — and
@@ -64,20 +64,20 @@ let begin_body ~owner ?(function_ = false) () =
     [?outer] are the binders around the method -- an instance's own
     parameters, its dictionaries among them -- pushed beneath [params].
     [?cpp] gives C++ types for [params] already decided by the caller, passed
-    on to {!Translation_types.push_binders} and recorded as the head's declared
+    on to {!Translation_binders.push_binders} and recorded as the head's declared
     ones ([declared_outer] in {!Translation_state}). *)
 let with_method_env_types ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(outer = []) env params f =
   let saved_env_types = (!tctx).lexical.env_types in
-  let saved_erased = Translation_types.save_erased_env () in
+  let saved_erased = Translation_binders.save_erased_env () in
   let saved_declared = (!tctx).lexical.declared_outer in
   reset_env_types ();
-  Translation_types.push_parameters env outer;
-  Translation_types.push_binders ~cpp env params;
+  Translation_binders.push_parameters env outer;
+  Translation_binders.push_binders ~cpp env params;
   set_lexical (fun l -> { l with declared_outer = (if cpp = [] then None else Some (Lexenv.depth l.env_types, cpp)) });
   Fun.protect
     ~finally:(fun () ->
       set_lexical (fun l -> { l with env_types = saved_env_types; declared_outer = saved_declared });
-      Translation_types.restore_erased_env saved_erased )
+      Translation_binders.restore_erased_env saved_erased )
     f
 
 (** Count the actual (non-promoted) type parameters in [signature].  Entries
@@ -470,7 +470,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Some ty ->
       let binders, _ = collect_lams b in
       let doms = Type_util.core_domains ty in
-      let tc_names = ref (Translation_support.collect_typeclass_param_ids ty) in
+      let tc_names = ref (Translation_tvars.collect_typeclass_param_ids ty) in
       let outer_first =
         List.mapi
           (fun j _ ->
@@ -569,7 +569,7 @@ let promoted_resolutions_of_body ?r ?ty b =
      the template names those binders take. *)
   ( match (r, ty) with
   | Some r, Some ty ->
-    let tc_names = Translation_support.collect_typeclass_param_ids ty in
+    let tc_names = Translation_tvars.collect_typeclass_param_ids ty in
     List.iter
       (fun (inst, ords) ->
         match
@@ -631,12 +631,12 @@ let with_body_resolutions r b f =
     standing for [M A] is [typename _tcI0::M], an associated type of the
     instance, not a template parameter.  Left as a free template parameter it
     would be undeducible: nothing in the signature determines it.  The
-    positions come from {!Translation_support.hkt_tvar_positions_of_type}. *)
+    positions come from {!Translation_tvars.hkt_tvar_positions_of_type}. *)
 let hkt_tvar_resolutions_of_type ?source_order ty : (int * Cpp_ir.Lowered.Type.t) list =
   List.map
-    (fun { Translation_support.htp_tvar; htp_instance; htp_field } ->
+    (fun { Translation_tvars.htp_tvar; htp_instance; htp_field } ->
       (htp_tvar, Cpp_ir.Type.Member (htp_instance, htp_field)) )
-    (Translation_support.hkt_tvar_positions_of_type ?source_order ty)
+    (Translation_tvars.hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
     {!hkt_tvar_resolutions_of_type}) throughout the statements of a function
@@ -720,7 +720,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
     let converted =
       List.map
         (fun (field_id, at) ->
-          Translation_support.gen_type_conversion_expr
+          Translation_conversion.gen_type_conversion_expr
             (* Every inductive generated into this same scope -- the type
                itself, its mutual siblings, and any other module-local
                inductive -- is spelled bare here, so it must not be

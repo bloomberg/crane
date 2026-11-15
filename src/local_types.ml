@@ -88,7 +88,7 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     builds (see the typing note on {!Core.Expr.t}), so it knows its type
     without reconstruction.  So does a fully applied global, from its declared
     codomain as the call instantiates it
-    ({!Translation_types.core_app_result_type}).  A recursive call, its head a
+    ({!Translation_calls.core_app_result_type}).  A recursive call, its head a
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
 let rec tail_result_type = function
@@ -98,7 +98,7 @@ let rec tail_result_type = function
   | Core.Expr.Boxed_value {value = b; _}
   | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type b
   | Core.Expr.Construct {result_type = ty; _} -> Some ty
-  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_types.core_app_result_type f args
+  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_calls.core_app_result_type f args
   | Core.Expr.Match {branches = brs; _} ->
     Array.fold_left
       (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type b)

@@ -13,10 +13,9 @@ open Util
 open Translation_state
 open Type_util
 open Core_query
-open Translation_support
-open Translation_types
-open Translation_calls
 open Translation_knot
+
+module IntSet = Escape.IntSet
 
 (** The names of the variables at the de Bruijn indices [is] a closure
    captures, in the order a capture list spells them; a class instance is a
@@ -48,8 +47,10 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
   (* What the lambda takes by move as it is made. *)
   let moved_captures = moved_names env (Ownership_ir.captures (!tctx).lexical.move_plan a) in
   (* Whether a binder becomes a C++ parameter: see
-     {!Translation_types.lambda_binder_emitted}. *)
-  let binder_emitted ~body binders i ty = lambda_binder_emitted env ~expected_ty ~body binders i ty in
+     {!Translation_lambda_params.lambda_binder_emitted}. *)
+  let binder_emitted ~body binders i ty =
+    Translation_lambda_params.lambda_binder_emitted env ~expected_ty ~body binders i ty
+  in
   (* A slot spelled [std::type_identity_t<Id_<...>>] -- a definitional
      class, taken out of deduction -- is still a function type, and the
      lambda is written against it: its arity and its result. *)
@@ -60,7 +61,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       | Const t' | Reference (Lvalue, t') -> as_fun t'
       | Function _ -> Some t
       | t -> (
-        match unfold_cpp_typedef env t with
+        match Translation_types.unfold_cpp_typedef env t with
         | Function _ as f when f <> t -> Some f
         | _ -> None )
     in
@@ -83,7 +84,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       | Const t | Reference (_, t) -> fun_ty_of t
       | Function (dom, cod) -> Some (List.length dom, cod)
       | t -> (
-        match unfold_cpp_typedef env t with
+        match Translation_types.unfold_cpp_typedef env t with
         | Function _ as f when f <> t -> fun_ty_of f
         | _ -> None )
     in
@@ -152,7 +153,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           | Core.Type.Arrow {parameter = a; result = b} -> real a && leading (i - 1) b
           | _ -> false
         in
-        not (match slot.expected_core_ty with Some ty -> leading n ty | None -> false)
+        not (match slot.Translation_slot.expected_core_ty with Some ty -> leading n ty | None -> false)
       then None
       else if
         (* A binder is only worth writing if the slot says what it is.  The
@@ -167,7 +168,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
            which would also displace the C++-level expansions that do have
            types to work from. *)
         not
-          ( match Option.map (unfold_cpp_typedef env) expected_ty with
+          ( match Option.map (Translation_types.unfold_cpp_typedef env) expected_ty with
           | Some (Function (doms, _)) when List.length doms = n ->
             let tvars = get_current_type_vars () in
             List.for_all
@@ -208,15 +209,17 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
     | _ -> (args, a)
   in
   (* The binders refined against the slot, where it is not a box: see
-     {!Translation_types.slot_refined_lambda}. *)
-  let binders_left_open = List.exists (fun (_, ty) -> has_open_meta ty) args in
+     {!Translation_lambda_params.slot_refined_lambda}. *)
+  let binders_left_open = List.exists (fun (_, ty) -> Translation_lambda_params.has_open_meta ty) args in
   let args, a =
-    slot_refined_lambda env ~expected_core_ty:(if boxed slot then None else slot.expected_core_ty) args a
+    Translation_lambda_params.slot_refined_lambda env
+      ~expected_core_ty:(if Translation_slot.boxed slot then None else slot.Translation_slot.expected_core_ty)
+      args a
   in
   let lam_params = List.map (fun (x, y) -> (id_of_binder_name x, y)) args in
   let args, env = push_vars' lam_params env in
   let saved_env_types = (!tctx).lexical.env_types in
-  push_binders env args;
+  Translation_binders.push_binders env args;
   (* Infer owned/borrowed for each lambda parameter using escape analysis.
 
      Owned parameters (stored in a data structure or returned) are passed by
@@ -228,7 +231,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
      (e.g. captured by a closure, stored in a constructor, or returned), it
      is marked as owned.  See {!Escape.infer_owned_params}. *)
   let n_all_params = List.length lam_params in
-  let owned_flags = infer_owned_flags a args
+  let owned_flags = Translation_ownership.infer_owned_flags a args
   in
   let args_with_owned =
     List.map2 (fun (id, ty) owned -> (id, ty, owned)) args owned_flags
@@ -283,7 +286,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
        has already settled what the lambda is, and a polymorphic function
        object does not convert to it. *)
     let slot_declares_signature =
-      match Option.map (unfold_cpp_typedef env) expected_ty with
+      match Option.map (Translation_types.unfold_cpp_typedef env) expected_ty with
       | Some (Function _) -> true
       | _ -> false
     in
@@ -312,7 +315,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       (* What the slot this lambda flows into declares its parameters to be,
          when it declares a signature at all. *)
       let expected_param_cpp_tys =
-        match Option.map (unfold_cpp_typedef env) expected_ty with
+        match Option.map (Translation_types.unfold_cpp_typedef env) expected_ty with
         | Some (Function (doms, _)) -> Some doms
         | _ -> None
       in
@@ -334,7 +337,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
               | None -> false
             in
             let param_cpp_ty, body_subst =
-              lambda_param_cpp_type env ~ns:(!tctx).input.method_self_ns ~tvars ~rank2_carrier
+              Translation_lambda_params.lambda_param_cpp_type env ~ns:(!tctx).input.method_self_ns ~tvars ~rank2_carrier
                 ~reified:((!tctx).input.itree_mode = Reified) ~n_params:n_all_params ~body:a ~unused
                 ~slot_dom:(slot_dom_cpp_ty j) arg
             in
@@ -368,15 +371,16 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           Option.map (fun j -> let ty, _, _ = List.nth cpp_arg_info j in ty)
             (position 0 emitted_binder_indices)
         in
-        owned_parameters (List.length args_with_owned)
-          ~owned:(fun i -> match declared i with Some ty -> not (declared_by_reference ty) | None -> false)
+        Translation_ownership.owned_parameters (List.length args_with_owned)
+          ~owned:(fun i ->
+            match declared i with Some ty -> not (Translation_ownership.declared_by_reference ty) | None -> false )
           ~declared
           ~ty:(fun i -> let _, ty, _ = List.nth args_with_owned i in ty)
       in
       (* A template parameter C++ cannot deduce is worse than the erasure
          it replaces, so the function object is polymorphic only where the
          carrier reaches a parameter: an erased position the body alone
-         mentions stays [std::any].  {!mk_lambda} is what enforces that;
+         mentions stays [std::any].  {!Translation_cpp_build.mk_lambda} is what enforces that;
          asking it here keeps the body's generation in step with the
          signature it will be given. *)
       let carrier =
@@ -397,9 +401,9 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                filtered_args_with_owned )
             cpp_arg_info
           |> List.map (fun ((j, (id, core_ty)), (ty, _, _)) ->
-               (id, lambda_param_assigned ~slot_dom:(slot_dom_cpp_ty j) core_ty ty))
+               (id, Translation_lambda_params.lambda_param_assigned ~slot_dom:(slot_dom_cpp_ty j) core_ty ty))
         in
-        assign_binder_types env
+        Translation_binders.assign_binder_types env
           ~cpp:(List.map (fun (id, _) -> List.assoc_opt id declared) args)
           args
       in
@@ -410,15 +414,15 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                | Core.Type.Arrow {result = cod; _} -> strip_arrows (n - 1) cod
                | _ -> None
         in
-        (match slot.expected_core_ty with
+        (match slot.Translation_slot.expected_core_ty with
         | Some fn_ty ->
           (match strip_arrows n_all_params fn_ty with
           | Some cod ->
             (match resolve_meta cod with
             | Core.Type.Erased _ | Core.Type.Unknown
-            | Core.Type.Meta {contents = None} | Core.Type.Open _ -> slot.expected_core_ty
+            | Core.Type.Meta {contents = None} | Core.Type.Open _ -> slot.Translation_slot.expected_core_ty
             | _ -> Some cod)
-          | None -> slot.expected_core_ty)
+          | None -> slot.Translation_slot.expected_core_ty)
         | None -> None)
       in
       (* Generate the body, then check if the body returns a lambda (this
@@ -443,12 +447,12 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          an absurd case under [fun (e : p = q) => ...] passed where a [nat]
          is wanted throws from a [uint64_t] thunk. *)
       let binderless_result =
-        match (filtered_args, carrier, Option.map (unfold_cpp_typedef env) expected_ty) with
+        match (filtered_args, carrier, Option.map (Translation_types.unfold_cpp_typedef env) expected_ty) with
         | [], None, Some t when t <> Void -> Some t
         | _ -> None
       in
       let with_lam_return_type f =
-        match Option.map (unfold_cpp_typedef env) expected_ty with
+        match Option.map (Translation_types.unfold_cpp_typedef env) expected_ty with
         | _ when binderless_result <> None -> with_cpp_return_type binderless_result f
         | _ when carrier <> None ->
           (* A polymorphic function object returns at the type its own
@@ -461,8 +465,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let ret =
             match (body_expected_core_ty, rank2_carrier) with
             | Some core_ty, Some x ->
-              Some (Rank2.at_carrier x (cpp_ir_of_core_type env (get_current_type_vars ()) core_ty))
-            | Some core_ty, None -> Some (cpp_ir_of_core_type env (get_current_type_vars ()) core_ty)
+              Some (Rank2.at_carrier x (Translation_types.cpp_ir_of_core_type env (get_current_type_vars ()) core_ty))
+            | Some core_ty, None -> Some (Translation_types.cpp_ir_of_core_type env (get_current_type_vars ()) core_ty)
             | None, _ -> None
           in
           with_cpp_return_type ret f
@@ -494,7 +498,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
             with_lam_return_type (fun () ->
               with_region ~owned:lambda_owned a (fun () ->
                 gen_stmts
-                  ~slot:{slot with expected_core_ty = body_expected_core_ty}
+                  ~slot:{slot with Translation_slot.expected_core_ty = body_expected_core_ty}
                   env
                   (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x))
                   a ) ) )
@@ -503,12 +507,12 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         List.fold_left
           (fun stmts (_, _, subst) ->
             match subst with
-            | Some (id, expr) -> List.map (local_var_subst_stmt id expr) stmts
+            | Some (id, expr) -> List.map (Translation_lifting.local_var_subst_stmt id expr) stmts
             | None -> stmts )
           body_stmts cpp_arg_info
       in
       let body_stmts =
-        return_captures_by_value body_stmts
+        Translation_lambda_params.return_captures_by_value body_stmts
       in
       (* When the lambda body is a standalone fixpoint (Core.Expr.Fixpoint with no
          applied args), the fix represents a function value that would make
@@ -543,7 +547,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                 List.mapi
                   (fun i (_, core_ty) ->
                     let bare =
-                      cpp_of_core env core_ty
+                      Translation_types.cpp_of_core env core_ty
                     in
                     let param_ty : Cpp_ir.Lowered.Type.t =
                       match bare with
@@ -624,10 +628,10 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       let branch_join =
         if not dropped_type_binder then None
         else
-          match List.map (cpp_of_core env) (leaf_rtys a) with
+          match List.map (Translation_types.cpp_of_core env) (leaf_rtys a) with
           | t :: (_ :: _ as rest) ->
             let j = List.fold_left join t rest in
-            if Cpp_ir.Types.prints_as_any j || not (names_only_scoped_tvars j) then None
+            if Cpp_ir.Types.prints_as_any j || not (Translation_types.names_only_scoped_tvars j) then None
             else Some j
           | _ -> None
       in
@@ -643,7 +647,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           match Option.map strip_cpp_ref_const expected_ty with
           | Some (Function (_, cod))
             when cod <> Void && (not (Cpp_ir.Types.prints_as_any cod))
-                 && names_only_scoped_tvars cod ->
+                 && Translation_types.names_only_scoped_tvars cod ->
             Some cod
           | _ -> None )
         | _ -> None
@@ -661,8 +665,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           | None -> slot_result_on_disagreement () )
       in
       match
-        mk_lambda ?tparams:(Option.map (fun x -> [x]) carrier) (List.rev cpp_args) ret_ann body_stmts
-          ~capture:Stored
+        Translation_cpp_build.mk_lambda ?tparams:(Option.map (fun x -> [x]) carrier) (List.rev cpp_args) ret_ann
+          body_stmts ~capture:Stored
       with
       | Lambda l -> Cpp_ir.Expr.Lambda {l with moved = moved_captures}
       | f -> f )
@@ -701,7 +705,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
            type variables from the argument types, and we compute
            non-deducible tvars via std::invoke_result_t. *)
         let n = List.length non_dummy_param_tys in
-        let is_unary_method = n = 1 && is_methodified r in
+        let is_unary_method = n = 1 && Translation_lambda_params.is_methodified r in
         if is_unary_method then
           (* The function was methodified: it is spelled [x.f()], not [f(x)],
              so no forwarding lambda can name it.  Emit the plain reference
@@ -743,7 +747,9 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         let local_tvars =
           List.init (List.fold_left max 0 all_tvars) (fun k -> local_tvar (k + 1))
         in
-        let local_ty ty = template_arg_of_core_type ~site:Through_tvar env local_tvars ty in
+        let local_ty ty =
+          Translation_types.template_arg_of_core_type ~site:Cpp_ir.Types.Through_tvar env local_tvars ty
+        in
         let local_var j : Cpp_ir.Lowered.Type.t = Variable (Index (j, Some (local_tvar j))) in
         (* A forwarding parameter, and the argument that forwards it. *)
         let forwarding : Cpp_ir.Lowered.Type.t = Reference (Forwarding, Auto) in
@@ -763,7 +769,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
               t
             | _ -> Decltype_auto
           in
-          mk_lambda ~tparams
+          Translation_cpp_build.mk_lambda ~tparams
             (List.map2 (fun ty id -> (ty, Some id)) params arg_ids)
             (Some ret) [Return (Some call)] ~capture:Stored
         in
@@ -793,7 +799,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                 :: List.map (fun j -> Cpp_ir.Type.Reference (Lvalue, local_var j)) deducible_tvars )
           in
           let ty_args =
-            written_at_variables r
+            Translation_calls.written_at_variables r
               (List.map
                  (fun i -> (i, if IntSet.mem i deducible_set then local_var i else invoke_result))
                  (List.sort compare (deducible_tvars @ non_deducible_tvars)) )
@@ -820,7 +826,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let own_index = Core_util.Var_types.is_empty tys_inner && all_tvars <> [] in
           let at_own_index ty =
             Type_util.resolve_tvars_to_any
-              (cpp_ir_of_core_type env [] ty)
+              (Translation_types.cpp_ir_of_core_type env [] ty)
           in
           let mentions_tvar ty =
             not (IntSet.is_empty (collect_tvars_set IntSet.empty ty))
@@ -831,7 +837,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                 match ty with
                 | Core.Type.Arrow _ -> forwarding
                 | _ when IntSet.is_empty (spelled_tvars_of IntSet.empty ty) ->
-                  Reference (Lvalue, Const (cpp_ir_of_core_type env [] ty))
+                  Reference (Lvalue, Const (Translation_types.cpp_ir_of_core_type env [] ty))
                 | _ when own_index -> Reference (Lvalue, Const Auto)
                 | _ -> forwarding )
               non_dummy_param_tys
@@ -851,7 +857,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let by_var =
             List.map
               (fun (v, ty) ->
-                (Scheme.Var.ordinal v, cpp_ir_of_core_type env inner_tvars ty) )
+                (Scheme.Var.ordinal v, Translation_types.cpp_ir_of_core_type env inner_tvars ty) )
               (Core_util.Var_types.bindings tys_inner)
           in
           (* An erased argument is left to deduction -- unless nothing can
@@ -870,10 +876,10 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let ret =
             Cpp_ir.Types.substitute
               (fun i -> List.assoc_opt i by_var)
-              (cpp_ir_of_core_type env [] result_core)
+              (Translation_types.cpp_ir_of_core_type env [] result_core)
           in
           lambda ~ret [] params
-            (Cpp_ir.Build.call (mk_cppglob r (written_at_variables r by_var)) fwd_args)
+            (Cpp_ir.Build.call (mk_cppglob r (Translation_calls.written_at_variables r by_var)) fwd_args)
       else
         (* Every binder was a type: the body is the value the slot takes. *)
         gen_expr ?expected_ty ~slot env a
@@ -895,7 +901,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         Cpp_ir.Build.call f [] )
   | _ ->
     let core_arity =
-      match slot.expected_core_ty with
+      match slot.Translation_slot.expected_core_ty with
       | Some ty -> count_core_value_arrows ty
       | None -> 0
     in
@@ -919,4 +925,5 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         !found
       | _ -> false
     in
-    eta_expand_to_expected ?expected_ty ~core_arity ~returns_a_lambda ~arity:(List.length filtered_args) f )
+    Translation_coerce.eta_expand_to_expected ?expected_ty ~core_arity ~returns_a_lambda
+      ~arity:(List.length filtered_args) f )

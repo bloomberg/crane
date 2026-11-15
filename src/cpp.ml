@@ -2493,7 +2493,7 @@ let plan_accessors s =
       | _ -> (
         match Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty with
         | Function _ -> false
-        | _ when Translation_support.thunk_reason r = Some Throws -> false
+        | _ when Translation_suspension.thunk_reason r = Some Translation_suspension.Throws -> false
         | cty ->
           in_template
           || in_struct
@@ -2988,9 +2988,9 @@ let plan_field_names s =
                        if j < Array.length p.constructor_argument_names then p.constructor_argument_names.(j) else []
                      in
                      ( c,
-                       Translation_support.compute_and_register_field_names ~owner:c
+                       Translation_naming.compute_and_register_field_names ~owner:c
                          (Type_util.ctor_struct_name_of_ref ~fallback_idx:j c)
-                         (Translation_support.augment_with_args_renaming c consarg_names)
+                         (Translation_naming.augment_with_args_renaming c consarg_names)
                          consarg_names
                          (List.length p.constructor_argument_types.(j)) ) ) )
              (Array.to_list ind.packets) )

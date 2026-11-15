@@ -1486,7 +1486,7 @@ let log_axioms = ref Ref.Can.Set.empty
 
 (* Whether a definition is a cofixpoint, or only throws, is a fact about the
    definition, and it decides whether naming it calls it
-   ({!Translation_support.thunk_reason}): keyed canonically, so a reference
+   ({!Translation_suspension.thunk_reason}): keyed canonically, so a reference
    through a module alias is called as the definition's own name is. *)
 let cofixpoints = ref Ref.Can.Set.empty
 
@@ -4143,8 +4143,8 @@ let extract_numeral r fmt =
     (* Try to detect a Peano pattern: the last nullary constructor is taken
        as zero and the last unary one as successor, -1 where there is none.
        Non-Peano types get indices too (N: N0 and Npos; Z: Z0 and Zneg), and
-       are not folded only because [Translation_types.try_fold_numeral] never
-       finds a chain of them ending in the zero constructor. *)
+       are not folded only because [Numeral_literal.peano] never finds a
+       chain of them ending in the zero constructor. *)
     let ctor_arities = mip.mind_consnrealdecls in
     let zero_idx = ref (-1) in
     let succ_idx = ref (-1) in

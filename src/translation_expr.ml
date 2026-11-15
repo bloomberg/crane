@@ -16,9 +16,6 @@ open Util
 open Translation_state
 open Type_util
 open Core_query
-open Translation_support
-open Translation_types
-open Translation_calls
 open Translation_application
 open Translation_construct
 open Translation_match
@@ -56,7 +53,7 @@ let check_binder_scopes env i =
 (** [gen_expr ?expected_ty ?slot env core_e] -- the CppIR expression for the
     Core expression [core_e], generated against [expected_ty] where the
     position states one.  A global that is called when named
-    ({!naming_calls}: a definition that only throws, emitted as a
+    ({!Translation_suspension.naming_calls}: a definition that only throws, emitted as a
     zero-parameter function) becomes a call of no arguments in the
     [Core.Expr.Global] case.
 
@@ -74,12 +71,12 @@ let check_binder_scopes env i =
     expression, the body of a lambda that is itself the stored value.  A
     position that opens a new slot (a let-bound right-hand side, a
     non-tail statement) does not take it. *)
-let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) env
+let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Translation_slot.empty_slot) env
     (core_e : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match core_e with
   | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
     check_binder_scopes env i;
-    let boxed_read = read_is_boxed i occ in
+    let boxed_read = Translation_binders.read_is_boxed i occ in
     let x = try get_db_name i env with Failure _ -> db_fallback_id i in
     let var_expr : Cpp_ir.Lowered.Expr.t = Local x in
     (* Move on a last use of a variable the region owns, as its plan says
@@ -98,7 +95,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
         (* The copy the plan names is the one the variable's declaration
            makes, where Core says what its type is. *)
         ( if Probe.checking () && Ownership_ir.read_is_typed (!tctx).lexical.move_plan occ then
-            match binder_cpp_type i with
+            match Translation_binders.binder_cpp_type i with
             (* [auto] says nothing of the type it deduces. *)
             | Some Cpp_ir.Type.(Auto | Const Auto | Reference (_, (Auto | Const Auto))) -> ()
             | Some declared when Ownership_ir.copy_of_declared declared <> copy ->
@@ -127,7 +124,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
            the variable at some other depth. *)
         result
       | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void ->
-        if resolves_to_any_type ty then result
+        if Translation_types.resolves_to_any_type ty then result
         else
           (* For a CUSTOM-LIST container target, the erased var is boxed at
              runtime as [deque<...erased...>] (each element fully erased).  A
@@ -180,7 +177,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
          once -- a [let fix] or a parameter of type [nat -> nat -> nat] where
          a [nat -> (nat -> nat)] is expected -- is curried to the slot, as a
          global named as a value is. *)
-      let unfolded = Option.map (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t)) in
+      let unfolded = Option.map (fun t -> Translation_types.unfold_cpp_typedef env (strip_cpp_ref_const t)) in
       let expected = unfolded expected_ty in
       let curries t =
         match (expected, unfolded t) with
@@ -190,13 +187,14 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
       ( match
         ( expected,
           unfolded
-            (planned_binder_type_or_derive ~use:"curried read" ~agree:(fun p l -> curries p = curries l) env i occ) )
+            (Translation_binders.planned_binder_type_or_derive ~use:"curried read"
+               ~agree:(fun p l -> curries p = curries l) env i occ) )
       with
       | Some (Function ((_ :: _ as exp_dom), _)), Some (Function (dom, _))
         when List.length dom > List.length exp_dom -> (
         (* The closure reads the function where it is made, and takes it
            there where this read moves it. *)
-        match (curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr, var_expr) with
+        match (Translation_coerce.curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr, var_expr) with
         | Lambda l, Local x when move_candidate -> Lambda {l with moved = [x]}
         | e, _ -> e )
       | _ -> result )
@@ -216,12 +214,13 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
     gen_expr ?expected_ty ~slot env (Core_normalize.spine e)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
-                     arguments = a1 :: l} when is_effect Core_effects.Return use ->
+                     arguments = a1 :: l} when Translation_monadic.is_effect Core_effects.Return use ->
     Translation_effects.gen_return_expr env ~r ~use ~a1 ~l
   (* | Core.Expr.Apply (Core.Expr.Global {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (Core.Expr.Apply (a1, a2::[])) *)
   | Core.Expr.Apply {callee = Core.Expr.Global use;
-                     arguments = _ :: _ :: _} as a when is_sequential_effect Core_effects.Bind use ->
+                     arguments = _ :: _ :: _} as a
+    when Translation_monadic.is_sequential_effect Core_effects.Bind use ->
     Translation_effects.gen_bind_expr env a
   | Core.Expr.Apply {callee = (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _); _} as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
@@ -243,9 +242,9 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
      once cannot drop an effect; only where it comes out as a call.  Core
      decides which calls those are ({!Core_elaborate.closed_instance_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use); arguments = args} as e
-    when (not slot.building_constant)
+    when (not slot.Translation_slot.building_constant)
          && Core_elaborate.closed_instance_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args -> (
-    let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
+    let built = gen_expr ?expected_ty ~slot:{slot with Translation_slot.building_constant = true} env e in
     match built with
     | Call _ ->
       Cpp_ir.Build.call
@@ -258,16 +257,16 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
   | Core.Expr.Global ({callee = x; _} as use) when is_inline_custom x ->
     let tys = Core_util.written_type_args use in
     let core_ty = callee_core_type_exn x in
-    let ty = cpp_of_core env core_ty in
+    let ty = Translation_types.cpp_of_core env core_ty in
     ( match ty with
     | Function (dom, cod) ->
       eta_fun ?expected_ty env (Core.Expr.Global use) []
     | _ ->
       mk_cppglob
         ?yields:
-          (glob_yields env x (Core_util.instantiate_written ~reader:"glob_yields" use))
+          (Translation_calls.glob_yields env x (Core_util.instantiate_written ~reader:"glob_yields" use))
         x
-        (template_params_of_core ~site:Through_tvar env
+        (Translation_types.template_params_of_core ~site:Cpp_ir.Types.Through_tvar env
            (List.map snd (Core_util.Var_types.bindings tys)) ) )
   | Core.Expr.Global ({callee = x; _} as use) ->
     let tys = Core_util.written_type_args use in
@@ -276,7 +275,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     let by_var =
       List.map
         (fun (v, ty) ->
-          let t = cpp_of_core env (type_simpl ty) in
+          let t = Translation_types.cpp_of_core env (type_simpl ty) in
           ( Scheme.Var.ordinal v,
             match t with
             | Variable (Index (_, None)) when tvars <> [] -> Cpp_ir.Type.Erased Type
@@ -294,7 +293,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
               match List.nth_opt names (i - 1) with
               | Some v -> (
                 match List.find_opt (fun (v', _) -> Id.equal v v') m with
-                | Some (_, b) when names_only_scoped_tvars b -> b
+                | Some (_, b) when Translation_types.names_only_scoped_tvars b -> b
                 | _ -> t )
               | None -> t ) )
         by_var
@@ -303,14 +302,14 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
        [MonadIter m] -- has its erased type arguments stated by the callable
        the slot takes. *)
     let by_var =
-      match (List.exists (fun (_, t) -> Cpp_ir.Types.prints_as_any t) by_var, slot.call_result) with
+      match (List.exists (fun (_, t) -> Cpp_ir.Types.prints_as_any t) by_var, slot.Translation_slot.call_result) with
       | true, (Some _ as res) -> (
-        match instance_family_binding env x tys res with
+        match Translation_calls.instance_family_binding env x tys res with
         | Some (_, names, m) -> fill_from (names, m) by_var
         | None -> by_var )
       | _ -> by_var
     in
-    let result_bindings () = callee_result_bindings env x ~explicit:true expected_ty in
+    let result_bindings () = Translation_calls.callee_result_bindings env x ~explicit:true expected_ty in
     let by_var =
       match expected_ty with
       | Some _ when by_var = [] -> (
@@ -321,7 +320,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
             List.mapi
               (fun k v ->
                 match List.find_opt (fun (v', _) -> Id.equal v v') m with
-                | Some (_, b) when names_only_scoped_tvars b -> Some (k + 1, b)
+                | Some (_, b) when Translation_types.names_only_scoped_tvars b -> Some (k + 1, b)
                 | _ -> None )
               names
           in
@@ -336,12 +335,12 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     in
     let tys_cpp = List.map snd by_var in
     let yields =
-      glob_yields env x (Core_util.instantiate_written ~reader:"glob_yields" use)
+      Translation_calls.glob_yields env x (Core_util.instantiate_written ~reader:"glob_yields" use)
     in
     let cglob =
-      mk_cppglob ?yields x (written_at_variables x (filter_erased_keyed by_var))
+      mk_cppglob ?yields x (Translation_calls.written_at_variables x (filter_erased_keyed by_var))
     in
-    if naming_calls ~cpp_of:(cpp_of_core env) x then
+    if Translation_suspension.naming_calls ~cpp_of:(Translation_types.cpp_of_core env) x then
       (* A function of no parameters named is called, a call made of this
          use. *)
       made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob [])
@@ -349,14 +348,14 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
       ( match
           Option.map
             (fun ty ->
-              materialise_opaque (cpp_of_core env (expand_core_fun_alias ty)))
+              materialise_opaque (Translation_types.cpp_of_core env (expand_core_fun_alias ty)))
             (callee_core_type x)
         with
       (* A declaration whose result erased -- because its Rocq type hides
          the quantifier behind a type alias, or because a type index alone
          pins the result down -- hands back a box whatever the use site's
          instantiation says, so a use site naming concrete types reaches it
-         through the adapter {!coerce} builds.  The type the use site wants
+         through the adapter {!Translation_coerce.coerce} builds.  The type the use site wants
          is the slot's when there is one; failing that, a single type
          argument tells what the one quantifier every erased position came
          from was instantiated at. *)
@@ -365,7 +364,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
         ->
         let into =
           match (expected_ty, tys_cpp) with
-          | Some into, _ when names_only_scoped_tvars into -> Some into
+          | Some into, _ when Translation_types.names_only_scoped_tvars into -> Some into
           | _, [t] when not (Cpp_ir.Types.prints_as_any t) ->
             let rec instantiate : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
               | Any -> t
@@ -394,14 +393,14 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
                    (fun (f : Cpp_ir.Lowered.Type.t) ->
                      match f with Function _ -> not (is_fully_erased_fun_ty f) | _ -> false )
                    dom ->
-            curry_value_to_expected env ~exact:true
-              (Option.map expand_core_fun_alias (instantiated_type use)) cglob
+            Translation_coerce.curry_value_to_expected env ~exact:true
+              (Option.map expand_core_fun_alias (Translation_calls.instantiated_type use)) cglob
           | _ -> cglob
         in
         ( match into with
-        | Some into -> coerce ~from ~into cglob
+        | Some into -> Translation_coerce.coerce ~from ~into cglob
         | None -> cglob )
-      | _ -> curry_to_expected env ?expected_ty use cglob )
+      | _ -> Translation_calls.curry_to_expected env ?expected_ty use cglob )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when is_custom r ->
     gen_expr_custom_cons ?expected_ty ~slot env ty r ts
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _}
@@ -430,9 +429,9 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
      left as it is.  Core decides which terms those are
      ({!Core_elaborate.shared_constant}). *)
   | Core.Expr.Construct {arguments = ts; _} as e
-    when (not slot.building_constant) && Core_elaborate.shared_constant ~walk:(elaborations ()) e
+    when (not slot.Translation_slot.building_constant) && Core_elaborate.shared_constant ~walk:(elaborations ()) e
          && not (takes_reuse_token e) -> (
-    let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
+    let built = gen_expr ?expected_ty ~slot:{slot with Translation_slot.building_constant = true} env e in
     match built with
     | Call (_, Type_member (Entity_application (n, _, _), _), _)
       when Table.is_shared_variant n && ts <> [] ->
@@ -464,7 +463,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
   | Core.Expr.UInt63 x -> Literal (Uint63 x)
   | Core.Expr.Numeral {inductive = ind; value = n} -> (
     match Table.get_numeral_info ind with
-    | Some info -> render_numeral info n
+    | Some info -> Translation_cpp_build.render_numeral info n
     | None ->
       CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
   | Core.Expr.Float64 f -> Literal (Float f)
@@ -482,11 +481,11 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     (* An erased proof or type reaching an expression position: a dead one,
        an absurd branch.  Where it is a value a constructor stores it is the
        empty box instead, see {!gen_stored_value}. *)
-    Abort ("unreachable", abort_ty expected_ty)
+    Abort ("unreachable", Translation_cpp_build.abort_ty expected_ty)
   | Core.Expr.Runtime_error msg ->
     (* Unreachable/absurd case - e.g., match on empty type *)
-    Abort (msg, abort_ty expected_ty)
-  | Core.Expr.Axiom_value s -> Abort ("unrealized axiom: " ^ s, abort_ty expected_ty)
+    Abort (msg, Translation_cpp_build.abort_ty expected_ty)
+  | Core.Expr.Axiom_value s -> Abort ("unrealized axiom: " ^ s, Translation_cpp_build.abort_ty expected_ty)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
 (** A term crossing a type gap erasure opened: a [Core.Expr.Coerce] with its
@@ -496,7 +495,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
 
 and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coercion ~boxed t occ :
     Cpp_ir.Lowered.Expr.t =
-  let expected_ty = planned_position occ ~live:expected_ty in
+  let expected_ty = Translation_binders.planned_position occ ~live:expected_ty in
   (* A value crossing into a slot that is really [std::any] has to be built
      at the canonical erased shape -- every component boxed -- because the
      consumer recovers it with a fixed [any_cast] and cannot know the
@@ -515,9 +514,9 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
       (match expected_ty with
           | Some t -> Cpp_ir.Types.prints_as_any t
           | None -> true)
-      && Cpp_ir.Types.prints_as_any (cpp_of_core env into)
-      && not (Cpp_ir.Types.prints_as_any (cpp_of_core env from)) ->
-      Some (box_kind_of_cpp_type (cpp_of_core env into))
+      && Cpp_ir.Types.prints_as_any (Translation_types.cpp_of_core env into)
+      && not (Cpp_ir.Types.prints_as_any (Translation_types.cpp_of_core env from)) ->
+      Some (Translation_types.box_kind_of_cpp_type (Translation_types.cpp_of_core env into))
     | Some _ | None -> None
   in
   (* A lambda is written against the slot it fills -- its binders and
@@ -527,7 +526,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
     gen_expr
       ?expected_ty:(match t with Core.Expr.Lambda _ -> expected_ty | _ -> None)
       ~slot:
-        (match into_box_kind with Some kind -> into_box kind slot | None -> slot)
+        (match into_box_kind with Some kind -> Translation_slot.into_box kind slot | None -> slot)
       env t
   in
   (* What extraction recorded about the term's own side of the boundary.
@@ -546,10 +545,12 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
            lowering need agree on no more than whether the binder is
            decided at a type that is not one. *)
         let decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
-        match planned_binder_type ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ with
+        match
+          Translation_binders.planned_binder_type ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ
+        with
         | Some ty when not (Cpp_ir.Types.prints_as_any ty) -> Some ty
-        | _ -> Some (cpp_of_core env from) )
-      | _ -> Some (cpp_of_core env from) )
+        | _ -> Some (Translation_types.cpp_of_core env from) )
+      | _ -> Some (Translation_types.cpp_of_core env from) )
     (* [Core.Expr.Boxed_value] is extraction's reading of the Coq typing.  A binder whose
        C++ type was decided at its binding site outranks it: a type-class
        method returning [M A] is opaque in Coq, but Crane emits the
@@ -558,7 +559,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
     | None when boxed -> (
       match t with
       | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
-        match planned_binder_type ~use:"boxed from" ~agree:( = ) i occ with
+        match Translation_binders.planned_binder_type ~use:"boxed from" ~agree:( = ) i occ with
         | Some ty -> Some ty
         | None -> Some Cpp_ir.Type.Any )
       | _ -> Some Cpp_ir.Type.Any )
@@ -570,7 +571,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
       (* The position's type, as the expressions below write it. *)
       let ty_ir = ty in
       let rec is_cpp_erased_var_rec = function
-        | Core.Expr.Bound_variable {index = i; occurrence = occ} -> read_is_boxed i occ
+        | Core.Expr.Bound_variable {index = i; occurrence = occ} -> Translation_binders.read_is_boxed i occ
         | Core.Expr.Coerce {value = t'; _}
         | Core.Expr.Boxed_value {value = t'; _}
         | Core.Expr.Lambda_group_barrier {value = t'; _} ->
@@ -597,17 +598,17 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
             In_namespace (ns_g, Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns))
           | t -> t
         in
-        coerce ~from:Any ~into:(erase_top_args ty) inner
-      else if core_expr_is_erased env t then
+        Translation_coerce.coerce ~from:Any ~into:(erase_top_args ty) inner
+      else if Translation_erasure.core_expr_is_erased env t then
         (* Extraction's oracle reads a type-class method's [M A] as erased,
            but the binder it is bound to was assigned an opaque type --
            an admission that the shape could not be resolved, not a box.
-           Say so rather than assert [Any]: {!coerce} recovers from a box
+           Say so rather than assert [Any]: {!Translation_coerce.coerce} recovers from a box
            and must not invent one. *)
         let opaque = Some (Cpp_ir.Type.Obligation Opaque_type) in
         let rec binder_is_opaque = function
           | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
-            planned_binder_type ~use:"opaque binder"
+            Translation_binders.planned_binder_type ~use:"opaque binder"
               ~agree:(fun p l -> (p = opaque) = (l = opaque))
               i occ
             = opaque
@@ -617,7 +618,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
             binder_is_opaque t'
           | _ -> false
         in
-        coerce
+        Translation_coerce.coerce
           ~from:(if binder_is_opaque t then Cpp_ir.Type.Obligation Opaque_type else Cpp_ir.Type.Any)
           ~into:ty inner
       else
@@ -640,15 +641,15 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
           | Some from
             when Cpp_ir.Types.prints_as_any from
                  && not
-                      ( reads_erased_pair_component env t
+                      ( Translation_erasure.reads_erased_pair_component env t
                       &&
                       match ty with
                       | Entity_application (g, _, _) -> is_prod_global g
                       | _ -> false ) ->
-            coerce ~from ~into:(boxed_shape_of ty_ir) inner
+            Translation_coerce.coerce ~from ~into:(Translation_erasure.boxed_shape_of ty_ir) inner
           | Some _
             when ( match coercion with
-                 | Some (from, _) -> absurd_coercion from ty
+                 | Some (from, _) -> Translation_coerce.absurd_coercion from ty
                  | None -> false ) -> (
             match coercion with
             (* Absurd only at some instantiations: [tt] read at the index [T1]
@@ -658,9 +659,9 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
             | Some (from, _) when contains_tvar ty ->
               Cpp_ir.Build.iife (Some ty)
                 [ If_constexpr
-                    { test = Convertible (ty, Reference (Lvalue, Const (cpp_of_core env from)));
+                    { test = Convertible (ty, Reference (Lvalue, Const (Translation_types.cpp_of_core env from)));
                       then_ = [Return (Some (Convert (ty, inner)))];
-                      else_ = [Throw dead_branch_message] } ]
-            | _ -> Abort (dead_branch_message, ty) )
+                      else_ = [Throw Translation_cpp_build.dead_branch_message] } ]
+            | _ -> Abort (Translation_cpp_build.dead_branch_message, ty) )
           | _ -> inner )
     | _ -> inner )

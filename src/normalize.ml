@@ -62,7 +62,7 @@ let group_call group ~depth e =
   match e with
   | Core.Expr.Apply {callee = (Core.Expr.Global {callee = r; _} as f);
                      arguments = args} when List.exists (GlobRef.UserOrd.equal r) group.globals ->
-    full_result (Translation_types.core_app_result_type f args)
+    full_result (Translation_calls.core_app_result_type f args)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; arguments = args} -> (
     match
       List.find_map
