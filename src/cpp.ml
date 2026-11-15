@@ -900,8 +900,9 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
         let with_promotion_scope body =
           if is_promoted then (
             eponymous_promote_ref := !eponymous_type_ref;
-            Option.iter rendered_promotion !eponymous_type_ref );
-          body ()
+            Option.iter rendered_promotion !eponymous_type_ref;
+            Fun.protect ~finally:(fun () -> eponymous_promote_ref := None) body )
+          else body ()
         in
         let promoted_template =
           is_promoted && match promoted_tparams with Some (_ :: _) -> true | _ -> false
@@ -938,26 +939,10 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                 Pp.(str "Crane: the module " ++ str (ModPath.to_string mp)
                     ++ str " has no planned header scope.")
         in
-        let body_written, this_method_candidates =
-          with_promotion_scope @@ fun () ->
-          let body = pp_module_body ~is_header f (enter_module ctx) body_mp sel in
-          (body, !method_candidates)
-        in
-        (* The assertions this struct's body held back: those naming a concept
-           it declares are emitted after it, now that both are in scope; the
-           rest travel further out.  Each names its subject from where it is
-           written, which qualifies it by every struct it left. *)
-        let mine, passed_out =
-          List.partition (fun a -> is_held_back_in this_held_back (held_concept_of a)) body_written.asserts
-        in
-        let deferred_asserts_pp = Cpp_ast.seq (List.map Cpp_ast.assertion mine) in
-        let body = body_written.text in
-        (* Capture and clean up promotion state. *)
-        let this_promoted = is_promoted in
         (* Whether the struct the eponymous inductive is promoted to derives
            from [enable_shared_from_this] is decided where the inductive was
-           generated. *)
-        let this_promote_sft =
+           generated, which is asked while the promotion is in force. *)
+        let promote_sft () =
           is_promoted
           && List.exists
                (function
@@ -969,7 +954,22 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                  | _ -> false )
                sel
         in
-        if is_promoted then eponymous_promote_ref := None;
+        let body_written, this_method_candidates, this_promote_sft =
+          with_promotion_scope @@ fun () ->
+          let body = pp_module_body ~is_header f (enter_module ctx) body_mp sel in
+          let candidates = !method_candidates in
+          (body, candidates, promote_sft ())
+        in
+        (* The assertions this struct's body held back: those naming a concept
+           it declares are emitted after it, now that both are in scope; the
+           rest travel further out.  Each names its subject from where it is
+           written, which qualifies it by every struct it left. *)
+        let mine, passed_out =
+          List.partition (fun a -> is_held_back_in this_held_back (held_concept_of a)) body_written.asserts
+        in
+        let deferred_asserts_pp = Cpp_ast.seq (List.map Cpp_ast.assertion mine) in
+        let body = body_written.text in
+        let this_promoted = is_promoted in
         let text, own_held =
         if is_header then
           if this_promoted then
@@ -1294,7 +1294,7 @@ let pp_wrapper_module_dual ~is_header ctx mp func_sels =
   (specs, elements defs_pp, elements lifted_pp, elements lifted_specs_pp)
 
 (** What analysing the structure concluded, for the passes that render it. *)
-let structure_analysis : Structure_analysis.t option ref = ref None
+let structure_analysis : Structure_analysis.t option ref = State.cell State.Unit None
 
 (** The analysis of the structure being rendered.
 

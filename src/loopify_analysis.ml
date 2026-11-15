@@ -329,8 +329,9 @@ let movable ty = (not (is_borrowed ty)) && (ty = Auto || worthwhile_move_type ty
 
 (* Global mutable state in this file and their reset granularity:
    - outcomes : reset per generated file (State.Unit)
-   - ctor_ptr_fields : accumulates across the full session; never cleared because
-     struct shapes don't change within a Rocq session *)
+   - ctor_ptr_fields : reset per extraction (State.Extraction): which fields a
+     constructor stores behind the pointer depends on [Crane BoxedFields],
+     which may change between two extractions of one session *)
 
 (** A constructor field stored behind the smart pointer: a recursive one, which
     holds the inductive itself, or one [Crane BoxedFields] boxed for holding
@@ -349,7 +350,7 @@ let ptr_field_index = function Recursive i | Boxed i -> i
     of it because a constructor name alone does not identify a struct -- two
     inductives may each have a [Cons], with different fields.  The value is a
     list of the constructor's pointer fields, by 0-based index. *)
-let ctor_ptr_fields : (string * string, ptr_field list) Hashtbl.t = Hashtbl.create 32
+let ctor_ptr_fields : (string * string, ptr_field list) Hashtbl.t = State.table State.Extraction 32
 
 (** Install the pointer fields of each constructor struct planned before
     rendering, the inductive, the constructor's struct name and each field's

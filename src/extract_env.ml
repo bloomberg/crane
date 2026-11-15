@@ -1377,8 +1377,9 @@ let format_file_inplace (filename : string) : unit =
     extraction.  A back-edge exists when module X includes module Y but Y is
     topologically earlier than X (Y comes before X in the extraction order and
     therefore Y's content is already (or will be) included when X is compiled).
-    The default is no-op; [separate_extraction] sets it per module. *)
-let opened_filter : (ModPath.t -> bool) ref = ref (fun _ -> true)
+    The default is no-op; [separate_extraction] sets it for the module it
+    prints, and puts the default back however the print leaves. *)
+let opened_filter : (ModPath.t -> bool) ref = State.cell State.Extraction (fun _ -> true)
 
 (** Under [CRANE_COUNT_GENERATION], report how many top-level bodies each
     phase generated for the unit written to [fn]. *)
@@ -2221,8 +2222,8 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
             match Hashtbl.find_opt topo_index mp' with
             | Some j -> j < current_idx
             | None -> true);
-        print_structure_to_file ~namespace:(Some ns) (module_filename mp) (dry mp) unit;
-        opened_filter := (fun _ -> true)
+        Fun.protect ~finally:(fun () -> opened_filter := fun _ -> true) @@ fun () ->
+        print_structure_to_file ~namespace:(Some ns) (module_filename mp) (dry mp) unit
       end
     | _ -> assert false
   in

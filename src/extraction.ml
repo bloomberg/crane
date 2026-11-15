@@ -37,7 +37,7 @@ exception I of Core.Inductive.Kind.t
 (* The constants of the fixpoint group {!extract_fixpoint} is extracting, so
    a call inside the group is told apart from a call to an outside constant
    ({!extract_cst_app}); [[]] outside a group. *)
-let current_fixpoints = ref ([] : Constant.t list)
+let current_fixpoints = State.cell State.Extraction ([] : Constant.t list)
 
 (** The local fixpoint a [let] binds while it is extracted, with the
     applications of its name in the [let]'s body: the group's entries
@@ -2956,7 +2956,6 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
   let types = Array.make n (Core.Type.Erased Core.Erasure_reason.Proof)
   and terms = Array.make n (Core.Expr.Erased_value Core.Erasure_reason.Proof) in
   let kns = Array.to_list vkn in
-  current_fixpoints := kns;
   (* for replacing recursive calls [Rel ..] by the corresponding [Const]: *)
   let sg, sub =
     CList.fold_left_map
@@ -2964,6 +2963,8 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
       sg
       (List.rev kns)
   in
+  current_fixpoints := kns;
+  Fun.protect ~finally:(fun () -> current_fixpoints := []) (fun () ->
   for i = 0 to n - 1 do
     if info_of_family (sort_of env sg ti.(i)) != Logic then
       try
@@ -2979,8 +2980,7 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
         types.(i) <- t
       with SingletonInductiveBecomesProp ind ->
         error_singleton_become_prop ind
-  done;
-  current_fixpoints := [];
+  done);
   (* Register CoFixpoints. is_fix=true means regular fixpoint, is_fix=false
      means cofixpoint *)
   if not is_fix then
