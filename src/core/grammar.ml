@@ -143,13 +143,26 @@ and Meta : sig
   (** A mutable type metavariable used while reconstructing types: [id]
       identifies it and [contents] is filled in with the resolved type once
       unification succeeds (staying [None] until then).  Read anywhere, but
-      made and solved only through {!Core.Meta}. *)
+      made and solved only through {!Core.Extracted.Meta}. *)
+  type t = private {
+    id : int;
+    mutable contents : Type.t option;
+  }
+
+  (** [make id contents] is the cell [id] holding [contents]. *)
+  val make : int -> Type.t option -> t
+
+  (** [set m t] solves [m] to [t]. *)
+  val set : t -> Type.t -> unit
+end = struct
   type t = {
     id : int;
     mutable contents : Type.t option;
   }
-end =
-  Meta
+
+  let make id contents = {id; contents}
+  let set m t = m.contents <- Some t
+end
 
 and Record : sig
   module Field : sig
@@ -379,13 +392,26 @@ and Global_use : sig
       callee's type scheme.  Built only through {!Core.Global_use}; a reader
       that needs only the callee matches [Global {callee; _}] and never sees
       the rest. *)
+  type t = private {
+    callee : GlobRef.t;
+    instance : instance;
+    occurrence : Occurrence.t;
+  }
+
+  val make : GlobRef.t -> instance -> Occurrence.t -> t
+end = struct
+  type instance =
+    | Monomorphic
+    | Polymorphic of Type.t Scheme.Instantiation.t
+
   type t = {
     callee : GlobRef.t;
     instance : instance;
     occurrence : Occurrence.t;
   }
-end =
-  Global_use
+
+  let make callee instance occurrence = {callee; instance; occurrence}
+end
 
 and Match : sig
   module Branch : sig

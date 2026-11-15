@@ -86,9 +86,9 @@ let () =
   | _ -> check "a copy keeps the shape" false );
   (* Open annotations: likewise, in the frozen program copies are made in. *)
   let o = Core.Type.Open (Core.Open.fresh 7) in
-  Core.Meta.freeze ();
+  Core.Extracted.Meta.freeze ();
   let opened = Core_copy.copy (Core.Expr.Lambda {parameter = x "p"; parameter_type = o; body = Core.Expr.Lambda {parameter = x "q"; parameter_type = o; body = Core.Expr.fresh_rel 1}}) in
-  Core.Meta.thaw ();
+  Core.Extracted.Meta.thaw ();
   ( match opened with
   | Core.Expr.Lambda {parameter_type = Core.Type.Open p;
                       body = Core.Expr.Lambda {parameter_type = Core.Type.Open q; _}; _} ->

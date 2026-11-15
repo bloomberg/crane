@@ -42,10 +42,10 @@ let iter_types f p =
 
 (* A metavariable is its cell: extraction numbers each declaration's afresh. *)
 module Cells = Hashtbl.Make (struct
-  type t = Core.Meta.t
+  type t = Core.Extracted.Meta.t
 
   let equal = ( == )
-  let hash (m : Core.Meta.t) = Hashtbl.hash m.id
+  let hash (m : Core.Extracted.Meta.t) = Hashtbl.hash m.id
 end)
 
 module Opens = Hashtbl.Make (Core.Open)
@@ -285,7 +285,7 @@ let check_occurrences phase p =
 
 let freeze p =
   let p = zonk p in
-  Core.Meta.freeze ();
+  Core.Extracted.Meta.freeze ();
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_recursive_groups p;
     check_declared_once p;

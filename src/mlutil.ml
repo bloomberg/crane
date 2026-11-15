@@ -152,7 +152,7 @@ let preserving_meta_supply f =
     annotation an unsolved metavariable becomes ({!Core.Type.Open}). *)
 let new_meta _ =
   incr meta_count;
-  if Core.Meta.is_frozen () then Core.Type.Open (Core.Open.fresh !meta_count) else Core.Type.Meta (Core.Meta.fresh !meta_count)
+  if Core.Extracted.Meta.is_frozen () then Core.Type.Open (Core.Open.fresh !meta_count) else Core.Type.Meta (Core.Extracted.Meta.fresh !meta_count)
 
 (** Structural equality on ML types. *)
 let rec eq_ml_type t1 t2 =
@@ -190,7 +190,7 @@ let rec eq_ml_type t1 t2 =
       | Core.Type.String ),
       _ ) -> false
 
-and eq_ml_meta (m1 : Core.Meta.t) (m2 : Core.Meta.t) =
+and eq_ml_meta (m1 : Core.Extracted.Meta.t) (m2 : Core.Extracted.Meta.t) =
   Int.equal m1.id m2.id && Option.equal eq_ml_type m1.contents m2.contents
 
 (** Whether a type carries a [Core.Type.Unknown] hole.  See {!fill_placeholders}. *)
@@ -440,12 +440,12 @@ let rec type_occurs alpha t =
 (** {2 Most General Unificator} *)
 
 let rec mgu = function
-  | Core.Type.Meta (m : Core.Meta.t), Core.Type.Meta (m' : Core.Meta.t) when Int.equal m.id m'.id -> ()
-  | Core.Type.Meta m, t | t, Core.Type.Meta (m : Core.Meta.t) ->
+  | Core.Type.Meta (m : Core.Extracted.Meta.t), Core.Type.Meta (m' : Core.Extracted.Meta.t) when Int.equal m.id m'.id -> ()
+  | Core.Type.Meta m, t | t, Core.Type.Meta (m : Core.Extracted.Meta.t) ->
     ( match m.contents with
     | Some u -> mgu (u, t)
     | None when type_occurs m.id t -> raise Impossible
-    | None -> Core.Meta.solve m t )
+    | None -> Core.Extracted.Meta.solve m t )
   (* Frozen, an open annotation unifies with itself alone. *)
   | Core.Type.Open o, Core.Type.Open o' when Int.equal (Core.Open.id o) (Core.Open.id o') -> ()
   | Core.Type.Arrow {parameter = a; result = b}, Core.Type.Arrow {parameter = a'; result = b'} ->
@@ -532,10 +532,10 @@ let generalizable a =
 (** {1 ML type env} *)
 
 module Mlenv = struct
-  let meta_cmp (m : Core.Meta.t) (m' : Core.Meta.t) = compare m.id m'.id
+  let meta_cmp (m : Core.Extracted.Meta.t) (m' : Core.Extracted.Meta.t) = compare m.id m'.id
 
   module Metaset = Set.Make (struct
-    type t = Core.Meta.t
+    type t = Core.Extracted.Meta.t
 
     let compare = meta_cmp
   end)
@@ -563,7 +563,7 @@ module Mlenv = struct
   (* [find_free] finds the free meta in a type. *)
 
   let rec find_free set = function
-    | Core.Type.Meta (m : Core.Meta.t) when Option.is_empty m.contents -> Metaset.add m set
+    | Core.Type.Meta (m : Core.Extracted.Meta.t) when Option.is_empty m.contents -> Metaset.add m set
     | Core.Type.Meta {contents = Some t} -> find_free set t
     | Core.Type.Arrow {parameter = a; result = b} -> find_free (find_free set a) b
     | Core.Type.Global_app {type_arguments = l; _} -> List.fold_left find_free set l
@@ -575,7 +575,7 @@ module Mlenv = struct
   let clean_free mle =
     let rem = ref Metaset.empty
     and add = ref Metaset.empty in
-    let clean (m : Core.Meta.t) =
+    let clean (m : Core.Extracted.Meta.t) =
       match m.contents with
       | None -> ()
       | Some u ->

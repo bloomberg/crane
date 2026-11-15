@@ -56,7 +56,7 @@ let rec iter_annotations f = function
 let rec mint ~minted ~next = function
   | Core.Type.Meta ({contents = None} as m) ->
     let v = Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = !next} in
-    Core.Meta.solve m v;
+    Core.Extracted.Meta.solve m v;
     incr next;
     minted v
   | Core.Type.Meta {contents = Some t} -> mint ~minted ~next t
@@ -143,7 +143,7 @@ let recover_fix_codomains ids funs =
    no longer asking what the body builds. *)
 let fill_codomain_hole (_, ty) body =
   match snd (Mlutil.type_decomp ty) with
-  | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Meta.solve cell) (tail_result_type body)
+  | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type body)
   | _ -> ()
 
 (* Settles one group as translation reads it: codomains filled and recovered,

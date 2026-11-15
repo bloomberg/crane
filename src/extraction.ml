@@ -52,7 +52,7 @@ let let_fix_entries = ref (None : (EConstr.t * EConstr.t array list) option)
    with the recorded erased type.  So [nil] in the deque_action_mismatch test
    (meta stays None) is filled with [pair<any,any>], while sigma_types (the
    [cons] meta is resolved to [nat]) is left alone. *)
-let pending_cpp_meta_fills : (Core.Meta.t * Core.Type.t) list ref = ref []
+let pending_cpp_meta_fills : (Core.Extracted.Meta.t * Core.Type.t) list ref = ref []
 
 (* NB: [type_of] and [sort_of] might raise
    [SingletonInductiveBecomesProp]. This exception is caught in late
@@ -2514,7 +2514,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
                   | _ -> false
                 in
                 if not (has_unknown ml_ty) then
-                  Core.Meta.solve r ml_ty
+                  Core.Extracted.Meta.solve r ml_ty
               | _ -> ()
             ) (Array.to_list metas) kept_args
           | _ -> ()
@@ -2905,8 +2905,8 @@ let extract_std_constant env sg kn body typ =
      inside a lambda whose return type is a dependent/erased type). *)
   if lang () == Cpp then
     List.iter
-      (fun ((r : Core.Meta.t), erased) ->
-        if r.contents = None then Core.Meta.solve r erased)
+      (fun ((r : Core.Extracted.Meta.t), erased) ->
+        if r.contents = None then Core.Extracted.Meta.solve r erased)
       !pending_cpp_meta_fills;
   pending_cpp_meta_fills := [];
   (* Expunging term and type from dummy lambdas. *)

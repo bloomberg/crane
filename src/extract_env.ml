@@ -1843,7 +1843,7 @@ let reset () =
   Visit.reset ();
   reset_tables ();
   reset_renaming_tables ();
-  Core.Meta.thaw ()
+  Core.Extracted.Meta.thaw ()
 
 (** Initializes the extraction environment, checking section scope and setting
     mode flags (modular/library/compute). *)

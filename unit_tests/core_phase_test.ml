@@ -63,9 +63,9 @@ let () =
   check "a use at a look-alike of its callee's scheme is refused"
     (refused [term "y" (use_of_p (Scheme.Id.fresh (r "p") ~arity:1)) nat]);
   check "a use holding a metavariable in its instantiation is refused"
-    (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Core.Type.Meta (Core.Meta.fresh 3))) nat]);
-  let shared = Core.Type.Meta (Core.Meta.fresh 1) in
-  let solved = Core.Type.Meta (Core.Meta.solved 2 nat) in
+    (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Core.Type.Meta (Core.Extracted.Meta.fresh 3))) nat]);
+  let shared = Core.Type.Meta (Core.Extracted.Meta.fresh 1) in
+  let solved = Core.Type.Meta (Core.Extracted.Meta.solved 2 nat) in
   let open_term = term "k" (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = shared; body = Core.Expr.fresh_rel 1}) (Core.Type.Arrow {parameter = shared; result = solved}) in
   let zonked = frozen [open_term] in
   check "each unsolved metavariable becomes one open annotation"
@@ -77,7 +77,7 @@ let () =
     check "the annotations sharing a cell share its open annotation" (Core.Open.equal o o');
     check "a solved metavariable is replaced by its solution" (t = nat)
   | _ -> check "freezing leaves no metavariable in the program" false );
-  Core.Meta.thaw ();
+  Core.Extracted.Meta.thaw ();
   let two = Core_phase.extracted [(mp "A", fine); (mp "B", [])] in
   let a, b = Core_phase.partition (ModPath.equal (mp "A")) two in
   check "partition splits by top-level module"
@@ -126,18 +126,18 @@ let () =
   ( match (before, Mlutil.new_meta ()) with
   | Core.Type.Open o, Core.Type.Open o' -> check "checking a normal form makes no number" (Core.Open.id o' = Core.Open.id o + 2)
   | _ -> check "a frozen program makes open annotations" false );
-  Core.Meta.thaw ()
+  Core.Extracted.Meta.thaw ()
 
 (* After freezing, nothing solves a metavariable. *)
 let () =
   let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
-  let m = Core.Meta.fresh 7 and m' = Core.Meta.fresh 8 in
-  Core.Meta.freeze ();
+  let m = Core.Extracted.Meta.fresh 7 and m' = Core.Extracted.Meta.fresh 8 in
+  Core.Extracted.Meta.freeze ();
   check "a solve of the frozen program is refused"
-    (match Core.Meta.solve m nat with () -> false | exception e -> CErrors.is_anomaly e);
+    (match Core.Extracted.Meta.solve m nat with () -> false | exception e -> CErrors.is_anomaly e);
   check "a refused solve writes nothing" (m.contents = None);
-  Core.Meta.thaw ();
-  Core.Meta.solve m' nat;
+  Core.Extracted.Meta.thaw ();
+  Core.Extracted.Meta.solve m' nat;
   check "a thawed program solves freely" (m'.contents = Some nat)
 
 (* A slot fills an open annotation without writing it: one met twice is
@@ -182,7 +182,7 @@ let () =
                                                      body = Core.Expr.fresh_rel 1}|];
                         occurrence = Core.Occurrence.fresh ()}
   in
-  let a = Core.Meta.fresh 11 and b = Core.Meta.fresh 12 and c = Core.Meta.fresh 13 and d = Core.Meta.fresh 14 in
+  let a = Core.Extracted.Meta.fresh 11 and b = Core.Extracted.Meta.fresh 12 and c = Core.Extracted.Meta.fresh 13 and d = Core.Extracted.Meta.fresh 14 in
   let body =
     Core.Expr.Let {binder = Core.Binder_name.Source go;
                    binder_type = nat;
