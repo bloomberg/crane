@@ -647,22 +647,6 @@ let itree_header = Runtime "itree_header"
 
 let needs_itree_header () = demanded "itree_header"
 
-(** Track if a main function returning a monad was encountered.
-    Stores (function_name, return_type, struct_qualifier, needs_run) for
-    wrapper generation.  [needs_run] is true only in reified ITree mode;
-    when the monad is erased (sequential mode), the wrapper calls [_main()]
-    directly without [->run()]. *)
-let main_function_tree : (Id.t * Core.Type.t * Id.t option * bool) option ref = ref None
-
-let set_main_function name ret_type struct_name needs_run =
-  main_function_tree := Some (name, ret_type, struct_name, needs_run)
-
-let get_main_function () = !main_function_tree
-
-let reset_main_function () = main_function_tree := None
-
-let () = on_reset reset_main_function
-
 (** Check if an ML type is a coinductive type by inspecting its global
     reference. *)
 let is_coinductive_type = function

@@ -337,21 +337,6 @@ val itree_header : header
 (** Check whether [crane_itree.h] is needed. *)
 val needs_itree_header : unit -> bool
 
-(** Record a [main] function for wrapper generation.
-    @param name       the renamed function name (e.g. [_main])
-    @param ret_type   the ML return type
-    @param struct_opt enclosing struct qualifier, if any
-    @param needs_run  true if the return type is a reified ITree
-                      (needs [->run()]), false if the monad was erased *)
-val set_main_function : Id.t -> Core.Type.t -> Id.t option -> bool -> unit
-
-(** Return the recorded main function, if any:
-    [(name, return_type, struct_qualifier, needs_run)]. *)
-val get_main_function : unit -> (Id.t * Core.Type.t * Id.t option * bool) option
-
-(** Reset main function tracking (between extraction units). *)
-val reset_main_function : unit -> unit
-
 (** The field references of a record or type class, [None] for an anonymous
     field; empty for anything else. *)
 val get_record_fields : GlobRef.t -> GlobRef.t option list

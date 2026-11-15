@@ -167,6 +167,24 @@ val check_finished : t -> unit
 (** Make [t] the unit's program, the one {!find} reads. *)
 val install : t -> unit
 
+(** A monadic [main] the unit's [.cpp] ends with an [int main()] wrapper
+    around: the function [entry_name] the wrapper calls, a member of the
+    struct [entry_struct] if there is one, and whether what it returns is a
+    reified tree the wrapper runs ([->run()]) rather than a monad erased to
+    a plain call. *)
+type entry_point = {
+  entry_name : Names.Id.t;
+  entry_struct : Names.Id.t option;
+  entry_runs_tree : bool;
+}
+
+(** [record_entry_point e]: generating the unit's [main] called for the
+    wrapper [e]. *)
+val record_entry_point : entry_point -> unit
+
+(** The wrapper the unit's generations called for, if any. *)
+val entry_point : unit -> entry_point option
+
 (** {2 Reading the installed program} *)
 
 (** The declaration [id] of the installed program, if it is there. *)

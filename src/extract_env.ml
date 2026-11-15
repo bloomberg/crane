@@ -1751,8 +1751,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
          [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
          calls [_main()->run()] to execute the ITree; in sequential mode (monad
          erased) it just calls [_main()] directly. *)
-      ( match Table.get_main_function () with
-      | Some (main_name, _ret_ml_ty, struct_qual, needs_run) ->
+      ( match Unit_program.entry_point () with
+      | Some {entry_name = main_name; entry_struct = struct_qual; entry_runs_tree = needs_run} ->
         let qualified_name =
           match struct_qual with
           | Some sn -> Id.print sn ++ str "::" ++ Id.print main_name
