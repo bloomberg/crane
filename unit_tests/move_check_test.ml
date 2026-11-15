@@ -141,7 +141,12 @@ let () =
    states: [f] owns [a] and lends [b]. *)
 let () =
   let f = GlobRef.VarRef (id "f") in
-  Callable_abi.install [Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []] [];
+  let decided =
+    Callable_abi.decide
+      ~callables:[Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []]
+      ~assumed:[] ~instance_methods:[]
+  in
+  Callable_abi.with_decided decided @@ fun () ->
   let cref : ty = Reference (Lvalue, Const tree) in
   let convention name params body expected =
     let found = Option.map List.length (Move_check.convention_violations f params body) in

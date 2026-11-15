@@ -210,6 +210,12 @@ val value_reference : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_resolution.
     ({!Cpp_resolution.Value_access}). *)
 val access : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_resolution.access
 
+(** The struct a definition of the declaration written outside every struct
+    body at the position is a member of, as its plan's scope names it
+    ({!Cpp_resolution.Out_of_line_scope}): what entering the function's
+    {!Cpp_resolution.Function} frame carries. *)
+val out_of_line_scope : Cpp_state.render_ctx -> Names.GlobRef.t -> Scope_plan.scope option
+
 (** The struct a value of the type is built through, named at the position
     given ({!Cpp_resolution.Built_struct}). *)
 val built_struct : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t

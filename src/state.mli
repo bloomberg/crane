@@ -24,3 +24,8 @@ val cell : scope -> 'a -> 'a ref
 
 (** A hash table emptied by {!reset}. *)
 val table : scope -> int -> ('a, 'b) Hashtbl.t
+
+(** [bind r v f] is [f ()] with [r] holding [v], and [r] restored however
+    [f] is left: a value set for a dynamic extent, not enrolled for a
+    reset. *)
+val bind : 'a ref -> 'a -> (unit -> 'b) -> 'b

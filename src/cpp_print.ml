@@ -2577,7 +2577,8 @@ and pp_leaf_decl ctx env (d : decl) =
     (* A definition outside every struct body is a member of the struct its
        declaration's scope names, as planned; so is every name written in it
        that the struct declares. *)
-    enter_from ctx (Function {owner = fst path.outer; defines = is_def}) @@ fun ctx ->
+    let owner = fst path.outer in
+    enter_from ctx (Function {owner; defines = is_def; scope = out_of_line_scope ctx owner}) @@ fun ctx ->
     let scope = ctx.rc_scope in
     let pp_fun_name n =
       match n with

@@ -45,11 +45,12 @@
       [type_scheme_arities], [sigma_assertions], [cofixpoints],
       [erased_type_consts], [value_dep_type_schemes], [erased_fix_groups].
       A phase result: its owner is the extracted program.
-    - {b Installed plan facts}, copies of a {!Program_facts} or {!Target_plan}
-      value made by [Install_legacy_plan] for readers that cannot reach the
-      plan: [named_refs], [instance_promoted_types], [promoted_inductives]
-      (accumulated over the units of an extraction), and the plan's
-      overrides of [inductive_kinds].
+    - {b Plan facts bound for a dynamic extent}, not enrolled for a reset:
+      the unit's configuration ({!with_unit_config}), and
+      [instance_promoted_types] and [promoted_inductives], bound from the
+      plans of the unit and the earlier units of its extraction
+      ([Accumulated_plan]).  The plan's decided kinds are recorded in
+      [inductive_kinds] ([Target_plan.record_kinds]).
     - {b Analysis results registered while a later phase runs}: [flat_inductives]
       and [enum_inductives] (registered by layout and generation, with a
       structural fallback), [shared_variants] (by a Core pass),
@@ -627,11 +628,15 @@ val add_value_dep_type_scheme : GlobRef.t -> unit
 (** Check whether a reference is a value-dependent type scheme. *)
 val is_value_dep_type_scheme : GlobRef.t -> bool
 
-(** Add instance promoted types. *)
-val add_instance_promoted_types :
-  GlobRef.t -> (Names.Id.t * Core.Type.t) list -> unit
+(** [with_instance_promoted_types m f] is [f ()] with [m] the concrete
+    types each instance gives its class's promoted variables: those of the
+    unit's instances, planned ([Cpp.plan_instance_promoted_types]), and of
+    every earlier unit's of a separate extraction. *)
+val with_instance_promoted_types :
+  (Names.Id.t * Core.Type.t) list GlobRef.Map.t -> (unit -> 'a) -> 'a
 
-(** Get instance promoted types. *)
+(** The concrete types the instance gives its class's promoted variables,
+    as {!with_instance_promoted_types} binds them; none outside it. *)
 val get_instance_promoted_types :
   GlobRef.t -> (Names.Id.t * Core.Type.t) list
 
@@ -944,15 +949,15 @@ val fast_variant : unit -> bool
     [crane::rc]/[crane::make_rc].  This is the resolved answer, not the raw
     [Set Crane NonAtomicRc] request: the request is a promise that the
     extracted program is single-threaded, and it is withheld from a unit that
-    runs on several threads (see {!unit_is_concurrent}).  Only meaningful once
-    the customs the unit's program names are installed. *)
+    runs on several threads (see {!unit_is_concurrent}).  Only meaningful
+    inside the unit's configuration ({!with_unit_config}). *)
 val non_atomic_rc : unit -> bool
 
 (** The raw [Set Crane NonAtomicRc] request, before {!non_atomic_rc} withholds
     it from a concurrent unit.  It is program-wide, so a decision that has to
     agree across the units of one extraction reads it rather than the per-unit
     answer: the parameter ownership {!Ownership} settles for the whole program
-    in [Extract_env.freeze], before any unit's customs are installed, and
+    in [Extract_env.freeze], before any unit's configuration is decided, and
     {!Escape.is_reuse_scrutinee}'s analysis runs before any unit's concurrency
     is decided too.  Everything a unit generates reads {!non_atomic_rc}. *)
 val non_atomic_rc_requested : unit -> bool
@@ -963,16 +968,32 @@ val non_atomic_rc_requested : unit -> bool
     like {!non_atomic_rc}. *)
 val single_threaded : unit -> bool
 
-(** Whether this unit runs on several threads: its program names a custom
-    extraction from a header that starts threads ([<thread>], [<future>],
+(** A unit's configuration: what it decides, from the customs its program
+    names, about the runtime it is written against.  [concurrent]: whether
+    it runs on several threads -- its program names a custom extraction
+    from a header that starts threads ([<thread>], [<future>],
     [crane_thread.h], their BDE spellings) or from Crane's transactional
     memory ([stm_adapter.h]), whose values are shared by threads the caller
     starts. *)
+type unit_config = {concurrent : bool}
+
+(** The configuration of a unit whose program names the customs [names]
+    (the [used_customs] of {!Program_facts.t}). *)
+val unit_config : names:Ref.User.Set.t -> unit_config
+
+(** [with_unit_config c f] is [f ()] extracting a unit of configuration
+    [c]: what {!unit_is_concurrent}, {!non_atomic_rc}, {!single_threaded}
+    and the smart pointer's spelling answer.  Outside one, a unit is taken
+    to run on one thread. *)
+val with_unit_config : unit_config -> (unit -> 'a) -> 'a
+
+(** Whether the unit being extracted runs on several threads, as its
+    configuration says ({!unit_config}). *)
 val unit_is_concurrent : unit -> bool
 
 (** Warn, once per unit, if [Set Crane NonAtomicRc] was requested but withheld
-    because the unit is concurrent.  Call after the customs the unit's
-    program names are installed and before any code generation. *)
+    because the unit is concurrent.  Call inside the unit's configuration
+    ({!with_unit_config}) and before any code generation. *)
 val check_non_atomic_rc_request : unit -> unit
 
 (** [Set Crane Arena]: whether the runtime scoped-arena factory
@@ -1261,14 +1282,6 @@ val extract_callback : string option -> qualid -> unit
 (** The imports of the customs the unit's files write. *)
 val get_custom_imports : unit -> string list
 
-(** Install the custom references the unit's program names (the
-    [used_customs] field of {!Program_facts.t}), which decide
-    {!unit_is_concurrent}. *)
-val set_named_customs : Ref.User.Set.t -> unit
-
-(** The installed custom references the unit's program names. *)
-val named_customs : unit -> Ref.User.Set.t
-
 (** Plan the custom references the unit's files write, from what was
     generated ahead of them: their imports are {!get_custom_imports}. *)
 val plan_written_customs : Ref.User.Set.t -> unit
@@ -1423,14 +1436,17 @@ val reset_extraction_blacklist : unit -> unit
 (** Print current blacklist. *)
 val print_extraction_blacklist : unit -> Pp.t
 
-(** Inductives promoted into their own namespace struct (e.g. String.string →
-    [namespace String { struct String }]).  Lives here to break the
-    Translation ↔ Cpp_state cycle. *)
-val promoted_inductives : unit Ref.User.Tbl.t
+(** [with_promoted_inductives s f] is [f ()] with [s] the inductives
+    promoted into their own namespace struct (e.g. String.string →
+    [namespace String { struct String }]): the unit's, planned
+    ([Cpp.plan_promoted_inductives]), and every earlier unit's of a separate
+    extraction, since a promotion outlives the unit that decided it: every
+    later mention of the inductive spells it the promoted way.  Lives here
+    to break the Translation ↔ Cpp_state cycle. *)
+val with_promoted_inductives : Ref.User.Set.t -> (unit -> 'a) -> 'a
 
-(** Record that a reference is promoted; see {!promoted_inductives}.  A
-    promotion outlives the rendering that decided it. *)
-val promote_inductive : GlobRef.t -> unit
+(** Whether [r] is promoted, as {!with_promoted_inductives} binds them. *)
+val is_promoted_inductive : GlobRef.t -> bool
 
 (** {2 Local fixpoint groups recursing at a ground instance} *)
 

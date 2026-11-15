@@ -36,29 +36,38 @@ let equal_plans a b =
        (fun (mp, l) (mp', l') -> ModPath.equal mp mp' && List.equal ModPath.equal l l')
        a.frames b.frames
 
-let installed : scope MPmap.t ref = State.cell State.Unit MPmap.empty
-let installed_nested : MPset.t ref = State.cell State.Unit MPset.empty
-let installed_templated : MPset.t ref = State.cell State.Unit MPset.empty
-let installed_visibility : Common.visibility MPmap.t ref = State.cell State.Unit MPmap.empty
-let installed_local_inductives : GlobRef.t list MPmap.t ref = State.cell State.Unit MPmap.empty
-let installed_frames : ModPath.t list MPmap.t ref = State.cell State.Unit MPmap.empty
+(* A plan as its queries read it. *)
+type bound = {
+  scope_of : scope MPmap.t;
+  nested_in : MPset.t;
+  templated_in : MPset.t;
+  visibility_of : Common.visibility MPmap.t;
+  local_inductives_of : GlobRef.t list MPmap.t;
+  frames_of : ModPath.t list MPmap.t;
+}
 
 let set_of = List.fold_left (fun s mp -> MPset.add mp s) MPset.empty
+let map_of l = List.fold_left (fun m (mp, x) -> MPmap.add mp x m) MPmap.empty l
 
-let install t =
-  installed := List.fold_left (fun m (mp, s) -> MPmap.add mp s m) MPmap.empty t.scopes;
-  installed_nested := set_of t.nested;
-  installed_templated := set_of t.templated;
-  installed_visibility := List.fold_left (fun m (mp, v) -> MPmap.add mp v m) MPmap.empty t.visibility;
-  installed_local_inductives := List.fold_left (fun m (mp, l) -> MPmap.add mp l m) MPmap.empty t.local_inductives;
-  installed_frames := List.fold_left (fun m (mp, l) -> MPmap.add mp l m) MPmap.empty t.frames
+let bound_of t =
+  { scope_of = map_of t.scopes;
+    nested_in = set_of t.nested;
+    templated_in = set_of t.templated;
+    visibility_of = map_of t.visibility;
+    local_inductives_of = map_of t.local_inductives;
+    frames_of = map_of t.frames }
 
-let of_module mp = MPmap.find_opt mp !installed
-let nested mp = MPset.mem mp !installed_nested
-let templated mp = MPset.mem mp !installed_templated
-let visibility mp = MPmap.find_opt mp !installed_visibility
-let local_inductives mp = MPmap.find_opt mp !installed_local_inductives
-let frames mp = MPmap.find_opt mp !installed_frames
+(* The unit's plan, for the extent {!with_plan} binds it for. *)
+let current = ref (bound_of empty)
+
+let with_plan t f = State.bind current (bound_of t) f
+
+let of_module mp = MPmap.find_opt mp !current.scope_of
+let nested mp = MPset.mem mp !current.nested_in
+let templated mp = MPset.mem mp !current.templated_in
+let visibility mp = MPmap.find_opt mp !current.visibility_of
+let local_inductives mp = MPmap.find_opt mp !current.local_inductives_of
+let frames mp = MPmap.find_opt mp !current.frames_of
 
 let of_declaration r =
   let origin =

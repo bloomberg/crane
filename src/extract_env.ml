@@ -1014,7 +1014,7 @@ let plan_scopes = "plan_scopes"
 let plan_instance_promoted_types = "plan_instance_promoted_types"
 let elaborate_calls = "elaborate_calls"
 let plan_callables = "plan_callables"
-let install_callables = "install_callables"
+let decide_callables = "decide_callables"
 
 let layout_pass_names =
   [ prepare_layout;
@@ -1031,7 +1031,7 @@ let layout_pass_names =
     plan_instance_promoted_types;
     elaborate_calls;
     plan_callables;
-    install_callables ]
+    decide_callables ]
 
 (** Settle the unit's layout -- where each declaration lives and what it is
     called ({!Module_plan}) -- then the names of the modules and the globals
@@ -1045,20 +1045,25 @@ let layout_pass_names =
     ({!Cpp.plan_concept_prerequisites}), which constants are
     accessor functions ({!Cpp.plan_accessors}), and how a definition written
     outside its struct's body names the struct ({!Cpp.plan_scopes}), then
-    elaborate every call of the unit and install the elaborations
+    elaborate every call of the unit and bind the elaborations
     ({!Core_elaborate.structure}), so that planning the callables reads
     them as emission does, then plan the callable of each
-    function and method a render will generate, installing each before the
-    next is decided.  Hands all of them, with the callables assumed of the
-    functions that have no plan, and the elaborations, to [k], which runs
-    lowering with the elaborations.  Under [CRANE_CHECK_IR] the callables are
+    function and method a render will generate.  Each decision a later one
+    or a reader asks about is bound for the rest of the unit as soon as it
+    is taken: added to [acc], what the unit and the earlier units of its
+    extraction decided ({!Accumulated_plan.bind}), or, for the scopes, the
+    unit's own ({!Scope_plan.with_plan}).  Hands all of them, with the
+    callables assumed of the functions that have no plan, the elaborations,
+    and [acc] with the unit's decisions, to [k], which runs lowering with
+    the elaborations.  Under [CRANE_CHECK_IR] the callables are
     planned a second time with every list reversed, and the two must agree:
     a head is a function of its declaration, not of what was planned before
     it.  Runs in the planning phase, which is the one that names modules. *)
-let plan_layout struc k =
+let plan_layout (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" prepare_layout;
   let modules = Cpp.prepare_structure struc in
-  Install_legacy_plan.install_modules modules;
+  let acc = {acc with modules = Module_plan.extend acc.modules modules} in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
@@ -1068,28 +1073,49 @@ let plan_layout struc k =
   let field_names = Cpp.plan_field_names struc in
   Pipeline_trace.event "layout" plan_pointer_fields;
   let pointer_fields = Cpp.plan_pointer_fields struc in
-  Install_legacy_plan.install_pointer_fields pointer_fields;
+  let acc = {acc with pointer_fields = Loopify_analysis.add_pointer_fields acc.pointer_fields pointer_fields} in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
-  Install_legacy_plan.install_unmerged_wrappers unmerged_wrappers;
+  let acc =
+    { acc with
+      unmerged_wrappers =
+        List.fold_left (fun m (name, mp) -> CString.Map.add name mp m) acc.unmerged_wrappers unmerged_wrappers }
+  in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_concept_prerequisites;
   let modules = Cpp.plan_concept_prerequisites modules struc in
-  Install_legacy_plan.install_modules modules;
+  let acc = {acc with modules = Module_plan.extend acc.modules modules} in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_scopes;
   let scopes = Cpp.plan_scopes struc in
-  Install_legacy_plan.install_scopes scopes;
+  Scope_plan.with_plan scopes @@ fun () ->
   Pipeline_trace.event "layout" plan_promoted_inductives;
   let promoted_inductives = Cpp.plan_promoted_inductives struc in
-  Install_legacy_plan.install_promoted_inductives promoted_inductives;
+  let acc =
+    { acc with
+      promoted_inductives =
+        List.fold_left (fun s r -> Ref.User.Set.add r s) acc.promoted_inductives promoted_inductives }
+  in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_accessors;
   let accessors = Cpp.plan_accessors struc in
-  Install_legacy_plan.install_accessors accessors;
+  let acc = {acc with accessors = List.fold_left Cpp_state.add_accessor_ref acc.accessors accessors} in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
-  Install_legacy_plan.install_nested_structs nested_structs;
+  let acc = {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
-  Install_legacy_plan.install_instance_promoted_types instance_promoted_types;
+  let acc =
+    { acc with
+      instance_promoted_types =
+        List.fold_left
+          (fun m (r, bindings) -> GlobRef.Map.add r bindings m)
+          acc.instance_promoted_types instance_promoted_types }
+  in
+  Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" elaborate_calls;
   let elaborations =
     Translation_state.generating_outside_modules @@ fun () ->
@@ -1110,10 +1136,10 @@ let plan_layout struc k =
       && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
   let assumed = Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
-  Pipeline_trace.event "layout" install_callables;
-  Install_legacy_plan.install_callables callables assumed;
-  Install_legacy_plan.install_instance_methods instance_methods;
-  k
+  Pipeline_trace.event "layout" decide_callables;
+  let acc = {acc with callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
+  Accumulated_plan.bind acc @@ fun () ->
+  k acc
   ( modules,
     { Target_plan.module_names;
       names;
@@ -1504,14 +1530,15 @@ let optimize_struct to_appear struc =
 (** The steps of {!analyze_and_plan}, in order. *)
 let analyze_program = "analyze_program"
 let plan_target = "plan_target"
-let install_plan = "install_legacy_plan"
-let plan_pass_names = [analyze_program; plan_target; install_plan]
+let record_kinds = "record_kinds"
+let plan_pass_names = [analyze_program; plan_target; record_kinds]
 
 (** Analyse the unit's structure ({!Program_facts}), decide what the backend
-    makes of it ({!Target_plan}), and install both for the readers not yet
-    converted.  Both are values computed from the structure alone; under
-    [CRANE_CHECK_IR] each is computed twice and the two must agree, which is
-    what lets a plan stand for its input. *)
+    makes of it ({!Target_plan}), and record the inductive kinds it decided
+    in the structure ({!Target_plan.record_kinds}).  Both are values
+    computed from the structure alone; under [CRANE_CHECK_IR] each is
+    computed twice and the two must agree, which is what lets a plan stand
+    for its input. *)
 let analyze_and_plan struc =
   Pipeline_trace.event "plan" analyze_program;
   let facts = Program_facts.analyze struc in
@@ -1525,8 +1552,8 @@ let analyze_and_plan struc =
         && Target_plan.equal plan (Target_plan.plan facts' struc))
     then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.")
   end;
-  Pipeline_trace.event "plan" install_plan;
-  Install_legacy_plan.install struc facts plan;
+  Pipeline_trace.event "plan" record_kinds;
+  Target_plan.record_kinds plan struc;
   (facts, plan)
 
 (** What a unit decides about its structure before its layout, in order.
@@ -1573,7 +1600,7 @@ let elaborate_unit elaborations =
 
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan].  They are decided from the inductive kinds
-    {!analyze_and_plan} installed, so after it.  Deciding records each as it
+    {!analyze_and_plan} recorded, so after it.  Deciding records each as it
     goes, which is what the readers of {!Tparam_kinds} take (see
     {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
     second time, against the first's, and the two must agree. *)
@@ -1586,6 +1613,63 @@ let plan_representation plan struc =
     && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Cpp_ind.template_kinds struc)))
   then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.");
   plan
+
+(** Under [CRANE_CHECK_IR], once the unit is rendered: that what the plan
+    decided is still what the extracted environment, the template-parameter
+    kinds and the decided names record, and that the promoted inductives
+    and the nested structs rendered are exactly the planned ones. *)
+let check_against_plan (plan : Target_plan.t) =
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+    let fail what =
+      CErrors.anomaly Pp.(str ("Crane: the recorded " ^ what ^ " no longer agree with the plan."))
+    in
+    Target_plan.check_kinds_recorded plan;
+    List.iter
+      (fun (r, kinds) -> if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then fail "template-parameter kinds")
+      plan.template_kinds;
+    List.iter
+      (fun (mp, s) ->
+        if not (Option.equal String.equal (Common.decided_module_name mp) (Some s)) then fail "module names" )
+      plan.representation.module_names;
+    List.iter
+      (fun (r, s) ->
+        if not (Option.equal String.equal (Common.decided_global_name r) (Some s)) then fail "global names" )
+      (plan.representation.names @ plan.representation.referenced_names);
+    List.iter
+      (fun (c, ids) ->
+        let ctor = Ml_type_util.ctor_struct_name_of_ref c in
+        List.iteri
+          (fun j id ->
+            if not (Id.equal (Common.lookup_ctor_field_name ~owner:c ctor j) id) then fail "constructor field names" )
+          ids )
+      plan.representation.field_names;
+    let describe (name, owner) =
+      name ^ " ("
+      ^ ( match owner with
+        | Cpp_state.NSref r -> Pp.string_of_ppcmds (GlobRef.print r)
+        | Cpp_state.NSmodule mp -> ModPath.to_string mp )
+      ^ ")"
+    in
+    let mem (n, o) l = List.exists (fun (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o') l in
+    let promoted = plan.representation.promoted_inductives and rendered = !Cpp_state.rendered_promotions in
+    let has r l = List.exists (GlobRef.UserOrd.equal r) l in
+    List.iter
+      (fun r ->
+        if not (has r promoted) then
+          fail ("promoted inductives: rendered but not planned " ^ Pp.string_of_ppcmds (GlobRef.print r)) )
+      rendered;
+    List.iter
+      (fun r ->
+        if not (has r rendered) then
+          fail ("promoted inductives: planned but not rendered " ^ Pp.string_of_ppcmds (GlobRef.print r)) )
+      promoted;
+    let planned = plan.representation.nested_structs and printed = !Cpp_state.printed_nested_structs in
+    List.iter (fun x -> if not (mem x planned) then fail ("nested structs: printed but not planned " ^ describe x)) printed;
+    if printed <> [] then
+      List.iter
+        (fun x -> if not (mem x printed) then fail ("nested structs: planned but not printed " ^ describe x))
+        planned
+  end
 
 (** Whether the unit [struc] declares a reference: an inductive of its, a
     constructor, a record field, a constant, a module type's specification;
@@ -1618,7 +1702,7 @@ let declares struc =
 
 (** Renders an entire ML structure to C++ header and implementation files:
     plans the unit, renders each file once, then writes and formats them. *)
-let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
+let print_structure_to_file ?(namespace = None) ?(unit_includes = []) ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
     (fn, si, mo) dry (core : Core_phase.normalized Core_phase.program) =
   let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
@@ -1637,7 +1721,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       magic = false;
     }
   in
+  Accumulated_plan.bind earlier @@ fun () ->
   let facts, plan = analyze_and_plan struc in
+  Table.with_unit_config plan.config @@ fun () ->
   Translation_state.with_unit_facts
     {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
   @@ fun () ->
@@ -1645,7 +1731,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  plan_layout struc @@ fun (modules, representation, callables, assumed, elaborations) ->
+  plan_layout earlier struc @@ fun acc (modules, representation, callables, assumed, elaborations) ->
   let plan = Target_plan.with_layout plan modules representation callables assumed in
   elaborate_unit elaborations;
   let planned_checkpoint = checkpoint () in
@@ -1710,7 +1796,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
   Unit_program.check_against_plan ~declares:(declares struc);
   Unit_program.check_against_ahead ();
-  Install_legacy_plan.check_installed facts plan;
+  check_against_plan plan;
   check_structure_unchanged planned struc;
   if Pipeline_trace.enabled () then begin
     Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
@@ -1839,7 +1925,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      lowered, and only the last outcome recorded of it describes the code
      actually emitted.  Report now that they are all in, and only when the
      files are written. *)
-  if not dry then Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ()
+  if not dry then Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ();
+  Accumulated_plan.for_next_unit acc
 
 (*********************************************)
 (** {2 Part III: the actual extraction commands} *)
@@ -2031,7 +2118,7 @@ let full_extr_reading opaque_access f (refs, mps) read =
         if source <> "" then
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
-      freeze core (print_structure_to_file ~unit_includes filenames false);
+      ignore (freeze core (print_structure_to_file ~unit_includes filenames false));
       read refs )
 
 let full_extr opaque_access f refs =
@@ -2140,6 +2227,9 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
     ) sel
   in
   List.iter (fun (mp, sel) -> collect_modtypes mp sel) struc;
+  (* The accessors a pre-scan of the whole program finds, which every unit
+     starts from. *)
+  let accessors = ref Cpp_state.no_accessors in
   let rec pre_scan_meyers_singletons ~in_template sel =
     List.iter (fun (_l, se) ->
       match se with
@@ -2148,7 +2238,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
           (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
             let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
             if in_template && not is_function then
-              Cpp_state.register_template_static_accessor_ref r )
+              accessors := Cpp_state.add_accessor_ref !accessors r )
           (Mlutil.term_defs d)
       | Core.Module.Structure_item.Module m ->
         let has_params = match m.expr with
@@ -2164,12 +2254,8 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
                 let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
                 if not is_function then begin
                   let lbl = Table.label_of_r r in
-                  Cpp_state.register_template_static_accessor
-                    (Table.modpath_of_r r) lbl;
-                  Option.iter
-                    (fun pmp ->
-                      Cpp_state.register_template_static_accessor pmp lbl )
-                    param_mp
+                  accessors := Cpp_state.add_accessor !accessors (Table.modpath_of_r r) lbl;
+                  Option.iter (fun pmp -> accessors := Cpp_state.add_accessor !accessors pmp lbl) param_mp
                 end
               | Core.Module.Signature_item.Module mt ->
                 let sub_param_mp = match param_mp with
@@ -2211,10 +2297,11 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
         if not (String.equal ns (ns_of_modfile mp)) then
           Common.rename_file_namespace mp ns )
     struc;
-  let print (mp, unit) =
+  let print earlier (mp, unit) =
     match (mp, Core_phase.structure unit) with
     | MPfile _, [(_, sel)] ->
-      if has_real_decls sel then begin
+      if not (has_real_decls sel) then earlier
+      else begin
         let ns = file_namespace mp sel in
         (* Only include modules that are topologically earlier (i.e., come
            before the current module in the extracted structure).  Including a
@@ -2230,7 +2317,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
             | Some j -> j < current_idx
             | None -> true);
         Fun.protect ~finally:(fun () -> opened_filter := fun _ -> true) @@ fun () ->
-        print_structure_to_file ~namespace:(Some ns) (module_filename mp) (dry mp) unit
+        print_structure_to_file ~namespace:(Some ns) ~earlier (module_filename mp) (dry mp) unit
       end
     | _ -> assert false
   in
@@ -2288,12 +2375,12 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
       List.iter
         (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
           if (match ty with Core.Type.Arrow _ -> false | _ -> true) then
-            Cpp_state.register_template_static_accessor
-              (Table.modpath_of_r r) (Table.label_of_r r) )
+            accessors := Cpp_state.add_accessor !accessors (Table.modpath_of_r r) (Table.label_of_r r) )
         (Mlutil.term_defs d)
     | _ -> ()
   ) struc;
-  List.iter print (Core_phase.modules core)
+  (* Each unit is planned with what the units before it planned. *)
+  ignore (List.fold_left print (Accumulated_plan.start ~accessors:!accessors) (Core_phase.modules core))
 
 (** Entry point for extracting specific references to separate files. Each Rocq
     .v file gets its own C++ output file. *)
@@ -2329,7 +2416,7 @@ let simple_extraction ~opaque_access r =
         warns ();
         if is_any_custom r then
           Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-        freeze core (print_structure_to_file (mono_filename None) false) )
+        ignore (freeze core (print_structure_to_file (mono_filename None) false)) )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -2564,7 +2651,8 @@ let print_one_decl struc mp decl =
     {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
   @@ fun () ->
   Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
-  plan_layout struc @@ fun (_, _, _, _, elaborations) ->
+  plan_layout (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
+  @@ fun _ (_, _, _, _, elaborations) ->
   elaborate_unit elaborations;
   end_planning ();
   let ans =

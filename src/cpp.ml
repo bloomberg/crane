@@ -2015,7 +2015,7 @@ let plan_file_layout s =
       (fun (_, d') ->
         List.iter
           (fun (wrapper_ref, name) ->
-            match Hashtbl.find_opt unmerged_wrappers name with
+            match unmerged_wrapper name with
             | Some wrapped ->
               homes := (position mp, position wrapped, {wrapper = name; wrapper_ref; wrapped; home = d}) :: !homes
             | None -> () )
@@ -3426,7 +3426,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               pp_wrapper_module_dual ~is_header top mp func_sels
             in
             current_structure_decls := old_decls;
-            if is_header && Cpp_ast.body_is_empty p_specs = Hashtbl.mem unmerged_wrappers name then
+            if is_header && Cpp_ast.body_is_empty p_specs = Option.has_some (unmerged_wrapper name) then
               Probe.violation "unmerged wrappers"
                 Pp.(
                   str "the wrapper " ++ str name

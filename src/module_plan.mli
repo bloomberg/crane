@@ -5,10 +5,9 @@
     before anything is rendered -- where declarations live and what they are
     called.  These are backend decisions, part of a unit's target plan
     ({!Target_plan.t.modules}), not observations about the program.  Decided by
-    {!Cpp.prepare_structure} and installed by {!Install_legacy_plan}, the one
-    writer, before anything is rendered, and read-only afterwards -- which is
-    what makes it safe to read from a [.cpp] body printed before the [.h] that
-    declares the names. *)
+    {!Cpp.prepare_structure}, and bound ({!with_layout}) before anything is
+    rendered, read-only afterwards -- which is what makes it safe to read
+    from a [.cpp] body printed before the [.h] that declares the names. *)
 
 open Names
 
@@ -73,21 +72,31 @@ val empty : t
 (** Field-by-field equality, lists compared in order. *)
 val equal : t -> t -> bool
 
-(** Record a unit's facts.  The enums replace the previous unit's; the rest
-    accumulate over the extraction, the namespace-scope refs and the concept
-    prerequisites over the unit.  Recording a plan again records nothing
-    new but what it adds. *)
-val install : t -> unit
+(** The layout the queries below read: the facts of every plan a unit and
+    the earlier units of its extraction decided, as {!extend} folds them. *)
+type layout
 
-(** Whether every decision of [t] reads back as {!install} recorded it: the
-    last answer [t] gives about a name, and a wrapper's role where [t] gives
-    one. *)
-val installed : t -> bool
+(** No facts. *)
+val no_layout : layout
+
+(** [extend l t] is [l] with the facts of [t].  The enums replace those of
+    [l]; the rest accumulate, the answer [t] gives about a name replacing
+    the one [l] gave, and a wrapper's role not given keeping the one [l]
+    recorded. *)
+val extend : layout -> t -> layout
+
+(** What a separate extraction's next unit starts from: [l] without the
+    facts that belong to one unit, the namespace-scope refs and the concept
+    prerequisites. *)
+val for_next_unit : layout -> layout
+
+(** [with_layout l f] is [f ()] with the queries below answering from [l]:
+    a unit binds the layout it is planned and rendered with. *)
+val with_layout : layout -> (unit -> 'a) -> 'a
 
 (** {1 Queries}
 
-    Each reads the installed tables: the answer of the last plan
-    {!install}ed that gave one. *)
+    Each reads the layout {!with_layout} binds; none outside it. *)
 
 (** Whether an enum inductive is written at global scope
     ([global_scope_enums] of the current unit). *)

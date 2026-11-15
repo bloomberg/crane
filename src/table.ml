@@ -1207,17 +1207,11 @@ let (_, add_value_dep_type_scheme, is_value_dep_type_scheme)
 let instance_promoted_types =
   ref (GlobRef.Map.empty : (Names.Id.t * Core.Type.t) list GlobRef.Map.t)
 
-let init_instance_promoted_types () =
-  instance_promoted_types := GlobRef.Map.empty
-
-let () = on_reset init_instance_promoted_types
-
 let () =
   register_census "instance_promoted_types" (fun () ->
       GlobRef.Map.cardinal !instance_promoted_types )
 
-let add_instance_promoted_types r bindings =
-  instance_promoted_types := GlobRef.Map.add r bindings !instance_promoted_types
+let with_instance_promoted_types m f = State.bind instance_promoted_types m f
 
 let get_instance_promoted_types r =
   match GlobRef.Map.find_opt r !instance_promoted_types with
@@ -2862,12 +2856,12 @@ let modfile_mps = ref MPmap.empty
     (e.g. [String.string] → [namespace String { struct String { ... }; }]).
     Referenced by both [Translation] and the [Cpp_state]/[Cpp_print] pipeline
     so it lives here to avoid a dependency cycle. *)
-let promoted_inductives : unit Ref.User.Tbl.t = Ref.User.Tbl.create 4
+let promoted_inductives = ref Ref.User.Set.empty
 
-(** Record that [r] is promoted.  A promotion outlives the rendering that
-    decided it: every later mention of the inductive has to spell it the
-    promoted way. *)
-let promote_inductive r = Ref.User.Tbl.replace promoted_inductives r ()
+let () = register_census "promoted_inductives" (fun () -> Ref.User.Set.cardinal !promoted_inductives)
+
+let with_promoted_inductives s f = State.bind promoted_inductives s f
+let is_promoted_inductive r = Ref.User.Set.mem r !promoted_inductives
 
 let reset_modfile () =
   modfile_ids := !blacklist_table;
@@ -2970,14 +2964,6 @@ let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 
 (** {2 Crane Extract Constant/Inductive} *)
 
-(* The customs the unit's program names ({!Program_facts.used_customs}),
-   installed with the plan, before anything is generated: whether the unit
-   can start a thread is decided from them. *)
-let named_refs = ref Ref.User.Set.empty
-
-let set_named_customs s = named_refs := s
-let named_customs () = !named_refs
-
 (* The customs the unit's files write, planned from what was generated ahead
    of them: the unit includes their imports.  [None] until planned. *)
 let written_refs = ref None
@@ -2987,10 +2973,8 @@ let written_customs () = Option.default Ref.User.Set.empty !written_refs
 
 let () =
   on_reset (fun () ->
-      named_refs := Ref.User.Set.empty;
       written_refs := None )
 
-let () = register_census "named_customs" (fun () -> Ref.User.Set.cardinal !named_refs)
 let () = register_census "written_customs" (fun () -> Ref.User.Set.cardinal (written_customs ()))
 
 (* Fires when a global already has a Crane extraction mapping and a *different*
@@ -3488,7 +3472,17 @@ let concurrency_headers =
 let runs_on_threads refs =
   StringSet.exists (fun h -> List.mem h concurrency_headers) (imports_of refs)
 
-let unit_is_concurrent () = runs_on_threads !named_refs
+type unit_config = {concurrent : bool}
+
+let unit_config ~names = {concurrent = runs_on_threads names}
+
+(* The configuration of the unit being extracted, for its extent
+   ({!with_unit_config}); a unit's own is bound once its plan decides it. *)
+let current_unit_config = ref {concurrent = false}
+
+let with_unit_config c f = State.bind current_unit_config c f
+
+let unit_is_concurrent () = !current_unit_config.concurrent
 
 let check_concurrency_decided () =
   if Probe.checking () && runs_on_threads (written_customs ()) && not (unit_is_concurrent ()) then

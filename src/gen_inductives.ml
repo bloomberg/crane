@@ -1120,7 +1120,7 @@ let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir
 (** The fields of a constructor of [name], of types [tys], that its struct
     stores behind the smart pointer, each with whether it holds [name]
     itself: what loop lowering reads off the struct, decided before it is
-    generated ({!Loopify_analysis.install_ctor_ptr_fields}). *)
+    generated ({!Loopify_analysis.add_pointer_fields}). *)
 let constructor_pointer_fields ~name ~is_coinductive vars tys =
   List.concat
     (List.mapi

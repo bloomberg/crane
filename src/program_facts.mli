@@ -5,8 +5,7 @@
     no backend decisions -- those are {!Target_plan}'s.
 
     Computed by {!analyze} as a value, from the structure alone, before
-    anything is rendered; {!Install_legacy_plan} then fills the tables
-    unconverted readers consult. *)
+    anything is rendered. *)
 
 type t = {
   used_customs : Ref.User.Set.t;
