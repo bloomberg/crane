@@ -5,7 +5,7 @@
     from Core.  See [position_plan.mli]. *)
 
 open Translation_state
-open Ml_type_util
+open Type_util
 open Translation_support
 open Translation_types
 open Core_query
@@ -13,7 +13,7 @@ open Cpp_ir.Type
 
 let push ids lex =
   Lexenv.push
-    (List.map (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value}) ids)
+    (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value}) ids)
     lex
 
 (* The return type a let's right-hand side is generated under
@@ -94,7 +94,7 @@ let region ~outer ~reads body =
         Array.iter (branch ~ret lex) branches )
     (* A lambda's body is a region of its own, planned where it begins. *)
     | Core.Expr.Lambda _ -> ()
-    | e -> Mlutil.ast_iter (expr ~pos:None ~ret lex) e
+    | e -> Core_util.ast_iter (expr ~pos:None ~ret lex) e
   (* A value a constructor stores ({!Translation_construct.gen_stored_value}). *)
   and stored ~pos ~ret ~slot lex e =
     match e with
@@ -167,7 +167,7 @@ let region ~outer ~reads body =
       if is_sequential_effect Core_effects.Bind use then (
         let a, f = Common.last_two args in
         expr ~pos:None ~ret lex a;
-        let ids, body = Mlutil.collect_lams f in
+        let ids, body = Core_util.collect_lams f in
         stmts ~ret ~slot (push ids lex) body )
       else expr ~pos:None ~ret lex e
     | Core.Expr.Apply {callee = Core.Expr.Global use;

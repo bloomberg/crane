@@ -173,7 +173,7 @@ let () =
     (Option.bind (inst.subst_index_of_orig (Param_pos.of_regular ~leading:0 0)) (Param_pos.nth inst.params)
     = Some nat);
   check "a call at its arity keeps the reading it was elaborated with"
-    (Mlutil.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))
+    (Core_util.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))
 
 (* A function generated as a method of its inductive is generated, and its
    calls elaborated, at its variables renumbered so the inductive's come

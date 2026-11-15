@@ -99,7 +99,7 @@ type renumbering = {
    Tvar2 -> 1; Tvar1 is the function's own and becomes position 2, its
    template parameter T1. *)
 let renumbering ~num_ind_vars ~this_pos ty =
-  let all_args, _ = Ml_type_util.get_args_and_ret [] ty in
+  let all_args, _ = Type_util.get_args_and_ret [] ty in
   let ind_tvar_map =
     match List.nth_opt all_args this_pos with
     | Some (Core.Type.Global_app {type_arguments = tvar_args; _}) ->
@@ -117,9 +117,9 @@ let renumbering ~num_ind_vars ~this_pos ty =
               tvar_args ) )
     | _ -> List.init num_ind_vars (fun i -> (i + 1, i + 1))
   in
-  let ind_tvar_set = Mlutil.IntSet.of_list (List.map fst ind_tvar_map) in
+  let ind_tvar_set = Core_util.IntSet.of_list (List.map fst ind_tvar_map) in
   let extra =
-    List.filter (fun i -> not (Mlutil.IntSet.mem i ind_tvar_set)) (Mlutil.IntSet.elements (Mlutil.ml_tvars ty))
+    List.filter (fun i -> not (Core_util.IntSet.mem i ind_tvar_set)) (Core_util.IntSet.elements (Core_util.ml_tvars ty))
   in
   let renamed = (not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)) || extra <> [] in
   let full = ind_tvar_map @ List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra in
@@ -145,7 +145,7 @@ let renumber_type r ty =
   in
   if r.renamed then go ty else ty
 
-let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body else body
+let renumber_body r body = if r.renamed then Core_util.remap_tvars r.rename body else body
 
 (** {2 Body safety check} *)
 
@@ -430,14 +430,14 @@ let find_best_inductive ind_refs ty =
     template parameter or skipped outright -- the three the method's own
     parameter list filters out. *)
 let arg_reaches_cpp d =
-  (not (Mlutil.isTdummy d))
-  && (not (Ml_type_util.ml_type_is_void d))
-  && not (Ml_type_util.ml_type_is_instance d)
+  (not (Core_util.isTdummy d))
+  && (not (Type_util.ml_type_is_void d))
+  && not (Type_util.ml_type_is_instance d)
 
 (** Number of value parameters in a curried ML type: the arrows whose domain
     reaches C++ as a parameter. *)
 let ml_value_arity ty =
-  List.length (List.filter arg_reaches_cpp (Ml_type_util.ml_domains ty))
+  List.length (List.filter arg_reaches_cpp (Type_util.ml_domains ty))
 
 (** [pos] counted among the arguments C++ is given, rather than among all the
     arrows of the ML type.
@@ -449,7 +449,7 @@ let ml_value_arity ty =
     position 1 and at C++ position 0, and a printer told 1 reaches past the
     receiver for it. *)
 let cpp_arg_pos ty pos =
-  let doms = Ml_type_util.ml_domains ty in
+  let doms = Type_util.ml_domains ty in
   List.length
     (List.filter arg_reaches_cpp (List.filteri (fun i _ -> i < pos) doms))
 
@@ -513,7 +513,7 @@ let file_calls modpath decls =
     (fun (_l, se) ->
       match se with
       | Core.Module.Structure_item.Declaration d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) (Mlutil.term_defs d)
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) (Core_util.term_defs d)
       | _ -> () )
     decls;
   fun body ->
@@ -559,7 +559,7 @@ let method_receiver ~func epon_ref body ty =
     when body_safe_for_method ~this_pos:pos
            ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
            body ->
-    let params, inner = Mlutil.collect_lams body in
+    let params, inner = Core_util.collect_lams body in
     let consumed () =
       Table.should_reuse func && Table.is_shared_variant epon_ref
       && Escape.is_reuse_scrutinee (List.length params - pos) inner
@@ -742,7 +742,7 @@ let register_methods_for_epon
                 | Some (pos, ind_tvar_positions) ->
                   consider r body ty pos ind_tvar_positions
                 | _ -> () )
-            (Mlutil.term_defs d)
+            (Core_util.term_defs d)
         | _ -> () )
       decls;
     if top_level_siblings then begin
@@ -863,7 +863,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     | Core.Module.Structure_item.Declaration d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) -> process_func fd.entity fd.body fd.type_)
-        (Mlutil.term_defs d)
+        (Core_util.term_defs d)
     | _ -> ()
   ) decls
 
@@ -1078,7 +1078,7 @@ let compute_returns_any
         | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
           List.iter
             (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace method_types fd.entity fd.type_)
-            (Mlutil.term_defs d)
+            (Core_util.term_defs d)
         | Core.Module.Structure_item.Module m ->
           ( match m.expr with
           | Core.Module.Expr.Structure {path = _mp; items = inner_sel} -> collect_from_sel inner_sel

@@ -93,16 +93,16 @@ and Type : sig
         (** A De Bruijn type variable.  [Core.Type.Rigidity.Schematic] is a variable of some
             other constant's type scheme, standing to be instantiated when that
             scheme is instantiated; [Core.Type.Rigidity.Rigid] is one of the definition currently
-            being reconstructed, made rigid by {!Mlutil.rigidify}.
+            being reconstructed, made rigid by {!Core_util.rigidify}.
 
             The two do not unify with each other even at the same index,
             which is the whole point: it is that failure that makes
-            {!Mlutil.needs_magic} insert a {!Expr.Coerce} where a definition's
+            {!Core_util.needs_magic} insert a {!Expr.Coerce} where a definition's
             own variable meets a schematic one.  Note that
-            {!Mlutil.type_subst_list} substitutes both flavours -- rigidity
+            {!Core_util.type_subst_list} substitutes both flavours -- rigidity
             constrains unification, not substitution.
 
-            Almost every reader outside {!Mlutil} and {!Extraction} ignores
+            Almost every reader outside {!Core_util} and {!Extraction} ignores
             [rigidity]: the back end does not care which flavour it has. *)
     | Variable_app of {
         head : int;
@@ -127,7 +127,7 @@ and Type : sig
             solved, as {!Core_phase.freeze} hands it on.  Immutable, and read
             as erased.  The annotations that shared the metavariable share the
             [Open.t], so a reader that fills it from other evidence fills it
-            wherever it is written ({!Ml_type_util.fill_holes}).  Unlike a
+            wherever it is written ({!Type_util.fill_holes}).  Unlike a
             [Hole] nothing is owed to it: no instantiation slot stands behind
             it, and a consumer with nothing to fill it from spells it erased.
             No [Meta] survives freezing; this is what becomes of the open

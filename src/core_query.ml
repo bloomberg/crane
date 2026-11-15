@@ -10,10 +10,10 @@
     it before translation runs. *)
 
 open Names
-open Mlutil
+open Core_util
 open Table
 open Util
-open Ml_type_util
+open Type_util
 
 (** {!Table.find_type}, [None] where [r] has no recorded type. *)
 let find_type_opt (r : GlobRef.t) : Core.Type.t option =
@@ -42,7 +42,7 @@ let safe_firstn n lst =
 
 (** Collect all Core.Type.Variable indices from an Core.Type.t. Used to find type variables beyond
     those of the containing inductive/record. *)
-let collect_tvars_set acc ty = IntSet.union acc (Mlutil.ml_tvars ty)
+let collect_tvars_set acc ty = IntSet.union acc (Core_util.ml_tvars ty)
 
 (** Convert an IntSet of type variable indices back to a list, wrapping
     [collect_tvars_set]. Used to collect all Core.Type.Variable indices from an Core.Type.t. *)
@@ -83,7 +83,7 @@ let reconcile_parameter_type body_ty sig_ty =
     | _ -> body_ty
   in
   let promoted_alias t =
-    match Mlutil.type_simpl t with
+    match Core_util.type_simpl t with
     | Core.Type.Global_app {head = (GlobRef.ConstRef _ as g); _} -> Table.promoted_type_params g <> []
     | _ -> false
   in
@@ -120,14 +120,14 @@ let rec spelled_tvars_of ?(plain = fun _ -> false) acc = function
     in
     (* Nor are the arguments a mapping's text does not place: [itree E R] is
        [std::shared_ptr<ITree<R>>], and [E] cannot be read off it. *)
-    let l = List.filteri (fun i _ -> Ml_type_util.type_arg_is_written r i) l in
+    let l = List.filteri (fun i _ -> Type_util.type_arg_is_written r i) l in
     List.fold_left (spelled_tvars_of ~plain) acc l
   | Core.Type.Meta {contents = Some t} -> spelled_tvars_of ~plain acc t
   | _ -> acc
 
 (** The variables [ml_ty]'s declaration takes as template names.
 
-    {!Ml_type_util.higher_kinded_ml_tvars} less those the declaration only
+    {!Type_util.higher_kinded_ml_tvars} less those the declaration only
     ever applies, in its parameters and nowhere else: each such application is
     relaxed there to a fresh deduced parameter
     ({!Plan_templates.relax_applied_param}), and the variable left a plain
@@ -155,7 +155,7 @@ let declared_higher_kinded_tvars ml_ty =
     && not (IntSet.mem j (collect_tvars_set IntSet.empty (ml_return_type ml_ty)))
   in
   IntSet.filter (fun j -> not (relaxed j))
-    (Ml_type_util.higher_kinded_ml_tvars [ml_ty])
+    (Type_util.higher_kinded_ml_tvars [ml_ty])
 
 (** The type variables of [id] a C++ compiler could read off the call's value
     arguments. *)
@@ -185,7 +185,7 @@ let deducible_tvars_of_glob id =
     so the frame a loopified call builds is typed instead of falling back on
     [decltype(lambda)].
 
-    Instantiation goes through {!Mlutil.Var_types.apply}, by the callee's
+    Instantiation goes through {!Core_util.Var_types.apply}, by the callee's
     variables: a second substituter here would be a second oracle, free to
     disagree. *)
 let rec infer_ml_body_type (a : Core.Expr.t) : Core.Type.t option =
@@ -197,10 +197,10 @@ let rec infer_ml_body_type (a : Core.Expr.t) : Core.Type.t option =
          ones the call site wrote, by variable, or, where it wrote none, the
          ones its arguments imply. *)
       let ty =
-        if not (Mlutil.Var_types.is_empty (Mlutil.written_type_args use)) then
-          Mlutil.instantiate_written ~reader:"infer_ml_body_type" use ty
+        if not (Core_util.Var_types.is_empty (Core_util.written_type_args use)) then
+          Core_util.instantiate_written ~reader:"infer_ml_body_type" use ty
         else
-          Mlutil.Var_types.apply
+          Core_util.Var_types.apply
             (tvar_instantiation r ty
                (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args) )
             ty
@@ -280,7 +280,7 @@ and tvar_instantiation_found
       when (not (GlobRef.CanOrd.equal g1 g2))
            && Option.has_some (Table.lookup_typedef_unchecked kn) ->
       let body = Option.get (Table.lookup_typedef_unchecked kn) in
-      unify f (if a2 = [] then body else Mlutil.type_subst_list a2 body)
+      unify f (if a2 = [] then body else Core_util.type_subst_list a2 body)
     (* Where both sides open with type abstractions, they may abstract
        different numbers of them -- [E ~> M]'s one against a handler written
        [fun T => intr], itself abstracting its own [T] -- and the value
@@ -335,7 +335,7 @@ and tvar_instantiation_found
                   match resolve_tmeta t with
                   | Core.Type.Global_app {type_arguments = []; _} -> true
                   | Core.Type.Global_app {type_arguments = args; _} ->
-                    Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
+                    Type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
                   | _ -> false )
                 (List.filteri (fun i _ -> i < List.length a2 - List.length a1) a2) ->
       let n_fixed = List.length a2 - List.length a1 in
@@ -350,7 +350,7 @@ and tvar_instantiation_found
        for. *)
     | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = cargs; _}, actual when constructors ->
       ( match Table.lookup_typedef_unchecked kn with
-      | Some body -> unify (Mlutil.type_subst_list cargs body) actual
+      | Some body -> unify (Core_util.type_subst_list cargs body) actual
       | None -> () )
     | _ -> ()
   in
@@ -377,13 +377,13 @@ and tvar_instantiation_found
     one found: a variable no argument mentions keeps itself, so substituting
     leaves it alone. *)
 and tvar_instantiation r callee_ty args =
-  match Mlutil.reference_scheme r with
-  | None -> Mlutil.Var_types.empty
+  match Core_util.reference_scheme r with
+  | None -> Core_util.Var_types.empty
   | Some scheme ->
     let found = tvar_instantiation_found callee_ty args in
     let at v = List.assoc_opt (Scheme.Var.ordinal v) found in
-    Mlutil.Var_types.through
-      (Mlutil.last_var (List.filter (fun v -> Option.has_some (at v)) (Scheme.Var.all scheme)))
+    Core_util.Var_types.through
+      (Core_util.last_var (List.filter (fun v -> Option.has_some (at v)) (Scheme.Var.all scheme)))
       (fun v ->
         match at v with
         | Some t -> t
@@ -423,7 +423,7 @@ and resolve_from_argument_types ~lex tyargs args =
     Core erases a [Type -> Type] argument, but the callee still declares a
     template parameter for it -- and the erasure is contagious: template
     arguments are positional, so the all-or-nothing rule in
-    {!Ml_type_util.filter_erased_type_args} drops the concrete arguments
+    {!Type_util.filter_erased_type_args} drops the concrete arguments
     beside it.  One lost family therefore costs every type argument the call
     could have written, including the ones nothing can deduce.
 
@@ -440,7 +440,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
     (* Only a variable the callee applies: this pass exists because Core
        erases a [Type -> Type] argument, and a plain type argument that came
        out erased is erased for a reason a value argument cannot undo. *)
-    let applied = Ml_type_util.applied_ml_tvar_arities [callee_ty] in
+    let applied = Type_util.applied_ml_tvar_arities [callee_ty] in
     (* Nor one a type alias in a domain is applied to: [ReSum_id : Id_ obj C
        -> ...] takes the category's morphism constructor [C], a type-level
        function erased for that reason alone, and the definitional class
@@ -498,15 +498,15 @@ let sole_instance ~lex ~n_outer t body =
   let exception Not_sole in
   try
     let instances = ref [] in
-    Mlutil.ast_iter_rel_applied
+    Core_util.ast_iter_rel_applied
       (fun n i args ->
         if Int.equal i (n + 1) then begin
           if args = [] then raise Not_sole;
           let args =
             List.map
               (fun a ->
-                if Mlutil.ast_occurs_itvl 1 (n + 1) a then raise Not_sole
-                else Mlutil.ast_lift (-(n + 1)) a )
+                if Core_util.ast_occurs_itvl 1 (n + 1) a then raise Not_sole
+                else Core_util.ast_lift (-(n + 1)) a )
               args
           in
           instances := tvar_instantiation_found ~lex t args :: !instances
@@ -516,7 +516,7 @@ let sole_instance ~lex ~n_outer t body =
     let outer_only ty = IntSet.for_all (fun k -> k <= n_outer) (collect_tvars_set IntSet.empty ty) in
     let agreed k =
       match List.map (List.assoc_opt k) !instances with
-      | Some ty :: rest when List.for_all (function Some ty' -> Mlutil.eq_ml_type ty ty' | None -> false) rest ->
+      | Some ty :: rest when List.for_all (function Some ty' -> Core_util.eq_ml_type ty ty' | None -> false) rest ->
         Some ty
       | _ -> None
     in
@@ -586,7 +586,7 @@ type let_lambda =
     ({!Core_elaborate.generated_definition}), after which translation meets
     only lambdas it binds or lifts. *)
 let let_lambda ~lex ~n_outer t a b =
-  if not (Ml_type_util.own_type_variables ~n_outer [t]) then Bound
+  if not (Type_util.own_type_variables ~n_outer [t]) then Bound
   else
     match sole_instance ~lex ~n_outer t b with
     | Some inst -> At_instance inst
@@ -640,8 +640,8 @@ let strip_magic = Core.Expr.strip_crossings
     whose body never mentions them. *)
 let rec strip_dictionary e =
   match strip_magic e with
-  | Core.Expr.Lambda {parameter_type = ty; body = b; _} when erased_by_extraction ty && not (Mlutil.ast_occurs 1 b) ->
-    strip_dictionary (Mlutil.ast_pop b)
+  | Core.Expr.Lambda {parameter_type = ty; body = b; _} when erased_by_extraction ty && not (Core_util.ast_occurs 1 b) ->
+    strip_dictionary (Core_util.ast_pop b)
   | e -> e
 
 (** [subst_dict_carrier carrier ty] puts [carrier] in place of the leading
@@ -652,7 +652,7 @@ let rec strip_dictionary e =
 
     [carrier] is a type constructor written as an application whose
     placeholders stand for what it is applied to, so applying it is filling
-    them -- which is what {!Mlutil.apply_ml_type} does, including for the
+    them -- which is what {!Core_util.apply_ml_type} does, including for the
     type-level lambda [fun T => holder T (box T)] whose binder occurs twice.
 
     An occurrence that cannot be filled is left as the [Core.Type.Variable_app] it was: a type of
@@ -661,7 +661,7 @@ let rec strip_dictionary e =
 let subst_dict_carrier ?(at = 1) carrier ty =
   let apply k xs =
     match carrier with
-    | Core.Type.Global_app _ -> Mlutil.apply_ml_type carrier xs
+    | Core.Type.Global_app _ -> Core_util.apply_ml_type carrier xs
     | _ -> Core.Type.Variable_app {head = k; arguments = xs}
   in
   let rec go t =
@@ -840,7 +840,7 @@ let with_dict_carrier ~lex ~caller id value_args ty =
   | None -> ty
 
 let instantiate_at_call ~lex ~caller id tys value_args ty =
-  Mlutil.Var_types.apply tys (with_dict_carrier ~lex ~caller id value_args ty)
+  Core_util.Var_types.apply tys (with_dict_carrier ~lex ~caller id value_args ty)
 
 (** Handle eta expansion, curried function application, and promoted type arg
     resolution. Recovers erased template type args at call sites where C++ can't
@@ -1006,7 +1006,7 @@ let projection_value_domains ~lex (use : Core.Global_use.t) inst =
       | _ -> ty
     in
     ml_domains
-      (Mlutil.instantiate_written ~reader:"projection_value_domains" use ty)
+      (Core_util.instantiate_written ~reader:"projection_value_domains" use ty)
     |> List.filter (fun t ->
            match resolve_tmeta t with
            | Core.Type.Erased _ -> false
@@ -1038,7 +1038,7 @@ let static_projection ~lex (use : Core.Global_use.t) args : Elaborated_call.stat
       let missing =
         if Table.is_inline_custom x then []
         else
-          let operands = List.filter (fun a -> not (Mlutil.isMLdummy a || a == inst)) args in
+          let operands = List.filter (fun a -> not (Core_util.isMLdummy a || a == inst)) args in
           List.filteri (fun i _ -> i >= List.length operands) domains
       in
       let rec position i = function

@@ -10,7 +10,7 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
 
@@ -99,13 +99,13 @@ let is_class_tparam class_ref i =
     template binds. *)
 let hkt_alias_param_name i = Generated_name.indexed "A" i
 
-(* Re-exports of {!Ml_type_util} helpers the declaration generators read
+(* Re-exports of {!Type_util} helpers the declaration generators read
    through this module. *)
-let recover_method_quantifier = Ml_type_util.recover_method_quantifier
+let recover_method_quantifier = Type_util.recover_method_quantifier
 
-let method_tvar_count = Ml_type_util.method_tvar_count
+let method_tvar_count = Type_util.method_tvar_count
 
-let hkt_carrier_fixed_args = Ml_type_util.hkt_carrier_fixed_args
+let hkt_carrier_fixed_args = Type_util.hkt_carrier_fixed_args
 
 (** Render a type CONSTRUCTOR argument as an alias template body: the [list] of
     [Instance ListContainer : Container list] becomes [List<_A0>], to be
@@ -117,9 +117,9 @@ let hkt_carrier_alias base arity ml_ty =
   let is_lambda =
     match ml_ty with
     | Core.Type.Global_app {head = r; type_arguments = args; _} ->
-      Mlutil.writes_binder ~constructors:(Mlutil.constructor_params r) args
-    | Core.Type.Variable_app {arguments = args; _} -> Mlutil.writes_binder args
-    | _ -> Mlutil.type_has_hole ml_ty
+      Core_util.writes_binder ~constructors:(Core_util.constructor_params r) args
+    | Core.Type.Variable_app {arguments = args; _} -> Core_util.writes_binder args
+    | _ -> Core_util.type_has_hole ml_ty
   in
   match ml_ty with
   (* A carrier with a hole is a type-level lambda whose binder is the hole:
@@ -128,7 +128,7 @@ let hkt_carrier_alias base arity ml_ty =
      The alias applies it to its parameter. *)
   | _ when arity = 1 && is_lambda ->
     ( [hkt_alias_param_name 0],
-      Mlutil.fill_type_hole (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) ml_ty )
+      Core_util.fill_type_hole (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) ml_ty )
   | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = es} ->
     let kept = hkt_carrier_fixed_args arity ml_ty in
     let params =
@@ -430,7 +430,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     let ok = ref true in
     let rec go t =
       (match t with Core.Expr.Bound_variable _ -> ok := false | _ -> ());
-      Mlutil.ast_iter go t
+      Core_util.ast_iter go t
     in
     go e;
     !ok
@@ -445,7 +445,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | None -> (
       match Table.find_type r with
       | ty -> (
-        match Mlutil.type_simpl (Ml_type_util.ml_codomain ty) with
+        match Core_util.type_simpl (Type_util.ml_codomain ty) with
         | Core.Type.Global_app {head = c; _} when Table.is_typeclass c -> Some c
         | _ -> None )
       | exception Not_found -> None )
@@ -467,7 +467,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | None -> []
     | Some ty ->
       let binders, _ = collect_lams b in
-      let doms = Ml_type_util.ml_domains ty in
+      let doms = Type_util.ml_domains ty in
       let tc_names = ref (Translation_support.collect_typeclass_param_ids ty) in
       let outer_first =
         List.mapi
@@ -498,7 +498,7 @@ let promoted_resolutions_of_body ?r ?ty b =
       match t with
       | Core.Expr.Lambda {body = b; _} -> go (depth + 1) b
       | Core.Expr.Let {value = a; body = b; _} -> go depth a; go (depth + 1) b
-      | _ -> Mlutil.ast_iter (go depth) t
+      | _ -> Core_util.ast_iter (go depth) t
     in
     go 0 e;
     !ok
@@ -533,7 +533,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk_at (d + Array.length ids)) funs
-    | e' -> Mlutil.ast_iter (walk_at d) e'
+    | e' -> Core_util.ast_iter (walk_at d) e'
   in
   let rec walk e =
         match Core_query.strip_magic e with
@@ -556,7 +556,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           | _ -> walk a )
         args
     | Core.Expr.Global {callee = r; _} -> add r (Entity_application (r, [], []))
-    | _ -> Mlutil.ast_iter walk e
+    | _ -> Core_util.ast_iter walk e
   in
   walk b;
   (if leading <> [] then
@@ -581,7 +581,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            Core.Expr.Apply {callee = Core.Expr.Global (Mlutil.open_reference inst);
+            Core.Expr.Apply {callee = Core.Expr.Global (Core_util.open_reference inst);
                              arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
           in
           Option.iter (add_at class_ref inst)
@@ -606,7 +606,7 @@ let type_resolutions_of_referenced_globals b =
     ( match Core_query.strip_magic e with
     | Core.Expr.Global {callee = r; _} -> found := !found @ ind_type_resolutions r
     | _ -> () );
-    Mlutil.ast_iter walk e
+    Core_util.ast_iter walk e
   in
   walk b;
   drop_ambiguous !found

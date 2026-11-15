@@ -579,7 +579,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
          argument at the seam ({!Cpp_erasure.instantiate_foreign}). *)
       if Probe.checking () then begin
         match head with
-        | Entity_application (r, _, _) when Ml_type_util.ref_has_no_cpp_name r ->
+        | Entity_application (r, _, _) when Type_util.ref_has_no_cpp_name r ->
           CErrors.anomaly (Pp.str "pp_cpp_type: a nameless constructor applied, not removed at the seam")
         | _ -> ()
       end;

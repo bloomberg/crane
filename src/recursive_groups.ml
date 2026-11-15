@@ -16,7 +16,7 @@ let empty = Map.empty
 let analyze struc =
   let defs = ref [] in
   Modutil.struct_iter
-    (fun d -> List.iter (fun fd -> defs := fd :: !defs) (Mlutil.term_defs d))
+    (fun d -> List.iter (fun fd -> defs := fd :: !defs) (Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -27,7 +27,7 @@ let analyze struc =
     let found = ref Set.empty in
     let rec scan = function
       | Core.Expr.Global {callee = r; _} when Tbl.mem position r -> found := Set.add r !found
-      | a -> Mlutil.ast_iter scan a
+      | a -> Core_util.ast_iter scan a
     in
     scan body;
     !found

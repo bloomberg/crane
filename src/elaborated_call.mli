@@ -101,7 +101,7 @@ type instantiated = private {
       (** The scheme variables as the call reads them in the end: {!call}'s
           reading, plus a partial application's variables resolved for the
           lambda it is eta-expanded into. *)
-  tys : Mlutil.Var_types.t;  (** {!reading} as substitutions take it ({!Call_tyargs.by_variable}). *)
+  tys : Core_util.Var_types.t;  (** {!reading} as substitutions take it ({!Call_tyargs.by_variable}). *)
   callee_type_at_call : Core.Type.t;  (** The callee's type at {!reading}. *)
   params : Param_pos.subst Param_pos.params;  (** The parameters of {!callee_type_at_call}. *)
   params_orig : Param_pos.orig Param_pos.params;  (** The parameters the callee declares. *)
@@ -118,7 +118,7 @@ type instantiated = private {
 val instantiate :
   t ->
   reading:Call_tyargs.t ->
-  at_call:(Mlutil.Var_types.t -> Core.Type.t -> Core.Type.t) ->
+  at_call:(Core_util.Var_types.t -> Core.Type.t -> Core.Type.t) ->
   expand:(Core.Type.t -> Core.Type.t) ->
   erased:(Core.Type.t -> bool) ->
   instantiated

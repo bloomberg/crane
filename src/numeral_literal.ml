@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Ml_type_util
+open Type_util
 
 let strip_magic = Core.Expr.strip_crossings
 

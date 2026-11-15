@@ -65,7 +65,7 @@ let () =
               {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) ) )
   in
   check "a use at the scheme its callee is referenced at freezes"
-    (not (refused [term "x" (use_of_p (Option.get (Mlutil.reference_scheme (r "p")))) nat]));
+    (not (refused [term "x" (use_of_p (Option.get (Core_util.reference_scheme (r "p")))) nat]));
   check "a use at a look-alike of its callee's scheme is refused"
     (refused [term "y" (use_of_p (Scheme.Id.fresh (r "p") ~arity:1)) nat]);
   check "a use holding a metavariable in its instantiation is refused"
@@ -126,10 +126,10 @@ let () =
   check "a pass that would splice its own result otherwise is refused" (not (normalizes decide_anew));
   check "the splices decided are the program's"
     (Splices.decided (Core_phase.splices (Core_phase.normalize decide_once (frozen fine))) (r "n"));
-  let minting s = ignore (Mlutil.new_meta ()); s in
-  let before = Mlutil.new_meta () in
+  let minting s = ignore (Core_util.new_meta ()); s in
+  let before = Core_util.new_meta () in
   ignore (Core_phase.normalize minting (frozen fine));
-  ( match (before, Mlutil.new_meta ()) with
+  ( match (before, Core_util.new_meta ()) with
   | Core.Type.Open o, Core.Type.Open o' -> check "checking a normal form makes no number" (Core.Open.id o' = Core.Open.id o + 2)
   | _ -> check "a frozen program makes open annotations" false );
   Core.Extracted.Meta.thaw ()
@@ -154,7 +154,7 @@ let () =
   let o = Core.Open.fresh 15 and other = Core.Open.fresh 15 in
   let fills = ref [] in
   let refined =
-    Ml_type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Core.Type.Open o) (Core.Type.Open o))
+    Type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Core.Type.Open o) (Core.Type.Open o))
       (pair nat bool)
   in
   check "a hole met twice is filled once" (refined = pair nat nat);
@@ -163,11 +163,11 @@ let () =
                                parameter_type = Core.Type.Open o;
                                body = Core.Expr.fresh_rel 1} in
   check "a term mentioning the hole is generated with it filled"
-    (Ml_type_util.fill_holes !fills body = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+    (Type_util.fill_holes !fills body = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
                                                              parameter_type = nat;
                                                              body = Core.Expr.fresh_rel 1});
   check "another hole of the same number is not filled"
-    (Ml_type_util.fill_holes !fills (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+    (Type_util.fill_holes !fills (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
                                                        parameter_type = Core.Type.Open other;
                                                        body = Core.Expr.fresh_rel 1}) = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
                                                                                                           parameter_type = Core.Type.Open other;

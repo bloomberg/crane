@@ -69,7 +69,7 @@ type representation = {
     start empty and are filled by {!with_template_kinds} and
     {!with_layout} as each stage is decided. *)
 type t = {
-  input : Ml_fingerprint.t option;
+  input : Core.Fingerprint.t option;
       (** The structure planned, where something reads it: under
           [CRANE_CHECK_IR] or [CRANE_TRACE_PIPELINE]. *)
   config : Table.unit_config;

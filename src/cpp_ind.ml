@@ -95,7 +95,7 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Ml_type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t) )
+        || Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds r l t)] else []
 
@@ -306,7 +306,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
           | Core.Module.Structure_item.Declaration d ->
             List.iter
               (fun (fd : Core.Recursion.Definition.t) -> consider fd.entity fd.body fd.type_)
-              (Mlutil.term_defs d)
+              (Core_util.term_defs d)
           | _ -> () )
         !current_structure_decls;
       (* A call to a method of any type is rendered on its receiver, so only
@@ -924,7 +924,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Ml_type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t)) )
+      not (Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the Core declaration [d], an
     element of [module_] written in the header scope [scope], generates, for

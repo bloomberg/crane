@@ -15,7 +15,7 @@ let check name cond =
 
 let r s = GlobRef.VarRef (Id.of_string s)
 let x s = Core.Binder_name.Source (Id.of_string s)
-let tmp n = Core.Binder_name.Generated (Mlutil.temporary_id n)
+let tmp n = Core.Binder_name.Generated (Core_util.temporary_id n)
 let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []}
 let tree = Core.Type.Global_app {head = r "tree"; type_arguments = []; index_arguments = []}
 let h = Core.Global_use.monomorphic (r "h")
@@ -33,7 +33,7 @@ let rec occurrences e =
     | _ -> []
   in
   let below = ref [] in
-  Mlutil.ast_iter (fun c -> below := !below @ occurrences c) e;
+  Core_util.ast_iter (fun c -> below := !below @ occurrences c) e;
   here @ !below
 
 let shared es = Core.Occurrence.shared (fun visit -> List.iter (fun e -> List.iter visit (occurrences e)) es) <> []
@@ -87,7 +87,7 @@ let () =
                                                                  body = Core.Expr.Bound_variable {index = 1; _}; _};
                                            occurrence = o; _}; _} ->
       check "the branch's own let stays outermost" (z = x "z");
-      check "a later branch binds a temporary of its own" (id <> tmp 1 && match id with Core.Binder_name.Generated v -> Mlutil.is_temporary_id v | _ -> false);
+      check "a later branch binds a temporary of its own" (id <> tmp 1 && match id with Core.Binder_name.Generated v -> Core_util.is_temporary_id v | _ -> false);
       check "a copy binds temporaries of its own" (t2 <> tmp 2);
       check "a later branch's let is an occurrence of its own" (not (Core.Occurrence.equal o occ))
     | _ -> check "what follows is read past a branch's own lets" false );

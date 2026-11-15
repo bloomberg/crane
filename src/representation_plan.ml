@@ -6,7 +6,7 @@
 
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Translation_support
 open Translation_types
 open Core_query
@@ -44,7 +44,7 @@ let at_binding ty =
 (* [scope] under the binders [ids], innermost first, each planned at the
    conversion of its ML type. *)
 let push kind ids scope =
-  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x;
+  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_mlid x;
                                                  eb_type = ty;
                                                  eb_role = Lexenv.Value}) ids) scope.lex;
     planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
@@ -90,9 +90,9 @@ let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
           let slot_dom = Option.bind slot (fun doms -> List.nth_opt doms (n_emitted - 1 - j)) in
           match
             lambda_param_cpp_type (Common.empty_env ()) ~ns ~tvars ~rank2_carrier ~reified ~n_params:n ~body
-              ~unused:(not (Mlutil.ast_occurs (i + 1) body))
+              ~unused:(not (Core_util.ast_occurs (i + 1) body))
               ~slot_dom
-              (Mlutil.id_of_mlid x, ty, false)
+              (Core_util.id_of_mlid x, ty, false)
           with
           | decl, _ -> (
             match strip_param_wrappers (lambda_param_assigned ~slot_dom ty decl) with
@@ -171,7 +171,7 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
   in
   let bound =
     custom_branch_binders (Common.empty_env ()) ~fix_a_fired ~scrut_ml_typ ~ml_typ:ty cname
-      (List.rev_map (fun (x, ty) -> (Mlutil.id_of_mlid x, ty)) ids)
+      (List.rev_map (fun (x, ty) -> (Core_util.id_of_mlid x, ty)) ids)
   in
   let planned = List.rev_map (fun (_, ty) -> at_binding ty) bound in
   let planned = if fix_a_fired then List.map (fun p -> pin p Any) planned else planned in
@@ -179,7 +179,7 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
   let elems_are_any =
     (cs.cs_mlmagic || cs.cs_magic)
     && match ty with Core.Type.Global_app {head = g;
-                                           type_arguments = _ :: _; _} -> Ml_type_util.is_custom_list_global g | _ -> false
+                                           type_arguments = _ :: _; _} -> Type_util.is_custom_list_global g | _ -> false
   in
   if elems_are_any then
     let def_tys = (Ctor_fields.of_ctor cname).types in
@@ -230,7 +230,7 @@ let region ~outer body =
      where the constructor's lowering says what it is, otherwise against the
      field's type: its ML type converted. *)
   let rec walk_field_lambda ?slot scope field_ty lam =
-    let ids, body = Mlutil.collect_lams lam in
+    let ids, body = Core_util.collect_lams lam in
     let slot_ty =
       match (slot, field_ty) with
       | Some s, _ -> s
@@ -307,7 +307,7 @@ let region ~outer body =
       let env = Common.empty_env () in
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
-        | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | Some ft -> List.filter (fun t -> not (Core_util.isTdummy t)) ft
         | None -> []
       in
       let temps = ctor_draft_temps env ~promoted_active ~return ty in
@@ -339,7 +339,7 @@ let region ~outer body =
                            arguments = args; _} when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
-        | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | Some ft -> List.filter (fun t -> not (Core_util.isTdummy t)) ft
         | None -> []
       in
       let env = Common.empty_env () in
@@ -353,7 +353,7 @@ let region ~outer body =
         match (ft, ty) with
         | Core.Type.Variable _, _ -> None
         | _, Core.Type.Global_app {type_arguments = tys; _} -> (
-          match cpp_of_ml env (Mlutil.type_subst_list tys ft) with
+          match cpp_of_ml env (Core_util.type_subst_list tys ft) with
           | ct -> (
             match codomain ct with
             | Some cod
@@ -373,7 +373,7 @@ let region ~outer body =
     | Core.Expr.Construct {constructor = r; arguments = args; _} when List.exists is_lambda args ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
-        | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | Some ft -> List.filter (fun t -> not (Core_util.isTdummy t)) ft
         | None -> []
       in
       List.iteri
@@ -419,7 +419,7 @@ let region ~outer body =
             let expected_ml_ty =
               match param_ml_ty i with Some t when not (ml_type_contains_erased t) -> Some t | _ -> None
             in
-            let ids, body = Mlutil.collect_lams lam in
+            let ids, body = Core_util.collect_lams lam in
             let ids, body = slot_refined_lambda (Common.empty_env ()) ~expected_ml_ty ids body in
             (* A callable the callee deduces is written against
                [const auto &] where the slot's domain is a box
@@ -457,7 +457,7 @@ let region ~outer body =
               | Some t when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) -> Some t
               | _ -> None
             in
-            let ids, body = Mlutil.collect_lams lam in
+            let ids, body = Core_util.collect_lams lam in
             walk (parameters ?slot_ty ~body ids scope) body
           | _ -> walk scope a )
         (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args)
@@ -475,7 +475,7 @@ let region ~outer body =
        which the check holds to the same answer for every pattern binder
        rooted at one, and counts for every read of one. *)
     | Core.Expr.Lambda _ as e ->
-      let ids, body = Mlutil.collect_lams e in
+      let ids, body = Core_util.collect_lams e in
       walk (parameters ~body ids scope) body
     (* A fixpoint with type variables of its own is lifted to a function of
        its own ({!Translation_stmts.gen_stmts}), its parameters bound at the
@@ -485,12 +485,12 @@ let region ~outer body =
       let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
       let scope = push Kfix (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) scope in
       if
-        Ml_type_util.own_type_variables ~n_outer:(List.length (!tctx).lexical.current_type_vars)
+        Type_util.own_type_variables ~n_outer:(List.length (!tctx).lexical.current_type_vars)
           (List.map snd (Array.to_list fs))
       then
         Array.iter
           (fun d ->
-            let ids, body = Mlutil.collect_lams d in
+            let ids, body = Core_util.collect_lams d in
             walk (push Kparameter ids scope) body )
           defs
       else Array.iter (walk scope) defs
@@ -500,7 +500,7 @@ let region ~outer body =
       reads := (occ, {rd_boxed = boxed (planned scope i);
                       rd_kind;
                       rd_type = Option.map fst (planned scope i)}) :: !reads
-    | e -> Mlutil.ast_iter (walk scope) e
+    | e -> Core_util.ast_iter (walk scope) e
   in
   let depth = Lexenv.depth outer in
   (* The outer binders a declaration's head declares, at the types it
@@ -526,7 +526,7 @@ let region ~outer body =
      type. *)
   ( match (strip_magic body, return) with
   | (Core.Expr.Lambda _ as e), Some t when slot_domains t <> None ->
-    let ids, body = Mlutil.collect_lams e in
+    let ids, body = Core_util.collect_lams e in
     walk (parameters ~slot_ty:t ~body ids scope) body
   | _ -> walk scope body );
   (!found, List.rev !reads)

@@ -45,7 +45,7 @@ let instantiate ?(lex = Lexenv.empty) ?caller ?(scope = []) use args =
 let var_type (inst : Elaborated_call.instantiated) i =
   List.find_map
     (fun (var, ty) -> if Scheme.Var.ordinal var = i then Some ty else None)
-    (Mlutil.Var_types.bindings inst.tys)
+    (Core_util.Var_types.bindings inst.tys)
 
 let mutind m l = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string m])) (Label.make l))
 let unit_path = ModPath.MPfile (DirPath.make [Id.of_string "CP"])
@@ -78,11 +78,11 @@ let () =
     (var_type colliding 2 = Some Core.Type.Unknown && var_type colliding 1 = Some (v 1));
   let self = instantiate ~caller:f (unwritten f ~arity:2) [a] in
   check "a self-call reads its variables as the caller's own"
-    (Mlutil.Var_types.is_empty self.tys
+    (Core_util.Var_types.is_empty self.tys
     && not (Call_tyargs.resolved_from Call_tyargs.Eta_parameter self.reading));
   let full = instantiate (unwritten f ~arity:2) [a; a] in
   check "a full application leaves its holes to deduction"
-    (Mlutil.Var_types.is_empty full.tys && Call_tyargs.holes full.reading <> []);
+    (Core_util.Var_types.is_empty full.tys && Call_tyargs.holes full.reading <> []);
   check "the declared parameters are the callee's, at any arity"
     (Param_pos.to_list full.params_orig = [v 1; v 1]
     && Param_pos.to_list partial.params_orig = [v 1; v 1])

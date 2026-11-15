@@ -733,7 +733,7 @@ let reset_renaming_tables () = do_cleanup ()
     it is the caller's cue to look for a collision. *)
 let modular_rename_ex ?(global_scope = false) id =
   let s = ascii_of_id id in
-  let s = Mlutil.unreserve_leading_underscore s in
+  let s = Core_util.unreserve_leading_underscore s in
   let is_kw =
     is_reserved_cpp_name s || (global_scope && is_reserved_at_global_scope s)
   in

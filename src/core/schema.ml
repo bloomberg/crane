@@ -2,12 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A constant's Core type scheme and its binder layout.  See
-    [ml_schema.mli]. *)
+    [schema.mli]. *)
 
 
 type binder_role =
   | Value
-  | Erased of Core.Erasure_reason.t
+  | Erased of Erasure_reason.t
 
 type binder_info = {
   binder : Scheme.Binder.t;
@@ -16,23 +16,23 @@ type binder_info = {
 }
 
 type raw_binder = {
-  raw_erased : Core.Erasure_reason.t option;
+  raw_erased : Erasure_reason.t option;
   raw_tvar : int option;
 }
 
 type t = {
   id : Scheme.Id.t;
-  body : Core.Type.t;
+  body : Type.t;
   layout : binder_info list;
 }
 
 let max_tvar t =
   let rec parse n = function
-    | Core.Type.Meta {contents = Some t} -> parse n t
-    | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i} -> max i n
-    | Core.Type.Variable_app {head = i; arguments = l} -> List.fold_left parse (max i n) l
-    | Core.Type.Arrow {parameter = a; result = b} -> parse (parse n a) b
-    | Core.Type.Global_app {type_arguments = l; _} -> List.fold_left parse n l
+    | Type.Meta {contents = Some t} -> parse n t
+    | Type.Variable {rigidity = Type.Rigidity.Schematic; variable = i} -> max i n
+    | Type.Variable_app {head = i; arguments = l} -> List.fold_left parse (max i n) l
+    | Type.Arrow {parameter = a; result = b} -> parse (parse n a) b
+    | Type.Global_app {type_arguments = l; _} -> List.fold_left parse n l
     | _ -> n
   in
   parse 0 t
@@ -50,7 +50,7 @@ let make owner body raw =
   in
   let claimed = List.filter_map (fun b -> b.scheme_var) layout in
   if List.length (List.sort_uniq Scheme.Var.compare claimed) <> List.length claimed
-  then invalid_arg "Ml_schema.make: two binders claim one variable";
+  then invalid_arg "Core.Schema.make: two binders claim one variable";
   {id; body; layout}
 
 let id s = s.id

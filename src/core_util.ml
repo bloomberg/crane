@@ -224,7 +224,7 @@ let constructor_params = function
     | None -> [] )
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ | GlobRef.VarRef _ -> []
 
-(* See [mlutil.mli]. *)
+(* See [core_util.mli]. *)
 let writes_binder ?(generated = true) ?(constructors = []) args =
   let binder = if generated then type_has_hole else ( = ) Core.Type.Unknown in
   List.rev (drop_placeholders (List.rev args) (List.length args))
@@ -739,12 +739,12 @@ let recorded_schema = function
 
 let reference_scheme r =
   match recorded_schema r with
-  | Some schema -> Some (Ml_schema.id schema)
+  | Some schema -> Some (Core.Schema.id schema)
   | None -> (
     match Table.find_type r with
     | exception Not_found -> None
     | ty -> (
-      let arity = Ml_schema.max_tvar ty in
+      let arity = Core.Schema.max_tvar ty in
       match GlobRef.Map.find_opt r !minted_schemes with
       | _ when arity = 0 -> None
       | Some id when Int.equal (Scheme.Id.arity id) arity -> Some id
@@ -772,8 +772,8 @@ let forwarding_use target =
       (Scheme.Instantiation.make scheme (fun v ->
            let own = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = Scheme.Var.ordinal v} in
            let source =
-             match Option.bind schema (fun s -> Ml_schema.origin s v) with
-             | Some b -> Scheme.Written {binder = b.Ml_schema.binder; observed = Some own}
+             match Option.bind schema (fun s -> Core.Schema.origin s v) with
+             | Some b -> Scheme.Written {binder = b.Core.Schema.binder; observed = Some own}
              | None -> Scheme.Not_written
            in
            {Scheme.solution = Scheme.Type own; source} ) )
@@ -799,7 +799,7 @@ module Var_types = struct
     | [] -> None
     | (w, _) :: _ ->
       if not (Scheme.Id.equal (Scheme.Var.owner v) (Scheme.Var.owner w)) then
-        invalid_arg "Mlutil.Var_types.find: a variable of another scheme";
+        invalid_arg "Core_util.Var_types.find: a variable of another scheme";
       List.find_map (fun (w, ty) -> if Scheme.Var.equal v w then Some ty else None) t
 
   let find_tvar t i = Scheme.Var.assoc_tvar i t
@@ -868,7 +868,7 @@ let rec type_mem_kn kn = function
 
 (** {2 Greatest variable occurring in [t]} *)
 
-let type_maxvar = Ml_schema.max_tvar
+let type_maxvar = Core.Schema.max_tvar
 
 (** {2 From [a -> b -> c] to [[a;b],c]} *)
 

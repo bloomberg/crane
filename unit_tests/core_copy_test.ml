@@ -31,7 +31,7 @@ let rec occurrences e =
     | _ -> []
   in
   let below = ref [] in
-  Mlutil.ast_iter (fun c -> below := !below @ occurrences c) e;
+  Core_util.ast_iter (fun c -> below := !below @ occurrences c) e;
   here @ !below
 
 let shares e e' =

@@ -6,10 +6,10 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
@@ -172,7 +172,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
               (fun i ->
                 match List.nth_opt doms i with
                 | Some t ->
-                  (not (Ml_type_util.has_tany_written t))
+                  (not (Type_util.has_tany_written t))
                   && Id.Set.for_all
                        (fun nm -> List.exists (Id.equal nm) tvars)
                        (Cpp_ir.Types.variable_names t)
@@ -328,7 +328,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           (fun j ((id, _, _) as arg) ->
             let unused =
               match List.nth_opt emitted_binder_indices j with
-              | Some i -> not (Mlutil.ast_occurs (i + 1) a)
+              | Some i -> not (Core_util.ast_occurs (i + 1) a)
               | None -> false
             in
             let param_cpp_ty, body_subst =
@@ -345,7 +345,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          slot ({!binder_emitted}) is the common case. *)
       let arity_only =
         List.filteri
-          (fun i _ -> not (Mlutil.ast_occurs (i + 1) a))
+          (fun i _ -> not (Core_util.ast_occurs (i + 1) a))
           args_with_owned
         |> List.map (fun (id, _, _) -> id)
       in
@@ -517,7 +517,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
       let cpp_args, body_stmts =
         match a with
         | Core.Expr.Fixpoint fix_group | Core.Expr.Cofixpoint fix_group when List.length filtered_args <= 1 ->
-          let fix_lam_params, _ = Mlutil.collect_lams (Core.Recursion.Group.selected_member fix_group).body in
+          let fix_lam_params, _ = Core_util.collect_lams (Core.Recursion.Group.selected_member fix_group).body in
           let fix_value_params =
             List.filter
               (fun (_, ty) -> is_runtime_binder_type ty)
@@ -676,7 +676,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
        function names as first-class values. *)
     ( match a with
     | Core.Expr.Global ({callee = r; _} as use) ->
-      let tys_inner = Mlutil.written_type_args use in
+      let tys_inner = Core_util.written_type_args use in
       let ml_ty =
         match callee_ml_type r with
         | Some ty -> ty
@@ -748,7 +748,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         let forward (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t = Forward (Type_of x, x) in
         (* What the callee returns once given its value arguments, in the
            lambda's own variables. *)
-        let result_ml = Ml_type_util.ml_drop_arrows n ml_ty in
+        let result_ml = Type_util.ml_drop_arrows n ml_ty in
         (* The lambda returns what the call does: its type where every
            variable in it is named, [decltype(auto)] -- the call's own
            answer -- where one is not. *)
@@ -756,7 +756,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
           let ret : Cpp_ir.Lowered.Type.t =
             match ret with
             | Some t
-              when (not (Ml_type_util.has_unnamed_tvar t)) && not (Cpp_ir.Types.prints_as_any t)
+              when (not (Type_util.has_unnamed_tvar t)) && not (Cpp_ir.Types.prints_as_any t)
               ->
               t
             | _ -> Decltype_auto
@@ -815,9 +815,9 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
              [interp] calling a named handler [h] with an event.  Every
              variable is then written as the box it is, and a parameter
              that mentions one is read at that erased type. *)
-          let own_index = Mlutil.Var_types.is_empty tys_inner && all_tvars <> [] in
+          let own_index = Core_util.Var_types.is_empty tys_inner && all_tvars <> [] in
           let at_own_index ty =
-            Ml_type_util.resolve_tvars_to_any
+            Type_util.resolve_tvars_to_any
               (cpp_ir_of_ml_type env [] ty)
           in
           let mentions_tvar ty =
@@ -850,7 +850,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
             List.map
               (fun (v, ty) ->
                 (Scheme.Var.ordinal v, cpp_ir_of_ml_type env inner_tvars ty) )
-              (Mlutil.Var_types.bindings tys_inner)
+              (Core_util.Var_types.bindings tys_inner)
           in
           (* An erased argument is left to deduction -- unless nothing can
              deduce it: [h : getE ~> itree noE] quantifies an index the

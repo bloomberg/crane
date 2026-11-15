@@ -6,11 +6,11 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Table
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
@@ -291,7 +291,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                 { params = params;
                   return_type = Some ret_ty;
                   _ }
-                when List.exists Ml_type_util.has_tany_in_type dom ->
+                when List.exists Type_util.has_tany_in_type dom ->
                 let strip_tmod : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
                   | Const t -> t
                   | t -> t
@@ -302,7 +302,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                 Function (param_tys, ret_ty)
               | _, Lambda _ -> cpp_ty
               | _, _
-                when Ml_type_util.has_erased_type_in_type cpp_ty
+                when Type_util.has_erased_type_in_type cpp_ty
                      || Cpp_ir.Types.exists
                           (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Promoted_member _ -> true | _ -> false)
                           cpp_ty ->

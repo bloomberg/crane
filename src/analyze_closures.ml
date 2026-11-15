@@ -10,14 +10,14 @@ type group = Lifted | In_place | Closures
 (* The function an application applies, under any coercion. *)
 let callee = Core.Expr.strip_crossings
 
-let arity f = List.length (fst (Mlutil.collect_lams f))
+let arity f = List.length (fst (Core_util.collect_lams f))
 
 (* Whether [use] is a monadic bind generated as sequencing, as the unit's
    effect operations [effects] say. *)
 let sequential_bind effects use = Core_effects.lookup effects use = Some {operation = Bind; mode = Sequential}
 
 let rec group ~effects ~n_outer ?continuation ~cofix ids bodies =
-  if Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) then Lifted
+  if Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) then Lifted
   else if
     escapes_in_bodies ~effects ~n_outer ~cofix bodies || Option.cata (escapes ~effects ~n_outer 1) false continuation
   then Closures
@@ -51,7 +51,7 @@ and escapes ~effects ~n_outer k t =
       | continuation :: rest -> (
         List.exists (go k) rest
         ||
-        match Mlutil.collect_lams continuation with
+        match Core_util.collect_lams continuation with
         | [], _ -> go k continuation
         | ids, body -> go (k + List.length ids) body )
       | [] -> false )
@@ -59,10 +59,10 @@ and escapes ~effects ~n_outer k t =
     | Core.Expr.Coerce {value = a; _}
     | Core.Expr.Boxed_value {value = a; _}
     | Core.Expr.Lambda_group_barrier {value = a; _} -> go k a
-    | Core.Expr.Lambda {body; _} -> Mlutil.ast_occurs (k + 1) body
+    | Core.Expr.Lambda {body; _} -> Core_util.ast_occurs (k + 1) body
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
-      Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies
+      Array.exists (Core_util.ast_occurs (k + Array.length ids)) bodies
     | Core.Expr.Let {value = a; body = b; _} -> go k a || go (k + 1) b
     | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       go k scrut
@@ -85,7 +85,7 @@ and escapes ~effects ~n_outer k t =
     let n = Array.length bodies in
     Array.exists
       (fun f ->
-        let params, body = Mlutil.collect_lams f in
+        let params, body = Core_util.collect_lams f in
         go (k + n + List.length params) body )
       bodies
   in
@@ -98,11 +98,11 @@ and escapes_in_bodies ~effects ~n_outer ~cofix bodies =
   let n = Array.length bodies in
   Array.exists
     (fun f ->
-      let params, body = Mlutil.collect_lams f in
+      let params, body = Core_util.collect_lams f in
       let k = List.length params in
       List.exists
         (fun j ->
           let member = k + n - j in
-          if cofix then Mlutil.ast_occurs member body else escapes ~effects ~n_outer member body )
+          if cofix then Core_util.ast_occurs member body else escapes ~effects ~n_outer member body )
         (List.init n Fun.id) )
     bodies

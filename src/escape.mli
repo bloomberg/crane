@@ -139,7 +139,7 @@ val returns_receiver_field : this_pos:int -> Core.Expr.t -> bool
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)
-module IntSet = Mlutil.IntSet
+module IntSet = Core_util.IntSet
 
 (** [free_rels depth t] returns free de Bruijn indices in [t], shifted by
     [depth]. An index [i > depth] contributes [i - depth].

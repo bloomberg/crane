@@ -18,7 +18,7 @@ let mode_of_monad m = if Table.is_monad_reified m then Reified else Sequential
    monad's, and [Sequential], the mode a generation starts in, for a
    codomain that is no monad. *)
 let declaration_mode ty =
-  match Ml_type_util.codomain_monad ty with
+  match Type_util.codomain_monad ty with
   | Some m -> mode_of_monad m
   | None -> Sequential
 
@@ -45,10 +45,10 @@ let analyze struc =
   in
   let rec body mode = function
     | Core.Expr.Global use -> record mode use
-    | a -> Mlutil.ast_iter (body mode) a
+    | a -> Core_util.ast_iter (body mode) a
   in
   Modutil.struct_iter
-    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> body (declaration_mode fd.type_) fd.body) (Mlutil.term_defs d))
+    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> body (declaration_mode fd.type_) fd.body) (Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;

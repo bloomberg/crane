@@ -1435,13 +1435,13 @@ let core_passes to_appear : Core.Program.t Pipeline_trace.pass list =
        declarations, final from here; the method registry {!Normalize} builds
        already asks. *)
     effect_ "shared_variants" Structure_analysis.register_shared_variants;
-    pass "dedup" Ml_dedup.structure;
-    pass "specialize" Ml_specialize.structure;
-    pass "knot" Ml_knot.structure;
+    pass "dedup" Core_dedup.structure;
+    pass "specialize" Core_specialize.structure;
+    pass "knot" Core_knot.structure;
     pass "fix_shape" Fix_shape.structure;
     pass "fresh_occurrences" Fresh_occurrences.structure;
     effect_ "local_types" Local_types.structure;
-    effect_ "ir_check" Ml_ir_check.structure ]
+    effect_ "ir_check" Core_check.structure ]
 
 let core_pass_names = Pipeline_trace.names (core_passes ([], []))
 
@@ -1472,8 +1472,8 @@ let normalize_pass_names = Pipeline_trace.names normalize_passes
 let observed_fingerprint ~stage struc =
   if Pipeline_trace.enabled () then
     Pipeline_trace.event stage
-      ("fingerprint " ^ Ml_fingerprint.to_hex (Ml_fingerprint.structure struc));
-  if Pipeline_trace.enabled () || Probe.checking () then Some (Ml_fingerprint.elements struc)
+      ("fingerprint " ^ Core.Fingerprint.to_hex (Core.Fingerprint.structure struc));
+  if Pipeline_trace.enabled () || Probe.checking () then Some (Core.Fingerprint.elements struc)
   else None
 
 (** Report the elements rendering changed, and under [CRANE_CHECK_IR] fail
@@ -1488,8 +1488,8 @@ let check_structure_unchanged planned struc =
     (fun before ->
       let changed =
         List.filter_map
-          (fun ((l, fp), (_, fp')) -> if Ml_fingerprint.equal fp fp' then None else Some l)
-          (List.combine before (Ml_fingerprint.elements struc))
+          (fun ((l, fp), (_, fp')) -> if Core.Fingerprint.equal fp fp' then None else Some l)
+          (List.combine before (Core.Fingerprint.elements struc))
       in
       List.iter
         (fun l -> Pipeline_trace.event "emit" ("changed by rendering: " ^ Label.to_string l))
@@ -1637,7 +1637,7 @@ let check_against_plan (plan : Target_plan.t) =
       (plan.representation.names @ plan.representation.referenced_names);
     List.iter
       (fun (c, ids) ->
-        let ctor = Ml_type_util.ctor_struct_name_of_ref c in
+        let ctor = Type_util.ctor_struct_name_of_ref c in
         List.iteri
           (fun j id ->
             if not (Id.equal (Common.lookup_ctor_field_name ~owner:c ctor j) id) then fail "constructor field names" )
@@ -1715,8 +1715,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = []) ?(earlier 
   reset_renaming_tables ();
   let unsafe_needs =
     {
-      Backend.mldummy = struct_ast_search Mlutil.isMLdummy struc;
-      tdummy = struct_type_search Mlutil.isTdummy struc;
+      Backend.mldummy = struct_ast_search Core_util.isMLdummy struc;
+      tdummy = struct_type_search Core_util.isTdummy struc;
       tunknown = struct_type_search (( == ) Core.Type.Unknown) struc;
       magic = false;
     }
@@ -2188,7 +2188,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   let decl_names = function
     | Core.Decl.Type_alias {entity = r; _} -> [ref_label r]
     | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-      List.map (fun (fd : Core.Recursion.Definition.t) -> ref_label fd.entity) (Mlutil.term_defs d)
+      List.map (fun (fd : Core.Recursion.Definition.t) -> ref_label fd.entity) (Core_util.term_defs d)
     | Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
       Array.to_list (Array.map (fun (ip : Core.Inductive.Packet.t) -> Id.to_string ip.name) ind.packets)
   in
@@ -2239,7 +2239,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
             let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
             if in_template && not is_function then
               accessors := Cpp_state.add_accessor_ref !accessors r )
-          (Mlutil.term_defs d)
+          (Core_util.term_defs d)
       | Core.Module.Structure_item.Module m ->
         let has_params = match m.expr with
           | Core.Module.Expr.Functor _ -> true
@@ -2331,7 +2331,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   let program_reads = ref Ref.Can.Set.empty in
   Modutil.struct_iter
     (fun d ->
-      let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Mlutil.term_defs d) in
+      let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core_util.term_defs d) in
       Modutil.decl_iter_references
         (fun r -> if not (List.exists (Ref.Can.equal r) own) then program_reads := Ref.Can.Set.add r !program_reads)
         ignore ignore d)
@@ -2376,7 +2376,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
         (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
           if (match ty with Core.Type.Arrow _ -> false | _ -> true) then
             accessors := Cpp_state.add_accessor !accessors (Table.modpath_of_r r) (Table.label_of_r r) )
-        (Mlutil.term_defs d)
+        (Core_util.term_defs d)
     | _ -> ()
   ) struc;
   (* Each unit is planned with what the units before it planned. *)

@@ -22,14 +22,14 @@
     parameters by variables or lets ({!check}) -- extraction makes the terms
     a type carries canonical where it builds them
     ([Extraction.extract_type_app]), and every application built later is
-    built with {!apply} or {!Mlutil.apply_eta_args}.  So translation
+    built with {!apply} or {!Core_util.apply_eta_args}.  So translation
     reads each call as it is written, and an analysis of the structure --
     which parameters a call owns ({!Escape}) -- reads the same call the
     printer emits: a global applied in stages had its first stage taken for
     a partial application that captures its arguments. *)
 
 (** [apply f args], [f] and [args] canonical: the canonical form of
-    [Core.Expr.Apply (f, args)] ({!Mlutil.canonical_app}), a literal where it is a
+    [Core.Expr.Apply (f, args)] ({!Core_util.canonical_app}), a literal where it is a
     numeral converter's application to a digit chain.  Every application
     built after {!structure} has run is built with this. *)
 val apply : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t

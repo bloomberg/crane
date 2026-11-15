@@ -20,7 +20,7 @@ let placeholder_index = function
 let rec replace_placeholders f e =
   match placeholder_index e with
   | Some i -> f i
-  | None -> Mlutil.ast_map (replace_placeholders f) e
+  | None -> Core_util.ast_map (replace_placeholders f) e
 
 (* A local fixpoint function: its declared type, and its arity, the
    lambdas its body starts with.  The type may leave its result open; the
@@ -49,7 +49,7 @@ let temporaries () =
   let n = ref 0 in
   fun () ->
     incr n;
-    Core.Binder_name.Generated (Mlutil.temporary_id !n)
+    Core.Binder_name.Generated (Core_util.temporary_id !n)
 
 (* A full application yields what its function's type ends in.  A partial
    one yields a function: there is nothing to evaluate early, and naming it
@@ -76,8 +76,8 @@ let group_call group ~depth e =
       (* What it yields, or, where the fixpoint's type does not say, an open
          annotation of the temporary's own: the program is frozen. *)
       Some
-        (Option.default (Mlutil.new_meta ())
-           (Ml_type_util.ml_codomain_after (List.length value_args) l.l_type))
+        (Option.default (Core_util.new_meta ())
+           (Type_util.ml_codomain_after (List.length value_args) l.l_type))
     | _ -> None )
   | _ -> None
 
@@ -92,7 +92,7 @@ type reading =
 (* The type the temporary binding the call [e], of type [ty], read as
    [reading] says, is declared at, or [None] where the call is left in
    place.  A function whose result is a type index
-   ({!Ml_type_util.result_is_index_only_tvar}: [eval : expr A -> A]) returns
+   ({!Type_util.result_is_index_only_tvar}: [eval : expr A -> A]) returns
    it boxed, and a temporary at [ty] holds it unboxed, cast where it is
    bound.  Where [ty] names a type variable the declaration does not bind
    -- one a constructor hides, the [A * B] of [fst (eval p)] or the
@@ -105,21 +105,21 @@ type reading =
    opened at a type of no value there, so such a call is left in place. *)
 let held group ~reading e ty =
   let boxed_only =
-    Mlutil.type_maxvar ty > group.own_tvars
+    Core_util.type_maxvar ty > group.own_tvars
     &&
     match e with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} ->
-      Option.cata Ml_type_util.result_is_index_only_tvar false (Core_query.find_type_opt r)
+      Option.cata Type_util.result_is_index_only_tvar false (Core_query.find_type_opt r)
     | _ -> false
   in
   if not boxed_only then Some ty
   else
     match reading with
-    | Stored -> Some (Mlutil.new_meta ())
+    | Stored -> Some (Core_util.new_meta ())
     | Coerced into -> (
-      match Mlutil.type_simpl into with
+      match Core_util.type_simpl into with
       | Core.Type.Variable _ | Core.Type.Variable_app _ -> None
-      | _ -> Some (Mlutil.new_meta ()) )
+      | _ -> Some (Core_util.new_meta ()) )
     | Passed -> None
 
 (* Whether [e], at binder depth [depth], calls one of [group]'s functions
@@ -169,7 +169,7 @@ let duplication_budget = 32
 
 (* [e], a term under one binder, under [n] more between that binder and the
    ones around [e]. *)
-let below_first n e = Mlutil.permut_rels n 1 (Mlutil.ast_lift n e)
+let below_first n e = Core_util.permut_rels n 1 (Core_util.ast_lift n e)
 
 (* [e] with each temporary it binds renamed by [fresh]: a copy of a term
    binding temporaries binds temporaries of its own. *)
@@ -179,18 +179,18 @@ let rec renamed_temporaries fresh e =
                    binder_type = ty;
                    value = a;
                    body = b;
-                   occurrence = occ} when Mlutil.is_temporary_id x ->
+                   occurrence = occ} when Core_util.is_temporary_id x ->
     Core.Expr.Let {binder = fresh ();
                    binder_type = ty;
                    value = renamed_temporaries fresh a;
                    body = renamed_temporaries fresh b;
                    occurrence = occ}
-  | _ -> Mlutil.ast_map (renamed_temporaries fresh) e
+  | _ -> Core_util.ast_map (renamed_temporaries fresh) e
 
 let into_branches ~fresh ~rty (id, ty, occ) branches rest =
-  if (Array.length branches - 1) * Mlutil.ast_size rest > duplication_budget then None
+  if (Array.length branches - 1) * Core_util.ast_size rest > duplication_budget then None
   else
-    let renamed = function Core.Binder_name.Generated x when Mlutil.is_temporary_id x -> fresh () | id -> id in
+    let renamed = function Core.Binder_name.Generated x when Core_util.is_temporary_id x -> fresh () | id -> id in
     let branch i ({Core.Match.Branch.binders = ids; body = b; _} as br) =
       let id, rest, occ =
         if i = 0 then (id, rest, occ)
@@ -260,8 +260,8 @@ let rec scope ~group ~depth ?expected e =
            call into it. *)
         let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
         take e'
-          (Option.default (Mlutil.new_meta ())
-             (Ml_type_util.ml_codomain_after (List.length value_args) (Core.Recursion.Group.selected_member g).type_))
+          (Option.default (Core_util.new_meta ())
+             (Type_util.ml_codomain_after (List.length value_args) (Core.Recursion.Group.selected_member g).type_))
       | _ -> e' )
     | Core.Expr.Construct {result_type = ty;
                            constructor = (GlobRef.ConstructRef (ind, _) as r);
@@ -321,7 +321,7 @@ let rec scope ~group ~depth ?expected e =
                               occurrence = o; _} when Splices.is_entered_copy group.splices o ->
           (* A partner's copy the machine enters stands for the partner: its
              calls are the group's. *)
-          {group with locals = (depth + 1, [|{l_type = ty; l_arity = Mlutil.nb_lams fn}|]) :: group.locals}
+          {group with locals = (depth + 1, [|{l_type = ty; l_arity = Core_util.nb_lams fn}|]) :: group.locals}
         | _ -> group
       in
       Core.Expr.Let {binder = id;
@@ -337,7 +337,7 @@ let rec scope ~group ~depth ?expected e =
       and bodies = Core.Recursion.Group.bodies rec_group
       and occ = rec_group.occurrence in
       let n = Array.length ids in
-      let fns = Array.mapi (fun j (_, ty) -> {l_type = ty; l_arity = Mlutil.nb_lams bodies.(j)}) ids in
+      let fns = Array.mapi (fun j (_, ty) -> {l_type = ty; l_arity = Core_util.nb_lams bodies.(j)}) ids in
       let group = {group with locals = (depth + n, fns) :: group.locals} in
       Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:i ids (Array.map (inner ~group n) bodies) occ)
     | Core.Expr.Cofixpoint rec_group ->
@@ -363,9 +363,9 @@ let rec scope ~group ~depth ?expected e =
   let k = List.length calls in
   (* The [i]th let sees the [i - 1] before it; the body sees all [k]. *)
   let rec wrap i = function
-    | [] -> replace_placeholders (fun j -> Core.Expr.fresh_rel (k - j + 1)) (Mlutil.ast_lift k body)
+    | [] -> replace_placeholders (fun j -> Core.Expr.fresh_rel (k - j + 1)) (Core_util.ast_lift k body)
     | (call, ty) :: rest ->
-      let rhs = replace_placeholders (fun j -> Core.Expr.fresh_rel (i - j)) (Mlutil.ast_lift (i - 1) call) in
+      let rhs = replace_placeholders (fun j -> Core.Expr.fresh_rel (i - j)) (Core_util.ast_lift (i - 1) call) in
       Core.Expr.Let {binder = group.fresh ();
                      binder_type = ty;
                      value = rhs;
@@ -420,7 +420,7 @@ let loopified ~methods r =
    operations [effects] whose partners splicing decided [splices]. *)
 let body ~effects ~splices ~globals ty b =
   scope ~group:{globals;
-                own_tvars = Mlutil.type_maxvar ty;
+                own_tvars = Core_util.type_maxvar ty;
                 locals = [];
                 fresh = temporaries ();
                 effects;
@@ -443,25 +443,25 @@ let decl ~effects ~splices ~methods = function
   | d -> d
 
 (* A definition of type [ty] as it is generated: binding a parameter at each
-   of its type's arrows ({!Ml_type_util.eta_parameters}), the body it writes
+   of its type's arrows ({!Type_util.eta_parameters}), the body it writes
    applied to the ones it does not, at each that extraction did not erase. *)
 let eta_body ty b =
   match b with
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> b
   | _ ->
-    let ty = Mlutil.type_simpl ty in
-    let params, body = Ml_type_util.collect_typed_lams ty b in
-    match Ml_type_util.eta_parameters ty params with
+    let ty = Core_util.type_simpl ty in
+    let params, body = Type_util.collect_typed_lams ty b in
+    match Type_util.eta_parameters ty params with
     | [] -> b
     | missing ->
       let args =
         List.rev
           (List.filter_map
-             (fun (i, (_, t)) -> if Ml_type_util.erased_by_extraction t then None else Some (Core.Expr.fresh_rel (i + 1)))
+             (fun (i, (_, t)) -> if Type_util.erased_by_extraction t then None else Some (Core.Expr.fresh_rel (i + 1)))
              (List.mapi (fun i x -> (i, x)) missing) )
       in
-      Mlutil.named_lams (missing @ params)
-        (Mlutil.apply_eta_args (Mlutil.ast_lift (List.length missing) body) args)
+      Core_util.named_lams (missing @ params)
+        (Core_util.apply_eta_args (Core_util.ast_lift (List.length missing) body) args)
 
 let eta_expand =
   Modutil.map_struct_decls (function

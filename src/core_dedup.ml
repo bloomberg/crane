@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A definition whose body is another's, written once.  See
-    [ml_dedup.mli]. *)
+    [core_dedup.mli]. *)
 
 open Names
 
@@ -43,7 +43,7 @@ let rec canonical self body =
     Core.Expr.Boxed_value {value = canonical self a; occurrence = mocc}
   | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
     Core.Expr.Lambda_group_barrier {value = canonical self a; occurrence = mocc}
-  | e -> Mlutil.ast_map (canonical self) e
+  | e -> Core_util.ast_map (canonical self) e
 
 (* A group's members, all named [f] at no type. *)
 and canonical_group self g =
@@ -53,10 +53,10 @@ and canonical_group self g =
 (* A forwarder with [body]'s parameters, calling [target] at its own type
    variables, in order. *)
 let forwarder body target =
-  let params, _ = Mlutil.collect_lams body in
+  let params, _ = Core_util.collect_lams body in
   let n = List.length params in
-  Mlutil.named_lams params
-    (Core.Expr.Apply {callee = Core.Expr.Global (Mlutil.forwarding_use target);
+  Core_util.named_lams params
+    (Core.Expr.Apply {callee = Core.Expr.Global (Core_util.forwarding_use target);
                       arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))})
 
 (* A function definition: a fixpoint, or a term that is a lambda, emitted
@@ -78,7 +78,7 @@ let structure struc =
       (* A forwarder runs its target's precondition checks, so two
          definitions are one only if those are the same too. *)
       let key = (canonical r body, Table.get_sigma_assertions r) in
-      match List.find_opt (fun (key', _, ty') -> key' = key && Mlutil.eq_ml_type ty' ty) seen with
+      match List.find_opt (fun (key', _, ty') -> key' = key && Core_util.eq_ml_type ty' ty) seen with
       | Some (_, r', _) ->
         (l, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
                                                                      body = forwarder body r';

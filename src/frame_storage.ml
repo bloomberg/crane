@@ -27,7 +27,7 @@ let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
                           type_arguments = args; _} when abbreviations && not (Table.is_custom r) -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some t -> value_inductive ~abbreviations (Mlutil.type_subst_list args t)
+    | Some t -> value_inductive ~abbreviations (Core_util.type_subst_list args t)
     | None -> false )
   | Core.Type.Meta {contents = Some t} -> value_inductive ~abbreviations t
   | _ -> false

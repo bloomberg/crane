@@ -86,7 +86,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
           let ids = Core.Recursion.Group.functions rec_group
           and funs = Core.Recursion.Group.bodies rec_group in
           Array.iter (walk (depth + Array.length ids)) funs
-        | e -> Mlutil.ast_iter (walk depth) e
+        | e -> Core_util.ast_iter (walk depth) e
     in
     walk depth e;
     !n
@@ -95,7 +95,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
      body, under the fixpoint's name and its parameters, continuing itself
      and every loop the scope does. *)
   and entered callee depth occurrence fix =
-    let parameters, inner = Mlutil.collect_lams fix in
+    let parameters, inner = Core_util.collect_lams fix in
     let arity = List.length parameters in
     let target = Loop.Member (occurrence, 0) in
     let callee ~depth:d f =
@@ -221,7 +221,7 @@ let rec fixpoints wanted acc e =
     | _ -> acc
   in
   let acc = ref acc in
-  Mlutil.ast_iter (fun e -> acc := fixpoints wanted !acc e) e;
+  Core_util.ast_iter (fun e -> acc := fixpoints wanted !acc e) e;
   !acc
 
 let lower ~methods plan program =
@@ -235,12 +235,12 @@ let lower ~methods plan program =
     (fun d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) -> defs := Names.GlobRef.Map_env.add fd.entity fd !defs)
-        (Mlutil.term_defs d) )
+        (Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     struc;
   let generated (fd : Core.Recursion.Definition.t) =
-    Ml_type_util.declared_parameters (Mlutil.type_simpl fd.type_) fd.body
+    Type_util.declared_parameters (Core_util.type_simpl fd.type_) fd.body
   in
   (* The body of a function lowered tail modulo cons is read with
      Normalize's temporaries put back, as the plan reads its chains. *)
@@ -306,7 +306,7 @@ let lower ~methods plan program =
             (fun (occ, funs) ->
               let builds = List.exists (Core.Occurrence.equal occ) local_modulo_cons in
               let frames = List.exists (Core.Occurrence.equal occ) frame_locals in
-              let parameters, inner = Mlutil.collect_lams funs.(0) in
+              let parameters, inner = Core_util.collect_lams funs.(0) in
               let inner = if builds then Recursion_plan.restore_temporaries inner else inner in
               let arity = List.length parameters in
               let callee ~depth f =
@@ -319,7 +319,7 @@ let lower ~methods plan program =
             (List.rev_map
                (fun (occ, _, funs) -> (occ, funs))
                (fixpoints (locals @ local_modulo_cons @ frame_locals) [] body) ) )
-        (Mlutil.term_defs d) )
+        (Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -336,7 +336,7 @@ let held_occurrences t =
   let rec ast = function
     | Core.Expr.Bound_variable {occurrence = o; _} -> found := o :: !found
     | Core.Expr.Global {occurrence; _} -> found := occurrence :: !found
-    | e -> Mlutil.ast_iter ast e
+    | e -> Core_util.ast_iter ast e
   in
   let continue_ (c : Control_ir.Term.continue_) = List.iter ast c.arguments in
   let rec go : Control_ir.Term.t -> unit = function

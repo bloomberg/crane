@@ -9,7 +9,7 @@ open Names
 open Table
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
@@ -381,7 +381,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
         match r with
         | GlobRef.ConstructRef ((kn, _), _) ->
           let ind = GlobRef.IndRef (kn, 0) in
-          Ml_type_util.is_custom_list_global ind
+          Type_util.is_custom_list_global ind
         | _ -> false
       in
       let rec ml_ty_all_dummy = function
@@ -403,7 +403,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
          concrete element type must be preserved. *)
       let hollow_container =
         is_custom_list && List.exists ml_ty_all_dummy tys
-        && List.exists Ml_type_util.has_erased_type_in_type temps
+        && List.exists Type_util.has_erased_type_in_type temps
       in
       let temps =
         if hollow_container && temps <> [] then
@@ -492,7 +492,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
       in
       match strip_ns_tglob clean_ct with
       | Entity_application (g, [elem_ty], _)
-        when Ml_type_util.is_custom_list_global g
+        when Type_util.is_custom_list_global g
              && not (resolves_to_any_type elem_ty) ->
         (* [expr] came out as the erased [deque<std::any>] from the
            Core.Expr.Bound_variable/Core.Expr.Coerce path; rebuild it as the concrete element container. *)
@@ -691,7 +691,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
         let temps =
           let slot_erases_something =
             match expected_ty with
-            | Some e -> Ml_type_util.has_tany_in_type (unfold_cpp_typedef env e)
+            | Some e -> Type_util.has_tany_in_type (unfold_cpp_typedef env e)
             | None -> true
           in
           if boxed slot && not slot_erases_something then temps
@@ -827,7 +827,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                   | GlobRef.ConstRef kn -> Table.lookup_typedef_unchecked kn
                   | _ -> None
                 in
-                Mlutil.type_expand abbrev ml_ty
+                Core_util.type_expand abbrev ml_ty
               in
               (* Canonical erased shape for a list-typed erased param is
                  [deque<std::any>] -- a bare [std::any] per element, not a
@@ -839,7 +839,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                  [std::bad_any_cast] at runtime.  See the matching
                  invariant in [gen_expr]'s [Core.Expr.Bound_variable]/[Core.Expr.Coerce] cases. *)
               let erase_custom_list_elems : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-                | Entity_application (g, _ :: _, ns) when Ml_type_util.is_custom_list_global g ->
+                | Entity_application (g, _ :: _, ns) when Type_util.is_custom_list_global g ->
                   Entity_application (g, [Cpp_ir.Type.Any], ns)
                 | t -> t
               in
@@ -945,7 +945,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
               let rec is_custom_list_cons = function
                 | Core.Expr.Construct {constructor = GlobRef.ConstructRef ((kn, _), _); _} ->
                   let ind = GlobRef.IndRef (kn, 0) in
-                  Ml_type_util.is_custom_list_global ind
+                  Type_util.is_custom_list_global ind
                 | Core.Expr.Coerce {value = inner; _}
                 | Core.Expr.Boxed_value {value = inner; _}
                 | Core.Expr.Lambda_group_barrier {value = inner; _} ->

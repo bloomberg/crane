@@ -8,10 +8,10 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 
 
@@ -282,7 +282,7 @@ let ml_result_type ty =
 (** Check if a monad reference uses the reified ITree extraction mode
     (i.e. its monad template string contains ["ITree"]).
 
-    Lives in {!Table} because {!Ml_type_util} asks it too, to recognise an
+    Lives in {!Table} because {!Type_util} asks it too, to recognise an
     event family. *)
 let is_monad_reified = Table.is_monad_reified
 
@@ -327,10 +327,10 @@ let is_sequential_effect op use =
   | Some {Core_effects.operation; mode = Sequential} -> operation = op
   | _ -> false
 
-(* [ref_is_skipped] and [ml_ret_is_skipped] live in {!Ml_type_util}, which
+(* [ref_is_skipped] and [ml_ret_is_skipped] live in {!Type_util}, which
    {!Method_registry} also asks. *)
 
-(* {!Ml_type_util.ml_type_is_instance} works the answer out; a caller with a
+(* {!Type_util.ml_type_is_instance} works the answer out; a caller with a
    global asks {!ref_is_instance} and one with a binder asks
    {!Core_query.binder_is_instance}. *)
 
@@ -438,7 +438,7 @@ let codomain_is_reified_monad (ty : Core.Type.t) : bool =
     the call -- it drops the tree, and with it the sequencing the program was
     expressed in. *)
 let ml_type_is_void_call (ty : Core.Type.t) : bool =
-  (match Ml_type_util.resolve_tmeta ty with
+  (match Type_util.resolve_tmeta ty with
   | Core.Type.Arrow _ -> true
   | Core.Type.Global_app {head = r; _} -> Table.is_monad r
   | _ -> false)
@@ -738,9 +738,9 @@ let ctor_field_types_at ctor (typ : Core.Type.t) =
   in
   match Table.get_ctor_ip_types_opt ctor with
   | Some tys ->
-    let tys = List.filter (fun t -> not (Mlutil.isTdummy t)) tys in
+    let tys = List.filter (fun t -> not (Core_util.isTdummy t)) tys in
     if List.for_all within_scope tys then
-      Some (List.map (Mlutil.type_subst_list tyargs) tys)
+      Some (List.map (Core_util.type_subst_list tyargs) tys)
     else None
   | None -> (
     match typ with
@@ -789,8 +789,8 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : Core.Type.t) ids =
         match ml_ty with
         | Core.Type.Meta {contents = None} | Core.Type.Open _ -> (x, fty)
         | _
-          when Ml_type_util.is_ml_erased_ty ml_ty
-               && not (Ml_type_util.is_ml_erased_ty fty) ->
+          when Type_util.is_ml_erased_ty ml_ty
+               && not (Type_util.is_ml_erased_ty fty) ->
           (x, fty)
         | _ -> (x, ml_ty))
       ids
@@ -937,7 +937,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
     (* A custom-mapped list at a known element type, under any namespace
        wrapper: only an erased source needs unboxing. *)
     | _, (Entity_application (g, [elem_ty], _) | In_namespace (_, Entity_application (g, [elem_ty], _)))
-      when Ml_type_util.is_custom_list_global g && elem_ty <> Any && elem_ty <> Auto -> (
+      when Type_util.is_custom_list_global g && elem_ty <> Any && elem_ty <> Auto -> (
       match src_ty with
       | Any -> Cpp_erasure.unbox (Entity_application (g, [Any], [])) expr
       | _ -> expr )
@@ -1004,14 +1004,14 @@ let rec is_reified_monadic_expr ml_expr =
      it is stepped over without spending an argument; an alias still owed
      arguments is the arrows it names ([stateT S M T] is [S -> M (S * T)]). *)
   let rec ml_result_after n ty =
-    match Ml_type_util.resolve_tmeta ty with
-    | Core.Type.Arrow {parameter = dom; result = res} when (match Ml_type_util.resolve_tmeta dom with
+    match Type_util.resolve_tmeta ty with
+    | Core.Type.Arrow {parameter = dom; result = res} when (match Type_util.resolve_tmeta dom with
             | Core.Type.Erased _ -> true
             | _ -> false) ->
       ml_result_after n res
     | Core.Type.Arrow {result = res; _} when n > 0 -> ml_result_after (n - 1) res
     | Core.Type.Global_app _ as t when n > 0 -> (
-      match Ml_type_util.expand_ml_fun_alias t with
+      match Type_util.expand_ml_fun_alias t with
       | Core.Type.Arrow _ as f -> ml_result_after n f
       | _ -> t )
     | t -> t
@@ -1030,11 +1030,11 @@ let rec is_reified_monadic_expr ml_expr =
   let instance_carrier_is_reified g =
     match Option.map ml_codomain (find_type_opt g) with
     | Some t -> (
-      match Ml_type_util.resolve_tmeta t with
+      match Type_util.resolve_tmeta t with
       | Core.Type.Global_app {type_arguments = targs; _} ->
         List.exists
           (fun t ->
-            match Ml_type_util.resolve_tmeta t with
+            match Type_util.resolve_tmeta t with
             | Core.Type.Global_app {head = m; _} -> Table.is_monad m && is_monad_reified m
             | _ -> false )
           targs
@@ -1045,7 +1045,7 @@ let rec is_reified_monadic_expr ml_expr =
     (* A carrier of arrow kind stands in its class's argument list as the
        [Core.Type.Variable_app] it would be if applied, with nothing applied to it yet. *)
     let names_carrier t =
-      match Ml_type_util.resolve_tmeta t with
+      match Type_util.resolve_tmeta t with
       | Core.Type.Variable {variable = i; _} | Core.Type.Variable_app {head = i; _} -> Int.equal i head
       | _ -> false
     in
@@ -1054,7 +1054,7 @@ let rec is_reified_monadic_expr ml_expr =
       | dom :: doms', _ when erased_by_extraction dom -> go doms' args
       | dom :: doms', a :: args' ->
         let fills_this_carrier =
-          match Ml_type_util.resolve_tmeta dom with
+          match Type_util.resolve_tmeta dom with
           | Core.Type.Global_app {type_arguments = targs; _} -> List.exists names_carrier targs
           | _ -> false
         in
@@ -1064,7 +1064,7 @@ let rec is_reified_monadic_expr ml_expr =
         | _ -> go doms' args' )
       | _ -> false
     in
-    go (Ml_type_util.ml_domains ty) args
+    go (Type_util.ml_domains ty) args
   in
   (* A local's type may say nothing -- a rank-2 [D ~> itree E] parameter is
      erased, so what it returns is a type variable -- and then the Rocq
@@ -1073,9 +1073,9 @@ let rec is_reified_monadic_expr ml_expr =
      monad is a tree.  Only a type that says something else is evidence of a
      plain value. *)
   let says_monadic ty =
-    Option.has_some (Ml_type_util.type_monad ty)
+    Option.has_some (Type_util.type_monad ty)
     ||
-    match Ml_type_util.resolve_tmeta ty with
+    match Type_util.resolve_tmeta ty with
     | Core.Type.Variable _ | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
     | _ -> false
   in
@@ -1104,12 +1104,12 @@ let rec is_reified_monadic_expr ml_expr =
     && ( match find_type_opt r with
        | Some ty ->
          let res = ml_result_after nargs ty in
-         ( match Ml_type_util.resolve_tmeta res with
+         ( match Type_util.resolve_tmeta res with
          | Core.Type.Variable_app {head; _} ->
            let args = match ml_expr with Core.Expr.Apply {arguments = args; _} -> args | _ -> [] in
            reified_via_dictionary ty args head
          | _ -> (
-           match Ml_type_util.type_monad res with
+           match Type_util.type_monad res with
            | Some m -> (not (Table.is_inline_custom r)) || is_monad_reified m
            | None -> false ) )
        | None -> false )
@@ -1254,7 +1254,7 @@ let calls_eagerly r body =
     | Core.Expr.Global {callee = r'; _} when globref_equal r r' -> raise Found
     | Core.Expr.Lambda _ -> ()
     | Core.Expr.Construct {result_type = ty; _} when Table.is_coinductive_type ty -> ()
-    | _ -> Mlutil.ast_iter walk e
+    | _ -> Core_util.ast_iter walk e
   in
   try walk body; false with Found -> true
 
@@ -1296,7 +1296,7 @@ let args_may_corecurse ~self ~binder_type ts =
       || Array.exists (fun {Core.Match.Branch.binders = ids; body = b; _} -> corec (depth + List.length ids) b) brs
     | e ->
       let exception Found in
-      (try Mlutil.ast_iter (fun c -> if corec depth c then raise Found) e; false
+      (try Core_util.ast_iter (fun c -> if corec depth c then raise Found) e; false
        with Found -> true)
   in
   List.exists (corec 0) ts
@@ -1440,7 +1440,7 @@ let written_arity g =
     Option.map (( + ) promoted) (Table.get_ind_num_param_vars_opt kn)
   | GlobRef.ConstRef kn ->
     Option.map
-      (fun body -> promoted + Mlutil.type_maxvar body)
+      (fun body -> promoted + Core_util.type_maxvar body)
       (Table.lookup_typedef_unchecked kn)
   | _ -> None
 
@@ -1480,7 +1480,7 @@ let rec collect_tvars_ast acc = function
     List.fold_left
       (fun acc (_, t) -> collect_tvars acc t)
       acc
-      (Mlutil.Var_types.bindings (Mlutil.written_type_args use))
+      (Core_util.Var_types.bindings (Core_util.written_type_args use))
   | Core.Expr.Construct {result_type = ty; arguments = args; _} ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
   | Core.Expr.Match {scrutinee_type = ty; scrutinee = e; branches = brs; _} ->
@@ -2157,7 +2157,7 @@ let partner_closure_params groups struc =
         (fun (fd : Core.Recursion.Definition.t) ->
           if Recursive_groups.group groups fd.entity <> None then
             members := (fd.entity, fd.body) :: !members )
-        (Mlutil.term_defs d) )
+        (Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -2231,7 +2231,7 @@ let ungeneralised_callable_params ~self_ref ~suspended n_params body =
     @ escaping_params ~suspended n_params body)
 
 (** {!ungeneralised_callable_params} for the definition of [r] at type [ty]
-    with body [b], over the parameters {!Ml_type_util.declared_parameters}
+    with body [b], over the parameters {!Type_util.declared_parameters}
     finds, written or eta-expanded: the ones its function is generated
     with. *)
 let ungeneralised_callables_of_definition r ty b =
@@ -2504,7 +2504,7 @@ let infer_owned_flags ?owner body params =
   | _ -> read_off_body ()
 
 (** Whether the C++ type [cpp_ty] names a value inductive
-    ({!Ml_type_util.is_inductive_value_type}), as itself or through a type
+    ({!Type_util.is_inductive_value_type}), as itself or through a type
     abbreviation: [Definition t elt := list (key * elt)] declares [t<T2>] an
     alias of [List<std::pair<key, T2>>], a value copied whole as surely as one
     named [List] is. *)
@@ -2531,7 +2531,7 @@ and abbreviates_value_inductive args body =
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
                           type_arguments = inner; _} when not (Table.is_custom r) -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some body -> abbreviates_value_inductive args (Mlutil.type_subst_list inner body)
+    | Some body -> abbreviates_value_inductive args (Core_util.type_subst_list inner body)
     | None -> false )
   | Core.Type.Variable {variable = j; _} when j >= 1 -> (
     match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
@@ -2581,7 +2581,7 @@ let rec core_lent_by_reference ty =
     | Some body -> (
       (* As {!names_value_inductive} reads an abbreviation: its body a value
          inductive, or a variable standing for one. *)
-      match resolve_tmeta (Mlutil.type_subst_list args body) with
+      match resolve_tmeta (Core_util.type_subst_list args body) with
       | Core.Type.Global_app {head = (GlobRef.IndRef _ | GlobRef.ConstRef _); _} as unfolded -> (
         match core_lent_by_reference unfolded with
         | Some lent ->
@@ -2592,7 +2592,7 @@ let rec core_lent_by_reference ty =
   | Core.Type.Global_app {head = r; _} when Table.is_custom r -> Some false
   (* A type abstraction erasure removes is no closure: what it returns is
      the value. *)
-  | Core.Type.Arrow {parameter = d; result = rest} when Mlutil.isTdummy d -> core_lent_by_reference rest
+  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.isTdummy d -> core_lent_by_reference rest
   | Core.Type.Arrow _ | Core.Type.Variable _ -> Some true
   | _ -> None
 
@@ -2698,7 +2698,7 @@ let rec ml_body_returns_erased_field = function
     let direct =
       match find_type_opt r with
       | Some ty ->
-        let ty = Mlutil.instantiate_written ~reader:"ml_body_returns_erased_field" use ty in
+        let ty = Core_util.instantiate_written ~reader:"ml_body_returns_erased_field" use ty in
         ( match strip_tarr_n (count_real_ml_args args) ty with
         | Some ret_ty -> ml_return_type_is_erased ret_ty
         | None -> false )
@@ -2848,7 +2848,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
           List.map2
             (fun (_, x) core ->
               let v : Cpp_ir.Lowered.Expr.t = Local (Option.get x) in
-              if Ownership_ir.worth_moving core && not (Ml_type_util.ml_type_is_unit core) then (Move v : Cpp_ir.Lowered.Expr.t) else v )
+              if Ownership_ir.worth_moving core && not (Type_util.ml_type_is_unit core) then (Move v : Cpp_ir.Lowered.Expr.t) else v )
             params_rev self.param_core_tys_rev
         in
         Lambda
@@ -2871,7 +2871,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
 let rec ml_ast_type_hint = function
   | Core.Expr.Construct {result_type = t; _} -> Some t
   | Core.Expr.Coerce {source_type = from; value = inner; _} ->
-    ( match Ml_type_util.resolve_tmeta from with
+    ( match Type_util.resolve_tmeta from with
     | Core.Type.Unknown | Core.Type.Erased _ -> ml_ast_type_hint inner
     (* A function value's representation at a slot it is coerced into is the
        boxed one [crane_erase_fn] produces, never its own arrow type: grounding
@@ -3129,7 +3129,7 @@ let check_planned_arity abi (live : Cpp_ir.Lowered.Type.t) =
     | None -> ()
     | Some {Callable_abi.params; _} ->
       let doms = match live with Function (d, _) -> d | _ -> [] in
-      let dicts, values = List.partition Ml_type_util.is_typeclass_type_cpp doms in
+      let dicts, values = List.partition Type_util.is_typeclass_type_cpp doms in
       let values = List.filter (fun t -> not (is_skipped_cpp_type t)) values in
       let instances =
         List.length

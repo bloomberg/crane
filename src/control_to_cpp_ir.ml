@@ -314,12 +314,12 @@ let fixpoint_parameters stmts =
    ({!loop_params}): the variables the helper captures, stored
    first, stand for none, every call passing them on as they are; the rest
    for the parameters of [l] that are not void
-   ({!Ml_type_util.void_binder}), the last first.  [None] where they are
+   ({!Type_util.void_binder}), the last first.  [None] where they are
    not so many. *)
 let lifted_positions (l : Control_ir.Term.loop) params =
   let kept =
     List.filter_map
-      (fun (i, (_, ty)) -> if Ml_type_util.void_binder ty then None else Some i)
+      (fun (i, (_, ty)) -> if Type_util.void_binder ty then None else Some i)
       (List.mapi (fun i p -> (i, p)) l.parameters)
   in
   let captured = List.length params - List.length kept in

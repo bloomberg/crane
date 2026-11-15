@@ -11,7 +11,7 @@
 open Common
 open Names
 open Util
-open Ml_type_util
+open Type_util
 open Gen_context
 
 module IntSet = Escape.IntSet
@@ -339,7 +339,7 @@ let gen_typeclass_cpp name fields =
            arguments are spelled out rather than deduced: a nullary method
            ([I::empty()]) offers nothing to deduce from, and defaulting the
            parameters instead would let a call that fails to deduce silently
-           fall back to [std::any].  {!Ml_type_util.method_tvar_count} is the same count
+           fall back to [std::any].  {!Type_util.method_tvar_count} is the same count
            the instance binds. *)
         let ntv =
           method_tvar_count

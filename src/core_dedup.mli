@@ -16,7 +16,7 @@
     definitions and projections are left alone.
 
     One of the Core passes run before the program is frozen, just before
-    {!Ml_specialize}. *)
+    {!Core_specialize}. *)
 
 (** Every module of the structure with its coinciding definitions made
     forwarders. *)

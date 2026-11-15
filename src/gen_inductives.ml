@@ -15,11 +15,11 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Table
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Translation
 open Plan_templates
 open Gen_context
@@ -347,10 +347,10 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
       (fun (_, ty, _) ->
         (* An instance is either promoted to a template parameter or skipped
            outright; either way it is not among the arguments a call passes,
-           and {!Ml_type_util.ml_type_is_instance} is where both cases are
+           and {!Type_util.ml_type_is_instance} is where both cases are
            recognised -- a skipped class is a [ConstRef] mapped to the empty
            string, which [is_typeclass_type] alone does not see. *)
-        Ml_type_util.is_runtime_binder_type ty && not (Ml_type_util.ml_type_is_instance ty) )
+        Type_util.is_runtime_binder_type ty && not (Type_util.ml_type_is_instance ty) )
       param_ids_with_pos
   in
 
@@ -534,13 +534,13 @@ let method_head vars s =
   let body_names =
     let annotations = ref [] in
     ignore
-      (Mlutil.ast_map_types
+      (Core_util.ast_map_types
          (fun t ->
            annotations := t :: !annotations;
            t )
          inner_body );
     (* A hole names no variable; it is declined rather than converted. *)
-    let declined = Mlutil.map_ml_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
+    let declined = Core_util.map_ml_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
     let annotations =
       with_type_vars (vars @ extra_tvar_names) (fun () ->
           List.rev_map
@@ -615,7 +615,7 @@ let method_head vars s =
     [h]: a parameter for one of its own variables declares the function's
     variable it was renumbered from ({!method_scope}). *)
 let method_plan func_ref s h =
-  let scheme = Mlutil.reference_scheme func_ref in
+  let scheme = Core_util.reference_scheme func_ref in
   Callable_abi.of_head ~minted:s.ms_minted
     ~omitted:(Translation_support.type_arg_omission func_ref)
     ~deduced_callables:s.ms_deduced_callables ~passing:s.ms_passing
@@ -746,7 +746,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
-     and are written nowhere ({!Mlutil.self_reference}). When the function is a
+     and are written nowhere ({!Core_util.self_reference}). When the function is a
      method, the recursive call needs
      explicit template args for non-deducible params. Replace CPPglob(func_ref,
      []) with CPPglob(func_ref, all_type_args).
@@ -1765,12 +1765,12 @@ let gen_ind_header_v2
               && (match (ctor 1, ctor 2) with
                   | Some [], Some [elem; tail] ->
                     let is_first_tvar t =
-                      match Ml_type_util.resolve_tmeta t with
+                      match Type_util.resolve_tmeta t with
                       | Core.Type.Variable {variable = 1; _} -> true
                       | _ -> false
                     in
                     let is_self t =
-                      match Ml_type_util.resolve_tmeta t with
+                      match Type_util.resolve_tmeta t with
                       | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
                       | _ -> false
                     in
@@ -2026,7 +2026,7 @@ let gen_ind_header_v2
              [g] stored behind a smart pointer? *)
           let field_is_ptr g fty =
             let root_is_g =
-              match Ml_type_util.resolve_tmeta fty with
+              match Type_util.resolve_tmeta fty with
               | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
               | _ -> false
             in
@@ -2040,7 +2040,7 @@ let gen_ind_header_v2
           in
           let rec harvest_val fuel ty e =
             if fuel <= 0 then raise Harvest_bail;
-            let ty = Ml_type_util.resolve_tmeta ty in
+            let ty = Type_util.resolve_tmeta ty in
             if is_direct_self_ref ty then [push_self_stmt e]
             else
               match ty with
@@ -2910,7 +2910,7 @@ let gen_ind_header_v2
         let token_field =
           List.find_map
             (fun ((j, storage_ty, _), ty) ->
-              match ((storage_ty : Cpp_ir.Lowered.Type.t), Mlutil.ml_resolve ty) with
+              match ((storage_ty : Cpp_ir.Lowered.Type.t), Core_util.ml_resolve ty) with
               | Shared_pointer inner, Core.Type.Global_app {head = r; _}
                 when GlobRef.CanOrd.equal r name ->
                 Some (j, inner)

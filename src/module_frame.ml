@@ -80,7 +80,7 @@ let method_candidates epon_ref sel ~enclosing =
             | Some c -> c :: acc
             | None -> acc
           else acc )
-        acc (Mlutil.term_defs d)
+        acc (Core_util.term_defs d)
     | _ -> acc
   in
   let candidates = List.fold_left candidates_of (List.fold_left candidates_of [] sel) enclosing in
@@ -104,7 +104,7 @@ let method_candidates epon_ref sel ~enclosing =
                     str "the registry's scan made " ++ GlobRef.print r ++ str " a method of " ++ GlobRef.print epon_ref
                     ++ str ", which its module's frame does not" )
               | _ -> () )
-            (Mlutil.term_defs d)
+            (Core_util.term_defs d)
         | _ -> () )
       sel;
   candidates

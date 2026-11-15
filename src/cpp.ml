@@ -283,7 +283,7 @@ let module_members_name_only_inductives sel =
     (fun (_, se) ->
       match se with
       | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
-        List.for_all (fun (fd : Core.Recursion.Definition.t) -> ty_ok fd.type_) (Mlutil.term_defs d)
+        List.for_all (fun (fd : Core.Recursion.Definition.t) -> ty_ok fd.type_) (Core_util.term_defs d)
       (* Only a function declaration is being judged here.  Everything else a
          module holds -- an inductive, a type alias, a submodule -- is either
          rendered somewhere other than this struct or shows up in its text as a
@@ -2298,7 +2298,7 @@ let plan_referenced_names s =
     | Core.Pattern.Tuple ps -> List.iter pattern ps
     | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> ()
   and term a =
-    Mlutil.ast_iter term a;
+    Core_util.ast_iter term a;
     match a with
     | Core.Expr.Global ({callee; _} as use) ->
       name Term callee;
@@ -2469,7 +2469,7 @@ let plan_accessors s =
         | cty ->
           in_template
           || in_struct
-             && (Ml_type_util.get_tvars cty <> [] || Common.get_force_cross_file_qualification ()) )
+             && (Type_util.get_tvars cty <> [] || Common.get_force_cross_file_qualification ()) )
   in
   let rec elems ~in_struct ~in_template sel =
     List.concat_map
@@ -2771,7 +2771,7 @@ let plan_nested_structs s =
         past_parameters b
       | b -> b
     in
-    match Ml_type_util.ml_return_type ty with
+    match Type_util.ml_return_type ty with
     | Core.Type.Global_app {head = cls; _} when Table.is_typeclass cls -> (
       match (Table.singleton_class_method cls, past_parameters body) with
       | Some _, _ | None, Core.Expr.Construct _ -> true
@@ -2910,7 +2910,7 @@ let plan_pointer_fields s =
                             ~is_coinductive:(kind = Core.Inductive.Kind.Coinductive) vars p.constructor_argument_types.(j)
                         with
                         | [] -> []
-                        | fields -> [(name, Ml_type_util.ctor_struct_name_of_ref ~fallback_idx:j c, fields)] )) )
+                        | fields -> [(name, Type_util.ctor_struct_name_of_ref ~fallback_idx:j c, fields)] )) )
              (Array.to_list ind.packets) )
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ | Core.Decl.Value _ | Core.Decl.Recursive_group _ -> [] )
     (declarations s)
@@ -2950,7 +2950,7 @@ let plan_field_names s =
                      in
                      ( c,
                        Translation_support.compute_and_register_field_names ~owner:c
-                         (Ml_type_util.ctor_struct_name_of_ref ~fallback_idx:j c)
+                         (Type_util.ctor_struct_name_of_ref ~fallback_idx:j c)
                          (Translation_support.augment_with_args_renaming c consarg_names)
                          consarg_names
                          (List.length p.constructor_argument_types.(j)) ) ) )
@@ -3083,7 +3083,7 @@ let concept_prereqs ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
             | Core.Module.Structure_item.Declaration d ->
               List.fold_left
                 (fun acc (fd : Core.Recursion.Definition.t) -> add_type_refs acc fd.Core.Recursion.Definition.type_)
-                acc (Mlutil.term_defs d)
+                acc (Core_util.term_defs d)
             | _ -> acc )
           acc
           (wrapper_sels (Cpp_names.wrapper_spelling r)) )

@@ -11,10 +11,10 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Translation
 open Gen_context
 open Gen_records
@@ -62,7 +62,7 @@ let instance_promoted_types name body ty =
                element parameters ([Core.Type.Variable 1 ...] here) have no meaning
                outside the instance, so they are erased. *)
             ( var_name,
-              Mlutil.type_subst_list (List.map (fun _ -> Core.Type.Unknown) params) ml_ty ) )
+              Core_util.type_subst_list (List.map (fun _ -> Core.Type.Unknown) params) ml_ty ) )
           promoted_vars promoted_concrete
       else []
     | _ -> [] )
@@ -244,7 +244,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
         if
           not
             (List.equal
-               (fun (v, t) (v', t') -> Id.equal v v' && Mlutil.eq_ml_type t t')
+               (fun (v, t) (v', t') -> Id.equal v v' && Core_util.eq_ml_type t t')
                planned generated )
         then
           Probe.violation "instance promoted types"
@@ -365,7 +365,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
           let offer_declared have want =
             if method_tvars <> [] then want
             else
-              Ml_type_util.refine_erased
+              Type_util.refine_erased
                 ~writable:(fun t ->
                   not
                     (Cpp_ir.Types.exists
@@ -851,7 +851,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
          is no template parameter, so [type_var_names] does not count it. *)
       let alias_tvar_base =
         List.fold_left
-          (fun n t -> max n (Mlutil.type_maxvar t))
+          (fun n t -> max n (Core_util.type_maxvar t))
           (List.length type_var_names)
           type_args
       in

@@ -11,7 +11,7 @@
 type group =
   | Lifted
       (** lifted to a function template, being polymorphic in a type variable
-          of its own past the head's ({!Ml_type_util.own_type_variables}): it
+          of its own past the head's ({!Type_util.own_type_variables}): it
           is passed what it closes over, so a call of it names each such
           variable as a value *)
   | In_place

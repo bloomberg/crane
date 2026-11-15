@@ -102,7 +102,7 @@ let erased_list_shape (ty : ty) =
   let rec go : ty -> (GlobRef.t * ty) option = function
     | In_namespace (ns_g, t) -> (
       match go t with Some (g, t') -> Some (g, In_namespace (ns_g, t')) | None -> None )
-    | Entity_application (g, [elem], _) when Ml_type_util.is_list_global g && not (Types.prints_as_any elem) ->
+    | Entity_application (g, [elem], _) when Type_util.is_list_global g && not (Types.prints_as_any elem) ->
       Some (g, Entity_application (g, [Any], []))
     | _ -> None
   in
@@ -121,7 +121,7 @@ let rec instance_dependent : ty -> (Id.t * GlobRef.t) option = function
     all-erased pair is stored as itself and needs no such walk. *)
 let needs_deep_recovery : ty -> bool = function
   | Entity_application (g, ([_; _] as args), _) ->
-    Ml_type_util.is_prod_global g && List.exists (fun a -> not (is_any_shaped a)) args
+    Type_util.is_prod_global g && List.exists (fun a -> not (is_any_shaped a)) args
   | _ -> false
 
 (** [tolerant ty] — a cast to [ty] cannot be resolved now and must defer to
@@ -435,7 +435,7 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
   let typ = m.return_type and scrut = m.scrutinee in
   let tokens = Foreign_template.match_template m.template in
   let prod_of : ty -> GlobRef.t option = function
-    | Entity_application (g, _, _) when Ml_type_util.is_prod_global g -> Some g
+    | Entity_application (g, _, _) when Type_util.is_prod_global g -> Some g
     | _ -> None
   in
   let erased_pair g : ty = Entity_application (g, [Any; Any], []) in
@@ -444,22 +444,22 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
     match scrut with
     | Any_cast (ty, _) when prod_of ty <> None -> prod_of ty
     | _ -> (
-      match typ with Entity_application (g, _ :: _, _) when Ml_type_util.is_prod_global g -> Some g | _ -> prod_of typ )
+      match typ with Entity_application (g, _ :: _, _) when Type_util.is_prod_global g -> Some g | _ -> prod_of typ )
   in
   let preset =
     match scrut with
     | Any_cast (ty, _) -> prod_of ty <> None
     | Local _ when scrut_boxed -> (
-      match typ with Entity_application (g, _ :: _, _) -> Ml_type_util.is_prod_global g | _ -> false )
+      match typ with Entity_application (g, _ :: _, _) -> Type_util.is_prod_global g | _ -> false )
     | _ -> false
   in
   let has_scrut = List.mem Foreign_template.CCscrut tokens in
   let effective, at_scrut =
     match (scrut, typ) with
-    | Local _, Entity_application (g, _ :: _, _) when scrut_boxed && Ml_type_util.is_prod_global g ->
+    | Local _, Entity_application (g, _ :: _, _) when scrut_boxed && Type_util.is_prod_global g ->
       (erased_pair g, true)
     | Local _, _ when scrut_boxed ->
-      if Ml_type_util.is_prod_global m.inductive then
+      if Type_util.is_prod_global m.inductive then
         ((match known_prod with Some g -> erased_pair g | None -> typ), true)
       else (typ, false)
     | Any_cast (ty, _), _ when prod_of ty <> None -> (erased_pair (Option.get (prod_of ty)), true)
@@ -483,7 +483,7 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
   in
   let scrut' = if has_scrut then read_as r scrut (reads_expr r scrut) effective else scrut in
   let scrut_is_cast_pair =
-    match scrut with Any_cast (Entity_application (g, _, _), _) -> Ml_type_util.is_prod_global g | _ -> false
+    match scrut with Any_cast (Entity_application (g, _, _), _) -> Type_util.is_prod_global g | _ -> false
   in
   let branch (b : phase Custom_match.branch) : phase Custom_match.branch =
     let r' = with_boxed_params r (List.map (fun (p : phase Custom_match.param) -> (p.name, p.type_)) b.params) in
@@ -491,7 +491,7 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
       if overridden || scrut_is_cast_pair then
         List.fold_left
           (fun r' ({name = id; type_ = ty; _} : phase Custom_match.param) ->
-            let is_pair = match ty with Entity_application (g, _ :: _, _) -> Ml_type_util.is_prod_global g | _ -> false in
+            let is_pair = match ty with Entity_application (g, _ :: _, _) -> Type_util.is_prod_global g | _ -> false in
             if is_any_shaped ty || is_pair then {r' with boxed = Id.Set.add id r'.boxed}
             else
               let erased : ty =
@@ -668,7 +668,7 @@ let rec instantiated_type ~boxing (t : ty) : ty =
       (* A constructor removed from the output ([Crane Extract Skip], or a
          skipped module's) is the identity on what it is applied to: its
          argument is the whole of what there is to write. *)
-      | Apply (Entity_application (r, _, _), [arg]) when Ml_type_util.ref_has_no_cpp_name r ->
+      | Apply (Entity_application (r, _, _), [arg]) when Type_util.ref_has_no_cpp_name r ->
         Some (instantiated_type ~boxing arg)
       (* Written through the inductive's own head. *)
       | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', tys, args)) when Common.globref_equal r r' ->
@@ -677,7 +677,7 @@ let rec instantiated_type ~boxing (t : ty) : ty =
       | Entity_application (r, tys, args) -> (
         match Table.inline_custom_text r with
         (* An empty text is a global removed from the output, written as
-           its arguments alone ({!Ml_type_util.ref_has_no_cpp_name}). *)
+           its arguments alone ({!Type_util.ref_has_no_cpp_name}). *)
         | Some s when s <> "" ->
           let tokens = Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
           Some (Foreign (instantiated_foreign ~boxing r tokens tys args None))
@@ -1381,16 +1381,16 @@ let bind_free_tvars (d : settled) : settled =
 
 (** Whether [ty] mentions anywhere a global with no C++ name, asked of the
     type as the printer writes it: an application of a nameless constructor
-    comes out as its argument ({!Ml_type_util.has_no_cpp_spelling}). *)
+    comes out as its argument ({!Type_util.has_no_cpp_spelling}). *)
 let has_no_cpp_spelling (ty : ty) =
   let as_printed =
     Types.map
       (fun (t : ty) ->
-        match t with Apply (Entity_application (r, _, _), [arg]) when Ml_type_util.ref_has_no_cpp_name r -> arg | t -> t )
+        match t with Apply (Entity_application (r, _, _), [arg]) when Type_util.ref_has_no_cpp_name r -> arg | t -> t )
       ty
   in
   Cpp_ir.Children.exists_type
-    (function Entity_application (r, _, _) -> Ml_type_util.ref_has_no_cpp_name r | _ -> false)
+    (function Entity_application (r, _, _) -> Type_util.ref_has_no_cpp_name r | _ -> false)
     as_printed
 
 (** Report what {!has_no_cpp_spelling} saw of a custom match's binder.
@@ -1417,9 +1417,9 @@ let report_unspellable where (ty : ty) =
     (Cpp_ir.Children.exists_type
        (fun (t : ty) ->
          match t with
-         | Entity_application (r, _, _) when Ml_type_util.ref_has_no_cpp_name r ->
+         | Entity_application (r, _, _) when Type_util.ref_has_no_cpp_name r ->
            let n = Pp.string_of_ppcmds (GlobRef.print r) in
-           if Ml_type_util.ref_has_no_spelling r then empty_custom := n :: !empty_custom
+           if Type_util.ref_has_no_spelling r then empty_custom := n :: !empty_custom
            else skipped_mod := n :: !skipped_mod;
            false
          | _ -> false )

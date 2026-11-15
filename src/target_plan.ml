@@ -31,7 +31,7 @@ type representation = {
 }
 
 type t = {
-  input : Ml_fingerprint.t option;
+  input : Core.Fingerprint.t option;
   config : Table.unit_config;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Tparam_kinds.t) list;
@@ -237,7 +237,7 @@ let value_use_demotion prior struc =
      natalg]] is a [list alg] whether or not any declaration's type says so. *)
   let scan_body body =
     ignore
-      (Mlutil.ast_map_types
+      (Core_util.ast_map_types
          (fun t ->
            scan_type t;
            t )
@@ -251,7 +251,7 @@ let value_use_demotion prior struc =
         (fun (fd : Core.Recursion.Definition.t) ->
           scan_term_type fd.type_;
           scan_body fd.body )
-        (Mlutil.term_defs d)
+        (Core_util.term_defs d)
   in
   let scan_spec = function
     | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> scan_ind kn ind
@@ -277,7 +277,7 @@ let value_use_demotion prior struc =
 let plan (facts : Program_facts.t) struc =
   let input =
     if Pipeline_trace.enabled () || Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-      Some (Ml_fingerprint.structure struc)
+      Some (Core.Fingerprint.structure struc)
     else None
   in
   let aligned = functor_alignment struc in
@@ -368,7 +368,7 @@ let equal a b =
   && List.equal
        (fun (r, bs) (r', bs') ->
          GlobRef.UserOrd.equal r r'
-         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Mlutil.eq_ml_type t t') bs bs' )
+         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Core_util.eq_ml_type t t') bs bs' )
        a.representation.instance_promoted_types b.representation.instance_promoted_types
   && same_callables a.callables b.callables
   && same_instance_methods a.instance_methods b.instance_methods

@@ -210,7 +210,7 @@ let lookup_typedef_unchecked kn =
   | None -> None
 
 (** Cache of constant type schemes, keyed by constant. *)
-let cst_types = ref (Cmap_env.empty : (constant_body * Ml_schema.t) Cmap_env.t)
+let cst_types = ref (Cmap_env.empty : (constant_body * Core.Schema.t) Cmap_env.t)
 
 (** Initialize the constant type scheme cache table. *)
 let init_cst_types () = cst_types := Cmap_env.empty
@@ -2092,7 +2092,7 @@ let flag_of_int n =
 
 (* For the moment, we allow by default everything except : - the type-unsafe
    optimization [opt_case_idg], which anyway cannot be activated currently (cf
-   [Mlutil.branch_as_fun]) - the linear let and beta reduction [opt_lin_let] and
+   [Core_util.branch_as_fun]) - the linear let and beta reduction [opt_lin_let] and
    [opt_lin_beta] (may lead to complexity blow-up, subsumed by finer reductions
    when inlining recursors). *)
 

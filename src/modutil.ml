@@ -18,7 +18,7 @@ open ModPath
 open CErrors
 open Util
 open Table
-open Mlutil
+open Core_util
 
 (** {1 Functions upon ML modules} *)
 
@@ -435,7 +435,7 @@ let decl_of_term r a t =
     when singleton_instance_class r = None ->
     (* Each call of itself is a use of its own, told apart from the others
        by its occurrence. *)
-    let c = Mlutil.ast_subst_each (fun () -> Core.Expr.Global (Mlutil.self_reference r)) c in
+    let c = Core_util.ast_subst_each (fun () -> Core.Expr.Global (Core_util.self_reference r)) c in
     unify_binders_with_signature t c;
     Core.Decl.Recursive_group (Core.Nonempty.singleton {Core.Recursion.Definition.entity = r; body = c; type_ = t})
     (* The self-reference instantiates [r] at its own type variables

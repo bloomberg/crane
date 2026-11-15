@@ -123,13 +123,13 @@ let rec tail_result_type = function
     [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
     integer literals, and its call site supplies the argument. *)
 let recover_fix_codomain ((id, ty) : Names.Id.t * Core.Type.t) (body : Core.Expr.t) =
-  let dom, cod = Mlutil.type_decomp ty in
+  let dom, cod = Core_util.type_decomp ty in
   match cod with
-  | Core.Type.Variable {variable = i; _} when not (List.exists (fun t -> Mlutil.IntSet.mem i (Mlutil.ml_tvars t)) dom) -> (
+  | Core.Type.Variable {variable = i; _} when not (List.exists (fun t -> Core_util.IntSet.mem i (Core_util.ml_tvars t)) dom) -> (
     match tail_result_type body with
     | Some t ->
-      let subst = Ml_type_util.subst_tvars_type [(i, t)] in
-      ((id, subst ty), Ml_type_util.map_types_in_ast subst body)
+      let subst = Type_util.subst_tvars_type [(i, t)] in
+      ((id, subst ty), Type_util.map_types_in_ast subst body)
     | None -> ((id, ty), body) )
   | _ -> ((id, ty), body)
 
@@ -143,7 +143,7 @@ let recover_fix_codomains ids funs =
    anything is minted -- a variable already standing for the result type is
    no longer asking what the body builds. *)
 let fill_codomain_hole (_, ty) body =
-  match snd (Mlutil.type_decomp ty) with
+  match snd (Core_util.type_decomp ty) with
   | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type body)
   | _ -> ()
 
@@ -227,14 +227,14 @@ let rec expr ~outer = function
     mint t;
     iter_annotations mint a;
     expr ~outer b
-  | e -> Mlutil.ast_iter (expr ~outer) e
+  | e -> Core_util.ast_iter (expr ~outer) e
 
 let structure =
   Modutil.struct_iter
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
-          (fun (fd : Core.Recursion.Definition.t) -> expr ~outer:(Mlutil.IntSet.fold max (Mlutil.ml_tvars fd.type_) 0) fd.body)
-          (Mlutil.term_defs d)
+          (fun (fd : Core.Recursion.Definition.t) -> expr ~outer:(Core_util.IntSet.fold max (Core_util.ml_tvars fd.type_) 0) fd.body)
+          (Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     ignore ignore

@@ -69,10 +69,10 @@ let higher_order_projections struc =
   let found = ref Ref.User.Set.empty in
   let rec scan = function
     | Core.Expr.Global {callee = r; _} when Table.is_projection r -> found := Ref.User.Set.add r !found
-    | a -> Mlutil.ast_iter scan a
+    | a -> Core_util.ast_iter scan a
   in
   Modutil.struct_iter
-    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> scan fd.body) (Mlutil.term_defs d))
+    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> scan fd.body) (Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;

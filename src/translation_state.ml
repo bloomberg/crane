@@ -45,7 +45,7 @@ let callee_ml_type (r : GlobRef.t) : Core.Type.t option =
       let live = find_type_opt r in
       let agrees =
         match (planned, live) with
-        | Some a, Some b -> a == b || Mlutil.eq_ml_type a b
+        | Some a, Some b -> a == b || Core_util.eq_ml_type a b
         | None, None -> true
         | _ -> false
       in

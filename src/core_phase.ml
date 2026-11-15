@@ -25,7 +25,7 @@ let modules p = List.map (fun ((mp, _) as m) -> (mp, { p with structure = [m] })
     declared types, the types bodies annotate, constructor argument types and
     type definitions. *)
 let iter_types f p =
-  let visit_body b = ignore (Mlutil.ast_map_types (fun t -> f t; t) b) in
+  let visit_body b = ignore (Core_util.ast_map_types (fun t -> f t; t) b) in
   let visit_ind (ind : Core.Inductive.t) =
     Array.iter
       (fun (pk : Core.Inductive.Packet.t) -> Array.iter (List.iter f) pk.constructor_argument_types)
@@ -36,7 +36,7 @@ let iter_types f p =
       | Core.Decl.Inductive {definition = ind; _} -> visit_ind ind
       | Core.Decl.Type_alias {body = t; _} -> f t
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> f fd.type_; visit_body fd.body) (Mlutil.term_defs d) )
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> f fd.type_; visit_body fd.body) (Core_util.term_defs d) )
     (function
       | Core.Signature.Declaration.Inductive {definition = ind; _} -> visit_ind ind
       | Core.Signature.Declaration.Type {body = t; _} -> Option.iter f t
@@ -107,7 +107,7 @@ let zonk p =
     | Core.Type.Unknown
     | Core.Type.Axiom
     | Core.Type.String -> t
-  and body e = Mlutil.ast_map_types ty e in
+  and body e = Core_util.ast_map_types ty e in
   let inductive (ind : Core.Inductive.t) =
     Array.iter
       (fun (pk : Core.Inductive.Packet.t) ->
@@ -143,7 +143,7 @@ let check_zonked p =
     | Core.Type.Meta _ -> fail "holds a metavariable"
     | Core.Type.Arrow {parameter = a; result = b} -> walk a; walk b
     | Core.Type.Global_app {type_arguments = ts; index_arguments = args; _} ->
-      List.iter walk ts; List.iter (fun a -> ignore (Mlutil.ast_map_types (fun t -> walk t; t) a)) args
+      List.iter walk ts; List.iter (fun a -> ignore (Core_util.ast_map_types (fun t -> walk t; t) a)) args
     | Core.Type.Variable_app {arguments = ts; _} -> List.iter walk ts
     | Core.Type.Variable _
     | Core.Type.Hole _
@@ -170,13 +170,13 @@ let check_declared_once p =
         Array.iteri (fun i _ -> declare (Names.GlobRef.IndRef (kn, i))) ind.packets
       | Core.Decl.Type_alias {entity = r; _} -> declare r
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> declare fd.entity) (Mlutil.term_defs d) )
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> declare fd.entity) (Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     p.structure
 
 (** Every polymorphic use is instantiated at its callee's own scheme, the
-    one {!Mlutil.reference_scheme} names, so that two readings of one
+    one {!Core_util.reference_scheme} names, so that two readings of one
     callee's variables meet the same variables; and no instantiation holds a
     metavariable: extraction froze each into an immutable hole. *)
 let check_instantiations p =
@@ -202,7 +202,7 @@ let check_instantiations p =
         let scheme = Scheme.Instantiation.scheme inst in
         if not (Names.GlobRef.UserOrd.equal (Scheme.Id.owner scheme) r) then
           fail ("instantiates a use of " ^ name () ^ " at another declaration's scheme");
-        match Mlutil.reference_scheme r with
+        match Core_util.reference_scheme r with
         | Some own when Scheme.Id.equal own scheme -> ()
         | Some own when Scheme.Id.arity own <> Scheme.Id.arity scheme ->
           fail ("instantiates a use of " ^ name () ^ " at a scheme of another arity")
@@ -213,13 +213,13 @@ let check_instantiations p =
       fail ("holds a metavariable in the instantiation of a use of " ^ name ())
   in
   let rec check_body = function
-    | Core.Expr.Global use as e -> check_use use; Mlutil.ast_iter check_body e
-    | e -> Mlutil.ast_iter check_body e
+    | Core.Expr.Global use as e -> check_use use; Core_util.ast_iter check_body e
+    | e -> Core_util.ast_iter check_body e
   in
   Modutil.struct_iter
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Mlutil.term_defs d)
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     (fun _ -> ())
     (fun _ -> ())
@@ -247,10 +247,10 @@ let iter_occurrences f p =
               | Core.Expr.Cofixpoint {occurrence = o; _} -> f fd.entity "local fixpoint" o
               | Core.Expr.Global use -> f fd.entity "use" (Core.Global_use.occurrence use)
               | _ -> () );
-              Mlutil.ast_iter walk e
+              Core_util.ast_iter walk e
             in
             walk fd.body )
-          (Mlutil.term_defs d)
+          (Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     (fun _ -> ())
     (fun _ -> ())
@@ -288,10 +288,10 @@ let freeze p =
 (** The top-level elements of [p] that normalizing [p] again would
     rewrite, and whether it would decide the partners it splices alike. *)
 let not_normal pass p =
-  let again = Mlutil.preserving_meta_supply (fun () -> pass p) in
+  let again = Core_util.preserving_meta_supply (fun () -> pass p) in
   ( List.filter_map
-      (fun ((l, fp), (_, fp')) -> if Ml_fingerprint.equal fp fp' then None else Some l)
-      (List.combine (Ml_fingerprint.elements p.structure) (Ml_fingerprint.elements again.structure)),
+      (fun ((l, fp), (_, fp')) -> if Core.Fingerprint.equal fp fp' then None else Some l)
+      (List.combine (Core.Fingerprint.elements p.structure) (Core.Fingerprint.elements again.structure)),
     Splices.equal p.splices again.splices )
 
 let normalize pass p =

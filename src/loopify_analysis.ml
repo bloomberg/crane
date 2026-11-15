@@ -385,7 +385,7 @@ let pointer_fields_of key = Struct_map.find_opt key !ctor_ptr_fields
     as planned, or [None] where it stores none. *)
 let constructor_pointer_fields c =
   Option.map (List.map ptr_field_index)
-    (pointer_fields_of (Common.ctor_owner_key c, Ml_type_util.ctor_struct_name_of_ref c))
+    (pointer_fields_of (Common.ctor_owner_key c, Type_util.ctor_struct_name_of_ref c))
 
 (** Check the pointer fields read off a generated constructor struct against
     the ones planned before rendering, under [CRANE_CHECK_IR]. *)

@@ -78,7 +78,7 @@ val debug_ml_type : Core.Type.t -> string
 
 (** The scheme extraction recorded for [r], with the source binders its
     variables come from; [None] for anything but an extracted constant. *)
-val recorded_schema : GlobRef.t -> Ml_schema.t option
+val recorded_schema : GlobRef.t -> Core.Schema.t option
 
 (** The scheme a reference to [r] is at: the one extraction recorded, or
     else one minted at the arity of the type [r] is registered with, the

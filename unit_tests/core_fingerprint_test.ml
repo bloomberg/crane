@@ -7,12 +7,12 @@ open Crane_plugin
 
 let check name cond =
   if not cond then (
-    Printf.eprintf "ml_fingerprint: %s\n" name;
+    Printf.eprintf "core_fingerprint: %s\n" name;
     exit 1 )
 
 let r s = Names.GlobRef.VarRef (Names.Id.of_string s)
-let fp d = Ml_fingerprint.decl d
-let same a b = Ml_fingerprint.equal (fp a) (fp b)
+let fp d = Core.Fingerprint.decl d
+let same a b = Core.Fingerprint.equal (fp a) (fp b)
 let term ty body = Core.Decl.Value {entity = r "f"; body; type_ = ty}
 let id_ty = Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1};
                              result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}}
@@ -52,5 +52,5 @@ let () =
   let s1 = [(Names.ModPath.MPfile (Names.DirPath.make [Names.Id.of_string "M"]),
              [(Names.Label.make "f", Core.Module.Structure_item.Declaration d)])] in
   check "structure deterministic"
-    (Ml_fingerprint.equal (Ml_fingerprint.structure s1) (Ml_fingerprint.structure s1));
-  check "hex is a digest" (String.length (Ml_fingerprint.to_hex (Ml_fingerprint.structure s1)) = 32)
+    (Core.Fingerprint.equal (Core.Fingerprint.structure s1) (Core.Fingerprint.structure s1));
+  check "hex is a digest" (String.length (Core.Fingerprint.to_hex (Core.Fingerprint.structure s1)) = 32)

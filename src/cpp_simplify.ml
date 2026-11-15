@@ -20,7 +20,7 @@ let rec is_function_type : ty -> bool = function
   | Function _ -> true
   | Entity_application (GlobRef.ConstRef kn, _, _) -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some ml -> ( match Mlutil.ml_resolve ml with Core.Type.Arrow _ -> true | _ -> false )
+    | Some ml -> ( match Core_util.ml_resolve ml with Core.Type.Arrow _ -> true | _ -> false )
     | None -> false )
   | In_namespace (_, t) -> is_function_type t
   | _ -> false

@@ -14,11 +14,11 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Table
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Translation
 open Plan_templates
 open Gen_context
@@ -116,7 +116,7 @@ let other_instance_self_calls n b =
   let rec walk = function
     | Core.Expr.Global use when GlobRef.UserOrd.equal (Core.Global_use.callee use) n && elsewhere use ->
       found := Core.Global_use.occurrence use :: !found
-    | e -> Mlutil.ast_iter walk e
+    | e -> Core_util.ast_iter walk e
   in
   walk b;
   !found
@@ -387,7 +387,7 @@ let sig_witness_expr name (ml_ty : Core.Type.t) =
     read the mode.  We detect reified by the monad template mentioning "ITree",
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
 let with_itree_mode_for ty f =
-  match Ml_type_util.codomain_monad ty with
+  match Type_util.codomain_monad ty with
   | Some monad_ref -> with_itree_mode (Core_effects.mode_of_monad monad_ref) f
   | None -> f ()
 
@@ -459,8 +459,8 @@ let plan_function_head ?deduced_callables ?passing ~minted n ty (temps : head_pa
   Callable_abi.of_head ?deduced_callables ?passing ~signature ~relaxations ~minted
     ~omitted:(Translation_support.type_arg_omission n)
     ~phantom_prefix:(Translation_types.leading_phantom_count n)
-    ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
-    ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
+    ~relaxed:(fun i -> IntSet.mem i (Type_util.relaxed_higher_kinded_tvars ty))
+    ~callee:n ~scheme:(Core_util.reference_scheme n) temps
 
 (** What a function's body is generated under, settled before the body:
     its return type, its parameters and the environment that names them, the
@@ -554,7 +554,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
        (printed as shared_ptr<ITree<void>> via monad template) *)
   let cod : Cpp_ir.Lowered.Type.t = if Translation_support.ml_type_is_void_call ty then Void else cod in
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
-  let mldom = List.rev (Ml_type_util.ml_domains ty) in
+  let mldom = List.rev (Type_util.ml_domains ty) in
   let ids, b = collect_typed_lams ty b in
   (* The explicit lambdas bind the outermost domains; the eta-expansion
      parameters, the innermost ones -- for [R -> nat -> nat -> nat] with body
@@ -663,7 +663,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
             (pos + 1, rank + 1, acc)
           | _ -> (pos + 1, rank, acc) )
         (1, 1, [])
-        (Ml_type_util.ml_domains (try Table.find_type n with Not_found -> ty))
+        (Type_util.ml_domains (try Table.find_type n with Not_found -> ty))
     in
     let n_type_binders = n_type_binders - 1 in
     (* Extraction does not always fall out of step: when the body happens to
@@ -677,7 +677,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       ignore
         (map_types_in_ast
            (fun ty ->
-             m := max !m (Mlutil.type_maxvar ty);
+             m := max !m (Core_util.type_maxvar ty);
              ty )
            b);
       !m
@@ -689,7 +689,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
        signature's numbering. *)
     let value_positions =
       List.mapi (fun i dom -> (i + 1, dom))
-        (Ml_type_util.ml_domains (try Table.find_type n with Not_found -> ty))
+        (Type_util.ml_domains (try Table.find_type n with Not_found -> ty))
       |> List.filter_map (fun (i, dom) ->
              match dom with Core.Type.Erased Core.Erasure_reason.Type_argument -> None | _ -> Some i)
     in
@@ -1493,7 +1493,7 @@ let gen_dfun ~minted n b cty ty temps =
     else
       (* An axiom or exception body, which always throws, is the one that
          binds fewer parameters than the head declares
-         ({!Ml_type_util.unwritten_parameters}). *)
+         ({!Type_util.unwritten_parameters}). *)
       let b =
         match custom_forwarding_body with
         | Some stmts -> stmts
@@ -1664,8 +1664,8 @@ let writable_offer ty = names_promoted_type_var ty || is_closed_type ty
     not, the guess is what the body is printed from, and it pre-empts the
     passes in {!Translation} that can still read the answer off the term. *)
 let recover_erased_body_types ty b =
-  let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
-  Mlutil.recover_erased_types ~only:writable_offer ~refine_only:true ty b
+  let b = Core_util.recover_erased_types ~only:names_promoted_type_var ty b in
+  Core_util.recover_erased_types ~only:writable_offer ~refine_only:true ty b
 
 (** A constant's initialiser: its body, or -- for an erased proof, a lemma of
     a module whose other members are extracted -- the empty box an erased
@@ -1682,7 +1682,7 @@ let gen_constant_value ?expected_ty b =
     stands for: the name {!Plan_templates.phantom_aware_temps} gives it. *)
 let scheme_params ?(extra = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   let spelled =
-    List.filter (fun (i, _) -> i > 0) (Ml_type_util.get_tvars_indexed cty)
+    List.filter (fun (i, _) -> i > 0) (Type_util.get_tvars_indexed cty)
   in
   List.map (fun (i, id) -> (id, Callable_abi.Scheme_param i)) spelled
   @ List.filter_map
@@ -1790,7 +1790,7 @@ let with_function_head n b ty k =
   let b = Translation_support.resolve_body_tvars b ty in
   with_method_ns_for_locals @@ fun () ->
   let cty = Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty in
-  let tvars = List.map snd (Ml_type_util.get_tvars_indexed cty) in
+  let tvars = List.map snd (Type_util.get_tvars_indexed cty) in
   let index_tvar_set = collect_ml_type_index_tvars ty in
   let extra_index_tvars =
     IntSet.fold (fun i acc ->
@@ -1803,7 +1803,7 @@ let with_function_head n b ty k =
   let tvars = tvars @ extra_index_tvars in
   let temps =
     phantom_aware_temps ~force_required:index_tvar_set
-      ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
+      ~also_declared:(Type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
   in
   let tc_param_ids =
     match ty with
@@ -1811,7 +1811,7 @@ let with_function_head n b ty k =
     | _ -> []
   in
   let minted =
-    scheme_params ~extra:(IntSet.union index_tvar_set (Ml_type_util.collect_ml_tvars ty)) cty
+    scheme_params ~extra:(IntSet.union index_tvar_set (Type_util.collect_ml_tvars ty)) cty
   in
   k ty
     { fh_body = b;
@@ -1831,7 +1831,7 @@ let gen_function n ty h =
       List.filter_map
         (fun ((ty : Cpp_ir.Lowered.Type.t), i) ->
           match ty with
-          | Function _ when not (Ml_type_util.is_fully_erased_fun_ty ty) ->
+          | Function _ when not (Type_util.is_fully_erased_fun_ty ty) ->
             Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
@@ -1945,8 +1945,8 @@ let gen_spec__inner n b ty =
          no partial application can fill, so the arrows the name stands for are
          the arrows the body must have. *)
       let inner_body =
-        Ml_type_util.eta_expand_to
-          (Ml_type_util.expand_ml_fun_alias ml_ty)
+        Type_util.eta_expand_to
+          (Type_util.expand_ml_fun_alias ml_ty)
           inner_body
       in
       begin_body ~owner:n ();

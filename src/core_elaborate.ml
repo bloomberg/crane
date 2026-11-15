@@ -7,7 +7,7 @@
 
 open Names
 open Util
-open Ml_type_util
+open Type_util
 open Core_query
 open Table
 
@@ -196,7 +196,7 @@ let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t)
       | None -> stated_ml
     with
     | Some result when Call_tyargs.interior_holes tyargs <> [] ->
-      let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
+      let families = Type_util.event_family_ml_tvars [fn_ml_ty] in
       (* A family is a head, or one applied at the index it erases
          ([BotE _]); [box nat] met at a bare variable is a value type, not
          the family. *)
@@ -204,7 +204,7 @@ let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t)
         match resolve_tmeta b with
         | Core.Type.Global_app {type_arguments = []; _} -> true
         | Core.Type.Global_app {type_arguments = args; _} ->
-          Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
+          Type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
         | _ -> false
       in
       (* With [~constructors]: an applied variable against an application
@@ -576,7 +576,7 @@ let lambda_body_position ~n position =
   in
   {position with expected}
 
-let binder role (x, ty) = {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = role}
+let binder role (x, ty) = {Lexenv.eb_id = Core_util.id_of_mlid x; eb_type = ty; eb_role = role}
 
 (* The binders [ids], innermost first, as [collect_lams] returns them. *)
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
@@ -602,7 +602,7 @@ let rec walk w ?(position = no_position) lex e =
     go lex f;
     List.iter (go ~position lex) args
   | Core.Expr.Lambda _ as e ->
-    let ids, body = Mlutil.collect_lams e in
+    let ids, body = Core_util.collect_lams e in
     List.iter (fun (_, ty) -> walk_type w lex ty) ids;
     go ~position:(lambda_body_position ~n:(List.length ids) position) (push Lexenv.Value ids lex) body
   (* An alias of a polymorphic function is not bound but put in place of its
@@ -692,7 +692,7 @@ and walk_type w lex ty =
 (* The variables a declaration of type [ty] is generated under: the type
    variables of its head, which a let-bound lambda in its body is numbered
    past ({!Local_types}). *)
-let head_variables ty = Mlutil.IntSet.fold max (Mlutil.ml_tvars ty) 0
+let head_variables ty = Core_util.IntSet.fold max (Core_util.ml_tvars ty) 0
 
 (* A declaration's own parameters are bound as its parameters, at the types
    its body is generated with ({!Core_query.reconcile_parameter_type}):
@@ -706,7 +706,7 @@ let head_variables ty = Mlutil.IntSet.fold max (Mlutil.ml_tvars ty) 0
    [add := Z.add], calls it; only an axiom's or exception's parameters are
    named here, with no body to bind them. *)
 let declaration_scope ty body =
-  let ty = Mlutil.type_simpl ty in
+  let ty = Core_util.type_simpl ty in
   let params, body = declared_parameters ty body in
   let parameter (x, body_ty) sig_ty =
     let body_ty =
@@ -715,7 +715,7 @@ let declaration_scope ty body =
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
   in
-  (Lexenv.push (List.map2 parameter params (List.rev (Ml_type_util.ml_domains ty))) Lexenv.empty, body)
+  (Lexenv.push (List.map2 parameter params (List.rev (Type_util.ml_domains ty))) Lexenv.empty, body)
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
    every let-bound lambda as translation generates it
@@ -732,10 +732,10 @@ let rec inline_aliases ~n_outer lex e =
     match let_lambda ~lex ~n_outer ty a body with
     | Inlined body -> go lex body
     | At_instance inst ->
-      let subst = Mlutil.type_subst_list inst in
+      let subst = Core_util.type_subst_list inst in
       go lex (Core.Expr.Let {binder = x;
                              binder_type = subst ty;
-                             value = Mlutil.ast_map_types subst a;
+                             value = Core_util.ast_map_types subst a;
                              body;
                              occurrence = occ})
     | Bound ->
@@ -766,21 +766,21 @@ let rec inline_aliases ~n_outer lex e =
     and defs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
     Core.Expr.Cofixpoint (Core.Recursion.Group.of_arrays ~selected:i fs (Array.map (under (fix_binders fs)) defs) occ)
-  | e -> Mlutil.ast_map (go lex) e
+  | e -> Core_util.ast_map (go lex) e
 
 let generated_definition ty body =
   match body with
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> body
   | _ ->
-    let ty' = Mlutil.type_simpl ty in
+    let ty' = Core_util.type_simpl ty in
     let params, _ = collect_typed_lams ty' body in
     let lex, inner = declaration_scope ty body in
-    Mlutil.named_lams params (inline_aliases ~n_outer:(head_variables ty') lex inner)
+    Core_util.named_lams params (inline_aliases ~n_outer:(head_variables ty') lex inner)
 
 (* A declaration's calls, read in that scope. *)
 let declaration ?caller ?scope b ty body =
   let lex, body = declaration_scope ty body in
-  let ty = Mlutil.type_simpl ty in
+  let ty = Core_util.type_simpl ty in
   let w = walker ?caller ?scope b ~n_outer:(head_variables ty) in
   walk_type w Lexenv.empty ty;
   walk w lex body
@@ -790,10 +790,10 @@ let declaration ?caller ?scope b ty body =
    those arrows ({!Gen_functions.gen_spec}): the slot it initialises is a
    function of the full signature, which no partial application fills. *)
 let constant_at_alias ~caller b ty body =
-  let ty = Mlutil.type_simpl ty in
+  let ty = Core_util.type_simpl ty in
   let body = match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _} | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b in
-  if Ml_type_util.ml_domains ty = [] then
-    match Ml_type_util.eta_expand_to (Ml_type_util.expand_ml_fun_alias ty) body with
+  if Type_util.ml_domains ty = [] then
+    match Type_util.eta_expand_to (Type_util.expand_ml_fun_alias ty) body with
     | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Lexenv.empty expanded
     | _ -> ()
 
@@ -806,7 +806,7 @@ let constant_at_alias ~caller b ty body =
    own is generated as that application alone ({!Gen_instances}), so that is
    the only body of it walked: the body as written shares its matches'
    occurrences with the application, which pushes the arguments into a
-   single-branch match ({!Mlutil.canonical_app}).  The record as written is
+   single-branch match ({!Core_util.canonical_app}).  The record as written is
    walked too, for the globals it names alone. *)
 let instance_methods b name body ty =
   Option.iter

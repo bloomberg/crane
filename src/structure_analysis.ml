@@ -263,7 +263,7 @@ let throwing_values (s : Core.Program.t) : GlobRef.t list =
   iter_structure
     (fun _mp _l se ->
       match se with
-      | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = e; _}) when Mlutil.only_throws e ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = e; _}) when Core_util.only_throws e ->
         found := r :: !found
       | _ -> () )
     s;
@@ -581,7 +581,7 @@ let methods_by_owner (reg : Method_registry.t) (s : Core.Program.t) =
         (fun (_l, se) ->
           match se with
           | Core.Module.Structure_item.Declaration d ->
-            List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity d) (Mlutil.term_defs d)
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity d) (Core_util.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -597,7 +597,7 @@ let decls_by_ref (s : Core.Program.t) =
         (fun (_l, se) ->
           match se with
           | Core.Module.Structure_item.Declaration d ->
-            List.iter (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace tbl fd.entity d) (Mlutil.term_defs d)
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace tbl fd.entity d) (Core_util.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -850,7 +850,7 @@ let collect_collision_wrappers
                 | Core.Module.Structure_item.Declaration d ->
                   List.iter
                     (fun (fd : Core.Recursion.Definition.t) -> add (modpath_of_r fd.entity) parent_name)
-                    (Mlutil.term_defs d)
+                    (Core_util.term_defs d)
                 | _ -> () )
               inner_sel
           in
@@ -1091,7 +1091,7 @@ let analyze (reg : Method_registry.t) (s : Core.Program.t) : t =
               in
               match se with
               | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
-                List.for_all (fun (fd : Core.Recursion.Definition.t) -> methodified fd.entity) (Mlutil.term_defs d)
+                List.for_all (fun (fd : Core.Recursion.Definition.t) -> methodified fd.entity) (Core_util.term_defs d)
               | _ -> true )
             sel )
   in

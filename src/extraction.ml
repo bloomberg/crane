@@ -24,7 +24,7 @@ open Retyping
 open Inductiveops
 open Namegen
 open Table
-open Mlutil
+open Core_util
 open Common
 open Context.Rel.Declaration
 (*i*)
@@ -350,13 +350,13 @@ let rec unfold_spine env sg c =
     is.  Which variable comes from which binder does not change. *)
 let schema_view r schema =
   let implicits = implicits_of_global r in
-  Ml_schema.with_roles
-    (fun {Ml_schema.binder; role; _} ->
+  Core.Schema.with_roles
+    (fun {Core.Schema.binder; role; _} ->
       let i = Scheme.Binder.position binder + 1 in
       match role with
-      | Ml_schema.Erased _ when conservative_types () -> Ml_schema.Value
-      | Ml_schema.Value when Int.Set.mem i implicits ->
-        Ml_schema.Erased (Core.Erasure_reason.Configured_implicit {entity = r; position = i})
+      | Core.Schema.Erased _ when conservative_types () -> Core.Schema.Value
+      | Core.Schema.Value when Int.Set.mem i implicits ->
+        Core.Schema.Erased (Core.Erasure_reason.Configured_implicit {entity = r; position = i})
       | role -> role )
     schema
 
@@ -663,7 +663,7 @@ and extract_spine env sg db j c args =
     assert (List.is_empty args);
     let env' = push_rel_assum (n, t) env in
     (* The binder's entry: the kill reason its arrow's domain carries, read
-       as {!Mlutil.type_to_signature} reads it, and the variable it was
+       as {!Core_util.type_to_signature} reads it, and the variable it was
        numbered, if any. *)
     let binder ~tvar dom (mld, spine) =
       if Int.equal j 0 then (mld, [])
@@ -673,7 +673,7 @@ and extract_spine env sg db j c args =
           | Some (Core.Type.Erased k) -> Some k
           | _ -> None
         in
-        (mld, {Ml_schema.raw_erased; raw_tvar = tvar} :: spine)
+        (mld, {Core.Schema.raw_erased; raw_tvar = tvar} :: spine)
     in
     let arrow dom (mld, spine) =
       match expand env mld with
@@ -935,7 +935,7 @@ and extract_type_scheme env sg db c p =
     whose binders all range over types is a type constructor, and has no ML
     type: [None] -- unless it ignores them: [fun T => list nat] is the
     carrier [list nat], whatever it is applied to (see
-    {!Mlutil.apply_ml_type}).  Anything else is the plain {!extract_type}
+    {!Core_util.apply_ml_type}).  Anything else is the plain {!extract_type}
     question. *)
 and extract_family_type env sg db c =
   (* A type function bound by a [let] is its definition: [N.binary_rect]
@@ -1503,7 +1503,7 @@ and record_constant_type env sg kn opt_typ =
      declared implicit ([Crane Extraction Implicit]) is dropped from the
      declaration as an erased one is, so its domain is a [Core.Type.Erased] there,
      carrying the signature's [Core.Erasure_reason.Configured_implicit] -- the binder's role,
-     [Erased (Implicit _)], as {!Ml_type_util.binder_role} reads it. *)
+     [Erased (Implicit _)], as {!Type_util.binder_role} reads it. *)
   let register mlt =
     let r = GlobRef.ConstRef kn in
     let rec mark s t =
@@ -1518,7 +1518,7 @@ and record_constant_type env sg kn opt_typ =
   in
   match lookup_cst_type kn cb with
   | Some schema ->
-    register (Ml_schema.body schema);
+    register (Core.Schema.body schema);
     schema_view (GlobRef.ConstRef kn) schema
   | None ->
     let typ =
@@ -1540,12 +1540,12 @@ and record_constant_type env sg kn opt_typ =
       if EConstr.eq_constr sg unfolded typ then spine
       else snd (extract_spine env sg [] 1 unfolded [])
     in
-    let schema = Ml_schema.make (GlobRef.ConstRef kn) mlt spine in
+    let schema = Core.Schema.make (GlobRef.ConstRef kn) mlt spine in
     List.iter
       (fun problem ->
         Probe.violation "schema"
           Pp.(str "the scheme of " ++ Names.Constant.print kn ++ str ": " ++ str problem) )
-      (Ml_schema.validate schema);
+      (Core.Schema.validate schema);
     add_cst_type kn cb schema;
     register mlt;
     schema_view (GlobRef.ConstRef kn) schema
@@ -1867,7 +1867,7 @@ and extract_term env sg mle mlt c args =
     assert (args = []);
     (* Unify expected type with Core.Type.String so let-bound string match
        variables get the correct C++ type instead of std::any. *)
-    Mlutil.try_mgu mlt Core.Type.String;
+    Core_util.try_mgu mlt Core.Type.String;
     Core.Expr.String s
   | Array (_u, t, def, _ty) ->
     assert (args = []);
@@ -1983,18 +1983,18 @@ and observe_type_arg env sg db a =
 (** {2 Extraction of a constant applied to arguments} *)
 
 (** The use's instantiation of [schema]: for each variable, the type its
-    metavariable in [metas] was solved to, frozen ({!Mlutil.freeze_types}), or
+    metavariable in [metas] was solved to, frozen ({!Core_util.freeze_types}), or
     [Identity] for a variable a call within the recursive group keeps [rigid];
     and the argument the call wrote at the variable's binder, if the call
     reaches that binder -- [observed = None] where what was written could not
     be read as a type. *)
 and freeze_instantiation schema ~rigid metas written_at =
   let frozen = Array.of_list (freeze_types (Array.to_list metas)) in
-  Scheme.Instantiation.make (Ml_schema.id schema) (fun v ->
+  Scheme.Instantiation.make (Core.Schema.id schema) (fun v ->
       let source =
-        match (Ml_schema.origin schema v, written_at v) with
+        match (Core.Schema.origin schema v, written_at v) with
         | Some b, Some observed ->
-          Scheme.Written {binder = b.Ml_schema.binder; observed = Option.map type_simpl observed}
+          Scheme.Written {binder = b.Core.Schema.binder; observed = Option.map type_simpl observed}
         | _ -> Scheme.Not_written
       in
       let solution =
@@ -2012,12 +2012,12 @@ and freeze_instantiation schema ~rigid metas written_at =
     @param kn The constant being applied
     @param args Rocq arguments (may be fewer than the full arity — partial application) *)
 and extract_cst_app env sg mle mlt kn args =
-  (* First, the [ml_schema] of the constant, in expanded version. *)
+  (* First, the {!Core.Schema} of the constant, in expanded version. *)
   let schema = record_constant_type env sg kn None in
-  let schema = Ml_schema.with_body (expand env (Ml_schema.body schema)) schema in
+  let schema = Core.Schema.with_body (expand env (Core.Schema.body schema)) schema in
   (* The metas the scheme's type variables are instantiated with, kept so
      that the call's own type arguments can be given to them below. *)
-  let tvar_metas = Array.init (Ml_schema.arity schema) (fun _ -> new_meta ()) in
+  let tvar_metas = Array.init (Core.Schema.arity schema) (fun _ -> new_meta ()) in
   (* What the call wrote for a scheme variable: the observation of the
      argument at the binder the variable comes from, [Some None] where that
      argument says nothing readable, [None] where the call does not reach the
@@ -2028,10 +2028,10 @@ and extract_cst_app env sg mle mlt kn args =
     List.map
       (fun v ->
         ( v,
-          Option.bind (Ml_schema.origin schema v) (fun b ->
+          Option.bind (Core.Schema.origin schema v) (fun b ->
               Option.map (observe_type_arg env sg db)
-                (List.nth_opt args (Scheme.Binder.position b.Ml_schema.binder)) ) ) )
-      (Ml_schema.vars schema)
+                (List.nth_opt args (Scheme.Binder.position b.Core.Schema.binder)) ) ) )
+      (Core.Schema.vars schema)
   in
   let written_at v =
     Option.flatten (List.find_map (fun (v', o) -> if Scheme.Var.equal v v' then Some o else None) observations)
@@ -2068,7 +2068,7 @@ and extract_cst_app env sg mle mlt kn args =
            match written_at v with
            | Some (Some t) when lang () == Cpp && informative t -> Some t
            | _ -> None )
-         (Ml_schema.vars schema) )
+         (Core.Schema.vars schema) )
   in
   let given v = given.(Scheme.Var.ordinal v - 1) in
   (* Can we instantiate the type variables of this constant?  Not inside the
@@ -2088,11 +2088,11 @@ and extract_cst_app env sg mle mlt kn args =
       rigidify
         (type_subst_fun
            (fun j ->
-             match Scheme.Var.of_tvar (Ml_schema.id schema) j with
+             match Scheme.Var.of_tvar (Core.Schema.id schema) j with
              | Some v when not (rigid v) -> Some tvar_metas.(j - 1)
              | _ -> None )
-           (Ml_schema.body schema) )
-    else type_subst_vect tvar_metas (Ml_schema.body schema)
+           (Core.Schema.body schema) )
+    else type_subst_vect tvar_metas (Core.Schema.body schema)
   in
   (* Then the expected type of this constant. *)
   let a = new_meta () in
@@ -2103,7 +2103,7 @@ and extract_cst_app env sg mle mlt kn args =
   (* Second, is the resulting type compatible with the expected type [mlt] ? *)
   let magic2 = needs_magic (a, mlt) in
   (* Now, the extraction of the arguments. *)
-  let s_full = type2signature env (Ml_schema.body schema) in
+  let s_full = type2signature env (Core.Schema.body schema) in
   let s_full = sign_with_implicits (GlobRef.ConstRef kn) s_full 0 in
   let s = sign_no_final_keeps s_full in
   let ls = List.length s in
@@ -2113,7 +2113,7 @@ and extract_cst_app env sg mle mlt kn args =
       match given v with
       | Some t -> try_mgu tvar_metas.(Scheme.Var.ordinal v - 1) (expand env t)
       | None -> () )
-    (Ml_schema.vars schema);
+    (Core.Schema.vars schema);
   let mla = make_mlargs env sg mle s args metas in
   (* The arguments are extracted, so the local unification is over: what it
      solved the scheme's variables to is frozen into the use, a variable it
@@ -2402,7 +2402,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         (* Split: outer lambda has [context_arity_before_unify] params, inner
            lambda has the rest. The inner lambda captures the outer params and
            applies the constructor with all args. We wrap the inner lambda in
-           [Core.Expr.Lambda_group_barrier (_, _)] so that {!Mlutil.collect_lams} stops at the
+           [Core.Expr.Lambda_group_barrier (_, _)] so that {!Core_util.collect_lams} stops at the
            outer lambda boundary: it only collects consecutive [Core.Expr.Lambda] nodes.
            [Core.Expr.Lambda_group_barrier] carries no coercion, so the C++ translation renders the
            inner lambda as the return value of the outer lambda. *)
@@ -2830,7 +2830,7 @@ let extract_std_constant env sg kn body typ =
   pending_cpp_meta_fills := [];
   (* The short type [t] (i.e. possibly with abbreviations). *)
   let schema = record_constant_type env sg kn (Some typ) in
-  let numtvars = Ml_schema.arity schema and t = Ml_schema.body schema in
+  let numtvars = Core.Schema.arity schema and t = Core.Schema.body schema in
   (* Detect sigma type preconditions and register assertions *)
   (try detect_sigma_assertions env sg kn typ with e when best_effort_failure e -> ());
   (* An instance of a singleton class keeps its class's type, but its body is
@@ -2932,7 +2932,7 @@ let extract_std_constant env sg kn body typ =
 let extract_axiom env sg kn typ =
   reset_meta_count ();
   (* The short type [t] (i.e. possibly with abbreviations). *)
-  let t = Ml_schema.body (record_constant_type env sg kn (Some typ)) in
+  let t = Core.Schema.body (record_constant_type env sg kn (Some typ)) in
   (* The real type [t']: without head products, expanded, *)
   (* and with its own type variables made rigid (not instantiable). *)
   let l, _ = type_decomp (expand env (rigidify t)) in
@@ -3203,8 +3203,8 @@ let extract_constant access env kn cb =
     | exception Not_found -> ()
     | short ->
       if
-        List.length (Ml_type_util.ml_value_domains short)
-        < List.length (Ml_type_util.ml_value_domains t)
+        List.length (Type_util.ml_value_domains short)
+        < List.length (Type_util.ml_value_domains t)
       then register_glob_def r t );
     Core.Decl.Value {entity = r; body = e; type_ = t}
   in
@@ -3301,7 +3301,7 @@ let extract_constant_spec env kn cb =
         | _ -> () );
         Core.Signature.Declaration.Type {entity = r; parameters = vl; body = Some t} )
     | Info, Default ->
-      let t = Ml_schema.body (record_constant_type env sg kn (Some typ)) in
+      let t = Core.Schema.body (record_constant_type env sg kn (Some typ)) in
       let mk_spec c =
         let e, ty = extract_std_constant env sg kn c typ in
         Core.Signature.Declaration.Value {entity = r; body = e; type_ = ty}

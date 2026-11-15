@@ -39,7 +39,7 @@ type tmc_cell_alloc = {
           value's spelling, is not *)
   tca_ctor_name : string;
       (** The constructor struct's name
-          ({!Ml_type_util.ctor_struct_name_of_ref}), e.g. ["Cons"] *)
+          ({!Type_util.ctor_struct_name_of_ref}), e.g. ["Cons"] *)
   tca_rec_field_idx : int;
       (** Index of the recursive argument (the hole) among the constructor
           args, in declared order *)
@@ -124,14 +124,14 @@ let cell_value_type = function
 
     A factory call records the constructor it builds ({!Cpp_ir.Expr.Call.signature}),
     and the struct is named after that constructor
-    ({!Ml_type_util.ctor_struct_name_of_ref}).  The factory's own name does
+    ({!Type_util.ctor_struct_name_of_ref}).  The factory's own name does
     not say: it is the struct's lowercased, so [PeanoSucc] and [WW] have
     factories [peanosucc] and [ww], from which no capitalisation recovers
     them. *)
 let is_ctor_factory_call = function
   | Call ({constructs = Some c; yields; _}, (Type_member (qualifier, _) as factory), args) ->
     let ty = match yields with Yields t -> t | Untyped -> qualifier in
-    let struct_name = Ml_type_util.ctor_struct_name_of_ref c in
+    let struct_name = Type_util.ctor_struct_name_of_ref c in
     (* A TMC-wrapping constructor has a field behind the pointer -- the hole
        the recursion writes into -- so it has pointer fields ({!pointer_fields_of});
        one that has none is no cell. *)

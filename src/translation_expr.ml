@@ -9,11 +9,11 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Table
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
@@ -25,10 +25,10 @@ open Translation_stmts
 
 (** The type variable the definition whose body is being generated returns
     boxed, its arguments carrying it only as a type index
-    ({!Ml_type_util.index_only_result_tvar}): [Some 1] in [eval : expr A ->
+    ({!Type_util.index_only_result_tvar}): [Some 1] in [eval : expr A ->
     A]. *)
 let own_index_only_result () =
-  Option.bind (Option.bind (!tctx).input.body_owner find_type_opt) Ml_type_util.index_only_result_tvar
+  Option.bind (Option.bind (!tctx).input.body_owner find_type_opt) Type_util.index_only_result_tvar
 
 (** Under [CRANE_CHECK_IR], that the variable at de Bruijn index [i] is one
     binder to both of the scopes translation keeps: [env], which names it, and
@@ -250,7 +250,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
   | Core.Expr.Lambda _ as a ->
     Translation_lambda.gen_lambda ~expected_ty ~slot env a
   | Core.Expr.Global ({callee = x; _} as use) when is_inline_custom x ->
-    let tys = Mlutil.written_type_args use in
+    let tys = Core_util.written_type_args use in
     let ml_ty = callee_ml_type_exn x in
     let ty = cpp_of_ml env ml_ty in
     ( match ty with
@@ -259,12 +259,12 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     | _ ->
       mk_cppglob
         ?yields:
-          (glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use))
+          (glob_yields env x (Core_util.instantiate_written ~reader:"glob_yields" use))
         x
         (template_params_of_ml ~site:Through_tvar env
-           (List.map snd (Mlutil.Var_types.bindings tys)) ) )
+           (List.map snd (Core_util.Var_types.bindings tys)) ) )
   | Core.Expr.Global ({callee = x; _} as use) ->
-    let tys = Mlutil.written_type_args use in
+    let tys = Core_util.written_type_args use in
     let tvars = get_current_type_vars () in
     (* Each argument with the variable it was written for. *)
     let by_var =
@@ -275,7 +275,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
             match t with
             | Variable (Index (_, None)) when tvars <> [] -> Cpp_ir.Type.Erased Type
             | _ -> t ) )
-        (Mlutil.Var_types.bindings tys)
+        (Core_util.Var_types.bindings tys)
     in
     (* An erased variable bound by a result: the [i]th of [names] stands for
        variable [i]. *)
@@ -330,7 +330,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     in
     let tys_cpp = List.map snd by_var in
     let yields =
-      glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use)
+      glob_yields env x (Core_util.instantiate_written ~reader:"glob_yields" use)
     in
     let cglob =
       mk_cppglob ?yields x (written_at_variables x (filter_erased_keyed by_var))
@@ -491,7 +491,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
      consumer recovers it with a fixed [any_cast] and cannot know the
      concrete component types.  Extraction recorded both sides of this
      boundary, so ask for that shape whenever [into] is the erased one and
-     [from] is not.  See {!Ml_type_util.slot_repr}. *)
+     [from] is not.  See {!Type_util.slot_repr}. *)
   let into_box_kind =
     match coercion with
     | Some (from, into)

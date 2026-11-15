@@ -273,7 +273,7 @@ let specialize_local_records fresh stmts =
          those. *)
       let live_fields =
         List.filter_map
-          (fun {Core.Record.Field.projection = fr; type_ = ty} -> if Mlutil.isTdummy ty then None else Some fr)
+          (fun {Core.Record.Field.projection = fr; type_ = ty} -> if Core_util.isTdummy ty then None else Some fr)
           (Table.get_record_field_bindings record)
       in
       let field_lambda r =

@@ -6,10 +6,10 @@
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Util
 open Translation_state
-open Ml_type_util
+open Type_util
 open Core_query
 open Translation_support
 open Translation_types
@@ -24,7 +24,7 @@ open Translation_application
    [fix], generated under [env], reads, by name. *)
 let local_fix_binders env fix occ ids compiled =
   let read = ref [] in
-  Mlutil.ast_iter_rel_applied (fun n i _ -> if i > n then read := (i - n) :: !read) fix;
+  Core_util.ast_iter_rel_applied (fun n i _ -> if i > n then read := (i - n) :: !read) fix;
   let captured =
     List.filter_map
       (fun db ->
@@ -82,7 +82,7 @@ let local_fix_stmts selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowered.S
 let local_passing ~closures funs =
   let n_fix = Array.length funs in
   let member f =
-    let lam_ids, inner = Mlutil.collect_lams f in
+    let lam_ids, inner = Core_util.collect_lams f in
     let flags = if closures then [] else Escape.infer_owned_params ~callee_flags:settled_ownership (List.length lam_ids + n_fix) inner in
     (* [lam_ids] is innermost first, and the plan outermost first. *)
     List.rev
@@ -547,7 +547,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
   let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
   let outer_tvars = get_current_type_vars () in
   let n_outer = List.length outer_tvars in
-  let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+  let has_extra_tvars = Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
   check_closure_local let_ty fix_term ~local:(not has_extra_tvars);
   if has_extra_tvars then (
     (* Lift the polymorphic inner fixpoint to a top-level function. Build tvar
@@ -810,12 +810,12 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   (match decision with
   | Bound -> gen_normal_letin ()
   | At_instance inst ->
-    let subst = Mlutil.type_subst_list inst in
+    let subst = Core_util.type_subst_list inst in
     ungenerated_let_lambda "a lambda used at one instance";
     with_plan (Ownership_ir.bound_at_instance (!tctx).lexical.move_plan ~let_:let_occ) (fun () ->
         gen_stmts ~slot env k (Core.Expr.Let {binder = x;
                                               binder_type = subst t;
-                                              value = Mlutil.ast_map_types subst a;
+                                              value = Core_util.ast_map_types subst a;
                                               body = b;
                                               occurrence = let_occ}) )
   | Inlined b ->
@@ -874,7 +874,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
        parameter C++ has to deduce.  A closure has no name to deduce, and
        so cannot agree with the same parameter as settled by another
        argument; {!name_fn_arg_for_tvar_param} names it. *)
-    (* {!Mlutil.collect_lams} hands the binders back innermost-first, so
+    (* {!Core_util.collect_lams} hands the binders back innermost-first, so
        the source order these are read in is the reverse of [params]. *)
     let param_ml_tys =
       List.rev
@@ -1067,7 +1067,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
          An [auto]-returning template with more than one instantiation in
          the same translation unit is then used before any of them is
          defined. *)
-      let ml_dom, _ = Mlutil.type_decomp t in
+      let ml_dom, _ = Core_util.type_decomp t in
       let value_dom =
         List.filter is_runtime_binder_type ml_dom
       in
@@ -1134,7 +1134,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
   let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
   let outer_tvars = get_current_type_vars () in
   let n_outer = List.length outer_tvars in
-  let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+  let has_extra_tvars = Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
   (* The arguments the plan reads before the call, its parameters being
      bound to them in order ({!Ownership_ir.evaluated_first}), each
      evaluated into a local of its own ahead of everything the call
@@ -1151,7 +1151,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
            let e =
              match List.nth_opt params i with
              | Some (_, (Core.Type.Arrow _ as ty))
-               when Table.is_erased_fix_group occ && List.exists Mlutil.has_unknown (ml_domains ty) ->
+               when Table.is_erased_fix_group occ && List.exists Core_util.has_unknown (ml_domains ty) ->
                adapt_to_erased_param env ty a e
              | _ -> e
            in

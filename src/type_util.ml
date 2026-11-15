@@ -2,11 +2,11 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Pure [Core.Type.t] / [cpp_type] predicates and transforms shared by
     extraction, translation, declaration generation and the printer.  See
-    [ml_type_util.mli]. *)
+    [type_util.mli]. *)
 
 open Common
 open Names
-open Mlutil
+open Core_util
 open Table
 
 (** Derive the PascalCase C++ constructor struct name from a [GlobRef.t].
@@ -34,7 +34,7 @@ let ctor_struct_name_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : string =
     type -- which is how the concept spells it for that instance too
     ([C<ic, std::any>]). *)
 let instance_type_args (args : Core.Type.t list) : Core.Type.t list =
-  List.map (fun t -> if Mlutil.isTdummy t then Core.Type.Unknown else t) args
+  List.map (fun t -> if Core_util.isTdummy t then Core.Type.Unknown else t) args
 
 (** Like {!ctor_struct_name_of_ref} but returns an [Core.Binder_name.Source.t]. *)
 let ctor_struct_id_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : Id.t =
@@ -60,7 +60,7 @@ let rec expand_ml_fun_alias ty =
     ( match Table.lookup_typedef_unchecked kn with
     | Some body ->
       let body =
-        if args = [] then body else Mlutil.type_subst_list args body
+        if args = [] then body else Core_util.type_subst_list args body
       in
       ( match resolve_tmeta body with
       | Core.Type.Arrow _ -> expand_ml_fun_alias body
@@ -163,7 +163,7 @@ let rec monad_heading view ty =
   | Core.Type.Global_app {head = m; _} when Table.is_monad m -> Some m
   | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = args; _} -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some body -> monad_heading view (if args = [] then body else Mlutil.type_subst_list args body)
+    | Some body -> monad_heading view (if args = [] then body else Core_util.type_subst_list args body)
     | None -> None )
   | _ -> None
 
@@ -261,7 +261,7 @@ let declared_parameters ty b =
     invented. *)
 let eta_expand_to ty b =
   let doms = ml_value_domains ty in
-  let ids, inner = Mlutil.collect_lams b in
+  let ids, inner = Core_util.collect_lams b in
   let k = List.length doms - List.length ids in
   if k <= 0 then b
   else
@@ -276,8 +276,8 @@ let eta_expand_to ty b =
         (List.rev missing)
     in
     let args = List.init k (fun i -> Core.Expr.fresh_rel (k - i)) in
-    Mlutil.named_lams (extra @ ids)
-      (Mlutil.apply_eta_args (Mlutil.ast_lift k inner) args)
+    Core_util.named_lams (extra @ ids)
+      (Core_util.apply_eta_args (Core_util.ast_lift k inner) args)
 
 (** A class method's type with the quantifier a concept erased put back.
 
@@ -288,7 +288,7 @@ let eta_expand_to ty b =
     flattened to [std::any].  Both the instance side ({!Gen_decls}) and the
     call side ({!Translation}) need the same answer, so they ask here. *)
 let rec strip_erased_method_prefix = function
-  | Core.Type.Arrow {parameter = d; result = rest} when Mlutil.isTdummy d || Table.is_typeclass_type d ->
+  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.isTdummy d || Table.is_typeclass_type d ->
     strip_erased_method_prefix rest
   | t -> t
 
@@ -296,7 +296,7 @@ let rec strip_erased_method_prefix = function
     dictionary: the erased arrows leading its type. *)
 let projection_class_arity proj =
   let rec count = function
-    | Core.Type.Arrow {parameter = d; result = b} when Mlutil.isTdummy d -> 1 + count b
+    | Core.Type.Arrow {parameter = d; result = b} when Core_util.isTdummy d -> 1 + count b
     | Core.Type.Meta {contents = Some t} -> count t
     | _ -> 0
   in
@@ -310,7 +310,7 @@ let projection_class_arity proj =
     number -- the definition binds that many [_A]s, and the requirement has to
     supply that many arguments -- so both read it from here. *)
 let method_tvar_count class_ref ty =
-  max 0 (Mlutil.type_maxvar ty - List.length (Table.get_ind_ip_vars class_ref))
+  max 0 (Core_util.type_maxvar ty - List.length (Table.get_ind_ip_vars class_ref))
 
 (** The arguments a higher-kinded carrier has already fixed: [Fn (prod X)]
     fixes the pair's first component, while the eta-expanded [option _] fixes
@@ -371,7 +371,7 @@ let rec ml_drop_arrows n t =
   if n <= 0 then t
   else
     match t with
-    | Core.Type.Arrow {parameter = t1; result = t2} when Mlutil.isTdummy t1 -> ml_drop_arrows n t2
+    | Core.Type.Arrow {parameter = t1; result = t2} when Core_util.isTdummy t1 -> ml_drop_arrows n t2
     | Core.Type.Arrow {result = t2; _} -> ml_drop_arrows (n - 1) t2
     | Core.Type.Meta {contents = Some t} -> ml_drop_arrows n t
     | _ -> Core.Type.Unknown
@@ -433,7 +433,7 @@ let ml_type_is_unit (ty : Core.Type.t) : bool =
   | _ -> false
 
 let own_type_variables ~n_outer tys =
-  List.exists (fun ty -> Mlutil.IntSet.exists (fun i -> i > n_outer) (Mlutil.ml_tvars ty)) tys
+  List.exists (fun ty -> Core_util.IntSet.exists (fun i -> i > n_outer) (Core_util.ml_tvars ty)) tys
 
 let is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application ((GlobRef.IndRef _ as r), _, _) -> Table.is_unit_type r
@@ -886,7 +886,7 @@ let rec get_args_and_ret acc = function
 let rec strip_tarr_n n ty =
   if n <= 0 then Some ty
   else match resolve_tmeta ty with
-    | Core.Type.Arrow {parameter = t1; result = rest} when Mlutil.isTdummy t1 ->
+    | Core.Type.Arrow {parameter = t1; result = rest} when Core_util.isTdummy t1 ->
       (* Skip erased type-param arrow without consuming a real argument *)
       strip_tarr_n n rest
     | Core.Type.Arrow {result = rest; _} -> strip_tarr_n (n - 1) rest
@@ -1300,7 +1300,7 @@ let rec fill_holes_type fills t =
   | _ -> t
 
 let fill_holes fills e =
-  match fills with [] -> e | _ -> Mlutil.ast_map_types (fill_holes_type fills) e
+  match fills with [] -> e | _ -> Core_util.ast_map_types (fill_holes_type fills) e
 
 let refine_param_from_slot ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
   let name_of (t : Cpp_ir.Lowered.Type.t) =
@@ -1504,7 +1504,7 @@ let collect_ml_type_index_tvars ml_ty =
     while the body and the call sites still number their arguments by the ML
     type.  A declaration that omitted such a variable would leave the body
     naming something the head never bound. *)
-let collect_ml_tvars = Mlutil.ml_tvars
+let collect_ml_tvars = Core_util.ml_tvars
 
 (** Arity of every type variable that [tys] applies to arguments, keyed by its
     1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type] reaches

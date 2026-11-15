@@ -271,7 +271,7 @@ let method_survivors (mf : meth) = calls_checker (Option.cata definition_calls [
    that are not void, last first: the order Loopify keeps a local
    fixpoint's parameters in, the reverse of the lambda's own. *)
 let kept_positions (l : Control_ir.Term.loop) =
-  List.filteri (fun _ (_, ty) -> not (Ml_type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
+  List.filteri (fun _ (_, ty) -> not (Type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
   |> List.rev_map fst
 
 (** Why a local fixpoint whose ControlIR says nothing of the parameters its

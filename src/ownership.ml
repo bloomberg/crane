@@ -6,7 +6,7 @@
 let read_off ~settled params body =
   let n = List.length params in
   List.map2
-    (fun (escapes, parts_escape) (_, ty) -> escapes || (parts_escape && Ml_type_util.is_prod_ml_type ty))
+    (fun (escapes, parts_escape) (_, ty) -> escapes || (parts_escape && Type_util.is_prod_ml_type ty))
     (List.combine
        (Escape.infer_owned_params ~callee_flags:settled n body)
        (Escape.infer_sub_bindings_escape_params n body))
@@ -21,7 +21,7 @@ let functions struc =
   let add r b ty = if not (Table.is_custom r) then acc := (r, b, ty) :: !acc in
   Modutil.struct_iter
     (function
-      | Core.Decl.Value {entity = r; body = b; type_ = ty} when Ml_type_util.ml_domains ty <> [] -> add r b ty
+      | Core.Decl.Value {entity = r; body = b; type_ = ty} when Type_util.ml_domains ty <> [] -> add r b ty
       | Core.Decl.Recursive_group fds ->
         Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity fd.body fd.type_) fds
       | _ -> () )
@@ -48,7 +48,7 @@ let summarize ?(receiver = fun _ -> None) struc =
     let changed = ref false in
     List.iter
       (fun (r, b, ty) ->
-        let params, body = Ml_type_util.declared_parameters ty b in
+        let params, body = Type_util.declared_parameters ty b in
         let f = unless_receiver r (Table.with_decl_ref r (fun () -> read_off ~settled params body)) in
         if Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;

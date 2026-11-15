@@ -144,7 +144,7 @@ let requirements signature = function
          ind.packets )
   (* A polymorphic value is a member template, which a requires-expression
      cannot name without choosing its arguments: it asks nothing. *)
-  | Core.Signature.Declaration.Value {type_ = t; _} when Ml_type_util.has_tvar t -> []
+  | Core.Signature.Declaration.Value {type_ = t; _} when Type_util.has_tvar t -> []
   | Core.Signature.Declaration.Value {entity = r; type_ = t; _} -> (
     let args, ret = arrows t in
     let result = convert ret in

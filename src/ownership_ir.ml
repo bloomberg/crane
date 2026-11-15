@@ -194,7 +194,7 @@ let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r
 let rec copy_of_type ty =
   match ty with
   | Core.Type.Meta {contents = Some t} -> copy_of_type t
-  | Core.Type.Arrow {parameter = d; result = rest} when Mlutil.isTdummy d -> copy_of_type rest
+  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.isTdummy d -> copy_of_type rest
   | Core.Type.Arrow _ -> Some Retain
   (* An instance of a class is an object of its own, a singleton class's
      too, whatever its method's type. *)
@@ -202,7 +202,7 @@ let rec copy_of_type ty =
   | Core.Type.Global_app {head = (Names.GlobRef.ConstRef kn as r); type_arguments = args; _}
     when (not (Table.is_custom r)) && not (Table.is_promoted_type_var r || Table.is_erased_type_const r) -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some body -> copy_of_type (Mlutil.type_subst_list args body)
+    | Some body -> copy_of_type (Core_util.type_subst_list args body)
     | None -> Some Duplicate )
   | Core.Type.Global_app {head = r; _} when shares_ref r -> Some Retain
   (* A mapped type's copy copies its arguments: it is its bits only where
@@ -382,8 +382,8 @@ let closure_local ~n_outer ty a =
   match a with
   | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
     let ids = Core.Recursion.Group.functions rec_group in
-    not (Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
-  | Core.Expr.Lambda _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
+    not (Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
+  | Core.Expr.Lambda _ -> not (Type_util.own_type_variables ~n_outer [ty])
   | _ -> false
 
 let at_instance arms occurrence =
@@ -398,7 +398,7 @@ let at_instance arms occurrence =
 let reads_at_uses ~n_outer ~arms ty a occurrence =
   match strip a with
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> true
-  | Core.Expr.Lambda _ -> Ml_type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
+  | Core.Expr.Lambda _ -> Type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
   | _ -> false
 
 (* A record's field read out of it, by its projection or by the match
@@ -648,7 +648,7 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
        an inline custom where it is generated as a call. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind effects use -> (
       let action, k = Common.last_two args in
-      match Mlutil.collect_lams k with
+      match Core_util.collect_lams k with
       | [], _ -> walk ~pinned parents d (walk ~consumed:false ~pinned parents d live k) action
       | ids, body ->
         let n = List.length ids in
@@ -815,7 +815,7 @@ module Binding = struct
   let pair_by_value ~owned scrut branches =
     Array.length branches = 1
     && (match matched_inductive branches with
-       | Some r -> Ml_type_util.is_prod_global r
+       | Some r -> Type_util.is_prod_global r
        | None -> false )
     && Table.is_custom_match branches
     && Foreign_template.structured_binding (Table.find_custom_match branches) <> None
@@ -923,7 +923,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind effects use -> (
       let action, k = Common.last_two args in
       own owned d action;
-      match Mlutil.collect_lams k with
+      match Core_util.collect_lams k with
       | [], _ -> own owned d k
       | ((_, ty) :: _ as ids), body ->
         let n = List.length ids in
@@ -976,9 +976,9 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
           List.iteri (fun i (_, ty) -> bound (d + i) ty) ids;
           ( match pat with
           | Core.Pattern.Constructor {constructor = r; _} when not (Table.is_custom_match branches) ->
-            let stored = Ml_type_util.Ctor_fields.of_ctor r in
+            let stored = Type_util.Ctor_fields.of_ctor r in
             List.iteri
-              (fun i _ -> if Ml_type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
+              (fun i _ -> if Type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
               ids
           | _ -> () );
           own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body;
@@ -1017,7 +1017,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
     | _, (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ | Core.Expr.Lambda _) ->
       at_instance arms occurrence || closure_local ~n_outer ty a
     | _ ->
-      (not (Ml_type_util.ml_type_is_unit ty))
+      (not (Type_util.ml_type_is_unit ty))
       && worth_moving ty
       && not (Binding.projects_in_place ~owned:(owned_var owned d) ~fate:(fate_in reads) ty a)
   and branch_owned owned d case ty scrut branches k {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} =
@@ -1065,8 +1065,8 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
             | _ -> owned
           in
           if consumed && not (reads_scrutinee body) then
-            let stored = Ml_type_util.Ctor_fields.of_ctor r in
-            Levels.union owned (fields (fun i _ -> not (Ml_type_util.Ctor_fields.behind_pointer stored i)))
+            let stored = Type_util.Ctor_fields.of_ctor r in
+            Levels.union owned (fields (fun i _ -> not (Type_util.Ctor_fields.behind_pointer stored i)))
           else owned
         | _ -> owned ) )
   in
@@ -1122,7 +1122,7 @@ let branches_at root o =
     | Core.Expr.Match {scrutinee = scrut;
                        branches = brs; _} when Option.equal Core.Occurrence.equal (Option.map snd (scrutinee_var scrut)) (Some o) ->
       raise (Found brs)
-    | a -> Mlutil.ast_iter find a
+    | a -> Core_util.ast_iter find a
   in
   match find root with () -> None | exception Found brs -> Some brs
 
@@ -1296,7 +1296,7 @@ let continue_moves ~effects (l : Control_ir.Term.loop) =
     let last_but_by_name (c : Control_ir.Term.continue_) i k o =
       moves ~whole:true p o
       ||
-      let rec erase n t = match t with Core.Expr.Bound_variable {index = j; _} when j = n -> Core.Expr.Erased_value Core.Erasure_reason.Proof | t -> Mlutil.ast_map_lift erase n t in
+      let rec erase n t = match t with Core.Expr.Bound_variable {index = j; _} when j = n -> Core.Expr.Erased_value Core.Erasure_reason.Proof | t -> Core_util.ast_map_lift erase n t in
       let arguments (c' : Control_ir.Term.continue_) =
         if Core.Occurrence.equal c'.occurrence c.occurrence then List.mapi (fun j a -> if j = i then a else erase k a) c'.arguments
         else c'.arguments

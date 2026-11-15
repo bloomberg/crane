@@ -56,7 +56,7 @@ let dictionary_filled c = Call_tyargs.resolved_from Call_tyargs.Argument_heads c
 type instantiated = {
   call : t;
   reading : Call_tyargs.t;
-  tys : Mlutil.Var_types.t;
+  tys : Core_util.Var_types.t;
   callee_type_at_call : Core.Type.t;
   params : Param_pos.subst Param_pos.params;
   params_orig : Param_pos.orig Param_pos.params;
@@ -83,7 +83,7 @@ let same_reading a b =
   let evidences =
     Call_tyargs.[Written; Argument_types; Argument_heads; Expected_result; Eta_parameter]
   in
-  Mlutil.Var_types.equal (Call_tyargs.by_variable a) (Call_tyargs.by_variable b)
+  Core_util.Var_types.equal (Call_tyargs.by_variable a) (Call_tyargs.by_variable b)
   && List.equal Int.equal (ordinals (Call_tyargs.holes a)) (ordinals (Call_tyargs.holes b))
   && List.equal Int.equal (ordinals (Call_tyargs.beyond_extent a)) (ordinals (Call_tyargs.beyond_extent b))
   && List.for_all (fun e -> Call_tyargs.resolved_from e a = Call_tyargs.resolved_from e b) evidences
@@ -93,7 +93,7 @@ let same_instantiation a b =
   && List.equal ( = ) a.call.roles b.call.roles
   && same_reading a.call.tyargs b.call.tyargs
   && same_reading a.reading b.reading
-  && Mlutil.eq_ml_type a.callee_type_at_call b.callee_type_at_call
+  && Core_util.eq_ml_type a.callee_type_at_call b.callee_type_at_call
 
 let at_call inst call =
   if not (Names.GlobRef.UserOrd.equal inst.call.callee call.callee && List.equal ( = ) inst.call.roles call.roles)
@@ -108,5 +108,5 @@ type static_projection = {
 
 let same_static_projection a b =
   Int.equal a.instance b.instance
-  && List.equal Mlutil.eq_ml_type a.domains b.domains
-  && List.equal Mlutil.eq_ml_type a.missing b.missing
+  && List.equal Core_util.eq_ml_type a.domains b.domains
+  && List.equal Core_util.eq_ml_type a.missing b.missing

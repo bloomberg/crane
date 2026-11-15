@@ -1258,7 +1258,7 @@ and rewrite_enter_stmts ctx stmts =
         List.partition
           (function
             | Bind_variable (v, _, _) ->
-              (not (Mlutil.is_temporary_id v)) || List.exists (Id.equal v) read_by_remat
+              (not (Core_util.is_temporary_id v)) || List.exists (Id.equal v) read_by_remat
             | _ -> true )
           bindings
       in

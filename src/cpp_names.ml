@@ -76,7 +76,7 @@ let inside_inductive_struct r v =
   | GlobRef.IndRef ((kn, i) as ind) ->
     let ctors =
       List.init (Option.default 0 (Table.get_ind_nb_ctors_opt kn i)) (fun j ->
-          Ml_type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)) )
+          Type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)) )
     in
     let scope =
       Label.make (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
