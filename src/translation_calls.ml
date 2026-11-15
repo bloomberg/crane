@@ -1,144 +1,680 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Call planning for translation: the template arguments a call is written
-    with, how arguments meet their parameters, the signature recorded on a
-    call node, and calls through type-class instances. *)
+(** Call planning for translation: the plan a call to a global is written
+    against ({!callee_abi}), the template arguments it writes -- dictionary
+    carriers, higher-kinded and lifted-call arguments, families an instance
+    fixes -- the position each argument is generated into, and the lowered
+    call.  Also how a global use is curried to an expected type. *)
 
+open Common
 open Names
 open Core_util
-open Table
 open Util
 open Translation_state
 open Type_util
-open Translation_support
-open Translation_types
 open Core_query
+open Table
 
-(** Where a callee's arrows are spelled ({!Cpp_ir.Types.spell_arrows}). *)
-type arrow_site = Cpp_ir.Types.arrow_site = Declared | Through_tvar | Declared_at of int
+module IntSet = Escape.IntSet
 
-(** An {!adapter_params} parameter read back as the argument to pass along. *)
+(** What a call to a global is, before its arguments are generated: the call
+    as Core elaborated it, and what planning its C++ added; see
+    {!plan_call}. *)
+type call_plan = {
+  cp_instantiated : Elaborated_call.instantiated;
+      (** The call's semantic half, decided before any of the C++ below. *)
+  cp_expected_result : Cpp_ir.Lowered.Type.t option;
+      (** The C++ type the call is expected to produce: the position's, with
+          a family it erased refined from what the arguments state, or, where
+          the position states none, the arguments' or the enclosing
+          function's return type. *)
+  cp_instance_type_args : Cpp_ir.Lowered.Type.t option list;
+      (** The template argument each class-instance argument is passed as. *)
+  cp_instance_families : (Cpp_ir.Lowered.Type.t * Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) list;
+      (** The families the call's instances were found to have
+          ({!instance_family_binding}); the slots their
+          arguments are generated against erase them the same way. *)
+  cp_tvars : Id.t list;
+      (** The enclosing declaration's type variable names. *)
+  cp_concrete_tvar_type : Cpp_ir.Lowered.Type.t option;
+      (** For a call with no written type arguments and excess value
+          arguments, the concrete type of its polymorphic result: the excess
+          arguments' types to the enclosing function's return type. *)
+  cp_instance_promoted : (Id.t * Cpp_ir.Lowered.Type.t) list;
+      (** Promoted variables bound to concrete C++ types by the concrete
+          instances the call passes, so that constructors in its arguments
+          use those types instead of [std::any]. *)
+  cp_result_tvar_map : (Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) Lazy.t;
+      (** The callee's variables as the call's expected result instantiates
+          them, read for a parameter the substitution left erased. *)
+}
 
-(** [apply_at_site site f args]: [f] applied to [args] as a callee spelled
-    at the arrow site [site] takes them -- all at once where it was declared
-    with them, one at a time through a type variable, and past the [n] a
-    declaration wrote one at a time.  No arguments is [f] itself. *)
-let apply_at_site (site : Cpp_ir.Types.arrow_site) (f : Cpp_ir.Lowered.Expr.t) args =
-  let apply f args = match args with [] -> f | _ -> Cpp_ir.Build.call f args in
-  let one_at_a_time f args = List.fold_left (fun f a -> Cpp_ir.Build.call f [a]) f args in
-  match site with
-  | Declared -> apply f args
-  | Through_tvar | Declared_at 0 -> one_at_a_time f args
-  | Declared_at n ->
-    if List.length args <= n then apply f args
-    else
-      one_at_a_time
-        (Cpp_ir.Build.call f (List.filteri (fun i _ -> i < n) args))
-        (List.filteri (fun i _ -> i >= n) args)
+(** Checks the plan [abi] of a function against [live], the C++ type of its
+    declared Core type as a call site rebuilds it: the plan declares one value
+    parameter per domain other than a class dictionary or a skipped type, and
+    one dictionary template parameter per dictionary domain.  Its types are
+    not compared: the declaration spells its parameters after its head's
+    relaxations, through its instances' associated types and with aliases
+    expanded, so they differ from the type rebuilt here by design. *)
+let check_planned_arity abi (live : Cpp_ir.Lowered.Type.t) =
+  if Probe.checking () then
+    match Callable_abi.signature abi with
+    | None -> ()
+    | Some {Callable_abi.params; _} ->
+      let doms = match live with Function (d, _) -> d | _ -> [] in
+      let dicts, values = List.partition Type_util.is_typeclass_type_cpp doms in
+      let values = List.filter (fun t -> not (is_skipped_cpp_type t)) values in
+      let instances =
+        List.length
+          (List.filter
+             (fun p ->
+               match p.Callable_abi.origin with Callable_abi.From_instance _ -> true | _ -> false )
+             (Callable_abi.template_head abi) )
+      in
+      if List.length values <> List.length params || List.length dicts <> instances then
+        Probe.violation "callable ABI"
+          Pp.(
+            str "the plan of " ++ GlobRef.print (Callable_abi.callee abi)
+            ++ str (Printf.sprintf " declares %d value parameters and %d dictionaries" (List.length params) instances)
+            ++ str (Printf.sprintf " where its type has %d and %d" (List.length values) (List.length dicts)) )
 
-(** [stored_adapter params e]: the lambda taking [params], in source order,
-    that returns [e] and holds its captures by copy, its return type
-    deduced. *)
-let stored_adapter params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  Lambda
-    { params;
-      type_params = [];
-      return_type = None;
-      body = [Return (Some e)];
-      capture = Stored;
-      moved = [];
-      binders = [];
-      fixpoint = None }
+(** {!check_planned_arity} for the installed plan of [id], where it has one. *)
+let check_installed_arity id live =
+  if Probe.checking () then Option.iter (fun abi -> check_planned_arity abi live) (Callable_abi.lookup id)
 
-(** Make a global named in value position into an expression a caller can
-    invoke, by eta-expanding it into a lambda that calls it.
+(** {!instantiate_at_call} at the type arguments [use] wrote, read by the
+    callee's scheme variables. *)
+let instantiate_use_at_call (use : Core.Global_use.t) value_args ty =
+  Core_util.instantiate_written ~reader:"instantiate_use_at_call" use
+    (with_dict_carrier ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref use.callee
+       value_args ty )
 
-    Two declarations need this.  A definition returning a closure ([nat -> nat
-    -> nat] read as [nat -> (nat -> nat)]) is declared flat, with every arrow
-    becoming a C++ parameter; that suits a direct call, but handing the bare
-    name to something expecting a one-argument callable does not compile, so
-    the nesting the use site asks for is rebuilt:
+(** What an application of a global yields, as a Core type.
 
-    {v [](uint64_t _ec0) { return [=](uint64_t _ec1) { return f(_ec0, _ec1); }; } v}
+    The callee's declared type says it, once instantiated the way the call
+    instantiates it: [tys] for its own [forall]s, and the dictionary argument
+    for the class parameter its parameter types spell as the carrier applied.
+    Both substitutions are {!instantiate_use_at_call}'s; this reads the
+    codomain of the result.
 
-    A definition with a function-typed parameter is declared as a template
-    deducing that parameter ({!Common.fun_tparam_name}), and its name alone is
-    an overload set rather than a value; one flat lambda gives the call the
-    argument it deduces from:
+    [None] where the callee has no recorded type, or fewer value arrows than
+    the call has value arguments -- a partial application returns a function,
+    which is not what the callers of this want. *)
+let core_app_result_type (f : Core.Expr.t) (args : Core.Expr.t list) : Core.Type.t option =
+  let ( let* ) = Option.bind in
+  match f with
+  | Core.Expr.Global ({callee = id; _} as use) ->
+    let value_args =
+      List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args
+    in
+    let* ty = find_type_opt id in
+    Type_util.core_codomain_after (List.length value_args)
+      (instantiate_use_at_call use value_args ty)
+  | _ -> None
 
-    {v [](std::function<uint64_t(uint64_t)> _ec0, uint64_t _ec1) { return f(_ec0, _ec1); } v}
+(** The variable {!Plan_templates.relax_tt_applied_return} takes out of [id]'s
+    template head, if any: the higher-kinded head of an applied codomain that
+    only a callback's result otherwise names -- [case_]'s [M] in [M X], which
+    the declaration spells [std::invoke_result_t<F0 &, ...>] instead.  Read off
+    the Rocq type for the reason {!writable_tvar_count} is. *)
+let relaxed_tt_return_var id =
+  match find_type_opt id with
+  | None -> None
+  | Some core_ty -> (
+    match resolve_meta (core_codomain core_ty) with
+    | Core.Type.Variable_app {head = h; arguments = [ _ ]}
+      when IntSet.mem h (declared_higher_kinded_tvars core_ty) ->
+      let occurs t = IntSet.mem h (collect_tvars_set IntSet.empty t) in
+      let doms = List.map resolve_meta (core_domains core_ty) in
+      (* A callback's result, written as an arrow; a definitional class
+         spells its variable in the declaration's parameter list and so names
+         it ([MonadIter<T1>]). *)
+      let under_arrow d =
+        match d with Core.Type.Arrow _ -> true | _ -> false
+      in
+      if
+        List.for_all (fun d -> under_arrow d || not (occurs d)) doms
+        && List.exists (fun d -> under_arrow d && occurs d) doms
+      then Some h
+      else None
+    | _ -> None )
 
-    A class method projected through its instance ([opN::op]) is a function
-    named the same way, and is curried the same way: {!curry_value_to_expected}
-    takes the callee's Core type rather than its name.
+(** The Rocq type-variable positions a call may still write, given that the
+    declaration reorders some of them out of reach.
 
-    [callee_site] is the arrow site the callee is spelled at
-    ({!Cpp_ir.Types.arrow_site}), where [core_ty] is an instantiation of it: an
-    instantiation can push arrows into the codomain ([idf {A} : A -> A] at
-    [A := nat -> nat] reads as two arguments), and the declaration takes only
-    the arguments it wrote, the rest going to what the call returns one at a
-    time ([Declared_at n]).
+    {!Plan_templates.relax_applied_return} handles a variable named only by the
+    return type -- C++ deduces nothing from a return type -- by giving it the
+    producing callback's result as its default and moving it {e last}, since a
+    default may only name parameters declared before it.  That pass records
+    "nothing supplies this signature's arguments explicitly, so the order is
+    free", and for a lifted helper that is true.  For a class method it is not:
+    [tfmap] is called with its Rocq arguments written out.
 
-    Returns [cglob] unchanged when the declaration is already a value. *)
-let curry_value_to_expected env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Declared)
-  ?(exact = false) core_ty
-    (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let decl_dom =
-    match Option.map (cpp_of_core env) core_ty with
-    | Some (Function (dom, _)) -> dom
-    | _ -> []
+    Once such a variable has moved, every position from it onwards is
+    unreachable positionally -- reaching it would mean spelling the synthesised
+    callable parameter that now precedes it, which is deduced and has no Rocq
+    argument to spell.  So the writable prefix ends there.
+
+    The condition is read off the Rocq type rather than the emitted
+    declaration, which a call site cannot consult ({!Table.census}'s rule that
+    planning decides and emission reads): the variable occurs in the
+    codomain, and every domain occurrence of it is under an arrow -- that is,
+    it is a callback's result, which is exactly the parameter the declaration
+    collapses to a deduced callable and stops naming. *)
+let writable_tvar_count id =
+  let ( let* ) o f = match o with None -> None | Some x -> f x in
+  let* core_ty = find_type_opt id in
+  let n = Core_util.type_maxvar (type_simpl core_ty) in
+  let occurs v t = IntSet.mem v (collect_tvars_set IntSet.empty t) in
+  let cod = resolve_meta (core_codomain core_ty) in
+  (* Only a codomain that {e applies} a variable is relaxed.  [list B] names
+     [B] as a plain leading parameter that the call still has to write, and
+     dropping it would leave nothing to deduce it from; [T V] is the
+     higher-kinded shape {!Plan_templates.relax_applied_return} rewrites. *)
+  (* And only a higher-kinded head: a family's application is written plain,
+     which the declaration does not relax ({!Plan_templates.relax_applied_return}). *)
+  let applied_cod =
+    match cod with
+    | Core.Type.Variable_app {head = h; _} ->
+      IntSet.mem h (Type_util.higher_kinded_core_tvars [core_ty])
+    | _ -> false
   in
-  (* Number of parameters the outer lambda takes; the rest, if any, go into a
-     nested one.  Only the arity comes from [exp_dom]; the types come from the
-     declaration, which is concrete where the callee's signature may still be
-     generic. *)
-  let n_outer =
-    match expected_ty with
-    | Some (Function (exp_dom, _))
-      when exp_dom <> [] && List.length decl_dom > List.length exp_dom ->
-      Some (List.length exp_dom)
-    | _ when List.exists (function Cpp_ir.Type.Function _ -> true | _ -> false) decl_dom ->
-      Some (List.length decl_dom)
+  let derived v =
+    applied_cod && occurs v cod
+    && List.for_all
+         (fun d ->
+           match resolve_meta d with
+           | Core.Type.Arrow _ -> true
+           | d -> not (occurs v d) )
+         (core_domains core_ty)
+    && List.exists (fun d -> occurs v d) (core_domains core_ty)
+  in
+  (* Only a derived {e suffix} may be dropped.  A derived position followed by
+     one that is still written cannot be removed without taking that one with
+     it, and the later position may be doing work the truncation would undo --
+     [iter]'s [R] is derived but its [I] is not, and dropping both loses an
+     argument deduction was relying on the first two to place.  Where the list
+     cannot be fixed by cutting its tail, it is left exactly as it was. *)
+  let rec suffix_start v = if v < 1 then 1 else if derived v then suffix_start (v - 1) else v + 1 in
+  Some (suffix_start n - 1)
+
+(** [t] with the instance's family written where a slot erased it: wherever
+    the carrier [carrier] heads a type, an erased argument at a position the
+    carrier fills with one of its variables takes that variable's binding in
+    [m].  See {!instance_family_binding}. *)
+let refine_by_instance_family ((carrier : Cpp_ir.Lowered.Type.t), _, m) (t : Cpp_ir.Lowered.Type.t) :
+    Cpp_ir.Lowered.Type.t =
+  match carrier with
+  | Entity_application (h, cargs, _) ->
+    Cpp_ir.Types.map
+      (fun (t : Cpp_ir.Lowered.Type.t) ->
+        match t with
+        | Entity_application (h', args, es) when GlobRef.CanOrd.equal h h' ->
+          let n = List.length cargs in
+          Entity_application
+            ( h',
+              List.mapi
+                (fun i a ->
+                  match List.nth_opt cargs i with
+                  | Some (Cpp_ir.Type.Variable (Index (_, Some v) | Named v))
+                    when i < n && Cpp_ir.Types.prints_as_any a -> (
+                    match List.find_opt (fun (v', _) -> Id.equal v v') m with
+                    | Some (_, b) -> b
+                    | None -> a )
+                  | _ -> a )
+                args,
+              es )
+        | t -> t )
+      t
+  | _ -> t
+
+(** [param_states_type_args x orig] -- whether the parameter whose Rocq type
+    is [orig] constrains the type variables of the global [x] in a way that
+    another argument's deduction can conflict with.
+
+    This is a question about the {e declaration} Crane emits for [x], not
+    about this call.  Two kinds of parameter say nothing.  A custom-extracted
+    callee's C++ is spelled by its mapping, so it has no template parameters
+    at all.  And a function-typed parameter is declared as a deduced template
+    parameter of its own ({!Common.fun_tparam_name}), so whatever type
+    variables its Rocq type mentions, the signature does not state them. *)
+let param_states_type_args x orig =
+  let rec is_arrow = function
+    | Core.Type.Arrow _ -> true
+    | Core.Type.Meta {contents = Some t} -> is_arrow t
+    | _ -> false
+  in
+  (not (Table.is_custom x)) && not (is_arrow orig)
+
+(** A singleton class's dictionary at the head of a call: the instance
+    parameter it is, the class, and the class's one method, as the
+    traversal's environment reads it.  Emission takes Core's reading
+    ({!Core_elaborate.singleton_dictionary_call}) and checks it against this
+    one. *)
+let singleton_dictionary env head =
+  match strip_magic head with
+  | Core.Expr.Bound_variable {index = i; _} -> (
+    match (Common.get_db_name_opt i env, get_env_type_opt i) with
+    | Some id, Some (Core.Type.Global_app {head = c; _}) when Common.is_tc_instance_id id ->
+      Option.map (fun m -> (id, c, m)) (Table.singleton_class_method c)
+    | _ -> None )
+  | _ -> None
+
+(** [split_instance_args ~lex args] -- the class dictionaries a call passes,
+    the ones an erasure removed left out; how many were removed, which still
+    occupy a parameter of the declaration; and the regular arguments. *)
+let split_instance_args ~lex args =
+  let tc, regular = List.partition (is_typeclass_instance_arg ~lex) args in
+  let erased, kept = List.partition (instance_arg_is_erased ~lex) tc in
+  (kept, List.length erased, regular)
+
+(** [inline_custom_arg_arity id] is the number of [%aN] term placeholders an
+    inline-custom mapping for [id] names -- one past the largest index it
+    uses -- or [None] when [id] has no inline-custom mapping.
+
+    A call has to supply exactly that many arguments: the printer drops any
+    beyond the last placeholder, and raises on a placeholder it cannot fill. *)
+let inline_custom_arg_arity id =
+  if not (Table.is_inline_custom id) then None
+  else
+    match Table.find_custom_opt id with
+    | None -> None
+    | Some tmpl ->
+      let re = Str.regexp "%a\\([0-9]+\\)" in
+      let rec scan pos acc =
+        match Str.search_forward re tmpl pos with
+        | i ->
+          scan (i + 1) (max acc (int_of_string (Str.matched_group 1 tmpl) + 1))
+        | exception Not_found -> acc
+      in
+      Some (scan 0 0)
+
+(** Convert Core type arguments to C++ template parameters, applying type
+    simplification and handling out-of-scope type variables.
+
+    This function maps a list of Core types to C++ types for use in template
+    argument lists. It performs two key transformations:
+
+    1. Type simplification via [type_simpl] to normalize Core types
+    2. Conversion to C++ types via [convert_core_type_to_cpp_type]
+    3. Detection and erasure of unbound type variables
+
+    The [tvars] parameter specifies the type variables in scope (as a list of
+    typename declarations in the current C++ context). When a [Core.Type.Variable] appears
+    with [None] for its binding and [tvars] is non-empty, this indicates the
+    type variable index is out of scope — it references a typename that doesn't
+    exist in the current C++ context.
+
+    Out-of-scope type variables are marked as [dummy_type], which triggers
+    [filter_erased_type_args] to drop the entire type argument list. This is
+    safer than emitting invalid C++ like [template<typename T> ... U] where
+    [U] is undefined.
+
+    Example scenario where this occurs:
+    - Core function with type scheme [forall A B, A -> B -> option A]
+    - Partial application instantiates [A] but leaves [B] polymorphic
+    - C++ code generator enters context with only [typename A]
+    - Type arg list includes [Core.Type.Variable 2] for [B]
+    - [convert_core_type_to_cpp_type] returns [Core.Type.Variable(2, None)] (no binding)
+    - We mark it [dummy_type] to trigger erasure
+
+    @param env   Translation environment (unused in current implementation)
+    @param tvars Type variables in scope (C++ typename parameters)
+    @param tys   Core type arguments to convert
+    @return List of C++ types, with out-of-scope Tvars marked as dummy_type *)
+
+(** Whether a bare reference to global [x] must be spelled [x()]: it is
+    declared as a zero-parameter function rather than a data member.  That is
+    the case for thunked values (monadic definitions, cofixpoints, extracted
+    axioms) and for definitions that really do take C++ parameters.
+
+    A Core arrow is {i not} enough: a definition all of whose arguments are
+    erased (a lemma-only argument, say) converts to a non-function C++ type
+    and is emitted as a data member by {!Gen_decls.gen_spec}.  Asking the
+    converter is what keeps the two in step. *)
+let glob_is_nullary_function x =
+  match callee_core_type x with
+  | None -> false
+  | Some core_ty ->
+    Translation_suspension.thunk_reason x <> None
+    || ( match Translation_types.cpp_ir_of_core_type (empty_env ()) [] core_ty with
+       | Function _ -> true
+       | _ -> false )
+
+(** The global [x], spelled [cglob], applied to [args]: a call, except that a
+    global value referenced bare stays a value ({!glob_is_nullary_function}). *)
+let apply_global x (cglob : Cpp_ir.Lowered.Expr.t) args =
+  if args = [] && not (glob_is_nullary_function x) then cglob else Cpp_ir.Build.call cglob args
+
+(** The site a callee's {e result} is spelled at ({!Cpp_ir.Types.arrow_site}): a
+    codomain that is a type variable takes its C++ shape from the template
+    argument instantiating it, so it is curried; one the declaration writes
+    out is flat there. *)
+let codomain_site core_ty : Cpp_ir.Types.arrow_site = if core_codomain_is_tvar core_ty then Through_tvar else Declared
+
+(** {!codomain_site} for a call to the global [id].  An inline custom
+    constant has no template argument: what it yields is whatever its text
+    reads -- [fst]'s [%a0.first] is the pair's component, stored flat. *)
+let call_result_site id : Cpp_ir.Types.arrow_site =
+  if is_inline_custom id then Declared
+  else match find_type_opt id with Some core_ty -> codomain_site core_ty | None -> Declared
+
+(** [result_cpp_via_receiver env callee_ty args] is the C++ type a call's
+    result really has, where the callee's declared codomain is one of the type
+    variables its first argument's type instantiates -- the field a projection
+    out of a dependent pair hands back, say.
+
+    The answer is read off the {e converted} receiver, at the template position
+    the codomain occupies in it.  Converting the codomain's own instantiation
+    instead is not the same thing: a type argument that the receiver's
+    conversion erases still spells concretely in isolation, and the field it
+    describes is then physically a [std::any] while its Core type denies it.
+    [None] means the call is not of this shape, or that the two spellings of
+    the receiver disagree on how many arguments it has -- the position would
+    then name the wrong one. *)
+let result_cpp_via_receiver env callee_ty args : Cpp_ir.Lowered.Type.t option =
+  let var_index t = match resolve_meta t with Core.Type.Variable {variable = j; _} -> Some j | _ -> None in
+  let position_of j formals =
+    let rec find i = function
+      | [] -> None
+      | f :: rest -> if var_index f = Some j then Some i else find (i + 1) rest
+    in
+    find 0 formals
+  in
+  (* The template arguments of [t], through references and pointers. *)
+  let rec template_args_ir t =
+    match unqualify_ty t with
+    | Reference (_, t) | Pointer t | Shared_pointer t -> template_args_ir t
+    | Entity_application (_, args, _) | Named (_, args) | External (_, args) | Apply (_, args) -> Some args
     | _ -> None
   in
-  match n_outer with
-  | None -> cglob
-  | Some n_outer ->
-    (* The two groups share one numbering, so they are named together and
-       then split. *)
-    (* A function-typed parameter with erased positions in it takes a
-       polymorphic function object, not the [std::function] its erasure
-       spells: writing that type here would fix the very type argument the
-       callee leaves to the caller.  [auto &&] passes whatever arrives
-       through, which is all this adapter does with it -- unless [exact]: a
-       value converted on to the erased signature is fixed at it anyway, and a
-       generic adapter has no signature to convert from. *)
-    let decl_dom =
-      if exact then decl_dom
-      else
-        List.map
-          (fun (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
-            match ty with
-            | Function _ when has_tany_in_type ty -> Reference (Forwarding, Auto)
-            | _ -> ty )
-          decl_dom
+  match (var_index (core_codomain callee_ty), core_value_domains callee_ty, args) with
+  | Some j, dom0 :: _, arg :: _ -> (
+    match (resolve_meta dom0, Option.map resolve_meta (infer_core_body_type arg)) with
+    | Core.Type.Global_app {head = g1;
+                            type_arguments = formals; _},
+                              Some (Core.Type.Global_app {head = g2; type_arguments = actuals; _} as recv)
+      when Common.globref_equal g1 g2 -> (
+      match (position_of j formals, template_args_ir (Translation_types.cpp_of_core env recv)) with
+      | Some i, Some cpp_args when List.length actuals = List.length cpp_args ->
+        List.nth_opt cpp_args i
+      | _ -> None )
+    | _ -> None )
+  | _ -> None
+
+(** The template name a written type [c] stands for at a higher-kinded
+    variable: [c] itself as a constructor, unless applying it changes
+    nothing -- [fun T => list nat], which extraction writes as its body
+    [list nat] -- when it is the constant one, [crane::constant_tc<c>::c]. *)
+let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
+  let carrier = Translation_types.template_arg_of_core_type ~site:Through_tvar env tvars c in
+  let constant = Core_util.eq_core_type (Core_util.apply_core_type c [Core.Type.Unknown]) c in
+  Type_constructor
+    (if constant then Member (External (Crane_rt.constant_tc, [carrier]), Id.of_string "c") else carrier)
+
+(** The explicit type arguments a call needs when the callee is generic in a
+    type {e constructor} and Rocq erased which one.
+
+    A higher-kinded class parameter reaches the call as [Core.Type.Erased]: the carrier
+    of [TFunctor (fun T => T * box T)] is a term Rocq computed away.  C++
+    deduces the parameter from the value argument instead, by matching
+    [T1<T2>] against the argument's type -- which works exactly when the
+    carrier is a template name applied to one argument, and fails outright
+    when it is not: [std::pair<Nat, Box<Nat>>] deduces [T1 = std::pair], a
+    binary template where a unary one was declared.
+
+    The carrier is recovered from the type the result is expected to have.
+    The callee returns [Core.Type.Variable_app (p, [Core.Type.Variable v])] -- the carrier at position [p]
+    applied to the variable at position [v] -- so abstracting the expected
+    result over whatever [v] was instantiated to inverts that application.
+    {!Translation_tvars.abstract_cpp_type} writes the sentinel the printer mints an
+    alias template for, and only position [p] is written: the rest deduce
+    through the alias, which is transparent.
+
+    Nothing is claimed where the abstraction does not fire.  If [v]'s
+    instantiation does not occur in the result then the carrier is constant in
+    its argument and the result says nothing about it, and if the result type
+    is unknown there is nothing to read.
+
+    Where extraction did name the carrier -- [list], or a constant [fun T =>
+    list nat] -- it is written as it is: a parameter that applies it to an
+    erased element, a rank-2 argument at [T1<std::any>], deduces nothing.  A
+    constant one is a complete type that an application leaves unchanged
+    ({!Core_util.apply_core_type}), and has no template to name: it is the type
+    function {!Crane_rt.constant_tc} makes of it. *)
+let hkt_carrier_type_args env tvars ?result id tys =
+  Probe.changed "REPAIR_hkt_carrier_type_args" id ~before:None @@
+  let ( let* ) = Option.bind in
+  let* core_ty = find_type_opt id in
+  match Core_util.Var_types.find_tvar tys 1 with
+  | Some c
+    when IntSet.mem 1 (Type_util.higher_kinded_core_tvars [core_ty])
+         && not (Core_util.is_erased_type (resolve_meta c))
+         && not (core_type_contains_erased c) ->
+    Some [carrier_template env tvars c]
+  | _ ->
+  let* p, v =
+    match resolve_meta (core_return_type core_ty) with
+    (* Only a leading carrier is written: an explicit argument list is
+       positional, so a carrier further in would need every argument before it
+       spelled as well, and a class parameter is always quantified first. *)
+    | Core.Type.Variable_app {head = 1; arguments = [Core.Type.Variable {variable = v; _}]} -> Some (1, v)
+    | _ -> None
+  in
+  let* () =
+    match Core_util.Var_types.find_tvar tys p with
+    | Some (Core.Type.Erased _) -> Some ()
+    | _ -> None
+  in
+  let* v_core = Core_util.Var_types.find_tvar tys v in
+  let* result =
+    match result with
+    | None -> current_cpp_return_type ()
+    | r -> r
+  in
+  let over = Translation_types.template_arg_of_core_type ~site:Through_tvar env tvars v_core in
+  let* carrier = Translation_tvars.abstract_cpp_type ~over result in
+  (* A carrier that is one template applied to the argument is left to
+     deduction, which reads it off the value argument and gets it right.  Only
+     a carrier with no head to read -- a composite, or a partial application --
+     has to be written, and it is written alone: everything after it deduces
+     through the alias, which is transparent. *)
+  let rec is_plain_head (t : Cpp_ir.Lowered.Type.t) =
+    match t with
+    (* A namespace or a const/reference wrapper is spelling, not structure. *)
+    | In_namespace (_, t) | Const t | Reference (_, t) -> is_plain_head t
+    | Entity_application (_, [arg], _) | Named (_, [arg]) | External (_, [arg]) | Apply (_, [arg]) ->
+      arg = Carrier_parameter
+    | _ -> false
+  in
+  if is_plain_head carrier then None else Some [(Type_constructor carrier : Cpp_ir.Lowered.Type.t)]
+
+(** The explicit type arguments a call to a lifted helper has to carry.
+
+    Lifting turns the body's type variables into template parameters of a new
+    top-level function, and a parameter that occurs only in the {e return}
+    type is deducible from nothing: the call must spell it or the overload is
+    discarded.  [binder_ty] is the lifted thing's own Core type, whose codomain
+    is matched against the enclosing function's C++ return type to say what
+    each variable beyond [outer_tvars] stands for at this call.
+
+    What the parameters already spell is left to deduction, because one
+    explicit list stands for every reference while the instantiations need not
+    agree -- a polymorphic local helper may be used at two types in one body.
+    Explicit arguments are positional, so only a trailing deducible run can be
+    dropped.
+
+    Every lift path asks this, and the only difference between them is where
+    the type and the parameters come from.  [all_tvar_names] is in index
+    order, as type conversion reads it; the arguments follow the order of the
+    [head], the type parameters the lifted template declares. *)
+let lifted_call_type_args
+    ~(class_args : Cpp_ir.Lowered.Type.t list) ~env ~outer_tvars ~head ~all_tvar_names ~binder_ty ~param_core_tys :
+    Cpp_ir.Lowered.Type.t list =
+  let in_head id = List.exists (Id.equal id) head in
+  let outer_tvars = List.filter in_head outer_tvars in
+  let all_tvar_names = List.filter in_head all_tvar_names in
+  let in_head_order = List.filter (fun id -> List.exists (Id.equal id) all_tvar_names) head in
+  class_args
+  @
+  let extra_tvar_names =
+    List.filter
+      (fun id -> not (List.exists (Id.equal id) outer_tvars))
+      in_head_order
+  in
+  if extra_tvar_names = [] then
+    List.map (fun id -> Cpp_ir.Build.named_variable id) outer_tvars
+  else
+    let tmpl_cod : Cpp_ir.Lowered.Type.t =
+      match Translation_types.cpp_ir_of_core_type env all_tvar_names binder_ty with
+      | Function (_, cod) -> cod
+      | t -> t
     in
-    let params = adapter_params ~prefix:"_ec" decl_dom in
-    let call = apply_at_site callee_site cglob (List.map adapter_arg params) in
-    (* One lambda per group of arguments the slot takes at a time, as deep as
-       it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C]. *)
-    let rec nest params (expected : Cpp_ir.Lowered.Type.t option) =
-      match expected with
-      | Some (Const t | Reference (_, t)) -> nest params (Some t)
-      | Some (Function (dom, cod)) when dom <> [] && List.length params > List.length dom ->
-        let k = List.length dom in
-        stored_adapter
-          (List.filteri (fun i _ -> i < k) params)
-          (nest (List.filteri (fun i _ -> i >= k) params) (Some cod))
-      | _ -> stored_adapter params call
+    let tvar_map =
+      match current_cpp_return_type () with
+      | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
+      | None -> []
     in
-    nest params (if n_outer < List.length params then expected_ty else None)
+    let args =
+      List.map (fun id -> Cpp_ir.Build.named_variable id) outer_tvars
+      @ List.map
+          (fun tvar_name ->
+            match
+              List.find_opt (fun (id, _) -> Id.equal id tvar_name) tvar_map
+            with
+            | Some (_, ty) -> ty
+            | None -> (
+              match current_cpp_return_type () with
+              | Some ret_ty -> ret_ty
+              | None -> Cpp_ir.Build.named_variable tvar_name ) )
+          extra_tvar_names
+    in
+    let deducible =
+      List.concat_map
+        (fun core_ty ->
+          get_tvars (Translation_types.cpp_ir_of_core_type env all_tvar_names core_ty) )
+        param_core_tys
+    in
+    if List.length in_head_order <> List.length args then
+      args
+    else
+      let rec strip = function
+        | [] -> []
+        | (id, ty) :: rest -> (
+          match strip rest with
+          | [] when List.exists (Id.equal id) deducible -> []
+          | rest -> (id, ty) :: rest )
+      in
+      List.map snd (strip (List.combine in_head_order args))
+
+(** The carrier of a higher-kinded class parameter, read off the {e dictionary}
+    the call passes for that class.
+
+    {!hkt_carrier_type_args} recovers a carrier from the type the result is
+    expected to have, which needs the result to mention it.  An instance
+    {e method} for a nested functor does not qualify: [TFunctor_list']'s result
+    is [list (T1 B)], and by the time the call is built the expected type has
+    already erased the element to [std::any], so there is nothing left to
+    abstract over.
+
+    What still knows the carrier is the dictionary argument.  A parameter of
+    class type -- [TFunctor T1] -- is instantiated by the instance for exactly
+    one type constructor, and that instance's method returns [T1] applied: the
+    dictionary for [box] is a function whose codomain is [box B].  So the head
+    of the dictionary's codomain {e is} the carrier.
+
+    The dictionary reaches the call wrapped in the adapter lambda that erases
+    its arguments, so the instance is found by descending to the head of the
+    lambda's body.  It need not be an instance at all: where the enclosing
+    function abstracts over the instance, the dictionary is a binder, and the
+    carrier is written in the constraint that binder's own type spells.  Both
+    sources end at a Core type headed by the carrier, and are consumed as one.
+
+    Nothing is claimed when neither source yields a type, or when that type is
+    not an application -- a carrier has to be applied to something to be one.
+
+    Written unconditionally, unlike the result route: [T1] here occupies a
+    non-deduced position ([std::type_identity_t<TFunctor<T1>>], and [T1<std::any>]
+    against an already-erased argument), so even a carrier that is a plain
+    template name has to be named rather than left to deduction. *)
+let dict_carrier_type_args env tvars id args =
+  Probe.changed "REPAIR_dict_carrier_type_args" id ~before:None @@
+  let ( let* ) = Option.bind in
+  let* cod =
+    dict_carrier_core_type ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref id args
+  in
+  (* Abstracted over the traversed type, as {!Translation_tvars.apply_hkt_tyctors} does: the
+     class applies its carrier to it and this idiom writes it first, so the two
+     agree on one body and the printer mints one alias for both.
+
+     The carrier need not apply to it {e directly}.  A composed carrier
+     [fun t => option (Exp t)] reaches it through the constructors it composes,
+     and the codomain's leading argument is then [Exp t] rather than [t];
+     abstracting over that yields [option] alone -- the composition's outer
+     head, which is the arity deduction would have guessed and precisely what
+     a composition is not.  So the leading arguments are descended to the type
+     that is not itself an application: that is what the whole composition is
+     applied to, and where the carrier is a plain head the descent stops at
+     once.
+
+     Descended only where the composition is fully known.  An occurrence
+     the carrier recovery declined to fill is left as the [Core.Type.Variable_app] it was, and by
+     then nothing tells it apart from one that was recovered; writing it out
+     spells a carrier built partly from a class parameter that is in scope and
+     is not the one meant.  There the leading argument is abstracted over as
+     before, which yields the outer head alone -- still wrong, but wrong the
+     way deduction is wrong, and absorbed wherever a converting constructor
+     absorbs it.  A wrong spelling is worse than an unrecovered one.
+
+     Only occurrences among the {e arguments} count.  The head may be a [Core.Type.Variable_app]
+     and be right: a carrier that {e is} a class parameter is written as that
+     parameter, which the enclosing declaration has in scope. *)
+  let rec unrecovered t =
+    match resolve_meta t with
+    | Core.Type.Variable_app _ -> true
+    | Core.Type.Global_app {type_arguments = targs; _} -> List.exists unrecovered targs
+    | _ -> false
+  in
+  (* Which argument the composition is applied {e in}, which is a different
+     question from how far to descend and only looks like the same one while
+     every constructor in the chain takes a single argument.  The carrier is
+     the method's codomain abstracted over the variable the method quantifies,
+     so the argument to follow is the one that variable occurs in:
+     [fun t => list (nat * Exp t)] reaches it through the {e second} component
+     of the pair, and following the leading argument abstracts over [nat]
+     instead -- a carrier of the right shape, varying in the wrong place, which
+     nothing downstream can tell from the right one. *)
+  let rec mentions_traversed t =
+    match resolve_meta t with
+    | Core.Type.Unknown | Core.Type.Variable _ -> true
+    | Core.Type.Global_app {type_arguments = targs; _} | Core.Type.Variable_app {arguments = targs; _} ->
+      List.exists mentions_traversed targs
+    | Core.Type.Arrow {parameter = a; result = b} -> mentions_traversed a || mentions_traversed b
+    | _ -> false
+  in
+  let rec traversed t =
+    match resolve_meta t with
+    | Core.Type.Global_app {type_arguments = (t0 :: _ as targs); _}
+    | Core.Type.Variable_app {arguments = (t0 :: _ as targs); _} ->
+      (* No argument mentioning it means there is nothing better to say than
+         what the leading one says, which is what this did before. *)
+      traversed (Option.default t0 (List.find_opt mentions_traversed targs))
+    | t -> t
+  in
+  let* over =
+    match resolve_meta cod with
+    | Core.Type.Global_app {type_arguments = (t0 :: _ as targs); _}
+    | Core.Type.Variable_app {arguments = (t0 :: _ as targs); _} ->
+      let whole = if List.exists unrecovered targs then t0 else traversed cod in
+      Some (Translation_types.template_arg_of_core_type ~site:Through_tvar env tvars whole)
+    | _ -> None
+  in
+  let* carrier =
+    Translation_tvars.abstract_cpp_type ~over
+      (Translation_types.template_arg_of_core_type ~site:Through_tvar env tvars cod)
+  in
+  Some [(Type_constructor carrier : Cpp_ir.Lowered.Type.t)]
 
 (** The type of the global [use] names, at the type arguments the use wrote.
     An adapter's parameters are spelled in the caller's scope, so the
@@ -149,19 +685,19 @@ let instantiated_type (use : Core.Global_use.t) =
     (Core_util.instantiate_written ~reader:"instantiated_type" use)
     (callee_core_type use.callee)
 
-(** {!curry_value_to_expected} for the global [use] names. *)
+(** {!Translation_coerce.curry_value_to_expected} for the global [use] names. *)
 let curry_to_expected env ?expected_ty (use : Core.Global_use.t) cglob =
   let decl_ty = callee_core_type use.callee in
   let core_ty = instantiated_type use in
   let callee_site =
-    let live = Option.map (cpp_of_core env) decl_ty in
+    let live = Option.map (Translation_types.cpp_of_core env) decl_ty in
     if Probe.checking () then
       Option.iter (fun t -> check_installed_arity use.callee t) live;
     match live with
-    | Some (Function (dom, _)) -> Declared_at (List.length dom)
-    | _ -> Declared
+    | Some (Function (dom, _)) -> Cpp_ir.Types.Declared_at (List.length dom)
+    | _ -> Cpp_ir.Types.Declared
   in
-  curry_value_to_expected env ?expected_ty ~callee_site core_ty cglob
+  Translation_coerce.curry_value_to_expected env ?expected_ty ~callee_site core_ty cglob
 
 (** The plan a call of the class field [x] through a concrete instance is
     written against.  The instance declares each method as a member template
@@ -186,14 +722,14 @@ let callee_abi ~instances id =
   let core_ty = find_type_opt id in
   let hk = Option.cata declared_higher_kinded_tvars IntSet.empty core_ty in
   let relaxed_tt = relaxed_tt_return_var id in
-  let omitted = type_arg_omission id in
+  let omitted = Translation_tvars.type_arg_omission id in
   Callable_abi.plan id ~scheme:(Core_util.reference_scheme id) ~instances ~omitted
     ~higher_kinded:(fun v -> IntSet.mem (Scheme.Var.ordinal v) hk)
     ~kept:(fun v -> omitted v = None && relaxed_tt <> Some (Scheme.Var.ordinal v))
     ?reachable:(writable_tvar_count id)
     ~relaxed:(fun i ->
       IntSet.mem i (Option.cata Type_util.relaxed_higher_kinded_tvars IntSet.empty core_ty) )
-    ~phantom_prefix:(leading_phantom_count id)
+    ~phantom_prefix:(Translation_types.leading_phantom_count id)
 
 (** The explicit template arguments of a reference to [id] that is given a
     value for some of its variables, [by_var] pairing each variable with its
@@ -262,7 +798,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     | Some {Core.Schema.role = Core.Schema.Erased Core.Erasure_reason.Type_argument; _} -> true
     | _ -> false
   in
-  let ty = cpp_of_core env fn_core_ty_subst in
+  let ty = Translation_types.cpp_of_core env fn_core_ty_subst in
   (* Combine: instance types first, then regular type args. If any regular
      type arg is Tany or a dummy type glob (from erased params), drop ALL
      regular type args via filter_erased_type_args and let the compiler deduce
@@ -356,7 +892,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
             | Core.Type.Variable {variable = j; _} -> (
               match Core_util.Var_types.find_tvar tys j with
               | Some ty when not (Core_util.is_erased_type (resolve_meta ty)) ->
-                let c = template_arg_of_core_type ~site:Through_tvar env tvars ty in
+                let c = Translation_types.template_arg_of_core_type ~site:Cpp_ir.Types.Through_tvar env tvars ty in
                 if Cpp_ir.Types.prints_as_any c then None else Some c
               | _ -> None )
             | _ -> None )
@@ -436,7 +972,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
                              | _ -> false
                            in
                            has_class x) ->
-                let c = template_arg_of_core_type ~site:Through_tvar env tvars x in
+                let c = Translation_types.template_arg_of_core_type ~site:Cpp_ir.Types.Through_tvar env tvars x in
                 (* A carrier is written at the erased element, so an
                    instantiation that erases nothing is some application
                    of it, not the carrier. *)
@@ -462,7 +998,8 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
             | Core.Expr.Bound_variable {index = j; occurrence = occ} -> (
               match
                 Option.map unwrap
-                  (planned_binder_type_or_derive ~use:"argument's type argument" ~agree:( = ) env j occ)
+                  (Translation_binders.planned_binder_type_or_derive ~use:"argument's type argument" ~agree:( = ) env j
+                     occ)
               with
               | Some (Cpp_ir.Type.Entity_application (g', [x], _)) when GlobRef.UserOrd.equal g g'
                 && not (Cpp_ir.Types.prints_as_any x) ->
@@ -523,7 +1060,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
               the constant carrier, not the head of the type it returns. *)
            let t =
              if constant_at_higher_kind i ty then carrier_template env tvars ty
-             else template_arg_of_core_type ~site:Through_tvar env tvars ty
+             else Translation_types.template_arg_of_core_type ~site:Cpp_ir.Types.Through_tvar env tvars ty
            in
            (* A higher-kinded variable of the caller's reaching such a
               position is spelled as the template it is, which names no
@@ -532,9 +1069,9 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
              match (t, resolve_meta ty) with
              | (Member _ | Variable _), Core.Type.Variable {variable = j; _}
                when IntSet.mem i plain_carriers && caller_higher_kinded j ->
-               template_arg_of_core_type ~site:Through_tvar env tvars
+               Translation_types.template_arg_of_core_type ~site:Cpp_ir.Types.Through_tvar env tvars
                  (Core.Type.Variable_app {head = j; arguments = [Core.Type.Unknown]})
-             | _ when (Cpp_ir.Types.prints_as_any t || under_applied_ind t)
+             | _ when (Cpp_ir.Types.prints_as_any t || Translation_tvars.under_applied_ind t)
                       && IntSet.mem i plain_carriers -> (
                match carrier_from_dictionary i with
                | Some t' -> t'
@@ -646,7 +1183,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     let from_expected targs =
       let names, m = Lazy.force result_tvar_map in
       (* A type-level lambda extraction could only write as its head
-         ({!under_applied_ind}) is filled the same way. *)
+         ({!Translation_tvars.under_applied_ind}) is filled the same way. *)
       List.map
         (fun (v, t) ->
           let i = Scheme.Var.ordinal v in
@@ -663,7 +1200,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
             | None -> None
           in
           ( v,
-            if Cpp_ir.Types.prints_as_any t || under_applied_ind t then
+            if Cpp_ir.Types.prints_as_any t || Translation_tvars.under_applied_ind t then
               match bound () with
               | Some (_, t') -> t'
               | None -> t
@@ -748,8 +1285,8 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     List.map
       (fun (v, t) ->
         ( v,
-          if (not (IntSet.mem (Scheme.Var.ordinal v) hk)) && under_applied_ind t then
-            saturate_at_any t
+          if (not (IntSet.mem (Scheme.Var.ordinal v) hk)) && Translation_tvars.under_applied_ind t then
+            Translation_tvars.saturate_at_any t
           else t ) )
       regular
   in
@@ -875,7 +1412,6 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     lc_written_by_var = written_tvar_args;
   }
 
-
 (** The callee [id]'s type variables as the type [expected] that its result
     lands in instantiates them: its declared codomain, with the variables
     named [_R1].. (apart from the caller's own), matched against [expected].
@@ -893,13 +1429,13 @@ let callee_result_bindings env id ~explicit (expected : Cpp_ir.Lowered.Type.t op
       List.init n (fun i -> Generated_name.indexed "R" (i + 1))
     in
     let cod : Cpp_ir.Lowered.Type.t =
-      match cpp_ir_of_core_type env names (type_simpl core_ty) with
+      match Translation_types.cpp_ir_of_core_type env names (type_simpl core_ty) with
       | Function (_, c) -> c
       | t -> t
     in
     (* A family is written applied at an erased index and declared plain: in
        the pattern it is the variable itself. *)
-    let cod = deapply_family_variables cod in
+    let cod = Translation_tvars.deapply_family_variables cod in
     (* The enclosing function's result is this call's only where the call is
        what it returns, which nothing here says; a codomain with structure has
        to match it to count as evidence, a bare variable matches anything --
@@ -911,7 +1447,7 @@ let callee_result_bindings env id ~explicit (expected : Cpp_ir.Lowered.Type.t op
       | t -> t
     in
     let exp =
-      let as_fun t = unfold_cpp_typedef env (strip_param_spelling t) in
+      let as_fun t = Translation_types.unfold_cpp_typedef env (strip_param_spelling t) in
       match (as_fun exp, cod) with
       | Function (_, c), (Entity_application _ | In_namespace _) -> c
       | e, _ -> e
@@ -921,7 +1457,7 @@ let callee_result_bindings env id ~explicit (expected : Cpp_ir.Lowered.Type.t op
       ( names,
         List.filter
           (fun (_, t) -> not (Cpp_ir.Types.prints_as_any t))
-          (Type_util.extract_tvar_map cod (unfold_cpp_typedef env exp)) )
+          (Type_util.extract_tvar_map cod (Translation_types.unfold_cpp_typedef env exp)) )
   | _ -> ([], [])
 
 (** An instance's type argument extraction could not express -- a family
@@ -957,9 +1493,9 @@ let instance_family_binding env r ts (expected : Cpp_ir.Lowered.Type.t option) =
          it is the variable itself. *)
       let carrier =
         Type_util.unqualify_ty
-          (deapply_family_variables (cpp_ir_of_core_type env names carrier))
+          (Translation_tvars.deapply_family_variables (Translation_types.cpp_ir_of_core_type env names carrier))
       in
-      match (carrier, Type_util.unqualify_ty (unfold_cpp_typedef env exp)) with
+      match (carrier, Type_util.unqualify_ty (Translation_types.unfold_cpp_typedef env exp)) with
       | Entity_application (h1, cargs, _), Entity_application (h2, eargs, _)
         when GlobRef.CanOrd.equal h1 h2 && List.length cargs <= List.length eargs ->
         let m =
@@ -1003,7 +1539,7 @@ let rec core_arg_to_template_type ?expected env core_arg : Cpp_ir.Lowered.Type.t
   in
   let instance_type_args r ts =
     Type_util.filter_erased_type_args
-      (build_template_params ~site:Through_tvar env []
+      (Translation_types.build_template_params ~site:Cpp_ir.Types.Through_tvar env []
          (List.filter_map (Core_util.Var_types.find_tvar ts) (struct_vars r ts)) )
   in
   let instance_type_args_from_expected r ts =
@@ -1017,7 +1553,7 @@ let rec core_arg_to_template_type ?expected env core_arg : Cpp_ir.Lowered.Type.t
             let j = Scheme.Var.ordinal v in
             ( j,
               if not (Core_util.is_erased_type (resolve_meta t)) then
-                Some (List.hd (build_template_params ~site:Through_tvar env [] [t]))
+                Some (List.hd (Translation_types.build_template_params ~site:Cpp_ir.Types.Through_tvar env [] [t]))
               else
                 Option.bind (List.nth_opt names (j - 1)) (fun v ->
                     Option.map snd (List.find_opt (fun (v', _) -> Id.equal v v') m) ) ) )
@@ -1107,102 +1643,6 @@ let rec core_arg_to_template_type ?expected env core_arg : Cpp_ir.Lowered.Type.t
          "core_arg_to_template_type: unexpected ML term after \
           is_typeclass_instance_arg filter" )
 
-
-(** The mirror of {!recover_carrier_result}: a value reaching a parameter the
-    callee declared as a carrier applied to a type variable -- [M A], a
-    {!Core.Type.Variable_app} -- arrives at whatever element the caller had, while a
-    dictionary stores its methods at the erased one.
-
-    Letting C++ convert implicitly is not enough.  A Crane carrier has a
-    generated converting constructor and crosses on its own, but a custom one
-    need not: [std::optional<std::any>] accepts {e anything}, so the whole
-    [std::optional<Nat>] goes into the box and the consumer's [any_cast<Nat>]
-    throws.  Asking the helper is the same question the result side asks, and
-    it is the identity where the two instantiations already agree.
-
-    Only for a value.  A function reaching such a slot is the erasure question
-    above, already answered there; a carrier's element walk applied to a
-    closure is not a conversion but a compile error.
-
-    And only where the element is erased, which is the whole of the mismatch:
-    a carrier written at a concrete element is already the caller's own type,
-    and naming it again buys nothing while asking the head to be spelled as a
-    template -- which a declaration that kept it a phantom [typename] will not
-    accept. *)
-let convert_carrier_arg param_core_ty (param_cpp_ty : Cpp_ir.Lowered.Type.t) e (expr : Cpp_ir.Lowered.Expr.t) :
-    Cpp_ir.Lowered.Expr.t =
-  let elem_is_erased =
-    match param_cpp_ty with
-    | Apply (_, args) -> List.exists Cpp_ir.Types.prints_as_any args
-    | _ -> false
-  in
-  match resolve_meta param_core_ty with
-  | Core.Type.Variable_app _
-    when (not (Cpp_ir.Types.prints_as_any param_cpp_ty))
-         && elem_is_erased
-         && (not (core_expr_is_function_value e))
-         && (match param_cpp_ty with Function _ -> false | _ -> true) ->
-    Cpp_ir.Expr.Convert (param_cpp_ty, expr)
-  | _ -> expr
-
-(** [erase_fn_arg_for_param env param_ty e expr] wraps a function-valued
-    argument when the callee's parameter type is the canonical erased
-    [std::function<std::any(std::any...)>] adapter (e.g. a class method
-    polymorphic in its own type argument, [forall A, (A -> A) -> A -> A]):
-    a concrete closure does not convert to the erased signature. *)
-let erase_fn_arg_for_param env param_core_ty e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let open Cpp_ir.Expr.Erase_shape in
-  (* The callee has already written this parameter down, so any opaque type in
-     it has been spelled [std::any] in the header and the slot really is
-     boxed. *)
-  let param_cpp_ty = materialise_opaque (cpp_of_core env param_core_ty) in
-  let erased_fn_param =
-    match param_cpp_ty with
-    (* An erased domain takes the adapter, at whatever result the signature
-       kept: a parameter that erases only its ARGUMENTS (e.g.
-       [std::function<typename I::M(std::any)>] for a higher-kinded class
-       method) keeps that result type, since erasing it too would box the
-       result twice. *)
-    | Function (dom, cod)
-      when List.exists (fun t -> Cpp_ir.Types.prints_as_any t || names_erased_alias t) dom ->
-      Some (At_signature (if Cpp_ir.Types.prints_as_any cod then Any else cod))
-    | Function (_, Any) -> Some (At_signature Any)
-    (* The whole parameter is boxed -- a type-level [Fixpoint] landing on
-       [using sem = std::any], say.  A callee that applies such a value goes
-       through the canonical [std::function<std::any(std::any)>] adapter,
-       so a raw closure dropped into the [std::any] would not match the cast
-       that reads it back out. *)
-    | ty when resolves_to_any_type ty -> Some Boxed_whole
-    | _ -> None
-  in
-  (* The instantiation this call sees may still hide an erasure the callee's
-     declaration made: a functor's [S.sem a] -- a type family applied to a
-     value -- is erased in [Make]'s body, and [Make<Inst>]'s call site reads it
-     as [Inst::sem].  The parameter is declared at the erased domain. *)
-  let erased_fn_param =
-    match erased_fn_param with
-    | Some _ -> erased_fn_param
-    | None -> (
-      let rec mentions_family t =
-        match resolve_meta t with
-        | Core.Type.Global_app {head = r; type_arguments = args; _} ->
-          value_indexed_family r || List.exists mentions_family args
-        | Core.Type.Arrow {parameter = a; result = b} -> mentions_family a || mentions_family b
-        | Core.Type.Variable_app {arguments = args; _} -> List.exists mentions_family args
-        | _ -> false
-      in
-      match expand_core_fun_alias param_core_ty with
-      | Core.Type.Arrow _ as t
-        when List.exists mentions_family (core_domains t) ->
-        let cod = core_codomain t in
-        if mentions_family cod then Some (At_signature Any)
-        else Some (At_signature (cpp_of_core env cod))
-      | _ -> None )
-  in
-  match erased_fn_param with
-  | Some shape when core_expr_is_function_value e -> Cpp_ir.Expr.Erase_callable (shape, expr)
-  | _ -> convert_carrier_arg param_core_ty param_cpp_ty e expr
-
 (** Whether the global [id] takes the callable it declares at [pos] as a
     deduced [F &&]: the callee then calls it at its own instantiation, and an
     argument written against the erased slot -- adapted to unbox
@@ -1214,12 +1654,12 @@ let deduces_callable = Callable_abi.deduces_callable
     declared positions of the callables a call to it assumes it deduces where
     no plan of it is recorded -- a custom mapping's, a projection's: those
     its signature would generalise were it generated as a function
-    ({!generalises_callable}), its body read for the ones it holds on to. *)
+    ({!Translation_callable_params.generalises_callable}), its body read for the ones it holds on to. *)
 let assumed_deduced_callables r b ty =
   let ids, _ = collect_typed_lams ty b in
   let binder_tys = List.rev_map snd ids in
-  let ungeneralised = ungeneralised_callables_of_definition r ty b in
-  let declared t = cpp_ir_of_core_type (Common.empty_env ()) [] (type_simpl t) in
+  let ungeneralised = Translation_callable_params.ungeneralised_callables_of_definition r ty b in
+  let declared t = Translation_types.cpp_ir_of_core_type (Common.empty_env ()) [] (type_simpl t) in
   match find_type_opt r with
   | None -> []
   | Some fn_core_ty -> (
@@ -1230,7 +1670,8 @@ let assumed_deduced_callables r b ty =
         (fun (pos, pt) ->
           match (declared pt, Param_pos.source_index binder_tys pos) with
           | (Function _ as f), Some i
-            when generalises_callable ~kept_as_fn:(Escape.IntSet.mem i ungeneralised) ~primary f ->
+            when Translation_callable_params.generalises_callable ~kept_as_fn:(Escape.IntSet.mem i ungeneralised)
+                   ~primary f ->
             Some pos
           | _ -> None )
         (Param_pos.positioned (Param_pos.orig_params ~expand:expand_core_fun_alias fn_core_ty))
@@ -1282,7 +1723,7 @@ let deduce_erased_domains : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = fun
 let record_call_sig env callee_ty (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match (e, callee_ty) with
   | Call ({yields = Untyped; params = Unknown; _}, f, args), Some core_ty ->
-    let cpp_of ml = cpp_ir_of_core_type env [] ml in
+    let cpp_of ml = Translation_types.cpp_ir_of_core_type env [] ml in
     ( match cpp_of (core_codomain core_ty) with
     | exception e' when CErrors.noncritical e' -> e
     | ty ->
@@ -1376,8 +1817,8 @@ let plan_call ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Ela
           | Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = subst a; result = subst b}
           | t -> t
         in
-        let t = cpp_of_core env (subst (core_codomain (callee_core_type_exn id))) in
-        spell_in_scope t
+        let t = Translation_types.cpp_of_core env (subst (core_codomain (callee_core_type_exn id))) in
+        Translation_types.spell_in_scope t
     in
     match expected_result with
     | Some e when Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any e -> (
@@ -1441,7 +1882,7 @@ let plan_call ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Ela
                 (fun core_arg ->
                   match core_arg with
                   | Core.Expr.Bound_variable {index = i; _} ->
-                    Option.map (cpp_ir_of_core_type env tvars) (parameter_type env i)
+                    Option.map (Translation_types.cpp_ir_of_core_type env tvars) (parameter_type env i)
                   | _ -> None )
                 excess_args
             in
@@ -1461,7 +1902,7 @@ let plan_call ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Ela
       match tc_arg with
       | Core.Expr.Global {callee = r; _} ->
         List.filter_map (fun (var_name, core_ty) ->
-          let cpp_ty = cpp_of_core env core_ty in
+          let cpp_ty = Translation_types.cpp_of_core env core_ty in
           if Cpp_ir.Types.prints_as_any cpp_ty then None
           else Some (var_name, cpp_ty)
         ) (Table.get_instance_promoted_types r)
@@ -1514,12 +1955,13 @@ type argument_position = {
     lowering recorded for the binder. *)
 let local_callable env j occ =
   let callable ty =
-    let ty = match ty with Some _ -> ty | None -> Option.map (cpp_of_core env) (get_env_type_opt j) in
-    match Option.map (unfold_cpp_typedef env) ty with
+    let ty = match ty with Some _ -> ty | None -> Option.map (Translation_types.cpp_of_core env) (get_env_type_opt j) in
+    match Option.map (Translation_types.unfold_cpp_typedef env) ty with
     | Some (Cpp_ir.Type.(Function _ | Const (Function _) | Reference (_, (Function _ | Const (Function _))))) -> true
     | _ -> false
   in
-  callable (planned_binder_type ~use:"local callable" ~agree:(fun p l -> callable p = callable l) j occ)
+  callable
+    (Translation_binders.planned_binder_type ~use:"local callable" ~agree:(fun p l -> callable p = callable l) j occ)
 
 (** [argument_position ~local_callable env id plan i core_arg] -- where the
     [i]th regular argument [core_arg] of the call to [id] planned as [plan]
@@ -1582,7 +2024,7 @@ let argument_position ~local_callable env id plan i core_arg =
   let param_expected_at params pos =
     match Param_pos.nth params pos with
     | Some core_ty ->
-      let cpp_ty = cpp_of_core env core_ty in
+      let cpp_ty = Translation_types.cpp_of_core env core_ty in
       if Cpp_ir.Types.prints_as_any cpp_ty then None else Some cpp_ty
     | None -> None
   in
@@ -1591,7 +2033,7 @@ let argument_position ~local_callable env id plan i core_arg =
      function type into a codomain that was a type variable flattens the
      element's arrows into the callable's own parameter list, and a
      template argument keeps its currying (see
-     {!template_arg_of_core_type}).  A parameter declared as a bare type
+     {!Translation_types.template_arg_of_core_type}).  A parameter declared as a bare type
      variable has arity zero, so its value is curried throughout. *)
   (* This parameter's substituted C++ type.  [param_index] counts
      positions of the unsubstituted type, so it has to be converted before
@@ -1606,7 +2048,7 @@ let argument_position ~local_callable env id plan i core_arg =
     match Param_pos.nth fn_param_core_tys_orig param_index with
     | Some orig ->
       Option.bind (param_expected_subst ())
-        (Cpp_ir.Types.respell_arrows (Declared_at (count_core_value_arrows orig)))
+        (Cpp_ir.Types.respell_arrows (Cpp_ir.Types.Declared_at (count_core_value_arrows orig)))
     | None -> None
   in
   let param_expected_at_declared_arity () =
@@ -1638,7 +2080,8 @@ let argument_position ~local_callable env id plan i core_arg =
     let tvar_arg_erased j =
       match Core_util.Var_types.find_tvar tys j with
       | Some t ->
-        Type_util.has_erased_type_in_type (unfold_cpp_typedef env (cpp_of_core env t))
+        Type_util.has_erased_type_in_type
+          (Translation_types.unfold_cpp_typedef env (Translation_types.cpp_of_core env t))
       | None -> false
     in
     match Param_pos.nth fn_param_core_tys_orig this with
@@ -1649,7 +2092,8 @@ let argument_position ~local_callable env id plan i core_arg =
           && param_states_type_args id orig
           && mentions j orig
           && Type_util.has_erased_type_in_type
-               (unfold_cpp_typedef env (cpp_of_core env (Core_util.Var_types.apply tys orig))))
+               (Translation_types.unfold_cpp_typedef env
+                  (Translation_types.cpp_of_core env (Core_util.Var_types.apply tys orig))))
         (Param_pos.positioned fn_param_core_tys_orig)
     | _ -> false
   in
@@ -1709,8 +2153,8 @@ let argument_position ~local_callable env id plan i core_arg =
     with
     | (result_names, (_ :: _ as m)), Some pt -> (
       let d =
-        cpp_ir_of_core_type env result_names (type_simpl pt)
-        |> deapply_family_variables
+        Translation_types.cpp_ir_of_core_type env result_names (type_simpl pt)
+        |> Translation_tvars.deapply_family_variables
         |> Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) ->
                match t with
                | Variable (Index (_, Some v) | Named v) -> (
@@ -1723,7 +2167,7 @@ let argument_position ~local_callable env id plan i core_arg =
       (* No slot at all: the declaration's type is the slot, where it is
          one this scope can write. *)
       | None | Some Any ->
-        ( match spell_in_scope d with
+        ( match Translation_types.spell_in_scope d with
         | Some _ as t -> t
         | None -> arg_expected_ty )
       (* A slot erased inside: each erased part is filled from the
@@ -1798,14 +2242,14 @@ let argument_position ~local_callable env id plan i core_arg =
     (param_tvar_erased && not param_written_by_call)
     ||
     match param_core_ty with
-    | Some core_ty -> core_erases_to_box env core_ty
+    | Some core_ty -> Translation_erasure.core_erases_to_box env core_ty
     | None -> false
   in
   let ret =
     if param_resolves_to_any then Some (Any : Cpp_ir.Lowered.Type.t)
     (* An argument is not a tail position, so the enclosing function's
        return type does not describe it -- and what the parameter says
-       does.  Left to {!position_cpp_ty}'s fallback, a match in argument
+       does.  Left to {!Translation_coerce.position_cpp_ty}'s fallback, a match in argument
        position builds its branches at the type the {e call} returns.
 
        Only where the parameter's type can be written, though: installed
@@ -1842,8 +2286,8 @@ let lower_call ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (
   let id = use.callee in
   let lex = current_lexenv () in
   let inst =
-    Core_elaborate.instantiation ~walk:(elaborations ()) ~lex ~expected_core:slot.expected_core_ty
-      ~stated_core:slot.stated_core_ty ~caller ~scope:(!tctx).lexical.current_type_vars use args
+    Core_elaborate.instantiation ~walk:(elaborations ()) ~lex ~expected_core:slot.Translation_slot.expected_core_ty
+      ~stated_core:slot.Translation_slot.stated_core_ty ~caller ~scope:(!tctx).lexical.current_type_vars use args
   in
   let plan = plan_call ~lex ?expected_ty env inst in
   call_type_args ~caller ~lex ?expected_ty env id plan
@@ -1874,5 +2318,5 @@ let glob_yields env x instantiate =
     in
     let inst = instantiate core_ty in
     let value_ty = if is_result_block then core_codomain inst else inst in
-    try Some (cpp_of_core env value_ty)
+    try Some (Translation_types.cpp_of_core env value_ty)
     with e when CErrors.noncritical e -> None )

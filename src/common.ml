@@ -482,7 +482,7 @@ let () = register_cleanup (fun () -> Hashtbl.clear sibling_collision_renames)
 
 (** The members every inductive's C++ struct declares for itself: the variant
     alias, its accessors and the deep copy.  Anything else that ends up inside
-    that struct -- a constructor's factory ({!Translation_support.factory_name_of_ctor})
+    that struct -- a constructor's factory ({!Translation_naming.factory_name_of_ctor})
     or a methodified constant ({!reserve_methodified}) -- has to keep clear of
     them, so this set is the one place the names are written down. *)
 let inductive_generated_members =
@@ -1698,7 +1698,7 @@ let field_param_id i = Id.of_string (field_param_name i)
 
     Maps [(ctor_struct_name, field_idx)] pairs to the C++ field identifier
     derived from the Rocq binder name.  Populated by
-    {!Translation_support.compute_and_register_field_names} at definition sites
+    {!Translation_naming.compute_and_register_field_names} at definition sites
     (struct field declarations, factory methods) and queried at access sites
     (pattern-match lambdas, record reuse, loopification cell patching).
 

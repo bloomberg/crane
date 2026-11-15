@@ -468,7 +468,7 @@ val field_param_id : int -> Id.t
 
     Maps a constructor struct's field, by owner, constructor name and
     position, to the C++ field name derived from its Rocq binder.  Filled
-    where the struct is declared ({!Translation_support.compute_and_register_field_names})
+    where the struct is declared ({!Translation_naming.compute_and_register_field_names})
     and read where a field is accessed.  It lives here rather than in
     {!Cpp_state} because [Cpp_state] depends on [Translation], which needs the
     registry.  Cleared on every extraction reset. *)

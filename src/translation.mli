@@ -18,21 +18,29 @@ open Names
     {!Translation_local_functions}), which recurse through
     {!Translation_knot}; this module ties that knot at load time.  What the
     generators share with lowering below it is named where it lives: the
-    per-declaration context in {!Translation_state}, type conversion and
-    binder types in {!Translation_types}, call planning in
-    {!Translation_calls}, and the rest in {!Translation_support}. *)
+    per-declaration context in {!Translation_state}, the position a subterm
+    fills in {!Translation_slot}, type conversion in {!Translation_types},
+    binder types in {!Translation_binders}, erasure judgements and coercions
+    in {!Translation_erasure} and {!Translation_coerce}, call planning in
+    {!Translation_calls}, and narrower questions in modules named for them
+    ({!Translation_match_types}, {!Translation_lambda_params},
+    {!Translation_ctor_args}, {!Translation_lifting},
+    {!Translation_callable_params}, {!Translation_ownership},
+    {!Translation_suspension}, {!Translation_monadic}, {!Translation_tvars},
+    {!Translation_conversion}, {!Translation_naming},
+    {!Translation_cpp_build}). *)
 
 (** Generate a C++ expression from a Core expression
     ({!Translation_expr.gen_expr}).  [slot] describes the position; callers
-    outside lowering leave it at {!Translation_support.empty_slot}. *)
+    outside lowering leave it at {!Translation_slot.empty_slot}. *)
 val gen_expr :
-  ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:Translation_support.slot -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t
+  ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:Translation_slot.slot -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** Generate C++ statements from a Core expression
     ({!Translation_stmts.gen_stmts}).  The continuation [k] turns the final
     expression into a statement (a return, an assignment). *)
 val gen_stmts :
-  ?slot:Translation_support.slot ->
+  ?slot:Translation_slot.slot ->
   env ->
   (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
   Core.Expr.t ->

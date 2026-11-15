@@ -35,7 +35,7 @@ type program = {
       (** Which functions recurse through which. *)
   partner_closure_params : (Names.GlobRef.t * int list) list;
       (** Which parameters of each function a call from its recursive group
-          passes a closure for ({!Translation_support.partner_closure_params}). *)
+          passes a closure for ({!Translation_callable_params.partner_closure_params}). *)
   recursion : Recursion_plan.t;
       (** How each function recurses through itself. *)
   control : Lower_control.t;

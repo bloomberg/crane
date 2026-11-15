@@ -26,12 +26,12 @@ open Common
 type lowering = {
   expr :
     ?expected_ty:Cpp_ir.Lowered.Type.t ->
-    ?slot:Translation_support.slot ->
+    ?slot:Translation_slot.slot ->
     env ->
     Core.Expr.t ->
     Cpp_ir.Lowered.Expr.t;
   stmts :
-    ?slot:Translation_support.slot ->
+    ?slot:Translation_slot.slot ->
     env ->
     (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
     Core.Expr.t ->

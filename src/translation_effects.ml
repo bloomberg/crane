@@ -12,8 +12,6 @@ open Table
 open Util
 open Translation_state
 open Type_util
-open Translation_support
-open Translation_types
 open Translation_knot
 
 (** [ret] of an effect monad, the global [use] (at [r]) applied to [a1 :: l],
@@ -21,12 +19,12 @@ open Translation_knot
     [ITree<R>::ret] in reified mode. *)
 let gen_return_expr env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
   let ret_tys = Core_util.written_type_args use in
-  if not (is_sequential_effect Core_effects.Return use) then begin
+  if not (Translation_monadic.is_sequential_effect Core_effects.Return use) then begin
     (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
     let t = Common.last (a1 :: l) in
     match t with
     | Core.Expr.Global {callee = g; _} when is_ghost g ->
-      mk_itree_ret Void []
+      Translation_monadic.mk_itree_ret Void []
     | _ ->
       let inner = gen_expr env t in
       (* The result type is the type argument written for the variable the
@@ -39,10 +37,10 @@ let gen_return_expr env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
           | _ -> None
         in
         match Option.bind value_var (Core_util.Var_types.find_tvar ret_tys) with
-        | Some r_core when not (Core_util.is_erased_type r_core) -> cpp_of_core env r_core
+        | Some r_core when not (Core_util.is_erased_type r_core) -> Translation_types.cpp_of_core env r_core
         | _ -> Void
       in
-      mk_itree_ret r_cpp [inner]
+      Translation_monadic.mk_itree_ret r_cpp [inner]
   end
   else begin
     let t = Common.last (a1 :: l) in
@@ -78,8 +76,8 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     | _ -> None
   in
   (* Reified mode: bind is a real function call, not desugared. *)
-  if not (is_sequential_effect Core_effects.Bind use) then
-    inline_iife k ((gen_expr ~slot env ast))
+  if not (Translation_monadic.is_sequential_effect Core_effects.Bind use) then
+    Translation_cpp_build.inline_iife k ((gen_expr ~slot env ast))
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
     let a_core, f = Common.last_two (a1 :: a2 :: l) in
@@ -90,7 +88,7 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids')
       env
   in
-  push_binders env ids;
+  Translation_binders.push_binders env ids;
   let bound_by_bind env = core_binder ~site:(Binding (Core.Global_use.occurrence use)) env 1 in
   (* Where a machine resumes at the continuation's parameter, which of
      what its frame keeps the save moves is the plan's, as at a let. *)
@@ -100,14 +98,14 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   (
   match ids with
   | (x, core_ty) :: _ ->
-    let ty = cpp_of_core env core_ty in
+    let ty = Translation_types.cpp_of_core env core_ty in
     if (match ty with Void | Obligation Unresolved_type -> true | _ -> false) || core_type_is_unit core_ty then
       (* Unit/void bind result: execute the action for side effects,
          then declare the variable as Unit::e_TT so the continuation
          can reference it if needed. *)
       let action_is_pure_ret =
         match a_core with
-        | Core.Expr.Apply {callee = Core.Expr.Global use; _} -> is_effect Core_effects.Return use
+        | Core.Expr.Apply {callee = Core.Expr.Global use; _} -> Translation_monadic.is_effect Core_effects.Return use
         | _ -> false
       in
       let side_effect : Cpp_ir.Lowered.Stmt.t list =
@@ -120,19 +118,19 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
          actually referenced in the generated C++ (unit-match elimination
          and Ret-in-void optimization may drop Core-level references). *)
       let body = gen_stmts ~slot env k f in
-      let cpp_ty = cpp_of_core env core_ty in
+      let cpp_ty = Translation_types.cpp_of_core env core_ty in
       let decl : Cpp_ir.Lowered.Stmt.t list =
-        if not (stmts_reference_var x body) then []
+        if not (Translation_lifting.stmts_reference_var x body) then []
         else if core_type_is_unit core_ty && not (is_cpp_unit_type cpp_ty) then
           []
         else if core_type_is_unit core_ty then
-          [Bind_variable (x, Declare (cpp_ty, bound_by_bind env), mk_tt_expr ())]
+          [Bind_variable (x, Declare (cpp_ty, bound_by_bind env), Translation_monadic.mk_tt_expr ())]
         else
           []
       in
       side_effect @ decl @ body
     else begin
-      match extract_block_template a with
+      match Translation_cpp_build.extract_block_template a with
       | Some (ref, tmpl, args, tys) ->
         (Foreign_block
           { custom = ref;
@@ -153,7 +151,7 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       match a with Enum_value _ -> [] | _ -> [Expression a]
     in
     ( match f with
-    | Core.Expr.Global use when is_effect Core_effects.Return use ->
+    | Core.Expr.Global use when Translation_monadic.is_effect Core_effects.Return use ->
       (* Eta-reduced Ret: bind action Ret = action (monad right identity).
          In sequential mode, just execute the action and return. *)
       if returns_void () then
@@ -168,7 +166,7 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         match action_result_ty with
         | Some ty ->
           let cpp_ty =
-            cpp_of_core env ty
+            Translation_types.cpp_of_core env ty
           in
           if cpp_ty = Void || cpp_ty = Obligation Unresolved_type || core_type_is_unit ty then
             None
@@ -194,9 +192,9 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     lowered as an [ITree<R>::ret] in reified mode. *)
 let gen_return_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l :
   Cpp_ir.Lowered.Stmt.t list =
-  if not (is_sequential_effect Core_effects.Return use) then begin
+  if not (Translation_monadic.is_sequential_effect Core_effects.Return use) then begin
     (* Reified mode: Ret is a constructor call, not desugared. *)
-    inline_iife k ((gen_expr ~slot env ast))
+    Translation_cpp_build.inline_iife k ((gen_expr ~slot env ast))
   end
   else begin
     (* Sequential mode: eliminate Ret, just use the value. *)
@@ -205,5 +203,5 @@ let gen_return_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
       (* Void-returning function: discard the value and return. *)
       [Return None]
     else
-      [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
+      [k (gen_expr ?expected_ty:(Translation_coerce.position_cpp_ty None) env t)]
   end

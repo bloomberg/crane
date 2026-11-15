@@ -128,11 +128,11 @@ and generation_site =
 (** What the analysis of the whole program decided that lowering reads
     ({!Program_facts.analyze_program}), for every unit of the extraction:
     the definitions whose body only throws, which are spelled as
-    zero-argument functions ({!Translation_support.thunk_reason}), which
+    zero-argument functions ({!Translation_suspension.thunk_reason}), which
     parameters of each function it owns, innermost first, settled across
     calls ({!Ownership.summarize}), and the parameters of a member of a
     recursive group a partner's call passes a closure for
-    ({!Translation_support.partner_closure_params}). *)
+    ({!Translation_callable_params.partner_closure_params}). *)
 type program_facts = {
   throwing_values : Ref.Can.Set.t;
   parameter_ownership : bool list Ref.User.Map.t;
@@ -311,7 +311,7 @@ type lexical = {
   (** Whether the binder each variable read of the region reads holds a box,
      as {!Representation_plan} plans it: by the read's occurrence.  Set
      beside {!representation}; the only answer lowering reads
-     ({!Translation_types.read_is_boxed}). *)
+     ({!Translation_binders.read_is_boxed}). *)
   planned_reads : (Core.Occurrence.t * planned_read) list;
   (** The C++ type the position each coercion of the region fills is
      generated against, as {!Position_plan} plans it: by the coercion's
@@ -331,7 +331,7 @@ type lexical = {
     fresh names are numbered by.  One generation advances them and the next
     reads the advanced value.  A body starts them at zero
     ({!Gen_context.begin_body}), and so does a closure's body, which is
-    generated as one ({!Translation_support.with_escape_analysis}); a
+    generated as one ({!with_escape_analysis}); a
     {!with_scope} bracket puts them back, as it puts back the whole
     context.  A field belongs here when siblings must see each other's
     effect on it: a name minted in one branch must not be minted again in
@@ -888,3 +888,42 @@ let parameter_type env i =
 let reset_env_types () =
   set_lexical (fun l -> { l with env_types = Lexenv.empty });
   set_lexical (fun l -> { l with cpp_binder_types = IntMap.empty; declared_outer = None })
+
+(** Run [f] in a fresh escape-analysis scope, restoring the enclosing one
+    afterwards.  Escape analysis runs at several nesting levels (lambdas,
+    let-in expressions, top-level functions) and each level has its own set of
+    safe bindings. *)
+let with_escape_analysis f =
+  (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
+     outer function returns void, gen_stmts generates bare 'return;' for tt,
+     but IIFE bodies return their own type (e.g. monostate), not void. *)
+  let inner_return_type =
+    match current_cpp_return_type () with
+    | Some Cpp_ir.Type.Void -> None
+    | rt -> rt
+  in
+  (* A lambda body is not part of the constructor expression that encloses it.
+     Both flags make an unresolvable type variable erase to [std::any], which
+     is right for a constructor's own arguments and wrong for the body of a
+     lambda that merely happens to be one -- the lambda has its own binders
+     and its own slots. *)
+  with_scope @@ fun () ->
+  tctx :=
+    { !tctx with
+      lexical =
+        { (!tctx).lexical with
+          move_plan = Ownership_ir.empty;
+          in_constructor_expr = false;
+          current_cpp_return_type = inner_return_type };
+      threaded = {match_param_counter = 0; cs_counter = 0} };
+  f ()
+
+(** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
+    fixpoint, or a record destructure in argument position).  The lambda
+    returns THIS expression's value, not the enclosing function's, so the
+    ambient return type must be re-based on the expression's own expected type
+    ([None] wherever the context imposes none).  Without this the enclosing
+    function's return type leaks into the IIFE body and its tail expression is
+    cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
+    caller then projects with [.first.first]. *)
+let with_iife_return_type (expected_ty : Cpp_ir.Lowered.Type.t option) f = with_cpp_return_type expected_ty f

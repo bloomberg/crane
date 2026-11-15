@@ -575,11 +575,11 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                 (* A parameter cast out of a box is a local of its own. *)
                 let owned =
                   let params_db = Array.of_list (List.rev params) in
-                  Translation_support.owned_parameters (Array.length params_db)
+                  Translation_ownership.owned_parameters (Array.length params_db)
                     ~owned:(fun i ->
                       let name, _, cpp_ty = params_db.(i) in
                       List.exists (fun (n, _, _) -> Id.equal n name) cast_info
-                      || not (Translation_support.declared_by_reference cpp_ty) )
+                      || not (Translation_ownership.declared_by_reference cpp_ty) )
                     ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some cpp_ty)
                     ~ty:(fun i -> snd (List.nth core_vars i))
                 in
@@ -669,10 +669,10 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                   (fun () ->
                     let binders_db = Array.of_list (List.rev binders) in
                     let owned =
-                      Translation_support.owned_parameters (Array.length binders_db)
+                      Translation_ownership.owned_parameters (Array.length binders_db)
                         ~owned:(fun i ->
                           binders_db.(i).mb_kind = `Value
-                          && not (Translation_support.declared_by_reference binders_db.(i).mb_cpp_ty) )
+                          && not (Translation_ownership.declared_by_reference binders_db.(i).mb_cpp_ty) )
                         ~declared:(fun i -> Some binders_db.(i).mb_cpp_ty)
                         ~ty:(fun i -> binders_db.(i).mb_core_ty)
                     in

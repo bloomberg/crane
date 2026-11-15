@@ -401,7 +401,7 @@ let rec iter_scoped f lex e =
   | e -> Core_util.ast_iter (iter_scoped f lex) e
 
 (* Whether [e], standing in [lex] in the definition [self], suspends a
-   coinductive constructor ({!Translation_support.suspends_constructor})
+   coinductive constructor ({!Translation_suspension.suspends_constructor})
    anywhere, under a lambda or in a local fixpoint's body too: the C++ [e]
    becomes holds the suspension wherever it stands. *)
 let suspends_within ~self lex e =
@@ -411,7 +411,7 @@ let suspends_within ~self lex e =
       (fun lex -> function
         | Core.Expr.Construct {result_type = Core.Type.Global_app {head = n; _}; constructor = c; arguments = args; _}
           when (not (Table.is_custom c))
-               && Translation_support.suspends_constructor ~self:(Some self)
+               && Translation_suspension.suspends_constructor ~self:(Some self)
                     ~binder_type:(Lexenv.type_opt lex) n args ->
           raise Found
         | _ -> () )
@@ -421,10 +421,10 @@ let suspends_within ~self lex e =
 
 (* Whether the C++ the definition [self] of type [ty] becomes holds a
    suspension: it is suspended whole
-   ({!Translation_support.suspends_whole}), or at a constructor. *)
+   ({!Translation_suspension.suspends_whole}), or at a constructor. *)
 let definition_suspends self ty body =
   let lex, body = Core_elaborate.declaration_scope ty body in
-  Translation_support.suspends_whole self (Type_util.core_return_type ty) body
+  Translation_suspension.suspends_whole self (Type_util.core_return_type ty) body
   || suspends_within ~self lex body
 
 (* The levels of the binders outside [e] that [e] reads as values, [e]
@@ -1043,7 +1043,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
                        arguments = [a]} when identity use.callee && Table.to_inline use.callee -> go pos a
     | Core.Expr.Construct {result_type = Core.Type.Global_app {head = n; _}; constructor = c; arguments = args; _}
       when (not (Table.is_custom c))
-           && Translation_support.suspends_constructor ~self:(Some self) ~binder_type:(fun _ -> None) n
+           && Translation_suspension.suspends_constructor ~self:(Some self) ~binder_type:(fun _ -> None) n
                 args ->
       ()
     | Core.Expr.Let {binder = x; value = a; body = b; _} -> (
@@ -1105,7 +1105,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
    where it is suspended whole. *)
 let flow_of r (fd : Core.Recursion.Definition.t) =
   let _, body = Core_elaborate.declaration_scope fd.type_ fd.body in
-  if Translation_support.suspends_whole r (Type_util.core_return_type fd.type_) body then None else Some body
+  if Translation_suspension.suspends_whole r (Type_util.core_return_type fd.type_) body then None else Some body
 
 (* The number of parameters the definition [fd] is generated taking: every
    one its type declares. *)
