@@ -17,6 +17,9 @@ open Translation_types
 open Translation_knot
 open Translation_match
 
+(** [gen_stmts ?slot env k e] -- [e] lowered as statements, the value it
+    computes handed to [k] (a [return], an assignment).  [slot] is
+    {!Translation_expr.gen_expr}'s, carried into the tail positions. *)
 let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast :
     Cpp_ir.Lowered.Stmt.t list =
   (* Statements open a position of their own and state no type for it: the
