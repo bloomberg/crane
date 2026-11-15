@@ -4,7 +4,6 @@
 
 let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
   Table.set_named_customs facts.used_customs;
-  Core_effects.install facts.effects;
   List.iter
     (fun ({block; kind; _} : Target_plan.kind_decision) ->
       Table.add_inductive_kind block kind;
@@ -15,10 +14,6 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
         (fun _ -> ())
         struc )
     plan.inductive_kinds
-
-let install_program (facts : Program_facts.program) =
-  Recursion_plan.install facts.recursion;
-  Lower_control.install facts.control
 
 let install_template_kinds (plan : Target_plan.t) =
   List.iter (fun (r, kinds) -> Tparam_kinds.record r kinds) plan.template_kinds

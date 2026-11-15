@@ -1488,8 +1488,8 @@ let freeze core f =
     Pipeline_trace.event "core" "analyze_program";
     (normalized, Program_facts.analyze_program normalized)
   in
-  Install_legacy_plan.install_program program;
-  Translation_state.with_program_facts (Program_facts.lowering program) (fun () -> f normalized)
+  Translation_state.with_program_facts (Program_facts.lowering program) @@ fun () ->
+  Loop_facts.with_program ~recursion:program.recursion ~control:program.control @@ fun () -> f normalized
 
 (** The extracted structure [struc] through the Core passes
     ({!core_pass_names}), keeping what [to_appear] names. *)
@@ -1641,8 +1641,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   in
   let facts, plan = analyze_and_plan struc in
   Translation_state.with_unit_facts
-    {higher_order_projections = facts.higher_order_projections; elaborations = None}
+    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
   @@ fun () ->
+  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
@@ -1715,7 +1716,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   check_structure_unchanged planned struc;
   if Pipeline_trace.enabled () then begin
     Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
-    Pipeline_trace.event "emit" (Core_effects.report ());
+    Pipeline_trace.event "emit" (Core_effects.report facts.effects);
     Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
@@ -2560,9 +2561,11 @@ let extract_and_compile ~opaque_access file l =
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
+  let facts = Program_facts.analyze struc in
   Translation_state.with_unit_facts
-    {higher_order_projections = (Program_facts.analyze struc).higher_order_projections; elaborations = None}
+    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
   @@ fun () ->
+  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   plan_layout struc @@ fun (_, _, _, _, elaborations) ->
   elaborate_unit elaborations;
   end_planning ();

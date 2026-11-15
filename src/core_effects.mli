@@ -12,9 +12,10 @@
     where the bind stands -- its tail position the enclosing one -- and
     [ret v] is [v].
 
-    Transitional.  The operations are installed for the unit, by the
+    Transitional.  The operations are analysed for the unit, by the
     occurrence of the use naming the operation ({!Core.Occurrence}), and
-    translation takes an application's from there; under [CRANE_CHECK_IR]
+    translation, handed them with the unit, takes an application's from
+    there; under [CRANE_CHECK_IR]
     each is checked against the global's registration and the mode the
     generation translating it is in. *)
 
@@ -52,21 +53,15 @@ val analyze : Core.Program.t -> t
     occurrences, in the same modes. *)
 val equal : t -> t -> bool
 
-(** Make [t] the unit's operations, the ones {!find} reads. *)
-val install : t -> unit
-
 (** [lookup t use] -- the operation of the use [use] among [t], if the
     analysis reached it; [None] for a use it did not, or one whose copies a
     rewrite duplicated were found in two modes. *)
 val lookup : t -> Core.Global_use.t -> effect_ option
 
-(** [find use] -- {!lookup} among the installed operations. *)
-val find : Core.Global_use.t -> effect_ option
-
-(** Record that translation took an operation from the installed ones, for
+(** Record that translation took an operation from the unit's, for
     {!report}. *)
 val tally : unit -> unit
 
-(** How many operations the unit analysed, and how many translation found
-    there. *)
-val report : unit -> string
+(** How many operations the unit analysed ([t]), and how many translation
+    found there. *)
+val report : t -> string

@@ -637,7 +637,7 @@ let adopt_local_fix ~stmts ~planned = function
            whose names another fixpoint may share.  How it is rerouted is
            its shape: one through the self-parameter forwards it as a
            leading argument the entry does not take. *)
-        let entering = Recursion_plan.entering (fst fixpoint.member) in
+        let entering = (Recursion_plan.entering (Loop_facts.recursion ())) (fst fixpoint.member) in
         let reroute e =
           match e with
           | Call (({occurrence = Some o; _} as res), Local id, args)
@@ -949,7 +949,7 @@ let planned_point ctx id (tgt : binding) =
     | Existing -> binder_of ctx id
     | Declare_static _ -> None
   in
-  match Option.map Recursion_plan.resumes_binding binder with
+  match Option.map (Recursion_plan.resumes_binding (Loop_facts.recursion ())) binder with
   | Some [p] -> p
   | Some points ->
     Probe.violation "frame plan"
@@ -970,7 +970,7 @@ let planned_point ctx id (tgt : binding) =
     where the plan does not say: the statement binds a local of the
     backend's own, or the machine is not one the plan describes. *)
 let planned_resume ctx id (tgt : binding) e =
-  let point b = match Recursion_plan.resumes_binding b with [p] -> Some p | _ -> None in
+  let point b = match (Recursion_plan.resumes_binding (Loop_facts.recursion ())) b with [p] -> Some p | _ -> None in
   match ctx.er_entered_by with
   | None -> None
   | Some entered_by -> (
@@ -2164,7 +2164,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
                er_entered_by = entered_by;
                er_entered = entered;
                er_points_into = points_into;
-               er_entering = Option.bind loop (fun l -> Option.map Control_ir.Term.continues (Lower_control.loop l));
+               er_entering = Option.bind loop (fun l -> Option.map Control_ir.Term.continues ((Lower_control.loop (Loop_facts.control ())) l));
                er_aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top

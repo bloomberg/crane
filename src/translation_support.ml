@@ -288,12 +288,12 @@ let is_monad_reified = Table.is_monad_reified
 
 (** The effect operation the use [use] heads, as Core elaborated it
     ({!Core_effects}): its operation, and the mode it is generated in, read
-    from the unit's facts, which are installed before anything is planned
-    ({!Install_legacy_plan.install}).  One the analysis did not reach heads
+    from the unit's facts, set before anything is planned
+    ({!Translation_state.unit_facts}).  One the analysis did not reach heads
     none.  Under [CRANE_CHECK_IR] both are checked against what the global's
     registration and the mode of the generation translating it would say. *)
 let effect_of (use : Core.Global_use.t) =
-  let found = Core_effects.find use in
+  let found = Core_effects.lookup (!tctx).input.unit.effects use in
   if Option.has_some found then Core_effects.tally ();
   if Probe.checking () then begin
     let here =

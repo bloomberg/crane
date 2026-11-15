@@ -123,7 +123,7 @@ let no_control_ir = "the loop has no ControlIR"
     Continues.  [check] still reads the call's arguments and receiver.  A
     loop with no ControlIR is a violation, and the transform declines. *)
 let planned_jumps loop check =
-  match Option.bind loop Lower_control.loop with
+  match Option.bind loop (Lower_control.loop (Loop_facts.control ())) with
   | None ->
     Probe.violation "control IR" (Pp.str no_control_ir);
     raise (Not_linearisable no_control_ir)
@@ -149,7 +149,7 @@ let checked_tail_loop loop transform =
       | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
       | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
     in
-    match Lower_control.loop l with
+    match (Lower_control.loop (Loop_facts.control ())) l with
     | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
     | Some t when not (made_as_planned (Control_ir.Term.continues t) (List.rev !jumps)) ->
       Probe.violation "control IR"
@@ -173,7 +173,7 @@ let machine_disagreement l entries =
   let within a b = List.for_all (fun o -> List.exists (Core.Occurrence.equal o) b) a in
   let same a b = within a b && within b a in
   let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) entries in
-  match Lower_control.loop l with
+  match (Lower_control.loop (Loop_facts.control ())) l with
   | None -> Some Pp.(str "no ControlIR for the machine of " ++ what ())
   | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) entries ->
     Some Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
@@ -212,7 +212,7 @@ let planned_local_strategy (fixpoint : local_fixpoint option) =
   match fixpoint with
   | Some {member; binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print binder) in
-    match Recursion_plan.strategy_at ~pointer_fields:constructor_pointer_fields member with
+    match (Recursion_plan.strategy_at (Loop_facts.recursion ())) ~pointer_fields:constructor_pointer_fields member with
     | Some planned -> planned
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
@@ -251,8 +251,8 @@ let entered_by_definition r =
     its finished body is one it still recurses by. *)
 let definition_calls r =
   match Lifted.of_ref r with
-  | Some h -> Option.cata Recursion_plan.member_calls [] (Lifted.fixpoint h)
-  | None -> Recursion_plan.calls r
+  | Some h -> Option.cata (Recursion_plan.member_calls (Loop_facts.recursion ())) [] (Lifted.fixpoint h)
+  | None -> (Recursion_plan.calls (Loop_facts.recursion ())) r
 
 (** The calls a finished body of the function [f] still recurses by
     ({!definition_calls}), whatever C++ heads them. *)
@@ -285,7 +285,7 @@ type member_plan = {
 }
 
 let member_plan ~frames member params =
-  match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
+  match (Lower_control.loop (Loop_facts.control ())) (Control_ir.Loop.Member (fst member, snd member)) with
   | Some (Loop l) ->
     let kept = kept_positions l in
     if List.compare_lengths kept params <> 0 then None
@@ -317,7 +317,7 @@ let member_plan ~frames member params =
           member_parts = List.map (List.nth parts) kept;
           member_moves =
             ( if frames then []
-              else List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept)) (Ownership_ir.continue_moves l) ) }
+              else List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept)) (Ownership_ir.continue_moves ~effects:(Loop_facts.effects ()) l) ) }
   | Some _ | None -> None
 
 (** Walk through a statement list and loopify each local fixpoint: the
@@ -728,9 +728,9 @@ let planned_strategy r =
     let pointer_fields = constructor_pointer_fields in
     let planned =
       match Option.map Lifted.site (Lifted.of_ref r) with
-      | Some (Fixpoint (occurrence, member)) -> Recursion_plan.strategy_at ~pointer_fields (occurrence, member)
-      | Some (Let occurrence) -> Recursion_plan.strategy_of_let occurrence
-      | None -> Recursion_plan.strategy ~pointer_fields r
+      | Some (Fixpoint (occurrence, member)) -> (Recursion_plan.strategy_at (Loop_facts.recursion ())) ~pointer_fields (occurrence, member)
+      | Some (Let occurrence) -> (Recursion_plan.strategy_of_let (Loop_facts.recursion ())) occurrence
+      | None -> (Recursion_plan.strategy (Loop_facts.recursion ())) ~pointer_fields r
     in
     let what () = Pp.str (Table.kername_of_global r) in
     match planned with
@@ -745,8 +745,8 @@ let planned_strategy r =
 let planned_adoptable r =
   match Lifted.of_ref r with
   | Some h -> (
-    match Lifted.fixpoint h with Some m -> Recursion_plan.adoptable_at m | None -> [] )
-  | None -> Recursion_plan.adoptable r
+    match Lifted.fixpoint h with Some m -> (Recursion_plan.adoptable_at (Loop_facts.recursion ())) m | None -> [] )
+  | None -> (Recursion_plan.adoptable_in (Loop_facts.recursion ())) r
 
 (** The chains a strategy lowers tail modulo cons around, if it does. *)
 let modulo_cons_chains = function
@@ -1008,7 +1008,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
              loop continues by, and the cells built around them its turns'. *)
           let check = planned_jumps loop self_check in
           let shapes =
-            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t)) (Option.bind loop Lower_control.loop)
+            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t)) (Option.bind loop (Lower_control.loop (Loop_facts.control ())))
           in
           let r =
             apply_nontail_loopification

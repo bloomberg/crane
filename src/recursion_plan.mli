@@ -88,11 +88,10 @@ val frame_loops : t -> Names.GlobRef.t list * Core.Occurrence.t list
     read off. *)
 val restore_temporaries : Core.Expr.t -> Core.Expr.t
 
-(** Make [t] the extraction's plan, the one {!strategy} reads. *)
-val install : t -> unit
-
-(** The plan of the group of the function [r], if [r] is on a cycle. *)
-val group_of : Names.GlobRef.t -> group option
+(** The plan of the group of the function [r] in the plan [t], if [r] is
+    on a cycle.  Each query below reads the plan it is handed, the first
+    argument. *)
+val group_of : t -> Names.GlobRef.t -> group option
 
 (** A constructor applied around a recursive call: its argument [hole], in
     the constructor's declared order, holds the call. *)
@@ -142,6 +141,7 @@ val kind_of_strategy : strategy -> kind
     the arguments of [c] so stored, [None] where it stores none
     ({!Loopify_analysis.constructor_pointer_fields}). *)
 val strategy :
+  t ->
   pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> strategy option
 
 (** The strategy of the function [member] of the local fixpoint
@@ -150,6 +150,7 @@ val strategy :
     counting.  A helper lifted for that function is planned by it
     ({!Lifted.fixpoint}). *)
 val strategy_at :
+  t ->
   pointer_fields:(Names.GlobRef.t -> int list option) ->
   Core.Occurrence.t * int ->
   strategy option
@@ -157,9 +158,9 @@ val strategy_at :
 (** The strategy of a helper lifted for the lambda the let [occurrence]
     binds, if the program has that let: no loop, for a lambda bound by a
     let does not call itself. *)
-val strategy_of_let : Core.Occurrence.t -> strategy option
+val strategy_of_let : t -> Core.Occurrence.t -> strategy option
 
-(** The local fixpoints the machine of the function [r], lowered by an
+(** The local fixpoints the machine of the function [r], in the plan [t], lowered by an
     explicit stack, may adopt as a second entry: those in its flow -- run
     where its body runs, not under a lambda nor in another local fixpoint --
     some member of which names a function of its recursive group, read in
@@ -167,9 +168,6 @@ val strategy_of_let : Core.Occurrence.t -> strategy option
     other's stack, so such a fixpoint is lowered inside [r]'s; the first of
     them in the flow that lowering can take is adopted
     ({!Loopify_frame.find_adopted}). *)
-val adoptable : Names.GlobRef.t -> Core.Occurrence.t list
-
-(** {!adoptable} in the plan [t]. *)
 val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
 
 (** [splice_partners ~loopified ~inlines p]: [p], a program being
@@ -216,48 +214,48 @@ val splice_partners :
     read alike whether it is written as the scheme's or as rigid. *)
 val yields_alike : Core.Type.t -> Core.Type.t -> bool
 
-(** {!adoptable} for the function [member] of the local fixpoint
+(** {!adoptable_in} for the function [member] of the local fixpoint
     [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
     fixpoints in its flow naming a member of its group. *)
-val adoptable_at : Core.Occurrence.t * int -> Core.Occurrence.t list
+val adoptable_at : t -> Core.Occurrence.t * int -> Core.Occurrence.t list
 
 (** Whether some machine may adopt the local fixpoint [occurrence]: a
-    function's ({!adoptable}) or that of a helper lifted for a fixpoint of
+    function's ({!adoptable_in}) or that of a helper lifted for a fixpoint of
     [lifted] ({!adoptable_by_fixpoint}). *)
-val adoptable_somewhere : lifted:Core.Occurrence.t list -> Core.Occurrence.t -> bool
+val adoptable_somewhere : t -> lifted:Core.Occurrence.t list -> Core.Occurrence.t -> bool
 
 (** Whether the machine of a helper lifted for the function of one of the
     local fixpoints [lifted] may adopt the local fixpoint [occurrence]
     ({!adoptable_at}).  A fixpoint generated as a lambda adopts nothing: its
     machine has one entry. *)
-val adoptable_by_fixpoint : lifted:Core.Occurrence.t list -> Core.Occurrence.t -> bool
+val adoptable_by_fixpoint : t -> lifted:Core.Occurrence.t list -> Core.Occurrence.t -> bool
 
 (** The calls of the function [member] of the local fixpoint [occurrence]
     made in its group's bodies, each by the occurrence of the read at its
     head, which the C++ call made of it records
     ({!Cpp_ir.Expr.Call.signature.occurrence}): the recursive calls a loop of that
     function takes. *)
-val member_calls : Core.Occurrence.t * int -> Core.Occurrence.t list
+val member_calls : t -> Core.Occurrence.t * int -> Core.Occurrence.t list
 
 (** The calls of the function [r] made in its recursive group's bodies,
     each by the occurrence of the use heading it, which the C++ call made
     of it records ({!Cpp_ir.Expr.Call.signature.occurrence}): the recursive calls
     of [r], the copies of its partners spliced into its body included.
     Empty for a function on no cycle. *)
-val calls : Names.GlobRef.t -> Core.Occurrence.t list
+val calls : t -> Names.GlobRef.t -> Core.Occurrence.t list
 
 (** Whether the bodies of the group of the local fixpoint [occurrence] read
     its function [member] other than at the head of a call: the function
     named as a value, which a loop made of it, no longer a function, cannot
     stand for. *)
-val named_as_value : Core.Occurrence.t * int -> bool
+val named_as_value : t -> Core.Occurrence.t * int -> bool
 
 (** The calls entering the local fixpoint of one member at [occurrence],
     each by the occurrence its C++ call records: its own ({!member_calls}),
     and those made where it is bound -- the fixpoint applied there, by its
     occurrence, or the reads of the let binding it.  What a machine
     adopting the fixpoint reroutes to its entry. *)
-val entering : Core.Occurrence.t -> Core.Occurrence.t list
+val entering : t -> Core.Occurrence.t -> Core.Occurrence.t list
 
 (** A recursive call a function resumes after: a call of the function of
     the group [Function g], with no fewer arguments than its parameters --
@@ -346,4 +344,4 @@ val in_place : Core.Type.t -> Core.Type.t -> bool
     records its let or bind ({!Core_binder.site}): two lets of one
     definition at one level, in two branches, both bind [b] only where [b]
     records neither. *)
-val resumes_binding : Core_binder.t -> resume list
+val resumes_binding : t -> Core_binder.t -> resume list

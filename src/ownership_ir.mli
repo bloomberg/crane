@@ -104,7 +104,7 @@ type resumes = {
   parameter_type : int -> Core.Type.t option;
 }
 
-(** [region ~owned ~copied ~resumes ~n_outer t] is the plan of [t]'s reads,
+(** [region ~owned ~copied ~resumes ~effects ~n_outer t] is the plan of [t]'s reads,
     [t] standing under binders it reads but does not bind, of which it owns
     those at the de Bruijn indices [owned], and generated under a head of
     [n_outer] type variables.  The closures it makes capture a copy of each
@@ -119,13 +119,15 @@ type resumes = {
     is, the saves are planned ({!save_moves}) but no read relies on one
     having been made.  [outer i]: the Core type of the variable bound
     outside [t] at the index [i] there, which says what a copy of it is
-    ({!Use}). *)
+    ({!Use}).  [effects] are the unit's effect operations: a bind generated
+    as sequencing runs its continuation inline. *)
 val region :
   ?owned:int list ->
   ?copied:int list ->
   ?outer:(int -> Core.Type.t option) ->
   ?resumes:resumes ->
   ?certain:bool ->
+  effects:Core_effects.t ->
   n_outer:int ->
   Core.Expr.t ->
   t
@@ -341,8 +343,9 @@ end
     be bound into it: the lowering, which orders the arguments' evaluation,
     moves it at the last of those reads it makes.  Whether a
     parameter is kept in a local, rather than by pointer, is the lowering's
-    to say.  A machine's loop moves nothing so. *)
-val continue_moves : Control_ir.Term.loop -> (Core.Occurrence.t * Continue_move.t list) list
+    to say.  A machine's loop moves nothing so.  [effects] are the unit's
+    effect operations ({!region}). *)
+val continue_moves : effects:Core_effects.t -> Control_ir.Term.loop -> (Core.Occurrence.t * Continue_move.t list) list
 
 (** [save_moves p let_]: of the let at the occurrence [let_], a point a
     machine with a stack of frames resumes at ({!resumes}), the binders the

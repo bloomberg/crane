@@ -332,11 +332,7 @@ let lower ~methods plan program =
     struc;
   List.rev !loops
 
-let installed : t ref = State.cell State.Extraction empty
-
-let install t = installed := t
-
-let loop l = List.find_map (fun (l', t) -> if Loop.equal l l' then Some t else None) !installed
+let loop t l = List.find_map (fun (l', t) -> if Loop.equal l l' then Some t else None) t
 
 (* The occurrences of the global uses and variable reads in the Core terms
    [t] holds -- what it returns, binds, matches on, and passes a turn or a

@@ -145,16 +145,18 @@ let no_program_facts =
 (** What analysing and planning the unit being extracted decided that
     lowering reads, set for the extent of the unit
     ({!with_unit_facts}): the projections used as function values, which
-    are written as standalone functions ({!Program_facts.t}), and the
-    elaborations of the unit's calls ({!Core_elaborate.structure}), [None]
-    until the unit is walked. *)
+    are written as standalone functions, and the effect operations its
+    applications are ({!Program_facts.t}), and the elaborations of the
+    unit's calls ({!Core_elaborate.structure}), [None] until the unit is
+    walked. *)
 type unit_facts = {
   higher_order_projections : Ref.User.Set.t;
+  effects : Core_effects.t;
   elaborations : Core_elaborate.t option;
 }
 
 (** The facts of no unit: lowering outside a unit's extent. *)
-let no_unit_facts = {higher_order_projections = Ref.User.Set.empty; elaborations = None}
+let no_unit_facts = {higher_order_projections = Ref.User.Set.empty; effects = Core_effects.empty; elaborations = None}
 
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
@@ -627,7 +629,7 @@ let plan_positions :
 let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
   let outer = Lexenv.type_opt (!tctx).lexical.env_types in
   let p =
-    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~n_outer:(List.length (!tctx).lexical.current_type_vars) body
+    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~effects:(!tctx).input.unit.effects ~n_outer:(List.length (!tctx).lexical.current_type_vars) body
   in
   (* The frames a machine enters its entries by are planned with it. *)
   Ownership_ir.Entry_moves.record_plan p;

@@ -90,6 +90,7 @@ type t = {
   saved_owned : (Core.Occurrence.t * Levels.t) list;  (* of each let [saves] names, the levels it keeps owned there *)
   entries : entry_read list;
   entry_owned : (Core.Occurrence.t * Levels.t) list;  (* of each call [entries] names, the levels owned there *)
+  effects : Core_effects.t;  (* the unit's effect operations: a sequential bind runs its continuation inline *)
 }
 
 let empty =
@@ -111,7 +112,8 @@ let empty =
     saves = [];
     saved_owned = [];
     entries = [];
-    entry_owned = [] }
+    entry_owned = [];
+    effects = Core_effects.empty }
 
 (* The reads in [t] of variables bound outside it, by level, [t] standing [d]
    binders deep. *)
@@ -452,7 +454,7 @@ let evaluations r =
   | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
-let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
+let sequential_bind effects use = Core_effects.lookup effects use = Some {operation = Bind; mode = Sequential}
 
 (* What an application, perhaps applied in turn, applies: through casts. *)
 let rec call_head f = match strip f with Core.Expr.Apply {callee = g; _} -> call_head g | h -> h
@@ -559,7 +561,7 @@ type tail_save = {
    written, the saves of the machine it may be lowered as, and the calls
    entering that machine's entries: one backward walk, from what is live
    after each subterm to what is live before it. *)
-let liveness ~n_outer ~copied ~arms ~resumes t =
+let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
   (* The captures a call re-entering the entry the region is lowered as
      passes it, and the level of the fixpoint's member such a call names. *)
   let entry_captures =
@@ -642,7 +644,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
     (* A bind generated as sequencing runs its action and then its
        continuation's body, inline, though a mapping spells the same bind as
        an inline custom where it is generated as a call. *)
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind use -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind effects use -> (
       let action, k = Common.last_two args in
       match Mlutil.collect_lams k with
       | [], _ -> walk ~pinned parents d (walk ~consumed:false ~pinned parents d live k) action
@@ -844,7 +846,7 @@ end
    variable it reads is owned where it is read: bound by value, so that the
    region may take its value.  [owned] holds the levels of the variables the
    region owns at its root. *)
-let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
+let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
   let out = ref [] in
   let read_types = ref [] in
   let captured = ref [] in
@@ -917,7 +919,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
       own owned d t
     (* A bind generated as sequencing binds its continuation's parameter to
        the action's value. *)
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind use -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind effects use -> (
       let action, k = Common.last_two args in
       own owned d action;
       match Mlutil.collect_lams k with
@@ -1072,9 +1074,9 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
 
 (* The plan of [root] from what {!liveness} found of it, with which reads,
    captures, saves and entries own their variable ({!ownership}). *)
-let plan ~n_outer ~outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves, entries) =
+let plan ~effects ~n_outer ~outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves, entries) =
   let owned, read_types, captured_owned, copied_reads, saved_owned, entry_owned =
-    ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned:root_owned ~copied:root_copied root
+    ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
   { root;
     n_outer;
@@ -1094,22 +1096,23 @@ let plan ~n_outer ~outer ~resumes ~certain root root_owned root_copied arms (rea
     saves;
     saved_owned;
     entries;
-    entry_owned }
+    entry_owned;
+    effects }
 
 (* The reads of [t] and the saves of the machine it is lowered as: where it
    may be generated as it is, its reads planned as they are there. *)
-let liveness_of ~n_outer ~copied ~arms ~resumes ~certain t =
-  let lowered = liveness ~n_outer ~copied ~arms ~resumes t in
+let liveness_of ~effects ~n_outer ~copied ~arms ~resumes ~certain t =
+  let lowered = liveness ~effects ~n_outer ~copied ~arms ~resumes t in
   if certain || Option.is_empty resumes then lowered
   else
-    let reads, captures, entered, _, _ = liveness ~n_outer ~copied ~arms ~resumes:None t in
+    let reads, captures, entered, _, _ = liveness ~effects ~n_outer ~copied ~arms ~resumes:None t in
     let _, _, _, saves, _ = lowered in
     (reads, captures, entered, saves, [])
 
-let region ?(owned = []) ?(copied = []) ?(outer = fun _ -> None) ?resumes ?(certain = true) ~n_outer t =
+let region ?(owned = []) ?(copied = []) ?(outer = fun _ -> None) ?resumes ?(certain = true) ~effects ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
-  plan ~n_outer ~outer ~resumes ~certain t (levels owned) (levels copied) []
-    (liveness_of ~n_outer ~copied:(levels copied) ~arms:[] ~resumes ~certain t)
+  plan ~effects ~n_outer ~outer ~resumes ~certain t (levels owned) (levels copied) []
+    (liveness_of ~effects ~n_outer ~copied:(levels copied) ~arms:[] ~resumes ~certain t)
 
 (* The branches of the match in [root] on the variable read at [o]. *)
 let branches_at root o =
@@ -1140,7 +1143,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
     if consumers = [] && Probe.checking () then
       Probe.violation "reuse plan"
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
-    plan ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied
+    plan ~effects:p.effects ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied
       (Rebuild {scrutinee; branch; consumers} :: p.arms)
       (p.reads, p.captures, p.entered, p.saves, p.entries)
   | None -> p
@@ -1157,7 +1160,7 @@ let allocation p construction : Allocation.t =
 let fields_by_value p ~case ~by_value =
   if p == empty then p
   else
-    plan ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
+    plan ~effects:p.effects ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
       (p.reads, p.captures, p.entered, p.saves, p.entries)
 
 (* Unlike the other arms, this one changes what a closure reads where it is
@@ -1166,8 +1169,8 @@ let bound_at_instance p ~let_ =
   if p == empty then p
   else
     let arms = Instance let_ :: p.arms in
-    plan ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied arms
-      (liveness_of ~n_outer:p.n_outer ~copied:p.root_copied ~arms ~resumes:p.resumes ~certain:p.certain p.root)
+    plan ~effects:p.effects ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied arms
+      (liveness_of ~effects:p.effects ~n_outer:p.n_outer ~copied:p.root_copied ~arms ~resumes:p.resumes ~certain:p.certain p.root)
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 
@@ -1276,11 +1279,11 @@ module Continue_move = struct
   type t = Keep | Move_parameter | Move_argument
 end
 
-let continue_moves (l : Control_ir.Term.loop) =
+let continue_moves ~effects (l : Control_ir.Term.loop) =
   match turn_term l.body with
   | exception Unplanned_turn -> []
   | body ->
-    let p = region ~n_outer:0 body in
+    let p = region ~effects ~n_outer:0 body in
     let n = List.length l.parameters in
     (* The reads in [t], standing where the Continue does, of what the index
        [db] names there. *)
@@ -1299,7 +1302,7 @@ let continue_moves (l : Control_ir.Term.loop) =
       in
       match turn_term ~arguments l.body with
       | exception Unplanned_turn -> false
-      | body -> moves ~whole:true (region ~n_outer:0 body) o
+      | body -> moves ~whole:true (region ~effects ~n_outer:0 body) o
     in
     let moves depth (c : Control_ir.Term.continue_) =
       List.mapi

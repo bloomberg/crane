@@ -674,7 +674,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
       | None -> false
     in
     let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
-    let closures = kept_by_frame || Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
+    let closures = kept_by_frame || Analyze_closures.group ~effects:(!tctx).input.unit.effects ~n_outer ~continuation:b ~cofix ids funs = Closures in
     let funs_compiled =
       Array.to_list
         (Array.mapi
@@ -1238,7 +1238,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
          applied to fewer arguments than its function takes parameters of
          a runtime value: their bodies own every parameter. *)
       let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
-      let escapes = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
+      let escapes = Analyze_closures.group ~effects:(!tctx).input.unit.effects ~n_outer ~cofix ids funs = Closures in
       let partial =
         List.compare_length_with args
           (List.length (List.filter (fun (_, ty) -> not (void_binder ty)) (fst (collect_lams funs.(x)))))

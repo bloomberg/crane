@@ -27,11 +27,13 @@ type group =
           sequencing and a group generated in place, applied or let-bound,
           run where they stand. *)
 
-(** [group ~n_outer ?continuation ~cofix ids bodies], of the group of
+(** [group ~effects ~n_outer ?continuation ~cofix ids bodies], of the group of
     binders [ids] and bodies [bodies], a cofixpoint where [cofix] says so,
-    generated under a head of [n_outer] type variables: let-bound in
-    [continuation], where it is given, or else applied in place. *)
+    generated under a head of [n_outer] type variables, in a unit whose
+    effect operations are [effects]: let-bound in [continuation], where it
+    is given, or else applied in place. *)
 val group :
+  effects:Core_effects.t ->
   n_outer:int ->
   ?continuation:Core.Expr.t ->
   cofix:bool ->

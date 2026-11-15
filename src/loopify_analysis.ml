@@ -580,7 +580,7 @@ let fixpoint_self (fixpoint : local_fixpoint option) params =
     reported the last first, parallel to the parameters a local fixpoint's
     loop is lowered over. *)
 let planned_self_checker member : call_checker =
-  let calls = Recursion_plan.member_calls member in
+  let calls = (Recursion_plan.member_calls (Loop_facts.recursion ())) member in
   fun e ->
     let planned =
       match e with
