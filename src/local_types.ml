@@ -29,7 +29,7 @@ let rec iter_annotations f = function
         f ty;
         iter_annotations f body )
       brs
-  | MLfix (_, ids, funs, _, _) ->
+  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
     Array.iter (fun (_, ty) -> f ty) ids;
     Array.iter (iter_annotations f) funs
   | MLapp (g, args) ->
@@ -188,17 +188,17 @@ let check_let_lambda ~outer t a =
 (* Mints the open variables of the local definitions in [e], under a
    declaration whose own variables number up to [outer]. *)
 let rec expr ~outer = function
-  | MLletin (_, _, MLfix (_, ids, funs, _, _), b, _) ->
+  | MLletin (_, _, (MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _)), b, _) ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs;
     expr ~outer b
-  | MLapp (MLfix (_, ids, funs, _, _), args) ->
+  | MLapp ((MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _)), args) ->
     let recovered, mint = settle ids funs in
     Array.iter (iter_annotations mint) recovered;
     List.iter (iter_annotations mint) args;
     Array.iter (expr ~outer) funs;
     List.iter (expr ~outer) args
-  | MLfix (_, ids, funs, _, _) ->
+  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs
   | MLletin (_, t, (MLlam _ as a), b, _) ->

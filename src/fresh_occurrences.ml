@@ -5,6 +5,13 @@
 
 open Miniml
 
+(* A group recursing at a ground instance stays one under its new
+   occurrence ({!Table.add_erased_fix_group}). *)
+let fix_occurrence occ =
+  let occ' = Occurrence.fresh () in
+  if Table.is_erased_fix_group occ then Table.add_erased_fix_group occ';
+  occ'
+
 let rec term e =
   match Mlutil.ast_map term e with
   | MLrel (i, _) -> fresh_rel i
@@ -12,12 +19,8 @@ let rec term e =
   | MLcase (ty, scrut, branches, _) -> MLcase (ty, scrut, branches, Occurrence.fresh ())
   | MLcons (ty, r, args, _) -> MLcons (ty, r, args, Occurrence.fresh ())
   | MLmagic (m, a, _) -> MLmagic (m, a, Occurrence.fresh ())
-  | MLfix (i, ids, bodies, cofix, occ) ->
-    let occ' = Occurrence.fresh () in
-    (* A group recursing at a ground instance stays one under its new
-       occurrence ({!Table.add_erased_fix_group}). *)
-    if Table.is_erased_fix_group occ then Table.add_erased_fix_group occ';
-    MLfix (i, ids, bodies, cofix, occ')
+  | MLfixpoint (i, ids, bodies, occ) -> MLfixpoint (i, ids, bodies, fix_occurrence occ)
+  | MLcofixpoint (i, ids, bodies, occ) -> MLcofixpoint (i, ids, bodies, fix_occurrence occ)
   | MLglob use -> MLglob (Global_use.refresh use)
   | e -> e
 

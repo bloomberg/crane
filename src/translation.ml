@@ -1215,9 +1215,9 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       Cpp_ir.Build.iife None (gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
-  | MLapp (MLfix _, _) as a ->
+  | MLapp ((MLfixpoint _ | MLcofixpoint _), _) as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
-       Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfix
+       Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfixpoint
        ...). *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       Cpp_ir.Build.iife None (gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
@@ -1806,7 +1806,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
         let body_stmts =
           return_captures_by_value body_stmts
         in
-        (* When the lambda body is a standalone fixpoint (MLfix with no
+        (* When the lambda body is a standalone fixpoint (MLfixpoint with no
            applied args), the fix represents a function value that would make
            this lambda curried — e.g. [fun x => fix f r := ...] generates
            [[=](x){auto f=...; return f;}] (1-arg returning fn) instead of
@@ -1815,7 +1815,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
            directly compatible with [std::function<R(A,B)>] contexts. *)
         let cpp_args, body_stmts =
           match a with
-          | MLfix (fix_x, _fix_ids, fix_funs, _, _)
+          | MLfixpoint (fix_x, _fix_ids, fix_funs, _) | MLcofixpoint (fix_x, _fix_ids, fix_funs, _)
             when List.length filtered_args <= 1 ->
             let fix_lam_params, _ = Mlutil.collect_lams fix_funs.(fix_x) in
             let fix_value_params =
@@ -3802,7 +3802,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     with_escape_analysis (fun () -> with_region a (fun () ->
       with_iife_return_type expected_ty (fun () ->
         Cpp_ir.Build.iife None (gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) ) )
-  | MLfix _ as a ->
+  | MLfixpoint _ | MLcofixpoint _ as a ->
     (* Bare fixpoint in expression context — wrap in IIFE, delegate to
        gen_stmts. *)
     with_escape_analysis (fun () -> with_region a (fun () ->
@@ -7331,7 +7331,9 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, let_ty, (MLfix (x, ids, funs, cofix, occ) as fix_term), b, let_occ) as _whole ->
+  | MLletin
+      (_, let_ty, ((MLfixpoint (x, ids, funs, occ) | MLcofixpoint (x, ids, funs, occ)) as fix_term), b, let_occ)
+    as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -7469,6 +7471,7 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
         | Some b -> Ownership_ir.kept_by_frame (!tctx).move_plan b
         | None -> false
       in
+      let cofix = match fix_term with MLcofixpoint _ -> true | _ -> false in
       let closures = kept_by_frame || Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
       let funs_compiled =
         Array.to_list
@@ -7492,7 +7495,7 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
          block is instantiated again with a different projection). *)
       let projected_id = List.nth renamed_ids x in
       (* Add non-projected fix names to the avoid set so that subsequent
-         fixpoints (e.g., a second MLfix with a different projection from
+         fixpoints (e.g., a second MLfixpoint with a different projection from
          the same mutual block) will rename conflicting names. *)
       let env_for_cont =
         let (db, avoid) = env in
@@ -8201,7 +8204,7 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
             @ gen_stmts ~slot env' k b
       in
       result
-  | MLapp ((MLfix (x, ids, funs, cofix, occ) as fix_term), args) ->
+  | MLapp (((MLfixpoint (x, ids, funs, occ) | MLcofixpoint (x, ids, funs, occ)) as fix_term), args) ->
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
     register_erased_members occ ids;
@@ -8318,6 +8321,7 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
         (* A group escaping in its own bodies is closures, and so is one
            applied to fewer arguments than its function takes parameters of
            a runtime value: their bodies own every parameter. *)
+        let cofix = match fix_term with MLcofixpoint _ -> true | _ -> false in
         let escapes = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
         let partial =
           List.compare_length_with args
@@ -8408,7 +8412,7 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
         end
     in
     !evaluated @ stmts
-  | MLfix (x, ids, funs, _, occ) as fix_term ->
+  | MLfixpoint (x, ids, funs, occ) | MLcofixpoint (x, ids, funs, occ) as fix_term ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
        called in place), it will always escape.  Use the Y-combinator pattern:

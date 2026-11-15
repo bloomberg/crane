@@ -2549,7 +2549,7 @@ let body_reads_members_of_binder body =
       || Array.exists
            (fun (ids, _, _, br) -> reads (depth + List.length ids) br)
            pv
-    | MLfix (_, ids, funs, _, _) ->
+    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
       Array.exists (reads (depth + Array.length ids)) funs
     | e ->
       let found = ref false in
@@ -2578,7 +2578,7 @@ let binder_matched_at body =
     | MLcase (_, sc, pv, _) ->
       walk depth sc;
       Array.iter (fun (ids, _, _, br) -> walk (depth + List.length ids) br) pv
-    | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
+    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) -> Array.iter (walk (depth + Array.length ids)) funs
     | e -> Mlutil.ast_iter (walk depth) e
   in
   walk 0 body;

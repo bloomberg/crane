@@ -26,13 +26,10 @@ let rec canonical self body =
           (fun (ids, _, p, b) -> (List.map (fun _ -> (anon, Tunknown)) ids, Tunknown, p, canonical self b))
           brs,
         occ )
-  | MLfix (i, fns, bodies, co, occ) ->
-    MLfix
-      ( i,
-        Array.map (fun (_, _) -> (Id.of_string "f", Tunknown)) fns,
-        Array.map (canonical self) bodies,
-        co,
-        occ )
+  | MLfixpoint (i, fns, bodies, occ) ->
+    MLfixpoint (i, Array.map (fun _ -> (Id.of_string "f", Tunknown)) fns, Array.map (canonical self) bodies, occ)
+  | MLcofixpoint (i, fns, bodies, occ) ->
+    MLcofixpoint (i, Array.map (fun _ -> (Id.of_string "f", Tunknown)) fns, Array.map (canonical self) bodies, occ)
   | MLmagic (m, a, mocc) -> MLmagic (m, canonical self a, mocc)
   | e -> Mlutil.ast_map (canonical self) e
 

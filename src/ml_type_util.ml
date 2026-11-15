@@ -706,13 +706,10 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
               map_types_in_ast f body ) )
           brs,
         occ )
-  | MLfix (i, ids, funs, cf, occ) ->
-    MLfix
-      ( i,
-        Array.map (fun (n, ty) -> (n, f ty)) ids,
-        Array.map (map_types_in_ast f) funs,
-        cf,
-        occ )
+  | MLfixpoint (i, ids, funs, occ) ->
+    MLfixpoint (i, Array.map (fun (n, ty) -> (n, f ty)) ids, Array.map (map_types_in_ast f) funs, occ)
+  | MLcofixpoint (i, ids, funs, occ) ->
+    MLcofixpoint (i, Array.map (fun (n, ty) -> (n, f ty)) ids, Array.map (map_types_in_ast f) funs, occ)
   | MLapp (fn, args) ->
     MLapp (map_types_in_ast f fn, List.map (map_types_in_ast f) args)
   | MLmagic (m, a, mocc) -> MLmagic (Mlutil.map_magic_types f m, map_types_in_ast f a, mocc)

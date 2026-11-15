@@ -992,7 +992,8 @@ let rec eq_ml_ast t1 t2 =
   | MLtuple t1, MLtuple t2 -> List.equal eq_ml_ast t1 t2
   | MLcase (t1, c1, p1, _), MLcase (t2, c2, p2, _) ->
     eq_ml_type t1 t2 && eq_ml_ast c1 c2 && Array.equal eq_ml_branch p1 p2
-  | MLfix (i1, id1, t1, _, _), MLfix (i2, id2, t2, _, _) ->
+  | ( (MLfixpoint (i1, id1, t1, _) | MLcofixpoint (i1, id1, t1, _)),
+      (MLfixpoint (i2, id2, t2, _) | MLcofixpoint (i2, id2, t2, _)) ) ->
     Int.equal i1 i2
     && Array.equal Id.equal (Array.map fst id1) (Array.map fst id2)
     && Array.equal eq_ml_ast t1 t2
@@ -1014,7 +1015,7 @@ let rec eq_ml_ast t1 t2 =
       | MLcons _
       | MLtuple _
       | MLcase _
-      | MLfix _
+      | MLfixpoint _ | MLcofixpoint _
       | MLexn _
       | MLdummy _
       | MLaxiom _
@@ -1059,7 +1060,7 @@ let ast_iter_rel_applied f =
     | MLcase (_, a, v, _) ->
       iter n a;
       Array.iter (fun (l, _, _, t) -> iter (n + List.length l) t) v
-    | MLfix (_, ids, v, _, _) ->
+    | MLfixpoint (_, ids, v, _) | MLcofixpoint (_, ids, v, _) ->
       let k = Array.length ids in
       Array.iter (iter (n + k)) v
     | MLapp (a, l) ->
@@ -1093,7 +1094,8 @@ let ast_map f = function
   | MLlam (i, t, a) -> MLlam (i, t, f a)
   | MLletin (i, t, a, b, occ) -> MLletin (i, t, f a, f b, occ)
   | MLcase (typ, a, v, occ) -> MLcase (typ, f a, Array.map (ast_map_branch f) v, occ)
-  | MLfix (i, ids, v, is_cofix, occ) -> MLfix (i, ids, Array.map f v, is_cofix, occ)
+  | MLfixpoint (i, ids, v, occ) -> MLfixpoint (i, ids, Array.map f v, occ)
+  | MLcofixpoint (i, ids, v, occ) -> MLcofixpoint (i, ids, Array.map f v, occ)
   | MLapp (a, l) -> MLapp (f a, List.map f l)
   | MLcons (typ, c, l, occ) -> MLcons (typ, c, List.map f l, occ)
   | MLtuple l -> MLtuple (List.map f l)
@@ -1135,13 +1137,10 @@ let rec ast_map_types f = function
         ast_map_types f body )
     in
     MLcase (f t, ast_map_types f a, Array.map branch v, occ)
-  | MLfix (i, ids, v, is_cofix, occ) ->
-    MLfix
-      ( i,
-        Array.map (fun (id, t) -> (id, f t)) ids,
-        Array.map (ast_map_types f) v,
-        is_cofix,
-        occ )
+  | MLfixpoint (i, ids, v, occ) ->
+    MLfixpoint (i, Array.map (fun (id, t) -> (id, f t)) ids, Array.map (ast_map_types f) v, occ)
+  | MLcofixpoint (i, ids, v, occ) ->
+    MLcofixpoint (i, Array.map (fun (id, t) -> (id, f t)) ids, Array.map (ast_map_types f) v, occ)
   | MLapp (a, l) -> MLapp (ast_map_types f a, List.map (ast_map_types f) l)
   | MLmagic (m, a, mocc) -> MLmagic (map_magic_types f m, ast_map_types f a, mocc)
   | MLparray (t, def) ->
@@ -1390,9 +1389,8 @@ let ast_map_lift f n = function
   | MLletin (i, t, a, b, occ) -> MLletin (i, t, f n a, f (n + 1) b, occ)
   | MLcase (typ, a, v, occ) ->
     MLcase (typ, f n a, Array.map (ast_map_lift_branch f n) v, occ)
-  | MLfix (i, ids, v, is_cofix, occ) ->
-    let k = Array.length ids in
-    MLfix (i, ids, Array.map (f (k + n)) v, is_cofix, occ)
+  | MLfixpoint (i, ids, v, occ) -> MLfixpoint (i, ids, Array.map (f (Array.length ids + n)) v, occ)
+  | MLcofixpoint (i, ids, v, occ) -> MLcofixpoint (i, ids, Array.map (f (Array.length ids + n)) v, occ)
   | MLapp (a, l) -> MLapp (f n a, List.map (f n) l)
   | MLcons (typ, c, l, occ) -> MLcons (typ, c, List.map (f n) l, occ)
   | MLtuple l -> MLtuple (List.map (f n) l)
@@ -1419,7 +1417,7 @@ let ast_iter f = function
   | MLcase (_, a, v, _) ->
     f a;
     Array.iter (ast_iter_branch f) v
-  | MLfix (i, ids, v, _, _) -> Array.iter f v
+  | MLfixpoint (i, ids, v, _) | MLcofixpoint (i, ids, v, _) -> Array.iter f v
   | MLapp (a, l) ->
     f a;
     List.iter f l
@@ -1469,7 +1467,7 @@ let nb_occur_match =
           0
           v
     | MLletin (_, _, a, b, _) -> nb k a + nb (k + 1) b
-    | MLfix (_, ids, v, _, _) ->
+    | MLfixpoint (_, ids, v, _) | MLcofixpoint (_, ids, v, _) ->
       let k = k + Array.length ids in
       Array.fold_left (fun r a -> r + nb k a) 0 v
     | MLlam (_, _, a) -> nb (k + 1) a
@@ -1514,10 +1512,12 @@ let dump_unused_vars a =
       let e' = ren env e in
       let br' = Array.Smart.map (ren_branch env) br in
       if e' == e && br' == br then a else MLcase (t, e', br', occ)
-    | MLfix (i, ids, v, is_cofix, occ) ->
-      let env' = List.init (Array.length ids) (fun _ -> ref false) @ env in
-      let v' = Array.Smart.map (ren env') v in
-      if v' == v then a else MLfix (i, ids, v', is_cofix, occ)
+    | MLfixpoint (i, ids, v, occ) ->
+      let v' = ren_fix env ids v in
+      if v' == v then a else MLfixpoint (i, ids, v', occ)
+    | MLcofixpoint (i, ids, v, occ) ->
+      let v' = ren_fix env ids v in
+      if v' == v then a else MLcofixpoint (i, ids, v', occ)
     | MLapp (b, l) ->
       let b' = ren env b
       and l' = List.Smart.map (ren env) l in
@@ -1542,6 +1542,9 @@ let dump_unused_vars a =
      |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> a
+  and ren_fix env ids v =
+    let env' = List.init (Array.length ids) (fun _ -> ref false) @ env in
+    Array.Smart.map (ren env') v
   and ren_branch env ((ids, r, p, b) as tr) =
     let occs = List.map (fun _ -> ref false) ids in
     let b' = ren (List.rev_append occs env) b in
@@ -1581,7 +1584,7 @@ let rec ast_size e =
   | MLletin (_, _, a, b, _) -> ast_size a + ast_size b
   | MLcons (_, _, a, _) | MLtuple a -> ast_sizes a
   | MLcase (_, s, brs, _) -> Array.fold_left (fun n (_, _, _, b) -> n + ast_size b) (ast_size s) brs
-  | MLfix (_, _, bs, _, _) -> Array.fold_left (fun n b -> n + ast_size b) 0 bs
+  | MLfixpoint (_, _, bs, _) | MLcofixpoint (_, _, bs, _) -> Array.fold_left (fun n b -> n + ast_size b) 0 bs
   | _ -> 0
 
 and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
@@ -2253,12 +2256,8 @@ let rec simpl o = function
       simpl o (ast_subst c e)
     else
       MLletin (id, t, simpl o c, e, occ)
-  | MLfix (i, ids, c, is_cofix, occ) ->
-    let n = Array.length ids in
-    if ast_occurs_itvl 1 n c.(i) then
-      MLfix (i, ids, Array.map (simpl o) c, is_cofix, occ)
-    else
-      simpl o (ast_lift (-n) c.(i))
+  | MLfixpoint (i, ids, c, occ) -> simpl_fix o i ids c (fun c -> MLfixpoint (i, ids, c, occ))
+  | MLcofixpoint (i, ids, c, occ) -> simpl_fix o i ids c (fun c -> MLcofixpoint (i, ids, c, occ))
     (* Dummy fixpoint *)
   (* An exception never yields a value, so there is no representation gap for
      a coercion around it to describe. *)
@@ -2271,6 +2270,12 @@ let rec simpl o = function
 
 (** Simplifies function application, performing beta-reduction and pushing
     applications into let/case. Invariant: argument list [a] is non-empty. *)
+(* A fixpoint group rebuilt by [fix] from new bodies, or its selected body
+   alone when that body does not recurse. *)
+and simpl_fix o i ids c fix =
+  let n = Array.length ids in
+  if ast_occurs_itvl 1 n c.(i) then fix (Array.map (simpl o) c) else simpl o (ast_lift (-n) c.(i))
+
 and simpl_app o a = function
   | MLlam (Dummy, ty, t) -> simpl o (MLapp (ast_pop t, List.tl a))
   | MLlam (id, ty, t) ->
@@ -2512,32 +2517,15 @@ let sign_of_args a =
 
 (** Removes all dummy (erased) bindings and arguments from an ML AST. *)
 let rec kill_dummy = function
-  | MLfix (i, fi, c, is_cofix, occ) ->
-    ( try
-        let k, c = kill_dummy_fix i c [] in
-        let fix = MLfix (i, fi, c, is_cofix, occ) in
-        Option.cata (fun k -> ast_subst fix (kill_dummy_args k 1 (fresh_rel 1))) fix k
-      with Impossible -> MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ) )
-  | MLapp (MLfix (i, fi, c, is_cofix, occ), a) ->
-    let a = List.map kill_dummy a in
-    (* Heuristics: if some arguments are implicit args, we try to eliminate the
-       corresponding arguments of the fixpoint *)
-    ( try
-        let k, c = kill_dummy_fix i c (sign_of_args a) in
-        let fake = MLapp (fresh_rel 1, List.map (ast_lift 1) a) in
-        let fake' = Option.cata (fun k -> kill_dummy_args k 1 fake) fake k in
-        ast_subst (MLfix (i, fi, c, is_cofix, occ)) fake'
-      with Impossible ->
-        MLapp (MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ), a) )
-  | MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e, let_occ) ->
-    ( try
-        let k, c = kill_dummy_fix i c [] in
-        let e = kill_dummy (Option.cata (fun k -> kill_dummy_args k 1 e) e k) in
-        MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e, let_occ)
-      with Impossible ->
-        MLletin
-          (id, t, MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ), kill_dummy e, let_occ)
-    )
+  | MLfixpoint (i, fi, c, occ) -> kill_dummy_fix_term i c (fun c -> MLfixpoint (i, fi, c, occ))
+  | MLcofixpoint (i, fi, c, occ) -> kill_dummy_fix_term i c (fun c -> MLcofixpoint (i, fi, c, occ))
+  | MLapp (MLfixpoint (i, fi, c, occ), a) -> kill_dummy_fix_app i c (fun c -> MLfixpoint (i, fi, c, occ)) a
+  | MLapp (MLcofixpoint (i, fi, c, occ), a) ->
+    kill_dummy_fix_app i c (fun c -> MLcofixpoint (i, fi, c, occ)) a
+  | MLletin (id, t, MLfixpoint (i, fi, c, occ), e, let_occ) ->
+    kill_dummy_fix_let i c (fun c -> MLfixpoint (i, fi, c, occ)) (fun b e -> MLletin (id, t, b, e, let_occ)) e
+  | MLletin (id, t, MLcofixpoint (i, fi, c, occ), e, let_occ) ->
+    kill_dummy_fix_let i c (fun c -> MLcofixpoint (i, fi, c, occ)) (fun b e -> MLletin (id, t, b, e, let_occ)) e
   | MLletin (id, t, c, e, occ) ->
     ( try
         let k, c = kill_dummy_lams [] (kill_dummy_hd c) in
@@ -2548,6 +2536,33 @@ let rec kill_dummy = function
   | a -> ast_map kill_dummy a
 
 (** Like [kill_dummy] but only acts on head lambdas and let-ins. *)
+(* A fixpoint group selected at [i] with bodies [c], rebuilt by [fix] from
+   new bodies: the three shapes [kill_dummy] prunes a fixpoint in. *)
+and kill_dummy_fix_term i c fix =
+  try
+    let k, c = kill_dummy_fix i c [] in
+    let fix = fix c in
+    Option.cata (fun k -> ast_subst fix (kill_dummy_args k 1 (fresh_rel 1))) fix k
+  with Impossible -> fix (Array.map kill_dummy c)
+
+and kill_dummy_fix_app i c fix a =
+  let a = List.map kill_dummy a in
+  (* Heuristics: if some arguments are implicit args, we try to eliminate the
+     corresponding arguments of the fixpoint *)
+  try
+    let k, c = kill_dummy_fix i c (sign_of_args a) in
+    let fake = MLapp (fresh_rel 1, List.map (ast_lift 1) a) in
+    let fake' = Option.cata (fun k -> kill_dummy_args k 1 fake) fake k in
+    ast_subst (fix c) fake'
+  with Impossible -> MLapp (fix (Array.map kill_dummy c), a)
+
+and kill_dummy_fix_let i c fix letin e =
+  try
+    let k, c = kill_dummy_fix i c [] in
+    let e = kill_dummy (Option.cata (fun k -> kill_dummy_args k 1 e) e k) in
+    letin (fix c) e
+  with Impossible -> letin (fix (Array.map kill_dummy c)) (kill_dummy e)
+
 and kill_dummy_hd = function
   | MLlam (id, ty, e) -> MLlam (id, ty, kill_dummy_hd e)
   | MLletin (id, t, c, e, occ) ->
@@ -2666,7 +2681,7 @@ let general_optimize_fix f ids n args m c occ =
   in
   let new_f = anonym_tmp_lams (MLapp (fresh_rel (n + m + 1), args_f)) new_tys in
   let new_c = named_lams ids (normalize (MLapp (ast_subst new_f c, args))) in
-  MLfix (0, [|f|], [|new_c|], false, occ)
+  MLfixpoint (0, [|f|], [|new_c|], occ)
 
 (** Optimizes fixpoint definitions by inlining small recursive calls and
     eta-reducing. *)
@@ -2682,7 +2697,7 @@ let optimize_fix a =
       match
         a'
       with
-      | MLfix (_, [|f|], [|c|], _, occ) ->
+      | MLfixpoint (_, [|f|], [|c|], occ) | MLcofixpoint (_, [|f|], [|c|], occ) ->
         (* The fixpoint calls itself under the definition's binders, passing
            each on -- a binder erasure kept, a type binder under
            Conservative Types, as the dummy it stands for, as extraction
@@ -2692,13 +2707,13 @@ let optimize_fix a =
         in
         let new_f = MLapp (fresh_rel (n + 1), args) in
         let new_c = named_lams ids (normalize (ast_subst new_f c)) in
-        MLfix (0, [|f|], [|new_c|], false, occ)
+        MLfixpoint (0, [|f|], [|new_c|], occ)
       | MLapp (a', args) ->
         let m = List.length args in
         ( match a' with
-        | MLfix (_, _, _, _, _)
+        | MLfixpoint (_, _, _, _) | MLcofixpoint (_, _, _, _)
           when test_eta_args_lift 0 n args && not (ast_occurs_itvl 1 m a') -> a'
-        | MLfix (_, [|f|], [|c|], _, occ) ->
+        | MLfixpoint (_, [|f|], [|c|], occ) | MLcofixpoint (_, [|f|], [|c|], occ) ->
           (try general_optimize_fix f ids n args m c occ with Impossible -> a)
         | _ -> a )
       | _ -> a
@@ -2716,7 +2731,7 @@ let rec ml_size = function
   | MLlam (_, _, t) -> 1 + ml_size t
   | MLcons (_, _, l, _) | MLtuple l -> ml_size_list l
   | MLcase (_, t, pv, _) -> 1 + ml_size t + ml_size_branch ml_size pv
-  | MLfix (_, _, f, _, _) -> ml_size_array f
+  | MLfixpoint (_, _, f, _) | MLcofixpoint (_, _, f, _) -> ml_size_array f
   | MLletin (_, _, _, t, _) -> ml_size t
   | MLmagic (_, t, _) -> ml_size t
   | MLparray (t, def) -> ml_size_array t + ml_size def
@@ -2735,7 +2750,7 @@ and ml_size_array a = Array.fold_left (fun a t -> a + ml_size t) 0 a
 
 (** Checks if an ML expression is a fixpoint definition. *)
 let is_fix = function
-  | MLfix _ -> true
+  | MLfixpoint _ | MLcofixpoint _ -> true
   | _ -> false
 
 (** {2 Strictness} *)
@@ -2775,7 +2790,7 @@ let rec non_stricts add cand = function
   | MLletin (_, _, t1, t2, _) ->
     let cand = non_stricts false cand t1 in
     pop 1 (non_stricts add (lift 1 cand) t2)
-  | MLfix (_, i, f, _, _) ->
+  | MLfixpoint (_, i, f, _) | MLcofixpoint (_, i, f, _) ->
     let n = Array.length i in
     let cand = lift n cand in
     let cand = Array.fold_left (non_stricts false) cand f in
@@ -2897,13 +2912,10 @@ let remap_tvars f =
                 remap_ast body ) )
             branches,
           occ )
-    | MLfix (idx, ids_tys, bodies, is_cofix, occ) ->
-      MLfix
-        ( idx,
-          Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys,
-          Array.map remap_ast bodies,
-          is_cofix,
-          occ )
+    | MLfixpoint (idx, ids_tys, bodies, occ) ->
+      MLfixpoint (idx, Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys, Array.map remap_ast bodies, occ)
+    | MLcofixpoint (idx, ids_tys, bodies, occ) ->
+      MLcofixpoint (idx, Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys, Array.map remap_ast bodies, occ)
     | MLmagic (m, a, mocc) -> MLmagic (m, remap_ast a, mocc)
     | MLparray (arr, def) -> MLparray (Array.map remap_ast arr, remap_ast def)
     | a -> a (* MLrel, MLexn, MLdummy, MLaxiom, MLuint, MLfloat, MLstring, MLnumeral *)

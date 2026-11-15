@@ -31,11 +31,17 @@ and escapes ~n_outer k t =
     | MLrel (i, _) -> i = k
     | MLapp (f, args) when (match callee f with MLrel (i, _) -> i = k | _ -> false) ->
       List.exists (go k) args
-    | MLapp (MLfix (x, ids, bodies, cofix, _), args)
-      when List.length args >= arity bodies.(x) && group ~n_outer ~cofix ids bodies = In_place ->
+    | MLapp (MLfixpoint (x, ids, bodies, _), args)
+      when List.length args >= arity bodies.(x) && group ~n_outer ~cofix:false ids bodies = In_place ->
       in_place k bodies || List.exists (go k) args
-    | MLletin (_, _, MLfix (_, ids, bodies, cofix, _), b, _)
-      when group ~n_outer ~continuation:b ~cofix ids bodies = In_place ->
+    | MLapp (MLcofixpoint (x, ids, bodies, _), args)
+      when List.length args >= arity bodies.(x) && group ~n_outer ~cofix:true ids bodies = In_place ->
+      in_place k bodies || List.exists (go k) args
+    | MLletin (_, _, MLfixpoint (_, ids, bodies, _), b, _)
+      when group ~n_outer ~continuation:b ~cofix:false ids bodies = In_place ->
+      in_place k bodies || go (k + 1) b
+    | MLletin (_, _, MLcofixpoint (_, ids, bodies, _), b, _)
+      when group ~n_outer ~continuation:b ~cofix:true ids bodies = In_place ->
       in_place k bodies || go (k + 1) b
     (* A bind generated as sequencing runs its continuation's body inline. *)
     | MLapp (MLglob use, (_ :: _ :: _ as args)) when sequential_bind use -> (
@@ -50,7 +56,8 @@ and escapes ~n_outer k t =
     | MLapp (f, args) -> go k f || List.exists (go k) args
     | MLmagic (_, a, _) -> go k a
     | MLlam (_, _, body) -> Mlutil.ast_occurs (k + 1) body
-    | MLfix (_, ids, bodies, _, _) -> Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies
+    | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->
+      Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies
     | MLletin (_, _, a, b, _) -> go k a || go (k + 1) b
     | MLcase (_, scrut, branches, _) ->
       go k scrut || Array.exists (fun (ids, _, _, body) -> go (k + List.length ids) body) branches

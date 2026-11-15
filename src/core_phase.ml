@@ -126,7 +126,7 @@ let check_zonked p =
     has. *)
 let check_recursive_groups p =
   let rec check_body = function
-    | MLfix (i, ids, funs, _, _) as e ->
+    | MLfixpoint (i, ids, funs, _) | MLcofixpoint (i, ids, funs, _) as e ->
       if Array.length ids <> Array.length funs || Array.length ids = 0 then
         fail "has a local recursive group whose names and bodies disagree";
       if i < 0 || i >= Array.length ids then fail "selects a recursive function its group lacks";
@@ -218,7 +218,7 @@ let iter_occurrences f p =
               | MLcase (_, _, _, o) -> f fd.fd_ref "match" o
               | MLcons (_, _, _, o) -> f fd.fd_ref "construction" o
               | MLmagic (_, _, o) -> f fd.fd_ref "coercion" o
-              | MLfix (_, _, _, _, o) -> f fd.fd_ref "local fixpoint" o
+              | MLfixpoint (_, _, _, o) | MLcofixpoint (_, _, _, o) -> f fd.fd_ref "local fixpoint" o
               | MLglob use -> f fd.fd_ref "use" (Global_use.occurrence use)
               | _ -> () );
               Mlutil.ast_iter walk e

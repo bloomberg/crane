@@ -203,7 +203,7 @@ let classify ~effects ~callee body =
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) ~tail b) branches
     | MLmagic (_, a, _) -> walk ~tail a
     | MLlam _ -> ()
-    | MLfix (_, ids, bodies, _, _) ->
+    | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->
       Array.iter
         (fun f ->
           let n, b = split_params 0 f in
@@ -278,7 +278,8 @@ let modulo_cons_chains ~effects ~member ~bodies self =
         Array.fold_left
           (fun n (ids, _, _, b) -> n + under (List.length ids) b)
           (calls ~depth s) branches
-      | MLfix (_, ids, funs, _, _) -> Array.fold_left (fun n b -> n + under (Array.length ids) b) 0 funs
+      | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+        Array.fold_left (fun n b -> n + under (Array.length ids) b) 0 funs
       | e ->
         let n = ref 0 in
         Mlutil.ast_iter (fun c -> n := !n + calls ~depth c) e;
@@ -365,7 +366,7 @@ let rec iter_scoped f lex e =
   | MLcase (_, s, branches, _) ->
     iter_scoped f lex s;
     Array.iter (fun (ids, _, _, b) -> iter_scoped f (bind (List.rev ids) lex) b) branches
-  | MLfix (_, ids, funs, _, _) ->
+  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
     (* The last function of the group is the innermost binder. *)
     let lex = bind (List.rev_map (fun (g, ty) -> (Id g, ty)) (Array.to_list ids)) lex in
     Array.iter (iter_scoped f lex) funs
@@ -413,7 +414,8 @@ let value_levels ~heads ~depth e =
     | MLcase (_, s, branches, _) ->
       go d s;
       Array.iter (fun (ids, _, _, b) -> go (d + List.length ids) b) branches
-    | MLfix (_, ids, funs, _, _) -> Array.iter (go (d + Array.length ids)) funs
+    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+      Array.iter (go (d + Array.length ids)) funs
     | e -> Mlutil.ast_iter (go d) e
   in
   go 0 e;
@@ -509,7 +511,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
           (arguments e)
       | _ -> () );
       match e with
-      | MLlam _ | MLfix _ -> ()
+      | MLlam _ | MLfixpoint _ | MLcofixpoint _ -> ()
       | MLletin (_, _, a, b, _) ->
         go ~enters:true d a;
         go ~enters (d + 1) b
@@ -566,7 +568,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       targets ~depth e <> []
       ||
       match e with
-      | MLfix (_, ids, funs, _, _) ->
+      | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
         Array.exists
           (fun f ->
             let arity, b = split_params 0 f in
@@ -592,7 +594,8 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | _ :: _ as called -> called
       | [] -> (
         match e with
-        | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix ->
+        | MLapp ((MLfixpoint (_, _, _, occ) | MLcofixpoint (_, _, _, occ) as fix), _)
+          when reaches depth fix ->
           [{target = Entering occ; occurrence = occ}]
         | MLcase (ty, _, branches, _) when match_bound_in_place ty branches ->
           List.concat_map
@@ -638,7 +641,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | _ :: _ as calls -> calls_read depth calls (arguments e)
       | [] -> (
         match e with
-        | MLapp ((MLfix _ as fix), args) when reaches depth fix ->
+        | MLapp ((MLfixpoint _ | MLcofixpoint _ as fix), args) when reaches depth fix ->
           through_closures [] (value_levels ~heads ~depth fix) @ calls_read depth [] args
         | MLcase (ty, _, branches, _) when match_bound_in_place ty branches ->
           List.concat_map
@@ -668,13 +671,17 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     | MLletin (_, _, a, b, site) ->
       let enclosing = resuming ~site ~after:(ending depth a) ~arguments_read:(arguments_read depth a) depth b in
       go depth a;
-      let rec closure = function MLlam _ | MLfix _ -> true | MLmagic (_, e, _) -> closure e | _ -> false in
+      let rec closure = function
+        | MLlam _ | MLfixpoint _ | MLcofixpoint _ -> true
+        | MLmagic (_, e, _) -> closure e
+        | _ -> false
+      in
       let closures = if closure a then (depth, a) :: closures else closures in
       (* The let binding a partner's copy the machine enters: its calls in
          the body are the copy's, a member of the fixpoint at that level. *)
       let targets, heads, fixpoints, captures =
         match a with
-        | MLfix (_, [|_|], [|_|], false, occ) when entered occ ->
+        | MLfixpoint (_, [|_|], [|_|], occ) when entered occ ->
           let level = depth in
           let rec entering ~depth:d = function
             | MLmagic (_, e, _) -> entering ~depth:d e
@@ -705,7 +712,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     | MLcase (_, s, branches, _) ->
       go depth s;
       Array.iter (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
-    | MLfix (_, ids, funs, _, occ) ->
+    | MLfixpoint (_, ids, funs, occ) | MLcofixpoint (_, ids, funs, occ) ->
       (* The member [m] is bound at level [depth + m], the last innermost. *)
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
@@ -745,7 +752,8 @@ let flow_fixpoints ~names depth body =
     | MLcase (_, s, branches, _) ->
       mentions depth s
       || Array.exists (fun (ids, _, _, b) -> mentions (depth + List.length ids) b) branches
-    | MLfix (_, ids, funs, _, _) -> Array.exists (mentions (depth + Array.length ids)) funs
+    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+      Array.exists (mentions (depth + Array.length ids)) funs
     | e ->
       let found = ref false in
       Mlutil.ast_iter (fun c -> if mentions depth c then found := true) e;
@@ -753,7 +761,7 @@ let flow_fixpoints ~names depth body =
   in
   let found = ref [] in
   let rec flow depth = function
-    | MLfix (_, ids, funs, _, occ) ->
+    | MLfixpoint (_, ids, funs, occ) | MLcofixpoint (_, ids, funs, occ) ->
       if Array.exists (mentions (depth + Array.length ids)) funs then found := occ :: !found
     | MLlam _ -> ()
     | MLletin (_, _, a, b, _) ->
@@ -779,7 +787,8 @@ let rec iter_under f depth e =
   | MLcase (_, s, branches, _) ->
     iter_under f depth s;
     Array.iter (fun (ids, _, _, b) -> iter_under f (depth + List.length ids) b) branches
-  | MLfix (_, ids, funs, _, _) -> Array.iter (iter_under f (depth + Array.length ids)) funs
+  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+    Array.iter (iter_under f (depth + Array.length ids)) funs
   | e -> Mlutil.ast_iter (iter_under f depth) e
 
 (* The calls of each local fixpoint in [body] made where it is bound, under
@@ -789,11 +798,12 @@ let bound_calls body =
   let found = ref [] in
   let rec walk e =
     ( match e with
-    | MLletin (_, _, MLfix (_, _, _, _, occurrence), b, _) ->
+    | MLletin (_, _, (MLfixpoint (_, _, _, occurrence) | MLcofixpoint (_, _, _, occurrence)), b, _) ->
       let reads = ref [] in
       iter_under (fun depth -> function MLrel (k, read) when k = depth + 1 -> reads := read :: !reads | _ -> ()) 0 b;
       found := (occurrence, List.rev !reads) :: !found
-    | MLapp (MLfix (_, _, _, _, occurrence), _) -> found := (occurrence, [occurrence]) :: !found
+    | MLapp ((MLfixpoint (_, _, _, occurrence) | MLcofixpoint (_, _, _, occurrence)), _) ->
+      found := (occurrence, [occurrence]) :: !found
     | _ -> () );
     Mlutil.ast_iter walk e
   in
@@ -882,7 +892,9 @@ let local_groups ~effects defs =
       let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
       let bound = bound_calls body in
       iter_scoped
-        (fun lex -> function MLfix (_, ids, funs, _, occ) -> plan ~bound r lex ids funs occ | _ -> ())
+        (fun lex -> function
+          | MLfixpoint (_, ids, funs, occ) | MLcofixpoint (_, ids, funs, occ) -> plan ~bound r lex ids funs occ
+          | _ -> ())
         lex body )
     defs;
   List.rev !plans
@@ -976,9 +988,9 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
         List.iter operand (List.rev rest);
         go (match pos with Returning | Returned -> Returned | Binding | Operand -> Operand) value
       | [] -> () )
-    | MLapp (MLfix _, args) -> (
+    | MLapp ((MLfixpoint _ | MLcofixpoint _), args) -> (
       match pos with Operand | Returned -> () | Returning | Binding -> List.iter operand args )
-    | MLfix _ | MLlam _ -> ()
+    | MLfixpoint _ | MLcofixpoint _ | MLlam _ -> ()
     | MLapp (f, args) ->
       operand f;
       List.iter operand args
@@ -1172,7 +1184,7 @@ let adopt_calls def sites body =
   | copy, inner ->
     let name = Names.Id.of_string (Names.Id.to_string (Table.safe_basename_of_global partner) ^ "_entry") in
     let entered = Occurrence.fresh () in
-    let fixpoint = MLfix (0, [|(name, def.fd_type)|], [|copy|], false, entered) in
+    let fixpoint = MLfixpoint (0, [|(name, def.fd_type)|], [|copy|], entered) in
     Ok (Mlutil.named_lams params (MLletin (Id name, def.fd_type, fixpoint, inner, Occurrence.fresh ())), entered)
   | exception Unspliced why -> Error why
 

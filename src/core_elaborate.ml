@@ -636,7 +636,7 @@ let rec walk w ?(position = no_position) lex e =
         walk_type w lex rty;
         go ~position lex body )
       branches
-  | MLfix (_, fs, defs, _, _) ->
+  | MLfixpoint (_, fs, defs, _) | MLcofixpoint (_, fs, defs, _) ->
     Array.iter (fun (_, ty) -> walk_type w lex ty) fs;
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
@@ -707,6 +707,7 @@ let declaration_scope ty body =
 let rec inline_aliases ~n_outer lex e =
   let go = inline_aliases ~n_outer in
   let under ids body = go (push Lexenv.Value ids lex) body in
+  let fix_binders fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
   match e with
   | MLletin (x, ty, (MLlam _ as a), body, occ) -> (
     match let_lambda ~lex ~n_outer ty a body with
@@ -724,9 +725,8 @@ let rec inline_aliases ~n_outer lex e =
         go lex scrut,
         Array.map (fun (ids, rty, pat, body) -> (ids, rty, pat, under (List.rev ids) body)) branches,
         occ )
-  | MLfix (i, fs, defs, cofix, occ) ->
-    let fs' = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
-    MLfix (i, fs, Array.map (under fs') defs, cofix, occ)
+  | MLfixpoint (i, fs, defs, occ) -> MLfixpoint (i, fs, Array.map (under (fix_binders fs)) defs, occ)
+  | MLcofixpoint (i, fs, defs, occ) -> MLcofixpoint (i, fs, Array.map (under (fix_binders fs)) defs, occ)
   | e -> Mlutil.ast_map (go lex) e
 
 let generated_definition ty body =

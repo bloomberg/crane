@@ -236,9 +236,10 @@ and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
     what the use instantiates the global's type scheme at
     ({!global_use}); [MLcons] a constructor application (its
     {!ml_type} records the constructed type); [MLtuple] an anonymous tuple;
-    [MLcase] a pattern match (matched-head type, scrutinee, branches); [MLfix]
+    [MLcase] a pattern match (matched-head type, scrutinee, branches); [MLfixpoint]
     a block of mutually recursive fixpoints (index of the selected component,
-    the name/type of each, their bodies, and a flag distinguishing cofixpoints);
+    the name/type of each, and their bodies) and [MLcofixpoint] the same for
+    cofixpoints;
     [MLexn] a runtime error raised for an unrealisable term; [MLdummy] the value
     of an erased/logical slot; [MLaxiom] a value left abstract by an axiom;
     [MLmagic] a marker at a type gap opened by erasure — either an unsafe
@@ -264,7 +265,7 @@ and ml_ast =
   | MLletin of ml_ident * ml_type * ml_ast * ml_ast * Occurrence.t
       (** The binder, its type, the bound term and the body, and the
           occurrence telling this let apart from every other one in the
-          program, kept by a pass rebuilding it as [MLfix]'s is: two lets
+          program, kept by a pass rebuilding it as [MLfixpoint]'s is: two lets
           bound to one name in one definition are still two. *)
   | MLglob of global_use
   | MLcons of ml_type * GlobRef.t * ml_ast list * Occurrence.t
@@ -278,12 +279,13 @@ and ml_ast =
           occurrence telling this match apart from every other one in the
           program, kept by a pass rebuilding it as [MLletin]'s is: the
           binders of one branch at one level in two matches are still two. *)
-  | MLfix of int * (Id.t * ml_type) array * ml_ast array * bool * Occurrence.t
-      (** The function selected, the group's binders and bodies, whether it
-          is a cofixpoint, and the occurrence telling this fixpoint apart
-          from every other one in the program: a pass rebuilding it keeps
-          it, so the plan made of the fixpoint and the code made of it name
-          one fixpoint. *)
+  | MLfixpoint of int * (Id.t * ml_type) array * ml_ast array * Occurrence.t
+      (** The function selected, the group's binders and bodies, and the
+          occurrence telling this fixpoint apart from every other one in the
+          program: a pass rebuilding it keeps it, so the plan made of the
+          fixpoint and the code made of it name one fixpoint. *)
+  | MLcofixpoint of int * (Id.t * ml_type) array * ml_ast array * Occurrence.t
+      (** A cofixpoint group, with the fields of [MLfixpoint]. *)
   | MLexn of string
   | MLdummy of kill_reason
   | MLaxiom of string

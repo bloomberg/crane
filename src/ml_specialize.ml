@@ -288,7 +288,7 @@ let specialize f fd use args =
           (* [b_rec] has exactly [k] lambdas, and the lambda among [args_b]
              is a value, so it is substituted for its parameter. *)
           let body = Option.get (instantiate b_rec args_b) in
-          MLfix (0, [|(fid, spec_ty)|], [|Mlutil.named_lams qs body|], false, Occurrence.fresh ())
+          MLfixpoint (0, [|(fid, spec_ty)|], [|Mlutil.named_lams qs body|], Occurrence.fresh ())
         in
         let rest = List.filteri (fun i _ -> i <> j) args in
         Some (if rest = [] then fix else MLapp (fix, rest))

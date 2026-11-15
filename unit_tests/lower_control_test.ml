@@ -181,7 +181,7 @@ let () =
                (id "y", nat, MLapp (MLrel (3, go_read), [fresh_rel 1]), call back' [fresh_rel 6; fresh_rel 1], Occurrence.fresh ())
            ) |], Occurrence.fresh ())
   in
-  let fixpoint = MLfix (0, [|(Id.of_string "go", Tarr (nat, nat))|], [|MLlam (id "k", nat, go_body)|], false, fix) in
+  let fixpoint = MLfixpoint (0, [|(Id.of_string "go", Tarr (nat, nat))|], [|MLlam (id "k", nat, go_body)|], fix) in
   let t = lower_adopting fix (MLapp (fixpoint, [fresh_rel 1])) in
   ( match t with
   | Term.Entry {entered; name = None; scope = Continue c} ->

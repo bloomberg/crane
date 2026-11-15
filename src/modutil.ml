@@ -172,7 +172,7 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
      |MLapp _
      |MLletin _
      |MLtuple _
-     |MLfix _
+     |MLfixpoint _ | MLcofixpoint _
      |MLexn _
      |MLdummy _
      |MLaxiom _
@@ -361,7 +361,7 @@ let get_decl_in_structure r struc =
     occurs exactly once it is substituted; otherwise a let-in redex is created
     for clarity) and iota redexes, plus some other optimizations. *)
 
-(** Convert member [i] of a Dfix group to an MLfix term for inlining. *)
+(** Convert member [i] of a Dfix group to an MLfixpoint term for inlining. *)
 let dfix_to_mlfix fds i =
   let rv = Array.of_list (List.map (fun fd -> fd.fd_ref) fds) in
   let rec make_subst n s =
@@ -382,7 +382,7 @@ let dfix_to_mlfix fds i =
       (List.map (fun fd -> (Label.to_id (label_of_r fd.fd_ref), fd.fd_type)) fds)
   in
   let c = Array.of_list (List.map (fun fd -> subst 0 fd.fd_body) fds) in
-  MLfix (i, ids, c, false, Occurrence.fresh ())
+  MLfixpoint (i, ids, c, Occurrence.fresh ())
 
 (* A let-fix promoted to its declaration ([local_length]'s inner [go]) keeps
    the binder annotations it had inside it, where extraction may have left a
@@ -409,7 +409,7 @@ let decl_of_term r a t =
   match dump_unused_vars (optimize_fix a) with
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
-  | MLfix (0, _, [|c|], _, _) when singleton_instance_class r = None ->
+  | MLfixpoint (0, _, [|c|], _) | MLcofixpoint (0, _, [|c|], _) when singleton_instance_class r = None ->
     (* Each call of itself is a use of its own, told apart from the others
        by its occurrence. *)
     let c = Mlutil.ast_subst_each (fun () -> MLglob (Mlutil.self_reference r)) c in
@@ -439,7 +439,7 @@ let rec optim_se top to_appear s = function
         fds
     in
     (* This fake body ensures that no fixpoint will be auto-inlined. *)
-    let fake_body = MLfix (0, [||], [||], false, Occurrence.fresh ()) in
+    let fake_body = MLfixpoint (0, [||], [||], Occurrence.fresh ()) in
     List.iteri
       (fun i fd ->
         if inline fd.fd_ref fake_body then

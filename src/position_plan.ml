@@ -64,11 +64,11 @@ let region ~outer ~reads body =
     (* A sequential bind in an expression is the statements it desugars to. *)
     | MLapp (MLglob use, _ :: _ :: _) when is_sequential_effect Core_effects.Bind use -> stmts ~ret lex e
     | MLapp (MLglob use, args) -> call ~pos ~ret ~slot lex use args
-    | MLapp ((MLfix _ as f), args) ->
+    | MLapp ((MLfixpoint _ | MLcofixpoint _ as f), args) ->
       stmts ~ret lex f;
       List.iter (expr ~pos:None ~ret lex) args
     | MLletin _ -> stmts ~ret:pos lex e
-    | MLfix _ -> stmts ~ret lex e
+    | MLfixpoint _ | MLcofixpoint _ -> stmts ~ret lex e
     | MLcase (typ, scrut, branches, occ) -> (
       expr ~pos:None ~ret lex scrut;
       match Core_elaborate.match_kind typ branches occ with
@@ -147,7 +147,7 @@ let region ~outer ~reads body =
       expr ~pos:None ~ret lex scrut;
       let slot = match Core_elaborate.match_kind typ branches occ with Match_kind.Record _ -> slot | _ -> empty_slot in
       Array.iter (branch ~ret ~slot lex) branches
-    | MLfix (_, fs, defs, _, _) ->
+    | MLfixpoint (_, fs, defs, _) | MLcofixpoint (_, fs, defs, _) ->
       let lex = push (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) lex in
       Array.iter (expr ~pos:None ~ret lex) defs
     (* A sequential bind is its action, generated at no position, then its

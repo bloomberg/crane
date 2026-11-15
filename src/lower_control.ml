@@ -69,7 +69,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       if Option.has_some (callee ~depth e) then incr n
       else
         match e with
-        | MLapp (MLfix (_, _, _, _, o), args) when adopts o ->
+        | MLapp ((MLfixpoint (_, _, _, o) | MLcofixpoint (_, _, _, o)), args) when adopts o ->
           incr n;
           List.iter (walk depth) args
         | MLapp (f, args) ->
@@ -82,7 +82,8 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
         | MLcase (_, s, branches, _) ->
           walk depth s;
           Array.iter (fun (ids, _, _, b) -> walk (depth + List.length ids) b) branches
-        | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
+        | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+          Array.iter (walk (depth + Array.length ids)) funs
         | e -> Mlutil.ast_iter (walk depth) e
     in
     walk depth e;
@@ -113,11 +114,13 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       | None -> Return e
     in
     match e with
-    | MLapp (MLfix (0, [|_|], [|fix|], _, o), args) when adopts o ->
+    | MLapp ((MLfixpoint (0, [|_|], [|fix|], o) | MLcofixpoint (0, [|_|], [|fix|], o)), args)
+      when adopts o ->
       let entered = entered callee depth o fix in
       if List.compare_lengths args entered.parameters <> 0 then Return e
       else Entry {entered; name = None; scope = Continue {target = entered.loop; occurrence = o; arguments = args}}
-    | MLletin (x, ty, (MLfix (0, [|_|], [|fix|], _, o) as a), b, _) when adopts o -> (
+    | MLletin (x, ty, (MLfixpoint (0, [|_|], [|fix|], o) | MLcofixpoint (0, [|_|], [|fix|], o) as a), b, _)
+      when adopts o -> (
       let entered = entered callee depth o fix in
       let arity = List.length entered.parameters in
       (* The let's binder, under [d] binders, names the entry. *)
@@ -182,7 +185,9 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
 let rec fixpoints wanted acc e =
   let acc =
     match e with
-    | MLfix (_, ids, funs, _, occ) when List.exists (Occurrence.equal occ) wanted -> (occ, Array.map snd ids, funs) :: acc
+    | (MLfixpoint (_, ids, funs, occ) | MLcofixpoint (_, ids, funs, occ))
+      when List.exists (Occurrence.equal occ) wanted ->
+      (occ, Array.map snd ids, funs) :: acc
     | _ -> acc
   in
   let acc = ref acc in

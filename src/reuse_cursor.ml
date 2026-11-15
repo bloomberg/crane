@@ -53,7 +53,8 @@ let reads env e =
     | MLletin (_, _, a, b, _) -> go (depth + 1) (go depth acc a) b
     | MLcase (_, s, branches, _) ->
       Array.fold_left (fun acc (ids, _, _, b) -> go (depth + List.length ids) acc b) (go depth acc s) branches
-    | MLfix (_, ids, funs, _, _) -> Array.fold_left (go (depth + Array.length ids)) acc funs
+    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+      Array.fold_left (go (depth + Array.length ids)) acc funs
     | MLapp (f, args) -> List.fold_left (go depth) acc (f :: args)
     | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go depth) acc args
     | MLmagic (_, e, _) -> go depth acc e
@@ -138,7 +139,7 @@ let reads_cell ~field = List.exists (function Whole | Field _ -> true | Pointee 
    value of its own; one that is a handle to a cell holds its own count. *)
 let own_value ty value =
   let rec closure_free = function
-    | MLlam _ | MLfix _ -> false
+    | MLlam _ | MLfixpoint _ | MLcofixpoint _ -> false
     | MLapp (f, args) -> List.for_all closure_free (f :: args)
     | MLcons (_, _, args, _) | MLtuple args -> List.for_all closure_free args
     | MLmagic (_, e, _) -> closure_free e

@@ -250,11 +250,10 @@ let () =
     let s = fresh_rel 1 in
     let at = Occurrence.fresh () in
     let fix =
-      MLfix
+      MLfixpoint
         ( 0,
           [|(Id.of_string "f", Tarr (nat, Tarr (lst, lst)))|],
           [|MLlam (Id (Id.of_string "n"), nat, MLlam (Id (Id.of_string "l"), lst, body))|],
-          false,
           at )
     in
     let root = MLapp (fix, [call "len" [fresh_rel 1]; s]) in
@@ -353,11 +352,10 @@ let () =
 let () =
   let modes ?in_place () =
     let fix =
-      MLfix
+      MLfixpoint
         ( 0,
           [|(Id.of_string "f", Tarr (nat, lst))|],
           [|MLlam (Id (Id.of_string "n"), nat, call "h" [fresh_rel 3])|],
-          false,
           Occurrence.fresh () )
     in
     let root = call "g" [fix] in

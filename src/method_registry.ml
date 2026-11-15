@@ -234,7 +234,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
            returns_target n_bindings branch_body )
          branches )
     || ret_has_shared_epon
-  | MLfix (fix_idx, _, funs, _, _) ->
+  | MLfixpoint (fix_idx, _, funs, _) | MLcofixpoint (fix_idx, _, funs, _) ->
     (* Case 2: Top-level fixpoint (recursive function). Check the body of the
        fixpoint at [fix_idx]. The fixpoint array introduces [n_funs] additional
        binders (the mutually recursive functions). *)

@@ -31,18 +31,18 @@ let thunk_nullary_cofix x ids funs occ =
     in
     let thunk f = MLlam (Id (Id.of_string "u"), unit_ty, call_self 1 (Mlutil.ast_lift 1 f)) in
     let ids = Array.map (fun (id, ty) -> (id, Tarr (unit_ty, ty))) ids in
-    MLapp (MLfix (x, ids, Array.map thunk funs, true, occ), [tt_v])
+    MLapp (MLcofixpoint (x, ids, Array.map thunk funs, occ), [tt_v])
   | _ -> CErrors.anomaly (Pp.str "Fix_shape: a parameterless local cofixpoint needs unit")
 
 (* Bottom-up: every fixpoint's functions get their [let]s floated, then a
    cofixpoint none of whose functions is a lambda is thunked. *)
 let rec expr e =
   match Mlutil.ast_map expr e with
-  | MLfix (x, ids, funs, is_cofix, occ) ->
+  | MLfixpoint (x, ids, funs, occ) -> MLfixpoint (x, ids, Array.map float_lets_under_lams funs, occ)
+  | MLcofixpoint (x, ids, funs, occ) ->
     let funs = Array.map float_lets_under_lams funs in
-    if is_cofix && Array.for_all (function MLlam _ -> false | _ -> true) funs then
-      thunk_nullary_cofix x ids funs occ
-    else MLfix (x, ids, funs, is_cofix, occ)
+    if Array.for_all (function MLlam _ -> false | _ -> true) funs then thunk_nullary_cofix x ids funs occ
+    else MLcofixpoint (x, ids, funs, occ)
   | e -> e
 
 let decl = function

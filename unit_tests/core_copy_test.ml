@@ -23,7 +23,9 @@ let a = Tvar (Schematic, 1)
 let rec occurrences e =
   let here =
     match e with
-    | MLrel (_, o) | MLletin (_, _, _, _, o) | MLcase (_, _, _, o) | MLfix (_, _, _, _, o) -> [o]
+    | MLrel (_, o) | MLletin (_, _, _, _, o) | MLcase (_, _, _, o)
+    | MLfixpoint (_, _, _, o) | MLcofixpoint (_, _, _, o) ->
+      [o]
     | MLglob u -> [Global_use.occurrence u]
     | _ -> []
   in
@@ -53,7 +55,7 @@ let use_holes = function
 let () =
   let scheme = Scheme.Id.fresh (r "g") ~arity:1 in
   let self = MLglob (Global_use.identity (r "g") scheme) in
-  let fix = MLfix (0, [|(Id.of_string "go", Tarr (a, a))|], [|MLlam (x "y", a, MLapp (fresh_rel 2, [fresh_rel 1]))|], false, Occurrence.fresh ()) in
+  let fix = MLfixpoint (0, [|(Id.of_string "go", Tarr (a, a))|], [|MLlam (x "y", a, MLapp (fresh_rel 2, [fresh_rel 1]))|], Occurrence.fresh ()) in
   let body =
     MLlam (x "n", a, MLletin (x "m", a, fresh_rel 1, MLapp (fix, [MLapp (self, [fresh_rel 1])]), Occurrence.fresh ()))
   in
@@ -91,7 +93,15 @@ let () =
   let at_nat = use_at scheme (fun _ -> slot (Scheme.Type nat)) in
   let inst = Core_copy.instance at_nat body in
   ( match inst with
-  | MLlam (_, t, MLletin (_, t', _, MLapp (MLfix (_, [|(_, ft)|], _, _, _), [MLapp (MLglob u, _)]), _)) ->
+  | MLlam
+      ( _,
+        t,
+        MLletin
+          ( _,
+            t',
+            _,
+            MLapp ((MLfixpoint (_, [|(_, ft)|], _, _) | MLcofixpoint (_, [|(_, ft)|], _, _)), [MLapp (MLglob u, _)]),
+            _ ) ) ->
     check "a parameter's variable is solved" (t = nat && t' = nat);
     check "a local fixpoint's signature is solved" (ft = Tarr (nat, nat));
     ( match Global_use.instantiation u with

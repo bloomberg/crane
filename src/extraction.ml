@@ -1823,7 +1823,11 @@ and extract_term env sg mle mlt c args =
       let typed, rest = split doms args in
       let arg_tys = typed @ rest in
       let head = extract_fix ~tys env sg mle i recd false tys.(i) in
-      let () = match head with MLfix (_, _, _, _, occ) -> Table.add_erased_fix_group occ | _ -> () in
+      let () =
+        match head with
+        | MLfixpoint (_, _, _, occ) | MLcofixpoint (_, _, _, occ) -> Table.add_erased_fix_group occ
+        | _ -> ()
+      in
       let applied = type_recomp (arg_tys, mlt) in
       let head = put_magic ~from:tys.(i) ~into:applied head in
       mlapp head (List.map2 (extract_maybe_term env sg mle) arg_tys args) )
@@ -2531,12 +2535,9 @@ and extract_fix ?tys env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
   in
   let mle = Array.fold_left Mlenv.push_type mle metas in
   let ei = Array.map2 (extract_maybe_term env sg mle) metas ci in
-  MLfix
-    ( i,
-      Array.mapi (fun i x -> (id_of_name x.binder_name, metas.(i))) fi,
-      ei,
-      is_cofix,
-      Occurrence.fresh () )
+  let ids = Array.mapi (fun i x -> (id_of_name x.binder_name, metas.(i))) fi in
+  if is_cofix then MLcofixpoint (i, ids, ei, Occurrence.fresh ())
+  else MLfixpoint (i, ids, ei, Occurrence.fresh ())
 
 (** {1 ML declarations} *)
 

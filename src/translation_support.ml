@@ -1265,7 +1265,7 @@ let args_may_corecurse ~self ~binder_type ts =
       | Some (Tunknown | Taxiom) | None -> true
       | Some ty -> yields_coinductive ty )
     | MLrel _ -> false
-    | MLfix _ -> true
+    | MLfixpoint _ | MLcofixpoint _ -> true
     | MLlam (_, _, b) -> corec (depth + 1) b
     | MLletin (_, _, a, b, _) -> corec depth a || corec (depth + 1) b
     | MLcase (_, s, brs, _) ->
@@ -1470,7 +1470,7 @@ let rec collect_tvars_ast acc = function
         collect_tvars_ast (collect_tvars acc ty) body )
       acc
       brs
-  | MLfix (_, ids, funs, _, _) ->
+  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
     let acc =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) acc ids
     in
@@ -1502,7 +1502,7 @@ let rec ast_may_throw = function
   | MLcase (_, e, brs, _) ->
     ast_may_throw e
     || Array.exists (fun (_, _, _, body) -> ast_may_throw body) brs
-  | MLfix (_, _, funs, _, _) -> Array.exists ast_may_throw funs
+  | MLfixpoint (_, _, funs, _) | MLcofixpoint (_, _, funs, _) -> Array.exists ast_may_throw funs
   | MLapp (f, args) -> ast_may_throw f || List.exists ast_may_throw args
   | MLmagic (_, a, _) -> ast_may_throw a
   | MLparray (arr, def) -> Array.exists ast_may_throw arr || ast_may_throw def
@@ -1548,13 +1548,13 @@ let build_tvar_subst_from_unify ty_with_tvars ty_concrete =
 (** Collect all types that should be unified with the top-level function type.
     Returns a list of types to unify pairwise with the top-level type:
     - The arrow type reconstructed from MLlam annotations
-    - The type annotation on the MLfix binding (if present)
-    - The arrow type from the MLfix's inner function body *)
+    - The type annotation on the MLfixpoint binding (if present)
+    - The arrow type from the MLfixpoint's inner function body *)
 let collect_body_types_for_unify body =
   let types = ref [] in
   let rec from_lams = function
     | MLlam (_, ty, inner) -> Miniml.Tarr (ty, from_lams inner)
-    | MLfix (_, ids, funs, _, _) ->
+    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
       Array.iter (fun (_, ty) -> types := ty :: !types) ids;
       Array.iter (fun f -> types := from_lams f :: !types) funs;
       Miniml.Tunknown
@@ -1776,7 +1776,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
         branches
     | MLcons (_, _, args, _) -> List.iter (walk depth) args
     | MLtuple args -> List.iter (walk depth) args
-    | MLfix (_, _, bodies, _, _) ->
+    | MLfixpoint (_, _, bodies, _) | MLcofixpoint (_, _, bodies, _) ->
       let n = Array.length bodies in
       Array.iter (walk (depth + n)) bodies
     | MLmagic (_, e, _) -> walk depth e
@@ -1836,7 +1836,7 @@ let escaping_params ~suspended n_params body =
         List.iter (walk under depth) rest;
         spine depth k
       | [] -> () )
-    | MLapp (MLfix (_, _, bodies, _, _), args) ->
+    | MLapp ((MLfixpoint (_, _, bodies, _) | MLcofixpoint (_, _, bodies, _)), args) ->
       (* A local fixpoint entered where it is written, as [let fix go ... in
          go l []] is: its recursion runs here, through a lambda captured by
          reference, and nothing outlives the call. *)
@@ -1860,7 +1860,7 @@ let escaping_params ~suspended n_params body =
         (fun (ids, _, _, b) -> walk under (depth + List.length ids) b)
         branches
     | MLcons (_, _, args, _) | MLtuple args -> List.iter (walk under depth) args
-    | MLfix (_, _, bodies, _, _) ->
+    | MLfixpoint (_, _, bodies, _) | MLcofixpoint (_, _, bodies, _) ->
       (* A local fixpoint is a closure over its free variables. *)
       let n = Array.length bodies in
       Array.iter (walk true (depth + n)) bodies
@@ -1945,7 +1945,7 @@ let rec argument_source n_params locals = function
       if i >= 0 && i < n_params then `Param i else `Fixed
   | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _
    |MLcons _ | MLtuple _ | MLparray _ -> `Fixed
-  | MLlam _ | MLapp _ | MLletin _ | MLcase _ | MLfix _ -> `Closure
+  | MLlam _ | MLapp _ | MLletin _ | MLcase _ | MLfixpoint _ | MLcofixpoint _ -> `Closure
 
 (** For each member of the recursive groups [bodies], the source-order
     indices of the parameters a call from another member of its group passes
@@ -2018,7 +2018,7 @@ let closure_feedback_params ~callee bodies =
         Array.iter
           (fun (ids, _, _, b) -> walk (List.map (fun _ -> Local_other) ids @ locals) b)
           branches
-      | MLfix (_, _, bodies, _, _) ->
+      | MLfixpoint (_, _, bodies, _) | MLcofixpoint (_, _, bodies, _) ->
         let locals = List.init (Array.length bodies) (fun _ -> Local_closure) @ locals in
         Array.iter (walk locals) bodies
       | MLcons (_, _, args, _) | MLtuple args -> List.iter (walk locals) args
@@ -2346,7 +2346,7 @@ let rec collect_free_rels_set n_bound acc = function
         collect_free_rels_set (n_bound + List.length ids) acc body )
       acc
       brs
-  | MLfix (_, ids, funs, _, _) ->
+  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
     let n_fix = Array.length ids in
     Array.fold_left
       (fun acc f ->

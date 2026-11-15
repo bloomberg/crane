@@ -96,11 +96,8 @@ and ml_ast w = function
     tag w "MLcons"; ml_type w ty; globref w r; list w (ml_ast w) args
   | MLtuple args -> tag w "MLtuple"; list w (ml_ast w) args
   | MLcase (ty, a, brs, _) -> tag w "MLcase"; ml_type w ty; ml_ast w a; array w (branch w) brs
-  | MLfix (i, ids, bodies, cofix, _) ->
-    tag w "MLfix"; int w i;
-    array w (fun (x, ty) -> id w x; ml_type w ty) ids;
-    array w (ml_ast w) bodies;
-    bool w cofix
+  | MLfixpoint (i, ids, bodies, _) -> tag w "MLfixpoint"; fix w i ids bodies
+  | MLcofixpoint (i, ids, bodies, _) -> tag w "MLcofixpoint"; fix w i ids bodies
   | MLexn s -> tag w "MLexn"; str w s
   | MLdummy k -> tag w "MLdummy"; kill_reason w k
   | MLaxiom s -> tag w "MLaxiom"; str w s
@@ -110,6 +107,11 @@ and ml_ast w = function
   | MLstring s -> tag w "MLstring"; str w (Pstring.to_string s)
   | MLparray (xs, d) -> tag w "MLparray"; array w (ml_ast w) xs; ml_ast w d
   | MLnumeral (r, n) -> tag w "MLnumeral"; globref w r; str w (Z.to_string n)
+
+and fix w i ids bodies =
+  int w i;
+  array w (fun (x, ty) -> id w x; ml_type w ty) ids;
+  array w (ml_ast w) bodies
 
 and magic w = function
   | Mcoerce (a, b) -> tag w "Mcoerce"; ml_type w a; ml_type w b

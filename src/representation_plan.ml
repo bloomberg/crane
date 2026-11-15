@@ -466,7 +466,7 @@ let region ~outer body =
        its own ({!Translation.gen_stmts}), its parameters bound at the
        conversion of their ML types ({!Translation.gen_fix}), not declared
        as a lambda's. *)
-    | MLfix (_, fs, defs, _, _) ->
+    | MLfixpoint (_, fs, defs, _) | MLcofixpoint (_, fs, defs, _) ->
       let scope = push Kfix (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) scope in
       if
         Ml_type_util.own_type_variables ~n_outer:(List.length (!tctx).current_type_vars)

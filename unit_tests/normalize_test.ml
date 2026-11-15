@@ -25,7 +25,9 @@ let k = Global_use.monomorphic (r "k")
 let rec occurrences e =
   let here =
     match e with
-    | MLrel (_, o) | MLletin (_, _, _, _, o) | MLcase (_, _, _, o) | MLfix (_, _, _, _, o) -> [o]
+    | MLrel (_, o) | MLletin (_, _, _, _, o) | MLcase (_, _, _, o)
+    | MLfixpoint (_, _, _, o) | MLcofixpoint (_, _, _, o) ->
+      [o]
     | MLglob u -> [Global_use.occurrence u]
     | _ -> []
   in

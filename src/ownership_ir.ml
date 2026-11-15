@@ -125,7 +125,8 @@ let closure_reads d t =
     | MLparray (elems, default) -> List.fold_left (go d') acc (default :: Array.to_list elems)
     | MLlam (_, _, b) -> go (d' + 1) acc b
     | MLletin (_, _, a, b, _) -> go (d' + 1) (go d' acc a) b
-    | MLfix (_, fs, defs, _, _) -> Array.fold_left (go (d' + Array.length fs)) acc defs
+    | MLfixpoint (_, fs, defs, _) | MLcofixpoint (_, fs, defs, _) ->
+      Array.fold_left (go (d' + Array.length fs)) acc defs
     | MLcase (_, scrut, branches, _) ->
       Array.fold_left
         (fun acc (ids, _, _, body) -> go (d' + List.length ids) acc body)
@@ -322,7 +323,7 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
   | MLparray (elems, default) -> frees parents d (default :: Array.to_list elems)
   | MLlam (_, _, body) -> whole (closure_under parents d ~n:1 body)
   | MLletin (_, _, a, b, _) -> Levels.union (free parents d a) (under parents d ~n:1 b)
-  | MLfix (_, fs, defs, _, _) ->
+  | MLfixpoint (_, fs, defs, _) | MLcofixpoint (_, fs, defs, _) ->
     let n = Array.length fs in
     let parents' = bind parents d ~n in
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
@@ -351,7 +352,7 @@ and whole s = Levels.map storage s
    a function template, or inlined at its uses, instead. *)
 let closure_local ~n_outer ty a =
   match a with
-  | MLfix (_, ids, _, _, _) ->
+  | MLfixpoint (_, ids, _, _) | MLcofixpoint (_, ids, _, _) ->
     not (Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
   | MLlam _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
   | _ -> false
@@ -367,7 +368,7 @@ let at_instance arms occurrence =
    included, is a value holding copies. *)
 let reads_at_uses ~n_outer ~arms ty a occurrence =
   match strip a with
-  | MLfix _ -> true
+  | MLfixpoint _ | MLcofixpoint _ -> true
   | MLlam _ -> Ml_type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
   | _ -> false
 
@@ -432,7 +433,11 @@ let call_of a =
   match strip a with
   | MLapp (f, _) -> (
     match call_head f with
-    | MLglob {occurrence; _} | MLrel (_, occurrence) | MLfix (_, _, _, _, occurrence) -> Some occurrence
+    | MLglob {occurrence; _}
+    | MLrel (_, occurrence)
+    | MLfixpoint (_, _, _, occurrence)
+    | MLcofixpoint (_, _, _, occurrence) ->
+      Some occurrence
     | _ -> None )
   | _ -> None
 
@@ -498,7 +503,7 @@ let machine_call resumes d f =
   | None -> None
   | Some {origin; entry_captures; _} -> (
     match strip f with
-    | MLfix (_, _, _, _, at) -> Some (at, `Fixpoint)
+    | MLfixpoint (_, _, _, at) | MLcofixpoint (_, _, _, at) -> Some (at, `Fixpoint)
     | _ -> (
       match (call_head f, entry_captures) with
       | MLglob {callee; occurrence; _}, _ when Common.globref_equal callee origin -> Some (occurrence, `Plain)
@@ -616,7 +621,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
        its arguments in order: each is followed by the later ones alone, and
        by what the fixpoint reads, which it reads as it runs, after them all.
        What it copies, it copies before any of them is evaluated. *)
-    | MLapp ((MLfix (_, _, _, _, at) as f), args) ->
+    | MLapp ((MLfixpoint (_, _, _, at) | MLcofixpoint (_, _, _, at) as f), args) ->
       (* A machine adopting the fixpoint enters it here with what it
          captures. *)
       if Option.has_some (machine_call resumes d f) then enters at (free parents d f) args ~pinned parents d live;
@@ -642,7 +647,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       unsequenced ~pinned parents d live (default :: Array.to_list elems)
     (* A closure reads what it closes over where it is made; its own body
        is a region of its own. *)
-    | MLlam _ | MLfix _ ->
+    | MLlam _ | MLfixpoint _ | MLcofixpoint _ ->
       let captured = free parents d t in
       (* A lambda copies what it captures when it is made, all at once; so
          does a local fixpoint generated as closures, though one generated
@@ -889,7 +894,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
     | MLcons (_, _, args, _) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
-    | MLlam _ | MLfix _ ->
+    | MLlam _ | MLfixpoint _ | MLcofixpoint _ ->
       List.iter
         (fun (l, o) -> captured := (o, Levels.mem l owned || Levels.mem l copied) :: !captured)
         (closure_reads d t)
@@ -898,7 +903,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
       bound d ty;
       (* What a local fixpoint closes over, it reads by reference. *)
       let owned_b =
-        match a with MLfix _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
+        match a with MLfixpoint _ | MLcofixpoint _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
       in
       let owned_b, added = after_resume owned_b d a occurrence in
       saving d a occurrence owned (fun () ->
@@ -943,7 +948,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
     match (x, a) with
     | Dummy, _ -> false
     (* A closure bound to a local is a value like any other. *)
-    | _, (MLfix _ | MLlam _) -> at_instance arms occurrence || closure_local ~n_outer ty a
+    | _, (MLfixpoint _ | MLcofixpoint _ | MLlam _) -> at_instance arms occurrence || closure_local ~n_outer ty a
     | _ ->
       (not (Ml_type_util.ml_type_is_unit ty))
       && worth_moving ty
@@ -1304,7 +1309,7 @@ let moved_captures p closure =
    functions reading each variable, by index at [fix]. *)
 let moved_captures_by_member p fix =
   match fix with
-  | MLfix (_, _, funs, _, _) ->
+  | MLfixpoint (_, _, funs, _) | MLcofixpoint (_, _, funs, _) ->
     let n = Array.length funs in
     let reads =
       Array.map
@@ -1331,7 +1336,7 @@ let moved_reads p ts =
     | MLcons (_, _, args, _) | MLtuple args -> List.fold_left go acc args
     (* What a closure among them takes by move, the closure made around
        them takes by move first, to hand it on. *)
-    | (MLlam _ | MLfix _) as closure -> moved_captures p closure @ acc
+    | (MLlam _ | MLfixpoint _ | MLcofixpoint _) as closure -> moved_captures p closure @ acc
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
@@ -1356,7 +1361,7 @@ let captures ?(in_place = false) p closure =
 
 let captures_by_member ?(in_place = false) p fix =
   match fix with
-  | MLfix (_, _, funs, _, _) ->
+  | MLfixpoint (_, _, funs, _) | MLcofixpoint (_, _, funs, _) ->
     let n = Array.length funs in
     let moved = if in_place then List.map (fun _ -> []) (Array.to_list funs) else moved_captures_by_member p fix in
     List.map2

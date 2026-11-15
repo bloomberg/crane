@@ -130,9 +130,9 @@ let rec reaches_call group ~depth e =
   group_call group ~depth e <> None
   ||
   match e with
-  | MLapp (MLfix (_, ids, bodies, false, _), args) ->
+  | MLapp (MLfixpoint (_, ids, bodies, _), args) ->
     List.exists (reaches_call group ~depth) args || fix_reaches_call group ~depth ids bodies
-  | MLlam _ | MLfix _ -> false
+  | MLlam _ | MLfixpoint _ | MLcofixpoint _ -> false
   | MLletin (_, _, rhs, body, _) ->
     reaches_call group ~depth rhs || reaches_call group ~depth:(depth + 1) body
   | MLcase (_, scrut, branches, _) ->
@@ -223,7 +223,7 @@ let rec scope ~group ~depth ?expected e =
     placeholder !count
   in
   let enters_group = function
-    | MLfix (_, ids, bodies, false, _) -> fix_reaches_call group ~depth ids bodies
+    | MLfixpoint (_, ids, bodies, _) -> fix_reaches_call group ~depth ids bodies
     | _ -> false
   in
   let rec strict ?(reading = Passed) ~tail e =
@@ -239,7 +239,7 @@ let rec scope ~group ~depth ?expected e =
       let e' = MLapp (strict ~tail:false f, List.map (strict ~tail:false) args) in
       match group_call e', f with
       | Some ty, _ when not tail -> Option.cata (take e') e' (held group ~reading e' ty)
-      | None, MLfix (i, ids, _, false, _) when (not tail) && enters_group f ->
+      | None, MLfixpoint (i, ids, _, _) when (not tail) && enters_group f ->
         (* A local fixpoint applied here that recurses into the group is a
            call into it. *)
         let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
@@ -299,7 +299,7 @@ let rec scope ~group ~depth ?expected e =
       in
       let group =
         match rhs with
-        | MLfix (_, [|_|], [|fn|], false, o) when Splices.is_entered_copy group.splices o ->
+        | MLfixpoint (_, [|_|], [|fn|], o) when Splices.is_entered_copy group.splices o ->
           (* A partner's copy the machine enters stands for the partner: its
              calls are the group's. *)
           {group with locals = (depth + 1, [|{l_type = ty; l_arity = Mlutil.nb_lams fn}|]) :: group.locals}
@@ -307,17 +307,13 @@ let rec scope ~group ~depth ?expected e =
       in
       MLletin (id, ty, rhs, inner ~group ?expected:(if tail then expected else None) 1 body, occ)
     | MLlam (id, ty, body) -> MLlam (id, ty, inner 1 body)
-    | MLfix (i, ids, bodies, cofix, occ) ->
+    | MLfixpoint (i, ids, bodies, occ) ->
       let n = Array.length ids in
-      let group =
-        if cofix then group
-        else
-          let fns =
-            Array.mapi (fun j (_, ty) -> {l_type = ty; l_arity = Mlutil.nb_lams bodies.(j)}) ids
-          in
-          {group with locals = (depth + n, fns) :: group.locals}
-      in
-      MLfix (i, ids, Array.map (inner ~group n) bodies, cofix, occ)
+      let fns = Array.mapi (fun j (_, ty) -> {l_type = ty; l_arity = Mlutil.nb_lams bodies.(j)}) ids in
+      let group = {group with locals = (depth + n, fns) :: group.locals} in
+      MLfixpoint (i, ids, Array.map (inner ~group n) bodies, occ)
+    | MLcofixpoint (i, ids, bodies, occ) ->
+      MLcofixpoint (i, ids, Array.map (inner ~group (Array.length ids)) bodies, occ)
     | MLmagic ((Mcoerce (_, into) as m), a, mocc) -> MLmagic (m, strict ~reading:(Coerced into) ~tail a, mocc)
     | MLmagic (m, a, mocc) -> MLmagic (m, strict ~tail a, mocc)
     | _ -> e

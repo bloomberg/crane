@@ -210,7 +210,7 @@ val renumber_body : renumbering -> Miniml.ml_ast -> Miniml.ml_ast
     {b What counts as "direct return":}
     - A bare [MLrel] in tail position that refers to the first argument.
     - This check recurses through [MLcase] branches, [MLletin] bodies, [MLmagic]
-      wrappers, and [MLfix] bodies to find all tail positions.
+      wrappers, and [MLfixpoint] and [MLcofixpoint] bodies to find all tail positions.
 
     {b What does NOT count as "direct return" (and is safe):}
     - Using the first argument for field access: [MLproj(arg, field)] translates
