@@ -1027,11 +1027,19 @@ let is_nested_struct_ref r =
 (** Whether [r], rendered unqualified as [name], is shadowed by some nested
     struct of the same name. A reference that is itself emitted as a nested
     struct is not shadowed: it is the shadower, and naming it [::name] would
-    point at global scope, where it does not live. *)
+    point at global scope, where it does not live.  Under separate extraction
+    each file is a namespace of its own, so only a nested struct of [r]'s
+    file can shadow [r], though the table holds every unit's. *)
 let is_shadowed_global_name name r =
+  let same_file = function
+    | NSref r' -> ModPath.equal (base_mp (modpath_of_r r')) (base_mp (modpath_of_r r))
+    | NSmodule mp -> ModPath.equal (base_mp mp) (base_mp (modpath_of_r r))
+  in
+  let may_shadow owner = (not (Common.get_force_cross_file_qualification ())) || same_file owner in
   match Hashtbl.find_opt nested_struct_names name with
   | Some owners ->
-    not (List.exists (nested_struct_owner_covers r) owners)
+    let owners = List.filter may_shadow owners in
+    owners <> [] && not (List.exists (nested_struct_owner_covers r) owners)
   | None -> false
 
 (** The struct a bystander [mp] keeps inside its collision wrapper: its

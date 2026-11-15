@@ -99,7 +99,7 @@ let borrowed_value_param_pointee = function
   | Reference (Lvalue, Const t) when is_value_type_ret t -> Some t
   | Const (Reference (Lvalue, t)) when is_value_type_ret t -> Some t
   | Const t when is_value_type_ret t -> Some t
-  | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
+  | t when Table.reuse_here () && Table.non_atomic_rc () && is_value_type_ret t ->
     Some t
   | _ -> None
 

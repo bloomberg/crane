@@ -2354,6 +2354,17 @@ let should_reuse r =
   else
     reuse ()
 
+(** {!should_reuse} of the declaration being generated
+    ({!current_decl_ref}); outside any declaration, the global setting. *)
+let reuse_here () =
+  match !current_decl_ref with
+  | Some r -> should_reuse r
+  | None -> reuse ()
+
+(** Whether some function may reuse: the global setting, or a [Crane Reuse]
+    naming one. *)
+let reuse_anywhere () = reuse () || not (Ref.User.Set.is_empty (fst !reuse_table))
+
 let add_reuse_entries b l =
   let f b = if b then Ref.User.Set.add else Ref.User.Set.remove in
   let y, n = !reuse_table in

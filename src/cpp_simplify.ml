@@ -149,7 +149,7 @@ let borrow_bound_matches (stmts : stmt list) =
 (* Under Reuse, a match-only scrutinee may be marked owned so that a reuse arm
    can consume it; one reached through a [const] reference or a pointer cannot
    be, and its matches borrow. *)
-let borrow_bound ss = if Table.reuse () then borrow_bound_matches ss else ss
+let borrow_bound ss = if Table.reuse_here () then borrow_bound_matches ss else ss
 
 let rec stmts ss = borrow_bound (bind_by_reference (drop_unused (List.map stmt ss)))
 

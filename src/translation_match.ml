@@ -727,7 +727,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
          unique -- a map's node has two, and its rebuild recycles the first.
        Only for an owned, non-coinductive scrutinee. *)
     let reuse_stmts_opt =
-      if Table.reuse () && Table.reuse_loopify_ok ()
+      if Table.reuse_here () && Table.reuse_loopify_ok ()
          && (if scrut_is_shared then scrut_consumable
              else Table.non_atomic_rc () && scrut_is_owned)
          && (not is_flat_match) && (not is_enum)

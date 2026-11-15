@@ -35,7 +35,7 @@ let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
 let passed_holdable passing ty =
   match passing with
   | Some Callable_abi.Borrowed -> value_inductive ~abbreviations:true ty
-  | Some Owned -> Table.reuse () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
+  | Some Owned -> Table.reuse_here () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
   | Some Forwarded | None -> false
 
 let local_holdable (l : Term.loop) i =

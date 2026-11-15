@@ -98,7 +98,7 @@ let storage_of (planned : planned_result) ret_ty = if planned.values then Value_
 (* Whether a result may be assembled in cells a reuse cursor recycles: one
    of values under the reuse policy, unless a shared variant. *)
 let recyclable_result (planned : planned_result) =
-  planned.values && Table.reuse () && Table.non_atomic_rc () && not planned.shared
+  planned.values && Table.reuse_here () && Table.non_atomic_rc () && not planned.shared
 
 (** The value type a cell holds behind its pointer, when cells are values. *)
 let cell_value_type = function

@@ -446,7 +446,7 @@ let infer_owned_params n_params body =
     let k = i + 1 in
     ( escapes ~query:Of_param k body
       && not (returned_or_matched k body) )
-    || (reuse () && is_reuse_scrutinee k body))
+    || (reuse_here () && is_reuse_scrutinee k body))
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]
     contribution.  Callers can OR this into the base owned flags selectively

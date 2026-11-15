@@ -100,7 +100,8 @@ val single_use_nargs : int -> Core.Expr.t -> int
     value), false when it can be borrowed (pass by const reference).  A
     parameter that escapes is owned unless it is only matched on and returned
     unchanged; a parameter matched with a reuse candidate arm
-    ({!is_reuse_scrutinee}) is owned when reuse is on.
+    ({!is_reuse_scrutinee}) is owned when the declaration being analysed
+    reuses ({!Table.reuse_here}).
 
     De Bruijn indexing: 1 = innermost/last parameter. Output order: element 0 →
     de Bruijn 1, element 1 → de Bruijn 2, etc.

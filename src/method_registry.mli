@@ -110,6 +110,12 @@ val create :
   Core.Program.t ->
   t
 
+(** Tell the naming layer which functions the registry emits inside their
+    inductive's struct ({!Common.reserve_methodified}).  {!create} does not:
+    the unit being named reserves the methods of the registry it renders with
+    ({!Cpp.prepare_structure}), after the unit's renaming tables are emptied. *)
+val reserve_names : t -> unit
+
 (** Look up full method info for a function reference. Returns [None] if the
     function is not a registered method.
     @param t the registry to query
@@ -288,8 +294,8 @@ val settle_file_calls :
   ref_of:('a -> GlobRef.t) ->
   'a list -> 'a list
 
-(** Whether the function qualifies as a method of the inductive. *)
-val would_register : GlobRef.t -> Core.Expr.t -> Core.Type.t -> bool
+(** Whether function [func] qualifies as a method of the inductive. *)
+val would_register : func:GlobRef.t -> GlobRef.t -> Core.Expr.t -> Core.Type.t -> bool
 
 (** {2 Eponymous-type helpers}
 

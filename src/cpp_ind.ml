@@ -297,7 +297,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
         if
           same_module r
           && (not (refs_excluded ty))
-          && Method_registry.would_register ind_ref body ty
+          && Method_registry.would_register ~func:r ind_ref body ty
         then eligible := (r, body, ty) :: !eligible
       in
       List.iter
