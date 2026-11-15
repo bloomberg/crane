@@ -227,7 +227,7 @@ let () =
                                      index_arguments = []} and cls_ty = Core.Type.Global_app {head = GlobRef.IndRef (kc, 0);
                                                                                               type_arguments = [];
                                                                                               index_arguments = []} in
-  let pat = Core.Pattern.Shallow_constructor (GlobRef.ConstructRef ((kn, 0), 1)) in
+  let pat = Core.Pattern.binding_all (GlobRef.ConstructRef ((kn, 0), 1)) 2 in
   let ids = [(id "x", nat); (id "y", Core.Type.Arrow {parameter = nat; result = nat})] in
   let one body = [|{Core.Match.Branch.binders = ids; result_type = nat; pattern = pat; body = body}|] in
   let a = declare "ma" nat in

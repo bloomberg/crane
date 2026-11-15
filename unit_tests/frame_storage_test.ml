@@ -63,7 +63,7 @@ let () =
       parameters = [(id "ts", lst)];
       body =
         match_ lst (Core.Expr.fresh_rel 1)
-          [ branch (Core.Pattern.Shallow_constructor nil) (Term.Return (Core.Expr.Erased_value Core.Erasure_reason.Proof));
+          [ branch (Core.Pattern.binding_all nil 0) (Term.Return (Core.Expr.Erased_value Core.Erasure_reason.Proof));
             branch
               ~binders:[(id "a", tree); (id "rest", lst)]
               (Core.Pattern.Constructor {constructor = cons;

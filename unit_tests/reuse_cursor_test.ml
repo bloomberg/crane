@@ -41,7 +41,7 @@ let on_list ?(result = lst) scrutinee body =
       branches =
         [ {binders = [];
            result_type = result;
-           pattern = Core.Pattern.Shallow_constructor nil;
+           pattern = Core.Pattern.binding_all nil 0;
            body = Return (Core.Expr.Construct {result_type = lst;
                                                constructor = nil;
                                                arguments = [];

@@ -1788,7 +1788,6 @@ let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
       ( try
           let {Core.Match.Branch.pattern = pat0; _} = pv.(0) in
           match pat0 with
-          | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _))
           | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} ->
             Core.Type.Global_app {head = GlobRef.IndRef ip; type_arguments = []; index_arguments = []}
           | _ -> typ
@@ -3452,7 +3451,6 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
       try
         let {Core.Match.Branch.pattern = pat0; _} = pv.(0) in
         let ind_ref = match pat0 with
-          | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _))
           | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} -> GlobRef.IndRef ip
           | _ -> raise Not_found
         in

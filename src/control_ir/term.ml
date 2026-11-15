@@ -177,8 +177,6 @@ let turn_provenances ~pointer_fields ~in_place (l : loop) =
       | Core.Pattern.Constructor {constructor = r; fields = ps} ->
         List.iteri (bind (Option.default [] (pointer_fields r))) ps
       | Core.Pattern.Tuple ps -> List.iteri (bind []) ps
-      | Core.Pattern.Shallow_constructor r ->
-        List.iteri (at (Option.default [] (pointer_fields r))) (List.init count (fun i -> count - i))
       | Core.Pattern.Wildcard -> ()
     in
     bind [] (-1) b.pattern;

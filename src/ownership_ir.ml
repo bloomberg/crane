@@ -439,7 +439,6 @@ let scrutinee_consumed ty scrut branches =
     Array.for_all
       (fun {Core.Match.Branch.pattern = pat; _} ->
         match pat with
-        | Core.Pattern.Shallow_constructor (Names.GlobRef.ConstructRef (ip, _))
         | Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _} ->
           Table.is_enum_inductive (Names.GlobRef.IndRef ip)
         | _ -> true )
@@ -778,8 +777,7 @@ let matched_inductive branches =
   Array.fold_left
     (fun acc {Core.Match.Branch.pattern = pat; _} ->
       match (acc, pat) with
-      | None, (Core.Pattern.Shallow_constructor (Names.GlobRef.ConstructRef (ip, _)) | Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _})
-        ->
+      | None, Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _} ->
         Some (Names.GlobRef.IndRef ip)
       | _ -> acc )
     None branches
@@ -972,7 +970,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
           let enclosing = !handles in
           List.iteri (fun i (_, ty) -> bound (d + i) ty) ids;
           ( match pat with
-          | (Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _}) when not (Table.is_custom_match branches) ->
+          | Core.Pattern.Constructor {constructor = r; _} when not (Table.is_custom_match branches) ->
             let stored = Ml_type_util.Ctor_fields.of_ctor r in
             List.iteri
               (fun i _ -> if Ml_type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
@@ -1050,7 +1048,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
         | None -> owned )
       | Variant -> (
         match (pat, ind) with
-        | (Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _}), Some ind
+        | Core.Pattern.Constructor {constructor = r; _}, Some ind
           when (not (Table.is_enum_inductive ind)) && not (Table.is_shared_variant ind) ->
           (* An owned variant is matched through references into it: it is
              not read whole by value while the branch runs, and its fields

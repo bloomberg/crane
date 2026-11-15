@@ -282,7 +282,7 @@ let region ~outer body =
           let inner = push Kpattern (List.rev ids) scope in
           let inner =
             match pat with
-            | Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _} when ids <> [] ->
+            | Core.Pattern.Constructor {constructor = r; _} when ids <> [] ->
               let field_planned = fields r ids in
               List.iteri
                 (fun i p ->

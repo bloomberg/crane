@@ -440,10 +440,6 @@ and Pattern : sig
         (** a branch binder by De Bruijn index: [Bound_variable 1] is the
             last of {!Match.Branch.binders} *)
     | Wildcard
-    | Shallow_constructor of GlobRef.t
-        (** shorthand for [Constructor] binding every argument in order:
-            [Constructor {constructor; fields = [Bound_variable n; ...;
-            Bound_variable 1]}] *)
 end =
   Pattern
 

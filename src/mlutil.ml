@@ -1101,7 +1101,6 @@ and eq_ml_pattern p1 p2 =
   | Core.Pattern.Tuple p1, Core.Pattern.Tuple p2 -> List.equal eq_ml_pattern p1 p2
   | Core.Pattern.Bound_variable i1, Core.Pattern.Bound_variable i2 -> Int.equal i1 i2
   | Core.Pattern.Wildcard, Core.Pattern.Wildcard -> true
-  | Core.Pattern.Shallow_constructor gr1, Core.Pattern.Shallow_constructor gr2 -> GlobRef.CanOrd.equal gr1 gr2
   | _ -> false
 
 and eq_ml_branch
@@ -1845,13 +1844,13 @@ let gen_subst v d t =
 
 let is_basic_pattern = function
   | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> true
-  | Core.Pattern.Shallow_constructor _ | Core.Pattern.Constructor _ | Core.Pattern.Tuple _ -> false
+  | Core.Pattern.Constructor _ | Core.Pattern.Tuple _ -> false
 
 (** Returns [true] if any branch contains a nested (non-basic) pattern. *)
 let has_deep_pattern br =
   let deep = function
     | Core.Pattern.Constructor {fields = l; _} | Core.Pattern.Tuple l -> not (List.for_all is_basic_pattern l)
-    | Core.Pattern.Shallow_constructor _ | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> false
+    | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> false
   in
   Array.exists (fun (b : Core.Match.Branch.t) -> deep b.pattern) br
 
@@ -1864,7 +1863,6 @@ let is_regular_match br =
     try
       let get_r {Core.Match.Branch.pattern = pat; _} =
         match pat with
-        | Core.Pattern.Shallow_constructor r -> r
         | Core.Pattern.Constructor {constructor = r; fields = l} ->
           let is_rel i = function
             | Core.Pattern.Bound_variable j -> Int.equal i j
@@ -2141,7 +2139,7 @@ let branch_as_fun typ (l, p, c) =
   let nargs = List.length l in
   let cons =
     match p with
-    | Core.Pattern.Shallow_constructor r ->
+    | Core.Pattern.Constructor {constructor = r; _} when Core.Pattern.binds_all nargs p ->
       Core.Expr.Construct {result_type = typ;
                            constructor = r;
                            arguments = eta_args nargs;
@@ -2327,9 +2325,9 @@ let rec iota_red i lift br ((typ, r, a, occ) as cons) =
   if i >= Array.length br then raise Impossible;
   let {Core.Match.Branch.binders = ids; pattern = p; body = c; _} = br.(i) in
   match p with
-  | (Core.Pattern.Shallow_constructor r' | Core.Pattern.Constructor {constructor = r'; _}) when not (GlobRef.CanOrd.equal r' r) ->
+  | Core.Pattern.Constructor {constructor = r'; _} when not (GlobRef.CanOrd.equal r' r) ->
     iota_red (i + 1) lift br cons
-  | Core.Pattern.Shallow_constructor r' ->
+  | Core.Pattern.Constructor _ when Core.Pattern.binds_all (List.length ids) p ->
     let c = named_lams (List.rev ids) c in
     let c = ast_lift lift c in
     Core.Expr.Apply {callee = c; arguments = a}

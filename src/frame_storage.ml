@@ -92,7 +92,6 @@ let declared_arguments (b : Term.branch) =
   ( match b.pattern with
   | Core.Pattern.Constructor {constructor = r; fields = ps} ->
     List.iteri (fun j -> function Core.Pattern.Bound_variable k -> at r j k | _ -> ()) ps
-  | Core.Pattern.Shallow_constructor r -> List.iteri (at r) (List.init count (fun i -> count - i))
   | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> () );
   Array.to_list bound
 

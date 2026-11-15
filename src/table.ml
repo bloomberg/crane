@@ -3358,7 +3358,6 @@ let indref_of_match pv =
   if Array.is_empty pv then raise Not_found;
   let pat = pv.(0).Core.Match.Branch.pattern in
   match pat with
-  | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _)) -> GlobRef.IndRef ip
   | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} -> GlobRef.IndRef ip
   | _ -> raise Not_found
 

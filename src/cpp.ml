@@ -2293,7 +2293,6 @@ let plan_referenced_names s =
     | Core.Pattern.Constructor {constructor = r; fields = ps} ->
       name Cons r;
       List.iter pattern ps
-    | Core.Pattern.Shallow_constructor r -> name Cons r
     | Core.Pattern.Tuple ps -> List.iter pattern ps
     | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> ()
   and term a =

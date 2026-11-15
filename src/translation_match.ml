@@ -562,7 +562,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
       | [] -> []
       | {Core.Match.Branch.binders = ids; pattern = p; body = body; _} :: cs ->
       match p with
-      | Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _} ->
+      | Core.Pattern.Constructor {constructor = r; _} ->
         let ids', env' =
           push_vars'
             (List.rev_map
@@ -689,7 +689,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
       | [] -> ([], None)
       | {Core.Match.Branch.binders = ids; result_type = rty; pattern = p; body = body} :: cs ->
       match p with
-      | Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _} ->
+      | Core.Pattern.Constructor {constructor = r; _} ->
         let saved_env_types = (!tctx).lexical.env_types in
         let saved_erased = save_erased_env () in
         let ids', env', dummies = process_match_pattern_vars ids env in
@@ -1167,7 +1167,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
     | [] -> []
     | {Core.Match.Branch.binders = ids; result_type = rty; pattern = p; body = t} :: cs ->
     match p with
-    | Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _} ->
+    | Core.Pattern.Constructor {constructor = r; _} ->
       let ids', env' =
         push_vars'
           (List.rev_map

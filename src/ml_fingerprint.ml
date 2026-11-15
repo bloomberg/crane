@@ -123,7 +123,6 @@ and pattern w = function
   | Core.Pattern.Tuple ps -> tag w "Pattern.Tuple"; list w (pattern w) ps
   | Core.Pattern.Bound_variable i -> tag w "Pattern.Bound_variable"; int w i
   | Core.Pattern.Wildcard -> tag w "Pattern.Wildcard"
-  | Core.Pattern.Shallow_constructor r -> tag w "Pattern.Shallow_constructor"; globref w r
 
 and global_use w u =
   globref w (Core.Global_use.callee u);

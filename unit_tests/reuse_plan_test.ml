@@ -30,14 +30,14 @@ let arm body =
   let root =
     Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "l"); parameter_type = lst; body = Core.Expr.Match {scrutinee_type = lst; scrutinee; branches = [| { Core.Match.Branch.binders = [];
                  result_type = lst;
-                 pattern = Core.Pattern.Shallow_constructor nil;
+                 pattern = Core.Pattern.binding_all nil 0;
                  body = Core.Expr.Construct {result_type = lst;
                                              constructor = nil;
                                              arguments = [];
                                              occurrence = Core.Occurrence.fresh ()} };
                {Core.Match.Branch.binders = [(x, nat); (t, lst)];
                 result_type = lst;
-                pattern = Core.Pattern.Shallow_constructor cons;
+                pattern = Core.Pattern.binding_all cons 2;
                 body = body}
             |]; occurrence = Core.Occurrence.fresh ()}}
   in
@@ -83,10 +83,10 @@ let () =
                                    occurrence = Core.Occurrence.fresh ()} in
   let bool = Core.Type.Global_app {head = GlobRef.VarRef (Id.of_string "bool"); type_arguments = []; index_arguments = []} in
   let tail =
-    Core.Expr.Let {binder = Core.Binder_name.Source (Id.of_string "b"); binder_type = bool; value = call "test" [Core.Expr.fresh_rel 2]; body = Core.Expr.Match {scrutinee_type = bool; scrutinee = Core.Expr.fresh_rel 1; branches = [| {Core.Match.Branch.binders = []; result_type = lst; pattern = Core.Pattern.Shallow_constructor other; body = left};
+    Core.Expr.Let {binder = Core.Binder_name.Source (Id.of_string "b"); binder_type = bool; value = call "test" [Core.Expr.fresh_rel 2]; body = Core.Expr.Match {scrutinee_type = bool; scrutinee = Core.Expr.fresh_rel 1; branches = [| {Core.Match.Branch.binders = []; result_type = lst; pattern = Core.Pattern.binding_all other 0; body = left};
                {Core.Match.Branch.binders = [];
                 result_type = lst;
-                pattern = Core.Pattern.Shallow_constructor other;
+                pattern = Core.Pattern.binding_all other 0;
                 body = right};
                {Core.Match.Branch.binders = [];
                 result_type = lst;

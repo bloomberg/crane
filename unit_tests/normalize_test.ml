@@ -49,10 +49,10 @@ let fresh =
 let () =
   let occ = Core.Occurrence.fresh () in
   let branches =
-    [| {Core.Match.Branch.binders = [(x "l", tree)]; result_type = nat; pattern = Core.Pattern.Shallow_constructor (r "Node"); body = Core.Expr.fresh_rel 1};
+    [| {Core.Match.Branch.binders = [(x "l", tree)]; result_type = nat; pattern = Core.Pattern.binding_all (r "Node") 1; body = Core.Expr.fresh_rel 1};
        { Core.Match.Branch.binders = [];
          result_type = nat;
-         pattern = Core.Pattern.Shallow_constructor (r "Leaf");
+         pattern = Core.Pattern.binding_all (r "Leaf") 0;
          body = Core.Expr.Let {binder = x "z"; binder_type = nat; value = Core.Expr.Apply {callee = Core.Expr.Global k; arguments = [Core.Expr.fresh_rel 1]}; body = Core.Expr.fresh_rel 1; occurrence = Core.Occurrence.fresh ()} } |]
   in
   let rest =

@@ -2534,7 +2534,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
         let ids, e = case_expunge s e in
         {Core.Match.Branch.binders = List.rev ids;
          result_type = mlt;
-         pattern = Core.Pattern.Shallow_constructor r;
+         pattern = Core.Pattern.binding_all r (List.length ids);
          body = e}
       in
       (* Apply standard case extraction for all inductives. *)

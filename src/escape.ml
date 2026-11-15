@@ -339,7 +339,7 @@ let find_reuse_candidates (pv : Core.Match.Branch.t array) =
   Array.iteri
     (fun idx {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} ->
       match pat with
-      | Core.Pattern.Shallow_constructor mr | Core.Pattern.Constructor {constructor = mr; _} ->
+      | Core.Pattern.Constructor {constructor = mr; _} ->
         (* One candidate per constructor the arm may rebuild: a nullary one
            among them ([take]'s [nil]) has no cell to recycle into, so the
            caller picks among them. *)
@@ -466,7 +466,7 @@ let returns_receiver_field ~this_pos fn =
   match bare body with
   | Core.Expr.Match {scrutinee = scrut;
                      branches = [| {Core.Match.Branch.binders = ids;
-                                    pattern = Core.Pattern.Constructor _ | Core.Pattern.Shallow_constructor _;
+                                    pattern = Core.Pattern.Constructor _;
                                     body = result; _} |]; _} -> (
     (match bare scrut with Core.Expr.Bound_variable {index = i; _} -> i = receiver | _ -> false)
     && match bare result with Core.Expr.Bound_variable {index = j; _} -> j <= List.length ids | _ -> false )

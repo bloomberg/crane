@@ -144,7 +144,6 @@ let patt_iter_references do_cons p =
     | Core.Pattern.Constructor {constructor = r; fields = l} ->
       do_cons r;
       List.iter iter l
-    | Core.Pattern.Shallow_constructor r -> do_cons r
     | Core.Pattern.Tuple l -> List.iter iter l
     | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> ()
   in
