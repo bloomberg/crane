@@ -19,14 +19,14 @@
     was inlined into, [Fix_F] into each function defined by well-founded
     recursion. *)
 val recover_fix_codomains :
-  (Names.Id.t * Miniml.ml_type) array ->
-  Miniml.ml_ast array ->
-  (Names.Id.t * Miniml.ml_type) array * Miniml.ml_ast array
+  (Names.Id.t * Core.Type.t) array ->
+  Core.Expr.t array ->
+  (Names.Id.t * Core.Type.t) array * Core.Expr.t array
 
 (** Under [CRANE_CHECK_IR], a group about to be lowered whose signatures
     still hold an unsolved metavariable is a violation: {!structure} missed
     the shape it is lowered in. *)
-val check_minted : (Names.Id.t * Miniml.ml_type) array -> unit
+val check_minted : (Names.Id.t * Core.Type.t) array -> unit
 
 (** [check_let_lambda ~outer t a] -- under [CRANE_CHECK_IR], the lambda [a]
     bound at [t], about to be lowered under a head of [outer] variables, is
@@ -34,7 +34,7 @@ val check_minted : (Names.Id.t * Miniml.ml_type) array -> unit
     minted past some other number than [outer], so that they would collide
     with the head's or leave a gap.  The second is checked where the minted
     cells are still found in [t] or [a]'s annotations. *)
-val check_let_lambda : outer:int -> Miniml.ml_type -> Miniml.ml_ast -> unit
+val check_let_lambda : outer:int -> Core.Type.t -> Core.Expr.t -> unit
 
 (** Mints the open variables of every local definition of the structure's
     declarations, rigid: they are the definition's, and a substitution for
@@ -48,4 +48,4 @@ val check_let_lambda : outer:int -> Miniml.ml_type -> Miniml.ml_ast -> unit
     are filled.  A let-bound lambda's, everything it contains included, are
     numbered past the variables of the declaration it is in, which name its
     head's. *)
-val structure : Miniml.ml_structure -> unit
+val structure : Core.Program.t -> unit

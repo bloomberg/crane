@@ -2,7 +2,6 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Miniml
 
 type t = Digest.t
 
@@ -55,170 +54,169 @@ let globref w = function
   | IndRef (m, i) -> tag w "I"; mutind w m; int w i
   | ConstructRef ((m, i), j) -> tag w "K"; mutind w m; int w i; int w j
 
-let kill_reason w = function
-  | Ktype -> tag w "Ktype"
-  | Kprop -> tag w "Kprop"
-  | Kimplicit (r, n) -> tag w "Kimplicit"; globref w r; int w n
+let erasure_reason w = function
+  | Core.Erasure_reason.Type_argument -> tag w "Erasure_reason.Type_argument"
+  | Core.Erasure_reason.Proof -> tag w "Erasure_reason.Proof"
+  | Core.Erasure_reason.Configured_implicit {entity = r; position = n} -> tag w "Erasure_reason.Configured_implicit"; globref w r; int w n
 
-let sign w = function Keep -> tag w "Keep" | Kill k -> tag w "Kill"; kill_reason w k
+let argument w = function Core.Signature.Argument.Runtime -> tag w "Signature.Argument.Runtime" | Core.Signature.Argument.Erased k -> tag w "Signature.Argument.Erased"; erasure_reason w k
 
-let ml_ident w = function
-  | Dummy -> tag w "Dummy"
-  | Id x -> tag w "Id"; id w x
-  | Tmp x -> tag w "Tmp"; id w x
+let binder_name w = function
+  | Core.Binder_name.Anonymous -> tag w "Binder_name.Anonymous"
+  | Core.Binder_name.Source x -> tag w "Binder_name.Source"; id w x
+  | Core.Binder_name.Generated x -> tag w "Binder_name.Generated"; id w x
 
 let scheme_id w s = globref w (Scheme.Id.owner s); int w (Scheme.Id.arity s)
 
-let rec ml_type w = function
-  | Tarr (a, b) -> tag w "Tarr"; ml_type w a; ml_type w b
-  | Tglob (r, tys, args) ->
-    tag w "Tglob"; globref w r; list w (ml_type w) tys; list w (ml_ast w) args
-  | Tvar (rigidity, i) ->
-    tag w (match rigidity with Schematic -> "Tvar" | Rigid -> "Tvar!"); int w i
-  | Tapp (i, tys) -> tag w "Tapp"; int w i; list w (ml_type w) tys
-  | Tmeta {contents = Some t; _} -> ml_type w t
-  | Tmeta {id = m; contents = None} -> tag w "Tmeta"; int w (first_occurrence w.metas m)
-  | Thole h -> tag w "Thole"; int w (first_occurrence w.holes h)
-  | Topen o -> tag w "Topen"; int w (first_occurrence w.metas (Open.id o))
-  | Tdummy k -> tag w "Tdummy"; kill_reason w k
-  | Tunknown -> tag w "Tunknown"
-  | Taxiom -> tag w "Taxiom"
-  | Tstring -> tag w "Tstring"
+let rec type_ w = function
+  | Core.Type.Arrow {parameter = a; result = b} -> tag w "Type.Arrow"; type_ w a; type_ w b
+  | Core.Type.Global_app {head = r; type_arguments = tys; index_arguments = args} ->
+    tag w "Type.Global_app"; globref w r; list w (type_ w) tys; list w (expr w) args
+  | Core.Type.Variable {rigidity; variable = i} ->
+    tag w (match rigidity with Core.Type.Rigidity.Schematic -> "Type.Variable" | Core.Type.Rigidity.Rigid -> "Type.Variable!"); int w i
+  | Core.Type.Variable_app {head = i; arguments = tys} -> tag w "Type.Variable_app"; int w i; list w (type_ w) tys
+  | Core.Type.Meta {contents = Some t; _} -> type_ w t
+  | Core.Type.Meta {id = m; contents = None} -> tag w "Type.Meta"; int w (first_occurrence w.metas m)
+  | Core.Type.Hole h -> tag w "Type.Hole"; int w (first_occurrence w.holes h)
+  | Core.Type.Open o -> tag w "Type.Open"; int w (first_occurrence w.metas (Core.Open.id o))
+  | Core.Type.Erased k -> tag w "Type.Erased"; erasure_reason w k
+  | Core.Type.Unknown -> tag w "Type.Unknown"
+  | Core.Type.Axiom -> tag w "Type.Axiom"
+  | Core.Type.String -> tag w "Type.String"
 
-and ml_ast w = function
-  | MLrel (i, _) -> tag w "MLrel"; int w i
-  | MLapp (f, args) -> tag w "MLapp"; ml_ast w f; list w (ml_ast w) args
-  | MLlam (x, ty, b) -> tag w "MLlam"; ml_ident w x; ml_type w ty; ml_ast w b
-  | MLletin (x, ty, a, b, _) ->
-    tag w "MLletin"; ml_ident w x; ml_type w ty; ml_ast w a; ml_ast w b
-  | MLglob u -> tag w "MLglob"; global_use w u
-  | MLcons (ty, r, args, _) ->
-    tag w "MLcons"; ml_type w ty; globref w r; list w (ml_ast w) args
-  | MLtuple args -> tag w "MLtuple"; list w (ml_ast w) args
-  | MLcase (ty, a, brs, _) -> tag w "MLcase"; ml_type w ty; ml_ast w a; array w (branch w) brs
-  | MLfix (i, ids, bodies, cofix, _) ->
-    tag w "MLfix"; int w i;
-    array w (fun (x, ty) -> id w x; ml_type w ty) ids;
-    array w (ml_ast w) bodies;
-    bool w cofix
-  | MLexn s -> tag w "MLexn"; str w s
-  | MLdummy k -> tag w "MLdummy"; kill_reason w k
-  | MLaxiom s -> tag w "MLaxiom"; str w s
-  | MLmagic (m, a, _) -> tag w "MLmagic"; magic w m; ml_ast w a
-  | MLuint n -> tag w "MLuint"; str w (Uint63.to_string n)
-  | MLfloat f -> tag w "MLfloat"; str w (Float64.to_hex_string f)
-  | MLstring s -> tag w "MLstring"; str w (Pstring.to_string s)
-  | MLparray (xs, d) -> tag w "MLparray"; array w (ml_ast w) xs; ml_ast w d
-  | MLnumeral (r, n) -> tag w "MLnumeral"; globref w r; str w (Z.to_string n)
+and expr w = function
+  | Core.Expr.Bound_variable {index = i; _} -> tag w "Expr.Bound_variable"; int w i
+  | Core.Expr.Apply {callee = f; arguments = args} -> tag w "Expr.Apply"; expr w f; list w (expr w) args
+  | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = b} -> tag w "Expr.Lambda"; binder_name w x; type_ w ty; expr w b
+  | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
+    tag w "Expr.Let"; binder_name w x; type_ w ty; expr w a; expr w b
+  | Core.Expr.Global u -> tag w "Expr.Global"; global_use w u
+  | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; _} ->
+    tag w "Expr.Construct"; type_ w ty; globref w r; list w (expr w) args
+  | Core.Expr.Tuple args -> tag w "Expr.Tuple"; list w (expr w) args
+  | Core.Expr.Match {scrutinee_type = ty; scrutinee = a; branches = brs; _} -> tag w "Expr.Match"; type_ w ty; expr w a; array w (branch w) brs
+  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; _} -> tag w "Expr.Fixpoint"; fix w i ids bodies
+  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; _} -> tag w "Expr.Cofixpoint"; fix w i ids bodies
+  | Core.Expr.Runtime_error s -> tag w "Expr.Runtime_error"; str w s
+  | Core.Expr.Erased_value k -> tag w "Expr.Erased_value"; erasure_reason w k
+  | Core.Expr.Axiom_value s -> tag w "Expr.Axiom_value"; str w s
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = a; _} -> tag w "Expr.Coerce"; type_ w from; type_ w into; expr w a
+  | Core.Expr.Boxed_value {value = a; _} -> tag w "Expr.Boxed_value"; expr w a
+  | Core.Expr.Lambda_group_barrier {value = a; _} -> tag w "Expr.Lambda_group_barrier"; expr w a
+  | Core.Expr.UInt63 n -> tag w "Expr.UInt63"; str w (Uint63.to_string n)
+  | Core.Expr.Float64 f -> tag w "Expr.Float64"; str w (Float64.to_hex_string f)
+  | Core.Expr.String s -> tag w "Expr.String"; str w (Pstring.to_string s)
+  | Core.Expr.Persistent_array {elements = xs; default = d} -> tag w "Expr.Persistent_array"; array w (expr w) xs; expr w d
+  | Core.Expr.Numeral {inductive = r; value = n} -> tag w "Expr.Numeral"; globref w r; str w (Z.to_string n)
 
-and magic w = function
-  | Mcoerce (a, b) -> tag w "Mcoerce"; ml_type w a; ml_type w b
-  | Mboxed -> tag w "Mboxed"
-  | Mbarrier -> tag w "Mbarrier"
+and fix w i ids bodies =
+  int w i;
+  array w (fun (x, ty) -> id w x; type_ w ty) ids;
+  array w (expr w) bodies
 
-and branch w (binders, ty, pat, body) =
-  list w (fun (x, t) -> ml_ident w x; ml_type w t) binders;
-  ml_type w ty; pattern w pat; ml_ast w body
+and branch w {Core.Match.Branch.binders; result_type; pattern = pat; body} =
+  list w (fun (x, t) -> binder_name w x; type_ w t) binders;
+  type_ w result_type; pattern w pat; expr w body
 
 and pattern w = function
-  | Pcons (r, ps) -> tag w "Pcons"; globref w r; list w (pattern w) ps
-  | Ptuple ps -> tag w "Ptuple"; list w (pattern w) ps
-  | Prel i -> tag w "Prel"; int w i
-  | Pwild -> tag w "Pwild"
-  | Pusual r -> tag w "Pusual"; globref w r
+  | Core.Pattern.Constructor {constructor = r; fields = ps} -> tag w "Pattern.Constructor"; globref w r; list w (pattern w) ps
+  | Core.Pattern.Tuple ps -> tag w "Pattern.Tuple"; list w (pattern w) ps
+  | Core.Pattern.Bound_variable i -> tag w "Pattern.Bound_variable"; int w i
+  | Core.Pattern.Wildcard -> tag w "Pattern.Wildcard"
+  | Core.Pattern.Shallow_constructor r -> tag w "Pattern.Shallow_constructor"; globref w r
 
 and global_use w u =
-  globref w (Global_use.callee u);
-  match Global_use.instantiation u with
+  globref w (Core.Global_use.callee u);
+  match Core.Global_use.instantiation u with
   | None -> tag w "mono"
   | Some inst ->
     tag w "poly";
     scheme_id w (Scheme.Instantiation.scheme inst);
     Scheme.Instantiation.fold
-      (fun v (s : ml_type Scheme.slot) () ->
+      (fun v (s : Core.Type.t Scheme.slot) () ->
         int w (Scheme.Var.ordinal v);
         ( match s.solution with
         | Identity -> tag w "identity"
-        | Type t -> tag w "type"; ml_type w t );
+        | Type t -> tag w "type"; type_ w t );
         match s.source with
         | Not_written -> tag w "unwritten"
         | Written {binder; observed} ->
           tag w "written";
           int w (Scheme.Binder.position binder);
-          option w (ml_type w) observed )
+          option w (type_ w) observed )
       inst ()
 
-let record_field w (r, ty) = option w (globref w) r; ml_type w ty
+let field w (r, ty) = option w (globref w) r; type_ w ty
 
-let ind_kind w = function
-  | Core.Inductive.Kind.Coinductive -> tag w "Coinductive"
-  | Core.Inductive.Kind.Inductive -> tag w "Standard"
-  | Core.Inductive.Kind.Record fs -> tag w "Record"; list w (record_field w) fs
-  | Core.Inductive.Kind.Type_class fs -> tag w "TypeClass"; list w (record_field w) fs
+let kind w = function
+  | Core.Inductive.Kind.Coinductive -> tag w "Kind.Coinductive"
+  | Core.Inductive.Kind.Inductive -> tag w "Kind.Inductive"
+  | Core.Inductive.Kind.Record fs -> tag w "Kind.Record"; list w (field w) fs
+  | Core.Inductive.Kind.Type_class fs -> tag w "Kind.Type_class"; list w (field w) fs
 
-let packet w p =
-  id w p.ip_typename;
-  array w (id w) p.ip_consnames;
-  bool w p.ip_logical;
-  list w (sign w) p.ip_sign;
-  list w (id w) p.ip_vars;
-  array w (list w (ml_type w)) p.ip_types;
-  array w (list w (option w (id w))) p.ip_consarg_names
+let packet w (p : Core.Inductive.Packet.t) =
+  id w p.name;
+  array w (id w) p.constructor_names;
+  bool w p.logical;
+  list w (argument w) p.signature;
+  list w (id w) p.type_variables;
+  array w (list w (type_ w)) p.constructor_argument_types;
+  array w (list w (option w (id w))) p.constructor_argument_names
 
-let ml_ind w ind =
-  ind_kind w ind.ind_kind;
-  int w ind.ind_nparams;
-  array w (packet w) ind.ind_packets;
-  match ind.ind_equiv with
-  | Core.Inductive.Equivalence.Distinct -> tag w "NoEquiv"
-  | Core.Inductive.Equivalence.Equivalent_to kn -> tag w "Equiv"; kername w kn
-  | Core.Inductive.Equivalence.Equivalent_in_renamed_module s -> tag w "RenEquiv"; str w s
+let inductive w (ind : Core.Inductive.t) =
+  kind w ind.kind;
+  int w ind.parameter_count;
+  array w (packet w) ind.packets;
+  match ind.equivalence with
+  | Core.Inductive.Equivalence.Distinct -> tag w "Equivalence.Distinct"
+  | Core.Inductive.Equivalence.Equivalent_to kn -> tag w "Equivalence.Equivalent_to"; kername w kn
+  | Core.Inductive.Equivalence.Equivalent_in_renamed_module s -> tag w "Equivalence.Equivalent_in_renamed_module"; str w s
 
-let fix_def w {fd_ref; fd_body; fd_type} =
-  globref w fd_ref; ml_ast w fd_body; ml_type w fd_type
+let definition w (d : Core.Recursion.Definition.t) =
+  globref w d.entity; expr w d.body; type_ w d.type_
 
-let ml_decl w = function
-  | Dind (m, ind) -> tag w "Dind"; mutind w m; ml_ind w ind
-  | Dtype (r, vars, ty) -> tag w "Dtype"; globref w r; list w (id w) vars; ml_type w ty
-  | Dterm (r, a, ty) -> tag w "Dterm"; globref w r; ml_ast w a; ml_type w ty
-  | Dfix fds -> tag w "Dfix"; list w (fix_def w) fds
+let declaration w = function
+  | Core.Decl.Inductive {entity = m; definition = ind} -> tag w "Decl.Inductive"; mutind w m; inductive w ind
+  | Core.Decl.Type_alias {entity = r; parameters = vars; body = ty} -> tag w "Decl.Type_alias"; globref w r; list w (id w) vars; type_ w ty
+  | Core.Decl.Value {entity = r; body = a; type_ = ty} -> tag w "Decl.Value"; globref w r; expr w a; type_ w ty
+  | Core.Decl.Recursive_group fds -> tag w "Decl.Recursive_group"; list w (definition w) (Core.Nonempty.to_list fds)
 
-let ml_spec w = function
-  | Sind (m, ind) -> tag w "Sind"; mutind w m; ml_ind w ind
-  | Stype (r, vars, ty) ->
-    tag w "Stype"; globref w r; list w (id w) vars; option w (ml_type w) ty
-  | Sval (r, a, ty) -> tag w "Sval"; globref w r; ml_ast w a; ml_type w ty
+let signature_declaration w = function
+  | Core.Signature.Declaration.Inductive {entity = m; definition = ind} -> tag w "Signature.Declaration.Inductive"; mutind w m; inductive w ind
+  | Core.Signature.Declaration.Type {entity = r; parameters = vars; body = ty} ->
+    tag w "Signature.Declaration.Type"; globref w r; list w (id w) vars; option w (type_ w) ty
+  | Core.Signature.Declaration.Value {entity = r; body = a; type_ = ty} -> tag w "Signature.Declaration.Value"; globref w r; expr w a; type_ w ty
 
 let rec module_type w = function
-  | MTident mp -> tag w "MTident"; modpath w mp
-  | MTfunsig (b, a, r) -> tag w "MTfunsig"; mbid w b; module_type w a; module_type w r
-  | MTsig (mp, sg) -> tag w "MTsig"; modpath w mp; list w (module_sig_elem w) sg
-  | MTwith (mt, wd) -> tag w "MTwith"; module_type w mt; with_decl w wd
+  | Core.Module.Type.Path mp -> tag w "Module.Type.Path"; modpath w mp
+  | Core.Module.Type.Functor {parameter = b; parameter_type = a; result = r} -> tag w "Module.Type.Functor"; mbid w b; module_type w a; module_type w r
+  | Core.Module.Type.Signature {path = mp; items = sg} -> tag w "Module.Type.Signature"; modpath w mp; list w (signature_item w) sg
+  | Core.Module.Type.Refined {base = mt; refinement = wd} -> tag w "Module.Type.Refined"; module_type w mt; refinement w wd
 
-and module_sig_elem w (l, sp) =
+and signature_item w (l, sp) =
   label w l;
   match sp with
-  | Spec s -> tag w "Spec"; ml_spec w s
-  | Smodule mt -> tag w "Smodule"; module_type w mt
-  | Smodtype mt -> tag w "Smodtype"; module_type w mt
+  | Core.Module.Signature_item.Declaration s -> tag w "Module.Signature_item.Declaration"; signature_declaration w s
+  | Core.Module.Signature_item.Module mt -> tag w "Module.Signature_item.Module"; module_type w mt
+  | Core.Module.Signature_item.Module_type mt -> tag w "Module.Signature_item.Module_type"; module_type w mt
 
-and with_decl w = function
-  | ML_With_type (path, vars, ty) ->
-    tag w "With_type"; list w (id w) path; list w (id w) vars; ml_type w ty
-  | ML_With_module (path, mp) -> tag w "With_module"; list w (id w) path; modpath w mp
+and refinement w = function
+  | Core.Module.Refinement.Type_equation {path; parameters = vars; definition = ty} ->
+    tag w "Module.Refinement.Type_equation"; list w (id w) path; list w (id w) vars; type_ w ty
+  | Core.Module.Refinement.Module_equation {path; definition = mp} -> tag w "Module.Refinement.Module_equation"; list w (id w) path; modpath w mp
 
-let rec structure_elem w (l, se) =
+let rec structure_item w (l, se) =
   label w l;
   match se with
-  | SEdecl d -> tag w "SEdecl"; ml_decl w d
-  | SEmodule m -> tag w "SEmodule"; module_expr w m.ml_mod_expr; module_type w m.ml_mod_type
-  | SEmodtype mt -> tag w "SEmodtype"; module_type w mt
+  | Core.Module.Structure_item.Declaration d -> tag w "Module.Structure_item.Declaration"; declaration w d
+  | Core.Module.Structure_item.Module m -> tag w "Module.Structure_item.Module"; module_expr w m.expr; module_type w m.type_
+  | Core.Module.Structure_item.Module_type mt -> tag w "Module.Structure_item.Module_type"; module_type w mt
 
 and module_expr w = function
-  | MEident mp -> tag w "MEident"; modpath w mp
-  | MEfunctor (b, mt, me) -> tag w "MEfunctor"; mbid w b; module_type w mt; module_expr w me
-  | MEstruct (mp, sel) -> tag w "MEstruct"; modpath w mp; list w (structure_elem w) sel
-  | MEapply (f, x) -> tag w "MEapply"; module_expr w f; module_expr w x
+  | Core.Module.Expr.Path mp -> tag w "Module.Expr.Path"; modpath w mp
+  | Core.Module.Expr.Functor {parameter = b; parameter_type = mt; body = me} -> tag w "Module.Expr.Functor"; mbid w b; module_type w mt; module_expr w me
+  | Core.Module.Expr.Structure {path = mp; items = sel} -> tag w "Module.Expr.Structure"; modpath w mp; list w (structure_item w) sel
+  | Core.Module.Expr.Apply {functor_ = f; argument = x} -> tag w "Module.Expr.Apply"; module_expr w f; module_expr w x
 
 let digest write x =
   let w = writer () in
@@ -226,13 +224,13 @@ let digest write x =
   Digest.string (Buffer.contents w.buf)
 
 let structure =
-  digest (fun w s -> list w (fun (mp, sel) -> modpath w mp; list w (structure_elem w) sel) s)
+  digest (fun w s -> list w (fun (mp, sel) -> modpath w mp; list w (structure_item w) sel) s)
 
 let elements s =
   List.concat_map
-    (fun (_, sel) -> List.map (fun ((l, _) as e) -> (l, digest structure_elem e)) sel)
+    (fun (_, sel) -> List.map (fun ((l, _) as e) -> (l, digest structure_item e)) sel)
     s
 
-let decl = digest ml_decl
+let decl = digest declaration
 let equal = Digest.equal
 let to_hex = Digest.to_hex

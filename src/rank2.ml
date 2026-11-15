@@ -9,9 +9,10 @@ let carrier_name = Generated_name.id "X"
 let quantifies_erased_type ty =
   let rec go ty =
     match Ml_type_util.resolve_tmeta ty with
-    | Miniml.Tunknown -> true
-    | Miniml.Tglob (_, args, _) | Miniml.Tapp (_, args) -> List.exists go args
-    | Miniml.Tarr (a, b) -> go a || go b
+    | Core.Type.Unknown -> true
+    | Core.Type.Global_app {type_arguments = args; _} | Core.Type.Variable_app {arguments = args; _} ->
+      List.exists go args
+    | Core.Type.Arrow {parameter = a; result = b} -> go a || go b
     | _ -> false
   in
   go ty

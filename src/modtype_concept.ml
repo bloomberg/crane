@@ -4,7 +4,6 @@
 (** The concept a module type becomes.  See [modtype_concept.mli]. *)
 
 open Names
-open Miniml
 
 module Ir = Cpp_ir.Resolved
 
@@ -75,7 +74,7 @@ let is_functor_param_ref r =
     !Cpp_state.functor_concept_scopes
 
 (* Whether [r] is a member of [M], the module the concept of the signature
-   at [signature] constrains: declared in it, or reached through a functor
+   at [Core.Signature.t] constrains: declared in it, or reached through a functor
    parameter that is not one of the concept's own. *)
 let is_member_ref signature r =
   let rmp = Table.modpath_of_r r in
@@ -83,7 +82,7 @@ let is_member_ref signature r =
   || match base_mp rmp with MPbound _ -> not (is_functor_param_ref r) | _ -> false
 
 (* The translated type [ty] as the requirements of the concept of the
-   signature at [signature] spell it: [M]'s members, the functor's
+   signature at [Core.Signature.t] spell it: [M]'s members, the functor's
    parameters and custom mappings told apart. *)
 let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
   let args = List.map (concept_type signature) in
@@ -116,7 +115,7 @@ let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
 
 (* The domains and codomain of an ML arrow type. *)
 let rec arrows = function
-  | Tarr (arg, rest) ->
+  | Core.Type.Arrow {parameter = arg; result = rest} ->
     let args, ret = arrows rest in
     (arg :: args, ret)
   | ret -> ([], ret)
@@ -124,29 +123,29 @@ let rec arrows = function
 (* An ML type as translation converts it, outside any function. *)
 let convert t = Translation_types.cpp_ir_of_ml_type (Common.empty_env ()) [] t
 
-(* The requirements one specification of the signature at [signature]
+(* The requirements one specification of the signature at [Core.Signature.t]
    asks of [M]; none for an inline custom, whose mapping stands in for the
    member. *)
 let requirements signature = function
-  | Sval (r, _, _) when Table.is_inline_custom r -> []
-  | Stype (r, _, _) when Table.is_inline_custom r -> []
+  | Core.Signature.Declaration.Value {entity = r; _} when Table.is_inline_custom r -> []
+  | Core.Signature.Declaration.Type {entity = r; _} when Table.is_inline_custom r -> []
   (* A record's projection is a data member of the record's struct, which
      [typename M::pt] already requires: a module emits no static function for
      it, and the functor body reads the field off the value. *)
-  | Sval (r, _, _) when Table.is_projection r -> []
-  | Sind (kn, ind) ->
+  | Core.Signature.Declaration.Value {entity = r; _} when Table.is_projection r -> []
+  | Core.Signature.Declaration.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
     (* A parameterised inductive is a class template, which only an
        instantiation names: any one will do. *)
     Array.to_list
       (Array.mapi
-         (fun i p ->
+         (fun i (p : Core.Inductive.Packet.t) ->
            let r = GlobRef.IndRef (kn, i) in
-           Inductive_member {member = r; enum = Cpp_names.is_enum_cached r; arity = List.length p.ip_vars} )
-         ind.ind_packets )
+           Inductive_member {member = r; enum = Cpp_names.is_enum_cached r; arity = List.length p.type_variables} )
+         ind.packets )
   (* A polymorphic value is a member template, which a requires-expression
      cannot name without choosing its arguments: it asks nothing. *)
-  | Sval (_, _, t) when Ml_type_util.has_tvar t -> []
-  | Sval (r, _, t) -> (
+  | Core.Signature.Declaration.Value {type_ = t; _} when Ml_type_util.has_tvar t -> []
+  | Core.Signature.Declaration.Value {entity = r; type_ = t; _} -> (
     let args, ret = arrows t in
     let result = convert ret in
     match ret with
@@ -154,7 +153,7 @@ let requirements signature = function
        emits as a nested struct satisfying the class's concept: a concept
        name is not a type, so the member type is asked for and
        constrained. *)
-    | Tglob (cls, cls_args, _) when args = [] && Table.is_typeclass cls ->
+    | Core.Type.Global_app {head = cls; type_arguments = cls_args; _} when args = [] && Table.is_typeclass cls ->
       [ Instance_member
           { value = r;
             class_ = cls;
@@ -163,34 +162,38 @@ let requirements signature = function
     | _ ->
       let parameters = List.map (fun a -> concept_type signature (convert a)) args in
       [Function_member {value = r; parameters; result = concept_type signature result}] )
-  | Stype (r, vl, _) -> [Type_member {member = r; arity = List.length vl}]
+  | Core.Signature.Declaration.Type {entity = r; parameters = vl; _} ->
+    [Type_member {member = r; arity = List.length vl}]
 
 let rec constraint_of ~params = function
-  | MTident kn -> Named kn
-  | MTfunsig (mbid, _, mt) -> constraint_of ~params:(MPbound mbid :: params) mt
-  | MTsig (mp, sign) ->
+  | Core.Module.Type.Path kn -> Named kn
+  | Core.Module.Type.Functor {parameter = mbid; result = mt; _} -> constraint_of ~params:(MPbound mbid :: params) mt
+  | Core.Module.Type.Signature {path = mp; items = sign} ->
     let item (label, specif) =
       match specif with
-      | Spec s -> List.map (fun r -> Requirement r) (requirements mp s)
-      | Smodule (MTident kn) -> [Requirement (Submodule {label; module_type = kn})]
-      | Smodule _ -> []
-      | Smodtype nested -> [Nested (MPdot (mp, label), constraint_of ~params:[] nested)]
+      | Core.Module.Signature_item.Declaration s -> List.map (fun r -> Requirement r) (requirements mp s)
+      | Core.Module.Signature_item.Module (Core.Module.Type.Path kn) ->
+        [Requirement (Submodule {label; module_type = kn})]
+      | Core.Module.Signature_item.Module _ -> []
+      | Core.Module.Signature_item.Module_type nested -> [Nested (MPdot (mp, label), constraint_of ~params:[] nested)]
     in
     Requirements {signature = mp; parameters = params; items = List.concat_map item sign}
-  | MTwith (mt, _) -> constraint_of ~params:[] mt
+  | Core.Module.Type.Refined {base = mt; _} -> constraint_of ~params:[] mt
 
 (* The named module type a module type refines, if it is one. *)
 let rec base_concept = function
-  | MTident kn -> Some kn
-  | MTwith (mt, _) -> base_concept mt
-  | MTfunsig _ | MTsig _ -> None
+  | Core.Module.Type.Path kn -> Some kn
+  | Core.Module.Type.Refined {base = mt; _} -> base_concept mt
+  | Core.Module.Type.Functor _ | Core.Module.Type.Signature _ -> None
 
 (* The [with Definition] refinements of a module type over a named one,
    innermost first. *)
 let refinements mt =
   let rec go acc = function
-    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, ir_type (Cpp_erasure.instantiate_type (convert typ))) :: acc) inner
-    | MTwith (inner, ML_With_module _) -> go acc inner
+    | Core.Module.Type.Refined {base = inner;
+                                refinement = Core.Module.Refinement.Type_equation {path = idl; definition = typ; _}} ->
+      go ((idl, ir_type (Cpp_erasure.instantiate_type (convert typ))) :: acc) inner
+    | Core.Module.Type.Refined {base = inner; refinement = Core.Module.Refinement.Module_equation _} -> go acc inner
     | _ -> acc
   in
   go [] mt

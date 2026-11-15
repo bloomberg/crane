@@ -5,13 +5,12 @@
     See [ml_specialize.mli]. *)
 
 open Names
-open Miniml
 
 let same = GlobRef.CanOrd.equal
 
 (** {1 Definitions} *)
 
-type def = Term of ml_ast * ml_type | Fix of ml_fix_def
+type def = Term of Core.Expr.t * Core.Type.t | Fix of Core.Recursion.Definition.t
 
 let definitions struc =
   let defs = ref Ref.User.Map.empty in
@@ -20,9 +19,11 @@ let definitions struc =
     List.iter
       (fun (_, se) ->
         match se with
-        | SEdecl (Dterm (r, b, ty)) -> add r (Term (b, ty))
-        | SEdecl (Dfix [fd]) -> add fd.fd_ref (Fix fd)
-        | SEmodule {ml_mod_expr = MEstruct (_, l); _} -> elems l
+        | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = b; type_ = ty}) ->
+          add r (Term (b, ty))
+        | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group {head = fd; tail = []}) ->
+          add fd.entity (Fix fd)
+        | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = l; _}; _} -> elems l
         | _ -> ())
       l
   in
@@ -35,7 +36,7 @@ let definitions struc =
    lands.  [None] for a mapped global, whose text is what is emitted, and
    where the use did not write an argument for every variable its type
    mentions -- an open instantiation is declined, not guessed. *)
-let body_of defs use =
+let body_of defs (use : Core.Global_use.t) =
   let g = use.callee in
   if Table.is_custom g then None
   else
@@ -48,7 +49,7 @@ let body_of defs use =
     in
     match Ref.User.Map.find_opt g defs with
     | Some (Term (b, ty)) -> at b ty
-    | Some (Fix fd) -> at fd.fd_body fd.fd_type
+    | Some (Fix fd) -> at fd.body fd.type_
     | None -> None
 
 (** {1 Terms} *)
@@ -56,9 +57,19 @@ let body_of defs use =
 (* A term whose evaluation computes nothing, and so may be duplicated or
    dropped. *)
 let rec is_value = function
-  | MLrel _ | MLglob _ | MLlam _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
-  | MLcons (_, _, a, _) | MLtuple a -> List.for_all is_value a
-  | MLmagic (_, a, _) -> is_value a
+  | Core.Expr.Bound_variable _
+  | Core.Expr.Global _
+  | Core.Expr.Lambda _
+  | Core.Expr.UInt63 _
+  | Core.Expr.Numeral _
+  | Core.Expr.Float64 _
+  | Core.Expr.String _
+  | Core.Expr.Erased_value _ -> true
+  | Core.Expr.Construct {arguments = a; _} | Core.Expr.Tuple a -> List.for_all is_value a
+  | Core.Expr.Coerce {value = a; _}
+  | Core.Expr.Boxed_value {value = a; _}
+  | Core.Expr.Lambda_group_barrier {value = a; _} ->
+    is_value a
   | _ -> false
 
 (* [b] applied to [args], its leading lambdas instantiated: a value
@@ -81,36 +92,36 @@ let instantiate b args =
         let a = Mlutil.ast_lift (n - i - 1) a in
         let body' =
           if is_value a || Mlutil.nb_occur_match body <= 1 then Mlutil.ast_subst a body
-          else MLletin (id, ty, a, body, Occurrence.fresh ())
+          else Core.Expr.Let {binder = id; binder_type = ty; value = a; body; occurrence = Core.Occurrence.fresh ()}
         in
         go body' (i + 1) rest
     in
-    (* Instantiate the innermost first, so each step substitutes [MLrel 1]. *)
+    (* Instantiate the innermost first, so each step substitutes [Core.Expr.Bound_variable 1]. *)
     let pairs = List.rev (List.combine now (List.rev params)) in
     let body = go body 0 pairs in
-    Some (if later = [] then body else MLapp (body, later))
+    Some (if later = [] then body else Core.Expr.Apply {callee = body; arguments = later})
 
 (* What a known-constructor argument is: a constructor, or a call to a
    definition whose body is one. *)
 let known_ctor defs e =
   match e with
-  | MLcons _ -> Some e
-  | MLapp (MLglob use, args) -> (
+  | Core.Expr.Construct _ -> Some e
+  | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} -> (
     match body_of defs use with
     | Some b -> (
       match (snd (Mlutil.collect_lams b), instantiate b args) with
-      | MLcons _, Some e' -> Some (Mlutil.normalize e')
+      | Core.Expr.Construct _, Some e' -> Some (Mlutil.normalize e')
       | _ -> None )
     | None -> None )
-  | MLglob use -> (
-    match body_of defs use with Some (MLcons _ as c) -> Some c | _ -> None )
+  | Core.Expr.Global use -> (
+    match body_of defs use with Some (Core.Expr.Construct _ as c) -> Some c | _ -> None )
   | _ -> None
 
 (* [e] with each [let] of a value read at most once substituted: a
    constructor bound by a beta-reduction is then matched where it is used. *)
 let rec subst_value_lets e =
   match Mlutil.ast_map subst_value_lets e with
-  | MLletin (_, _, c, b, _) when is_value c && Mlutil.nb_occur_match b <= 1 ->
+  | Core.Expr.Let {value = c; body = b; _} when is_value c && Mlutil.nb_occur_match b <= 1 ->
     Mlutil.ast_subst c b
   | e -> e
 
@@ -126,7 +137,7 @@ let fuel = 16
 let rec reduce defs shrunk fuel e =
   let e = Mlutil.ast_map (reduce defs shrunk fuel) e in
   match e with
-  | MLapp (MLglob ({callee = g; _} as use), args) when fuel > 0 -> (
+  | Core.Expr.Apply {callee = Core.Expr.Global ({callee = g; _} as use); arguments = args} when fuel > 0 -> (
     match unfold defs shrunk fuel use args with
     | Some e' -> e'
     | None -> Option.default e (push defs shrunk fuel use args) )
@@ -147,7 +158,8 @@ and unfold defs shrunk fuel use args =
       | None -> None
       | Some e ->
         let e' = settle defs (fuel - 1) e in
-        if Mlutil.ast_size e' < Mlutil.ast_size (MLapp (MLglob use, args)) then (
+        if Mlutil.ast_size e' < Mlutil.ast_size (Core.Expr.Apply {callee = Core.Expr.Global use;
+                                                                  arguments = args}) then (
           shrunk := true;
           Some e' )
         else None )
@@ -168,7 +180,7 @@ and settle defs fuel e =
    into the match's branches: kept only if some branch unfolds. *)
 and push defs shrunk fuel use args =
   let rec split before = function
-    | MLcase (ty, s, brs, occ) :: after
+    | Core.Expr.Match {scrutinee_type = ty; scrutinee = s; branches = brs; occurrence = occ} :: after
       when List.for_all is_value before && List.for_all is_value after ->
       Some (List.rev before, ty, s, brs, occ, after)
     | a :: after -> split (a :: before) after
@@ -180,37 +192,35 @@ and push defs shrunk fuel use args =
     let any = ref false in
     let brs' =
       Array.map
-        (fun (ids, bty, p, b) ->
+        (fun ({Core.Match.Branch.binders = ids; result_type = bty; body = b; _} as br) ->
           let k = List.length ids in
           let lift = List.map (Mlutil.ast_lift k) in
-          let call = MLapp (MLglob use, lift before @ [b] @ lift after) in
+          let call = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = lift before @ [b] @ lift after} in
           let call' = settle defs fuel call in
           if Mlutil.ast_size call' < Mlutil.ast_size call then (
             any := true;
-            (ids, bty, p, call') )
+            {br with Core.Match.Branch.body = call'} )
           else
             (* Unreduced, the branch's value is still what it was -- the
                result of a match, typed by the branch -- and is passed by
                name, so it keeps that type rather than taking one from the
                parameter it now meets. *)
             let lift1 = List.map (Mlutil.ast_lift (k + 1)) in
-            ( ids, bty, p,
-              MLletin
-                ( Id (Id.of_string "step"), bty, b,
-                  MLapp (MLglob use, lift1 before @ [fresh_rel 1] @ lift1 after),
-                  Occurrence.fresh () ) ) )
+            { br with
+              Core.Match.Branch.body =
+                Core.Expr.Let {binder = Core.Binder_name.Source (Id.of_string "step"); binder_type = bty; value = b; body = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = lift1 before @ [Core.Expr.fresh_rel 1] @ lift1 after}; occurrence = Core.Occurrence.fresh ()} } )
         brs
     in
     if !any then (
       shrunk := true;
-      Some (MLcase (ty, s, brs', occ)) )
+      Some (Core.Expr.Match {scrutinee_type = ty; scrutinee = s; branches = brs'; occurrence = occ}) )
     else None
 
 (** {1 Specialization} *)
 
 (* The parameters of [fd], outermost first, and its body under them. *)
-let params_of fd =
-  let ps, body = Mlutil.collect_lams fd.fd_body in
+let params_of (fd : Core.Recursion.Definition.t) =
+  let ps, body = Mlutil.collect_lams fd.body in
   (List.rev ps, body)
 
 (* Whether every occurrence of [f] in its body [b], under its [k] parameters,
@@ -219,12 +229,12 @@ let static_param f k j b =
   let exception No in
   let rec walk d e =
     match e with
-    | MLapp (MLglob {callee = g; _}, a) when same g f ->
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = a} when same g f ->
       ( match List.nth_opt a j with
-      | Some (MLrel (i, _)) when i = k - j + d -> ()
+      | Some (Core.Expr.Bound_variable {index = i; _}) when i = k - j + d -> ()
       | _ -> raise_notrace No );
       List.iter (walk d) a
-    | MLglob {callee = g; _} when same g f -> raise_notrace No
+    | Core.Expr.Global {callee = g; _} when same g f -> raise_notrace No
     | _ -> ignore (Mlutil.ast_map_lift (fun d e -> walk d e; e) d e)
   in
   try walk 0 b; true with No -> false
@@ -232,8 +242,9 @@ let static_param f k j b =
 (* [ty]'s arrow at position [j] dropped, and its domains, outermost first. *)
 let rec drop_domain j ty =
   match (j, Mlutil.ml_resolve ty) with
-  | 0, Tarr (_, c) -> Some c
-  | j, Tarr (d, c) -> Option.map (fun c -> Tarr (d, c)) (drop_domain (j - 1) c)
+  | 0, Core.Type.Arrow {result = c; _} -> Some c
+  | j, Core.Type.Arrow {parameter = d; result = c} ->
+    Option.map (fun c -> Core.Type.Arrow {parameter = d; result = c}) (drop_domain (j - 1) c)
   | _ -> None
 
 (* The first [n] domains of [ty], outermost first; [None] if it has fewer
@@ -242,38 +253,38 @@ let rec domains n ty =
   if n = 0 then Some []
   else
     match Mlutil.ml_resolve ty with
-    | Tarr (d, c) -> Option.map (fun ds -> d :: ds) (domains (n - 1) c)
+    | Core.Type.Arrow {parameter = d; result = c} -> Option.map (fun ds -> d :: ds) (domains (n - 1) c)
     | _ -> None
 
 (** [specialize f fd use args] is the call [f args] (at the type arguments
     [use] wrote) with [f] specialized to the lambda among [args] that it passes
     unchanged to itself: a local fixpoint applied to the other arguments. *)
-let specialize f fd use args =
+let specialize f (fd : Core.Recursion.Definition.t) use args =
   let ps, b0 = params_of fd in
   let k = List.length ps in
-  let candidate j a = j < k && (match a with MLlam _ -> true | _ -> false) && static_param f k j b0 in
+  let candidate j a = j < k && (match a with Core.Expr.Lambda _ -> true | _ -> false) && static_param f k j b0 in
   match List.find_opt (fun (j, a) -> candidate j a) (List.mapi (fun j a -> (j, a)) args) with
   | None -> None
   | Some (j, lam) -> (
-    if not (Mlutil.written_covers use (Mlutil.type_maxvar fd.fd_type)) then None
+    if not (Mlutil.written_covers use (Mlutil.type_maxvar fd.type_)) then None
     else
       let inst = Mlutil.instantiate_written ~reader:"ml_specialize.specialize" use in
-      let fty = inst fd.fd_type in
+      let fty = inst fd.type_ in
       match (drop_domain j fty, domains k fty) with
       | Some spec_ty, Some doms ->
         (* The recursive calls, on the parameters' own [b_rec] placed under
            the [k - 1] remaining parameters and the fixpoint's binder. *)
         let rec self d e =
           match e with
-          | MLapp (MLglob {callee = g; _}, a) when same g f ->
+          | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = a} when same g f ->
             let a = List.map (self d) a in
-            MLapp (fresh_rel (d + k), List.filteri (fun i _ -> i <> j) a)
+            Core.Expr.Apply {callee = Core.Expr.fresh_rel (d + k); arguments = List.filteri (fun i _ -> i <> j) a}
           | _ -> Mlutil.ast_map_lift self d e
         in
         let b_rec =
-          Mlutil.instantiate_body ~reader:"ml_specialize.specialize" use (self 0 fd.fd_body)
+          Mlutil.instantiate_body ~reader:"ml_specialize.specialize" use (self 0 fd.body)
         in
-        let q i = fresh_rel (k - 1 - i) in
+        let q i = Core.Expr.fresh_rel (k - 1 - i) in
         let args_b =
           List.init k (fun i ->
               if i < j then q i else if i = j then Mlutil.ast_lift k lam else q (i - 1))
@@ -288,10 +299,13 @@ let specialize f fd use args =
           (* [b_rec] has exactly [k] lambdas, and the lambda among [args_b]
              is a value, so it is substituted for its parameter. *)
           let body = Option.get (instantiate b_rec args_b) in
-          MLfix (0, [|(fid, spec_ty)|], [|Mlutil.named_lams qs body|], false, Occurrence.fresh ())
+          Core.Expr.Fixpoint {selected = 0;
+                              functions = [|(fid, spec_ty)|];
+                              bodies = [|Mlutil.named_lams qs body|];
+                              occurrence = Core.Occurrence.fresh ()}
         in
         let rest = List.filteri (fun i _ -> i <> j) args in
-        Some (if rest = [] then fix else MLapp (fix, rest))
+        Some (if rest = [] then fix else Core.Expr.Apply {callee = fix; arguments = rest})
       | _ -> None )
 
 (** The declaration [r := body] with its call specialized and simplified,
@@ -299,7 +313,8 @@ let specialize f fd use args =
 let decl defs r body ty =
   let ps, inner = Mlutil.collect_lams body in
   match inner with
-  | MLapp (MLglob ({callee = f; _} as use), args) when not (Table.is_custom r) -> (
+  | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use);
+                     arguments = args} when not (Table.is_custom r) -> (
     match Ref.User.Map.find_opt f defs with
     | Some (Fix fd) when not (Table.is_custom f) -> (
       match specialize f fd use args with
@@ -313,7 +328,7 @@ let decl defs r body ty =
         if not !shrunk then None
         else
           match Modutil.decl_of_term r (Mlutil.named_lams ps spec) ty with
-          | Dfix _ as d -> Some d
+          | Core.Decl.Recursive_group _ as d -> Some d
           | _ -> None )
     | _ -> None )
   | _ -> None
@@ -324,10 +339,12 @@ let structure struc =
     List.map
       (fun (lbl, se) ->
         match se with
-        | SEdecl (Dterm (r, body, ty)) -> (
-          match decl defs r body ty with Some d -> (lbl, SEdecl d) | None -> (lbl, se) )
-        | SEmodule ({ml_mod_expr = MEstruct (mp, l); _} as m) ->
-          (lbl, SEmodule {m with ml_mod_expr = MEstruct (mp, elems l)})
+        | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body; type_ = ty}) -> (
+          match decl defs r body ty with Some d -> (lbl, Core.Module.Structure_item.Declaration d) | None -> (lbl, se) )
+        | Core.Module.Structure_item.Module ({Core.Module.expr = Core.Module.Expr.Structure {path = mp;
+                                                                                             items = l}; _} as m) ->
+          (lbl, Core.Module.Structure_item.Module {m with Core.Module.expr = Core.Module.Expr.Structure {path = mp;
+                                                                                                         items = elems l}})
         | se -> (lbl, se))
       l
   in

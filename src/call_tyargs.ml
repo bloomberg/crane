@@ -4,7 +4,6 @@
 (** A call's reading of its callee's scheme variables.  See
     [call_tyargs.mli]. *)
 
-open Miniml
 
 type evidence =
   | Written
@@ -17,7 +16,7 @@ type evidence =
    a hole, the use having written something no type could be read from
    ([Unreadable]) or nothing at all ([Unwritten]). *)
 type slot =
-  | Known of ml_type * evidence
+  | Known of Core.Type.t * evidence
   | Unreadable
   | Unwritten
 
@@ -27,7 +26,7 @@ type t = {
 }
 
 let erased = function
-  | Tdummy _ -> true
+  | Core.Type.Erased _ -> true
   | _ -> false
 
 let of_source = function
@@ -37,7 +36,7 @@ let of_source = function
 
 let of_use use =
   let slots =
-    match Global_use.instantiation use with
+    match Core.Global_use.instantiation use with
     | None -> []
     | Some inst ->
       List.sort
@@ -46,7 +45,7 @@ let of_use use =
            (fun v s acc -> (v, of_source s.Scheme.source) :: acc)
            inst [] )
   in
-  {callee = Global_use.callee use; slots}
+  {callee = Core.Global_use.callee use; slots}
 
 let callee t = t.callee
 let vars t = List.map fst t.slots
@@ -144,4 +143,4 @@ let by_variable t =
   Mlutil.Var_types.through (last_spoken t) (fun v ->
       match slot t v with
       | Known (ty, _) -> ty
-      | Unreadable | Unwritten -> Tdummy Ktype )
+      | Unreadable | Unwritten -> Core.Type.Erased Core.Erasure_reason.Type_argument )

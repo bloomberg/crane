@@ -1,9 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Smart pointer optimization for MiniML AST.
+(** Smart pointer optimization for Core AST.
 
-    This module performs escape analysis on MiniML terms to determine ownership
+    This module performs escape analysis on Core terms to determine ownership
     of values, enabling two optimizations:
 
     1. Owned/borrowed inference: Function parameters are classified as "owned"
@@ -14,12 +14,11 @@
     use_count() == 1 can reuse the existing allocation by mutating fields
     in-place rather than allocating a new object.
 
-    The analysis runs on the MiniML AST before translation to CppIR.  It
+    The analysis runs on the Core AST before translation to CppIR.  It
     attaches nothing to the tree: it answers per-parameter queries, which
     {!Ownership} settles for the whole program and translation reads back
     when it chooses parameter passing and the reuse path of a match. *)
 
-open Miniml
 open Table
 
 (** {2 Utility: occurrence counting} *)
@@ -31,20 +30,21 @@ open Table
     evaluates its argument twice, so a variable passed to it is read twice. *)
 let nb_occur_match =
   let rec nb k = function
-    | MLrel (i, _) -> if i = k then 1 else 0
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Bound_variable {index = i; _} -> if i = k then 1 else 0
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       nb k scrut
       + Array.fold_left
-          (fun max_count (ids, _, _, body) ->
+          (fun max_count {Core.Match.Branch.binders = ids; body = body; _} ->
             max max_count (nb (k + List.length ids) body) )
           0
           branches
-    | MLletin (_, _, rhs, cont, _) -> nb k rhs + nb (k + 1) cont
-    | MLfix (_, ids, bodies, _, _) ->
+    | Core.Expr.Let {value = rhs; body = cont; _} -> nb k rhs + nb (k + 1) cont
+    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
       let k' = k + Array.length ids in
       Array.fold_left (fun total body -> total + nb k' body) 0 bodies
-    | MLlam (_, _, body) -> nb (k + 1) body
-    | MLapp ((MLglob {callee = r; _} as head), args) when Table.is_inline_custom r ->
+    | Core.Expr.Lambda {body; _} -> nb (k + 1) body
+    | Core.Expr.Apply {callee = (Core.Expr.Global {callee = r; _} as head);
+                       arguments = args} when Table.is_inline_custom r ->
       let mentions =
         match Table.inline_custom_text r with
         | Some s -> Foreign_template.arg_mentions s
@@ -54,49 +54,54 @@ let nb_occur_match =
         (List.fold_left
            (fun (total, i) arg -> (total + (mentions i * nb k arg), i + 1))
            (nb k head, 0) args)
-    | MLapp (head, args) ->
+    | Core.Expr.Apply {callee = head; arguments = args} ->
       List.fold_left (fun total arg -> total + nb k arg) (nb k head) args
-    | MLcons (_, _, args, _) | MLtuple args ->
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args ->
       List.fold_left (fun total arg -> total + nb k arg) 0 args
-    | MLmagic (_, a, _) -> nb k a
-    | MLparray (elts, def) ->
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} -> nb k a
+    | Core.Expr.Persistent_array {elements = elts; default = def} ->
       Array.fold_left (fun total elt -> total + nb k elt) 0 elts + nb k def
-    | MLglob _
-     |MLexn _
-     |MLdummy _
-     |MLaxiom _
-     |MLuint _ | MLnumeral _
-     |MLfloat _
-     |MLstring _ -> 0
+    | Core.Expr.Global _
+     |Core.Expr.Runtime_error _
+     |Core.Expr.Erased_value _
+     |Core.Expr.Axiom_value _
+     |Core.Expr.UInt63 _ | Core.Expr.Numeral _
+     |Core.Expr.Float64 _
+     |Core.Expr.String _ -> 0
   in
   nb
 
-(** Simple occurrence check: does [MLrel k] appear anywhere in [t]?  {!escapes}
+(** Simple occurrence check: does [Core.Expr.Bound_variable k] appear anywhere in [t]?  {!escapes}
     uses it for positions where any occurrence is a capture (lambda and
     fixpoint bodies, partial applications, primitive arrays). *)
 let rec occurs k = function
-  | MLrel (i, _) -> i = k
-  | MLcase (_, scrut, branches, _) ->
+  | Core.Expr.Bound_variable {index = i; _} -> i = k
+  | Core.Expr.Match {scrutinee = scrut; branches; _} ->
     occurs k scrut
     || Array.exists
-         (fun (ids, _, _, body) -> occurs (k + List.length ids) body)
+         (fun {Core.Match.Branch.binders = ids; body = body; _} -> occurs (k + List.length ids) body)
          branches
-  | MLletin (_, _, rhs, cont, _) -> occurs k rhs || occurs (k + 1) cont
-  | MLlam (_, _, body) -> occurs (k + 1) body
-  | MLapp (head, args) -> occurs k head || List.exists (occurs k) args
-  | MLfix (_, ids, bodies, _, _) ->
+  | Core.Expr.Let {value = rhs; body = cont; _} -> occurs k rhs || occurs (k + 1) cont
+  | Core.Expr.Lambda {body; _} -> occurs (k + 1) body
+  | Core.Expr.Apply {callee = head; arguments = args} -> occurs k head || List.exists (occurs k) args
+  | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
     let k' = k + Array.length ids in
     Array.exists (occurs k') bodies
-  | MLcons (_, _, args, _) | MLtuple args -> List.exists (occurs k) args
-  | MLmagic (_, a, _) -> occurs k a
-  | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
-  | MLglob _
-   |MLexn _
-   |MLdummy _
-   |MLaxiom _
-   |MLuint _ | MLnumeral _
-   |MLfloat _
-   |MLstring _ -> false
+  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (occurs k) args
+  | Core.Expr.Coerce {value = a; _}
+  | Core.Expr.Boxed_value {value = a; _}
+  | Core.Expr.Lambda_group_barrier {value = a; _} ->
+    occurs k a
+  | Core.Expr.Persistent_array {elements = elts; default = def} -> Array.exists (occurs k) elts || occurs k def
+  | Core.Expr.Global _
+   |Core.Expr.Runtime_error _
+   |Core.Expr.Erased_value _
+   |Core.Expr.Axiom_value _
+   |Core.Expr.UInt63 _ | Core.Expr.Numeral _
+   |Core.Expr.Float64 _
+   |Core.Expr.String _ -> false
 
 (** Return the remaining arity of a partial application, or [None] if fully
     applied. A partial application creates a closure that captures the provided
@@ -108,25 +113,25 @@ let partial_app_remaining head args =
     try Some (find_type r) with Not_found -> None
   in
   match head with
-  | MLglob {callee = r; _} ->
+  | Core.Expr.Global {callee = r; _} ->
     ( match find_type_opt r with
     | Some ty ->
       let rec count_value_dom = function
-        | Tarr (Tdummy _, rest) -> count_value_dom rest
-        | Tarr (_, rest) -> 1 + count_value_dom rest
-        | Tmeta {contents = Some t} -> count_value_dom t
+        | Core.Type.Arrow {parameter = Core.Type.Erased _; result = rest} -> count_value_dom rest
+        | Core.Type.Arrow {result = rest; _} -> 1 + count_value_dom rest
+        | Core.Type.Meta {contents = Some t} -> count_value_dom t
         | _ -> 0
       in
       let n_dom = count_value_dom ty in
       let n_args =
         List.length
-          (List.filter (function MLdummy _ -> false | _ -> true) args)
+          (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args)
       in
       if n_args < n_dom then Some (n_dom - n_args) else None
     | None -> None )
   | _ -> None
 
-(** Check if [MLapp(head, args)] is a partial application. Delegates to
+(** Check if [Core.Expr.Apply(head, args)] is a partial application. Delegates to
     [partial_app_remaining]. *)
 let is_partial_app head args =
   partial_app_remaining head args <> None
@@ -136,17 +141,17 @@ let is_partial_app head args =
 (** Check if de Bruijn index [k] escapes in [t].
 
     Escaping positions (value outlives its scope):
-    - Lambda body (MLlam) → captured by closure
+    - Lambda body (Core.Expr.Lambda) → captured by closure
     - Tail position → returned to caller (caller owns it)
-    - Fixpoint body (MLfix) → captured by recursive closure
-    - Constructor argument (MLcons/MLtuple), unless the query is
+    - Fixpoint body (Core.Expr.Fixpoint, Core.Expr.Cofixpoint) → captured by recursive closure
+    - Constructor argument (Core.Expr.Construct/Core.Expr.Tuple), unless the query is
       [Of_param] → stored in a data structure
 
     Non-escaping positions:
-    - Case scrutinee (MLcase) → destructured immediately
-    - Under MLmagic → transparent wrapper
-    - Function arguments (MLapp) → callee's responsibility
-    - Constructor argument (MLcons/MLtuple), for an [Of_param] query →
+    - Case scrutinee (Core.Expr.Match) → destructured immediately
+    - Under Core.Expr.Coerce/Core.Expr.Boxed_value/Core.Expr.Lambda_group_barrier → transparent wrapper
+    - Function arguments (Core.Expr.Apply) → callee's responsibility
+    - Constructor argument (Core.Expr.Construct/Core.Expr.Tuple), for an [Of_param] query →
       callee's responsibility too: building [(s, a)] or [Ctor s] reads [s]
       once to copy it into the new value's field, exactly as calling a
       function with [s] does.  The field needs a copy either way; a
@@ -166,7 +171,7 @@ let is_partial_app head args =
       not something extracted from it, merely read to build a new value --
       asks [Of_param].
 
-    An [Of_param] query also counts as an escape passing [MLrel k] directly
+    An [Of_param] query also counts as an escape passing [Core.Expr.Bound_variable k] directly
     to a parameter its callee owns ({!callee_flags}): the callee keeps it.
 
     [Of_sub_binding] and [Of_param] both look inside a lambda passed directly
@@ -179,7 +184,7 @@ type escape_query = Conservative | Of_sub_binding | Of_param
     {!Ownership} computed it -- [None] for a global it has not settled. *)
 let callee_flags : (Names.GlobRef.t -> bool list option) ref = ref (fun _ -> None)
 
-(* Whether [args], applied to the global [g], pass [MLrel k] itself to one of
+(* Whether [args], applied to the global [g], pass [Core.Expr.Bound_variable k] itself to one of
    [g]'s owned parameters: the callee keeps it, so a borrowed [k] would be
    copied there, where an owned one is moved. *)
 let passed_to_owned g k args =
@@ -187,7 +192,13 @@ let passed_to_owned g k args =
   | None -> false
   | Some flags ->
     let n = List.length flags in
-    let rec direct = function MLrel (i, _) -> i = k | MLmagic (_, a, _) -> direct a | _ -> false in
+    let rec direct = function
+      | Core.Expr.Bound_variable {index = i; _} -> i = k
+      | Core.Expr.Coerce {value = a; _}
+      | Core.Expr.Boxed_value {value = a; _}
+      | Core.Expr.Lambda_group_barrier {value = a; _} -> direct a
+      | _ -> false
+    in
     List.exists
       (fun (j, a) -> j < n && direct a && List.nth flags (n - 1 - j))
       (List.mapi (fun j a -> (j, a)) args)
@@ -196,43 +207,47 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
   let refined = query <> Conservative in
   let cons_escapes = query <> Of_param in
   let rec check k in_tail in_fn_arg = function
-    | MLrel (i, _) -> i = k && in_tail && return_escapes
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Bound_variable {index = i; _} -> i = k && in_tail && return_escapes
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       ( match scrut with
-      | MLrel (i, _) when i = k -> false
+      | Core.Expr.Bound_variable {index = i; _} when i = k -> false
       | _ -> check k false false scrut )
       || Array.exists
-           (fun (ids, _, _, body) ->
+           (fun {Core.Match.Branch.binders = ids; body = body; _} ->
              check (k + List.length ids) in_tail false body )
            branches
-    | MLletin (_, _, rhs, cont, _) ->
+    | Core.Expr.Let {value = rhs; body = cont; _} ->
       check k false false rhs || check (k + 1) in_tail false cont
-    | MLlam (_, _, body) ->
+    | Core.Expr.Lambda {body; _} ->
       if refined && in_fn_arg then
         check (k + 1) false false body
       else
         occurs (k + 1) body
-    | MLapp (MLglob {callee = g; _}, args) when query = Of_param && passed_to_owned g k args -> true
-    | MLapp (head, args) ->
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _};
+                       arguments = args} when query = Of_param && passed_to_owned g k args -> true
+    | Core.Expr.Apply {callee = head; arguments = args} ->
       check k false false head
       || List.exists (check k false (refined)) args
       || (not in_fn_arg && is_partial_app head args
          && List.exists (occurs k) args)
-    | MLfix (_, ids, bodies, _, _) ->
+    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
       let k' = k + Array.length ids in
       Array.exists (occurs k') bodies
-    | MLcons (_, _, args, _) ->
+    | Core.Expr.Construct {arguments = args; _} ->
       List.exists (check k cons_escapes false) args
-    | MLtuple args -> List.exists (check k cons_escapes false) args
-    | MLmagic (_, a, _) -> check k in_tail false a
-    | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
-    | MLglob _
-     |MLexn _
-     |MLdummy _
-     |MLaxiom _
-     |MLuint _ | MLnumeral _
-     |MLfloat _
-     |MLstring _ -> false
+    | Core.Expr.Tuple args -> List.exists (check k cons_escapes false) args
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} ->
+      check k in_tail false a
+    | Core.Expr.Persistent_array {elements = elts; default = def} -> Array.exists (occurs k) elts || occurs k def
+    | Core.Expr.Global _
+     |Core.Expr.Runtime_error _
+     |Core.Expr.Erased_value _
+     |Core.Expr.Axiom_value _
+     |Core.Expr.UInt63 _ | Core.Expr.Numeral _
+     |Core.Expr.Float64 _
+     |Core.Expr.String _ -> false
   in
   check k true false t
 
@@ -248,7 +263,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
 
     A parameter can be borrowed when it only appears in:
     - Case scrutinee (destructured immediately)
-    - Under MLmagic (transparent wrapper)
+    - Under Core.Expr.Coerce/Core.Expr.Boxed_value/Core.Expr.Lambda_group_barrier (transparent wrapper)
     - Call arguments, other than one the callee owns
     - Constructor arguments (read once to copy into the new field)
 
@@ -265,21 +280,23 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
     the parameter should be owned so sub-bindings can be moved. *)
 let sub_bindings_escape k body =
   let rec check k = function
-    | MLcase (_, MLrel (i, _), branches, _) when i = k ->
-      Array.exists (fun (ids, _, _, branch_body) ->
+    | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = i; _}; branches; _} when i = k ->
+      Array.exists (fun {Core.Match.Branch.binders = ids; body = branch_body; _} ->
         let n = List.length ids in
         List.exists (fun j ->
           escapes ~query:Of_sub_binding (j + 1) branch_body
         ) (List.init n Fun.id)
       ) branches
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       check k scrut
-      || Array.exists (fun (ids, _, _, body) ->
+      || Array.exists (fun {Core.Match.Branch.binders = ids; body = body; _} ->
            check (k + List.length ids) body
          ) branches
-    | MLletin (_, _, rhs, cont, _) ->
+    | Core.Expr.Let {value = rhs; body = cont; _} ->
       check k rhs || check (k + 1) cont
-    | MLmagic (_, a, _) -> check k a
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} -> check k a
     | _ -> false
   in
   check k body
@@ -290,17 +307,20 @@ let sub_bindings_escape k body =
    [let]s, and in each branch of a match it ends in -- a map's update
    rebuilds its node in whichever branch the key comparison picks. *)
 let rec tail_constructions = function
-  | MLmagic (_, a, _) -> tail_constructions a
-  | MLletin (_, _, _, b, _) -> tail_constructions b
-  | MLcons _ as c -> [c]
-  | MLcase (_, _, brs, _) ->
-    List.concat_map (fun (_, _, _, b) -> tail_constructions b) (Array.to_list brs)
+  | Core.Expr.Coerce {value = a; _}
+  | Core.Expr.Boxed_value {value = a; _}
+  | Core.Expr.Lambda_group_barrier {value = a; _} ->
+    tail_constructions a
+  | Core.Expr.Let {body = b; _} -> tail_constructions b
+  | Core.Expr.Construct _ as c -> [c]
+  | Core.Expr.Match {branches = brs; _} ->
+    List.concat_map (fun {Core.Match.Branch.body = b; _} -> tail_constructions b) (Array.to_list brs)
   | _ -> []
 
-(** [find_reuse_candidates pv]: match branches whose body builds an [MLcons]
+(** [find_reuse_candidates pv]: match branches whose body builds an [Core.Expr.Construct]
     of the same inductive type as the matched constructor, as
     [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)]. *)
-let find_reuse_candidates (pv : ml_branch array) =
+let find_reuse_candidates (pv : Core.Match.Branch.t array) =
   let ctor_ind = function
     | Names.GlobRef.ConstructRef (ind, _) -> Some ind
     | _ -> None
@@ -312,13 +332,14 @@ let find_reuse_candidates (pv : ml_branch array) =
     | _ -> false
   in
   let tail_conses body =
-    List.filter_map (function MLcons (_, r, args, _) -> Some (r, args) | _ -> None) (tail_constructions body)
+    List.filter_map (function Core.Expr.Construct {constructor = r;
+                                                   arguments = args; _} -> Some (r, args) | _ -> None) (tail_constructions body)
   in
   let cands = ref [] in
   Array.iteri
-    (fun idx (ids, _rty, pat, body) ->
+    (fun idx {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} ->
       match pat with
-      | Pusual mr | Pcons (mr, _) ->
+      | Core.Pattern.Shallow_constructor mr | Core.Pattern.Constructor {constructor = mr; _} ->
         (* One candidate per constructor the arm may rebuild: a nullary one
            among them ([take]'s [nil]) has no cell to recycle into, so the
            caller picks among them. *)
@@ -330,7 +351,7 @@ let find_reuse_candidates (pv : ml_branch array) =
         List.iter
           (fun (tr, targs) -> cands := (idx, mr, List.length ids, tr, targs) :: !cands)
           tails
-      | Pwild | Prel _ | Ptuple _ -> () )
+      | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> () )
     pv;
   List.rev !cands
 
@@ -352,43 +373,53 @@ let find_reuse_candidates (pv : ml_branch array) =
     on the granted answer. *)
 let is_reuse_scrutinee k body =
   let recyclable = function
-    | Tglob (r, _, _) when Table.is_shared_variant r -> true
+    | Core.Type.Global_app {head = r; _} when Table.is_shared_variant r -> true
     | _ -> non_atomic_rc_requested ()
   in
   let found = ref false in
   let rec scan d = function
-    | MLcase (typ, scrut, branches, _) ->
+    | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; _} ->
       ( match scrut with
-      | MLrel (j, _) | MLmagic (_, MLrel (j, _), _) ->
+      | Core.Expr.Bound_variable {index = j; _} | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _} ->
         if j > d && j - d = k && recyclable typ
            && find_reuse_candidates branches <> []
         then found := true
       | _ -> () );
       scan d scrut;
       Array.iter
-        (fun (ids, _, _, b) -> scan (d + List.length ids) b)
+        (fun {Core.Match.Branch.binders = ids; body = b; _} -> scan (d + List.length ids) b)
         branches
-    | MLletin (_, _, rhs, cont, _) -> scan d rhs; scan (d + 1) cont
-    | MLlam (_, _, b) -> scan (d + 1) b
-    | MLapp (f, args) -> scan d f; List.iter (scan d) args
-    | MLfix (_, ids, bodies, _, _) ->
+    | Core.Expr.Let {value = rhs; body = cont; _} -> scan d rhs; scan (d + 1) cont
+    | Core.Expr.Lambda {body = b; _} -> scan (d + 1) b
+    | Core.Expr.Apply {callee = f; arguments = args} -> scan d f; List.iter (scan d) args
+    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
       Array.iter (scan (d + Array.length ids)) bodies
-    | MLcons (_, _, ts, _) | MLtuple ts -> List.iter (scan d) ts
-    | MLmagic (_, a, _) -> scan d a
-    | MLparray (arr, def) -> Array.iter (scan d) arr; scan d def
+    | Core.Expr.Construct {arguments = ts; _} | Core.Expr.Tuple ts -> List.iter (scan d) ts
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} -> scan d a
+    | Core.Expr.Persistent_array {elements = arr; default = def} -> Array.iter (scan d) arr; scan d def
     | _ -> ()
   in
   scan 0 body;
   !found
 
-(* Whether [MLrel k] is matched on in [t]. *)
+(* Whether [Core.Expr.Bound_variable k] is matched on in [t]. *)
 let rec matched k = function
-  | MLcase (_, scrut, branches, _) ->
-    (match scrut with MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> i = k | _ -> false)
+  | Core.Expr.Match {scrutinee = scrut; branches; _} ->
+    (match scrut with
+     | Core.Expr.Bound_variable {index = i; _}
+     | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+     | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+     | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} -> i = k
+     | _ -> false)
     || matched k scrut
-    || Array.exists (fun (ids, _, _, b) -> matched (k + List.length ids) b) branches
-  | MLletin (_, _, rhs, cont, _) -> matched k rhs || matched (k + 1) cont
-  | MLmagic (_, a, _) -> matched k a
+    || Array.exists (fun {Core.Match.Branch.binders = ids; body = b; _} -> matched (k + List.length ids) b) branches
+  | Core.Expr.Let {value = rhs; body = cont; _} -> matched k rhs || matched (k + 1) cont
+  | Core.Expr.Coerce {value = a; _}
+  | Core.Expr.Boxed_value {value = a; _}
+  | Core.Expr.Lambda_group_barrier {value = a; _} ->
+    matched k a
   | _ -> false
 
 (* A parameter that is matched on, and otherwise only ever returned as it is
@@ -429,13 +460,16 @@ let infer_sub_bindings_escape_params n_params body =
 let returns_receiver_field ~this_pos fn =
   let params, body = Mlutil.collect_lams fn in
   let receiver = List.length params - this_pos in
-  let rec bare = function MLmagic (_, a, _) -> bare a | a -> a in
+  let rec bare = function Core.Expr.Coerce {value = a; _} | Core.Expr.Boxed_value {value = a; _} | Core.Expr.Lambda_group_barrier {value = a; _} -> bare a | a -> a in
   List.length params = 1
   &&
   match bare body with
-  | MLcase (_, scrut, [| (ids, _, (Pcons _ | Pusual _), result) |], _) -> (
-    (match bare scrut with MLrel (i, _) -> i = receiver | _ -> false)
-    && match bare result with MLrel (j, _) -> j <= List.length ids | _ -> false )
+  | Core.Expr.Match {scrutinee = scrut;
+                     branches = [| {Core.Match.Branch.binders = ids;
+                                    pattern = Core.Pattern.Constructor _ | Core.Pattern.Shallow_constructor _;
+                                    body = result; _} |]; _} -> (
+    (match bare scrut with Core.Expr.Bound_variable {index = i; _} -> i = receiver | _ -> false)
+    && match bare result with Core.Expr.Bound_variable {index = j; _} -> j <= List.length ids | _ -> false )
   | _ -> false
 
 (** {2 Utility functions} *)
@@ -448,72 +482,88 @@ module IntSet = Mlutil.IntSet
 let free_rels depth t =
   let free = ref IntSet.empty in
   let rec collect d = function
-    | MLrel (i, _) when i > d -> free := IntSet.add (i - d) !free
-    | MLrel _ -> ()
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Bound_variable {index = i; _} when i > d -> free := IntSet.add (i - d) !free
+    | Core.Expr.Bound_variable _ -> ()
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       collect d scrut;
       Array.iter
-        (fun (ids, _, _, body) -> collect (d + List.length ids) body)
+        (fun {Core.Match.Branch.binders = ids; body = body; _} -> collect (d + List.length ids) body)
         branches
-    | MLletin (_, _, rhs, cont, _) ->
+    | Core.Expr.Let {value = rhs; body = cont; _} ->
       collect d rhs;
       collect (d + 1) cont
-    | MLlam (_, _, body) -> collect (d + 1) body
-    | MLapp (head, args) ->
+    | Core.Expr.Lambda {body; _} -> collect (d + 1) body
+    | Core.Expr.Apply {callee = head; arguments = args} ->
       collect d head;
       List.iter (collect d) args
-    | MLfix (_, ids, bodies, _, _) ->
+    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
       let d' = d + Array.length ids in
       Array.iter (collect d') bodies
-    | MLcons (_, _, args, _) | MLtuple args -> List.iter (collect d) args
-    | MLmagic (_, a, _) -> collect d a
-    | MLparray (elts, def) ->
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.iter (collect d) args
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} ->
+      collect d a
+    | Core.Expr.Persistent_array {elements = elts; default = def} ->
       Array.iter (collect d) elts;
       collect d def
-    | MLglob _
-     |MLexn _
-     |MLdummy _
-     |MLaxiom _
-     |MLuint _ | MLnumeral _
-     |MLfloat _
-     |MLstring _ -> ()
+    | Core.Expr.Global _
+     |Core.Expr.Runtime_error _
+     |Core.Expr.Erased_value _
+     |Core.Expr.Axiom_value _
+     |Core.Expr.UInt63 _ | Core.Expr.Numeral _
+     |Core.Expr.Float64 _
+     |Core.Expr.String _ -> ()
   in
   collect depth t;
   !free
 
-(** Find the single use of [MLrel k] in [t] and return how many non-dummy
-    args it is applied to (0 if it appears bare, not as head of MLapp).
+(** Find the single use of [Core.Expr.Bound_variable k] in [t] and return how many non-dummy
+    args it is applied to (0 if it appears bare, not as head of Core.Expr.Apply).
     Precondition: [k] occurs at most once in [t]. *)
 let single_use_nargs k t =
   let result = ref 0 in
   let rec search k = function
-    | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _), _)), args) when i = k ->
+    | Core.Expr.Apply {callee = ( Core.Expr.Bound_variable {index = i; _}
+          | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+          | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+          | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ); arguments = args}
+      when i = k ->
       result :=
         List.length
-          (List.filter (function MLdummy _ -> false | _ -> true) args)
-    | MLrel _ -> ()
-    | MLletin (_, _, rhs, cont, _) ->
+          (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args)
+    | Core.Expr.Bound_variable _ -> ()
+    | Core.Expr.Let {value = rhs; body = cont; _} ->
       search k rhs;
       search (k + 1) cont
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       search k scrut;
       Array.iter
-        (fun (ids, _, _, body) -> search (k + List.length ids) body)
+        (fun {Core.Match.Branch.binders = ids; body = body; _} -> search (k + List.length ids) body)
         branches
-    | MLlam (_, _, body) -> search (k + 1) body
-    | MLfix (_, ids, bodies, _, _) ->
+    | Core.Expr.Lambda {body; _} -> search (k + 1) body
+    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
       Array.iter (search (k + Array.length ids)) bodies
-    | MLapp (head, args) ->
+    | Core.Expr.Apply {callee = head; arguments = args} ->
       search k head;
       List.iter (search k) args
-    | MLcons (_, _, args, _) -> List.iter (search k) args
-    | MLtuple args -> List.iter (search k) args
-    | MLmagic (_, a, _) -> search k a
-    | MLparray (elts, def) ->
+    | Core.Expr.Construct {arguments = args; _} -> List.iter (search k) args
+    | Core.Expr.Tuple args -> List.iter (search k) args
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} ->
+      search k a
+    | Core.Expr.Persistent_array {elements = elts; default = def} ->
       Array.iter (search k) elts;
       search k def
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _
-    | MLstring _ ->
+    | Core.Expr.Global _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ ->
       ()
   in
   search k t;
@@ -524,15 +574,15 @@ let single_use_nargs k t =
     types in C++, with only their recursive fields behind a shared pointer.
     The predicate separates Crane's own inductive layouts from enums, lazy
     coinductives and custom mappings.  Custom-extracted inductives (e.g., prod mapped to
-    std::pair) are excluded.  Resolves Tmeta chains. *)
+    std::pair) are excluded.  Resolves Core.Type.Meta chains. *)
 let rec is_shared_ptr_type = function
-  | Tglob (r, _, _) ->
+  | Core.Type.Global_app {head = r; _} ->
     ( match r with
     | Names.GlobRef.IndRef _ ->
       (not (is_enum_inductive r))
-      && not (is_coinductive_type (Tglob (r, [], [])))
+      && not (is_coinductive_type (Core.Type.Global_app {head = r; type_arguments = []; index_arguments = []}))
       && not (is_custom r)
     | _ -> false )
-  | Tmeta {contents = Some ty} -> is_shared_ptr_type ty
+  | Core.Type.Meta {contents = Some ty} -> is_shared_ptr_type ty
   | _ -> false
 

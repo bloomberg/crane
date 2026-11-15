@@ -1,8 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Declaration-level C++ code generation from extracted MiniML.
+(** Declaration-level C++ code generation from extracted Core.
 
-    This module turns Rocq/MiniML declarations into CppIR C++ declarations:
+    This module turns Rocq/Core declarations into CppIR C++ declarations:
     inductive types (an encapsulated struct with methods, held by value, behind
     a [std::shared_ptr], or as an [enum class]), records, typeclass concepts,
     typeclass instances, and top-level (possibly mutually recursive) function definitions
@@ -13,22 +13,21 @@
     and consumes the declarations produced here. *)
 
 open Common
-open Miniml
 open Names
 
 (** {2 Declaration Generation} *)
 
 (** Generate C++ declaration for a term definition. Returns (decl, env,
     type_variables). *)
-val gen_decl : GlobRef.t -> ml_ast -> ml_type -> Cpp_ir.Lowered.Decl.t * env * variable list
+val gen_decl : GlobRef.t -> Core.Expr.t -> Core.Type.t -> Cpp_ir.Lowered.Decl.t * env * variable list
 
 (** Similar to {!gen_decl} but returns [None] for a term whose C++ type is
     not a function's, which the caller declares some other way. *)
 val gen_decl_for_pp :
-  GlobRef.t -> ml_ast -> ml_type -> Cpp_ir.Lowered.Decl.t option * env * variable list
+  GlobRef.t -> Core.Expr.t -> Core.Type.t -> Cpp_ir.Lowered.Decl.t option * env * variable list
 
 (** Generate C++ function specification (declaration without body). *)
-val gen_spec : GlobRef.t -> ml_ast -> ml_type -> Cpp_ir.Lowered.Decl.t * env
+val gen_spec : GlobRef.t -> Core.Expr.t -> Core.Type.t -> Cpp_ir.Lowered.Decl.t * env
 
 (** Where a function's definition is written: a template's in the header,
     anything else's in the implementation file. *)
@@ -55,40 +54,40 @@ val defined : Cpp_ir.Lowered.Decl.t -> variable list -> generated_entity
 
 (** Generate each function of a mutually recursive group, translating each
     body once. *)
-val gen_dfuns_dual : ml_fix_def list -> generated_fun list
+val gen_dfuns_dual : Core.Recursion.Definition.t list -> generated_fun list
 
-(** Generate a single Dterm function, translating its body once. *)
-val gen_decl_for_pp_dual : GlobRef.t -> ml_ast -> ml_type -> generated_fun
+(** Generate a single Core.Decl.Value function, translating its body once. *)
+val gen_decl_for_pp_dual : GlobRef.t -> Core.Expr.t -> Core.Type.t -> generated_fun
 
 (** [plan_function ~fixpoint r b ty] is the callable plan of the function
     [r] -- [b] its body, [ty] its type -- as generating it would plan it,
     without generating its body; [None] for a constant generated as no
     function.  A member of a recursive group is always generated as a
     function; a constant only where its C++ type is one. *)
-val plan_function : fixpoint:bool -> GlobRef.t -> ml_ast -> ml_type -> Callable_abi.t option
+val plan_function : fixpoint:bool -> GlobRef.t -> Core.Expr.t -> Core.Type.t -> Callable_abi.t option
 
 (** [plan_method name vars candidate] is the callable plan of the method
     made of [candidate] in the inductive [name], whose variables are [vars],
     as generating it would plan it, without generating its body. *)
 val plan_method :
-  GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> Callable_abi.t
+  GlobRef.t -> Id.t list -> GlobRef.t * Core.Expr.t * Core.Type.t * int -> Callable_abi.t
 
 (** [generate_method_ahead name vars candidate] generates the method made of
     [candidate] in the inductive [name], whose variables are [vars], before
     the files are rendered, recording it with the helpers lifted out of its
     body for the inductive's generation to take, and returns those helpers. *)
 val generate_method_ahead :
-  GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> Cpp_ir.Lowered.Decl.t list
+  GlobRef.t -> Id.t list -> GlobRef.t * Core.Expr.t * Core.Type.t * int -> Cpp_ir.Lowered.Decl.t list
 
 (** [check_method_ahead name vars candidate] generates the method again and
     checks it is the one {!generate_method_ahead} recorded. *)
-val check_method_ahead : GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> unit
+val check_method_ahead : GlobRef.t -> Id.t list -> GlobRef.t * Core.Expr.t * Core.Type.t * int -> unit
 
 (** The concrete types the instance [r] -- of body [b] and type [ty] -- gives
     its class's promoted variables, which a call through it substitutes for
     them; none where it builds no record of its class or does not give them
     all. *)
-val instance_promoted_types : GlobRef.t -> ml_ast -> ml_type -> (Id.t * ml_type) list
+val instance_promoted_types : GlobRef.t -> Core.Expr.t -> Core.Type.t -> (Id.t * Core.Type.t) list
 
 (** {2 Inductive Type Generation} *)
 
@@ -96,14 +95,14 @@ val instance_promoted_types : GlobRef.t -> ml_ast -> ml_type -> (Id.t * ml_type)
     its struct stores behind the smart pointer, each with whether it holds
     [name] itself; [vars] are the inductive's struct's variables. *)
 val constructor_pointer_fields :
-  name:GlobRef.t -> is_coinductive:bool -> Id.t list -> ml_type list -> (int * bool) list
+  name:GlobRef.t -> is_coinductive:bool -> Id.t list -> Core.Type.t list -> (int * bool) list
 
 (** The struct of a record type, in CppIR. *)
 val gen_record_cpp :
-  GlobRef.t -> Miniml.record_field list -> ml_ind_packet -> Cpp_ir.Lowered.Decl.t
+  GlobRef.t -> Core.Record.Field.t list -> Core.Inductive.Packet.t -> Cpp_ir.Lowered.Decl.t
 
 (** The concept of a type class, in CppIR. *)
-val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> Cpp_ir.Lowered.Decl.t
+val gen_typeclass_cpp : GlobRef.t -> Core.Record.Field.t list -> Cpp_ir.Lowered.Decl.t
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
@@ -112,7 +111,7 @@ val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> Cpp_ir.Lowered.
                            constructors, their argument types and their
                            argument binder names
     @param consarg_names   constructor argument binder names from
-                           {!Miniml.ml_ind_packet.ip_consarg_names}: struct
+                           {!Core.Inductive.Packet.t.ip_consarg_names}: struct
                            fields use them (e.g. [d_left]) instead of
                            positional names ([d_a0])
     @param vars            template type parameter names
@@ -121,18 +120,18 @@ val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> Cpp_ir.Lowered.
     @param tys             constructor argument types
     @param method_candidates
       functions to generate as methods: (func_ref, body, type, this_position)
-    @param ind_kind        whether the inductive is coinductive, a record,
+    @param kind        whether the inductive is coinductive, a record,
                            a typeclass, etc. *)
 val gen_ind_header_v2 :
   ?is_mutual:bool ->
   ?consarg_names:Id.t option list array ->
-  ?mutual_partners:(GlobRef.t * GlobRef.t array * ml_type list array * Id.t option list array) list ->
+  ?mutual_partners:(GlobRef.t * GlobRef.t array * Core.Type.t list array * Id.t option list array) list ->
   variable list ->
   GlobRef.t ->
   GlobRef.t array ->
-  ml_type list array ->
-  (GlobRef.t * ml_ast * ml_type * int) list ->
-  record_field Core.Inductive.Kind.t ->
+  Core.Type.t list array ->
+  (GlobRef.t * Core.Expr.t * Core.Type.t * int) list ->
+  Core.Inductive.Kind.t ->
   Cpp_ir.Lowered.Decl.t
 
 (** Generate methods for eponymous records. For records merged into module
@@ -146,7 +145,7 @@ val gen_ind_header_v2 :
 val gen_record_methods :
   GlobRef.t ->
   variable list ->
-  (GlobRef.t * ml_ast * ml_type * int) list ->
+  (GlobRef.t * Core.Expr.t * Core.Type.t * int) list ->
   Cpp_ir.Lowered.phase Cpp_ir.Field.member list
 
 (** {2 Type Class Instance Generation} *)
@@ -162,8 +161,8 @@ val gen_record_methods :
 val gen_instance_struct :
   ?bodies:bool ->
   GlobRef.t ->
-  ml_ast ->
-  ml_type ->
+  Core.Expr.t ->
+  Core.Type.t ->
   Cpp_ir.Lowered.Decl.t option
   * GlobRef.t option
   * Cpp_ir.Lowered.Type.t list
@@ -176,8 +175,8 @@ val gen_instance_struct :
 val plan_instance_methods :
   finish:(Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t) ->
   GlobRef.t ->
-  ml_ast ->
-  ml_type ->
+  Core.Expr.t ->
+  Core.Type.t ->
   (Id.t * Callable_abi.t) list
 
 (** [gen_type_alias r vars ot] is the [using] declaration for a type alias.
@@ -185,16 +184,16 @@ val plan_instance_methods :
     [ot] is [None] for a signature entry that names a type without defining
     it; an axiom and a custom extraction each get the right-hand side they
     need, expressed in the IR rather than as rendered text. *)
-val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Cpp_ir.Lowered.Decl.t
+val gen_type_alias : GlobRef.t -> Id.t list -> Core.Type.t option -> Cpp_ir.Lowered.Decl.t
 
 (** [type_alias_kinds r vars t] is the kinds of the parameters [vars] of the
     type alias [r], whose body is [t], as {!gen_type_alias} declares them --
     without recording them. *)
-val type_alias_kinds : GlobRef.t -> Id.t list -> ml_type -> Tparam_kinds.t
+val type_alias_kinds : GlobRef.t -> Id.t list -> Core.Type.t -> Tparam_kinds.t
 
 (** Check if a term of the given type is a type class instance (constructs a
     type class record): the type's result is a type class. *)
-val is_typeclass_instance : ml_type -> bool
+val is_typeclass_instance : Core.Type.t -> bool
 
 (** How many top-level bodies each phase of the current unit has
     generated -- none while planning, then the implementation and header

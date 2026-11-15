@@ -4,7 +4,7 @@
 (** The C++ type each coercion's position is generated against, planned
     from Core ahead of lowering.
 
-    A coercion ([MLmagic]) is lowered against the type of the position it
+    A coercion ([Core.Expr.Coerce], [Core.Expr.Boxed_value], [Core.Expr.Lambda_group_barrier]) is lowered against the type of the position it
     fills: the parameter a global call passes it at, the return type of the
     region whose result it is, a constructor's field.  The plan walks a
     region's Core body and gives each coercion's occurrence that type, by
@@ -22,6 +22,6 @@
     return type in force, its variable reads planned as [reads]. *)
 val region :
   outer:Lexenv.t ->
-  reads:(Miniml.Occurrence.t * Translation_state.planned_read) list ->
-  Miniml.ml_ast ->
-  (Miniml.Occurrence.t * Cpp_ir.Lowered.Type.t option) list
+  reads:(Core.Occurrence.t * Translation_state.planned_read) list ->
+  Core.Expr.t ->
+  (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list

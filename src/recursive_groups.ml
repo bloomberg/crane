@@ -3,7 +3,6 @@
 
 (** The recursive groups of a frozen program.  See [recursive_groups.mli]. *)
 
-open Miniml
 module Map = Ref.User.Map
 module Set = Ref.User.Set
 module Tbl = Ref.User.Tbl
@@ -23,18 +22,18 @@ let analyze struc =
     struc;
   let defs = List.rev !defs in
   let position = Tbl.create 64 in
-  List.iteri (fun i fd -> Tbl.replace position fd.fd_ref i) defs;
+  List.iteri (fun i (fd : Core.Recursion.Definition.t) -> Tbl.replace position fd.entity i) defs;
   let callees body =
     let found = ref Set.empty in
     let rec scan = function
-      | MLglob {callee = r; _} when Tbl.mem position r -> found := Set.add r !found
+      | Core.Expr.Global {callee = r; _} when Tbl.mem position r -> found := Set.add r !found
       | a -> Mlutil.ast_iter scan a
     in
     scan body;
     !found
   in
   let edges = Tbl.create 64 in
-  List.iter (fun fd -> Tbl.replace edges fd.fd_ref (callees fd.fd_body)) defs;
+  List.iter (fun (fd : Core.Recursion.Definition.t) -> Tbl.replace edges fd.entity (callees fd.body)) defs;
   let succ r = Option.default Set.empty (Tbl.find_opt edges r) in
   (* Tarjan's algorithm. *)
   let index = Tbl.create 64 and low = Tbl.create 64 and on_stack = Tbl.create 64 in
@@ -70,7 +69,7 @@ let analyze struc =
         List.iter (fun m -> groups := Map.add m members !groups) members
     end
   in
-  List.iter (fun fd -> if not (Tbl.mem index fd.fd_ref) then visit fd.fd_ref) defs;
+  List.iter (fun (fd : Core.Recursion.Definition.t) -> if not (Tbl.mem index fd.entity) then visit fd.entity) defs;
   !groups
 
 let group t r = Map.find_opt r t

@@ -30,7 +30,7 @@ type t =
 
 (** [classify ty branches] -- the kind of a match annotated [ty] with
     [branches]. *)
-val classify : Miniml.ml_type -> Miniml.ml_branch array -> t
+val classify : Core.Type.t -> Core.Match.Branch.t array -> t
 
 (** Whether the match takes a record apart rather than branching. *)
 val is_record : t -> bool

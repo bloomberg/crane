@@ -7,16 +7,16 @@
 type orig
 type subst
 type 'k pos = int
-type 'k params = Miniml.ml_type list
+type 'k params = Core.Type.t list
 
 (* The domains of [ty] up its arrow spine, [expand] applied at each step,
-   the [Tdummy] ones dropped. *)
+   the [Core.Type.Erased] ones dropped. *)
 let collect ~expand ty =
   let rec go ty =
     match expand ty with
-    | Miniml.Tarr (t, rest) -> (
+    | Core.Type.Arrow {parameter = t; result = rest} -> (
       match Ml_type_util.resolve_tmeta t with
-      | Miniml.Tdummy _ -> go rest
+      | Core.Type.Erased _ -> go rest
       | t -> t :: go rest )
     | _ -> []
   in
@@ -50,14 +50,14 @@ let source_index binder_tys o =
     | [] -> None
     | t :: rest -> (
       match Ml_type_util.resolve_tmeta t with
-      | Miniml.Tdummy _ -> go (i + 1) k rest
+      | Core.Type.Erased _ -> go (i + 1) k rest
       | _ when k = o -> Some i
       | _ -> go (i + 1) (k + 1) rest )
   in
   go 0 0 binder_tys
 
 let of_source_index binder_tys i =
-  let erased t = match Ml_type_util.resolve_tmeta t with Miniml.Tdummy _ -> true | _ -> false in
+  let erased t = match Ml_type_util.resolve_tmeta t with Core.Type.Erased _ -> true | _ -> false in
   let rec go j k = function
     | [] -> None
     | t :: _ when j = i -> if erased t then None else Some k

@@ -48,7 +48,7 @@ type enumerator_site =
   | Case_label
 
 (** The two places the type printer writes a global type's head: a type
-    named by its global ([Tglob]), and an inductive written through the
+    named by its global ([Core.Type.Global_app]), and an inductive written through the
     struct it is declared in ([Tnamespace]). *)
 type head_form =
   | Glob_head

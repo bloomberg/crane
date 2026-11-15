@@ -2,7 +2,6 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Miniml
 
 let violation r what =
   Probe.violation "global use"
@@ -23,13 +22,14 @@ let solution_types inst =
       | _ -> acc )
     inst []
 
-(* The holes ({!Miniml.Thole}) occurring in a type, through solved
+(* The holes ({!Core.Type.Hole}) occurring in a type, through solved
    metavariables. *)
 let rec holes acc = function
-  | Thole h -> h :: acc
-  | Tarr (a, b) -> holes (holes acc a) b
-  | Tglob (_, l, _) | Tapp (_, l) -> List.fold_left holes acc l
-  | Tmeta {contents = Some t} -> holes acc t
+  | Core.Type.Hole h -> h :: acc
+  | Core.Type.Arrow {parameter = a; result = b} -> holes (holes acc a) b
+  | Core.Type.Global_app {type_arguments = l; _} | Core.Type.Variable_app {arguments = l; _} ->
+    List.fold_left holes acc l
+  | Core.Type.Meta {contents = Some t} -> holes acc t
   | _ -> acc
 
 (* [owners] maps each hole met so far to the instantiation holding it: a
@@ -57,8 +57,8 @@ let check_instantiation owners r inst =
              h (show inst) (show inst') ) )
     (List.fold_left holes [] tys)
 
-let check_global_use owners use =
-  Option.iter (check_instantiation owners use.callee) (Global_use.instantiation use)
+let check_global_use owners (use : Core.Global_use.t) =
+  Option.iter (check_instantiation owners use.callee) (Core.Global_use.instantiation use)
 
 let structure struc =
   if Probe.checking () then
@@ -67,7 +67,7 @@ let structure struc =
       (Modutil.struct_ast_search
          (fun a ->
            ( match a with
-           | MLglob use -> check_global_use owners use
+           | Core.Expr.Global use -> check_global_use owners use
            | _ -> () );
            false )
          struc )

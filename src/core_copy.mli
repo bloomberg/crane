@@ -17,7 +17,7 @@
 
 (** [copy e]: [e], every occurrence in it fresh and its open annotations
     and holes renamed apart from [e]'s. *)
-val copy : Miniml.ml_ast -> Miniml.ml_ast
+val copy : Core.Expr.t -> Core.Expr.t
 
 (** [instance use body]: [body], the definition of [use]'s callee, copied
     ({!copy}) at the use: each variable of the callee's scheme the use
@@ -27,7 +27,7 @@ val copy : Miniml.ml_ast -> Miniml.ml_ast
     Substitution reaches every variable of the callee's range, as
     {!Mlutil.instantiate_body}'s does: a local definition's own variable
     numbered within it ({!Local_types}) is replaced too. *)
-val instance : Miniml.global_use -> Miniml.ml_ast -> Miniml.ml_ast
+val instance : Core.Global_use.t -> Core.Expr.t -> Core.Expr.t
 
 (** [call ~ty use body args]: the call of [use]'s callee, defined as [body]
     at type [ty], to [args], as the callee's body ({!instance}) with each
@@ -37,4 +37,4 @@ val instance : Miniml.global_use -> Miniml.ml_ast -> Miniml.ml_ast
     at.  [None] unless [args] is exactly one argument per parameter the type
     declares, each bound by a lambda of [body].  [args] stand where the call
     does, and are moved there, not copied. *)
-val call : ty:Miniml.ml_type -> Miniml.global_use -> Miniml.ml_ast -> Miniml.ml_ast list -> Miniml.ml_ast option
+val call : ty:Core.Type.t -> Core.Global_use.t -> Core.Expr.t -> Core.Expr.t list -> Core.Expr.t option

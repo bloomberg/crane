@@ -9,7 +9,7 @@
     values to their [method_info] records.
 
     The overall flow is:
-    + [create] iterates every module in the ml_structure.
+    + [create] iterates every module in the Core.Program.t.
     + For each module, it finds the eponymous inductive (if any): the
       inductive whose lowercase name matches the module name.
     + For each function in that module (and wrapper modules), it checks
@@ -23,7 +23,6 @@
 open Util
 open Names
 open Table
-open Miniml
 open Common
 
 (** Metadata for a function that has been promoted to a method. *)
@@ -40,7 +39,7 @@ type method_info = {
 }
 
 (** A method candidate: (func_ref, body, type, this_pos). *)
-type method_candidate = GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int
+type method_candidate = GlobRef.t * Core.Expr.t * Core.Type.t * int
 
 (** Tables keyed by a global's canonical name.  Being a method is a property
     of the definition, so it holds under every name the definition is reached
@@ -67,16 +66,16 @@ type t = {
     [return shared_from_this()]. *)
 let ml_return_type_has_ref ref ty =
   let rec get_return = function
-    | Miniml.Tarr (_, rest) -> get_return rest
+    | Core.Type.Arrow {result = rest; _} -> get_return rest
     | t -> t
   in
   let ret = get_return ty in
   let rec contains = function
-    | Miniml.Tglob (r, args, _) ->
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       globref_equal r ref
       || List.exists contains args
-    | Miniml.Tarr (a, b) -> contains a || contains b
-    | Miniml.Tmeta { contents = Some t } -> contains t
+    | Core.Type.Arrow {parameter = a; result = b} -> contains a || contains b
+    | Core.Type.Meta { contents = Some t } -> contains t
     | _ -> false
   in
   contains ret
@@ -103,7 +102,7 @@ let renumbering ~num_ind_vars ~this_pos ty =
   let all_args, _ = Ml_type_util.get_args_and_ret [] ty in
   let ind_tvar_map =
     match List.nth_opt all_args this_pos with
-    | Some (Miniml.Tglob (_, tvar_args, _)) ->
+    | Some (Core.Type.Global_app {type_arguments = tvar_args; _}) ->
       (* Only entries whose destination is one of the inductive's variables:
          a parameter extraction killed (a phantom) maps past them, and is the
          function's own instead. *)
@@ -134,11 +133,14 @@ let renumbering ~num_ind_vars ~this_pos ty =
 (* Solved metas are followed; a variable [rename] does not map stays put. *)
 let renumber_type r ty =
   let rec go = function
-    | Miniml.Tvar (rigid, i) -> Miniml.Tvar (rigid, r.rename i)
-    | Miniml.Tapp (i, args) -> Miniml.Tapp (r.rename i, List.map go args)
-    | Miniml.Tarr (t1, t2) -> Miniml.Tarr (go t1, go t2)
-    | Miniml.Tglob (g, args, e) -> Miniml.Tglob (g, List.map go args, e)
-    | Miniml.Tmeta {contents = Some t} -> go t
+    | Core.Type.Variable {rigidity = rigid; variable = i} ->
+      Core.Type.Variable {rigidity = rigid; variable = r.rename i}
+    | Core.Type.Variable_app {head = i; arguments = args} ->
+      Core.Type.Variable_app {head = r.rename i; arguments = List.map go args}
+    | Core.Type.Arrow {parameter = t1; result = t2} -> Core.Type.Arrow {parameter = go t1; result = go t2}
+    | Core.Type.Global_app {head = g; type_arguments = args; index_arguments = e} ->
+      Core.Type.Global_app {head = g; type_arguments = List.map go args; index_arguments = e}
+    | Core.Type.Meta {contents = Some t} -> go t
     | t -> t
   in
   if r.renamed then go ty else ty
@@ -152,7 +154,7 @@ let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body el
     Background: when a function becomes a C++ method, its first argument is
     received via the [this] pointer (a raw pointer) rather than as a
     [std::shared_ptr]. If the function's body directly returns that first
-    argument (a bare [MLrel] in tail position), the generated C++ would produce
+    argument (a bare [Core.Expr.Bound_variable] in tail position), the generated C++ would produce
     [return this;], but [this] is a raw pointer and cannot be implicitly
     converted back to [std::shared_ptr<T>], causing a compilation error.
 
@@ -172,8 +174,8 @@ let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body el
 
     The check works by: 1. Stripping outer lambdas to find the inner body and
     computing the de Bruijn index of the first argument. 2. Recursing through
-    tail positions (match branches, let bodies, fixpoint bodies, MLmagic
-    wrappers) to see if any tail position is a bare [MLrel] pointing at the
+    tail positions (match branches, let bodies, fixpoint bodies, coercion
+    wrappers) to see if any tail position is a bare [Core.Expr.Bound_variable] pointing at the
     first argument. 3. Special-casing top-level matches on the first argument
     (common pattern for destructors) — only the branches are checked, not the
     scrutinee itself (which is obviously the first argument but is used for
@@ -183,7 +185,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
      Bruijn index of the outermost (first) argument: in [fun a b c -> body],
      argument [a] has index 3 inside [body]. *)
   let rec strip_lams n = function
-    | MLlam (_, _, b) -> strip_lams (n + 1) b
+    | Core.Expr.Lambda {body = b; _} -> strip_lams (n + 1) b
     | b -> (n, b)
   in
   let num_lams, inner = strip_lams 0 body in
@@ -193,17 +195,17 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
      skipped by [find_epon_arg_pos]) we check the correct inductive
      argument. *)
   let target_db = num_lams - this_pos in
-  (* Check if [MLrel target_db] appears as a direct return value in the AST. A
-     "direct return" means the expression IS just [MLrel] (not wrapped in
-     [MLapp], [MLcons], etc.). We recurse through match branches, let bodies,
+  (* Check if [Core.Expr.Bound_variable target_db] appears as a direct return value in the AST. A
+     "direct return" means the expression IS just [Core.Expr.Bound_variable] (not wrapped in
+     [Core.Expr.Apply], [Core.Expr.Construct], etc.). We recurse through match branches, let bodies,
      and fixpoints to find all result positions.
 
      [depth] tracks additional binders introduced inside the body (e.g. match
      branch bindings, let bindings) that shift the de Bruijn index of the target
      argument. *)
   let rec returns_target depth = function
-    | MLrel (i, _) -> i = target_db + depth
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Bound_variable {index = i; _} -> i = target_db + depth
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       (* Also check the scrutinee when it is itself a match expression.
          If the target argument can flow out of the scrutinee (e.g.
          [match (match c with Blue => s) with ...]), then [s] becomes [this]
@@ -211,30 +213,35 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
          when the IIFE deduces [shared_ptr<T>] from other branches. *)
       returns_target depth scrut
       || Array.exists
-           (fun (ids, _, _, branch_body) ->
+           (fun {Core.Match.Branch.binders = ids; body = branch_body; _} ->
              let n_bindings = List.length ids in
              returns_target (depth + n_bindings) branch_body )
            branches
-    | MLletin (_, _, _, b, _) -> returns_target (depth + 1) b
-    | MLmagic (_, a, _) -> returns_target depth a
-    (* All other forms (MLapp, MLcons, MLlam, etc.) produce a NEW value, not a
+    | Core.Expr.Let {body = b; _} -> returns_target (depth + 1) b
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} ->
+      returns_target depth a
+    (* All other forms (Core.Expr.Apply, Core.Expr.Construct, Core.Expr.Lambda, etc.) produce a NEW value, not a
        bare return of the argument. So they're safe. *)
     | _ -> false
   in
   (* Check the inner body. Three cases: *)
   match inner with
-  | MLcase (_, MLrel (scrut_idx, _), branches, _) when scrut_idx = target_db ->
+  | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = scrut_idx; _};
+                     branches; _} when scrut_idx = target_db ->
     (* Case 1: Top-level match on first arg (e.g. [match xs with ...]). Only
        check branches, not the scrutinee: the scrutinee is the first argument
        but is used for dispatch, not directly returned. *)
     not
       (Array.exists
-         (fun (ids, _, _, branch_body) ->
+         (fun {Core.Match.Branch.binders = ids; body = branch_body; _} ->
            let n_bindings = List.length ids in
            returns_target n_bindings branch_body )
          branches )
     || ret_has_shared_epon
-  | MLfix (fix_idx, _, funs, _, _) ->
+  | Core.Expr.Fixpoint {selected = fix_idx;
+                        bodies = funs; _} | Core.Expr.Cofixpoint {selected = fix_idx; bodies = funs; _} ->
     (* Case 2: Top-level fixpoint (recursive function). Check the body of the
        fixpoint at [fix_idx]. The fixpoint array introduces [n_funs] additional
        binders (the mutually recursive functions). *)
@@ -243,10 +250,11 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
     let fix_lams, fix_inner = strip_lams 0 fix_body in
     let fix_target_db = target_db + n_funs + fix_lams in
     ( match fix_inner with
-    | MLcase (_, MLrel (scrut_idx, _), branches, _) when scrut_idx = fix_target_db ->
+    | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = scrut_idx; _};
+                       branches; _} when scrut_idx = fix_target_db ->
       not
         (Array.exists
-           (fun (ids, _, _, branch_body) ->
+           (fun {Core.Match.Branch.binders = ids; body = branch_body; _} ->
              let n_bindings = List.length ids in
              returns_target (n_funs + fix_lams + n_bindings) branch_body )
            branches )
@@ -268,26 +276,26 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
     Type-class inductives are excluded because they become C++ concepts rather
     than structs, so attaching methods to them does not apply.
 
-    Only searches [SEdecl (Dind ...)] entries at the current level; does not
+    Only searches [Core.Module.Structure_item.Declaration (Core.Decl.Inductive ...)] entries at the current level; does not
     recurse into sub-modules. *)
 let find_eponymous_inductive module_name_str decls =
   let lowercase_module = String.lowercase_ascii module_name_str in
   List.find_map
     (fun (_l, se) ->
       match se with
-      | SEdecl (Dind (kn, ind)) ->
-        (* A single Dind may have multiple packets (mutual inductives). Check
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+        (* A single Core.Decl.Inductive may have multiple packets (mutual inductives). Check
            each packet's name against the module name. *)
         let rec find_in_packets i =
-          if i >= Array.length ind.ind_packets then
+          if i >= Array.length ind.packets then
             None
           else
-            let _p = ind.ind_packets.(i) in
+            let _p = ind.packets.(i) in
             let ind_ref = GlobRef.IndRef (kn, i) in
             let ind_name = Common.pp_global_name Type ind_ref in
             if String.lowercase_ascii ind_name = lowercase_module then
               match
-                ind.ind_kind
+                ind.kind
               with
               | Core.Inductive.Kind.Type_class _ ->
                 None (* Type classes become concepts, not methods *)
@@ -303,7 +311,7 @@ let find_eponymous_inductive module_name_str decls =
 (** Find the position of the first argument matching an eponymous type.
 
     Walks the curried arrow type [T1 -> T2 -> ... -> Tn -> R], checking each
-    [Ti] to see if it is [Tglob(epon_ref, tvar_args, _)].
+    [Ti] to see if it is [Core.Type.Global_app(epon_ref, tvar_args, _)].
 
     Returns [Some (pos, ind_tvar_positions)] where:
     - [pos] is the 0-based argument index that will become [this].
@@ -313,13 +321,13 @@ let find_eponymous_inductive module_name_str decls =
       method's template parameters.
 
     Example: for [app : forall A, list A -> list A -> list A]:
-    - The type is [Tarr(Tglob(list, [Tvar 1], _), Tarr(..., ...))].
-    - [Tglob]'s first arg matches [epon_ref], so [pos = 0].
-    - [tvar_args = [Tvar 1]], so [ind_tvar_positions = [0]] (Tvar 1 maps to
+    - The type is [Core.Type.Arrow(Core.Type.Global_app(list, [Core.Type.Variable 1], _), Core.Type.Arrow(..., ...))].
+    - [Core.Type.Global_app]'s first arg matches [epon_ref], so [pos = 0].
+    - [tvar_args = [Core.Type.Variable 1]], so [ind_tvar_positions = [0]] (Core.Type.Variable 1 maps to
       0-based index 0 in the type parameter list). *)
 let find_epon_arg_pos epon_ref ty =
   let rec aux pos = function
-    | Miniml.Tarr (Miniml.Tglob (arg_ref, tvar_args, _), rest)
+    | Core.Type.Arrow {parameter = Core.Type.Global_app {head = arg_ref; type_arguments = tvar_args; _}; result = rest}
       when globref_equal arg_ref epon_ref ->
       let nparams = match epon_ref with
         | GlobRef.IndRef (kn, _) ->
@@ -333,7 +341,7 @@ let find_epon_arg_pos epon_ref ty =
           param_tvar_args
       in
       Some (pos, ind_tvar_positions)
-    | Miniml.Tarr (_, rest) -> aux (pos + 1) rest
+    | Core.Type.Arrow {result = rest; _} -> aux (pos + 1) rest
     | _ -> None
   in
   aux 0 ty
@@ -346,20 +354,20 @@ let find_epon_arg_pos epon_ref ty =
 let find_all_module_inductives decls =
   List.concat_map (fun (_l, se) ->
     match se with
-    | SEdecl (Dind (kn, ind)) ->
-      let is_mutual = Array.length ind.ind_packets > 1 in
-      List.init (Array.length ind.ind_packets) (fun i ->
-        let p = ind.ind_packets.(i) in
+    | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+      let is_mutual = Array.length ind.packets > 1 in
+      List.init (Array.length ind.packets) (fun i ->
+        let p = ind.packets.(i) in
         let ind_ref = GlobRef.IndRef (kn, i) in
         if is_custom ind_ref || is_mutual then None
-        else match ind.ind_kind with
+        else match ind.kind with
           | Core.Inductive.Kind.Type_class _ -> None
           | Core.Inductive.Kind.Record _ -> None     (* Records have their own eponymous merging *)
           | Core.Inductive.Kind.Coinductive -> None  (* Coinductives use lazy eval, methods
                                     would capture this in closures *)
           | _ ->
             if Table.is_enum_inductive ind_ref then None
-            else if Array.length p.ip_types = 0 then None
+            else if Array.length p.constructor_argument_types = 0 then None
                    (* Empty types have no constructors — can't instantiate *)
             else Some ind_ref
       ) |> List.filter_map Fun.id
@@ -369,19 +377,19 @@ let find_all_module_inductives decls =
 (** Count how many times [ind_ref] appears in a type expression. *)
 let rec count_type_occurrences ind_ref ty =
   match ty with
-  | Miniml.Tglob (r, args, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} ->
     (if globref_equal r ind_ref then 1 else 0)
     + List.fold_left (fun acc a -> acc + count_type_occurrences ind_ref a) 0 args
-  | Miniml.Tarr (t1, t2) ->
+  | Core.Type.Arrow {parameter = t1; result = t2} ->
     count_type_occurrences ind_ref t1 + count_type_occurrences ind_ref t2
-  | Miniml.Tmeta { contents = Some t } -> count_type_occurrences ind_ref t
+  | Core.Type.Meta { contents = Some t } -> count_type_occurrences ind_ref t
   | _ -> 0
 
 (** Find the 0-based position of the first input argument matching [ind_ref].
     Returns [None] if [ind_ref] does not appear in any argument position. *)
 let find_first_input_pos ind_ref ty =
   let rec aux pos = function
-    | Miniml.Tarr (arg, rest) ->
+    | Core.Type.Arrow {parameter = arg; result = rest} ->
       if count_type_occurrences ind_ref arg > 0 then Some pos
       else aux (pos + 1) rest
     | _ -> None
@@ -507,7 +515,8 @@ let file_calls modpath decls =
   List.iter
     (fun (_l, se) ->
       match se with
-      | SEdecl d -> List.iter (fun fd -> add fd.fd_ref) (Mlutil.term_defs d)
+      | Core.Module.Structure_item.Declaration d ->
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) (Mlutil.term_defs d)
       | _ -> () )
     decls;
   fun body ->
@@ -649,7 +658,7 @@ let register_methods_for_epon
     List.iter
       (fun (_l, se) ->
         match se with
-        | SEdecl (Dind (fwd_kn, fwd_ind)) ->
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = fwd_kn; definition = fwd_ind}) ->
           Array.iteri
             (fun j _p ->
               let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
@@ -657,17 +666,17 @@ let register_methods_for_epon
                 seen_epon := true
               else if !seen_epon then
                 forward_inductives := fwd_ref :: !forward_inductives )
-            fwd_ind.ind_packets
+            fwd_ind.packets
         | _ -> () )
       decls;
     let fwd_refs = !forward_inductives in
     let refs_any excluded =
       let rec check ty =
         match ty with
-        | Miniml.Tglob (r, args, _) ->
+        | Core.Type.Global_app {head = r; type_arguments = args; _} ->
           List.exists (globref_equal r) excluded || List.exists check args
-        | Miniml.Tarr (t1, t2) -> check t1 || check t2
-        | Miniml.Tmeta {contents = Some t} -> check t
+        | Core.Type.Arrow {parameter = t1; result = t2} -> check t1 || check t2
+        | Core.Type.Meta {contents = Some t} -> check t
         | _ -> false
       in
       check
@@ -692,7 +701,7 @@ let register_methods_for_epon
       List.filter_map
         (fun (_l, se) ->
           match se with
-          | SEdecl (Dtype (r, _, _))
+          | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _})
             when ModPath.equal (modpath_of_r r) epon_modpath
                  && not (Table.is_any_inline_custom r) ->
             Some r
@@ -726,9 +735,9 @@ let register_methods_for_epon
     List.iter
       (fun (_l, se) ->
         match se with
-        | SEdecl d ->
+        | Core.Module.Structure_item.Declaration d ->
           List.iter
-            (fun {fd_ref = r; fd_body = body; fd_type = ty} ->
+            (fun {Core.Recursion.Definition.entity = r; body = body; type_ = ty} ->
               if same_module r && not (refs_forward ty) && not (refs_alias ty)
               then
                 match method_receiver epon_ref body ty with
@@ -757,16 +766,16 @@ let register_methods_for_epon
     this function considers all non-typeclass, non-custom inductives in the module
     and uses [find_best_inductive] to pick the best one for each function. *)
 let register_methods_for_all_inductives tbl cands ind_refs decls =
-  (* Collect type aliases (Dtype) defined in this module. Methods on nested
+  (* Collect type aliases (Core.Decl.Type_alias) defined in this module. Methods on nested
      inductives can't reference these because the type alias may not be
      visible from inside the inductive's struct definition.  Inline-custom
-     types (Crane Extract Inlined Constant) are excluded: they generate Dtype
+     types (Crane Extract Inlined Constant) are excluded: they generate Core.Decl.Type_alias
      entries but expand to inline C++ code, so they don't create real type
      aliases that would cause visibility problems. *)
   let module_type_aliases =
     List.filter_map (fun (_l, se) ->
       match se with
-      | SEdecl (Dtype (r, _, _))
+      | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _})
         when not (Table.is_any_inline_custom r) -> Some r
       | _ -> None
     ) decls
@@ -777,14 +786,14 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     let seen = ref false in
     List.iter (fun (_l, se) ->
       match se with
-      | SEdecl (Dind (kn, ind)) ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
         Array.iteri (fun j _p ->
           let r = GlobRef.IndRef (kn, j) in
           if globref_equal r ind_ref then
             seen := true
           else if !seen then
             fwd := r :: !fwd
-        ) ind.ind_packets
+        ) ind.packets
       | _ -> ()
     ) decls;
     (ind_ref, !fwd)
@@ -803,11 +812,11 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     in
     let excluded = module_type_aliases @ fwd_refs in
     let rec check = function
-      | Miniml.Tglob (r, args, _) ->
+      | Core.Type.Global_app {head = r; type_arguments = args; _} ->
         List.exists (globref_equal r) excluded
         || List.exists check args
-      | Miniml.Tarr (t1, t2) -> check t1 || check t2
-      | Miniml.Tmeta { contents = Some t } -> check t
+      | Core.Type.Arrow {parameter = t1; result = t2} -> check t1 || check t2
+      | Core.Type.Meta { contents = Some t } -> check t
       | _ -> false
     in check ty
   in
@@ -827,14 +836,14 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
      [tree] struct, whose members are written over its own parameters. *)
   let has_concrete_type_args best_ref ty =
     let rec find_arg pos = function
-      | Miniml.Tarr (Miniml.Tglob (r, tvar_args, _), _rest)
+      | Core.Type.Arrow {parameter = Core.Type.Global_app {head = r; type_arguments = tvar_args; _}; result = _rest}
         when globref_equal r best_ref ->
         (* Check if any type arg is concrete (not a type variable) *)
         tvar_args <> [] &&
         List.exists (fun t ->
-          match t with Miniml.Tvar (_, _) -> false | _ -> true
+          match t with Core.Type.Variable _ -> false | _ -> true
         ) tvar_args
-      | Miniml.Tarr (_, rest) -> find_arg (pos + 1) rest
+      | Core.Type.Arrow {result = rest; _} -> find_arg (pos + 1) rest
       | _ -> false
     in
     find_arg 0 ty
@@ -853,9 +862,9 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
   in
   List.iter (fun (_l, se) ->
     match se with
-    | SEdecl d ->
+    | Core.Module.Structure_item.Declaration d ->
       List.iter
-        (fun fd -> process_func fd.fd_ref fd.fd_body fd.fd_type)
+        (fun (fd : Core.Recursion.Definition.t) -> process_func fd.entity fd.body fd.type_)
         (Mlutil.term_defs d)
     | _ -> ()
   ) decls
@@ -875,7 +884,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     declarations that match a wrapper module naming pattern are also registered.
 
     {b Inside modules} ([at_top_level = false]): For inductives inside a
-    [SEmodule], the standard eponymous type detection applies: the module name
+    [Core.Module.Structure_item.Module], the standard eponymous type detection applies: the module name
     is compared against inductive names, and functions within that module are
     checked.
 
@@ -890,15 +899,15 @@ let rec pre_register_methods_from_structure
     tbl
     cands
     ~at_top_level
-    (parent_decls : (Label.t * Miniml.ml_structure_elem) list)
-    (sel : (Label.t * Miniml.ml_structure_elem) list) : unit =
+    (parent_decls : (Label.t * Core.Module.Structure_item.t) list)
+    (sel : (Label.t * Core.Module.Structure_item.t) list) : unit =
   (* Handle top-level inductives that may have sibling methods. *)
   if at_top_level then
     List.iter
       (fun (_l, se) ->
         match se with
-        | SEdecl (Dind (kn, ind)) ->
-          let is_mutual = Array.length ind.ind_packets > 1 in
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+          let is_mutual = Array.length ind.packets > 1 in
           Array.iteri
             (fun i p ->
               let ind_ref = GlobRef.IndRef (kn, i) in
@@ -913,7 +922,7 @@ let rec pre_register_methods_from_structure
                  support methods via the multi-inductive heuristic.
                  Registering methods on standalone records (like Q from
                  QArith) would generate method calls without definitions. *)
-              match ind.ind_kind with
+              match ind.kind with
               | Core.Inductive.Kind.Type_class _ | Core.Inductive.Kind.Record _ -> ()
               | _ ->
                 (* Register methods from sibling declarations at this level. *)
@@ -933,29 +942,29 @@ let rec pre_register_methods_from_structure
                   ~top_level_siblings:true
                   ind_ref
                   parent_decls )
-            ind.ind_packets
+            ind.packets
         | _ -> () )
       sel;
   (* Process each declaration, recursing into sub-modules. *)
   List.iter
     (fun (l, se) ->
       match se with
-      | SEmodule m ->
-        ( match m.ml_mod_expr with
-        | MEstruct (_mp, inner_sel) ->
+      | Core.Module.Structure_item.Module m ->
+        ( match m.expr with
+        | Core.Module.Expr.Structure {path = _mp; items = inner_sel} ->
           (* Early enum detection for inductives inside this module. *)
           List.iter
             (fun (_l', se') ->
               match se' with
-              | SEdecl (Dind (kn', ind')) ->
-                let is_mutual' = Array.length ind'.ind_packets > 1 in
+              | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn'; definition = ind'}) ->
+                let is_mutual' = Array.length ind'.packets > 1 in
                 Array.iteri
                   (fun i' p' ->
                     let ind_ref' = GlobRef.IndRef (kn', i') in
                     if (not (is_custom ind_ref')) && not is_mutual' then
                       if Table.is_enum_inductive_packet ind' i' then
                         Table.add_enum_inductive ind_ref' )
-                  ind'.ind_packets
+                  ind'.packets
               | _ -> () )
             inner_sel;
           (* Find ALL module-local inductives for method assignment. *)
@@ -989,7 +998,7 @@ let rec pre_register_methods_from_structure
             ~at_top_level:false
             (parent_decls @ sel)
             inner_sel
-        | MEfunctor (_mbid, _mt, body) ->
+        | Core.Module.Expr.Functor {parameter = _mbid; parameter_type = _mt; body} ->
           (* Recurse into functor bodies: they may contain modules with
              eponymous types. *)
           pre_register_methods_from_module_expr
@@ -1006,15 +1015,15 @@ let rec pre_register_methods_from_structure
 and pre_register_methods_from_module_expr
     tbl
     cands
-    (parent_decls : (Label.t * Miniml.ml_structure_elem) list) = function
-  | MEstruct (_mp, sel) ->
+    (parent_decls : (Label.t * Core.Module.Structure_item.t) list) = function
+  | Core.Module.Expr.Structure {path = _mp; items = sel} ->
     pre_register_methods_from_structure
       tbl
       cands
       ~at_top_level:false
       parent_decls
       sel
-  | MEfunctor (_mbid, _mt, body) ->
+  | Core.Module.Expr.Functor {parameter = _mbid; parameter_type = _mt; body} ->
     pre_register_methods_from_module_expr tbl cands parent_decls body
   | _ -> ()
 
@@ -1035,7 +1044,7 @@ and pre_register_methods_from_module_expr
     method signature.
 
     The algorithm: 1. Build a mapping from each inductive [GlobRef] to its
-    parameter variable names (the [ip_vars] that correspond to kept parameters).
+    parameter variable names (the [type_variables] that correspond to kept parameters).
     2. For each registered method, find its ML type in the structure, extract
     the return type, and ask [ret_is_erased] whether it has a C++ spelling. 3.
     If it does not, set [returns_any = true] in the method's entry.
@@ -1045,19 +1054,19 @@ and pre_register_methods_from_module_expr
     them.  So the judgement arrives as a parameter rather than as a call into
     {!Translation}, which would make the two modules mutually dependent. *)
 let compute_returns_any
-    ~(ret_is_erased : Id.t list -> Miniml.ml_type -> bool) tbl
-    (s : ml_structure) =
+    ~(ret_is_erased : Id.t list -> Core.Type.t -> bool) tbl
+    (s : Core.Program.t) =
   (* Step 1: In a single walk of the structure, build (a) IndRef -> param_vars
      for all inductives and (b) a term-ref -> ML type index so step 2 can look
      up each method's type in O(1) instead of re-walking the whole structure
      per method. *)
   let ind_param_vars : Id.t list Ref.User.Tbl.t = Ref.User.Tbl.create 32 in
-  let method_types : Miniml.ml_type Ref.User.Tbl.t = Ref.User.Tbl.create 256 in
+  let method_types : Core.Type.t Ref.User.Tbl.t = Ref.User.Tbl.create 256 in
   let rec collect_from_sel sel =
     List.iter
       (fun (_l, se) ->
         match se with
-        | SEdecl (Dind (kn, ind)) ->
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           Array.iteri
             (fun i p ->
               let ind_ref = GlobRef.IndRef (kn, i) in
@@ -1067,14 +1076,14 @@ let compute_returns_any
                  in a method's return type.  See {!Table.ind_promoted_params}. *)
               Ref.User.Tbl.replace ind_param_vars ind_ref
                 (Table.ind_promoted_params kn @ param_vars) )
-            ind.ind_packets
-        | SEdecl ((Dterm _ | Dfix _) as d) ->
+            ind.packets
+        | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
           List.iter
-            (fun fd -> Ref.User.Tbl.replace method_types fd.fd_ref fd.fd_type)
+            (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace method_types fd.entity fd.type_)
             (Mlutil.term_defs d)
-        | SEmodule m ->
-          ( match m.ml_mod_expr with
-          | MEstruct (_mp, inner_sel) -> collect_from_sel inner_sel
+        | Core.Module.Structure_item.Module m ->
+          ( match m.expr with
+          | Core.Module.Expr.Structure {path = _mp; items = inner_sel} -> collect_from_sel inner_sel
           | _ -> () )
         | _ -> () )
       sel
@@ -1089,7 +1098,7 @@ let compute_returns_any
       | Some param_vars ->
         (* Extract the return type from a curried arrow type. *)
         let rec get_return_type = function
-          | Miniml.Tarr (_, t2) -> get_return_type t2
+          | Core.Type.Arrow {result = t2; _} -> get_return_type t2
           | ret -> ret
         in
         (* Step 3: Look up this method's ML type (indexed in step 1) and check
@@ -1113,7 +1122,7 @@ let compute_returns_any
     The two-phase approach (register methods, then compute returns_any) is
     necessary because [compute_returns_any] needs the full set of registered
     methods and all inductives' parameter information to work correctly. *)
-let create ~ret_is_erased (s : ml_structure) : t =
+let create ~ret_is_erased (s : Core.Program.t) : t =
   let tbl = RefTbl.create 100 in
   let cands = Ref.User.Tbl.create 32 in
   (* Gather all top-level declarations across all modules. These serve as
@@ -1193,7 +1202,7 @@ let get_candidates (reg : t) (ind_ref : GlobRef.t) : method_candidate list =
     rendering reads the registry and adds nothing to it.  Under
     [CRANE_CHECK_IR] a method the scan missed is reported. *)
 let planned_candidate (reg : t) (epon_ref : GlobRef.t) (func_ref : GlobRef.t)
-    (body : Miniml.ml_ast) (ty : Miniml.ml_type) : method_candidate option =
+    (body : Core.Expr.t) (ty : Core.Type.t) : method_candidate option =
   match method_receiver epon_ref body ty with
   | None -> None
   | Some (pos, _) -> (
@@ -1206,19 +1215,19 @@ let planned_candidate (reg : t) (epon_ref : GlobRef.t) (func_ref : GlobRef.t)
           ++ GlobRef.print epon_ref ++ str ", which the registry's scan did not" );
       None )
 
-(** Collect [Dtype] refs from a declaration list that share [modpath],
+(** Collect [Core.Decl.Type_alias] refs from a declaration list that share [modpath],
     excluding inline-custom types (e.g., [Crane Extract Inlined Constant]).
-    These produce [Dtype] entries but are not real C++ type aliases; including
+    These produce [Core.Decl.Type_alias] entries but are not real C++ type aliases; including
     them would incorrectly block method candidates whose signatures reference
     the inlined name.
 
-    Works with both [ml_specif] lists (used during pre-scan) and
-    [ml_structure_elem] lists (used during rendering) via [extract_decl]. *)
+    Works with both [Core.Module.Signature_item.t] lists (used during pre-scan) and
+    [Core.Module.Structure_item.t] lists (used during rendering) via [extract_decl]. *)
 let collect_module_type_aliases ~extract_decl modpath decls =
   List.fold_left
     (fun acc item ->
       match extract_decl item with
-      | Some (Miniml.Dtype (r, _, _))
+      | Some (Core.Decl.Type_alias {entity = r; _})
         when Names.ModPath.equal (modpath_of_r r) modpath
           && not (Table.is_any_inline_custom r) ->
         r :: acc

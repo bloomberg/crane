@@ -197,7 +197,7 @@ and Call : sig
     params : 'p params;
     constructs : GlobRef.t option;
         (** the constructor a factory call builds *)
-    occurrence : Miniml.Occurrence.t option;
+    occurrence : Core.Occurrence.t option;
         (** the Core call the call is made of *)
   }
 
@@ -255,7 +255,7 @@ and Local_fixpoint : sig
   type t = {
     binder : Id.t;  (** the binder it binds in its definition *)
     name : Id.t;  (** the name it is called by in C++ *)
-    member : Miniml.Occurrence.t * int;
+    member : Core.Occurrence.t * int;
         (** the Core fixpoint it lowers, by the fixpoint's occurrence, and
             the index of its function among the fixpoint's *)
     captured : (Id.t * Core_binder.t) list;

@@ -15,9 +15,9 @@
     not behaviour: two algorithms for one function stay two.  Mapped
     definitions and projections are left alone.
 
-    One of the MiniML passes run before the program is frozen, just before
+    One of the Core passes run before the program is frozen, just before
     {!Ml_specialize}. *)
 
 (** Every module of the structure with its coinciding definitions made
     forwarders. *)
-val structure : Miniml.ml_structure -> Miniml.ml_structure
+val structure : Core.Program.t -> Core.Program.t

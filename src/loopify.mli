@@ -80,7 +80,7 @@ val frame_machine :
     C++ call made of it records: a function's own, in its recursive group's
     bodies ({!Recursion_plan.calls}), or those of the member of the local
     fixpoint a helper lifted for it lowers. *)
-val definition_calls : GlobRef.t -> Miniml.Occurrence.t list
+val definition_calls : GlobRef.t -> Core.Occurrence.t list
 
 (** [record_unlowered ?unlowered f body] records the outcome of the
     function [f], whose body is [body], of which no loop of its own is made
@@ -139,10 +139,10 @@ val modulo_cons_loop :
     gives ({!Ownership_ir.continue_moves}). *)
 val transform_method_own :
   ?cursor:Reuse_cursor.t ->
-  ?moves:(Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list ->
+  ?moves:(Core.Occurrence.t * Ownership_ir.Continue_move.t list) list ->
   varying:bool list ->
   parts:bool list ->
-  park:Miniml.Occurrence.t list ->
+  park:Core.Occurrence.t list ->
   tparams:(param_kind * Id.t) list ->
   self_ty:ty ->
   meth ->
@@ -184,7 +184,7 @@ val lower_function_locals :
     It raises [Loopify_analysis.Not_linearisable] where the transform
     declines. *)
 val local_frame_machine :
-  member:Miniml.Occurrence.t * int ->
+  member:Core.Occurrence.t * int ->
   name:Id.t ->
   binders:(Id.t * Core_binder.t) list ->
   varying:bool list ->
@@ -209,7 +209,7 @@ type member_plan = {
   member_parts : bool list;
       (** Whether it is passed parts of the caller's, or held by pointer in
           a frame. *)
-  member_moves : (Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list;
+  member_moves : (Core.Occurrence.t * Ownership_ir.Continue_move.t list) list;
       (** The parameters each Continue of a tail loop moves into their next
           value ({!Ownership_ir.continue_moves}); empty for a machine. *)
 }
@@ -219,7 +219,7 @@ type member_plan = {
     a stack of frames where [frames]; [None] where it has no ControlIR loop,
     or the lambda takes other parameters than the loop. *)
 val member_plan :
-  frames:bool -> Miniml.Occurrence.t * int -> (Names.Id.t * ty) list -> member_plan option
+  frames:bool -> Core.Occurrence.t * int -> (Names.Id.t * ty) list -> member_plan option
 
 val worthwhile_move_type : ty -> bool
 (** Whether a value of this type is expensive enough to copy that writing

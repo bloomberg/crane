@@ -49,7 +49,7 @@ type action =
     arguments the turn passes them that read anything the cell holds, and
     are read before the field it walks on to is stolen. *)
 type step = private {
-  turn : Miniml.Occurrence.t;
+  turn : Core.Occurrence.t;
   action : action;
   arguments_read_first : int list;
 }
@@ -73,7 +73,7 @@ type t = private {
     walked. *)
 val plan :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
-  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   Control_ir.Term.loop ->
   t option
 
@@ -84,4 +84,4 @@ val plan :
 val positioned : t -> int option list -> t option
 
 (** The step [c] takes at the turn [turn], if it walks on there. *)
-val step_at : t -> Miniml.Occurrence.t -> step option
+val step_at : t -> Core.Occurrence.t -> step option

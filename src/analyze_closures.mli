@@ -33,8 +33,8 @@ type group =
     [continuation], where it is given, or else applied in place. *)
 val group :
   n_outer:int ->
-  ?continuation:Miniml.ml_ast ->
+  ?continuation:Core.Expr.t ->
   cofix:bool ->
-  (Names.Id.t * Miniml.ml_type) array ->
-  Miniml.ml_ast array ->
+  (Names.Id.t * Core.Type.t) array ->
+  Core.Expr.t array ->
   group

@@ -11,7 +11,7 @@
     ({!Core_effects.install}) and the inductive kinds), and writes each
     decided inductive kind into the structure's declarations of that block,
     which most readers still take the kind from. *)
-val install : Miniml.ml_structure -> Program_facts.t -> Target_plan.t -> unit
+val install : Core.Program.t -> Program_facts.t -> Target_plan.t -> unit
 
 (** [install_program facts] fills the tables a whole program's analysis
     stands for: the throwing values, the parameter ownership, the recursive
@@ -48,7 +48,7 @@ val install_scopes : Scope_plan.t -> unit
     unit's instances give their classes' promoted variables, as
     {!Target_plan.representation} holds them. *)
 val install_instance_promoted_types :
-  (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list -> unit
+  (Names.GlobRef.t * (Names.Id.t * Core.Type.t) list) list -> unit
 
 (** [install_promoted_inductives inductives] promotes the inductives, as
     {!Target_plan.representation} holds them. *)

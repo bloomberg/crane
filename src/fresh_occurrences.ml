@@ -3,27 +3,39 @@
 
 (** Every term is an occurrence of its own.  See [fresh_occurrences.mli]. *)
 
-open Miniml
+
+(* A group recursing at a ground instance stays one under its new
+   occurrence ({!Table.add_erased_fix_group}). *)
+let fix_occurrence occ =
+  let occ' = Core.Occurrence.fresh () in
+  if Table.is_erased_fix_group occ then Table.add_erased_fix_group occ';
+  occ'
 
 let rec term e =
   match Mlutil.ast_map term e with
-  | MLrel (i, _) -> fresh_rel i
-  | MLletin (x, ty, a, b, _) -> MLletin (x, ty, a, b, Occurrence.fresh ())
-  | MLcase (ty, scrut, branches, _) -> MLcase (ty, scrut, branches, Occurrence.fresh ())
-  | MLcons (ty, r, args, _) -> MLcons (ty, r, args, Occurrence.fresh ())
-  | MLmagic (m, a, _) -> MLmagic (m, a, Occurrence.fresh ())
-  | MLfix (i, ids, bodies, cofix, occ) ->
-    let occ' = Occurrence.fresh () in
-    (* A group recursing at a ground instance stays one under its new
-       occurrence ({!Table.add_erased_fix_group}). *)
-    if Table.is_erased_fix_group occ then Table.add_erased_fix_group occ';
-    MLfix (i, ids, bodies, cofix, occ')
-  | MLglob use -> MLglob (Global_use.refresh use)
+  | Core.Expr.Bound_variable {index = i; _} -> Core.Expr.fresh_rel i
+  | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
+    Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; occurrence = Core.Occurrence.fresh ()}
+  | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; _} ->
+    Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; occurrence = Core.Occurrence.fresh ()}
+  | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; _} ->
+    Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; occurrence = Core.Occurrence.fresh ()}
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = a; _} ->
+    Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = Core.Occurrence.fresh ()}
+  | Core.Expr.Boxed_value {value = a; _} -> Core.Expr.Boxed_value {value = a; occurrence = Core.Occurrence.fresh ()}
+  | Core.Expr.Lambda_group_barrier {value = a; _} ->
+    Core.Expr.Lambda_group_barrier {value = a; occurrence = Core.Occurrence.fresh ()}
+  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
+    Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = fix_occurrence occ}
+  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
+    Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = fix_occurrence occ}
+  | Core.Expr.Global use -> Core.Expr.Global (Core.Global_use.refresh use)
   | e -> e
 
 let decl = function
-  | Dterm (r, b, ty) -> Dterm (r, term b, ty)
-  | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = term fd.fd_body}) fds)
+  | Core.Decl.Value {entity = r; body = b; type_ = ty} -> Core.Decl.Value {entity = r; body = term b; type_ = ty}
+  | Core.Decl.Recursive_group fds ->
+    Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = term fd.body}) fds)
   | d -> d
 
 let structure = Modutil.map_struct_decls decl

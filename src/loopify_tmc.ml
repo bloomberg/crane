@@ -164,7 +164,7 @@ let make_cell ~constructor ~factory ~cell_ty ~ctor_name args idx =
     and the occurrence the call is made of, where it is known. *)
 type shape = {
   constructors : (GlobRef.t * int) list;
-  call : Miniml.Occurrence.t option;
+  call : Core.Occurrence.t option;
 }
 
 (** The shapes of the recursion plan's [chains] ({!Recursion_plan.strategy}),
@@ -206,7 +206,8 @@ let planned_result shapes ret_ty =
   in
   match List.sort_uniq GlobRef.CanOrd.compare (List.filter_map outermost shapes) with
   | [r] ->
-    let planned = {values = (not (Table.is_coinductive r)) && not (Table.is_custom r); shared = Table.is_shared_variant r} in
+    let planned = {values = (not (Table.is_coinductive r)) && not (Table.is_custom r);
+                   shared = Table.is_shared_variant r} in
     if Probe.checking () && planned <> read_off_type then
       Probe.violation "tail modulo cons plan"
         Pp.(
@@ -238,7 +239,7 @@ let branch_along shapes check expr =
               let made_of_call =
                 match (call, Loopify_analysis.made_of held) with
                 | None, _ -> true
-                | Some o, Some o' -> Miniml.Occurrence.equal o o'
+                | Some o, Some o' -> Core.Occurrence.equal o o'
                 | Some _, None -> false
               in
               if made_of_call then
@@ -495,7 +496,10 @@ let return_from_switches ret stmts =
   and stmt ~in_switch = function
     | Break when in_switch -> Return (Some ret)
     | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
-      Switch {scrutinee = scrut; enum = r; branches = List.map (fun (p, b) -> (p, block ~in_switch:true b)) branches; default = Option.map (block ~in_switch:true) default}
+      Switch {scrutinee = scrut;
+              enum = r;
+              branches = List.map (fun (p, b) -> (p, block ~in_switch:true b)) branches;
+              default = Option.map (block ~in_switch:true) default}
     | (While _ | For_range _) as s -> s
     | s -> map_stmt Fun.id (stmt ~in_switch) Fun.id s
   in

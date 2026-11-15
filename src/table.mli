@@ -22,7 +22,6 @@
 
 open Names
 open Libnames
-open Miniml
 open Declarations
 
 (** Get a safe basename identifier from a global reference. *)
@@ -96,10 +95,10 @@ val check_inside_section : unit -> unit
 val check_loaded_modfile : ModPath.t -> unit
 
 (** Get message for implicit kill reason. *)
-val msg_of_implicit : kill_reason -> string
+val msg_of_implicit : Core.Erasure_reason.t -> string
 
 (** Issue error or warning for remaining implicit. *)
-val err_or_warn_remaining_implicit : kill_reason -> unit
+val err_or_warn_remaining_implicit : Core.Erasure_reason.t -> unit
 
 (** Print info message about file. *)
 val info_file : string -> unit
@@ -177,18 +176,18 @@ val labels_of_ref : GlobRef.t -> ModPath.t * Label.t list
     @param kn the constant being cached
     @param cb the constant body used as a checksum to detect stale entries
     @param t  the extracted ML type to store *)
-val add_typedef : Constant.t -> constant_body -> ml_type -> unit
+val add_typedef : Constant.t -> constant_body -> Core.Type.t -> unit
 
 (** Lookup type definition from cache.
     @param kn the constant to look up
     @param cb the current constant body; [None] is returned if this doesn't
               match the body stored when the entry was created
     @return [Some t] if found and the checksum matches, [None] otherwise *)
-val lookup_typedef : Constant.t -> constant_body -> ml_type option
+val lookup_typedef : Constant.t -> constant_body -> Core.Type.t option
 
 (** Lookup type definition without checksum validation.
     @return [Some t] if any entry for [kn] exists, regardless of staleness *)
-val lookup_typedef_unchecked : Constant.t -> ml_type option
+val lookup_typedef_unchecked : Constant.t -> Core.Type.t option
 
 (** Add constant type schema to cache.
     @param kn the constant being cached
@@ -210,28 +209,28 @@ val constant_schema : Constant.t -> Ml_schema.t option
 (** Add inductive to cache.
     @param kn    the mutual inductive name being cached
     @param mib   the inductive body used as a checksum to detect stale entries
-    @param ml_ind the extracted ML inductive to store *)
-val add_ind : MutInd.t -> mutual_inductive_body -> ml_ind -> unit
+    @param Core.Inductive.t the extracted ML inductive to store *)
+val add_ind : MutInd.t -> mutual_inductive_body -> Core.Inductive.t -> unit
 
 (** Lookup inductive from cache.
     @param kn  the mutual inductive name to look up
     @param mib the current inductive body; [None] is returned on checksum mismatch
     @return [Some ind] if found and the checksum matches, [None] otherwise *)
-val lookup_ind : MutInd.t -> mutual_inductive_body -> ml_ind option
+val lookup_ind : MutInd.t -> mutual_inductive_body -> Core.Inductive.t option
 
 (** Get number of parameters for inductive if available. *)
 val get_ind_nparams_opt : MutInd.t -> int option
 
-(** The type variable a type argument is, where it is one: a bare [Tvar], or
+(** The type variable a type argument is, where it is one: a bare [Core.Type.Variable], or
     a higher-kinded variable applied at nothing but placeholders ([E _]), which
-    is how MiniML writes one. *)
-val type_var_of_arg : Miniml.ml_type -> int option
+    is how Core writes one. *)
+val type_var_of_arg : Core.Type.t -> int option
 
 (** Get number of parameter variables for inductive if available. *)
 val get_ind_num_param_vars_opt : MutInd.t -> int option
 
 (** Compute the kept type-variable names among an inductive packet's
-    PARAMETER positions only (the first [ind_nparams] entries of [ip_sign]),
+    PARAMETER positions only (the first [parameter_count] entries of [signature]),
     excluding type INDICES.  Used to distinguish a scheme's own parameters
     (e.g. [List (A:Type)]) from indices it is applied to (e.g. the [A] in
     [wrap : Set -> Type]), which are not template-representable in C++.
@@ -239,14 +238,14 @@ val get_ind_num_param_vars_opt : MutInd.t -> int option
     @param p the packet (one constructor group) to compute parameter vars for
     @return the kept parameter variable names, and their count *)
 val ind_param_vars :
-  Miniml.ml_ind -> Miniml.ml_ind_packet -> Names.Id.t list * int
+  Core.Inductive.t -> Core.Inductive.Packet.t -> Names.Id.t list * int
 
 (** Add inductive kind to table. *)
-val add_inductive_kind : MutInd.t -> record_field Core.Inductive.Kind.t -> unit
+val add_inductive_kind : MutInd.t -> Core.Inductive.Kind.t -> unit
 
 (** The recorded kind of the inductive a reference belongs to, if any.  Every
     question about an inductive's kind is answered from this. *)
-val inductive_kind_of : GlobRef.t -> record_field Core.Inductive.Kind.t option
+val inductive_kind_of : GlobRef.t -> Core.Inductive.Kind.t option
 
 (** Check if reference is coinductive. *)
 val is_coinductive : GlobRef.t -> bool
@@ -255,7 +254,7 @@ val is_coinductive : GlobRef.t -> bool
 val has_any_coinductive : unit -> bool
 
 (** Check if ML type is coinductive. *)
-val is_coinductive_type : ml_type -> bool
+val is_coinductive_type : Core.Type.t -> bool
 
 (** {2 Demands}
 
@@ -344,11 +343,11 @@ val needs_itree_header : unit -> bool
     @param struct_opt enclosing struct qualifier, if any
     @param needs_run  true if the return type is a reified ITree
                       (needs [->run()]), false if the monad was erased *)
-val set_main_function : Id.t -> ml_type -> Id.t option -> bool -> unit
+val set_main_function : Id.t -> Core.Type.t -> Id.t option -> bool -> unit
 
 (** Return the recorded main function, if any:
     [(name, return_type, struct_qualifier, needs_run)]. *)
-val get_main_function : unit -> (Id.t * ml_type * Id.t option * bool) option
+val get_main_function : unit -> (Id.t * Core.Type.t * Id.t option * bool) option
 
 (** Reset main function tracking (between extraction units). *)
 val reset_main_function : unit -> unit
@@ -358,18 +357,18 @@ val reset_main_function : unit -> unit
 val get_record_fields : GlobRef.t -> GlobRef.t option list
 
 (** Get record fields from ML type. *)
-val record_fields_of_type : ml_type -> GlobRef.t option list
+val record_fields_of_type : Core.Type.t -> GlobRef.t option list
 
 (** The fields of a record or type class, each paired with its ML type.  Use
     this rather than zipping {!get_record_fields} against
     {!record_field_types}, which can disagree in length. *)
-val get_record_field_bindings : GlobRef.t -> Miniml.record_field list
+val get_record_field_bindings : GlobRef.t -> Core.Record.Field.t list
 
 (** {!get_record_field_bindings} for a record named by an ML type. *)
-val record_field_bindings_of_type : ml_type -> Miniml.record_field list
+val record_field_bindings_of_type : Core.Type.t -> Core.Record.Field.t list
 
 (** Get types of record fields. *)
-val record_field_types : GlobRef.t -> ml_type list
+val record_field_types : GlobRef.t -> Core.Type.t list
 
 (** Get inductive type parameter variables. *)
 val get_ind_ip_vars : GlobRef.t -> Names.Id.t list
@@ -388,12 +387,12 @@ val get_ind_nb_sign_keeps : GlobRef.t -> int
     instance ([typename I::M]), reusing the representation of promoted
     [Type]-valued record fields. *)
 
-(** Record which of an inductive's [Keep] parameters (0-based) are type
+(** Record which of an inductive's [Core.Signature.Argument.Runtime] parameters (0-based) are type
     constructors, each with its arity.  Called by extraction; a no-op for the
     empty list. *)
 val add_ind_hkt_params : GlobRef.t -> (int * int) list -> unit
 
-(** Positions (0-based among the [Keep] parameters) of the type-constructor
+(** Positions (0-based among the [Core.Signature.Argument.Runtime] parameters) of the type-constructor
     parameters of [r]. *)
 val get_ind_hkt_params : GlobRef.t -> int list
 
@@ -401,7 +400,7 @@ val get_ind_hkt_params : GlobRef.t -> int list
     parameter is an ordinary type. *)
 val get_ind_hkt_arity : GlobRef.t -> int -> int
 
-(** True when parameter [i] (0-based among the [Keep] parameters) of [r] is a
+(** True when parameter [i] (0-based among the [Core.Signature.Argument.Runtime] parameters) of [r] is a
     type constructor. *)
 val is_hkt_param : GlobRef.t -> int -> bool
 
@@ -420,10 +419,10 @@ val add_type_scheme_arity : GlobRef.t -> int -> unit
     parameters or is unknown. *)
 val get_type_scheme_arity : GlobRef.t -> int
 
-(** Get the ML field types for a constructor, as stored in [ip_types].
+(** Get the ML field types for a constructor, as stored in [constructor_argument_types].
     Returns [None] if the inductive is not in the extraction table.
     The list order matches the constructor argument order. *)
-val get_ctor_ip_types_opt : GlobRef.t -> Miniml.ml_type list option
+val get_ctor_ip_types_opt : GlobRef.t -> Core.Type.t list option
 
 (** [is_non_uniform_inductive r] holds when the inductive [r] is nested
     (non-uniform): a constructor field mentions the inductive at instantiated
@@ -431,8 +430,8 @@ val get_ctor_ip_types_opt : GlobRef.t -> Miniml.ml_type list option
 val is_non_uniform_inductive : Names.GlobRef.t -> bool
 
 (** Get the number of C++ parameter type variables for the inductive
-    containing the given constructor.  Only [Keep] entries in the PARAMETER
-    portion of [ip_sign] (first [ind_nparams] positions) are counted —
+    containing the given constructor.  Only [Core.Signature.Argument.Runtime] entries in the PARAMETER
+    portion of [signature] (first [parameter_count] positions) are counted —
     type indices are excluded.  Mirrors the [param_vars] computation in
     [gen_ind_header_v2].  Returns 0 on lookup failure. *)
 val get_ctor_num_param_vars : GlobRef.t -> int
@@ -462,7 +461,7 @@ val singleton_instance_class : ?env:Environ.env -> GlobRef.t -> GlobRef.t option
 val builds_instance : ?env:Environ.env -> GlobRef.t -> bool
 
 (** Check if ML type is a typeclass. *)
-val is_typeclass_type : ml_type -> bool
+val is_typeclass_type : Core.Type.t -> bool
 
 (** Mark inductive as flat (single-ctor, no variant wrapper). *)
 val add_flat_inductive : GlobRef.t -> unit
@@ -510,12 +509,12 @@ val has_dependent_params : GlobRef.t -> bool
     and at least one constructor exists.
     @param ind the extracted ML inductive (contains all packets)
     @param i   0-based index of the packet within [ind] to test *)
-val is_enum_inductive_packet : Miniml.ml_ind -> int -> bool
+val is_enum_inductive_packet : Core.Inductive.t -> int -> bool
 
 (** Check if an inductive packet qualifies as flat (single constructor, no kept
     type parameters, not coinductive, not mutual, no self-referencing fields).
     Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
-val is_flat_inductive_packet : Names.MutInd.t -> Miniml.ml_ind -> int -> bool
+val is_flat_inductive_packet : Names.MutInd.t -> Core.Inductive.t -> int -> bool
 
 (** The constructor names of packet [i] of the extracted inductive [kn], in
     declaration order, if it has been extracted. *)
@@ -604,11 +603,11 @@ val is_value_dep_type_scheme : GlobRef.t -> bool
 
 (** Add instance promoted types. *)
 val add_instance_promoted_types :
-  GlobRef.t -> (Names.Id.t * Miniml.ml_type) list -> unit
+  GlobRef.t -> (Names.Id.t * Core.Type.t) list -> unit
 
 (** Get instance promoted types. *)
 val get_instance_promoted_types :
-  GlobRef.t -> (Names.Id.t * Miniml.ml_type) list
+  GlobRef.t -> (Names.Id.t * Core.Type.t) list
 
 (** An applied instance, as the Rocq type writes it: a head and what it is
     applied to, recursively.  [Carg_unknown] is an argument whose head is not a
@@ -659,7 +658,7 @@ val promoted_type_params : GlobRef.t -> Id.t list
 (** [add_type_alias_body r t] records the right-hand side of the type-level
     [Definition] [r], which is otherwise nowhere the closure above can read.
     An alias has no constructor payloads, so its body is what it reaches. *)
-val add_type_alias_body : GlobRef.t -> Miniml.ml_type -> unit
+val add_type_alias_body : GlobRef.t -> Core.Type.t -> unit
 
 (** Whether {!add_type_alias_body} has recorded a body for [r], i.e. whether
     [r] is a type-level [Definition] rather than a term. *)
@@ -898,7 +897,7 @@ val is_shared_variant : GlobRef.t -> bool
     or is a tagged union with a constructor holding something.  The
     structural test {!add_shared_variant} is fed from; readers ask
     {!is_shared_variant}. *)
-val is_shared_variant_packet : Names.MutInd.t -> Miniml.ml_ind -> int -> bool
+val is_shared_variant_packet : Names.MutInd.t -> Core.Inductive.t -> int -> bool
 
 (** Record that an inductive is stored as a shared variant; done by
     [Structure_analysis] for every packet {!is_shared_variant_packet}
@@ -1107,14 +1106,14 @@ val escape_reserved_struct_name : string -> string
 val find_type_custom : GlobRef.t -> string list * string
 
 (** Check if branch array has custom match extraction. *)
-val is_custom_match : ml_branch array -> bool
+val is_custom_match : Core.Match.Branch.t array -> bool
 
 (** The inductive a match's first branch belongs to.
     @raise Not_found when the branch has no constructor pattern. *)
-val indref_of_match : ml_branch array -> GlobRef.t
+val indref_of_match : Core.Match.Branch.t array -> GlobRef.t
 
 (** Find custom match extraction code. *)
-val find_custom_match : ml_branch array -> string
+val find_custom_match : Core.Match.Branch.t array -> string
 
 (** Look up the [Boxed Element] wrapper template (e.g. ["immer::box<%t0>"])
     for a custom container.  The wrapper is applied to the container's element
@@ -1181,18 +1180,18 @@ val is_any_custom : GlobRef.t -> bool
 val is_any_inline_custom : GlobRef.t -> bool
 
 (** Find type for reference. *)
-val find_type : GlobRef.t -> ml_type
+val find_type : GlobRef.t -> Core.Type.t
 
 (** [iter_types f] applies [f] to every type {!find_type} can answer. *)
-val iter_types : (ml_type -> unit) -> unit
+val iter_types : (Core.Type.t -> unit) -> unit
 
 (** [map_types f] makes {!find_type} answer [f t] wherever it answered [t]. *)
-val map_types : (ml_type -> ml_type) -> unit
+val map_types : (Core.Type.t -> Core.Type.t) -> unit
 
 (** [add_type r ty] records [ty] as the type {!find_type} answers for [r],
     in the current session only: the cache {!register_glob_def} fills,
     without the library object that makes it persist. *)
-val add_type : GlobRef.t -> ml_type -> unit
+val add_type : GlobRef.t -> Core.Type.t -> unit
 
 (** {2 Extraction commands} *)
 
@@ -1368,7 +1367,7 @@ val extract_numeral : qualid -> string -> unit
     @param id the global reference of the definition being registered
     @param ty the ML type to associate with it, used for type-directed
               code generation at call sites *)
-val register_glob_def : GlobRef.t -> ml_type -> unit
+val register_glob_def : GlobRef.t -> Core.Type.t -> unit
 
 (** Argument specifier for implicit extraction. *)
 type int_or_id =
@@ -1409,7 +1408,7 @@ val promote_inductive : GlobRef.t -> unit
     ([Extraction.erased_fix_types]): its calls are written at their own
     instance, and translation adapts their arguments to the erased
     parameters. *)
-val add_erased_fix_group : Miniml.Occurrence.t -> unit
+val add_erased_fix_group : Core.Occurrence.t -> unit
 
 (** Whether {!add_erased_fix_group} recorded [occ]. *)
-val is_erased_fix_group : Miniml.Occurrence.t -> bool
+val is_erased_fix_group : Core.Occurrence.t -> bool

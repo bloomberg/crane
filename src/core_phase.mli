@@ -3,7 +3,7 @@
 
 (** Crane's functional Core IR: an extracted program, at a named phase.
 
-    The phases share MiniML's grammar.  What tells them apart is which passes
+    The phases share Core's grammar.  What tells them apart is which passes
     have run, and the type says it: a backend entry point takes a
     [normalized program], and a structure only becomes one through
     {!optimize}, {!freeze} and then {!normalize}.  Selecting whole top-level
@@ -12,7 +12,7 @@
     {!freeze} checks the program's structural invariants.  It leaves no
     metavariable in the program: each solved one is
     replaced by its solution and each unsolved one by an immutable open
-    annotation ({!Miniml.Topen}), read as erased.  A local definition's open
+    annotation ({!Core.Type.Open}), read as erased.  A local definition's open
     types are minted before it ({!Local_types}), and a slot filling a hole
     hands the answer to the terms that mention the hole.  [CRANE_CHECK_IR]
     checks that, as it checks that rendering leaves the program it was
@@ -39,19 +39,19 @@ type 'phase program
 (** A program being normalized ({!normalize}): its structure, and what
     splicing decided about the partners of its loopified functions so far
     ({!Splices}). *)
-type normalizing = { structure : Miniml.ml_structure; splices : Splices.t }
+type normalizing = { structure : Core.Program.t; splices : Splices.t }
 
 (** The immediate result of extraction. *)
-val extracted : Miniml.ml_structure -> extracted program
+val extracted : Core.Program.t -> extracted program
 
 (** [optimize passes p] runs the Core passes over [p]. *)
-val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program -> optimized program
+val optimize : (Core.Program.t -> Core.Program.t) -> extracted program -> optimized program
 
-(** [freeze p] is [p], checked: every recursive group is nonempty and its
-    selected member exists, no reference is declared twice, every
+(** [freeze p] is [p], checked: every local recursive group is nonempty
+    and its selected member exists, no reference is declared twice, every
     polymorphic use is instantiated at its callee's own scheme with no
     metavariable in its instantiation, and no two terms -- reads, lets,
-    local fixpoints, global uses -- are one {!Miniml.Occurrence.t}, which
+    local fixpoints, global uses -- are one {!Core.Occurrence.t}, which
     every consumer reads as one place in one definition.  Its annotations
     hold no metavariable either: each is replaced by its solution, or by an open annotation where
     extraction left it unsolved, and from here until the extraction ends none
@@ -78,7 +78,7 @@ val normalize : (normalizing -> normalizing) -> frozen program -> normalized pro
 val splices : normalized program -> Splices.t
 
 (** The structure, for the consumers not converted to the phase types. *)
-val structure : 'phase program -> Miniml.ml_structure
+val structure : 'phase program -> Core.Program.t
 
 (** [partition keep p] splits [p]'s top-level modules by [keep]. *)
 val partition : (Names.ModPath.t -> bool) -> 'phase program -> 'phase program * 'phase program
@@ -87,5 +87,5 @@ val partition : (Names.ModPath.t -> bool) -> 'phase program -> 'phase program * 
 val modules : 'phase program -> (Names.ModPath.t * 'phase program) list
 
 (** The open annotations reachable from [p]'s annotations
-    ({!Miniml.Topen}), each counted once. *)
+    ({!Core.Type.Open}), each counted once. *)
 val open_annotations : 'phase program -> int

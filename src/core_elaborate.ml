@@ -5,7 +5,6 @@
     (docs/Pipeline-Disentangling-Plan.md, section 4.7).  See
     [core_elaborate.mli]. *)
 
-open Miniml
 open Names
 open Util
 open Ml_type_util
@@ -37,11 +36,11 @@ let classify ~lex id written =
   let args_before_split = args in
   let args, excess_args =
     let is_value_arg = function
-      | MLdummy _ -> false
+      | Core.Expr.Erased_value _ -> false
       (* A variable bound at an erased type carries no more than a dummy:
          under [Conservative Types] a definition keeps its type binders and
          passes them on ([length A l']). *)
-      | MLrel (i, _) -> (
+      | Core.Expr.Bound_variable {index = i; _} -> (
         match Lexenv.type_opt lex i with
         | Some t -> not (erased_by_extraction t)
         | None -> true )
@@ -50,21 +49,21 @@ let classify ~lex id written =
     let is_value (_, a) = is_value_arg a in
     let is_value_dom t =
       match resolve_tmeta t with
-      | Miniml.Tdummy _ -> false
+      | Core.Type.Erased _ -> false
       | _ -> true
     in
     let rec collect_tarr_dom acc = function
-      | Miniml.Tarr (t1, t2) -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
+      | Core.Type.Arrow {parameter = t1; result = t2} -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
       | _ -> List.rev acc
     in
     match find_type_opt id with
     | Some ml_ty ->
       let all_dom = collect_tarr_dom [] ml_ty in
-      (* Count value-domain entries by filtering out ALL [Tdummy] positions
-         (both [Ktype] for erased type params and [Kprop] for erased proofs).
-         Symmetrically, filter the arg list to exclude [MLdummy] entries.
+      (* Count value-domain entries by filtering out ALL [Core.Type.Erased] positions
+         (both [Core.Erasure_reason.Type_argument] for erased type params and [Core.Erasure_reason.Proof] for erased proofs).
+         Symmetrically, filter the arg list to exclude [Core.Expr.Erased_value] entries.
          Comparing these two filtered counts avoids false excess detection
-         when erased params appear in [args] as [MLdummy] instead of (or in
+         when erased params appear in [args] as [Core.Expr.Erased_value] instead of (or in
          addition to) being carried in [tys]. *)
       let n_value_dom = List.length (List.filter is_value_dom all_dom) in
       (* An erased argument at a position the declaration takes a value at
@@ -75,7 +74,7 @@ let classify ~lex id written =
       let value_args =
         (* Two conventions meet here.  The arguments the Rocq term gave
            have the declaration's erased domains dropped ([make_mlargs]
-           kills each [Tdummy]), so each is at a value domain, erased or
+           kills each [Core.Type.Erased]), so each is at a value domain, erased or
            not.  The tail an eta-expansion invents keeps them: a dummy at
            each erased domain, a variable at each value one
            ([STRefToIxNat __ __ ref]).  The tail is the longest suffix
@@ -121,7 +120,7 @@ let classify ~lex id written =
   in
   (* A value argument that vanishes here vanishes from the emitted call, and
      the parameter it would have filled is dropped from the declaration by
-     the same [Tdummy] reading of the callee's domain -- leaving a body that
+     the same [Core.Type.Erased] reading of the callee's domain -- leaving a body that
      names a binder nothing supplies.  Report it rather than make it a
      question about reading the generated C++ back. *)
   let () =
@@ -138,7 +137,7 @@ let classify ~lex id written =
                 (n_in - n_out) n_in
                 (List.length
                    (List.filter
-                      (function _, MLdummy _ -> true | _ -> false)
+                      (function _, Core.Expr.Erased_value _ -> true | _ -> false)
                       args_before_split ))
                 (List.length args) ) )
   in
@@ -149,7 +148,7 @@ let classify ~lex id written =
   let erased, kept = List.partition (fun (_, a) -> instance_arg_is_erased ~lex a) instances in
   (* The erased arguments left among the regular ones are the ones the
      declaration takes a value at (see [value_args] above); they are
-     generated as empty boxes rather than as the [CPPabort] an [MLdummy] is
+     generated as empty boxes rather than as the [CPPabort] an [Core.Expr.Erased_value] is
      elsewhere. *)
   let role_of i =
     let at l = List.exists (fun (j, _) -> Int.equal i j) l in
@@ -162,7 +161,7 @@ let classify ~lex id written =
   List.mapi (fun i _ -> role_of i) written
 
 (* The call of [use] to [args], each argument in the role at its position. *)
-let of_roles use args roles =
+let of_roles (use : Core.Global_use.t) args roles =
   let id = use.callee in
   (* Order the instance arguments the way the callee numbered its own
      [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
@@ -176,7 +175,7 @@ let of_roles use args roles =
   Elaborated_call.of_roles ~callee:id ~callee_type:(find_type id) ~dictionaries
     ~tyargs:(Call_tyargs.of_use use) args roles
 
-let elaborate_arguments ~lex use args = of_roles use args (classify ~lex use.callee args)
+let elaborate_arguments ~lex (use : Core.Global_use.t) args = of_roles use args (classify ~lex use.callee args)
 
 (* The holes of [call]'s reading of its scheme variables that its context
    states: the ML type its position expects or states for its result
@@ -203,8 +202,8 @@ let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t)
          the family. *)
       let family_shaped b =
         match resolve_tmeta b with
-        | Miniml.Tglob (_, [], _) -> true
-        | Miniml.Tglob (_, args, _) ->
+        | Core.Type.Global_app {type_arguments = []; _} -> true
+        | Core.Type.Global_app {type_arguments = args; _} ->
           Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
         | _ -> false
       in
@@ -256,9 +255,9 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
     let n_params =
       let rec count ty =
         match expand_ml_fun_alias ty with
-        | Miniml.Tarr (t, rest) ->
+        | Core.Type.Arrow {parameter = t; result = rest} ->
           (match resolve_tmeta t with
-           | Miniml.Tdummy _ -> count rest
+           | Core.Type.Erased _ -> count rest
            | _ -> 1 + count rest)
         | _ -> 0
       in
@@ -300,8 +299,8 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
           (fun v ->
             let i = Scheme.Var.ordinal v in
             Some
-              ( if IntSet.mem i in_cod && collides i then Miniml.Tunknown
-                else Miniml.Tvar (Miniml.Schematic, i) ) )
+              ( if IntSet.mem i in_cod && collides i then Core.Type.Unknown
+                else Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i} ) )
           (List.filter (fun v -> Scheme.Var.ordinal v <= n) open_vars)
           tyargs
   in
@@ -315,7 +314,7 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
     ~expand:expand_ml_fun_alias
     ~erased:(fun t ->
       match resolve_tmeta t with
-      | Miniml.Tdummy _ -> true
+      | Core.Type.Erased _ -> true
       | _ -> false )
 
 (** Where the walk met an application: in a body as it is generated -- a
@@ -334,7 +333,7 @@ type site =
     ({!closed_head}), and whether it calls a kept instance's member template
     ({!member_template_projection}). *)
 type entry = {
-  occurrence : Occurrence.t;
+  occurrence : Core.Occurrence.t;
   roles : Elaborated_call.role list;
   planned : Elaborated_call.instantiated option;
   site : site;
@@ -347,15 +346,15 @@ type entry = {
 type t = {
   calls : entry list Ref.User.Map.t;  (** By callee, each newest first. *)
   named : GlobRef.Set_env.t;  (** Every global the bodies name, applied or not. *)
-  dictionary_calls : (Occurrence.t * (GlobRef.t * GlobRef.t)) list;
+  dictionary_calls : (Core.Occurrence.t * (GlobRef.t * GlobRef.t)) list;
       (** Each application of a singleton class's dictionary, by the
           occurrence of the variable at its head: the class and its one
           method ({!singleton_dictionary_head}). *)
-  constructions : (Occurrence.t * bool) list GlobRef.Map_env.t;
+  constructions : (Core.Occurrence.t * bool) list GlobRef.Map_env.t;
       (** Each construction, by its constructor and then its occurrence:
           whether it is a closed term of a shared variant
           ({!is_shared_constant_term}). *)
-  matches : (Occurrence.t * Match_kind.t) list Int.Map.t;
+  matches : (Core.Occurrence.t * Match_kind.t) list Int.Map.t;
       (** Each match, by its number of branches and then its occurrence:
           how it is lowered ({!Match_kind.classify}). *)
 }
@@ -372,16 +371,22 @@ let empty =
    is the same every time it is evaluated. *)
 let is_shared_constant_term e =
   let rec closed = function
-    | MLcons (_, _, ts, _) -> List.for_all closed ts
-    | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
-    | MLmagic (_, a, _) -> closed a
+    | Core.Expr.Construct {arguments = ts; _} -> List.for_all closed ts
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _
+    | Core.Expr.Erased_value _ -> true
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} -> closed a
     | _ -> false
   in
   match e with
-  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), (_ :: _ as ts), _) ->
+  | Core.Expr.Construct {constructor = (GlobRef.ConstructRef ((kn, i), _) as r); arguments = (_ :: _ as ts); _} ->
     Table.is_shared_variant (GlobRef.IndRef (kn, i))
     && (not (Table.is_custom r))
-    && List.exists (function MLdummy _ -> false | _ -> true) ts
+    && List.exists (function Core.Expr.Erased_value _ -> false | _ -> true) ts
     && List.for_all closed ts
   | _ -> false
 
@@ -395,11 +400,12 @@ let add_keyed key occ fact m =
    the class -- from no value of [lex]: its only free variables are instance
    parameters, which C++ takes as template arguments ({!binder_is_instance}).
    Such a call is the same value every time it is evaluated. *)
-let builds_closed_instance ~lex use args =
+let builds_closed_instance ~lex (use : Core.Global_use.t) args =
   (not (Table.is_custom use.callee))
   && args <> []
   && Table.builds_instance use.callee
-  && Escape.IntSet.for_all (binder_is_instance lex) (Escape.free_rels 0 (MLapp (MLglob use, args)))
+  && Escape.IntSet.for_all (binder_is_instance lex) (Escape.free_rels 0 (Core.Expr.Apply {callee = Core.Expr.Global use;
+                                                                                          arguments = args}))
 
 (* Whether the call [call] of [use], standing in [lex], applies arguments past its
    callee's arity to a head -- the callee applied to the rest, at least one --
@@ -411,7 +417,8 @@ let closed_head ~lex use (call : Elaborated_call.t) =
   (not (Table.is_custom call.callee))
   && n > 0 && call.excess <> []
   && Escape.IntSet.for_all (binder_is_instance lex)
-       (Escape.free_rels 0 (MLapp (MLglob use, List.filteri (fun i _ -> i < n) call.args)))
+       (Escape.free_rels 0 (Core.Expr.Apply {callee = Core.Expr.Global use;
+                                             arguments = List.filteri (fun i _ -> i < n) call.args}))
 
 (* Whether the call [call], standing in [lex], projects a class field
    through its one dictionary argument where that instance was kept
@@ -424,7 +431,7 @@ let member_template_projection ~lex (call : Elaborated_call.t) =
     kept_instance_of_projection ~lex call.callee [inst] <> None
     &&
     match resolve_tmeta (instance_class_ty ~lex inst) with
-    | Tglob (c, _, _) -> method_is_member_template c call.callee
+    | Core.Type.Global_app {head = c; _} -> method_is_member_template c call.callee
     | _ -> false )
   | _ -> false
 
@@ -435,7 +442,7 @@ let singleton_dictionary_head lex i =
   match Lexenv.binder lex i with
   | Some {eb_id; eb_type; eb_role} when eb_role = Lexenv.Dictionary || Common.is_tc_instance_id eb_id -> (
     match resolve_tmeta eb_type with
-    | Tglob (c, _, _) -> Option.map (fun m -> (c, m)) (Table.singleton_class_method c)
+    | Core.Type.Global_app {head = c; _} -> Option.map (fun m -> (c, m)) (Table.singleton_class_method c)
     | _ -> None )
   | _ -> None
 
@@ -446,7 +453,7 @@ type builder = t ref
 (* The ML types a position expects ([expected]) and states ([stated]) for
    the value generated there: the slot translation threads, kept as
    translation keeps it. *)
-type position = {expected : ml_type option; stated : ml_type option}
+type position = {expected : Core.Type.t option; stated : Core.Type.t option}
 
 let no_position = {expected = None; stated = None}
 
@@ -471,7 +478,7 @@ let walker ?caller ?scope b ~n_outer =
 
 let name (b : builder) r = b := {!b with named = GlobRef.Set_env.add r !b.named}
 
-let record w ~position lex use args =
+let record w ~position lex (use : Core.Global_use.t) args =
   match classify ~lex use.callee args with
   | roles ->
     let call = of_roles use args roles in
@@ -485,7 +492,7 @@ let record w ~position lex use args =
     in
     let others = Option.default [] (Ref.User.Map.find_opt use.callee !(w.b).calls) in
     let entry =
-      { occurrence = Global_use.occurrence use;
+      { occurrence = Core.Global_use.occurrence use;
         roles;
         planned;
         site = w.site;
@@ -553,7 +560,7 @@ let argument_positions ~position planned =
 let lambda_body_position ~n position =
   let rec strip n ty =
     if n = 0 then Some ty
-    else match resolve_tmeta ty with Tarr (_, cod) -> strip (n - 1) cod | _ -> None
+    else match resolve_tmeta ty with Core.Type.Arrow {result = cod; _} -> strip (n - 1) cod | _ -> None
   in
   let expected =
     match position.expected with
@@ -561,7 +568,8 @@ let lambda_body_position ~n position =
       match strip n fn_ty with
       | Some cod -> (
         match resolve_tmeta cod with
-        | Tdummy _ | Tunknown | Tmeta {contents = None} | Topen _ -> position.expected
+        | Core.Type.Erased _ | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _ ->
+          position.expected
         | _ -> Some cod )
       | None -> position.expected )
     | None -> None
@@ -579,21 +587,21 @@ let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 let rec walk w ?(position = no_position) lex e =
   let go ?(position = no_position) lex e = walk w ~position lex e in
   match e with
-  | MLapp (MLglob use, args) ->
+  | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} ->
     walk_use w lex use;
     let at = argument_positions ~position (record w ~position lex use args) in
     List.iteri (fun i a -> go ~position:(at i) lex a) args
   (* A local callee's arguments are generated at the call's position. *)
-  | MLapp (f, args) ->
+  | Core.Expr.Apply {callee = f; arguments = args} ->
     ( match f with
-    | MLrel (i, occ) ->
+    | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
       Option.iter
         (fun head -> w.b := {!(w.b) with dictionary_calls = (occ, head) :: !(w.b).dictionary_calls})
         (singleton_dictionary_head lex i)
     | _ -> () );
     go lex f;
     List.iter (go ~position lex) args
-  | MLlam _ as e ->
+  | Core.Expr.Lambda _ as e ->
     let ids, body = Mlutil.collect_lams e in
     List.iter (fun (_, ty) -> walk_type w lex ty) ids;
     go ~position:(lambda_body_position ~n:(List.length ids) position) (push Lexenv.Value ids lex) body
@@ -601,23 +609,23 @@ let rec walk w ?(position = no_position) lex e =
      uses ({!Core_query.let_lambda}), and its calls are those of
      what it abbreviates, at the arguments each use gives it.  A lambda that
      is bound is generated as a function of its own, at no position. *)
-  | MLletin (x, ty, (MLlam _ as a), body, _) -> (
+  | Core.Expr.Let {binder = x; binder_type = ty; value = (Core.Expr.Lambda _ as a); body; _} -> (
     walk_type w lex ty;
     match let_lambda ~lex ~n_outer:w.n_outer ty a body with
     | Inlined body -> go ~position lex body
     | Bound | At_instance _ | Lifted ->
       go lex a;
       go ~position (push Lexenv.Value [(x, ty)] lex) body )
-  | MLletin (x, ty, a, body, _) ->
+  | Core.Expr.Let {binder = x; binder_type = ty; value = a; body; _} ->
     walk_type w lex ty;
     go ~position:{position with expected = Some ty} lex a;
     go ~position (push Lexenv.Value [(x, ty)] lex) body
-  | MLcons (ty, r, args, occ) ->
+  | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; occurrence = occ} ->
     w.b := {!(w.b) with constructions = add_keyed r occ (is_shared_constant_term e) !(w.b).constructions};
     walk_type w lex ty;
     List.iter (go ~position:{expected = None; stated = position.stated} lex) args
-  | MLtuple args -> List.iter (go lex) args
-  | MLcase (ty, scrut, branches, occ) ->
+  | Core.Expr.Tuple args -> List.iter (go lex) args
+  | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; occurrence = occ} ->
     let kind = Match_kind.classify ty branches in
     w.b :=
       { !(w.b) with
@@ -630,44 +638,54 @@ let rec walk w ?(position = no_position) lex e =
     (* A branch's result type is written under its binders: a custom match
        declares it as the type its arm returns. *)
     Array.iter
-      (fun (ids, rty, _, body) ->
+      (fun {Core.Match.Branch.binders = ids; result_type = rty; body = body; _} ->
         List.iter (fun (_, ty) -> walk_type w lex ty) ids;
         let lex = push Lexenv.Value (List.rev ids) lex in
         walk_type w lex rty;
         go ~position lex body )
       branches
-  | MLfix (_, fs, defs, _, _) ->
+  | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
     Array.iter (fun (_, ty) -> walk_type w lex ty) fs;
     (* The last function of the group is the innermost binder. *)
-    let fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
+    let fs = List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs) in
     Array.iter (go (push Lexenv.Value fs lex)) defs
-  | MLmagic (_, e, _) -> go ~position lex e
-  | MLparray (elems, def) ->
+  | Core.Expr.Coerce {value = e; _}
+  | Core.Expr.Boxed_value {value = e; _}
+  | Core.Expr.Lambda_group_barrier {value = e; _} ->
+    go ~position lex e
+  | Core.Expr.Persistent_array {elements = elems; default = def} ->
     Array.iter (go lex) elems;
     go lex def
   (* A global named but not applied -- a function passed as a value -- is
      translated as its call with no arguments. *)
-  | MLglob use ->
+  | Core.Expr.Global use ->
     walk_use w lex use;
     ignore (record w ~position lex use [])
-  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> ()
+  | Core.Expr.Bound_variable _
+  | Core.Expr.Runtime_error _
+  | Core.Expr.Erased_value _
+  | Core.Expr.Axiom_value _
+  | Core.Expr.UInt63 _
+  | Core.Expr.Numeral _
+  | Core.Expr.Float64 _
+  | Core.Expr.String _ -> ()
 
-and walk_use w lex use =
+and walk_use w lex (use : Core.Global_use.t) =
   name w.b use.callee;
-  Global_use.iter_types (walk_type w lex) use
+  Core.Global_use.iter_types (walk_type w lex) use
 
 (* A custom type applied to a term -- a fixed-size array to its length --
    has calls of its own, translated where the type is converted, in no
    declaration's name. *)
 and walk_type w lex ty =
   match resolve_tmeta ty with
-  | Tglob (g, tys, args) ->
+  | Core.Type.Global_app {head = g; type_arguments = tys; index_arguments = args} ->
     List.iter (walk_type w lex) tys;
     if Table.is_custom g then List.iter (walk {w with caller = None; site = Type_term} lex) args
-  | Tarr (dom, cod) ->
+  | Core.Type.Arrow {parameter = dom; result = cod} ->
     walk_type w lex dom;
     walk_type w lex cod
-  | Tapp (_, tys) -> List.iter (walk_type w lex) tys
+  | Core.Type.Variable_app {arguments = tys; _} -> List.iter (walk_type w lex) tys
   | _ -> ()
 
 (* The variables a declaration of type [ty] is generated under: the type
@@ -691,7 +709,7 @@ let declaration_scope ty body =
   let params, body = declared_parameters ty body in
   let parameter (x, body_ty) sig_ty =
     let body_ty =
-      match resolve_tmeta body_ty with Tmeta {contents = None} | Topen _ -> sig_ty | t -> t
+      match resolve_tmeta body_ty with Core.Type.Meta {contents = None} | Core.Type.Open _ -> sig_ty | t -> t
     in
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
@@ -707,31 +725,49 @@ let declaration_scope ty body =
 let rec inline_aliases ~n_outer lex e =
   let go = inline_aliases ~n_outer in
   let under ids body = go (push Lexenv.Value ids lex) body in
+  let fix_binders fs = List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs) in
   match e with
-  | MLletin (x, ty, (MLlam _ as a), body, occ) -> (
+  | Core.Expr.Let {binder = x; binder_type = ty; value = (Core.Expr.Lambda _ as a); body; occurrence = occ} -> (
     match let_lambda ~lex ~n_outer ty a body with
     | Inlined body -> go lex body
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
-      go lex (MLletin (x, subst ty, Mlutil.ast_map_types subst a, body, occ))
-    | Bound -> MLletin (x, ty, go lex (Core_query.eta_bound_lambda ty a), under [(x, ty)] body, occ)
-    | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ) )
-  | MLletin (x, ty, a, body, occ) -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ)
-  | MLlam (x, ty, body) -> MLlam (x, ty, under [(x, ty)] body)
-  | MLcase (ty, scrut, branches, occ) ->
-    MLcase
-      ( ty,
-        go lex scrut,
-        Array.map (fun (ids, rty, pat, body) -> (ids, rty, pat, under (List.rev ids) body)) branches,
-        occ )
-  | MLfix (i, fs, defs, cofix, occ) ->
-    let fs' = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
-    MLfix (i, fs, Array.map (under fs') defs, cofix, occ)
+      go lex (Core.Expr.Let {binder = x;
+                             binder_type = subst ty;
+                             value = Mlutil.ast_map_types subst a;
+                             body;
+                             occurrence = occ})
+    | Bound ->
+      Core.Expr.Let {binder = x;
+                     binder_type = ty;
+                     value = go lex (Core_query.eta_bound_lambda ty a);
+                     body = under [(x, ty)] body;
+                     occurrence = occ}
+    | Lifted ->
+      Core.Expr.Let {binder = x; binder_type = ty; value = go lex a; body = under [(x, ty)] body; occurrence = occ} )
+  | Core.Expr.Let {binder = x; binder_type = ty; value = a; body; occurrence = occ} ->
+    Core.Expr.Let {binder = x; binder_type = ty; value = go lex a; body = under [(x, ty)] body; occurrence = occ}
+  | Core.Expr.Lambda {parameter = x; parameter_type = ty; body} ->
+    Core.Expr.Lambda {parameter = x; parameter_type = ty; body = under [(x, ty)] body}
+  | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; occurrence = occ} ->
+    Core.Expr.Match {scrutinee_type = ty; scrutinee = go lex scrut; branches = Array.map
+          (fun (br : Core.Match.Branch.t) -> {br with Core.Match.Branch.body = under (List.rev br.binders) br.body})
+          branches; occurrence = occ}
+  | Core.Expr.Fixpoint {selected = i; functions = fs; bodies = defs; occurrence = occ} ->
+    Core.Expr.Fixpoint {selected = i;
+                        functions = fs;
+                        bodies = Array.map (under (fix_binders fs)) defs;
+                        occurrence = occ}
+  | Core.Expr.Cofixpoint {selected = i; functions = fs; bodies = defs; occurrence = occ} ->
+    Core.Expr.Cofixpoint {selected = i;
+                          functions = fs;
+                          bodies = Array.map (under (fix_binders fs)) defs;
+                          occurrence = occ}
   | e -> Mlutil.ast_map (go lex) e
 
 let generated_definition ty body =
   match body with
-  | MLaxiom _ | MLexn _ -> body
+  | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> body
   | _ ->
     let ty' = Mlutil.type_simpl ty in
     let params, _ = collect_typed_lams ty' body in
@@ -752,7 +788,7 @@ let declaration ?caller ?scope b ty body =
    function of the full signature, which no partial application fills. *)
 let constant_at_alias ~caller b ty body =
   let ty = Mlutil.type_simpl ty in
-  let body = match body with MLmagic (_, b, _) -> b | b -> b in
+  let body = match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _} | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b in
   if Ml_type_util.ml_domains ty = [] then
     match Ml_type_util.eta_expand_to (Ml_type_util.expand_ml_fun_alias ty) body with
     | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Lexenv.empty expanded
@@ -773,7 +809,7 @@ let instance_methods b name body ty =
   Option.iter
     (fun (lam_params, methods) ->
       let lex =
-        Lexenv.push (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Id x, ty)) lam_params) Lexenv.empty
+        Lexenv.push (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Core.Binder_name.Source x, ty)) lam_params) Lexenv.empty
       in
       let w = walker ~caller:name b ~n_outer:(head_variables ty) in
       List.iter
@@ -784,7 +820,8 @@ let instance_methods b name body ty =
             else None
           in
           match eta with
-          | Some (eta, call) -> walk w (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call
+          | Some (eta, call) ->
+            walk w (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Core.Binder_name.Source x, ty)) eta) lex) call
           | None -> walk w lex m.body )
         methods )
     (Instance_methods.methods name body ty)
@@ -825,21 +862,22 @@ let structure ~methods struc =
   let defined = ref GlobRef.Set_env.empty in
   let define r = defined := GlobRef.Set_env.add r !defined in
   let closed_type = walk_type {(walker b ~n_outer:0) with site = Type_term} Lexenv.empty in
-  let inductive ind = Array.iter (fun p -> Array.iter (List.iter closed_type) p.ip_types) ind.ind_packets in
+  let inductive (ind : Core.Inductive.t) = Array.iter (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter closed_type) p.constructor_argument_types) ind.packets in
   let as_methods =
     let acc = ref GlobRef.Set_env.empty in
     Modutil.struct_iter
       (function
-        | Dind (kn, ind) -> List.iter (fun (_, (r, _, _, _)) -> acc := GlobRef.Set_env.add r !acc) (methods kn ind)
-        | Dterm _ | Dfix _ | Dtype _ -> () )
+        | Core.Decl.Inductive {entity = kn; definition = ind} ->
+          List.iter (fun (_, (r, _, _, _)) -> acc := GlobRef.Set_env.add r !acc) (methods kn ind)
+        | Core.Decl.Value _ | Core.Decl.Recursive_group _ | Core.Decl.Type_alias _ -> () )
       ignore ignore struc;
     !acc
   in
   let as_method r = GlobRef.Set_env.mem r as_methods in
   Modutil.struct_iter
     (function
-      | Dterm (r, _, _) when as_method r -> define r
-      | Dterm (r, body, ty) ->
+      | Core.Decl.Value {entity = r; _} when as_method r -> define r
+      | Core.Decl.Value {entity = r; body; type_ = ty} ->
         define r;
         let written b =
           declaration ~caller:r b ty body;
@@ -847,20 +885,20 @@ let structure ~methods struc =
         in
         if Instance_methods.methods r body ty <> None then names_only b written else written b;
         instance_methods b r body ty
-      | Dfix fds ->
-        List.iter
-          (fun fd ->
-            define fd.fd_ref;
-            if not (as_method fd.fd_ref) then declaration ~caller:fd.fd_ref b fd.fd_type fd.fd_body )
+      | Core.Decl.Recursive_group fds ->
+        Core.Nonempty.iter
+          (fun (fd : Core.Recursion.Definition.t) ->
+            define fd.entity;
+            if not (as_method fd.entity) then declaration ~caller:fd.entity b fd.type_ fd.body )
           fds
-      | Dind (kn, ind) ->
+      | Core.Decl.Inductive {entity = kn; definition = ind} ->
         inductive ind;
         List.iter (fun (vars, candidate) -> method_ b vars candidate) (methods kn ind)
-      | Dtype (_, _, ty) -> closed_type ty )
+      | Core.Decl.Type_alias {body = ty; _} -> closed_type ty )
     (function
-      | Sind (_, ind) -> inductive ind
-      | Stype (_, _, ty) -> Option.iter closed_type ty
-      | Sval (_, _, ty) -> closed_type ty )
+      | Core.Signature.Declaration.Inductive {definition = ind; _} -> inductive ind
+      | Core.Signature.Declaration.Type {body = ty; _} -> Option.iter closed_type ty
+      | Core.Signature.Declaration.Value {type_ = ty; _} -> closed_type ty )
     ignore struc;
   foreign_types b ~walked:!defined;
   !b
@@ -887,14 +925,14 @@ let install t =
    rebuilds every node, so the use's occurrence is what identifies the
    application; one a rewrite duplicated is found only where every copy has
    the same roles. *)
-let roles t use n =
+let roles t (use : Core.Global_use.t) n =
   match Ref.User.Map.find_opt use.callee t.calls with
   | None -> None
   | Some entries -> (
-    let occurrence = Global_use.occurrence use in
+    let occurrence = Core.Global_use.occurrence use in
     match
       List.filter
-        (fun e -> Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n)
+        (fun e -> Core.Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n)
         entries
     with
     | [] -> None
@@ -907,14 +945,14 @@ let roles t use n =
    arity its context expects -- [fun _ no => length no], simplified to [fun _
    => length], gets its [no] back -- and a call translation built is
    elaborated where it is translated. *)
-let extended t use n =
+let extended t (use : Core.Global_use.t) n =
   match Ref.User.Map.find_opt use.callee t.calls with
   | None -> false
   | Some entries ->
-    let occurrence = Global_use.occurrence use in
-    List.exists (fun e -> Occurrence.equal e.occurrence occurrence && List.length e.roles < n) entries
+    let occurrence = Core.Global_use.occurrence use in
+    List.exists (fun e -> Core.Occurrence.equal e.occurrence occurrence && List.length e.roles < n) entries
 
-let elaboration ~lex use args =
+let elaboration ~lex (use : Core.Global_use.t) args =
   let elaborate () = elaborate_arguments ~lex use args in
   let from_core roles =
     let call = of_roles use args roles in
@@ -948,14 +986,14 @@ let elaboration ~lex use args =
    names its callee by [use]: [`Planned] where every entry the walk made
    there planned one and all agree, [`Ambiguous] with the sites of the
    entries where they do not or one failed, [`Unwalked] where the walk made none. *)
-let planned t use n =
+let planned t (use : Core.Global_use.t) n =
   match Ref.User.Map.find_opt use.callee t.calls with
   | None -> `Unwalked
   | Some entries -> (
-    let occurrence = Global_use.occurrence use in
+    let occurrence = Core.Global_use.occurrence use in
     match
       List.filter
-        (fun e -> Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n)
+        (fun e -> Core.Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n)
         entries
     with
     | [] -> `Unwalked
@@ -968,7 +1006,7 @@ let planned t use n =
       `Planned p
     | entries -> `Ambiguous (List.map (fun (e : entry) -> e.site) entries) )
 
-let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
+let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope (use : Core.Global_use.t) args =
   let call = elaboration ~lex use args in
   let live () = instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call in
   let describe what =
@@ -1048,15 +1086,15 @@ let same_head (c, m) (c', m') = GlobRef.CanOrd.equal c c' && GlobRef.CanOrd.equa
 (* What every entry the walk made for the application, with [n] arguments,
    naming its callee by [use] says of it ([fact]), if they all say one
    thing. *)
-let entry_fact ~equal fact use n =
+let entry_fact ~equal fact (use : Core.Global_use.t) n =
   match Ref.User.Map.find_opt use.callee !installed.calls with
   | None -> None
   | Some entries ->
-    let occurrence = Global_use.occurrence use in
+    let occurrence = Core.Global_use.occurrence use in
     agreed equal
       (List.filter_map
          (fun e ->
-           if Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n then Some (fact e)
+           if Core.Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n then Some (fact e)
            else None )
          entries )
 
@@ -1083,19 +1121,19 @@ let member_template_call ~lex use args =
 
 let singleton_dictionary_call ~live occ =
   let planned =
-    match List.filter_map (fun (o, h) -> if Occurrence.equal o occ then Some h else None) !installed.dictionary_calls with
+    match List.filter_map (fun (o, h) -> if Core.Occurrence.equal o occ then Some h else None) !installed.dictionary_calls with
     | [] -> Some None
     | heads -> Option.map Option.make (agreed same_head heads)
   in
   lookup "singleton dictionary calls" ~equal:(Option.equal same_head) ~live planned
 
 let shared_constant = function
-  | MLcons (_, r, _, occ) as e ->
+  | Core.Expr.Construct {constructor = r; occurrence = occ; _} as e ->
     let planned =
       match GlobRef.Map_env.find_opt r !installed.constructions with
       | None -> None
       | Some l ->
-        agreed Bool.equal (List.filter_map (fun (o, f) -> if Occurrence.equal o occ then Some f else None) l)
+        agreed Bool.equal (List.filter_map (fun (o, f) -> if Core.Occurrence.equal o occ then Some f else None) l)
     in
     lookup "shared constants" ~equal:Bool.equal ~live:(fun () -> is_shared_constant_term e) planned
   | _ -> false
@@ -1104,7 +1142,7 @@ let match_kind ty branches occ =
   let planned =
     match Int.Map.find_opt (Array.length branches) !installed.matches with
     | None -> None
-    | Some l -> agreed ( = ) (List.filter_map (fun (o, k) -> if Occurrence.equal o occ then Some k else None) l)
+    | Some l -> agreed ( = ) (List.filter_map (fun (o, k) -> if Core.Occurrence.equal o occ then Some k else None) l)
   in
   lookup "match kinds" ~equal:( = ) ~live:(fun () -> Match_kind.classify ty branches) planned
 

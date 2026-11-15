@@ -10,11 +10,11 @@
     - an argument's place among the call's regular arguments, the class
       dictionaries partitioned out of it ([int]);
     - a position of the {e declared} parameter list ({!orig}): the callee's ML
-      domains with the [Tdummy] ones dropped, dictionary parameters included,
+      domains with the [Core.Type.Erased] ones dropped, dictionary parameters included,
       erased ones too;
     - a position of the {e instantiated} list ({!subst}): the same after the
       call's type arguments are substituted, which can turn a parameter into
-      [Tdummy] and so drop it -- the [m A] of a [bind] whose instance erases
+      [Core.Type.Erased] and so drop it -- the [m A] of a [bind] whose instance erases
       [m].
 
     The two lists are kept as distinct types, and so are their positions, so
@@ -33,23 +33,23 @@ type 'k pos
 type 'k params
 
 (** The value parameters of an ML function type: its domains up the arrow
-    spine, definitional-class aliases expanded, the [Tdummy] ones dropped.
+    spine, definitional-class aliases expanded, the [Core.Type.Erased] ones dropped.
     [~expand] expands an alias that stands for a function type. *)
 val orig_params :
-  expand:(Miniml.ml_type -> Miniml.ml_type) -> Miniml.ml_type -> orig params
+  expand:(Core.Type.t -> Core.Type.t) -> Core.Type.t -> orig params
 
 (** {!orig_params} of an instantiated function type. *)
 val subst_params :
-  expand:(Miniml.ml_type -> Miniml.ml_type) -> Miniml.ml_type -> subst params
+  expand:(Core.Type.t -> Core.Type.t) -> Core.Type.t -> subst params
 
-val to_list : 'k params -> Miniml.ml_type list
+val to_list : 'k params -> Core.Type.t list
 val length : 'k params -> int
 
 (** The parameter at a position, [None] past the end. *)
-val nth : 'k params -> 'k pos -> Miniml.ml_type option
+val nth : 'k params -> 'k pos -> Core.Type.t option
 
 (** Every parameter with its position. *)
-val positioned : 'k params -> ('k pos * Miniml.ml_type) list
+val positioned : 'k params -> ('k pos * Core.Type.t) list
 
 (** The declared position of the call's [i]th regular argument, the
     [leading] parameters the dictionaries occupy -- erased instances among
@@ -63,14 +63,14 @@ val regular_of : leading:int -> orig pos -> int option
 (** The instantiated position of a declared one, [None] where the
     instantiation erased the parameter outright -- so that no neighbour is
     returned in its place.  [~erased] says whether a declared parameter type
-    is [Tdummy] once instantiated.
+    is [Core.Type.Erased] once instantiated.
 
     The count is taken over the declared list's own elements rather than by
     walking the two arrow spines side by side: substitution can uncover an
     alias whose expansion has a different arity, and paired spines then drift
     against each other. *)
 val subst_of_orig :
-  erased:(Miniml.ml_type -> bool) -> orig params -> orig pos -> subst pos option
+  erased:(Core.Type.t -> bool) -> orig params -> orig pos -> subst pos option
 
 (** Positions at which a custom mapping's parameters are read: its text
     takes the arguments in declared order, so its instantiated list is read
@@ -85,12 +85,12 @@ val of_receiver : int -> orig pos
     definition's leading binders [binder_tys] in source order -- each binder
     a position, as an erased one is not in the declared list.  [None] past
     the binders. *)
-val source_index : Miniml.ml_type list -> orig pos -> int option
+val source_index : Core.Type.t list -> orig pos -> int option
 
 (** [of_source_index binder_tys i] inverts {!source_index}: the declared
     position of the binder at source index [i], [None] for an erased binder
     or one past the binders. *)
-val of_source_index : Miniml.ml_type list -> int -> orig pos option
+val of_source_index : Core.Type.t list -> int -> orig pos option
 
 (** Whether two positions of one list are the same. *)
 val equal : 'k pos -> 'k pos -> bool

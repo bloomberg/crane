@@ -15,7 +15,7 @@ type t = {
       (** The inductive the module is named after, case aside, that is
           neither a record nor a class: functions taking it become its
           methods. *)
-  eponymous_record : (GlobRef.t * Miniml.record_field list * Miniml.ml_ind_packet) option;
+  eponymous_record : (GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
       (** The record the module is named after, merged into its struct. *)
   method_candidates : Method_registry.method_candidate list;
       (** The functions of the module and of the structure declaring it
@@ -34,13 +34,13 @@ type t = {
 val of_module :
   ModPath.t ->
   name:string ->
-  (Label.t * Miniml.ml_structure_elem) list ->
-  enclosing:(Label.t * Miniml.ml_structure_elem) list ->
+  (Label.t * Core.Module.Structure_item.t) list ->
+  enclosing:(Label.t * Core.Module.Structure_item.t) list ->
   t
 
 (** Whether a class [sel] declares has a concept named as the module [mp]
     is, by the names both are planned under. *)
-val concept_collision : ModPath.t -> (Label.t * Miniml.ml_structure_elem) list -> bool
+val concept_collision : ModPath.t -> (Label.t * Core.Module.Structure_item.t) list -> bool
 
 (** Whether two frames say the same of a module: the same eponymous
     inductive and record, the same candidates at the same receiver

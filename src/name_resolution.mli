@@ -5,7 +5,7 @@
 
     A per-extraction cache of how each inductive type is rendered.
 
-    {!create} scans the [ml_structure] once, after
+    {!create} scans the [Core.Program.t] once, after
     {!Structure_analysis.analyze} and before rendering, and records for every
     inductive declared at top level or in a module structure its
     classification ({!Cpp_ir.Inductive.Kind}: sum, enum, record,
@@ -37,7 +37,7 @@ type t
     {!Structure_analysis.analyze}.  Inductives inside functor bodies are not
     scanned.
     @return a freshly built name resolution cache *)
-val create : Miniml.ml_structure -> t
+val create : Core.Program.t -> t
 
 (** Check if a type is an eponymous record.  Reads
     {!Module_plan.is_eponymous_record}, not the cache.

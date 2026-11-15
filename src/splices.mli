@@ -16,7 +16,7 @@ val empty : t
 (** [decide ?entered r s]: [s], with the partners of [r] decided -- spliced,
     one of them entered as the local fixpoint [entered], or left as they
     are. *)
-val decide : ?entered:Miniml.Occurrence.t -> Names.GlobRef.t -> t -> t
+val decide : ?entered:Core.Occurrence.t -> Names.GlobRef.t -> t -> t
 
 (** Whether the partners of [r] are decided: splicing again leaves them as
     they are. *)
@@ -24,11 +24,11 @@ val decided : t -> Names.GlobRef.t -> bool
 
 (** The local fixpoint the machine of [r] enters, a partner's copy spliced
     into its body. *)
-val entered_copy : t -> Names.GlobRef.t -> Miniml.Occurrence.t option
+val entered_copy : t -> Names.GlobRef.t -> Core.Occurrence.t option
 
 (** Whether [o] is a local fixpoint some machine enters
     ({!entered_copy}). *)
-val is_entered_copy : t -> Miniml.Occurrence.t -> bool
+val is_entered_copy : t -> Core.Occurrence.t -> bool
 
 (** Whether two splicings decided alike: normalizing a program again under
     [CRANE_CHECK_IR] must decide its partners as the first run did. *)

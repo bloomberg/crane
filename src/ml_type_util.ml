@@ -1,11 +1,10 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Pure [ml_type] / [cpp_type] predicates and transforms shared by
+(** Pure [Core.Type.t] / [cpp_type] predicates and transforms shared by
     extraction, translation, declaration generation and the printer.  See
     [ml_type_util.mli]. *)
 
 open Common
-open Miniml
 open Names
 open Mlutil
 open Table
@@ -29,21 +28,21 @@ let ctor_struct_name_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : string =
     instance's signature and its call sites must spell them.
 
     Extraction erases a type that carries no information ([Inductive token :=
-    tok]) all the way to [Tdummy], and a parameter at such a type would then
+    tok]) all the way to [Core.Type.Erased], and a parameter at such a type would then
     disappear.  It may not: the class declares each field at an arity the
     generated concept checks, so the parameter keeps its slot at the erased
     type -- which is how the concept spells it for that instance too
     ([C<ic, std::any>]). *)
-let instance_type_args (args : ml_type list) : ml_type list =
-  List.map (fun t -> if Mlutil.isTdummy t then Miniml.Tunknown else t) args
+let instance_type_args (args : Core.Type.t list) : Core.Type.t list =
+  List.map (fun t -> if Mlutil.isTdummy t then Core.Type.Unknown else t) args
 
-(** Like {!ctor_struct_name_of_ref} but returns an [Id.t]. *)
+(** Like {!ctor_struct_name_of_ref} but returns an [Core.Binder_name.Source.t]. *)
 let ctor_struct_id_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : Id.t =
   Id.of_string (ctor_struct_name_of_ref ~fallback_idx c)
 
-(** Resolve a chain of [Tmeta] indirections to the underlying type. *)
+(** Resolve a chain of [Core.Type.Meta] indirections to the underlying type. *)
 let rec resolve_tmeta = function
-  | Miniml.Tmeta {contents = Some t} -> resolve_tmeta t
+  | Core.Type.Meta {contents = Some t} -> resolve_tmeta t
   | t -> t
 
 (** Unfold a type alias standing for a function type.
@@ -57,24 +56,24 @@ let rec resolve_tmeta = function
     arguments are substituted for the body's variables. *)
 let rec expand_ml_fun_alias ty =
   match resolve_tmeta ty with
-  | Miniml.Tglob (GlobRef.ConstRef kn, args, _) as t ->
+  | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = args; _} as t ->
     ( match Table.lookup_typedef_unchecked kn with
     | Some body ->
       let body =
         if args = [] then body else Mlutil.type_subst_list args body
       in
       ( match resolve_tmeta body with
-      | Miniml.Tarr _ -> expand_ml_fun_alias body
+      | Core.Type.Arrow _ -> expand_ml_fun_alias body
       | _ -> t )
     | None -> t )
   | t -> t
 
 (** Unify a template [cpp_type] with a concrete [cpp_type] to extract type
-    variable bindings. Recursively walks matching type constructors ([Tglob],
+    variable bindings. Recursively walks matching type constructors ([Core.Type.Global_app],
     [Tfun], [Tref], [Tconst], [Tnamespace]) and collects [(id, concrete_ty)]
-    pairs wherever [tmpl] has a [Tvar].
+    pairs wherever [tmpl] has a [Core.Type.Variable].
 
-    @param tmpl  the template type (may contain [Tvar] holes)
+    @param tmpl  the template type (may contain [Core.Type.Variable] holes)
     @param conc  the concrete type to unify against
     @return association list of type variable bindings *)
 let rec extract_tvar_map (tmpl : Cpp_ir.Lowered.Type.t) (conc : Cpp_ir.Lowered.Type.t) :
@@ -93,27 +92,30 @@ let rec extract_tvar_map (tmpl : Cpp_ir.Lowered.Type.t) (conc : Cpp_ir.Lowered.T
   | _ -> []
 
 (** Search an ML type for the first self-referential or mutually-recursive
-    subtype, returning its type arguments. Recurses into [Tglob] type
-    arguments and resolves [Tmeta] indirections.
+    subtype, returning its type arguments. Recurses into [Core.Type.Global_app] type
+    arguments and resolves [Core.Type.Meta] indirections.
 
     @param is_self_or_mutual  predicate identifying self/mutual references
-    @return [Some args] for the first matching [Tglob], or [None] *)
+    @return [Some args] for the first matching [Core.Type.Global_app], or [None] *)
 let rec find_self_ref_args ~is_self_or_mutual = function
-  | Miniml.Tglob (r, args, _) when is_self_or_mutual r -> Some args
-  | Miniml.Tglob (_, args, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} when is_self_or_mutual r -> Some args
+  | Core.Type.Global_app {type_arguments = args; _} ->
     List.find_map (find_self_ref_args ~is_self_or_mutual) args
-  | Miniml.Tmeta {contents = Some t} -> find_self_ref_args ~is_self_or_mutual t
+  | Core.Type.Meta {contents = Some t} -> find_self_ref_args ~is_self_or_mutual t
   | _ -> None
 
 (** Check if an ML type is directly erased (non-recursive, top-level only).
-    Matches an unresolved [Tmeta], a [Topen] hole, [Tdummy], and a
-    [Schematic] [Tvar]. *)
+    Matches an unresolved [Core.Type.Meta], a [Core.Type.Open] hole, [Core.Type.Erased], and a
+    [Core.Type.Rigidity.Schematic] [Core.Type.Variable]. *)
 let is_erased_ml_type = function
-  | Miniml.Tmeta {contents = None} | Miniml.Topen _ | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
+  | Core.Type.Meta {contents = None}
+  | Core.Type.Open _
+  | Core.Type.Erased _
+  | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; _} -> true
   | _ -> false
 
-(** Recursive check for erased sub-types inside an ML type.  Resolves [Tmeta]
-    chains before checking, then recurses into [Tglob] type arguments.
+(** Recursive check for erased sub-types inside an ML type.  Resolves [Core.Type.Meta]
+    chains before checking, then recurses into [Core.Type.Global_app] type arguments.
 
     An arrow is opaque by default: the metas of a function type are the callee's
     own business, and treating them as erasure here would make every stored
@@ -124,9 +126,12 @@ let is_erased_ml_type = function
 let rec ml_type_contains_erased ?(in_arrows = false) ty =
   let recur = ml_type_contains_erased ~in_arrows in
   match resolve_tmeta ty with
-  | Miniml.Tmeta _ | Miniml.Topen _ | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
-  | Miniml.Tglob (_, tys, _) -> List.exists recur tys
-  | Miniml.Tarr (a, b) -> in_arrows && (recur a || recur b)
+  | Core.Type.Meta _
+  | Core.Type.Open _
+  | Core.Type.Erased _
+  | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; _} -> true
+  | Core.Type.Global_app {type_arguments = tys; _} -> List.exists recur tys
+  | Core.Type.Arrow {parameter = a; result = b} -> in_arrows && (recur a || recur b)
   | _ -> false
 
 (** Whether a type variable survives anywhere in [ty].
@@ -137,17 +142,17 @@ let rec ml_type_contains_erased ?(in_arrows = false) ty =
     must reject it: converting it prints an undeclared [T1]. *)
 let rec ml_type_contains_tvar ty =
   match resolve_tmeta ty with
-  | Miniml.Tvar _ -> true
-  | Miniml.Tglob (_, tys, _) | Miniml.Tapp (_, tys) ->
+  | Core.Type.Variable _ -> true
+  | Core.Type.Global_app {type_arguments = tys; _} | Core.Type.Variable_app {arguments = tys; _} ->
     List.exists ml_type_contains_tvar tys
-  | Miniml.Tarr (a, b) -> ml_type_contains_tvar a || ml_type_contains_tvar b
+  | Core.Type.Arrow {parameter = a; result = b} -> ml_type_contains_tvar a || ml_type_contains_tvar b
   | _ -> false
 
 (** Return the codomain of an ML type, chasing through arrows and meta
     indirections. For [A -> B -> C] this returns [C]. *)
 let rec ml_codomain = function
-  | Miniml.Tarr (_, t2) -> ml_codomain t2
-  | Miniml.Tmeta {contents = Some t} -> ml_codomain t
+  | Core.Type.Arrow {result = t2; _} -> ml_codomain t2
+  | Core.Type.Meta {contents = Some t} -> ml_codomain t
   | t -> t
 
 (* The registered monad heading [ty] seen through aliases, after [codomain]
@@ -155,8 +160,8 @@ let rec ml_codomain = function
    type is no monad, however it is spelled). *)
 let rec monad_heading view ty =
   match view ty with
-  | Miniml.Tglob (m, _, _) when Table.is_monad m -> Some m
-  | Miniml.Tglob (GlobRef.ConstRef kn, args, _) -> (
+  | Core.Type.Global_app {head = m; _} when Table.is_monad m -> Some m
+  | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = args; _} -> (
     match Table.lookup_typedef_unchecked kn with
     | Some body -> monad_heading view (if args = [] then body else Mlutil.type_subst_list args body)
     | None -> None )
@@ -169,7 +174,7 @@ let type_monad = monad_heading resolve_tmeta
 (** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
     not a parameter at run time.  Extraction erases a binder whose type is a
     type, a proof, or an argument declared implicit ([Crane Extraction
-    Implicit]); every argument list drops it, an [MLdummy] standing for its
+    Implicit]); every argument list drops it, an [Core.Expr.Erased_value] standing for its
     argument.  A binder of [void] type survives extraction but takes no C++
     parameter. *)
 type erasure =
@@ -185,12 +190,12 @@ type binder_role =
   | Erased of erasure
 
 (** The erasure extraction recorded in a binder's type, if it did: its
-    [Tdummy], whose kill reason says why. *)
-let extraction_erasure (ty : ml_type) : erasure option =
+    [Core.Type.Erased], whose kill reason says why. *)
+let extraction_erasure (ty : Core.Type.t) : erasure option =
   match resolve_tmeta ty with
-  | Tdummy Ktype -> Some Type_binder
-  | Tdummy Kprop -> Some Proof
-  | Tdummy (Kimplicit (r, i)) -> Some (Implicit (r, i))
+  | Core.Type.Erased Core.Erasure_reason.Type_argument -> Some Type_binder
+  | Core.Type.Erased Core.Erasure_reason.Proof -> Some Proof
+  | Core.Type.Erased (Core.Erasure_reason.Configured_implicit {entity = r; position = i}) -> Some (Implicit (r, i))
   | _ -> None
 
 (** Whether extraction erased a binder of type [ty]: no call passes an
@@ -207,11 +212,11 @@ let erased_by_extraction ty = Option.has_some (extraction_erasure ty)
     one entry it looks at. *)
 let rec ml_domains t =
   match resolve_tmeta t with
-  | Miniml.Tarr (t1, t2) -> t1 :: ml_domains t2
+  | Core.Type.Arrow {parameter = t1; result = t2} -> t1 :: ml_domains t2
   | _ -> []
 
 (** The domains of an ML type, in argument order, skipping the erased
-    ([Tdummy]) ones -- so the result lines up with the arguments a C++ call
+    ([Core.Type.Erased]) ones -- so the result lines up with the arguments a C++ call
     actually passes. *)
 let ml_value_domains t =
   List.filter (fun d -> not (erased_by_extraction d)) (ml_domains t)
@@ -227,12 +232,12 @@ let collect_typed_lams ty b =
 let eta_parameters ty params =
   let doms = List.rev (ml_domains ty) in
   let n_missing = max 0 (List.length doms - List.length params) in
-  List.mapi (fun i t -> (Id (eta_param_id (n_missing - 1 - i)), t)) (Util.List.firstn n_missing doms)
+  List.mapi (fun i t -> (Core.Binder_name.Source (eta_param_id (n_missing - 1 - i)), t)) (Util.List.firstn n_missing doms)
 
 let unwritten_parameters ty params body =
   let missing = eta_parameters ty params in
   ( match body with
-  | MLaxiom _ | MLexn _ -> ()
+  | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> ()
   | _ ->
     if missing <> [] && Probe.checking () then
       Probe.violation "eta-expanded"
@@ -266,24 +271,24 @@ let eta_expand_to ty b =
     let extra =
       List.mapi
         (fun i t ->
-          ( Miniml.Id (Names.Id.of_string (Printf.sprintf "_eta%d" (k - 1 - i))),
+          ( Core.Binder_name.Source (Names.Id.of_string (Printf.sprintf "_eta%d" (k - 1 - i))),
             t ) )
         (List.rev missing)
     in
-    let args = List.init k (fun i -> Miniml.fresh_rel (k - i)) in
+    let args = List.init k (fun i -> Core.Expr.fresh_rel (k - i)) in
     Mlutil.named_lams (extra @ ids)
       (Mlutil.apply_eta_args (Mlutil.ast_lift k inner) args)
 
 (** A class method's type with the quantifier a concept erased put back.
 
-    A class's [ip_types] entry has already erased the method's own [forall A]
+    A class's [constructor_argument_types] entry has already erased the method's own [forall A]
     and the class instance itself; the projection constant kept both.  Reading
     the projection's type and dropping those leading domains recovers the
     method as its instances must spell it -- a member template, not a signature
     flattened to [std::any].  Both the instance side ({!Gen_decls}) and the
     call side ({!Translation}) need the same answer, so they ask here. *)
 let rec strip_erased_method_prefix = function
-  | Miniml.Tarr (d, rest) when Mlutil.isTdummy d || Table.is_typeclass_type d ->
+  | Core.Type.Arrow {parameter = d; result = rest} when Mlutil.isTdummy d || Table.is_typeclass_type d ->
     strip_erased_method_prefix rest
   | t -> t
 
@@ -291,8 +296,8 @@ let rec strip_erased_method_prefix = function
     dictionary: the erased arrows leading its type. *)
 let projection_class_arity proj =
   let rec count = function
-    | Miniml.Tarr (d, b) when Mlutil.isTdummy d -> 1 + count b
-    | Miniml.Tmeta {contents = Some t} -> count t
+    | Core.Type.Arrow {parameter = d; result = b} when Mlutil.isTdummy d -> 1 + count b
+    | Core.Type.Meta {contents = Some t} -> count t
     | _ -> 0
   in
   match Table.find_type proj with exception Not_found -> 0 | ty -> count ty
@@ -313,12 +318,12 @@ let method_tvar_count class_ref ty =
     template's parameters, or as the method's own type variables. *)
 let hkt_carrier_fixed_args arity ml_ty =
   match ml_ty with
-  | Miniml.Tglob (r, args, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} ->
     let given = List.length args in
     let total = max arity (max given (Table.get_type_scheme_arity r)) in
     let fixed = max 0 (total - arity) in
     if given >= fixed then CList.firstn fixed args else []
-  | Miniml.Tapp (_, args) ->
+  | Core.Type.Variable_app {arguments = args; _} ->
     (* A carrier that is a type variable ([Instance ... (M : Type -> Type)])
        is eta-expanded the same way, but has no declared scheme to compare
        against: what it applies beyond [arity] is what it fixed. *)
@@ -328,7 +333,7 @@ let hkt_carrier_fixed_args arity ml_ty =
 (** [recover_method_quantifier class_ref field_ref erased] is the type of a
     class field with its own [forall A] intact.
 
-    A class's [ip_types] entry has already erased the quantifier; the
+    A class's [constructor_argument_types] entry has already erased the quantifier; the
     projection constant has not.  An instance method takes it back as a
     member template: a higher-kinded class's every method, whose carrier is an
     alias template applied to the element type, and a type class's method
@@ -359,34 +364,34 @@ let method_is_member_template class_ref field_ref =
      | projection -> method_tvar_count class_ref (strip_erased_method_prefix projection) > 0
 
 (** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
-    been applied. Erased ([Tdummy]) domains do not count, matching the value
-    arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunknown], which
+    been applied. Erased ([Core.Type.Erased]) domains do not count, matching the value
+    arrows a C++ call consumes. Fewer than [n] arrows leaves [Core.Type.Unknown], which
     no caller can mistake for a function type. *)
 let rec ml_drop_arrows n t =
   if n <= 0 then t
   else
     match t with
-    | Miniml.Tarr (t1, t2) when Mlutil.isTdummy t1 -> ml_drop_arrows n t2
-    | Miniml.Tarr (_, t2) -> ml_drop_arrows (n - 1) t2
-    | Miniml.Tmeta {contents = Some t} -> ml_drop_arrows n t
-    | _ -> Miniml.Tunknown
+    | Core.Type.Arrow {parameter = t1; result = t2} when Mlutil.isTdummy t1 -> ml_drop_arrows n t2
+    | Core.Type.Arrow {result = t2; _} -> ml_drop_arrows (n - 1) t2
+    | Core.Type.Meta {contents = Some t} -> ml_drop_arrows n t
+    | _ -> Core.Type.Unknown
 
-(** Count the number of non-erased (non-[Tdummy]) arrow levels in an ML type.
-    For example [Tdummy -> A -> B -> C] counts as 2 (the dummy is skipped). *)
+(** Count the number of non-erased (non-[Core.Type.Erased]) arrow levels in an ML type.
+    For example [Core.Type.Erased -> A -> B -> C] counts as 2 (the dummy is skipped). *)
 let count_ml_value_arrows t = List.length (ml_value_domains t)
 
 (** Check if the codomain of an ML type (after all arrows) is a type variable.
     When true, the type variable might hide additional arrows, so the arrow
     count is not reliable for over-application detection. *)
 let rec ml_codomain_is_tvar = function
-  | Miniml.Tarr (_, t2) -> ml_codomain_is_tvar t2
-  | Miniml.Tmeta {contents = Some t} -> ml_codomain_is_tvar t
-  | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
+  | Core.Type.Arrow {result = t2; _} -> ml_codomain_is_tvar t2
+  | Core.Type.Meta {contents = Some t} -> ml_codomain_is_tvar t
+  | Core.Type.Variable _ | Core.Type.Unknown -> true
   | _ -> false
 
 (** Count the total number of arrow levels in an ML type (including erased). *)
 let rec count_ml_arrows = function
-  | Miniml.Tarr (_, t2) -> 1 + count_ml_arrows t2
+  | Core.Type.Arrow {result = t2; _} -> 1 + count_ml_arrows t2
   | _ -> 0
 
 (** Check if an ML type is a monadic type (outermost constructor is a registered
@@ -394,37 +399,37 @@ let rec count_ml_arrows = function
     so bare references to them must be wrapped in a function call. *)
 let is_monadic_ml_type ty =
   match resolve_tmeta ty with
-  | Miniml.Tglob (r, _, _) -> Table.is_monad r
+  | Core.Type.Global_app {head = r; _} -> Table.is_monad r
   | _ -> false
 
 (** Check if an ML type is void (unit type mapped to C++ void). *)
-let ml_type_is_void (ty : ml_type) : bool =
+let ml_type_is_void (ty : Core.Type.t) : bool =
   match resolve_tmeta ty with
-  | Tglob (r, _, _) -> is_void r
+  | Core.Type.Global_app {head = r; _} -> is_void r
   | _ -> false
 
 (** The role of a binder of type [ty]: the one classification every site
     asking whether a binder is a run-time parameter reads. *)
-let binder_role (ty : ml_type) : binder_role =
+let binder_role (ty : Core.Type.t) : binder_role =
   match extraction_erasure ty with
   | Some e -> Erased e
   | None -> if ml_type_is_void ty then Erased Void else Runtime
 
 (** Whether a binder of type [ty] is a parameter at run time
     ({!binder_role}). *)
-let is_runtime_binder_type (ty : ml_type) : bool =
+let is_runtime_binder_type (ty : Core.Type.t) : bool =
   match binder_role ty with Runtime -> true | Erased _ -> false
 
 (** Whether a binder of type [ty] is erased for being [void]: it survives
     extraction, and an argument list keeps it, but a C++ signature does
     not. *)
-let void_binder (ty : ml_type) : bool =
+let void_binder (ty : Core.Type.t) : bool =
   match binder_role ty with Erased Void -> true | Runtime | Erased _ -> false
 
 (** Check if an ML type is Rocq's [unit] type. *)
-let ml_type_is_unit (ty : ml_type) : bool =
+let ml_type_is_unit (ty : Core.Type.t) : bool =
   match resolve_tmeta ty with
-  | Tglob (r, _, _) -> Table.is_unit_type r
+  | Core.Type.Global_app {head = r; _} -> Table.is_unit_type r
   | _ -> false
 
 let own_type_variables ~n_outer tys =
@@ -438,40 +443,40 @@ let is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool = function
 (** Check if an ML type represents a void or unit type. *)
 let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
 
-(** Filter out erased ([Tdummy]) types from a type list. *)
+(** Filter out erased ([Core.Type.Erased]) types from a type list. *)
 let filter_value_types = List.filter (fun t -> not (isTdummy t))
 
 (** Test whether the codomain of an ML function type, after skipping [n]
     value-domain arrows, erases to [std::any] in the generated C++.
 
-    A [Tvar] or [Tunknown] codomain erases to [std::any] only when
-    at least one [Tdummy Ktype] was encountered while traversing the domain.
+    A [Core.Type.Variable] or [Core.Type.Unknown] codomain erases to [std::any] only when
+    at least one [Core.Type.Erased Core.Erasure_reason.Type_argument] was encountered while traversing the domain.
     That marker identifies a higher-rank, universally-quantified function (e.g.
     [forall A : Type, A -> A]) whose C++ encoding stores arguments and results
-    as [std::any].  A plain [Tvar i] with no preceding [Tdummy] is a named C++
+    as [std::any].  A plain [Core.Type.Variable i] with no preceding [Core.Type.Erased] is a named C++
     template parameter (e.g. [T2] in [T1 -> T2]) and must {b not} be treated
     as erased.
 
     [n] counts the value-domain arrows to skip before inspecting the codomain;
     pass [0] to query the type's immediate codomain.  The [?has_dummy] flag
-    accumulates whether a [Tdummy Ktype] was seen; callers should omit it
-    (defaults to [false]).  Note: [Tdummy Kprop] (erased proof) is skipped
+    accumulates whether a [Core.Type.Erased Core.Erasure_reason.Type_argument] was seen; callers should omit it
+    (defaults to [false]).  Note: [Core.Type.Erased Core.Erasure_reason.Proof] (erased proof) is skipped
     without setting [has_dummy] — a proof argument does not make the codomain
     [std::any]. *)
 let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
-  | Miniml.Tarr (t, rest) ->
+  | Core.Type.Arrow {parameter = t; result = rest} ->
     ( match t with
-    | Miniml.Tdummy Miniml.Ktype ->
+    | Core.Type.Erased Core.Erasure_reason.Type_argument ->
       ml_codomain_erases_to_any ~has_dummy:true n rest
     | _ when isTdummy t ->
-      (* Tdummy Kprop / Kimplicit: erased proof/implicit, skip without
+      (* Core.Type.Erased Core.Erasure_reason.Proof / Core.Erasure_reason.Configured_implicit: erased proof/implicit, skip without
          setting has_dummy and without consuming a value-arg slot. *)
       ml_codomain_erases_to_any ~has_dummy n rest
     | _ ->
       if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
       else false )
-  | Miniml.Tvar (_, _) | Miniml.Tunknown -> n = 0 && has_dummy
-  | Miniml.Tmeta {contents = Some t} -> ml_codomain_erases_to_any ~has_dummy n t
+  | Core.Type.Variable _ | Core.Type.Unknown -> n = 0 && has_dummy
+  | Core.Type.Meta {contents = Some t} -> ml_codomain_erases_to_any ~has_dummy n t
   | _ -> false
 
 (** [ml_codomain_after n ty] is what [ty] returns once [n] value arguments
@@ -479,15 +484,15 @@ let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
     {!ml_codomain_erases_to_any} does.  [None] where [ty] has fewer value
     arrows than that. *)
 let rec ml_codomain_after n = function
-  | Miniml.Tarr (t, rest) ->
+  | Core.Type.Arrow {parameter = t; result = rest} ->
     if isTdummy t then ml_codomain_after n rest
     else if n > 0 then ml_codomain_after (n - 1) rest
-    else Some (Miniml.Tarr (t, rest))
-  | Miniml.Tmeta {contents = Some t} -> ml_codomain_after n t
+    else Some (Core.Type.Arrow {parameter = t; result = rest})
+  | Core.Type.Meta {contents = Some t} -> ml_codomain_after n t
   | ty -> if n = 0 then Some ty else None
 
 (** Return [true] if the C++ type contains any unresolved type variable
-    ([Tvar] or [Tauto]): such a type has no spelling of its own at the use, so
+    ([Core.Type.Variable] or [Tauto]): such a type has no spelling of its own at the use, so
     it cannot serve as a cast target or a concrete expected type. *)
 let contains_tvar =
   Cpp_ir.Types.exists (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Variable _ | Auto -> true | _ -> false)
@@ -497,7 +502,7 @@ let contains_tvar =
 let is_prod_global g = Rocqlib.check_ref "core.prod.type" g
 
 (** Structural equality on C++ types, ignoring [Tconst] and [Tnamespace]
-    wrappers and [Tvar] name annotations.  Used to match the state parameter type
+    wrappers and [Core.Type.Variable] name annotations.  Used to match the state parameter type
     against the state component of a [pair<S,R>] return type. *)
 let rec cpp_ty_eq (t1 : Cpp_ir.Lowered.Type.t) (t2 : Cpp_ir.Lowered.Type.t) =
   let rec strip : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
@@ -631,10 +636,10 @@ let rec is_all_erased : Cpp_ir.Lowered.Type.t -> bool = function
   | _ -> false
 
 (** [extract_template_args ty] — unwrap namespace and shared_ptr wrappers
-    to extract the template arguments from the innermost [Tglob].
-    Returns [\[\]] if no [Tglob] is found.
+    to extract the template arguments from the innermost [Core.Type.Global_app].
+    Returns [\[\]] if no [Core.Type.Global_app] is found.
 
-    For example, [Tnamespace(ns, Tglob(g, \[T1; T2\], _))] returns [\[T1; T2\]]. *)
+    For example, [Tnamespace(ns, Core.Type.Global_app(g, \[T1; T2\], _))] returns [\[T1; T2\]]. *)
 let rec extract_template_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list = function
   | Entity_application (_, args, _) -> args
   | In_namespace (_, inner) -> extract_template_args inner
@@ -642,14 +647,14 @@ let rec extract_template_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t l
   | _ -> []
 
 (** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
-    ML AST: a bare type variable, [Tunknown], an empty [Tmeta] or a [Topen]
-    hole, seen through filled [Tmeta]s.  These
+    ML AST: a bare type variable, [Core.Type.Unknown], an empty [Core.Type.Meta] or a [Core.Type.Open]
+    hole, seen through filled [Core.Type.Meta]s.  These
     arise from type-level parameters that were erased during extraction
     and correspond to [std::any] in the C++ representation. *)
 and is_ml_erased_ty = function
-  | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
-  | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
-  | Miniml.Tmeta {contents = Some t} -> is_ml_erased_ty t
+  | Core.Type.Variable _ | Core.Type.Unknown -> true
+  | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
+  | Core.Type.Meta {contents = Some t} -> is_ml_erased_ty t
   | _ -> false
 
 (** Check if a C++ type is a skipped type (inline custom with empty string).
@@ -671,83 +676,96 @@ let rec is_typeclass_type_cpp : Cpp_ir.Lowered.Type.t -> bool = function
     Used to filter out parameters whose type was [Crane Extract Skip]-ped
     (e.g. [ReSum]-typed typeclass parameters from the ITree library). *)
 let is_skipped_ml_type = function
-  | Miniml.Tglob (r, _, _) ->
+  | Core.Type.Global_app {head = r; _} ->
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
 (** Check if an ML type contains any unresolved type variable or placeholder.
-    Returns true for Tvar, unresolved Tmeta, and Tunknown. Used to
-    guard Tvar substitution: we only substitute with fully concrete types. *)
+    Returns true for Core.Type.Variable, unresolved Core.Type.Meta, and Core.Type.Unknown. Used to
+    guard Core.Type.Variable substitution: we only substitute with fully concrete types. *)
 let rec has_tvar = function
-  | Miniml.Tvar (_, _) -> true
-  | Miniml.Tunknown -> true
-  | Miniml.Tarr (t1, t2) -> has_tvar t1 || has_tvar t2
-  | Miniml.Tglob (_, args, _) -> List.exists has_tvar args
-  | Miniml.Tmeta {contents = Some t} -> has_tvar t
-  | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
+  | Core.Type.Variable _ -> true
+  | Core.Type.Unknown -> true
+  | Core.Type.Arrow {parameter = t1; result = t2} -> has_tvar t1 || has_tvar t2
+  | Core.Type.Global_app {type_arguments = args; _} -> List.exists has_tvar args
+  | Core.Type.Meta {contents = Some t} -> has_tvar t
+  | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
   | _ -> false
 
 (** Apply a type-level transformation to every type annotation in an ML AST. *)
-let rec map_types_in_ast (f : ml_type -> ml_type) = function
-  | MLlam (id, ty, body) -> MLlam (id, f ty, map_types_in_ast f body)
-  | MLletin (id, ty, a, b, occ) ->
-    MLletin (id, f ty, map_types_in_ast f a, map_types_in_ast f b, occ)
-  | MLglob use -> MLglob (Global_use.map_types f use)
-  | MLcons (ty, r, args, occ) -> MLcons (f ty, r, List.map (map_types_in_ast f) args, occ)
-  | MLcase (ty, e, brs, occ) ->
-    MLcase
-      ( f ty,
-        map_types_in_ast f e,
-        Array.map
-          (fun (ids, ty, pat, body) ->
-            ( List.map (fun (id, t) -> (id, f t)) ids,
-              f ty,
-              pat,
-              map_types_in_ast f body ) )
-          brs,
-        occ )
-  | MLfix (i, ids, funs, cf, occ) ->
-    MLfix
-      ( i,
-        Array.map (fun (n, ty) -> (n, f ty)) ids,
-        Array.map (map_types_in_ast f) funs,
-        cf,
-        occ )
-  | MLapp (fn, args) ->
-    MLapp (map_types_in_ast f fn, List.map (map_types_in_ast f) args)
-  | MLmagic (m, a, mocc) -> MLmagic (Mlutil.map_magic_types f m, map_types_in_ast f a, mocc)
-  | MLparray (arr, def) ->
-    MLparray (Array.map (map_types_in_ast f) arr, map_types_in_ast f def)
-  | MLtuple args -> MLtuple (List.map (map_types_in_ast f) args)
-  | ( MLrel _
-    | MLexn _
-    | MLdummy _
-    | MLaxiom _
-    | MLuint _ | MLnumeral _
-    | MLfloat _
-    | MLstring _ ) as t -> t
+let rec map_types_in_ast (f : Core.Type.t -> Core.Type.t) = function
+  | Core.Expr.Lambda {parameter = id; parameter_type = ty; body} ->
+    Core.Expr.Lambda {parameter = id; parameter_type = f ty; body = map_types_in_ast f body}
+  | Core.Expr.Let {binder = id; binder_type = ty; value = a; body = b; occurrence = occ} ->
+    Core.Expr.Let {binder = id;
+                   binder_type = f ty;
+                   value = map_types_in_ast f a;
+                   body = map_types_in_ast f b;
+                   occurrence = occ}
+  | Core.Expr.Global use -> Core.Expr.Global (Core.Global_use.map_types f use)
+  | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; occurrence = occ} ->
+    Core.Expr.Construct {result_type = f ty;
+                         constructor = r;
+                         arguments = List.map (map_types_in_ast f) args;
+                         occurrence = occ}
+  | Core.Expr.Match {scrutinee_type = ty; scrutinee = e; branches = brs; occurrence = occ} ->
+    Core.Expr.Match {scrutinee_type = f ty; scrutinee = map_types_in_ast f e; branches = Array.map
+          (fun {Core.Match.Branch.binders = ids; result_type = ty; pattern = pat; body = body} ->
+            { Core.Match.Branch.binders = List.map (fun (id, t) -> (id, f t)) ids;
+              result_type = f ty;
+              pattern = pat;
+              body = map_types_in_ast f body } )
+          brs; occurrence = occ}
+  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies = funs; occurrence = occ} ->
+    Core.Expr.Fixpoint {selected = i;
+                        functions = Array.map (fun (n, ty) -> (n, f ty)) ids;
+                        bodies = Array.map (map_types_in_ast f) funs;
+                        occurrence = occ}
+  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies = funs; occurrence = occ} ->
+    Core.Expr.Cofixpoint {selected = i;
+                          functions = Array.map (fun (n, ty) -> (n, f ty)) ids;
+                          bodies = Array.map (map_types_in_ast f) funs;
+                          occurrence = occ}
+  | Core.Expr.Apply {callee = fn; arguments = args} ->
+    Core.Expr.Apply {callee = map_types_in_ast f fn; arguments = List.map (map_types_in_ast f) args}
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
+    Core.Expr.Coerce {source_type = f from; target_type = f into; value = map_types_in_ast f a; occurrence = mocc}
+  | Core.Expr.Boxed_value {value = a; occurrence = mocc} ->
+    Core.Expr.Boxed_value {value = map_types_in_ast f a; occurrence = mocc}
+  | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
+    Core.Expr.Lambda_group_barrier {value = map_types_in_ast f a; occurrence = mocc}
+  | Core.Expr.Persistent_array {elements = arr; default = def} ->
+    Core.Expr.Persistent_array {elements = Array.map (map_types_in_ast f) arr; default = map_types_in_ast f def}
+  | Core.Expr.Tuple args -> Core.Expr.Tuple (List.map (map_types_in_ast f) args)
+  | ( Core.Expr.Bound_variable _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _ | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ ) as t -> t
 
-(** Apply a Tvar substitution to an ML type. *)
+(** Apply a Core.Type.Variable substitution to an ML type. *)
 let rec subst_tvars_type subst = function
-  | Miniml.Tvar (_, i) ->
+  | Core.Type.Variable {variable = i; _} ->
     ( match List.assoc_opt i subst with
     | Some t -> t
-    | None -> Miniml.Tvar (Schematic, i) )
-  | Miniml.Tarr (a, b) ->
-    Miniml.Tarr (subst_tvars_type subst a, subst_tvars_type subst b)
-  | Miniml.Tglob (r, args, a) ->
-    Miniml.Tglob (r, List.map (subst_tvars_type subst) args, a)
-  | Miniml.Tmeta {contents = Some t} -> subst_tvars_type subst t
-  | Miniml.Tapp (i, args) ->
+    | None -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i} )
+  | Core.Type.Arrow {parameter = a; result = b} ->
+    Core.Type.Arrow {parameter = subst_tvars_type subst a; result = subst_tvars_type subst b}
+  | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = a} ->
+    Core.Type.Global_app {head = r; type_arguments = List.map (subst_tvars_type subst) args; index_arguments = a}
+  | Core.Type.Meta {contents = Some t} -> subst_tvars_type subst t
+  | Core.Type.Variable_app {head = i; arguments = args} ->
     (* The head of an application is a type variable too, but only another
        variable can stand in that position, so a mapping to a structured type
        leaves it alone. *)
     let i =
       match List.assoc_opt i subst with
-      | Some (Miniml.Tvar (_, j)) -> j
+      | Some (Core.Type.Variable {variable = j; _}) -> j
       | _ -> i
     in
-    Miniml.Tapp (i, List.map (subst_tvars_type subst) args)
+    Core.Type.Variable_app {head = i; arguments = List.map (subst_tvars_type subst) args}
   | t -> t
 
 (** Replace all unnamed Tvars with Tany (for type erasure in indexed
@@ -766,13 +784,13 @@ let tvar_erase_type =
 
     This is the erasure required wherever one C++ type has to serve every
     instantiation of an existential -- an index-position argument of an
-    indexed inductive (after an erased [Tdummy Ktype] index), or a value
+    indexed inductive (after an erased [Core.Type.Erased Core.Erasure_reason.Type_argument] index), or a value
     flowing into an erased slot.  Collapsing the whole argument to [std::any]
     would also be uniform, but it throws away a structure the consumer needs:
     the payload of a [{ T : Type & list T }] is still a list, and only its
     element type is existential.
 
-    A leaf is collapsed rather than recursed into so that a namespaced [Tglob]
+    A leaf is collapsed rather than recursed into so that a namespaced [Core.Type.Global_app]
     like [Nat] yields plain [std::any], not the malformed
     [typename Nat::std::any]. *)
 let rec index_erase_type (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
@@ -788,9 +806,9 @@ let rec index_erase_type (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     | t -> In_namespace (r, t) )
   | _ -> Any
 
-(** Extract return type from a function type, stripping all Tarr layers. *)
+(** Extract return type from a function type, stripping all Core.Type.Arrow layers. *)
 let rec ml_return_type = function
-  | Tarr (_, rest) -> ml_return_type rest
+  | Core.Type.Arrow {result = rest; _} -> ml_return_type rest
   | t -> t
 
 (** Whether a global has no C++ spelling: whatever mapped it mapped it to the
@@ -853,7 +871,7 @@ let has_no_cpp_spelling (ty : Cpp_ir.Lowered.Type.t) =
     are infrastructure and are erased. *)
 let ml_ret_is_skipped ty =
   match ml_return_type ty with
-  | Tglob (rr, _, _) -> ref_is_skipped rr
+  | Core.Type.Global_app {head = rr; _} -> ref_is_skipped rr
   | _ -> false
 
 (** Whether a value of ML type [ty] is a typeclass instance.
@@ -866,20 +884,20 @@ let ml_type_is_instance ty =
 
 (** Extract argument types and return type from a function type. *)
 let rec get_args_and_ret acc = function
-  | Tarr (t, rest) -> get_args_and_ret (t :: acc) rest
+  | Core.Type.Arrow {parameter = t; result = rest} -> get_args_and_ret (t :: acc) rest
   | ret_ty -> (List.rev acc, ret_ty)
 
-(** Strip [n] non-dummy arrow levels from an ML type, resolving Tmeta
-    indirections and automatically skipping erased (Tdummy) arrows.
+(** Strip [n] non-dummy arrow levels from an ML type, resolving Core.Type.Meta
+    indirections and automatically skipping erased (Core.Type.Erased) arrows.
     Returns the codomain after stripping, or [None] if the type has fewer
     than [n] non-dummy arrow levels. *)
 let rec strip_tarr_n n ty =
   if n <= 0 then Some ty
   else match resolve_tmeta ty with
-    | Tarr (t1, rest) when Mlutil.isTdummy t1 ->
+    | Core.Type.Arrow {parameter = t1; result = rest} when Mlutil.isTdummy t1 ->
       (* Skip erased type-param arrow without consuming a real argument *)
       strip_tarr_n n rest
-    | Tarr (_, rest) -> strip_tarr_n (n - 1) rest
+    | Core.Type.Arrow {result = rest; _} -> strip_tarr_n (n - 1) rest
     | _ -> None
 
 (** Strip one level of reference or const-qualification from a C++ type.
@@ -892,12 +910,12 @@ let strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = funct
   | t -> t
 
 (** Count non-erased arguments in an ML application.
-    [MLdummy] nodes represent erased type/proof parameters that are not
+    [Core.Expr.Erased_value] nodes represent erased type/proof parameters that are not
     passed to C++ functions; this returns the count of the remaining actual
     value arguments. *)
 let count_real_ml_args args =
   List.length (List.filter (fun a ->
-    match a with MLdummy _ -> false | _ -> true) args)
+    match a with Core.Expr.Erased_value _ -> false | _ -> true) args)
 
 (** Whether copying a value of this C++ type is free.
 
@@ -917,7 +935,7 @@ let rec is_trivially_copyable_type (t : Cpp_ir.Lowered.Type.t) =
     read off the ML type. *)
 let rec ml_is_trivially_copyable ty =
   match resolve_tmeta ty with
-  | Miniml.Tglob (g, args, _) ->
+  | Core.Type.Global_app {head = g; type_arguments = args; _} ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
     || Table.is_trivially_copyable_ref g && List.for_all ml_is_trivially_copyable args
   | _ -> false
@@ -926,19 +944,19 @@ let boxes_field ty =
   Table.boxed_fields ()
   &&
   match resolve_tmeta ty with
-  | Miniml.Tglob ((GlobRef.IndRef _ as g), _, _) ->
+  | Core.Type.Global_app {head = (GlobRef.IndRef _ as g); _} ->
     (not (Table.is_coinductive g)) && not (ml_is_trivially_copyable ty)
   | _ -> false
 
 let boxes_param_field ~owner ty =
   Table.boxed_fields ()
   && (not (Table.is_shared_variant owner))
-  && match resolve_tmeta ty with Miniml.Tvar _ -> true | _ -> false
+  && match resolve_tmeta ty with Core.Type.Variable _ -> true | _ -> false
 
 module Ctor_fields = struct
   type t = {
     inductive : GlobRef.t;
-    types : ml_type list;
+    types : Core.Type.t list;
   }
 
   let of_ctor cname =
@@ -960,20 +978,23 @@ module Ctor_fields = struct
     | _ -> false
 
   let rec mentions_self f = function
-    | Miniml.Tglob (r, args, _) -> is_self_or_mutual f r || List.exists (mentions_self f) args
-    | Miniml.Tmeta {contents = Some t} -> mentions_self f t
-    | Miniml.Tarr (t1, t2) -> mentions_self f t1 || mentions_self f t2
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
+      is_self_or_mutual f r || List.exists (mentions_self f) args
+    | Core.Type.Meta {contents = Some t} -> mentions_self f t
+    | Core.Type.Arrow {parameter = t1; result = t2} -> mentions_self f t1 || mentions_self f t2
     | _ -> false
 
   let self_or_mutual_ref f i =
     field f i (function
-      | Miniml.Tglob (r, _, _) | Miniml.Tmeta {contents = Some (Miniml.Tglob (r, _, _))} ->
+      | Core.Type.Global_app {head = r; _} | Core.Type.Meta {contents = Some (Core.Type.Global_app {head = r; _})} ->
         is_self_or_mutual f r
       | _ -> false )
 
   let nested_self_ref f i =
     field f i (function
-      | Miniml.Tglob (r, args, _) | Miniml.Tmeta {contents = Some (Miniml.Tglob (r, args, _))}
+      | Core.Type.Global_app {head = r;
+                              type_arguments = args; _} | Core.Type.Meta {contents = Some (Core.Type.Global_app {head = r;
+                                                                                          type_arguments = args; _})}
         when not (is_self_or_mutual f r) ->
         List.exists (mentions_self f) args
       | _ -> false )
@@ -987,12 +1008,12 @@ module Ctor_fields = struct
      be dereferenced when bound in a match arm. *)
   let recurses_through_boxed f i =
     let rec go = function
-      | Miniml.Tglob (g, args, _) -> (
+      | Core.Type.Global_app {head = g; type_arguments = args; _} -> (
         match Table.find_boxed_wrapper_opt g with
         | Some _ when List.exists (mentions_self f) args -> true
         | _ -> List.exists go args )
-      | Miniml.Tmeta {contents = Some t'} -> go t'
-      | Miniml.Tarr (a, b) -> go a || go b
+      | Core.Type.Meta {contents = Some t'} -> go t'
+      | Core.Type.Arrow {parameter = a; result = b} -> go a || go b
       | _ -> false
     in
     field f i go
@@ -1009,7 +1030,7 @@ end
 
 let is_prod_ml_type ty =
   match resolve_tmeta ty with
-  | Miniml.Tglob (r, _, _) -> is_prod_global r
+  | Core.Type.Global_app {head = r; _} -> is_prod_global r
   | _ -> false
 
 (* Rocq BinNums.positive constructor indices (1-based): xI = 2n+1, xO = 2n, xH = 1 *)
@@ -1126,9 +1147,9 @@ let rec type_is_erased (ty : Cpp_ir.Lowered.Type.t) : bool =
   | Const inner | In_namespace (_, inner) -> type_is_erased inner
   | t -> is_tany_node t
 
-(** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
+(** Check if a C++ type contains any unnamed Core.Type.Variable (Core.Type.Variable(_, None)). Used to
     detect types that can't be fully resolved in monomorphized contexts
-    (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
+    (tvars=[]), where nested Core.Type.Variable(_, None) would print as invalid C++ like
     List<T1>. *)
 let has_unnamed_tvar =
   Cpp_ir.Children.exists_type (fun (t : Cpp_ir.Lowered.Type.t) ->
@@ -1143,7 +1164,7 @@ let resolve_tvars_to_any =
     paired with a key that survives with it, using a two-phase approach:
     proof erasure stripping followed by all-or-nothing type erasure.
 
-    Phase 1: Strip proof-erasure markers ([dummy_prop] from [Tdummy Kprop]).
+    Phase 1: Strip proof-erasure markers ([dummy_prop] from [Core.Type.Erased Core.Erasure_reason.Proof]).
     These are positional placeholders in the ML AST that have no C++ analog.
     They must be removed before checking for erased types, otherwise their
     presence would trigger full erasure of concrete type arguments.
@@ -1169,21 +1190,21 @@ let resolve_tvars_to_any =
     Example scenarios:
 
     1. Concrete types (no erasure):
-       Input: [[Tglob nat; Tglob bool]]
-       Output: [[Tglob nat; Tglob bool]]
+       Input: [[Core.Type.Global_app nat; Core.Type.Global_app bool]]
+       Output: [[Core.Type.Global_app nat; Core.Type.Global_app bool]]
 
     2. Proof in middle (strip but keep others):
-       Input: [[Tglob nat; Tglob dummy_prop; Tglob bool]]
-       After phase 1: [[Tglob nat; Tglob bool]]
-       Output: [[Tglob nat; Tglob bool]]
+       Input: [[Core.Type.Global_app nat; Core.Type.Global_app dummy_prop; Core.Type.Global_app bool]]
+       After phase 1: [[Core.Type.Global_app nat; Core.Type.Global_app bool]]
+       Output: [[Core.Type.Global_app nat; Core.Type.Global_app bool]]
 
     3. Erased type in middle (drop all):
-       Input: [[Tglob nat; Tglob dummy_type; Tglob bool]]
-       After phase 1: [[Tglob nat; Tglob dummy_type; Tglob bool]]
+       Input: [[Core.Type.Global_app nat; Core.Type.Global_app dummy_type; Core.Type.Global_app bool]]
+       After phase 1: [[Core.Type.Global_app nat; Core.Type.Global_app dummy_type; Core.Type.Global_app bool]]
        After phase 2: [[]] (erased)
 
     4. Only proofs (drop all):
-       Input: [[Tglob dummy_prop; Tglob dummy_prop]]
+       Input: [[Core.Type.Global_app dummy_prop; Core.Type.Global_app dummy_prop]]
        After phase 1: [[]]
        Output: [[]]
 
@@ -1241,27 +1262,30 @@ let rec refine_erased_by ~(expected : Cpp_ir.Lowered.Type.t) (actual : Cpp_ir.Lo
 
 (* What [fills] filled the hole [o] with, if anything. *)
 let filled_with fills o =
-  List.find_map (fun (o', t) -> if Miniml.Open.equal o o' then Some t else None) fills
+  List.find_map (fun (o', t) -> if Core.Open.equal o o' then Some t else None) fills
 
 let refine_erased ?(fills = ref []) ~writable have want =
   let erased = function
-    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
+    | Core.Type.Unknown | Core.Type.Erased _ | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
     | _ -> false
   in
   let filled = function
-    | Miniml.Topen o as t -> Option.default t (filled_with !fills o)
+    | Core.Type.Open o as t -> Option.default t (filled_with !fills o)
     | t -> t
   in
   let rec refine have want =
     match (filled (resolve_tmeta have), resolve_tmeta want) with
-    | Miniml.Topen o, w when (not (erased w)) && writable w ->
+    | Core.Type.Open o, w when (not (erased w)) && writable w ->
       fills := (o, w) :: !fills;
       w
     | h, w when erased h -> if (not (erased w)) && writable w then w else h
-    | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
+    | Core.Type.Global_app {head = n;
+                            type_arguments = ha;
+                            index_arguments = sc}, Core.Type.Global_app {head = m; type_arguments = wa; _}
       when GlobRef.CanOrd.equal n m && List.length ha = List.length wa ->
-      Miniml.Tglob (n, List.map2 refine ha wa, sc)
-    | Miniml.Tarr (a, b), Miniml.Tarr (c, d) -> Miniml.Tarr (refine a c, refine b d)
+      Core.Type.Global_app {head = n; type_arguments = List.map2 refine ha wa; index_arguments = sc}
+    | Core.Type.Arrow {parameter = a; result = b}, Core.Type.Arrow {parameter = c; result = d} ->
+      Core.Type.Arrow {parameter = refine a c; result = refine b d}
     | h, _ -> h
   in
   refine have want
@@ -1269,16 +1293,18 @@ let refine_erased ?(fills = ref []) ~writable have want =
 (* Rebuilt only where a hole is filled, so the rest is shared. *)
 let rec fill_holes_type fills t =
   match t with
-  | Miniml.Topen o -> Option.default t (filled_with fills o)
-  | Miniml.Tmeta {contents = Some u} ->
+  | Core.Type.Open o -> Option.default t (filled_with fills o)
+  | Core.Type.Meta {contents = Some u} ->
     let u' = fill_holes_type fills u in
     if u' == u then t else u'
-  | Miniml.Tarr (a, b) ->
+  | Core.Type.Arrow {parameter = a; result = b} ->
     let a' = fill_holes_type fills a and b' = fill_holes_type fills b in
-    if a' == a && b' == b then t else Miniml.Tarr (a', b')
-  | Miniml.Tglob (g, ts, args) ->
+    if a' == a && b' == b then t else Core.Type.Arrow {parameter = a'; result = b'}
+  | Core.Type.Global_app {head = g; type_arguments = ts; index_arguments = args} ->
     let ts' = List.map (fill_holes_type fills) ts in
-    if List.for_all2 ( == ) ts ts' then t else Miniml.Tglob (g, ts', args)
+    if List.for_all2 ( == ) ts ts' then t else Core.Type.Global_app {head = g;
+                                                                     type_arguments = ts';
+                                                                     index_arguments = args}
   | _ -> t
 
 let fill_holes fills e =
@@ -1310,7 +1336,7 @@ let refine_param_from_slot ~tvars ~slot (bare : Cpp_ir.Lowered.Type.t) =
   if says_something && keeps_names && has_erased_type_in_type bare && has_erased_type_in_type erased then erased
   else bare
 
-(** Collect (index, name) pairs for all Tvar occurrences, sorted by index; a
+(** Collect (index, name) pairs for all Core.Type.Variable occurrences, sorted by index; a
     variable known only by name stands at index [0], ahead of the others. *)
 let get_tvars_indexed (t : Cpp_ir.Lowered.Type.t) =
   let get_name i n =
@@ -1400,10 +1426,10 @@ let rendered_tvar_arities (t : Cpp_ir.Lowered.Type.t) =
   aux t;
   arities
 
-(** Tvar names, sorted by index *)
+(** Core.Type.Variable names, sorted by index *)
 let get_tvars t = List.map snd (get_tvars_indexed t)
 
-(** Tvar indices only, sorted *)
+(** Core.Type.Variable indices only, sorted *)
 let get_tvar_indices t = List.map fst (get_tvars_indexed t)
 
 (** Collect tvar indices that are represented concretely in the generated C++
@@ -1451,18 +1477,18 @@ let primary_tvar_indices (dom : Cpp_ir.Lowered.Type.t list) cod =
 let collect_ml_type_index_tvars ml_ty =
   let result = ref IntSet.empty in
   let rec collect_tvars = function
-    | Miniml.Tvar (_, i) ->
+    | Core.Type.Variable {variable = i; _} ->
       result := IntSet.add i !result
-    | Miniml.Tarr (t1, t2) ->
+    | Core.Type.Arrow {parameter = t1; result = t2} ->
       collect_tvars t1; collect_tvars t2
-    | Miniml.Tglob (_, ts, _) ->
+    | Core.Type.Global_app {type_arguments = ts; _} ->
       List.iter collect_tvars ts
-    | Miniml.Tmeta {contents = Some t} -> collect_tvars t
+    | Core.Type.Meta {contents = Some t} -> collect_tvars t
     | _ -> ()
   in
   let rec walk = function
-    | Miniml.Tarr (t1, t2) -> walk t1; walk t2
-    | Miniml.Tglob (g, ts, _) ->
+    | Core.Type.Arrow {parameter = t1; result = t2} -> walk t1; walk t2
+    | Core.Type.Global_app {head = g; type_arguments = ts; _} ->
       ( match g with
       | GlobRef.IndRef (kn, _) ->
         ( match Table.get_ind_num_param_vars_opt kn with
@@ -1473,7 +1499,7 @@ let collect_ml_type_index_tvars ml_ty =
         | _ -> () );
         List.iter walk ts
       | _ -> List.iter walk ts )
-    | Miniml.Tmeta {contents = Some t} -> walk t
+    | Core.Type.Meta {contents = Some t} -> walk t
     | _ -> ()
   in
   walk ml_ty;
@@ -1490,18 +1516,18 @@ let collect_ml_tvars = Mlutil.ml_tvars
 
 (** Arity of every type variable that [tys] applies to arguments, keyed by its
     1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type] reaches
-    MiniML as the head of a {!Miniml.Tapp}, and a plain [typename] cannot be
+    Core as the head of a {!Core.Type.Variable_app}, and a plain [typename] cannot be
     applied: such a parameter is declared [template <typename> class], and an
     explicit argument for it is a bare template name rather than a type. *)
 let applied_ml_tvar_arities tys =
   let arities = Hashtbl.create 4 in
   let rec scan = function
-    | Miniml.Tapp (i, args) ->
+    | Core.Type.Variable_app {head = i; arguments = args} ->
       Hashtbl.replace arities i (List.length args);
       List.iter scan args
-    | Miniml.Tglob (_, args, _) -> List.iter scan args
-    | Miniml.Tarr (a, b) -> scan a; scan b
-    | Miniml.Tmeta {contents = Some t} -> scan t
+    | Core.Type.Global_app {type_arguments = args; _} -> List.iter scan args
+    | Core.Type.Arrow {parameter = a; result = b} -> scan a; scan b
+    | Core.Type.Meta {contents = Some t} -> scan t
     | _ -> ()
   in
   List.iter scan tys;
@@ -1531,23 +1557,23 @@ let relaxed_applied_ml_tvars ml_ty =
        as the argument of an alias, [Sub UBE E] -- is written applied to the
        alias's own placeholder. That is an occurrence the declaration has to
        keep the parameter for, not an application it can relax. *)
-    | Miniml.Tapp (i, args)
+    | Core.Type.Variable_app {head = i; arguments = args}
       when args = []
            || List.exists
                 (fun a ->
                   match resolve_tmeta a with
-                  | Miniml.Tunknown -> true
+                  | Core.Type.Unknown -> true
                   | _ -> false )
                 args -> bare := IntSet.add i !bare
-    | Miniml.Tapp (i, args) ->
+    | Core.Type.Variable_app {head = i; arguments = args} ->
       Hashtbl.replace applied i ();
       List.iter scan args
-    | Miniml.Tvar (_, i) -> bare := IntSet.add i !bare
-    | Miniml.Tglob (_, args, _) -> List.iter scan args
-    | Miniml.Tarr (a, b) ->
+    | Core.Type.Variable {variable = i; _} -> bare := IntSet.add i !bare
+    | Core.Type.Global_app {type_arguments = args; _} -> List.iter scan args
+    | Core.Type.Arrow {parameter = a; result = b} ->
       scan a;
       scan b
-    | Miniml.Tmeta {contents = Some t} -> scan t
+    | Core.Type.Meta {contents = Some t} -> scan t
     | _ -> ()
   in
   List.iter scan doms;
@@ -1587,18 +1613,18 @@ let event_family_ml_tvars tys =
      ([Table.is_family_ind_param]). *)
   let rec at_family_positions t =
     match resolve_tmeta t with
-    | Miniml.Tglob (r, args, _) ->
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       List.iteri
         (fun i a ->
           ( if Table.is_family_ind_param r i then
               match resolve_tmeta a with
-              | Miniml.Tvar (_, v) | Miniml.Tapp (v, _) ->
+              | Core.Type.Variable {variable = v; _} | Core.Type.Variable_app {head = v; _} ->
                 fams := IntSet.add v !fams
               | _ -> () );
           at_family_positions a )
         args
-    | Miniml.Tapp (_, args) -> List.iter at_family_positions args
-    | Miniml.Tarr (a, b) -> at_family_positions a; at_family_positions b
+    | Core.Type.Variable_app {arguments = args; _} -> List.iter at_family_positions args
+    | Core.Type.Arrow {parameter = a; result = b} -> at_family_positions a; at_family_positions b
     | _ -> ()
   in
   List.iter at_family_positions tys;
@@ -1607,13 +1633,13 @@ let event_family_ml_tvars tys =
      and so is anything a sum nested inside it names. *)
   let rec families a =
     match resolve_tmeta a with
-    | Miniml.Tvar (_, v) | Miniml.Tapp (v, _) -> fams := IntSet.add v !fams
-    | Miniml.Tglob (_, args, _) -> List.iter families args
+    | Core.Type.Variable {variable = v; _} | Core.Type.Variable_app {head = v; _} -> fams := IntSet.add v !fams
+    | Core.Type.Global_app {type_arguments = args; _} -> List.iter families args
     | _ -> ()
   in
   let rec scan t =
     match t with
-    | Miniml.Tglob (r, (_ :: _ as args), _)
+    | Core.Type.Global_app {head = r; type_arguments = (_ :: _ as args); _}
       when Table.is_monad r && Table.is_monad_reified r ->
       (* A reified monad parameterises on its result last; everything before
          it is the event family. *)
@@ -1621,9 +1647,10 @@ let event_family_ml_tvars tys =
         (fun i a -> if i < List.length args - 1 then families a)
         args;
       List.iter scan args
-    | Miniml.Tglob (_, args, _) | Miniml.Tapp (_, args) -> List.iter scan args
-    | Miniml.Tarr (a, b) -> scan a; scan b
-    | Miniml.Tmeta {contents = Some t} -> scan t
+    | Core.Type.Global_app {type_arguments = args; _} | Core.Type.Variable_app {arguments = args; _} ->
+      List.iter scan args
+    | Core.Type.Arrow {parameter = a; result = b} -> scan a; scan b
+    | Core.Type.Meta {contents = Some t} -> scan t
     | _ -> ()
   in
   List.iter scan tys;
@@ -1632,7 +1659,7 @@ let event_family_ml_tvars tys =
 (** The type variables an ML signature genuinely demands be declared
     [template <typename> class] rather than plain [typename].
 
-    MiniML never names a higher-kinded variable bare: [sum1 E F X] arrives as
+    Core never names a higher-kinded variable bare: [sum1 E F X] arrives as
     [sum1 (E ?) (F ?) X], every occurrence already applied.  So "is it applied"
     cannot be the question, and two things answer it instead.
 
@@ -1672,12 +1699,12 @@ let higher_kinded_ml_tvars tys =
     let as_arg = ref IntSet.empty and elsewhere = ref IntSet.empty in
     let rec scan ~under_app t =
       match resolve_tmeta t with
-      | Miniml.Tvar (_, j) ->
+      | Core.Type.Variable {variable = j; _} ->
         if under_app then as_arg := IntSet.add j !as_arg
         else elsewhere := IntSet.add j !elsewhere
-      | Miniml.Tapp (_, args) -> List.iter (scan ~under_app:true) args
-      | Miniml.Tglob (_, args, _) -> List.iter (scan ~under_app:false) args
-      | Miniml.Tarr (a, b) -> scan ~under_app:false a; scan ~under_app:false b
+      | Core.Type.Variable_app {arguments = args; _} -> List.iter (scan ~under_app:true) args
+      | Core.Type.Global_app {type_arguments = args; _} -> List.iter (scan ~under_app:false) args
+      | Core.Type.Arrow {parameter = a; result = b} -> scan ~under_app:false a; scan ~under_app:false b
       | _ -> ()
     in
     List.iter (scan ~under_app:false) tys;
@@ -1685,19 +1712,19 @@ let higher_kinded_ml_tvars tys =
   in
   let survived_erasure a =
     match resolve_tmeta a with
-    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta _ | Miniml.Topen _ -> false
-    | Miniml.Tvar (_, j) -> not (IntSet.mem j index_vars)
+    | Core.Type.Unknown | Core.Type.Erased _ | Core.Type.Meta _ | Core.Type.Open _ -> false
+    | Core.Type.Variable {variable = j; _} -> not (IntSet.mem j index_vars)
     | _ -> true
   in
   let rec scan ~generated_arg t =
     match t with
-    | Miniml.Tapp (i, args) ->
+    | Core.Type.Variable_app {head = i; arguments = args} ->
       (* Applied at something erasure did not take away, or written where a
          generated constructor expects a template name. *)
       if generated_arg || List.exists survived_erasure args
       then demand i;
       List.iter (scan ~generated_arg:false) args
-    | Miniml.Tglob (r, args, _) ->
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       (* Only a position the constructor's header actually declares a
          template: [Plan_templates.hkt_templates] recorded which, and a family
          parameter it left plain takes the family's own struct. *)
@@ -1708,10 +1735,10 @@ let higher_kinded_ml_tvars tys =
               ((not (Table.is_custom r)) && Table.is_hkt_ind_param r i)
             a )
         args
-    | Miniml.Tarr (a, b) ->
+    | Core.Type.Arrow {parameter = a; result = b} ->
       scan ~generated_arg:false a;
       scan ~generated_arg:false b
-    | Miniml.Tmeta {contents = Some t} -> scan ~generated_arg t
+    | Core.Type.Meta {contents = Some t} -> scan ~generated_arg t
     | _ -> ()
   in
   List.iter (scan ~generated_arg:false) tys;
@@ -1742,19 +1769,19 @@ let hkt_arg_ml_tvar_arities tys =
   let arities = Hashtbl.create 4 in
   let rec scan t =
     match t with
-    | Miniml.Tglob (r, args, _) ->
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       List.iteri
         (fun i a ->
           match (resolve_tmeta a, Table.hkt_ind_param_arity r i) with
-          | Miniml.Tvar (_, v), Some arity -> Hashtbl.replace arities v arity
-          | Miniml.Tapp (v, args), Some _ ->
+          | Core.Type.Variable {variable = v; _}, Some arity -> Hashtbl.replace arities v arity
+          | Core.Type.Variable_app {head = v; arguments = args}, Some _ ->
             Hashtbl.replace arities v (List.length args)
           | _ -> () )
         args;
       List.iter scan args
-    | Miniml.Tapp (_, args) -> List.iter scan args
-    | Miniml.Tarr (a, b) -> scan a; scan b
-    | Miniml.Tmeta {contents = Some t} -> scan t
+    | Core.Type.Variable_app {arguments = args; _} -> List.iter scan args
+    | Core.Type.Arrow {parameter = a; result = b} -> scan a; scan b
+    | Core.Type.Meta {contents = Some t} -> scan t
     | _ -> ()
   in
   List.iter scan tys;
@@ -1774,30 +1801,30 @@ let hkt_arg_ml_tvar_arities tys =
     ([wrap A -> A]) fixes one index, so the function has one result type and a
     template parameter says it exactly.  And a variable the arguments also
     carry outside an index position is deducible as usual.  The variable is
-    [Some n] for [Tvar n], [None] where the result is no such variable. *)
+    [Some n] for [Core.Type.Variable n], [None] where the result is no such variable. *)
 let index_only_result_tvar ml_ty =
   let rec split acc = function
-    | Miniml.Tarr (t1, t2) -> split (t1 :: acc) t2
-    | Miniml.Tmeta {contents = Some t} -> split acc t
+    | Core.Type.Arrow {parameter = t1; result = t2} -> split (t1 :: acc) t2
+    | Core.Type.Meta {contents = Some t} -> split acc t
     | res -> (acc, res)
   in
   let doms, res = split [] ml_ty in
   match res with
-  | (Miniml.Tvar (_, n)) when doms <> [] ->
+  | (Core.Type.Variable {variable = n; _}) when doms <> [] ->
     (* [as_index]: variables an argument carries only as an index of a
        many-constructor inductive.  [elsewhere]: everything it carries in any
        other position, which is deducible and so disqualifies. *)
     let as_index = ref IntSet.empty and elsewhere = ref IntSet.empty in
     let rec tvars_of into = function
-      | Miniml.Tvar (_, i) -> into := IntSet.add i !into
-      | Miniml.Tarr (t1, t2) -> tvars_of into t1; tvars_of into t2
-      | Miniml.Tglob (_, ts, _) -> List.iter (tvars_of into) ts
-      | Miniml.Tmeta {contents = Some t} -> tvars_of into t
+      | Core.Type.Variable {variable = i; _} -> into := IntSet.add i !into
+      | Core.Type.Arrow {parameter = t1; result = t2} -> tvars_of into t1; tvars_of into t2
+      | Core.Type.Global_app {type_arguments = ts; _} -> List.iter (tvars_of into) ts
+      | Core.Type.Meta {contents = Some t} -> tvars_of into t
       | _ -> ()
     in
     let rec walk = function
-      | Miniml.Tarr (t1, t2) -> walk t1; walk t2
-      | Miniml.Tglob (GlobRef.IndRef (kn, i), ts, _) ->
+      | Core.Type.Arrow {parameter = t1; result = t2} -> walk t1; walk t2
+      | Core.Type.Global_app {head = GlobRef.IndRef (kn, i); type_arguments = ts; _} ->
         let nparams =
           match Table.get_ind_num_param_vars_opt kn with Some k -> k | None -> 0
         in
@@ -1808,8 +1835,8 @@ let index_only_result_tvar ml_ty =
           (fun j t ->
             if j >= nparams && many_ctors then tvars_of as_index t else walk t )
           ts
-      | Miniml.Tglob (_, ts, _) -> List.iter walk ts
-      | Miniml.Tmeta {contents = Some t} -> walk t
+      | Core.Type.Global_app {type_arguments = ts; _} -> List.iter walk ts
+      | Core.Type.Meta {contents = Some t} -> walk t
       | t -> tvars_of elsewhere t
     in
     List.iter walk doms;

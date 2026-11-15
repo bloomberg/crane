@@ -12,7 +12,6 @@
     head says.  The rewrites a relaxation makes of the declaration under its
     head are {!Head_relaxation}'s. *)
 
-open Miniml
 open Names
 open Util
 open Ml_type_util
@@ -172,19 +171,19 @@ let template_kinds ?(applied : head_type option) vars tys =
          and [E X] is written [E].  Only an application at a real type --
          [F (Free F A)] -- asks for a template name. *)
       let rec survives = function
-        | Miniml.Tvar _ | Miniml.Tunknown | Miniml.Tdummy _ -> false
-        | Miniml.Tmeta {contents = Some t} -> survives t
-        | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> false
+        | Core.Type.Variable _ | Core.Type.Unknown | Core.Type.Erased _ -> false
+        | Core.Type.Meta {contents = Some t} -> survives t
+        | Core.Type.Meta {contents = None} | Core.Type.Open _ -> false
         | _ -> true
       in
       let demanded = Hashtbl.create 4 in
       let rec scan = function
-        | Miniml.Tapp (i, args) ->
+        | Core.Type.Variable_app {head = i; arguments = args} ->
           if List.exists survives args then Hashtbl.replace demanded i ();
           List.iter scan args
-        | Miniml.Tglob (_, args, _) -> List.iter scan args
-        | Miniml.Tarr (a, b) -> scan a; scan b
-        | Miniml.Tmeta {contents = Some t} -> scan t
+        | Core.Type.Global_app {type_arguments = args; _} -> List.iter scan args
+        | Core.Type.Arrow {parameter = a; result = b} -> scan a; scan b
+        | Core.Type.Meta {contents = Some t} -> scan t
         | _ -> ()
       in
       List.iter scan tys;
@@ -493,7 +492,7 @@ let relax_applied_param (temps : head_params) (signature : Callable_abi.signatur
          and the name it must now use is the name that parameter took. *)
       let seen = ref [] in
       (* Keyed by the variable and the arguments it is applied to, not by the
-         type node: the same application is spelled with whatever [Tvar]
+         type node: the same application is spelled with whatever [Core.Type.Variable]
          rigidity the position it was built in gave it. *)
       let key (t : head_type) =
         match t with
@@ -699,7 +698,7 @@ let apply_signature r ({params; ret} : Callable_abi.signature) : Callable_abi.si
   {params; ret}
 
 (** A function's head, relaxed: what the relaxations above decide from the
-    head [temps] and the declared [signature], the signature they leave, and
+    head [temps] and the declared [Core.Signature.t], the signature they leave, and
     the rewrites that carry their decisions through the declaration, its
     body included ({!Head_relaxation.apply}).  Each relaxation decides from
     the signature the previous ones left, in order:

@@ -28,30 +28,30 @@
     fixpoint of the definition itself, which Crane suspends as it does any
     other.  A definition no rewrite shrinks is left exactly as it was.
 
-    One of the MiniML passes run before the program is frozen
+    One of the Core passes run before the program is frozen
     ([core_passes] in [extract_env.ml]), after {!Ml_dedup}. *)
 
 (** Every top-level definition of the structure, those inside its modules
     included, specialized and simplified where that shrinks it. *)
-val structure : Miniml.ml_structure -> Miniml.ml_structure
+val structure : Core.Program.t -> Core.Program.t
 
 (** A definition of the structure: a term and its type, or a fixpoint of
     one function. *)
 type def =
-  | Term of Miniml.ml_ast * Miniml.ml_type
-  | Fix of Miniml.ml_fix_def
+  | Term of Core.Expr.t * Core.Type.t
+  | Fix of Core.Recursion.Definition.t
 
 (** The structure's definitions, those inside its modules included. *)
-val definitions : Miniml.ml_structure -> def Ref.User.Map.t
+val definitions : Core.Program.t -> def Ref.User.Map.t
 
 (** The body of the global a use names, where it may be unfolded, at the
     type arguments the use wrote: [None] for a mapped global, and where the
     use did not write an argument for every variable its type mentions. *)
-val body_of : def Ref.User.Map.t -> Miniml.global_use -> Miniml.ml_ast option
+val body_of : def Ref.User.Map.t -> Core.Global_use.t -> Core.Expr.t option
 
 (** [instantiate b args]: [b] applied to [args], its leading lambdas
     instantiated: a value argument substituted, any other bound once by a
     [let] where its parameter is read more than once.  Arguments past [b]'s
     lambdas stay applied; [None] where there are fewer arguments than
     lambdas. *)
-val instantiate : Miniml.ml_ast -> Miniml.ml_ast list -> Miniml.ml_ast option
+val instantiate : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t option

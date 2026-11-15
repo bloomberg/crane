@@ -42,7 +42,7 @@ let raises_user_error f =
 let () =
   Unix.putenv "CRANE_CHECK_IR" "1";
   let helper =
-    Lifted.make ~origin:None ~binder:(Names.Id.of_string "go") (Let (Miniml.Occurrence.fresh ()))
+    Lifted.make ~origin:None ~binder:(Names.Id.of_string "go") (Let (Core.Occurrence.fresh ()))
   in
   let helper_decl =
     dfun (Lifted.ref_of helper) [Return (Some (Entity (r "callee", [], None)))]
@@ -83,7 +83,7 @@ let () =
   State.reset State.Unit;
   let owned =
     Lifted.make ~origin:(Some (r "stray")) ~binder:(Names.Id.of_string "go")
-      (Let (Miniml.Occurrence.fresh ()))
+      (Let (Core.Occurrence.fresh ()))
   in
   let owned_decl = dfun (Lifted.ref_of owned) [] in
   Unit_program.record_lifted_ahead [owned_decl];

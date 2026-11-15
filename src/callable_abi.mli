@@ -59,7 +59,7 @@ type origin =
 
 (** What the builder of a head knows of a parameter as it names it, and
     records rather than leaving the name to say: the callee's type variable
-    [Tvar i] it declares, the [k]th class dictionary it stands for, or the
+    [Core.Type.Variable i] it declares, the [k]th class dictionary it stands for, or the
     value parameter at index [i] whose callable type it deduces.  A
     parameter its builder records nothing for is [Derived]. *)
 type minted =
@@ -169,7 +169,7 @@ val relaxations : t -> Head_relaxation.t list
     not omit it ({!omission}) -- as the plan was made. *)
 val keeps : t -> Scheme.Var.t -> bool
 
-(** {!keeps} for the variable the callee's type spells [Tvar (_, i)]: the
+(** {!keeps} for the variable the callee's type spells [Core.Type.Variable (_, i)]: the
     crossing from the body's numbering.  One the plan does not know is
     kept. *)
 val keeps_tvar : t -> int -> bool
@@ -189,7 +189,7 @@ val dictionary_carriers : t -> Scheme.Var.t list
     [relaxed] says the declaration relaxed out of its head declares nothing
     any more: the parameter left at it is [Derived].  [receiver] is what
     the plan of a method adds; [passing] how its value parameters are
-    passed, in declaration order; [signature] what a function is declared
+    passed, in declaration order; [Core.Signature.t] what a function is declared
     at; [omitted] says why the convention omits a variable of [scheme], if
     it does. *)
 val of_head :
@@ -347,13 +347,13 @@ val dropped_positions : Names.GlobRef.t -> int list
 val method_params : Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option
 
 (** The callee's ML type the plan was made against: the ML-shaped signature
-    beside the declared one ({!signature}), before the head's relaxations,
+    beside the declared one ({!Core.Signature.t}), before the head's relaxations,
     in the callee's own variables, which a call's C++ head is rebuilt from
     at the call's instantiation.  [None] for a global with no recorded
     type. *)
-val ml_type : t -> Miniml.ml_type option
+val ml_type : t -> Core.Type.t option
 
-(** [planned_ml_type r] -- {!ml_type} of the unit's plan of [r], installed,
+(** [planned_ml_type r] -- {!Core.Type.t} of the unit's plan of [r], installed,
     foreign or a projection's, without planning one; [None] where none is
     planned. *)
-val planned_ml_type : Names.GlobRef.t -> Miniml.ml_type option option
+val planned_ml_type : Names.GlobRef.t -> Core.Type.t option option

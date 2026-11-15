@@ -20,7 +20,7 @@ let self_scope = Structure_analysis.concept_self_param ^ "::"
 
 (** What a module type contributes where a concept body is expected.
 
-    [MTident] and its refinements name a concept that already exists; only an
+    [Core.Module.Type.Path] and its refinements name a concept that already exists; only an
     anonymous signature has requirements of its own, and those are a list of
     lines rather than one blob, so "does this concept ask for anything" is a
     question about the list and not about the rendered text. *)
@@ -77,7 +77,8 @@ let type_names frame ty = global_names [frame] (type_globals ty)
 let namespaced r r' e : Cpp_ir.Resolved.Type.t = In_namespace (r, Entity_application (r', [], e))
 
 let rec concept_type_names frame : Modtype_concept.concept_type -> _ = function
-  | Member {member; arguments; _} -> (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names frame arguments
+  | Member {member; arguments; _} ->
+    (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names frame arguments
   | Global (r, args) -> type_names frame (Entity_application (r, [], [])) @ concept_types_names frame args
   | Namespaced (r, r', e, args) -> type_names frame (namespaced r r' e) @ concept_types_names frame args
   | Foreign {custom; arguments; _} -> (frame, Cpp_resolution.Custom_text custom) :: concept_types_names frame arguments

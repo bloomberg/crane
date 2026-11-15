@@ -5,7 +5,6 @@
     [frame_storage.mli]. *)
 
 open Names
-open Miniml
 module Term = Control_ir.Term
 module Loop = Control_ir.Loop
 
@@ -22,14 +21,15 @@ type parameter =
       level : int;
     }
 
-let rec value_inductive ~abbreviations : ml_type -> bool = function
-  | Tglob ((GlobRef.IndRef _ as r), _, _) ->
+let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
+  | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     (not (Table.is_coinductive r)) && (not (Table.is_custom r)) && not (Table.is_enum_inductive r)
-  | Tglob ((GlobRef.ConstRef kn as r), args, _) when abbreviations && not (Table.is_custom r) -> (
+  | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
+                          type_arguments = args; _} when abbreviations && not (Table.is_custom r) -> (
     match Table.lookup_typedef_unchecked kn with
     | Some t -> value_inductive ~abbreviations (Mlutil.type_subst_list args t)
     | None -> false )
-  | Tmeta {contents = Some t} -> value_inductive ~abbreviations t
+  | Core.Type.Meta {contents = Some t} -> value_inductive ~abbreviations t
   | _ -> false
 
 let passed_holdable passing ty =
@@ -75,27 +75,29 @@ let kept = function Cell -> Cell | Stable | Shares -> Shares | Fresh -> Fresh
    binder in scope: a variable's, through any in-place coercion; anything
    else is computed afresh. *)
 let rec kind ~in_place env = function
-  | MLrel (db, _) -> Option.default Fresh (List.nth_opt env (db - 1))
-  | MLmagic (Mcoerce (from, into), e, _) when in_place from into -> kind ~in_place env e
+  | Core.Expr.Bound_variable {index = db; _} -> Option.default Fresh (List.nth_opt env (db - 1))
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = e; _} when in_place from into ->
+    kind ~in_place env e
   | _ -> Fresh
 
 (* Whether a frame may hold a pointer to a value of this kind. *)
 let pointable = function Stable | Cell -> true | Shares | Fresh -> false
 
 (* The constructor each binder of [b] is bound at, with its declared
-   argument, [Prel 1] first, where the pattern binds it directly. *)
+   argument, [Core.Pattern.Bound_variable 1] first, where the pattern binds it directly. *)
 let declared_arguments (b : Term.branch) =
   let count = List.length b.binders in
   let bound = Array.make count None in
   let at r j k = if k >= 1 && k <= count then bound.(k - 1) <- Some (r, j) in
   ( match b.pattern with
-  | Pcons (r, ps) -> List.iteri (fun j -> function Prel k -> at r j k | _ -> ()) ps
-  | Pusual r -> List.iteri (at r) (List.init count (fun i -> count - i))
-  | Pwild | Prel _ | Ptuple _ -> () );
+  | Core.Pattern.Constructor {constructor = r; fields = ps} ->
+    List.iteri (fun j -> function Core.Pattern.Bound_variable k -> at r j k | _ -> ()) ps
+  | Core.Pattern.Shallow_constructor r -> List.iteri (at r) (List.init count (fun i -> count - i))
+  | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> () );
   Array.to_list bound
 
 (* The binders of the branch [b] of a match on a value of kind [k] and type
-   [ty], [Prel 1] first.  A variant's fields are bound by reference into the
+   [ty], [Core.Pattern.Bound_variable 1] first.  A variant's fields are bound by reference into the
    value: one stored behind the pointer is a cell wherever the value holds
    the storage's cells, any other lies where the value does.  A record's
    fields may be bound as copies, and a custom match binds what its
@@ -156,7 +158,8 @@ let entered_levels (l : Term.loop) =
   let rec go depth acc = function
     | Term.Loop inner -> go (depth + List.length inner.parameters) acc inner.body
     | Let b -> go (depth + 1) acc b.body
-    | Match m -> List.fold_left (fun acc (b : Term.branch) -> go (depth + List.length b.binders) acc b.body) acc m.branches
+    | Match m ->
+      List.fold_left (fun acc (b : Term.branch) -> go (depth + List.length b.binders) acc b.body) acc m.branches
     | Return _ | Continue _ | Continue_into _ -> acc
     | Resume r -> go (depth + 1) (go depth acc r.value) r.body
     | Entry e ->

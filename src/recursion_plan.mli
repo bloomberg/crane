@@ -52,7 +52,7 @@ val equal : t -> t -> bool
 (** The effect operation the use [use] is, where [effects] says it is
     generated sequentially: a bind's continuation and a ret's value then
     stand where the operation does. *)
-val sequential : Core_effects.t -> Miniml.global_use -> Core_effects.operation option
+val sequential : Core_effects.t -> Core.Global_use.t -> Core_effects.operation option
 
 (** Whether the custom [r]'s replacement text is its one argument, which is
     then where the custom is. *)
@@ -63,30 +63,30 @@ val identity : Names.GlobRef.t -> bool
     binder -- a custom match, or a record's one branch -- rather than in a
     lambda invoked in place, as it does any other.  A recursive call only
     the latter's branches end in is not a point the let resumes at. *)
-val match_bound_in_place : Miniml.ml_type -> Miniml.ml_branch array -> bool
+val match_bound_in_place : Core.Type.t -> Core.Match.Branch.t array -> bool
 
 (** What [t] lowers to loops of tail calls alone: the functions planned
     {!Tail_loop}, and the local fixpoints of one member planned so, by
     occurrence. *)
-val tail_loops : t -> Names.GlobRef.t list * Miniml.Occurrence.t list
+val tail_loops : t -> Names.GlobRef.t list * Core.Occurrence.t list
 
 (** The functions [t] reads constructor chains around the calls of, for
     them to be lowered tail modulo cons ({!Modulo_cons}), in a group none of
     whose members suspends, and the local fixpoints of one member it reads
     so, by occurrence.  Whether one is so lowered also depends on how its
     constructors store their fields ({!strategy}). *)
-val modulo_cons_loops : t -> Names.GlobRef.t list * Miniml.Occurrence.t list
+val modulo_cons_loops : t -> Names.GlobRef.t list * Core.Occurrence.t list
 
 (** The functions [t] finds recursing by a call that is not a tail call, in
     a group none of whose members suspends, that it reads no constructor
     chains for: those lowered with a stack of frames ({!Frame_stack}); and
     the local fixpoints of one member it finds so, by occurrence. *)
-val frame_loops : t -> Names.GlobRef.t list * Miniml.Occurrence.t list
+val frame_loops : t -> Names.GlobRef.t list * Core.Occurrence.t list
 
 (** [e] with each temporary {!Normalize} bound a call, where it is read
     once, put back where it is read: the body the constructor chains are
     read off. *)
-val restore_temporaries : Miniml.ml_ast -> Miniml.ml_ast
+val restore_temporaries : Core.Expr.t -> Core.Expr.t
 
 (** Make [t] the extraction's plan, the one {!strategy} reads. *)
 val install : t -> unit
@@ -151,13 +151,13 @@ val strategy :
     ({!Lifted.fixpoint}). *)
 val strategy_at :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
-  Miniml.Occurrence.t * int ->
+  Core.Occurrence.t * int ->
   strategy option
 
 (** The strategy of a helper lifted for the lambda the let [occurrence]
     binds, if the program has that let: no loop, for a lambda bound by a
     let does not call itself. *)
-val strategy_of_let : Miniml.Occurrence.t -> strategy option
+val strategy_of_let : Core.Occurrence.t -> strategy option
 
 (** The local fixpoints the machine of the function [r], lowered by an
     explicit stack, may adopt as a second entry: those in its flow -- run
@@ -167,10 +167,10 @@ val strategy_of_let : Miniml.Occurrence.t -> strategy option
     other's stack, so such a fixpoint is lowered inside [r]'s; the first of
     them in the flow that lowering can take is adopted
     ({!Loopify_frame.find_adopted}). *)
-val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
+val adoptable : Names.GlobRef.t -> Core.Occurrence.t list
 
 (** {!adoptable} in the plan [t]. *)
-val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
+val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
 
 (** [splice_partners ~loopified ~inlines p]: [p], a program being
     normalized, with the partners of each function [loopified] says it
@@ -214,50 +214,50 @@ val splice_partners :
 (** Whether functions of types [a] and [b] yield one type, once every
     abbreviation is unfolded and a variable of the definition's scheme is
     read alike whether it is written as the scheme's or as rigid. *)
-val yields_alike : Miniml.ml_type -> Miniml.ml_type -> bool
+val yields_alike : Core.Type.t -> Core.Type.t -> bool
 
 (** {!adoptable} for the function [member] of the local fixpoint
     [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
     fixpoints in its flow naming a member of its group. *)
-val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
+val adoptable_at : Core.Occurrence.t * int -> Core.Occurrence.t list
 
 (** Whether some machine may adopt the local fixpoint [occurrence]: a
     function's ({!adoptable}) or that of a helper lifted for a fixpoint of
     [lifted] ({!adoptable_by_fixpoint}). *)
-val adoptable_somewhere : lifted:Miniml.Occurrence.t list -> Miniml.Occurrence.t -> bool
+val adoptable_somewhere : lifted:Core.Occurrence.t list -> Core.Occurrence.t -> bool
 
 (** Whether the machine of a helper lifted for the function of one of the
     local fixpoints [lifted] may adopt the local fixpoint [occurrence]
     ({!adoptable_at}).  A fixpoint generated as a lambda adopts nothing: its
     machine has one entry. *)
-val adoptable_by_fixpoint : lifted:Miniml.Occurrence.t list -> Miniml.Occurrence.t -> bool
+val adoptable_by_fixpoint : lifted:Core.Occurrence.t list -> Core.Occurrence.t -> bool
 
 (** The calls of the function [member] of the local fixpoint [occurrence]
     made in its group's bodies, each by the occurrence of the read at its
     head, which the C++ call made of it records
     ({!Cpp_ir.Expr.Call.signature.occurrence}): the recursive calls a loop of that
     function takes. *)
-val member_calls : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
+val member_calls : Core.Occurrence.t * int -> Core.Occurrence.t list
 
 (** The calls of the function [r] made in its recursive group's bodies,
     each by the occurrence of the use heading it, which the C++ call made
     of it records ({!Cpp_ir.Expr.Call.signature.occurrence}): the recursive calls
     of [r], the copies of its partners spliced into its body included.
     Empty for a function on no cycle. *)
-val calls : Names.GlobRef.t -> Miniml.Occurrence.t list
+val calls : Names.GlobRef.t -> Core.Occurrence.t list
 
 (** Whether the bodies of the group of the local fixpoint [occurrence] read
     its function [member] other than at the head of a call: the function
     named as a value, which a loop made of it, no longer a function, cannot
     stand for. *)
-val named_as_value : Miniml.Occurrence.t * int -> bool
+val named_as_value : Core.Occurrence.t * int -> bool
 
 (** The calls entering the local fixpoint of one member at [occurrence],
     each by the occurrence its C++ call records: its own ({!member_calls}),
     and those made where it is bound -- the fixpoint applied there, by its
     occurrence, or the reads of the let binding it.  What a machine
     adopting the fixpoint reroutes to its entry. *)
-val entering : Miniml.Occurrence.t -> Miniml.Occurrence.t list
+val entering : Core.Occurrence.t -> Core.Occurrence.t list
 
 (** A recursive call a function resumes after: a call of the function of
     the group [Function g], with no fewer arguments than its parameters --
@@ -269,8 +269,8 @@ val entering : Miniml.Occurrence.t -> Miniml.Occurrence.t list
     adopts. *)
 type target =
   | Function of Names.GlobRef.t
-  | Member of Miniml.Occurrence.t * int
-  | Entering of Miniml.Occurrence.t
+  | Member of Core.Occurrence.t * int
+  | Entering of Core.Occurrence.t
 
 (** A call a function resumes after: what it calls, and the occurrence the
     C++ call made of it records ({!Cpp_ir.Expr.Call.signature.occurrence}) -- the
@@ -279,7 +279,7 @@ type target =
     one right-hand side are told apart by it. *)
 type call = private {
   target : target;
-  occurrence : Miniml.Occurrence.t;
+  occurrence : Core.Occurrence.t;
 }
 
 (** Where a function goes on once a recursive call returns: [binder], the
@@ -336,7 +336,7 @@ and recomputable = private {
     representation: two instances of one inductive agreeing on the
     arguments its C++ type takes, those of its parameters
     ({!Table.get_ind_num_param_vars_opt}); its indices it does not take. *)
-val in_place : Miniml.ml_type -> Miniml.ml_type -> bool
+val in_place : Core.Type.t -> Core.Type.t -> bool
 
 (** The points binding [b] at which its definition, a member of a group that
     does not recurse only by tail calls, resumes after a recursive call: a

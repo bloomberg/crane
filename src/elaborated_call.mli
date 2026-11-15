@@ -34,18 +34,18 @@ type dictionary_order =
 
 type t = private {
   callee : Names.GlobRef.t;
-  callee_type : Miniml.ml_type;  (** As the callee is declared. *)
-  args : Miniml.ml_ast list;  (** The arguments the call writes. *)
+  callee_type : Core.Type.t;  (** As the callee is declared. *)
+  args : Core.Expr.t list;  (** The arguments the call writes. *)
   roles : role list;  (** The role of each of {!args}, in order. *)
-  primary : Miniml.ml_ast list;
+  primary : Core.Expr.t list;
       (** The arguments the callee takes, dictionaries among them, in
           source order. *)
-  excess : Miniml.ml_ast list;  (** The [Excess] arguments. *)
-  instances : Miniml.ml_ast list;
+  excess : Core.Expr.t list;  (** The [Excess] arguments. *)
+  instances : Core.Expr.t list;
       (** The [Dictionary] arguments, in the order the callee numbers its
           dictionary parameters. *)
   erased_instances : int;  (** How many arguments are [Erased_dictionary]. *)
-  regular : Miniml.ml_ast list;  (** The [Regular] arguments. *)
+  regular : Core.Expr.t list;  (** The [Regular] arguments. *)
   tyargs : Call_tyargs.t;
       (** The callee's scheme variables as the call reads them, before they
           are spelled in the caller's scope. *)
@@ -56,10 +56,10 @@ type t = private {
     position. *)
 val of_roles :
   callee:Names.GlobRef.t ->
-  callee_type:Miniml.ml_type ->
+  callee_type:Core.Type.t ->
   dictionaries:dictionary_order ->
   tyargs:Call_tyargs.t ->
-  Miniml.ml_ast list ->
+  Core.Expr.t list ->
   role list ->
   t
 
@@ -102,7 +102,7 @@ type instantiated = private {
           reading, plus a partial application's variables resolved for the
           lambda it is eta-expanded into. *)
   tys : Mlutil.Var_types.t;  (** {!reading} as substitutions take it ({!Call_tyargs.by_variable}). *)
-  callee_type_at_call : Miniml.ml_type;  (** The callee's type at {!reading}. *)
+  callee_type_at_call : Core.Type.t;  (** The callee's type at {!reading}. *)
   params : Param_pos.subst Param_pos.params;  (** The parameters of {!callee_type_at_call}. *)
   params_orig : Param_pos.orig Param_pos.params;  (** The parameters the callee declares. *)
   subst_index_of_orig : Param_pos.orig Param_pos.pos -> Param_pos.subst Param_pos.pos option;
@@ -118,9 +118,9 @@ type instantiated = private {
 val instantiate :
   t ->
   reading:Call_tyargs.t ->
-  at_call:(Mlutil.Var_types.t -> Miniml.ml_type -> Miniml.ml_type) ->
-  expand:(Miniml.ml_type -> Miniml.ml_type) ->
-  erased:(Miniml.ml_type -> bool) ->
+  at_call:(Mlutil.Var_types.t -> Core.Type.t -> Core.Type.t) ->
+  expand:(Core.Type.t -> Core.Type.t) ->
+  erased:(Core.Type.t -> bool) ->
   instantiated
 
 (** Whether [a] and [b] instantiate one call alike: the same callee, its
@@ -139,8 +139,8 @@ val at_call : instantiated -> t -> instantiated
     through, rather than through the field's dispatcher. *)
 type static_projection = {
   instance : int;  (** The instance's position among the arguments the call writes. *)
-  domains : Miniml.ml_type list;  (** The member's value parameters, at the call. *)
-  missing : Miniml.ml_type list;
+  domains : Core.Type.t list;  (** The member's value parameters, at the call. *)
+  missing : Core.Type.t list;
       (** The trailing ones of {!domains} the call gives no operand for, which a
           partial application closes over. *)
 }

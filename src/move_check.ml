@@ -502,7 +502,7 @@ let check_by_reference_closures owner ss =
         (fun (s : stmt) ->
           match s with
           | Bind_variable (y, Declare _, Lambda {fixpoint = Some {member; encoding = Self_passing selves; _}; body; _})
-            when List.exists (fun (_, o) -> Miniml.Occurrence.equal o (fst member)) planned ->
+            when List.exists (fun (_, o) -> Core.Occurrence.equal o (fst member)) planned ->
             Some (y, selves, body)
           | _ -> None )
         ss

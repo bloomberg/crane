@@ -22,7 +22,7 @@ type t = {
 }
 
 (** [analyze struc] observes one unit's structure; it writes nothing. *)
-val analyze : Miniml.ml_structure -> t
+val analyze : Core.Program.t -> t
 
 (** What analysing the whole normalized program observed, before it is split into
     units: interprocedural summaries, fixed points over every function. *)

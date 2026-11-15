@@ -8,7 +8,6 @@
     {!Position_plan} plans the coercions it stores by them. *)
 
 open Common
-open Miniml
 open Names
 open Util
 open Translation_state
@@ -39,21 +38,20 @@ let into_erased_return slot =
    arguments are the ones both sides agree on, so take them for the
    positions the annotation erased.  Not in a [Boxed] slot: there the
    erased instantiation {i is} the canonical one. *)
-let refined_by_slot slot (ty : ml_type) =
+let refined_by_slot slot (ty : Core.Type.t) =
   match (resolve_tmeta ty, Option.map resolve_tmeta slot.expected_ml_ty) with
-  | Miniml.Tglob (n, tys, sc), Some (Miniml.Tglob (n', exp_tys, _))
+  | Core.Type.Global_app {head = n;
+                          type_arguments = tys;
+                          index_arguments = sc}, Some (Core.Type.Global_app {head = n'; type_arguments = exp_tys; _})
     when (not (boxed slot))
          && globref_equal n n'
          && List.length tys = List.length exp_tys
          && List.exists (ml_type_contains_erased ~in_arrows:true) tys ->
-    Miniml.Tglob
-      ( n,
-        List.map2
+    Core.Type.Global_app {head = n; type_arguments = List.map2
           (fun local outer ->
             if ml_type_contains_erased ~in_arrows:true local then outer
             else local )
-          tys exp_tys,
-        sc )
+          tys exp_tys; index_arguments = sc}
   | _ -> ty
 
 (** [list_propagated_args ty ts] -- the arguments [ts] of a list constructor
@@ -61,9 +59,9 @@ let refined_by_slot slot (ty : ml_type) =
     type the arguments resolve, so that the nested [nil] of
     [cons(1, cons(2, nil))] is a [List<nat>], not a [List<std::any>]; any
     other constructor's, unchanged. *)
-let list_propagated_args (ty : ml_type) ts =
+let list_propagated_args (ty : Core.Type.t) ts =
   match ty with
-  | Miniml.Tglob (n, tys_orig, schema_opt) ->
+  | Core.Type.Global_app {head = n; type_arguments = tys_orig; index_arguments = schema_opt} ->
     (* Only run type propagation for list constructors *)
     let is_list =
       try String.equal (Common.pp_global_name Type n) "list"
@@ -83,9 +81,9 @@ let list_propagated_args (ty : ml_type) ts =
       (* Resolve Tunresolved from element types *)
       let has_unknown =
         List.exists
-          (fun (t : ml_type) ->
+          (fun (t : Core.Type.t) ->
             match t with
-            | Tunknown -> true
+            | Core.Type.Unknown -> true
             | _ -> false )
           tys_filt
       in
@@ -98,42 +96,62 @@ let list_propagated_args (ty : ml_type) ts =
       then
         let tys_resolved =
           List.map
-            (fun (t : ml_type) ->
+            (fun (t : Core.Type.t) ->
               match t with
-              | Tunknown ->
+              | Core.Type.Unknown ->
                 let first_elem =
                   List.find_opt
                     (fun a ->
                       match a with
-                      | MLdummy _ -> false
+                      | Core.Expr.Erased_value _ -> false
                       | _ -> true )
                     ts
                 in
                 ( match first_elem with
-                | Some (MLmagic (_, MLcons (elem_ty, _, _, _), _)) -> elem_ty
-                | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
+                | Some
+                    ( Core.Expr.Coerce {value = Core.Expr.Construct {result_type = elem_ty; _}; _}
+                    | Core.Expr.Boxed_value {value = Core.Expr.Construct {result_type = elem_ty; _}; _}
+                    | Core.Expr.Lambda_group_barrier {value = Core.Expr.Construct {result_type = elem_ty; _}; _} ) ->
+                  elem_ty
+                | Some (Core.Expr.Construct {result_type = elem_ty; _}) -> elem_ty
                 | _ -> t )
               | _ -> t )
             tys_filt
         in
         (* Propagate resolved type to nested constructors *)
-        let resolved_ty = Miniml.Tglob (n, tys_resolved, schema_opt) in
+        let resolved_ty = Core.Type.Global_app {head = n;
+                                                type_arguments = tys_resolved;
+                                                index_arguments = schema_opt} in
         let rec update_nested_ty ast =
           match ast with
-          | MLcons (arg_typ, arg_c, arg_ts, arg_occ) ->
+          | Core.Expr.Construct {result_type = arg_typ;
+                                 constructor = arg_c;
+                                 arguments = arg_ts;
+                                 occurrence = arg_occ} ->
             ( match arg_typ with
-            | Miniml.Tglob (arg_ref, arg_tys, _)
+            | Core.Type.Global_app {head = arg_ref; type_arguments = arg_tys; _}
               when GlobRef.CanOrd.equal arg_ref n
                    && List.exists
                         (fun t ->
                           match t with
-                          | Miniml.Tunknown -> true
+                          | Core.Type.Unknown -> true
                           | _ -> false )
                         arg_tys ->
-              MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts, arg_occ)
+              Core.Expr.Construct {result_type = resolved_ty;
+                                   constructor = arg_c;
+                                   arguments = List.map update_nested_ty arg_ts;
+                                   occurrence = arg_occ}
             | _ ->
-              MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts, arg_occ) )
-          | MLmagic (m, inner, mocc) -> MLmagic (m, update_nested_ty inner, mocc)
+              Core.Expr.Construct {result_type = arg_typ;
+                                   constructor = arg_c;
+                                   arguments = List.map update_nested_ty arg_ts;
+                                   occurrence = arg_occ} )
+          | Core.Expr.Coerce {source_type = from; target_type = into; value = inner; occurrence = mocc} ->
+            Core.Expr.Coerce {source_type = from; target_type = into; value = update_nested_ty inner; occurrence = mocc}
+          | Core.Expr.Boxed_value {value = inner; occurrence = mocc} ->
+            Core.Expr.Boxed_value {value = update_nested_ty inner; occurrence = mocc}
+          | Core.Expr.Lambda_group_barrier {value = inner; occurrence = mocc} ->
+            Core.Expr.Lambda_group_barrier {value = update_nested_ty inner; occurrence = mocc}
           | other -> other
         in
         List.map update_nested_ty ts
@@ -217,7 +235,7 @@ let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps
   | _ -> temps
 
 (** [erase_past_type_arg ts temps]: in dependent types, if a constructor arg [ts] at position i is
-   [MLdummy Ktype] (a type-valued argument — e.g. [x : A] where
+   [Core.Expr.Erased_value Core.Erasure_reason.Type_argument] (a type-valued argument — e.g. [x : A] where
    [A : Type]), any template param at a later position j > i must
    also be erased to [std::any].
    Rationale: later params often have types that are functions of
@@ -232,7 +250,10 @@ let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps
 let erase_past_type_arg ts_updated temps =
   let rec first_ktype_dummy i = function
     | [] -> max_int
-    | (MLdummy Ktype | MLmagic (_, MLdummy Ktype, _)) :: _ -> i
+    | ( Core.Expr.Erased_value Core.Erasure_reason.Type_argument
+      | Core.Expr.Coerce {value = Core.Expr.Erased_value Core.Erasure_reason.Type_argument; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Erased_value Core.Erasure_reason.Type_argument; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Erased_value Core.Erasure_reason.Type_argument; _} ) :: _ -> i
     | _ :: rest -> first_ktype_dummy (i + 1) rest
   in
   let cutoff = first_ktype_dummy 0 ts_updated in
@@ -246,26 +267,26 @@ let erase_past_type_arg ts_updated temps =
     instantiated at ([rc_ctor_temps]); and its fields' declared types,
     erased ones dropped ([rc_field_types]). *)
 type regular = {
-  rc_ty : ml_type;
-  rc_args : ml_ast list;
-  rc_ty_ml_tparams : ml_type list;
+  rc_ty : Core.Type.t;
+  rc_args : Core.Expr.t list;
+  rc_ty_ml_tparams : Core.Type.t list;
   rc_ctor_temps : Cpp_ir.Lowered.Type.t list;
-  rc_field_types : ml_type list;
+  rc_field_types : Core.Type.t list;
 }
 
 (** [regular env ~expected_ty ty r ts] -- the constructor [r] of annotation
     [ty] ({!refined_by_slot}) applied to [ts], built at [expected_ty] under
     the return type in force. *)
-let regular env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : ml_type) r ts =
+let regular env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) r ts =
   let ts_updated = list_propagated_args ty ts in
   let temps_from_slot = temps_from_slot env ~expected_ty in
   let erase_past_type_arg = erase_past_type_arg ts_updated in
   let ty_ml_tparams = match resolve_tmeta ty with
-    | Miniml.Tglob (_, tys_orig, _) -> tys_orig
+    | Core.Type.Global_app {type_arguments = tys_orig; _} -> tys_orig
     | _ -> []
   in
   let ctor_temps = match ty with
-    | Miniml.Tglob (n, tys_orig, _) ->
+    | Core.Type.Global_app {head = n; type_arguments = tys_orig; _} ->
       let tys_filt = match n with
         | GlobRef.IndRef (kn, _) ->
           ( match Table.get_ind_num_param_vars_opt kn with
@@ -329,8 +350,8 @@ let regular_field env ~is_boxed c ~slot i e =
      [any_cast<concrete>] — otherwise the bare [std::any] is forwarded
      straight into a concrete-typed factory parameter and fails to
      compile.  Thread the field's concrete C++ type as the expected type
-     so the erased-[MLrel] path (see [gen_expr]'s [MLrel] case) inserts
-     the cast.  [Tvar] fields are left to
+     so the erased-[Core.Expr.Bound_variable] path (see [gen_expr]'s [Core.Expr.Bound_variable] case) inserts
+     the cast.  [Core.Type.Variable] fields are left to
      [wrap_if_needed_for_field], which handles the erased-field cases. *)
   (* The field's declared type with this constructor call's own type
      arguments substituted in — the [P] of [sigT A P] becomes the
@@ -345,12 +366,15 @@ let regular_field env ~is_boxed c ~slot i e =
     | Some ft ->
       let is_erased_rel =
         match e with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+        | Core.Expr.Bound_variable {index = j; occurrence = occ}
+        | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+        | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+        | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _} ->
           is_boxed j occ
         | _ -> false
       in
       ( match ft with
-      | (Miniml.Tvar (_, _))
+      | (Core.Type.Variable _)
         when (match unfold_cpp_typedef env (instantiated_field_cpp_ty ft) with
               | Entity_application (_, args, _) ->
                 args <> [] && List.exists has_tany_in_type args
@@ -363,7 +387,7 @@ let regular_field env ~is_boxed c ~slot i e =
       (* A boxed variable at a type-parameter field -- [Ret x] with [x]
          the erased existential of the continuation it is in -- is
          recovered at the field's instantiation. *)
-      | Miniml.Tvar (_, _)
+      | Core.Type.Variable _
         when is_erased_rel
              && not (Cpp_ir.Types.prints_as_any (instantiated_field_cpp_ty ft)) ->
         Some (instantiated_field_cpp_ty ft)
@@ -372,13 +396,13 @@ let regular_field env ~is_boxed c ~slot i e =
          time, and the field's instantiation, where the destination
          wrote it in full, is the type to build it at: its own
          annotation may erase a class variable the field writes. *)
-      | Miniml.Tvar (_, _)
-        when (match strip_magic e with MLcons _ -> true | _ -> false)
+      | Core.Type.Variable _
+        when (match strip_magic e with Core.Expr.Construct _ -> true | _ -> false)
              && (let ct = instantiated_field_cpp_ty ft in
                  (not (has_tany_in_type ct)) && names_only_scoped_tvars ct) ->
         Some (instantiated_field_cpp_ty ft)
-      | Miniml.Tvar (_, _) -> None
-      | Miniml.Tapp _ ->
+      | Core.Type.Variable _ -> None
+      | Core.Type.Variable_app _ ->
         (* A field that applies one of the inductive's [template
            <typename> class] parameters ([F A]).  Nothing in the
            argument names the instantiation -- a [None] has no value to
@@ -391,12 +415,12 @@ let regular_field env ~is_boxed c ~slot i e =
       | _ when is_erased_rel ->
         let ct = cpp_of_ml env ft in
         if Cpp_ir.Types.prints_as_any ct then None else Some ct
-      | Miniml.Tglob (g, _, _)
+      | Core.Type.Global_app {head = g; _}
         when (match resolve_tmeta ty with
-             | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
+             | Core.Type.Global_app {head = n_ind; _} -> globref_equal g n_ind
              | _ -> false)
              || ( match strip_magic e with
-                | MLcons (_, GlobRef.ConstructRef ((kn, i), _), _, _) ->
+                | Core.Expr.Construct {constructor = GlobRef.ConstructRef ((kn, i), _); _} ->
                   globref_equal g (GlobRef.IndRef (kn, i))
                 | _ -> false ) ->
         (* The recursive spine: every cell of a list is the same C++
@@ -404,7 +428,7 @@ let regular_field env ~is_boxed c ~slot i e =
            was, not at the one its own annotation converts to.  So is
            a constructor built straight into a field of its own type
            -- [go (RetF r)] -- whose annotation may have lost an
-           argument MiniML erases, a family, that the field states.
+           argument Core erases, a family, that the field states.
            A family variable is written applied at an erased index
            ([T1<std::any>], taken back off where it is declared
            plain), and that erasure is no reason to refuse the field:
@@ -458,7 +482,7 @@ let regular_field env ~is_boxed c ~slot i e =
         let ct = plain_families (instantiated_field_cpp_ty ft) in
         let spine =
           match resolve_tmeta ty with
-          | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
+          | Core.Type.Global_app {head = n_ind; _} -> globref_equal g n_ind
           | _ -> false
         in
         if (if spine then has_tany_in_type ct
@@ -468,7 +492,7 @@ let regular_field env ~is_boxed c ~slot i e =
       | _ ->
         (* A field whose instantiated C++ type is a curried function
            (e.g. [A -> A] at [A = nat -> nat]) must keep its currying:
-           without the expected type, [gen_expr]'s [MLlam] case would
+           without the expected type, [gen_expr]'s [Core.Expr.Lambda] case would
            flatten the nested binders into one multi-parameter lambda,
            which does not convert to [std::function<F(F)>]. *)
         let ct = instantiated_field_cpp_ty ft in
@@ -478,7 +502,7 @@ let regular_field env ~is_boxed c ~slot i e =
            continuation -- is written against the field: its result
            is what the body's constructors are built at. *)
         | _, Function (_, cod)
-          when (match strip_magic e with MLlam _ -> true | _ -> false)
+          when (match strip_magic e with Core.Expr.Lambda _ -> true | _ -> false)
                && not (Cpp_ir.Types.prints_as_any cod) ->
           Some ct
         | _ -> (
@@ -529,14 +553,14 @@ let regular_field env ~is_boxed c ~slot i e =
     | Some ft -> (
       let inst = Mlutil.type_subst_list ty_ml_tparams ft in
       match ft with
-      | Miniml.Tapp _ -> Some inst
+      | Core.Type.Variable_app _ -> Some inst
       | _
         when (not (ml_type_contains_erased ~in_arrows:true inst))
              && not (Ml_type_util.ml_type_contains_tvar inst) ->
         Some inst
-      | Miniml.Tglob (g, _, _)
+      | Core.Type.Global_app {head = g; _}
         when ( match resolve_tmeta ty with
-             | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
+             | Core.Type.Global_app {head = n_ind; _} -> globref_equal g n_ind
              | _ -> false ) ->
         slot.expected_ml_ty
       | _ -> None )
@@ -554,16 +578,16 @@ let regular_field env ~is_boxed c ~slot i e =
     a lambda assigned to one of its fields has to spell them that way too,
     and the scope forgets how to resolve them; the ones it mentions are
     parameters of the struct ({!ind_promoted_type_args}), spelled resolved. *)
-let record_promoted_map (ty : ml_type) =
+let record_promoted_map (ty : Core.Type.t) =
   let mentioned =
-    match ty with Miniml.Tglob (n, _, _) -> Table.promoted_type_params n | _ -> []
+    match ty with Core.Type.Global_app {head = n; _} -> Table.promoted_type_params n | _ -> []
   in
   List.filter (fun (v, _) -> List.exists (Id.equal v) mentioned) (!tctx).promoted_var_map
 
 (** [record_field_types r]: the declared types of the fields of the record
     constructor [r]. A record's erased fields (a promoted [Type] field such as [dyn]'s
       [dty]) carry no argument, so the declared field types are aligned
-      with the arguments only once the [Tdummy] entries are dropped --
+      with the arguments only once the [Core.Type.Erased] entries are dropped --
       otherwise every field from the first erased one on is read off by
       the type of its predecessor. *)
 let record_field_types r =
@@ -576,10 +600,10 @@ let record_field_types r =
    types (see [gen_ind_header_v2]), so that -- not the conversion that
    keeps the variable -- is the type an argument reaches the field
    at. *)
-let record_declared_field_cpp_ty env (ty : ml_type) ft =
+let record_declared_field_cpp_ty env (ty : Core.Type.t) ft =
   let tvars = get_current_type_vars () in
   match ty with
-  | Miniml.Tglob ((GlobRef.IndRef (kn, _) as n), _, _) ->
+  | Core.Type.Global_app {head = (GlobRef.IndRef (kn, _) as n); _} ->
     let t =
       cpp_ir_of_ml_type env ~ns:(Ref.User.Set.singleton n) tvars ft
     in
@@ -588,11 +612,11 @@ let record_declared_field_cpp_ty env (ty : ml_type) ft =
     else t
   | _ -> cpp_of_ml env ft
 
-(** [record_field env ~is_boxed ty r ~slot i e]: the C++ type the [i]th
+(** [Core.Record.Field.t env ~is_boxed ty r ~slot i e]: the C++ type the [i]th
     field [e] of the record constructor [r] of annotation [ty], built into
     [slot], is generated against, and the slot it fills.  [is_boxed i occ]
     says whether the read of the variable [i] at [occ] holds a box. *)
-let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
+let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
   let field_types_rec = record_field_types r in
   let declared_field_cpp_ty = record_declared_field_cpp_ty env ty in
   (* A record field with a CONCRETE type receiving an argument that is an
@@ -600,20 +624,23 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
      deeply-erased [pair<any,any>]) needs a final [any_cast<concrete>] —
      otherwise the bare [std::any] is aggregate-brace-initialized into a
      concrete field and fails to compile.  Thread the field's concrete C++
-     type as the expected type so the erased-[MLrel] path (see [gen_expr]'s
-     [MLrel] case) inserts the cast.  This mirrors the equivalent handling
+     type as the expected type so the erased-[Core.Expr.Bound_variable] path (see [gen_expr]'s
+     [Core.Expr.Bound_variable] case) inserts the cast.  This mirrors the equivalent handling
      for value-type (variant) constructors in [gen_and_wrap]. *)
   let expected_for_field i e =
     match List.nth_opt field_types_rec i with
     | Some ft ->
       let is_erased_rel =
         match e with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+        | Core.Expr.Bound_variable {index = j; occurrence = occ}
+        | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+        | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _}
+        | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; occurrence = occ}; _} ->
           is_boxed j occ
         | _ -> false
       in
       ( match ft with
-      | Miniml.Tvar (_, _) -> None
+      | Core.Type.Variable _ -> None
       | _ when is_erased_rel ->
         let ct = cpp_of_ml env ft in
         if Cpp_ir.Types.prints_as_any ct then None else Some ct
@@ -621,9 +648,9 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
          parameter is by the parameter's, where that type returns a
          function -- [nat -> pred nat] is the curried
          [crane::fn<pred<Nat>(Nat)>], an alias hiding the second arrow
-         -- and [gen_expr]'s [MLlam] case would otherwise gather every
+         -- and [gen_expr]'s [Core.Expr.Lambda] case would otherwise gather every
          binder into one lambda, which does not convert to it. *)
-      | _ when (match strip_magic e with MLlam _ -> true | _ -> false) -> (
+      | _ when (match strip_magic e with Core.Expr.Lambda _ -> true | _ -> false) -> (
         let rec codomain = function
           | Const t | Reference (_, t) -> codomain t
           | Function (_, cod) -> Some cod
@@ -633,7 +660,7 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
             | _ -> None )
         in
         match ty with
-        | Miniml.Tglob (_, tys, _) -> (
+        | Core.Type.Global_app {type_arguments = tys; _} -> (
           let ct = cpp_of_ml env (Mlutil.type_subst_list tys ft) in
           match codomain ct with
           | Some cod
@@ -646,9 +673,9 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
          option (exp T)] at an erased [T] is an
          [std::optional<exp<std::any>>], which fills the carrier a
          bare-variable codomain cannot. *)
-      | _ when (match strip_magic e with MLapp _ -> true | _ -> false) -> (
+      | _ when (match strip_magic e with Core.Expr.Apply _ -> true | _ -> false) -> (
         match ty with
-        | Miniml.Tglob (_, tys, _) ->
+        | Core.Type.Global_app {type_arguments = tys; _} ->
           let ct = cpp_of_ml env (Mlutil.type_subst_list tys ft) in
           if Cpp_ir.Types.prints_as_any ct || not (names_only_scoped_tvars ct) then None
           else Some ct
@@ -694,7 +721,7 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
     [expected_ty] into [slot], its type arguments recovered from the
     arguments, the slot and the position where the annotation leaves them
     unknown. *)
-let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type) r ts =
+let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r ts =
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
@@ -708,8 +735,8 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
      is exactly what makes the consumer's fixed [any_cast] throw. *)
   let ty =
     match ty with
-    | Miniml.Tglob (n, tys, sc)
-      when List.exists (fun t -> t = Miniml.Tunknown) tys
+    | Core.Type.Global_app {head = n; type_arguments = tys; index_arguments = sc}
+      when List.exists (fun t -> t = Core.Type.Unknown) tys
            && (not (boxed slot))
            (* Nor when the destination is (or contains) [std::any]: there the
               erased shape is the canonical one every producer has to agree
@@ -732,10 +759,10 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
       List.iteri
         (fun i ft ->
           match (ft, List.nth_opt ts i) with
-          | (Miniml.Tvar (_, k)), Some arg
+          | (Core.Type.Variable {variable = k; _}), Some arg
             when k >= 1
                  && k <= Array.length recovered
-                 && recovered.(k - 1) = Miniml.Tunknown ->
+                 && recovered.(k - 1) = Core.Type.Unknown ->
             ( match ml_ast_type_hint arg with
             | Some arg_ty -> recovered.(k - 1) <- arg_ty
             | None -> () )
@@ -745,7 +772,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
          off, so the only remaining witness is the slot it is being built
          into -- the field type of an enclosing constructor, instantiated. *)
       ( match Option.map resolve_tmeta slot.expected_ml_ty with
-      | Some (Miniml.Tglob (exp_n, exp_tys, _))
+      | Some (Core.Type.Global_app {head = exp_n; type_arguments = exp_tys; _})
         when GlobRef.CanOrd.equal n exp_n
              && List.length exp_tys >= Array.length recovered ->
         (* Aligned at the right: a type constructor that reached the slot
@@ -759,12 +786,12 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
            is a variable from {e another} scope -- a slot read off an
            abstract carrier ([m_carrier M]) -- which would not compile. *)
         let rec is_writable = function
-          | Miniml.Tglob (_, args, _) -> List.for_all is_writable args
-          | Miniml.Tarr (a, b) -> is_writable a && is_writable b
-          | Miniml.Tmeta {contents = Some t} -> is_writable t
-          | Miniml.Tvar (_, _) as t ->
+          | Core.Type.Global_app {type_arguments = args; _} -> List.for_all is_writable args
+          | Core.Type.Arrow {parameter = a; result = b} -> is_writable a && is_writable b
+          | Core.Type.Meta {contents = Some t} -> is_writable t
+          | Core.Type.Variable _ as t ->
             names_only_scoped_tvars (cpp_of_ml env t)
-          | Miniml.Tapp _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _ ->
+          | Core.Type.Variable_app _ | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _ ->
             false
           | _ -> true
         in
@@ -772,11 +799,11 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
         List.iteri
           (fun i t ->
             let i = i - (List.length exp_tys - m) in
-            if i >= 0 && recovered.(i) = Miniml.Tunknown && is_writable t then
+            if i >= 0 && recovered.(i) = Core.Type.Unknown && is_writable t then
               recovered.(i) <- t )
           exp_tys
       | _ -> () );
-      Miniml.Tglob (n, Array.to_list recovered, sc)
+      Core.Type.Global_app {head = n; type_arguments = Array.to_list recovered; index_arguments = sc}
     | _ -> ty
   in
   (* The same reading of the slot, but pointwise and at any depth.  A type
@@ -813,21 +840,20 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
       | None -> current_cpp_return_type ()
     in
     match (ty, Option.map (fun t -> Ml_type_util.unqualify_ty (unfold_cpp_typedef env t)) expected) with
-    | Miniml.Tglob (n, tys, sc), Some (Entity_application (n', etys, _))
+    | Core.Type.Global_app {head = n;
+                            type_arguments = tys;
+                            index_arguments = sc}, Some (Entity_application (n', etys, _))
       when GlobRef.CanOrd.equal n n' && List.length tys = List.length etys
            && (not (boxed slot)) ->
-      Miniml.Tglob
-        ( n,
-          List.map2
+      Core.Type.Global_app {head = n; type_arguments = List.map2
             (fun t e ->
               match (resolve_tmeta t, e) with
-              | (Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _),
+              | (Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _),
                 Variable (Index (i, _))
                 when names_only_scoped_tvars e ->
-                Miniml.Tvar (Miniml.Schematic, i)
+                Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i}
               | _ -> t )
-            tys etys,
-          sc )
+            tys etys; index_arguments = sc}
     | _ -> ty
   in
   ty
@@ -842,8 +868,8 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
     ([cc_deeply_erased]), and whether an argument is forwarded verbatim
     ([cc_passthrough]). *)
 type custom = {
-  cc_ty_args_for_expected : ml_type list;
-  cc_field_types : ml_type list;
+  cc_ty_args_for_expected : Core.Type.t list;
+  cc_field_types : Core.Type.t list;
   cc_temps_at_slot : Cpp_ir.Lowered.Type.t list;
   cc_states_unboxed : int -> bool;
   cc_list_cons : bool;
@@ -854,23 +880,25 @@ type custom = {
 (** [custom env ~expected_ty ~slot ty r]: the custom constructor [r] of
     annotation [ty] ({!custom_refined_annotation}), built at [expected_ty]
     into [slot] under the return type in force. *)
-let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type) r =
+let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r =
   (* Generate args with expected type hints: pass the i-th type arg of the constructor's inductive type before generating
      the i-th value arg.  This allows gen_ctor_call to recover concrete element
-     types for nil lists whose ML annotation has unresolved metas (Tmeta{None}).
+     types for nil lists whose ML annotation has unresolved metas (Core.Type.Meta{None}).
      Specifically: in pair(fr, nil), the pair type args [A, B] tell us B = list(A),
-     so the nil's element type can be recovered as A even if its annotation is Tmeta. *)
+     so the nil's element type can be recovered as A even if its annotation is Core.Type.Meta. *)
   (* Try to get type args from the pair type annotation, falling back to the
-     outer [expected_ml_ty] (set by an enclosing MLletin or MLapp
-     lookahead) when the pair type itself is erased (Tmeta{None}). This
+     outer [expected_ml_ty] (set by an enclosing Core.Expr.Let or Core.Expr.Apply
+     lookahead) when the pair type itself is erased (Core.Type.Meta{None}). This
      recovers the expected element type for nil args in pairs like
        let sk0 : parser_frame × list(parser_frame) = (fr(...), nil)
-     where the pair MLcons has type annotation Tmeta{None}. *)
+     where the pair Core.Expr.Construct has type annotation Core.Type.Meta{None}. *)
   let ty_args_for_expected =
     let rec deep_resolve ty =
       match resolve_tmeta ty with
-      | Miniml.Tglob (n, tys, s) -> Miniml.Tglob (n, List.map deep_resolve tys, s)
-      | Miniml.Tarr (t1, t2) -> Miniml.Tarr (deep_resolve t1, deep_resolve t2)
+      | Core.Type.Global_app {head = n; type_arguments = tys; index_arguments = s} ->
+        Core.Type.Global_app {head = n; type_arguments = List.map deep_resolve tys; index_arguments = s}
+      | Core.Type.Arrow {parameter = t1; result = t2} ->
+        Core.Type.Arrow {parameter = deep_resolve t1; result = deep_resolve t2}
       | t -> t
     in
     (* Also try the expected type from the enclosing let-binding when deep_resolve
@@ -885,7 +913,7 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type
             | _ -> None
           in
           (match deep_resolve exp, ctor_ind with
-          | Miniml.Tglob (exp_n, exp_tys, _), Some ind
+          | Core.Type.Global_app {head = exp_n; type_arguments = exp_tys; _}, Some ind
             when GlobRef.CanOrd.equal exp_n ind
                  && List.length exp_tys = List.length tys ->
             (* An arrow the annotation left unresolved is erasure too -- the
@@ -903,7 +931,7 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type
       else tys
     in
     match deep_resolve ty with
-    | Miniml.Tglob (_, tys, _) -> fallback_from_expected tys
+    | Core.Type.Global_app {type_arguments = tys; _} -> fallback_from_expected tys
     | _ ->
       (match slot.expected_ml_ty with
       | Some exp ->
@@ -912,14 +940,14 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type
           | _ -> None
         in
         (match deep_resolve exp, ctor_ind with
-        | Miniml.Tglob (exp_n, exp_tys, _), Some ind
+        | Core.Type.Global_app {head = exp_n; type_arguments = exp_tys; _}, Some ind
           when GlobRef.CanOrd.equal exp_n ind -> exp_tys
         | _ -> [])
       | None -> [])
   in
   (* Pre-compute field types and draft template types so we can wrap lambdas
      that are stored in erased (std::any) fields.  This mirrors the logic in
-     wrap_if_needed_for_field for the standard MLcons path. *)
+     wrap_if_needed_for_field for the standard Core.Expr.Construct path. *)
   let field_types_for_wrap = match Table.get_ctor_ip_types_opt r with
     | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
     | None -> [] in
@@ -1049,8 +1077,8 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : ml_type
     own signature where it erased only its domain. *)
 type custom_arg = {
   ca_ret : Cpp_ir.Lowered.Type.t option;
-  ca_term : ml_ast;
-  ca_expected_ml : ml_type option;
+  ca_term : Core.Expr.t;
+  ca_expected_ml : Core.Type.t option;
   ca_erased_fn_slot : Cpp_ir.Lowered.Type.t option;
   ca_expected : Cpp_ir.Lowered.Type.t option;
   ca_slot : slot;
@@ -1065,17 +1093,17 @@ let custom_field ?var env c ~slot r i e =
   let saved_ret = current_cpp_return_type () in
   let new_expected =
     match List.nth_opt field_types_for_wrap i with
-    | Some (Miniml.Tvar (_, j) as ft) -> (
+    | Some (Core.Type.Variable {variable = j; _} as ft) -> (
       match List.nth_opt ty_args_for_expected (j - 1) with
-      | Some (Tdummy _) | None -> Some ft
+      | Some (Core.Type.Erased _) | None -> Some ft
       | x -> x )
     | Some ft when ty_args_for_expected <> [] ->
       Some (Mlutil.type_subst_list ty_args_for_expected ft)
     | Some ft -> Some ft
     | None ->
     match List.nth_opt ty_args_for_expected i with
-    | Some (Tdummy _) | None ->
-      (* A [Tdummy] here means extraction couldn't statically reduce this
+    | Some (Core.Type.Erased _) | None ->
+      (* A [Core.Type.Erased] here means extraction couldn't statically reduce this
          type argument (e.g. a [prod]'s component type inferred through a
          non-reducible dependent [match] like [nt_semty x] at a literal
          [x], which is dependently well-typed in Coq but whose component
@@ -1083,8 +1111,8 @@ let custom_field ?var env c ~slot r i e =
          placeholders) -- it carries no more information than [None], so
          fall back the same way: to the concrete field type when the
          enclosing constructor has an erased ML type (e.g. pair(pred,
-         action) with Tmeta{None}).  Combined with the MLlam
-         Tarr-stripping logic, this lets gen_ctor_call recover the
+         action) with Core.Type.Meta{None}).  Combined with the Core.Expr.Lambda
+         Core.Type.Arrow-stripping logic, this lets gen_ctor_call recover the
          concrete element type for nil constructors, and lets a "cons"
          argument like a tuple literal's own component recover its
          declared field type so it gets any_cast'd to the concrete type
@@ -1127,7 +1155,7 @@ let custom_field ?var env c ~slot r i e =
          and a nested constructor built at the erased one boxes it. *)
       let cpp_ty =
         match List.nth_opt field_types_for_wrap i with
-        | Some (Miniml.Tvar (_, j)) when Ml_type_util.has_tany_written cpp_ty -> (
+        | Some (Core.Type.Variable {variable = j; _}) when Ml_type_util.has_tany_written cpp_ty -> (
           match List.nth_opt ctor_temps_at_slot (j - 1) with
           | Some t when not (Cpp_ir.Types.prints_as_any t) ->
             Ml_type_util.refine_erased_by ~expected:t cpp_ty
@@ -1153,7 +1181,7 @@ let custom_field ?var env c ~slot r i e =
       None
     else
       match List.nth_opt field_types_for_wrap i with
-      | Some (Miniml.Tvar (_, j)) -> (
+      | Some (Core.Type.Variable {variable = j; _}) -> (
         match
           Option.map Ml_type_util.tvar_erase_type
             (List.nth_opt ctor_temps_at_slot (j - 1))

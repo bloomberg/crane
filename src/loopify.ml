@@ -131,7 +131,7 @@ let planned_jumps loop check =
     let continues = Control_ir.Term.continues t in
     fun e ->
       match made_of e with
-      | Some o when List.exists (Miniml.Occurrence.equal o) continues -> check e
+      | Some o when List.exists (Core.Occurrence.equal o) continues -> check e
       | Some _ | None -> None
 
 (** [transform jumped], the loop [loop] the transform makes, telling
@@ -170,7 +170,7 @@ let machine_disagreement l entries =
     | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
     | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
   in
-  let within a b = List.for_all (fun o -> List.exists (Miniml.Occurrence.equal o) b) a in
+  let within a b = List.for_all (fun o -> List.exists (Core.Occurrence.equal o) b) a in
   let same a b = within a b && within b a in
   let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) entries in
   match Lower_control.loop l with
@@ -233,7 +233,7 @@ let entered_by_function r (c : Recursion_plan.call) =
     entered by: that member's. *)
 let entered_by_member (occurrence, member) (c : Recursion_plan.call) =
   match c.target with
-  | Member (o, m) -> Miniml.Occurrence.equal o occurrence && Int.equal m member
+  | Member (o, m) -> Core.Occurrence.equal o occurrence && Int.equal m member
   | Function _ | Entering _ -> false
 
 (** The calls the machine of the definition [r] is entered by: a
@@ -281,7 +281,7 @@ let no_varying_plan = "no ControlIR loop says which parameters vary"
 type member_plan = {
   member_varying : bool list;
   member_parts : bool list;
-  member_moves : (Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list;
+  member_moves : (Core.Occurrence.t * Ownership_ir.Continue_move.t list) list;
 }
 
 let member_plan ~frames member params =
@@ -520,7 +520,10 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
       let scrutinee = process_expr m.scrutinee in
       Custom_match {m with scrutinee; branches}
     | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
-      Switch {scrutinee = process_expr scrut; enum = r; branches = List.map (fun (id, body) -> (id, process_stmts body)) branches; default = Option.map process_stmts default}
+      Switch {scrutinee = process_expr scrut;
+              enum = r;
+              branches = List.map (fun (id, body) -> (id, process_stmts body)) branches;
+              default = Option.map process_stmts default}
     | Match (scrut, branches, default) ->
       Match
         ( { scrut with expr = process_expr scrut.expr },
@@ -777,7 +780,7 @@ let modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check (f :
     ControlIR enters: the local fixpoint's function. *)
 let adopts_entry ad (entry : Control_ir.Loop.t) =
   match entry with
-  | Member (o, 0) -> Miniml.Occurrence.equal ad.ad_fixpoint o
+  | Member (o, 0) -> Core.Occurrence.equal ad.ad_fixpoint o
   | Member _ | Function _ -> false
 
 let frame_machine ~loop ?entry ?entered_pointers ~varying ~parts ~tparams check (f : func) params body =
@@ -824,7 +827,8 @@ let record_unlowered ?(unlowered = Left None) (f : func) body =
   | Suspended _, _ -> record_outcome name deferred_cofixpoint
   | (Tail_loop | Modulo_cons _ | Frame_stack), Declined why -> record_outcome name (Lp_declined why)
   | Tail_loop, Left survived -> ignore (report_outcome ?survived ~name ~check ~strategy:Lp_tail body)
-  | (Modulo_cons _ | Frame_stack), Left survived -> ignore (report_outcome ?survived ~name ~check ~strategy:Lp_frame body)
+  | (Modulo_cons _ | Frame_stack), Left survived ->
+    ignore (report_outcome ?survived ~name ~check ~strategy:Lp_frame body)
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
@@ -949,7 +953,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
         let is_self r =
           match mf.globref with Some sr -> Common.globref_equal r sr | None -> false
         in
-        let parks (cs : signature) = match cs.occurrence with Some o -> List.exists (Miniml.Occurrence.equal o) park | None -> false in
+        let parks (cs : signature) = match cs.occurrence with Some o -> List.exists (Core.Occurrence.equal o) park | None -> false in
         (* [park e] returns the rewritten self-call, with its value receiver
            replaced by a reference to the parking slot, or [None]. *)
         let park e =

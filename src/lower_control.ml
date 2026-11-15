@@ -4,7 +4,6 @@
 (** LowerControl: the {!Control_ir} of a normalized program.  See
     [lower_control.mli]. *)
 
-open Miniml
 open Control_ir
 open Control_ir.Term
 
@@ -12,14 +11,14 @@ type t = (Loop.t * Term.t) list
 
 let empty = []
 
-let rec strip = function MLmagic (_, e, _) -> strip e | e -> e
+let rec strip = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e
 
 (* The occurrence of the call headed by [f]: the global's use, or the read
    of the member. *)
 let occurrence f =
   match strip f with
-  | MLglob use -> Some (Global_use.occurrence use)
-  | MLrel (_, read) -> Some read
+  | Core.Expr.Global use -> Some (Core.Global_use.occurrence use)
+  | Core.Expr.Bound_variable {occurrence = read; _} -> Some read
   | _ -> None
 
 (* [body], under the parameters of the loop [target], as that loop:
@@ -31,7 +30,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
   (* The loops a read names, by the binders it stands under: the loop it
      continues, and its number of parameters. *)
   let own ~depth f = Option.map (fun n -> (target, n)) (callee ~depth f) in
-  let adopts o = Option.cata (Occurrence.equal o) false adopted in
+  let adopts o = Option.cata (Core.Occurrence.equal o) false adopted in
   let rec lower ?(bound = false) callee depth e =
     match recognise ~bound callee depth e with
     | t when continues t = [] -> Return e
@@ -41,7 +40,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
   and named callee ~depth f n =
     match callee ~depth f with Some (l, n') when n = n' -> Some l | Some _ | None -> None
   and call callee ~depth = function
-    | MLapp (f, args) ->
+    | Core.Expr.Apply {callee = f; arguments = args} ->
       Option.bind (named callee ~depth f (List.length args)) (fun l ->
           Option.map (fun o -> (l, o, args)) (occurrence f) )
     | _ -> None
@@ -51,7 +50,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
      innermost holding the call itself, and none calls it elsewhere. *)
   and chain callee depth e =
     match e with
-    | MLcons (_, constructor, args, _) -> (
+    | Core.Expr.Construct {constructor; arguments = args; _} -> (
       let calling = List.filteri (fun _ (_, a) -> calls callee ~depth a > 0) (List.mapi (fun i a -> (i, a)) args) in
       match calling with
       | [(hole, a)] when calls callee ~depth a = 1 -> (
@@ -69,20 +68,23 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       if Option.has_some (callee ~depth e) then incr n
       else
         match e with
-        | MLapp (MLfix (_, _, _, _, o), args) when adopts o ->
+        | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {occurrence = o; _} | Core.Expr.Cofixpoint {occurrence = o; _});
+                           arguments = args} when adopts o ->
           incr n;
           List.iter (walk depth) args
-        | MLapp (f, args) ->
+        | Core.Expr.Apply {callee = f; arguments = args} ->
           walk depth f;
           List.iter (walk depth) args
-        | MLlam (_, _, b) -> walk (depth + 1) b
-        | MLletin (_, _, a, b, _) ->
+        | Core.Expr.Lambda {body = b; _} -> walk (depth + 1) b
+        | Core.Expr.Let {value = a; body = b; _} ->
           walk depth a;
           walk (depth + 1) b
-        | MLcase (_, s, branches, _) ->
+        | Core.Expr.Match {scrutinee = s; branches; _} ->
           walk depth s;
-          Array.iter (fun (ids, _, _, b) -> walk (depth + List.length ids) b) branches
-        | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
+          Array.iter (fun {Core.Match.Branch.binders = ids; body = b; _} -> walk (depth + List.length ids) b) branches
+        | Core.Expr.Fixpoint {functions = ids;
+                              bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+          Array.iter (walk (depth + Array.length ids)) funs
         | e -> Mlutil.ast_iter (walk depth) e
     in
     walk depth e;
@@ -97,7 +99,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     let target = Loop.Member (occurrence, 0) in
     let callee ~depth:d f =
       match strip f with
-      | MLrel (db, _) when db = arity + 1 + d -> Some (target, arity)
+      | Core.Expr.Bound_variable {index = db; _} when db = arity + 1 + d -> Some (target, arity)
       | _ -> callee ~depth:(depth + 1 + arity + d) f
     in
     {loop = target; parameters = List.rev parameters; body = lower callee 0 inner}
@@ -113,17 +115,35 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       | None -> Return e
     in
     match e with
-    | MLapp (MLfix (0, [|_|], [|fix|], _, o), args) when adopts o ->
+    | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {selected = 0;
+                                                     functions = [|_|];
+                                                     bodies = [|fix|];
+                                                     occurrence = o} | Core.Expr.Cofixpoint {selected = 0;
+                                                                                             functions = [|_|];
+                                                                                             bodies = [|fix|];
+                                                                                             occurrence = o});
+                       arguments = args}
+      when adopts o ->
       let entered = entered callee depth o fix in
       if List.compare_lengths args entered.parameters <> 0 then Return e
       else Entry {entered; name = None; scope = Continue {target = entered.loop; occurrence = o; arguments = args}}
-    | MLletin (x, ty, (MLfix (0, [|_|], [|fix|], _, o) as a), b, _) when adopts o -> (
+    | Core.Expr.Let {binder = x;
+                     binder_type = ty;
+                     value = (Core.Expr.Fixpoint {selected = 0;
+                                                  functions = [|_|];
+                                                  bodies = [|fix|];
+                                                  occurrence = o} | Core.Expr.Cofixpoint {selected = 0;
+                                                                                          functions = [|_|];
+                                                                                          bodies = [|fix|];
+                                                                                          occurrence = o} as a);
+                     body = b; _}
+      when adopts o -> (
       let entered = entered callee depth o fix in
       let arity = List.length entered.parameters in
       (* The let's binder, under [d] binders, names the entry. *)
       let entering ~depth:d f =
         match strip f with
-        | MLrel (db, _) when db = d - depth -> Some (entered.loop, arity)
+        | Core.Expr.Bound_variable {index = db; _} when db = d - depth -> Some (entered.loop, arity)
         | _ -> callee ~depth:d f
       in
       (* A fixpoint the scope enters by no turn -- applied only in a
@@ -132,46 +152,62 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       | scope when Control_ir.Term.continues_of entered.loop scope <> [] -> Entry {entered; name = Some (x, ty); scope}
       | _ -> Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b} )
     | f when Option.has_some (named callee ~depth f 0) -> continue_ f (Option.get (named callee ~depth f 0)) []
-    | MLapp (f, args) when Option.has_some (named callee ~depth f (List.length args)) ->
+    | Core.Expr.Apply {callee = f; arguments = args} when Option.has_some (named callee ~depth f (List.length args)) ->
       continue_ f (Option.get (named callee ~depth f (List.length args))) args
-    | MLcons (_, c, [a], _) when Recursion_plan.identity c -> lower callee depth a
-    | MLapp (MLglob use, [a]) when Recursion_plan.identity use.callee && Table.to_inline use.callee ->
+    | Core.Expr.Construct {constructor = c; arguments = [a]; _} when Recursion_plan.identity c -> lower callee depth a
+    | Core.Expr.Apply {callee = Core.Expr.Global use;
+                       arguments = [a]} when Recursion_plan.identity use.callee && Table.to_inline use.callee ->
       lower callee depth a
-    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
-      | MLlam (x, ty, k) :: action :: _ when frames && calls callee ~depth action > 0 ->
-        Resume {binder = x; binder_type = ty; value = lower ~bound:true callee depth action; body = lower callee (depth + 1) k}
-      | MLlam (x, ty, k) :: action :: _ ->
+      | Core.Expr.Lambda {parameter = x;
+                          parameter_type = ty;
+                          body = k} :: action :: _ when frames && calls callee ~depth action > 0 ->
+        Resume {binder = x;
+                binder_type = ty;
+                value = lower ~bound:true callee depth action;
+                body = lower callee (depth + 1) k}
+      | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = k} :: action :: _ ->
         Let {binder = x; binder_type = ty; value = action; body = lower callee (depth + 1) k}
       | _ -> Return e )
-    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Return -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Return -> (
       match List.rev args with value :: _ -> lower callee depth value | [] -> Return e )
-    | MLapp ((MLlam _ as f), args) ->
+    | Core.Expr.Apply {callee = (Core.Expr.Lambda _ as f); arguments = args} ->
       let rec enter depth f args =
         match (f, args) with
-        | MLlam (x, ty, b), a :: rest ->
+        | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = b}, a :: rest ->
           Let {binder = x; binder_type = ty; value = a; body = enter (depth + 1) b rest}
-        | MLlam _, [] -> Return e
+        | Core.Expr.Lambda _, [] -> Return e
         | b, [] -> lower callee depth b
         | _, _ :: _ -> Return e
       in
       enter depth f args
-    | MLletin (x, ty, a, b, _) when frames && calls callee ~depth a > 0 ->
+    | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} when frames && calls callee ~depth a > 0 ->
       Resume {binder = x; binder_type = ty; value = lower ~bound:true callee depth a; body = lower callee (depth + 1) b}
-    | MLletin (x, ty, a, b, _) -> Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b}
-    | MLcase (ty, _, branches, _) when bound && not (Recursion_plan.match_bound_in_place ty branches) -> Return e
-    | MLcase (ty, s, branches, _) ->
+    | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
+      Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b}
+    | Core.Expr.Match {scrutinee_type = ty;
+                       branches; _} when bound && not (Recursion_plan.match_bound_in_place ty branches) -> Return e
+    | Core.Expr.Match {scrutinee_type = ty; scrutinee = s; branches; _} ->
       Match
         { scrutinee_type = ty;
           scrutinee = s;
           branches =
             Array.to_list
               (Array.map
-                 (fun (ids, result_type, pattern, b) ->
+                 (fun {Core.Match.Branch.binders = ids; result_type = result_type; pattern = pattern; body = b} ->
                    {binders = ids; result_type; pattern; body = lower callee (depth + List.length ids) b} )
                  branches ) }
-    | MLmagic (m, a, mocc) -> map_returns (fun v -> MLmagic (m, v, mocc)) (lower callee depth a)
-    | MLcons _ when modulo_cons -> (
+    | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
+      map_returns (fun v -> Core.Expr.Coerce {source_type = from;
+                                              target_type = into;
+                                              value = v;
+                                              occurrence = mocc}) (lower callee depth a)
+    | Core.Expr.Boxed_value {value = a; occurrence = mocc} ->
+      map_returns (fun v -> Core.Expr.Boxed_value {value = v; occurrence = mocc}) (lower callee depth a)
+    | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
+      map_returns (fun v -> Core.Expr.Lambda_group_barrier {value = v; occurrence = mocc}) (lower callee depth a)
+    | Core.Expr.Construct _ when modulo_cons -> (
       match chain callee depth e with Some c -> Continue_into c | None -> Return e )
     | e -> Return e
   in
@@ -182,7 +218,13 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
 let rec fixpoints wanted acc e =
   let acc =
     match e with
-    | MLfix (_, ids, funs, _, occ) when List.exists (Occurrence.equal occ) wanted -> (occ, Array.map snd ids, funs) :: acc
+    | (Core.Expr.Fixpoint {functions = ids;
+                           bodies = funs;
+                           occurrence = occ; _} | Core.Expr.Cofixpoint {functions = ids;
+                                                                        bodies = funs;
+                                                                        occurrence = occ; _})
+      when List.exists (Core.Occurrence.equal occ) wanted ->
+      (occ, Array.map snd ids, funs) :: acc
     | _ -> acc
   in
   let acc = ref acc in
@@ -199,13 +241,13 @@ let lower ~methods plan program =
   Modutil.struct_iter
     (fun d ->
       List.iter
-        (fun (fd : ml_fix_def) -> defs := Names.GlobRef.Map_env.add fd.fd_ref fd !defs)
+        (fun (fd : Core.Recursion.Definition.t) -> defs := Names.GlobRef.Map_env.add fd.entity fd !defs)
         (Mlutil.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     struc;
-  let generated (fd : ml_fix_def) =
-    Ml_type_util.declared_parameters (Mlutil.type_simpl fd.fd_type) fd.fd_body
+  let generated (fd : Core.Recursion.Definition.t) =
+    Ml_type_util.declared_parameters (Mlutil.type_simpl fd.type_) fd.body
   in
   (* The body of a function lowered tail modulo cons is read with
      Normalize's temporaries put back, as the plan reads its chains. *)
@@ -222,7 +264,7 @@ let lower ~methods plan program =
     let first o = List.find_opt single (fixpoints [o] [] inner) in
     let yields_own ty =
       match Names.GlobRef.Map_env.find_opt r !defs with
-      | Some own -> Recursion_plan.yields_alike own.fd_type ty
+      | Some own -> Recursion_plan.yields_alike own.type_ ty
       | None -> false
     in
     match List.find_map first (Recursion_plan.adoptable_in plan r) with
@@ -248,34 +290,35 @@ let lower ~methods plan program =
   Modutil.struct_iter
     (fun d ->
       List.iter
-        (fun (fd : ml_fix_def) ->
-          let body = fd.fd_body in
-          let builds = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) modulo_cons in
-          let frames = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) frame_functions in
-          if builds || frames || List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) functions then begin
+        (fun (fd : Core.Recursion.Definition.t) ->
+          let body = fd.body in
+          let builds = List.exists (Names.GlobRef.UserOrd.equal fd.entity) modulo_cons in
+          let frames = List.exists (Names.GlobRef.UserOrd.equal fd.entity) frame_functions in
+          if builds || frames || List.exists (Names.GlobRef.UserOrd.equal fd.entity) functions then begin
             let parameters, inner = read ~builds fd in
             let arity = List.length parameters in
             let callee ~depth:_ = function
-              | MLglob use when Names.GlobRef.UserOrd.equal use.callee fd.fd_ref -> Some arity
+              | Core.Expr.Global (use : Core.Global_use.t) when Names.GlobRef.UserOrd.equal use.callee fd.entity ->
+                Some arity
               | _ -> None
             in
-            let target = Loop.Function fd.fd_ref in
-            let adopted = if frames && not (methods fd.fd_ref) then adoption fd.fd_ref inner else None in
+            let target = Loop.Function fd.entity in
+            let adopted = if frames && not (methods fd.entity) then adoption fd.entity inner else None in
             let lowered = tail_loop ~modulo_cons:builds ~frames ?adopted ~effects ~target ~callee inner in
             add target parameters lowered;
-            check_entered fd.fd_ref (Some lowered)
+            check_entered fd.entity (Some lowered)
           end
-          else check_entered fd.fd_ref None;
+          else check_entered fd.entity None;
           List.iter
             (fun (occ, funs) ->
-              let builds = List.exists (Occurrence.equal occ) local_modulo_cons in
-              let frames = List.exists (Occurrence.equal occ) frame_locals in
+              let builds = List.exists (Core.Occurrence.equal occ) local_modulo_cons in
+              let frames = List.exists (Core.Occurrence.equal occ) frame_locals in
               let parameters, inner = Mlutil.collect_lams funs.(0) in
               let inner = if builds then Recursion_plan.restore_temporaries inner else inner in
               let arity = List.length parameters in
               let callee ~depth f =
                 match strip f with
-                | MLrel (db, _) when db = arity + 1 + depth -> Some arity
+                | Core.Expr.Bound_variable {index = db; _} when db = arity + 1 + depth -> Some arity
                 | _ -> None
               in
               let target = Loop.Member (occ, 0) in
@@ -302,8 +345,8 @@ let loop l = List.find_map (fun (l', t) -> if Loop.equal l l' then Some t else N
 let held_occurrences t =
   let found = ref [] in
   let rec ast = function
-    | Miniml.MLrel (_, o) -> found := o :: !found
-    | Miniml.MLglob {occurrence; _} -> found := occurrence :: !found
+    | Core.Expr.Bound_variable {occurrence = o; _} -> found := o :: !found
+    | Core.Expr.Global {occurrence; _} -> found := occurrence :: !found
     | e -> Mlutil.ast_iter ast e
   in
   let continue_ (c : Control_ir.Term.continue_) = List.iter ast c.arguments in
@@ -336,5 +379,5 @@ let held_occurrences t =
    copies, and only these are told apart from them. *)
 let taken_continues t =
   let continues = Control_ir.Term.continues t and held = held_occurrences t in
-  let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
+  let count o l = List.length (List.filter (Core.Occurrence.equal o) l) in
   List.filter (fun o -> count o continues = 1 && count o held = 0) continues

@@ -1,7 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-open Miniml
 
 let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
   Table.set_named_customs facts.used_customs;
@@ -10,10 +9,10 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
   List.iter
     (fun ({block; kind; _} : Target_plan.kind_decision) ->
       Table.add_inductive_kind block kind;
-      let write kn ind = if Names.MutInd.UserOrd.equal kn block then ind.ind_kind <- kind in
+      let write kn (ind : Core.Inductive.t) = if Names.MutInd.UserOrd.equal kn block then ind.kind <- kind in
       Modutil.struct_iter
-        (function Dind (kn, ind) -> write kn ind | _ -> ())
-        (function Sind (kn, ind) -> write kn ind | _ -> ())
+        (function Core.Decl.Inductive {entity = kn; definition = ind} -> write kn ind | _ -> ())
+        (function Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> write kn ind | _ -> ())
         (fun _ -> ())
         struc )
     plan.inductive_kinds

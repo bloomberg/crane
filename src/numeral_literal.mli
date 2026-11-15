@@ -4,7 +4,7 @@
 (** Numeral literals: a registered numeral converter applied to a digit
     chain, and a constructor term of a numeral inductive that spells a
     number, decided here once and written into Core as the literal
-    ([Miniml.MLnumeral]), so that no later pass reads the chain. *)
+    ([Core.Expr.Numeral]), so that no later pass reads the chain. *)
 
 (** [registered_constructor name r]: [r]'s 1-based constructor index, where
     [r] is a constructor of the inductive Rocq registers as [name]
@@ -19,7 +19,7 @@ val registered_constructor : string -> Names.GlobRef.t -> int option
     one.  The one place both Core, which writes the application as the
     literal ({!fold}), and dependency collection, which then leaves the
     converter and its digit inductives out, decide that it folds. *)
-val converter_literal : Names.GlobRef.t -> Miniml.ml_ast -> (Table.numeral_info * Z.t) option
+val converter_literal : Names.GlobRef.t -> Core.Expr.t -> (Table.numeral_info * Z.t) option
 
 (** [constructor_literal e]: the numeral mapping and the value of the
     constructor term [e] of a numeral inductive, where it is a literal: a
@@ -27,19 +27,19 @@ val converter_literal : Names.GlobRef.t -> Miniml.ml_ast -> (Table.numeral_info 
     [Npos] around one ([Zneg (xI xH)] is -3), or else a chain of the
     inductive's successor constructor down to its zero constructor
     ([S (S O)], [Z0]). *)
-val constructor_literal : Miniml.ml_ast -> (Table.numeral_info * Z.t) option
+val constructor_literal : Core.Expr.t -> (Table.numeral_info * Z.t) option
 
 (** [fold e]: [e], where it is a numeral literal -- a numeral converter
     applied to a digit chain ({!converter_literal}) or a constructor term
     ({!constructor_literal}) -- as the literal, at its numeral inductive;
     otherwise [e] itself.  Reads [e]'s head node and the chain under it
     only. *)
-val fold : Miniml.ml_ast -> Miniml.ml_ast
+val fold : Core.Expr.t -> Core.Expr.t
 
 (** Whether {!fold} writes [e] as a literal. *)
-val folds : Miniml.ml_ast -> bool
+val folds : Core.Expr.t -> bool
 
 (** Whether [e] is a numeral converter applied to a digit chain, which
     {!fold} writes as a literal: the converter and the chain's inductives
     are named nowhere once it has. *)
-val converter_folds : Miniml.ml_ast -> bool
+val converter_folds : Core.Expr.t -> bool

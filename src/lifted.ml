@@ -7,13 +7,13 @@
 open Names
 
 type site =
-  | Let of Miniml.Occurrence.t
-  | Fixpoint of Miniml.Occurrence.t * int
+  | Let of Core.Occurrence.t
+  | Fixpoint of Core.Occurrence.t * int
 
 let same_site a b =
   match (a, b) with
-  | Let o, Let o' -> Miniml.Occurrence.equal o o'
-  | Fixpoint (o, m), Fixpoint (o', m') -> Miniml.Occurrence.equal o o' && Int.equal m m'
+  | Let o, Let o' -> Core.Occurrence.equal o o'
+  | Fixpoint (o, m), Fixpoint (o', m') -> Core.Occurrence.equal o o' && Int.equal m m'
   | Let _, Fixpoint _ | Fixpoint _, Let _ -> false
 
 type t =

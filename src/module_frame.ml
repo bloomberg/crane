@@ -2,19 +2,18 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Miniml
 open Common
 
 type t = {
   eponymous_type : GlobRef.t option;
-  eponymous_record : (GlobRef.t * record_field list * ml_ind_packet) option;
+  eponymous_record : (GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
   method_candidates : Method_registry.method_candidate list;
   concept_collision : bool;
   promoted : Id.t list option;
 }
 
-let inductive_refs kn ind =
-  List.init (Array.length ind.ind_packets) (fun i -> (GlobRef.IndRef (kn, i), ind.ind_packets.(i)))
+let inductive_refs kn (ind : Core.Inductive.t) =
+  List.init (Array.length ind.packets) (fun i -> (GlobRef.IndRef (kn, i), ind.packets.(i)))
 
 (* Every eponymous packet is met in order and the last one wins, as the
    render's scan let it. *)
@@ -23,12 +22,12 @@ let eponymous ~name sel =
   List.fold_left
     (fun acc (_, se) ->
       match se with
-      | SEdecl (Dind (kn, ind)) ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
         List.fold_left
           (fun (ty, record) (r, p) ->
             if String.lowercase_ascii (pp_global_name Type r) <> lowercase_module then (ty, record)
             else
-              match ind.ind_kind with
+              match ind.kind with
               | Core.Inductive.Kind.Type_class _ -> (ty, record)
               | Core.Inductive.Kind.Record fields -> (ty, Some (r, fields, p))
               | _ -> (Some r, record) )
@@ -45,7 +44,7 @@ let method_candidates epon_ref sel ~enclosing =
   let same_module r = ModPath.equal (Table.modpath_of_r r) epon_modpath in
   let module_type_aliases =
     Method_registry.collect_module_type_aliases
-      ~extract_decl:(fun (_, se) -> match se with SEdecl d -> Some d | _ -> None)
+      ~extract_decl:(fun (_, se) -> match se with Core.Module.Structure_item.Declaration d -> Some d | _ -> None)
       epon_modpath sel
   in
   let forward_inductives =
@@ -53,7 +52,7 @@ let method_candidates epon_ref sel ~enclosing =
       (List.fold_left
          (fun acc (_, se) ->
            match se with
-           | SEdecl (Dind (kn, ind)) ->
+           | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
              List.fold_left
                (fun (seen, fwd) (r, _) ->
                  if globref_equal r epon_ref then (true, fwd)
@@ -65,17 +64,17 @@ let method_candidates epon_ref sel ~enclosing =
   in
   let excluded_refs = module_type_aliases @ forward_inductives in
   let rec refs_excluded = function
-    | Tglob (r, args, _) ->
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       List.exists (globref_equal r) excluded_refs || List.exists refs_excluded args
-    | Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
-    | Tmeta {contents = Some t} -> refs_excluded t
+    | Core.Type.Arrow {parameter = t1; result = t2} -> refs_excluded t1 || refs_excluded t2
+    | Core.Type.Meta {contents = Some t} -> refs_excluded t
     | _ -> false
   in
   let candidates_of acc (_, se) =
     match se with
-    | SEdecl d ->
+    | Core.Module.Structure_item.Declaration d ->
       List.fold_left
-        (fun acc {fd_ref = r; fd_body = body; fd_type = ty} ->
+        (fun acc {Core.Recursion.Definition.entity = r; body = body; type_ = ty} ->
           if same_module r && not (refs_excluded ty) then
             match Cpp_state.planned_method_candidate epon_ref r body ty with
             | Some c -> c :: acc
@@ -93,9 +92,9 @@ let method_candidates epon_ref sel ~enclosing =
     List.iter
       (fun (_, se) ->
         match se with
-        | SEdecl d ->
+        | Core.Module.Structure_item.Declaration d ->
           List.iter
-            (fun {fd_ref = r; _} ->
+            (fun {Core.Recursion.Definition.entity = r; _} ->
               match Cpp_state.is_registered_method r with
               | Some (e, _)
                 when same_module r && globref_equal e epon_ref
@@ -119,7 +118,8 @@ let concept_collision mp sel =
   List.exists
     (fun (_, se) ->
       match se with
-      | SEdecl (Dind (kn, ({ind_kind = Core.Inductive.Kind.Type_class _; _} as ind))) ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn;
+                                                                     definition = ({Core.Inductive.kind = Core.Inductive.Kind.Type_class _; _} as ind)}) ->
         List.exists
           (fun (r, _) -> Option.equal String.equal (concept_name r) (Some (Common.emitted_module_name mp)))
           (inductive_refs kn ind)
@@ -134,14 +134,14 @@ let concept_collision mp sel =
    name are parameters too ({!Table.ind_promoted_params}): the head spelled
    for the module is the one the inductive's struct is generated with. *)
 let promoted mp sel eponymous_type =
-  let has_submodules = List.exists (function _, SEmodule _ -> true | _ -> false) sel in
-  let inductives = List.length (List.filter (function _, SEdecl (Dind _) -> true | _ -> false) sel) in
+  let has_submodules = List.exists (function _, Core.Module.Structure_item.Module _ -> true | _ -> false) sel in
+  let inductives = List.length (List.filter (function _, Core.Module.Structure_item.Declaration (Core.Decl.Inductive _) -> true | _ -> false) sel) in
   match eponymous_type with
   | Some epon when (not (Scope_plan.nested mp)) && (not has_submodules) && inductives <= 1 ->
     List.find_map
       (fun (_, se) ->
         match se with
-        | SEdecl (Dind (kn, ind)) ->
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           List.fold_left
             (fun found (r, p) ->
               if globref_equal r epon && not (Table.is_enum_inductive r) then

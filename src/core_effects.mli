@@ -13,7 +13,7 @@
     [ret v] is [v].
 
     Transitional.  The operations are installed for the unit, by the
-    occurrence of the use naming the operation ({!Miniml.Occurrence}), and
+    occurrence of the use naming the operation ({!Core.Occurrence}), and
     translation takes an application's from there; under [CRANE_CHECK_IR]
     each is checked against the global's registration and the mode the
     generation translating it is in. *)
@@ -46,7 +46,7 @@ val empty : t
 
 (** [analyze s] -- every use of a [bind] or [ret] in [s]'s declarations'
     bodies, each with the mode of the declaration it is written in. *)
-val analyze : Miniml.ml_structure -> t
+val analyze : Core.Program.t -> t
 
 (** Whether two analyses found the same operations, at the same
     occurrences, in the same modes. *)
@@ -58,10 +58,10 @@ val install : t -> unit
 (** [lookup t use] -- the operation of the use [use] among [t], if the
     analysis reached it; [None] for a use it did not, or one whose copies a
     rewrite duplicated were found in two modes. *)
-val lookup : t -> Miniml.global_use -> effect_ option
+val lookup : t -> Core.Global_use.t -> effect_ option
 
 (** [find use] -- {!lookup} among the installed operations. *)
-val find : Miniml.global_use -> effect_ option
+val find : Core.Global_use.t -> effect_ option
 
 (** Record that translation took an operation from the installed ones, for
     {!report}. *)

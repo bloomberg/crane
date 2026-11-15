@@ -3,14 +3,13 @@
 
 (** OwnershipIR.  See [ownership_ir.mli]. *)
 
-open Miniml
 
 module Levels = Set.Make (Int)
 module Parents = Map.Make (Int)
 
 (* Every read the region holds, in no order. *)
 type read = {
-  occurrence : Occurrence.t;
+  occurrence : Core.Occurrence.t;
   last : bool;  (* nothing after it or beside it reads the variable, or the component it reads *)
   last_whole : bool;  (* nothing after it or beside it reads the variable *)
   consumed : bool;  (* where it stands, its value may be taken *)
@@ -25,12 +24,12 @@ type read = {
    type variable of its own: to a local, at the one instance its uses agree
    on, where the let named by its occurrence is an [Instance] one. *)
 type arm =
-  | Rebuild of {scrutinee : Occurrence.t; branch : int; consumers : ml_ast list}
-  | Fields of {case : ml_ast; by_value : bool list}
-  | Instance of Occurrence.t
+  | Rebuild of {scrutinee : Core.Occurrence.t; branch : int; consumers : Core.Expr.t list}
+  | Fields of {case : Core.Expr.t; by_value : bool list}
+  | Instance of Core.Occurrence.t
 
 type resume = {
-  calls : Occurrence.t list;
+  calls : Core.Occurrence.t list;
   kept : Core_binder.t list;
   held : Core_binder.t list;
   passed : Core_binder.t list;
@@ -40,16 +39,16 @@ type resume = {
    what each of its arguments reads: the variables, by level, with their
    parts ([variables]), and every read, by level and occurrence ([read_at]).
    [overlaps] says whether two levels share storage where it stands. *)
-type argument = {variables : Levels.t; read_at : (int * Occurrence.t) list}
+type argument = {variables : Levels.t; read_at : (int * Core.Occurrence.t) list}
 
-type entered = {at : Occurrence.t; arguments : argument list; overlaps : int -> int -> bool}
+type entered = {at : Core.Occurrence.t; arguments : argument list; overlaps : int -> int -> bool}
 
 type resumes = {
   origin : Names.GlobRef.t;
   depth : int;
   resume_at : Core_binder.t -> resume option;
   entry_captures : int option;
-  parameter_type : int -> ml_type option;
+  parameter_type : int -> Core.Type.t option;
 }
 
 (* Of a let a frame machine resumes at, by its occurrence: each binder the
@@ -58,43 +57,43 @@ type resumes = {
    arguments, nor anything a closure reads at its uses, nor what follows the
    let, reads it or a part of it, nor is another binder the frame keeps a
    part of it or it one of that one; and it is no variable closures copy. *)
-type save = {save_at : Occurrence.t; saved : (Core_binder.t * int * bool) list}
+type save = {save_at : Core.Occurrence.t; saved : (Core_binder.t * int * bool) list}
 
 (* A call that may enter a frame of the machine the region is lowered as
    ({!machine_call}), by its occurrence: what it enters an adopted entry
    with besides its arguments, by level, with whether nothing after the
    call or beside it reads it, and the arguments that are variables, by
    level and read. *)
-type entry_read = {call : Occurrence.t; captured : (int * bool) list; arguments : (int * Occurrence.t) list}
+type entry_read = {call : Core.Occurrence.t; captured : (int * bool) list; arguments : (int * Core.Occurrence.t) list}
 
 (* What a copy of a variable's value is: its bits, a retain of the block it
    points at, or a semantic copy ({!Use}). *)
 type copy = Bits | Retain | Duplicate
 
 type t = {
-  root : ml_ast;
+  root : Core.Expr.t;
   n_outer : int;  (* the type variables of the head the region is generated under *)
-  outer : int -> ml_type option;  (* the Core type of a variable bound outside the region, by its index at the root *)
+  outer : int -> Core.Type.t option;  (* the Core type of a variable bound outside the region, by its index at the root *)
   resumes : resumes option;
   certain : bool;  (* whether the region is lowered as the machine resuming at [resumes] wherever it is generated *)
   root_owned : Levels.t;
   root_copied : Levels.t;  (* variables closures capture a copy of, owned by them alone *)
   arms : arm list;
   reads : read list;
-  owned : (Occurrence.t * bool) list;  (* whether the variable a read reads is owned there *)
-  read_types : (Occurrence.t * ml_type option) list;  (* the Core type of the variable a read reads, where known *)
+  owned : (Core.Occurrence.t * bool) list;  (* whether the variable a read reads is owned there *)
+  read_types : (Core.Occurrence.t * Core.Type.t option) list;  (* the Core type of the variable a read reads, where known *)
   captures : read list;  (* a lambda's capture of a variable, by the reads inside it *)
-  captured_owned : (Occurrence.t * bool) list;
-  copied_reads : Occurrence.t list;  (* reads of a variable closures copy *)
+  captured_owned : (Core.Occurrence.t * bool) list;
+  copied_reads : Core.Occurrence.t list;  (* reads of a variable closures copy *)
   entered : entered list;
   saves : save list;
-  saved_owned : (Occurrence.t * Levels.t) list;  (* of each let [saves] names, the levels it keeps owned there *)
+  saved_owned : (Core.Occurrence.t * Levels.t) list;  (* of each let [saves] names, the levels it keeps owned there *)
   entries : entry_read list;
-  entry_owned : (Occurrence.t * Levels.t) list;  (* of each call [entries] names, the levels owned there *)
+  entry_owned : (Core.Occurrence.t * Levels.t) list;  (* of each call [entries] names, the levels owned there *)
 }
 
 let empty =
-  { root = MLdummy Kprop;
+  { root = Core.Expr.Erased_value Core.Erasure_reason.Proof;
     n_outer = 0;
     outer = (fun _ -> None);
     resumes = None;
@@ -118,19 +117,31 @@ let empty =
    binders deep. *)
 let closure_reads d t =
   let rec go d' acc = function
-    | MLrel (i, o) -> if d' - i < d then (d' - i, o) :: acc else acc
-    | MLmagic (_, t, _) -> go d' acc t
-    | MLapp (f, args) -> List.fold_left (go d') acc (f :: args)
-    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go d') acc args
-    | MLparray (elems, default) -> List.fold_left (go d') acc (default :: Array.to_list elems)
-    | MLlam (_, _, b) -> go (d' + 1) acc b
-    | MLletin (_, _, a, b, _) -> go (d' + 1) (go d' acc a) b
-    | MLfix (_, fs, defs, _, _) -> Array.fold_left (go (d' + Array.length fs)) acc defs
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Bound_variable {index = i; occurrence = o} -> if d' - i < d then (d' - i, o) :: acc else acc
+    | Core.Expr.Coerce {value = t; _}
+    | Core.Expr.Boxed_value {value = t; _}
+    | Core.Expr.Lambda_group_barrier {value = t; _} ->
+      go d' acc t
+    | Core.Expr.Apply {callee = f; arguments = args} -> List.fold_left (go d') acc (f :: args)
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.fold_left (go d') acc args
+    | Core.Expr.Persistent_array {elements = elems; default} ->
+      List.fold_left (go d') acc (default :: Array.to_list elems)
+    | Core.Expr.Lambda {body = b; _} -> go (d' + 1) acc b
+    | Core.Expr.Let {value = a; body = b; _} -> go (d' + 1) (go d' acc a) b
+    | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+      Array.fold_left (go (d' + Array.length fs)) acc defs
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       Array.fold_left
-        (fun acc (ids, _, _, body) -> go (d' + List.length ids) acc body)
+        (fun acc {Core.Match.Branch.binders = ids; body = body; _} -> go (d' + List.length ids) acc body)
         (go d' acc scrut) branches
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> acc
+    | Core.Expr.Global _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ -> acc
   in
   go d [] t
 
@@ -142,12 +153,12 @@ let worth_moving_ref worth r args =
      || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
 
 let rec worth_moving = function
-  | Tglob (r, args, _) -> worth_moving_ref worth_moving r args
-  | Tarr _ | Tvar _ | Tapp _ -> true
+  | Core.Type.Global_app {head = r; type_arguments = args; _} -> worth_moving_ref worth_moving r args
+  | Core.Type.Arrow _ | Core.Type.Variable _ | Core.Type.Variable_app _ -> true
   (* A type nothing determined, an index a constructor hides, is held in the
      box ([std::any]), which a move hands over. *)
-  | Topen _ -> true
-  | Tmeta {contents = Some t} -> worth_moving t
+  | Core.Type.Open _ -> true
+  | Core.Type.Meta {contents = Some t} -> worth_moving t
   | _ -> false
 
 let rec worth_moving_cpp : type p. p Cpp_ir.Type.t -> bool = function
@@ -179,30 +190,31 @@ let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r
    inference left unsolved, a metavariable or a hole. *)
 let rec copy_of_type ty =
   match ty with
-  | Tmeta {contents = Some t} -> copy_of_type t
-  | Tarr (d, rest) when Mlutil.isTdummy d -> copy_of_type rest
-  | Tarr _ -> Some Retain
+  | Core.Type.Meta {contents = Some t} -> copy_of_type t
+  | Core.Type.Arrow {parameter = d; result = rest} when Mlutil.isTdummy d -> copy_of_type rest
+  | Core.Type.Arrow _ -> Some Retain
   (* An instance of a class is an object of its own, a singleton class's
      too, whatever its method's type. *)
-  | Tglob (r, _, _) when Table.is_typeclass r -> Some Duplicate
-  | Tglob ((Names.GlobRef.ConstRef kn as r), args, _)
+  | Core.Type.Global_app {head = r; _} when Table.is_typeclass r -> Some Duplicate
+  | Core.Type.Global_app {head = (Names.GlobRef.ConstRef kn as r); type_arguments = args; _}
     when (not (Table.is_custom r)) && not (Table.is_promoted_type_var r || Table.is_erased_type_const r) -> (
     match Table.lookup_typedef_unchecked kn with
     | Some body -> copy_of_type (Mlutil.type_subst_list args body)
     | None -> Some Duplicate )
-  | Tglob (r, _, _) when shares_ref r -> Some Retain
+  | Core.Type.Global_app {head = r; _} when shares_ref r -> Some Retain
   (* A mapped type's copy copies its arguments: it is its bits only where
      theirs are. *)
-  | Tglob (r, args, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} ->
     Some (if worth_moving_ref (fun t -> copy_of_type t <> Some Bits) r args then Duplicate else Bits)
-  | Tvar _ | Tapp _ | Topen _ | Tstring -> Some (if worth_moving ty then Duplicate else Bits)
-  | Taxiom -> Some Duplicate
-  | Tdummy _ -> Some Bits
+  | Core.Type.Variable _ | Core.Type.Variable_app _ | Core.Type.Open _ | Core.Type.String ->
+    Some (if worth_moving ty then Duplicate else Bits)
+  | Core.Type.Axiom -> Some Duplicate
+  | Core.Type.Erased _ -> Some Bits
   (* A type erasure removed -- an existential index, a variable of the
      callee's the scope cannot name, a type computed from a value -- is held
      as a value of its own, in a box or deduced. *)
-  | Tunknown -> Some Duplicate
-  | Tmeta _ | Thole _ -> None
+  | Core.Type.Unknown -> Some Duplicate
+  | Core.Type.Meta _ | Core.Type.Hole _ -> None
 
 (* The same, of the C++ type a variable is declared at.  An abbreviation
    the program defines is read as its Core definition: one naming an
@@ -217,18 +229,19 @@ let rec copy_of_cpp : type p. p Cpp_ir.Type.t -> copy =
     when (not (Table.is_custom r))
          && (not (Table.is_promoted_type_var r || Table.is_erased_type_const r))
          && Option.has_some (Table.lookup_typedef_unchecked kn) -> (
-    let rec body = function Tmeta {contents = Some t} -> body t | t -> t in
+    let rec body = function Core.Type.Meta {contents = Some t} -> body t | t -> t in
     match body (Option.get (Table.lookup_typedef_unchecked kn)) with
     (* One of its arguments, under another name. *)
-    | Tvar (_, j) when j >= 1 && j <= List.length args -> copy_of_cpp (List.nth args (j - 1))
+    | Core.Type.Variable {variable = j; _} when j >= 1 && j <= List.length args -> copy_of_cpp (List.nth args (j - 1))
     | _ -> (
-      match copy_of_type (Tglob (r, [], [])) with
+      match copy_of_type (Core.Type.Global_app {head = r; type_arguments = []; index_arguments = []}) with
       | Some Retain -> Retain
       | Some c when args = [] -> c
       | Some _ | None -> if worth_moving_cpp ty then Duplicate else Bits ) )
   | Entity_application (r, args, _) ->
     if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) r args then Duplicate else Bits
-  | Foreign {custom; types; _} -> if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) custom types then Duplicate else Bits
+  | Foreign {custom; types; _} ->
+    if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) custom types then Duplicate else Bits
   (* A box holds a value of its own, which a copy copies. *)
   | Any | Obligation Opaque_type -> Duplicate
   | Const t | In_namespace (_, t) | Reference (_, t) | Non_deduced t -> copy_of_cpp t
@@ -270,19 +283,19 @@ let leave parents d s =
       if storage l < d then Some l else List.find_opt (fun p -> p < d) (ancestors parents l) )
     s
 
-(* The component of the pair variable [MLrel i] that [r] applied to it reads,
+(* The component of the pair variable [Core.Expr.Bound_variable i] that [r] applied to it reads,
    [t] standing [d] binders deep: [r] is an inline custom spelled as the
    projection of its argument's [first] or [second] member. *)
 let projected d r t =
   match (Table.inline_custom_text r, t) with
-  | Some s, MLrel (i, o) when Table.is_inline_custom r -> (
+  | Some s, Core.Expr.Bound_variable {index = i; occurrence = o} when Table.is_inline_custom r -> (
     match Foreign_template.pair_projection_field s with
     | Some "first" -> Some (component (d - i) 0, o)
     | Some "second" -> Some (component (d - i) 1, o)
     | _ -> None )
   | _ -> None
 
-let rec strip = function MLmagic (_, t, _) -> strip t | t -> t
+let rec strip = function Core.Expr.Coerce {value = t; _} | Core.Expr.Boxed_value {value = t; _} | Core.Expr.Lambda_group_barrier {value = t; _} -> strip t | t -> t
 
 (* What a match's pattern variables are parts of: the variable it matches,
    when it matches one. *)
@@ -292,7 +305,7 @@ let bind_parts parents d ~n scrut =
     else
       let parents =
         match strip scrut with
-        | MLrel (i, _) -> Parents.add l (d - i) parents
+        | Core.Expr.Bound_variable {index = i; _} -> Parents.add l (d - i) parents
         | _ -> Parents.remove l parents
       in
       go parents (l + 1)
@@ -312,28 +325,40 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
   let closure_frees = frees ~parts and closure_under = under ~parts in
   let free = free ~parts ~outside and frees = frees ~parts ~outside and under = under ~parts ~outside in
   match t with
-  | MLrel (i, _) ->
+  | Core.Expr.Bound_variable {index = i; _} ->
     if i > 0 && not (Levels.mem (d - i) outside) then Levels.singleton (d - i) else Levels.empty
-  | MLmagic (_, t, _) -> free parents d t
-  | MLapp (MLglob {callee = r; _}, [arg]) when parts && projected d r (strip arg) <> None ->
+  | Core.Expr.Coerce {value = t; _}
+  | Core.Expr.Boxed_value {value = t; _}
+  | Core.Expr.Lambda_group_barrier {value = t; _} ->
+    free parents d t
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _};
+                     arguments = [arg]} when parts && projected d r (strip arg) <> None ->
     Levels.singleton (fst (Option.get (projected d r (strip arg))))
-  | MLapp (f, args) -> frees parents d (f :: args)
-  | MLcons (_, _, args, _) | MLtuple args -> frees parents d args
-  | MLparray (elems, default) -> frees parents d (default :: Array.to_list elems)
-  | MLlam (_, _, body) -> whole (closure_under parents d ~n:1 body)
-  | MLletin (_, _, a, b, _) -> Levels.union (free parents d a) (under parents d ~n:1 b)
-  | MLfix (_, fs, defs, _, _) ->
+  | Core.Expr.Apply {callee = f; arguments = args} -> frees parents d (f :: args)
+  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> frees parents d args
+  | Core.Expr.Persistent_array {elements = elems; default} -> frees parents d (default :: Array.to_list elems)
+  | Core.Expr.Lambda {body; _} -> whole (closure_under parents d ~n:1 body)
+  | Core.Expr.Let {value = a; body = b; _} -> Levels.union (free parents d a) (under parents d ~n:1 b)
+  | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
     let n = Array.length fs in
     let parents' = bind parents d ~n in
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
-  | MLcase (_, scrut, branches, _) ->
+  | Core.Expr.Match {scrutinee = scrut; branches; _} ->
     Array.fold_left
-      (fun acc (ids, _, _, body) ->
+      (fun acc {Core.Match.Branch.binders = ids; body = body; _} ->
         let n = List.length ids in
         let parents' = bind_parts parents d ~n scrut in
         Levels.union acc (leave parents' d (free parents' (d + n) body)) )
       (free parents d scrut) branches
-  | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> Levels.empty
+  | Core.Expr.Global _
+  | Core.Expr.Runtime_error _
+  | Core.Expr.Erased_value _
+  | Core.Expr.Axiom_value _
+  | Core.Expr.UInt63 _
+  | Core.Expr.Numeral _
+  | Core.Expr.Float64 _
+  | Core.Expr.String _ ->
+    Levels.empty
 
 and frees ?parts ?outside parents d ts =
   List.fold_left (fun acc t -> Levels.union acc (free ?parts ?outside parents d t)) Levels.empty ts
@@ -351,13 +376,13 @@ and whole s = Levels.map storage s
    a function template, or inlined at its uses, instead. *)
 let closure_local ~n_outer ty a =
   match a with
-  | MLfix (_, ids, _, _, _) ->
+  | Core.Expr.Fixpoint {functions = ids; _} | Core.Expr.Cofixpoint {functions = ids; _} ->
     not (Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
-  | MLlam _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
+  | Core.Expr.Lambda _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
   | _ -> false
 
 let at_instance arms occurrence =
-  List.exists (function Instance o -> Occurrence.equal o occurrence | Rebuild _ | Fields _ -> false) arms
+  List.exists (function Instance o -> Core.Occurrence.equal o occurrence | Rebuild _ | Fields _ -> false) arms
 
 (* Whether the closure a let binds may read what it closes over at its uses
    rather than where it is made: a local fixpoint closes over its
@@ -367,15 +392,18 @@ let at_instance arms occurrence =
    included, is a value holding copies. *)
 let reads_at_uses ~n_outer ~arms ty a occurrence =
   match strip a with
-  | MLfix _ -> true
-  | MLlam _ -> Ml_type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
+  | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> true
+  | Core.Expr.Lambda _ -> Ml_type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
   | _ -> false
 
 (* A record's field read out of it, by its projection or by the match
    taking the record apart that returns one field: the record read. *)
 let field_of = function
-  | MLapp (MLglob {callee = r; _}, [t]) when Table.is_projection r -> Some t
-  | MLcase (ty, t, [|(ids, _, _, MLrel (k, _))|], _)
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = [t]} when Table.is_projection r -> Some t
+  | Core.Expr.Match {scrutinee_type = ty;
+                     scrutinee = t;
+                     branches = [|{Core.Match.Branch.binders = ids;
+                                   body = Core.Expr.Bound_variable {index = k; _}; _}|]; _}
     when Table.record_fields_of_type ty <> [] && k <= List.length ids ->
     Some t
   | _ -> None
@@ -383,8 +411,11 @@ let field_of = function
 (* Whether translation spells [t] as often as it is mentioned, being a
    variable or a record field of one. *)
 let rec spelled_in_place = function
-  | MLrel _ -> true
-  | MLmagic (_, t, _) -> spelled_in_place t
+  | Core.Expr.Bound_variable _ -> true
+  | Core.Expr.Coerce {value = t; _}
+  | Core.Expr.Boxed_value {value = t; _}
+  | Core.Expr.Lambda_group_barrier {value = t; _} ->
+    spelled_in_place t
   | t -> ( match field_of t with Some t -> spelled_in_place t | None -> false )
 
 (* Whether a match may take its scrutinee's value, as translation generates
@@ -406,9 +437,10 @@ let scrutinee_consumed ty scrut branches =
   | Record _ -> true
   | Variant ->
     Array.for_all
-      (fun (_, _, pat, _) ->
+      (fun {Core.Match.Branch.pattern = pat; _} ->
         match pat with
-        | Pusual (Names.GlobRef.ConstructRef (ip, _)) | Pcons (Names.GlobRef.ConstructRef (ip, _), _) ->
+        | Core.Pattern.Shallow_constructor (Names.GlobRef.ConstructRef (ip, _))
+        | Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _} ->
           Table.is_enum_inductive (Names.GlobRef.IndRef ip)
         | _ -> true )
       branches
@@ -423,16 +455,20 @@ let evaluations r =
 let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
 
 (* What an application, perhaps applied in turn, applies: through casts. *)
-let rec call_head f = match strip f with MLapp (g, _) -> call_head g | h -> h
+let rec call_head f = match strip f with Core.Expr.Apply {callee = g; _} -> call_head g | h -> h
 
 (* The call [a] makes, by its occurrence, where it is one -- of a global, of
    a local fixpoint's member, or a local fixpoint applied where it is
    written -- applied in one application or several. *)
 let call_of a =
   match strip a with
-  | MLapp (f, _) -> (
+  | Core.Expr.Apply {callee = f; _} -> (
     match call_head f with
-    | MLglob {occurrence; _} | MLrel (_, occurrence) | MLfix (_, _, _, _, occurrence) -> Some occurrence
+    | Core.Expr.Global {occurrence; _}
+    | Core.Expr.Bound_variable {occurrence; _}
+    | Core.Expr.Fixpoint {occurrence; _}
+    | Core.Expr.Cofixpoint {occurrence; _} ->
+      Some occurrence
     | _ -> None )
   | _ -> None
 
@@ -446,9 +482,9 @@ let bound_in_place ty branches = Match_kind.bound_in_place (Match_kind.classify 
 let rec ending_calls a =
   match (call_of a, strip a) with
   | Some call, _ -> [call]
-  | None, MLcase (ty, _, branches, _) when bound_in_place ty branches ->
-    List.concat_map (fun (_, _, _, b) -> ending_calls b) (Array.to_list branches)
-  | None, MLletin (_, _, _, b, _) -> ending_calls b
+  | None, Core.Expr.Match {scrutinee_type = ty; branches; _} when bound_in_place ty branches ->
+    List.concat_map (fun {Core.Match.Branch.body = b; _} -> ending_calls b) (Array.to_list branches)
+  | None, Core.Expr.Let {body = b; _} -> ending_calls b
   | None, _ -> []
 
 (* The variables, by level, that a frame keeps across the calls [a] ends
@@ -462,7 +498,8 @@ let resume_of resumes d a occurrence =
   | Some _, [] | None, _ -> None
   | Some {origin; depth; resume_at; _}, ending -> (
     match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:(Binding occurrence) ()) with
-    | Some ({calls; _} as r) when List.exists (fun c -> List.exists (Occurrence.equal c) calls) ending -> Some (depth, r)
+    | Some ({calls; _} as r) when List.exists (fun c -> List.exists (Core.Occurrence.equal c) calls) ending ->
+      Some (depth, r)
     | Some _ | None -> None )
 
 let kept_binders resumes d a occurrence =
@@ -498,20 +535,20 @@ let machine_call resumes d f =
   | None -> None
   | Some {origin; entry_captures; _} -> (
     match strip f with
-    | MLfix (_, _, _, _, at) -> Some (at, `Fixpoint)
+    | Core.Expr.Fixpoint {occurrence = at; _} | Core.Expr.Cofixpoint {occurrence = at; _} -> Some (at, `Fixpoint)
     | _ -> (
       match (call_head f, entry_captures) with
-      | MLglob {callee; occurrence; _}, _ when Common.globref_equal callee origin -> Some (occurrence, `Plain)
-      | MLrel (i, occurrence), Some k when d - i = -k -> Some (occurrence, `Member)
-      | MLrel (_, occurrence), _ -> Some (occurrence, `Plain)
+      | Core.Expr.Global {callee; occurrence; _}, _ when Common.globref_equal callee origin -> Some (occurrence, `Plain)
+      | Core.Expr.Bound_variable {index = i; occurrence}, Some k when d - i = -k -> Some (occurrence, `Member)
+      | Core.Expr.Bound_variable {occurrence; _}, _ -> Some (occurrence, `Plain)
       | _ -> None ) )
 
 (* A frame saved where the right-hand side of the let at [let_at] ends in one of
    the calls [calls]: the binders it keeps, with their levels, and what is
    read once the let is done. *)
 type tail_save = {
-  let_at : Occurrence.t;
-  calls : Occurrence.t list;
+  let_at : Core.Occurrence.t;
+  calls : Core.Occurrence.t list;
   kept_at : (Core_binder.t * int) list;
   kept : Levels.t;
   outside : Levels.t;
@@ -543,7 +580,8 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
     entries :=
       { call;
         captured = List.map (fun l -> (l, last l)) (Levels.elements captured);
-        arguments = List.filter_map (fun a -> match strip a with MLrel (i, o) -> Some (d - i, o) | _ -> None) args }
+        arguments = List.filter_map (fun a -> match strip a with Core.Expr.Bound_variable {index = i;
+                                                                                           occurrence = o} -> Some (d - i, o) | _ -> None) args }
       :: !entries
   in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
@@ -565,7 +603,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
     (* A call a frame is saved for, where the right-hand side of the let
        the machine resumes at ends in it: the save is made before its
        arguments are evaluated. *)
-    | _ when Option.cata (fun s -> Option.cata (fun c -> List.exists (Occurrence.equal c) s.calls) false (call_of t)) false tail
+    | _ when Option.cata (fun s -> Option.cata (fun c -> List.exists (Core.Occurrence.equal c) s.calls) false (call_of t)) false tail
       ->
       let s = Option.get tail in
       let saved, after_save = Levels.partition (fun l -> Levels.mem (storage l) s.kept) live in
@@ -574,8 +612,8 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
          well. *)
       let entered =
         match (entry_captures, strip t) with
-        | Some (member, captures), MLapp (f, _) -> (
-          match call_head f with MLrel (i, _) when d - i = member -> Lazy.force captures | _ -> Levels.empty )
+        | Some (member, captures), Core.Expr.Apply {callee = f; _} -> (
+          match call_head f with Core.Expr.Bound_variable {index = i; _} when d - i = member -> Lazy.force captures | _ -> Levels.empty )
         | _ -> Levels.empty
       in
       let read_after = Levels.union (free parents d t) (Levels.union s.outside entered) in
@@ -586,20 +624,25 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       in
       saves := {save_at = s.let_at; saved = List.map (fun (b, l) -> (b, l, last l)) s.kept_at} :: !saves;
       Levels.union saved (walk ~consumed ~pinned parents d after_save t)
-    | MLrel (i, occurrence) -> read (d - i) occurrence
-    | MLmagic (_, t, _) -> walk ~consumed ?tail ~pinned parents d live t
+    | Core.Expr.Bound_variable {index = i; occurrence} -> read (d - i) occurrence
+    | Core.Expr.Coerce {value = t; _}
+    | Core.Expr.Boxed_value {value = t; _}
+    | Core.Expr.Lambda_group_barrier {value = t; _} ->
+      walk ~consumed ?tail ~pinned parents d live t
     (* A component read through its projection is a part of the pair: a read
        of the other component is not a later read of it. *)
-    | MLapp (MLglob {callee = r; _}, [arg]) when projected d r (strip arg) <> None ->
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _};
+                       arguments = [arg]} when projected d r (strip arg) <> None ->
       let l, occurrence = Option.get (projected d r (strip arg)) in
       read l occurrence
     (* A field is read out of its record where the projection stands. *)
-    | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_projection r -> walk ~consumed ~pinned parents d live arg
-    | MLcase (_, scrut, _, _) when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = [arg]} when Table.is_projection r ->
+      walk ~consumed ~pinned parents d live arg
+    | Core.Expr.Match {scrutinee = scrut; _} when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
     (* A bind generated as sequencing runs its action and then its
        continuation's body, inline, though a mapping spells the same bind as
        an inline custom where it is generated as a call. *)
-    | MLapp (MLglob use, (_ :: _ :: _ as args)) when sequential_bind use -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind use -> (
       let action, k = Common.last_two args in
       match Mlutil.collect_lams k with
       | [], _ -> walk ~pinned parents d (walk ~consumed:false ~pinned parents d live k) action
@@ -610,13 +653,14 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
         let live_body = walk ~consumed ?tail ~pinned parents' (d + n) live body in
         walk ?tail:(saved_at d action use.occurrence ~outside:(Levels.union live pinned)) ~pinned parents d
           (leave parents' d live_body) action )
-    | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args} when Table.is_inline_custom r ->
       unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A local fixpoint applied where it is written binds its parameters to
        its arguments in order: each is followed by the later ones alone, and
        by what the fixpoint reads, which it reads as it runs, after them all.
        What it copies, it copies before any of them is evaluated. *)
-    | MLapp ((MLfix (_, _, _, _, at) as f), args) ->
+    | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {occurrence = at; _} | Core.Expr.Cofixpoint {occurrence = at; _} as f);
+                       arguments = args} ->
       (* A machine adopting the fixpoint enters it here with what it
          captures. *)
       if Option.has_some (machine_call resumes d f) then enters at (free parents d f) args ~pinned parents d live;
@@ -629,20 +673,20 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
         :: !entered;
       List.fold_right (fun t live -> walk ~pinned parents d live t) args (Levels.union live (free parents d f))
     (* A function is called through: [std::move(f)(x)] still calls [f]. *)
-    | MLapp (f, args) ->
+    | Core.Expr.Apply {callee = f; arguments = args} ->
       ( match (machine_call resumes d f, entry_captures) with
       | Some (call, `Member), Some (_, captures) -> enters call (Lazy.force captures) args ~pinned parents d live
       | Some (call, (`Member | `Plain | `Fixpoint)), _
-        when List.exists (fun a -> match strip a with MLrel _ -> true | _ -> false) args ->
+        when List.exists (fun a -> match strip a with Core.Expr.Bound_variable _ -> true | _ -> false) args ->
         enters call Levels.empty args ~pinned parents d live
       | _ -> () );
       unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
-    | MLcons (_, _, args, _) | MLtuple args -> unsequenced ~pinned parents d live args
-    | MLparray (elems, default) ->
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> unsequenced ~pinned parents d live args
+    | Core.Expr.Persistent_array {elements = elems; default} ->
       unsequenced ~pinned parents d live (default :: Array.to_list elems)
     (* A closure reads what it closes over where it is made; its own body
        is a region of its own. *)
-    | MLlam _ | MLfix _ ->
+    | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ ->
       let captured = free parents d t in
       (* A lambda copies what it captures when it is made, all at once; so
          does a local fixpoint generated as closures, though one generated
@@ -654,7 +698,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
           captures := {occurrence; last; last_whole = last; consumed = true} :: !captures )
         (closure_reads d t);
       Levels.union live captured
-    | MLletin (_, ty, a, b, occurrence) ->
+    | Core.Expr.Let {binder_type = ty; value = a; body = b; occurrence; _} ->
       let pinned_b = if reads_at_uses ~n_outer ~arms ty a occurrence then Levels.union pinned (free parents d a) else pinned in
       let parents_b = after_resume (bind parents d ~n:1) d a occurrence in
       let live_b = walk ~consumed ?tail ~pinned:pinned_b parents_b (d + 1) live b in
@@ -663,10 +707,10 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
        evaluation -- a field of the record it names, a component of the pair
        it hands over -- so what follows the scrutinee is what the branches
        read besides them. *)
-    | MLcase (ty, scrut, branches, _) ->
+    | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; _} ->
       let after_scrut =
         Array.fold_left
-          (fun acc (ids, _, _, body) ->
+          (fun acc {Core.Match.Branch.binders = ids; body = body; _} ->
             let n = List.length ids in
             let tail = if bound_in_place ty branches then tail else None in
             let live_body = walk ~consumed ?tail ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
@@ -676,7 +720,14 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       walk
         ~consumed:(scrutinee_consumed ty scrut branches)
         ~pinned parents d after_scrut scrut
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> live
+    | Core.Expr.Global _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ -> live
   (* What follows a resume at the binder [a] binds at [occurrence], [d]
      deep, reads each binder the frame holds itself in a field of its own, a
      part of no other. *)
@@ -713,7 +764,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
 type fate = Last_use | Read_again | Inspected | Unplanned
 
 let fate_in ?(whole = false) reads o =
-  match List.filter (fun r -> Occurrence.equal o r.occurrence) reads with
+  match List.filter (fun r -> Core.Occurrence.equal o r.occurrence) reads with
   | [] -> Unplanned
   | copies ->
     if not (List.for_all (fun r -> if whole then r.last_whole else r.last) copies) then Read_again
@@ -725,9 +776,9 @@ let fate ?whole p o = fate_in ?whole p.reads o
 (* The inductive a match's branches take apart, if one names a constructor. *)
 let matched_inductive branches =
   Array.fold_left
-    (fun acc (_, _, pat, _) ->
+    (fun acc {Core.Match.Branch.pattern = pat; _} ->
       match (acc, pat) with
-      | None, (Pusual (Names.GlobRef.ConstructRef (ip, _)) | Pcons (Names.GlobRef.ConstructRef (ip, _), _))
+      | None, (Core.Pattern.Shallow_constructor (Names.GlobRef.ConstructRef (ip, _)) | Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _})
         ->
         Some (Names.GlobRef.IndRef ip)
       | _ -> acc )
@@ -739,11 +790,16 @@ let matched_inductive branches =
    itself is taken apart as a value the region owns; one named through an
    application is read in place. *)
 let rec scrutinee_storage = function
-  | MLrel (i, o) -> Some (i, o)
-  | MLmagic (_, t, _) | MLapp (t, _) -> scrutinee_storage t
+  | Core.Expr.Bound_variable {index = i; occurrence = o} -> Some (i, o)
+  | Core.Expr.Coerce {value = t; _}
+  | Core.Expr.Boxed_value {value = t; _}
+  | Core.Expr.Lambda_group_barrier {value = t; _}
+  | Core.Expr.Apply {callee = t; _} ->
+    scrutinee_storage t
   | _ -> None
 
-let scrutinee_var scrut = match strip scrut with MLrel (i, o) -> Some (i, o) | _ -> None
+let scrutinee_var scrut = match strip scrut with Core.Expr.Bound_variable {index = i;
+                                                                           occurrence = o} -> Some (i, o) | _ -> None
 
 (* The binding modes a region's lowering gives its binders, as functions of
    whether a read's variable is owned where it is read ([owned]) and of the
@@ -763,7 +819,7 @@ module Binding = struct
     &&
     match scrutinee_var scrut with
     | Some (i, o) ->
-      let ids, _, _, body = branches.(0) in
+      let {Core.Match.Branch.binders = ids; body = body; _} = branches.(0) in
       owned i o && Escape.nb_occur_match (i + List.length ids) body = 0
     | None -> true
 
@@ -773,7 +829,9 @@ module Binding = struct
     Escape.is_shared_ptr_type ty
     &&
     match a with
-    | MLcase (_, MLrel (k, o), [|(_, _, _, MLrel _)|], _) -> not (owned k o && fate o = Last_use)
+    | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = k; occurrence = o};
+                       branches = [|{Core.Match.Branch.body = Core.Expr.Bound_variable _; _}|]; _} ->
+      not (owned k o && fate o = Last_use)
     | _ -> false
 
   (* A variant match takes apart a scrutinee the region owns, binding its
@@ -849,14 +907,17 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
   let rec own owned d t =
     let all = List.iter (own owned d) in
     match t with
-    | MLrel (i, occurrence) ->
+    | Core.Expr.Bound_variable {index = i; occurrence} ->
       out := (occurrence, Levels.mem (d - i) owned) :: !out;
       read_types := (occurrence, read_type (d - i)) :: !read_types;
       if Levels.mem (d - i) copied then copied_reads := occurrence :: !copied_reads
-    | MLmagic (_, t, _) -> own owned d t
+    | Core.Expr.Coerce {value = t; _}
+    | Core.Expr.Boxed_value {value = t; _}
+    | Core.Expr.Lambda_group_barrier {value = t; _} ->
+      own owned d t
     (* A bind generated as sequencing binds its continuation's parameter to
        the action's value. *)
-    | MLapp (MLglob use, (_ :: _ :: _ as args)) when sequential_bind use -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind use -> (
       let action, k = Common.last_two args in
       own owned d action;
       match Mlutil.collect_lams k with
@@ -868,7 +929,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
         saving d action use.occurrence owned (fun () ->
             resuming added (fun () ->
                 own (if worth_moving ty then Levels.add (d + n - 1) owned_k else owned_k) (d + n) body ) ) )
-    | MLapp (f, args) ->
+    | Core.Expr.Apply {callee = f; arguments = args} ->
       let entered = entering d f in
       Option.iter (fun call -> entry_owned := (call, Levels.union owned (frame_held_now ())) :: !entry_owned) entered;
       (* A function the region is handed -- a variable bound outside it, not
@@ -878,7 +939,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
       let handed =
         match (machine_call resumes d f, call_head f) with
         | Some (_, `Member), _ -> false
-        | _, MLrel (i, _) -> d - i < 0
+        | _, Core.Expr.Bound_variable {index = i; _} -> d - i < 0
         | _ -> false
       in
       if handed then begin
@@ -886,32 +947,32 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
         List.iter (own (Levels.diff owned !resumed) d) args
       end
       else all (f :: args)
-    | MLcons (_, _, args, _) | MLtuple args -> all args
-    | MLparray (elems, default) -> all (default :: Array.to_list elems)
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> all args
+    | Core.Expr.Persistent_array {elements = elems; default} -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
-    | MLlam _ | MLfix _ ->
+    | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ ->
       List.iter
         (fun (l, o) -> captured := (o, Levels.mem l owned || Levels.mem l copied) :: !captured)
         (closure_reads d t)
-    | MLletin (x, ty, a, b, occurrence) ->
+    | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; occurrence} ->
       own owned d a;
       bound d ty;
       (* What a local fixpoint closes over, it reads by reference. *)
       let owned_b =
-        match a with MLfix _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
+        match a with Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
       in
       let owned_b, added = after_resume owned_b d a occurrence in
       saving d a occurrence owned (fun () ->
           resuming added (fun () ->
               own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b ) )
-    | MLcase (ty, scrut, branches, _) ->
+    | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; _} ->
       own owned d scrut;
       Array.iteri
-        (fun k ((ids, _, pat, body) as branch) ->
+        (fun k ({Core.Match.Branch.binders = ids; pattern = pat; body = body; _} as branch) ->
           let enclosing = !handles in
           List.iteri (fun i (_, ty) -> bound (d + i) ty) ids;
           ( match pat with
-          | (Pusual r | Pcons (r, _)) when not (Table.is_custom_match branches) ->
+          | (Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _}) when not (Table.is_custom_match branches) ->
             let stored = Ml_type_util.Ctor_fields.of_ctor r in
             List.iteri
               (fun i _ -> if Ml_type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
@@ -920,7 +981,14 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
           own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body;
           handles := enclosing )
         branches
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> ()
+    | Core.Expr.Global _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ -> ()
   (* [f], which plans what follows a binding of [a] at [occurrence], [d]
      deep: where the machine resumes there, a binder an enclosing frame of
      the turn holds is the handler's own, for the frame saved here to take;
@@ -941,14 +1009,15 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
   and owned_var owned d i _ = Levels.mem (d - i) owned
   and let_owned owned d x ty a occurrence =
     match (x, a) with
-    | Dummy, _ -> false
+    | Core.Binder_name.Anonymous, _ -> false
     (* A closure bound to a local is a value like any other. *)
-    | _, (MLfix _ | MLlam _) -> at_instance arms occurrence || closure_local ~n_outer ty a
+    | _, (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ | Core.Expr.Lambda _) ->
+      at_instance arms occurrence || closure_local ~n_outer ty a
     | _ ->
       (not (Ml_type_util.ml_type_is_unit ty))
       && worth_moving ty
       && not (Binding.projects_in_place ~owned:(owned_var owned d) ~fate:(fate_in reads) ty a)
-  and branch_owned owned d case ty scrut branches k (ids, _, pat, body) =
+  and branch_owned owned d case ty scrut branches k {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} =
     let n = List.length ids in
     let fields p =
       Levels.of_list (List.filteri (fun i _ -> p i (List.nth ids i)) (List.init n (fun i -> d + i)))
@@ -963,7 +1032,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
     | Some (i, o)
       when List.exists
              (function
-               | Rebuild a -> a.branch = k && Occurrence.equal a.scrutinee o
+               | Rebuild a -> a.branch = k && Core.Occurrence.equal a.scrutinee o
                | Fields _ | Instance _ -> false )
              arms ->
       (* Rebuilding in the scrutinee's storage moves every field out of it. *)
@@ -981,7 +1050,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
         | None -> owned )
       | Variant -> (
         match (pat, ind) with
-        | (Pusual r | Pcons (r, _)), Some ind
+        | (Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _}), Some ind
           when (not (Table.is_enum_inductive ind)) && not (Table.is_shared_variant ind) ->
           (* An owned variant is matched through references into it: it is
              not read whole by value while the branch runs, and its fields
@@ -1044,9 +1113,10 @@ let region ?(owned = []) ?(copied = []) ?(outer = fun _ -> None) ?resumes ?(cert
 
 (* The branches of the match in [root] on the variable read at [o]. *)
 let branches_at root o =
-  let exception Found of ml_branch array in
+  let exception Found of Core.Match.Branch.t array in
   let rec find = function
-    | MLcase (_, scrut, brs, _) when Option.equal Occurrence.equal (Option.map snd (scrutinee_var scrut)) (Some o) ->
+    | Core.Expr.Match {scrutinee = scrut;
+                       branches = brs; _} when Option.equal Core.Occurrence.equal (Option.map snd (scrutinee_var scrut)) (Some o) ->
       raise (Found brs)
     | a -> Mlutil.ast_iter find a
   in
@@ -1061,9 +1131,9 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
     let consumers =
       match branches_at p.root scrutinee with
       | Some brs when branch < Array.length brs ->
-        let _, _, _, body = brs.(branch) in
+        let {Core.Match.Branch.body = body; _} = brs.(branch) in
         List.filter
-          (function MLcons (_, r, _, _) -> Common.globref_equal r constructor | _ -> false)
+          (function Core.Expr.Construct {constructor = r; _} -> Common.globref_equal r constructor | _ -> false)
           (Escape.tail_constructions body)
       | _ -> []
     in
@@ -1104,7 +1174,7 @@ let closure_local p ty a = if p == empty then None else Some (closure_local ~n_o
 (* Whether the variable the read [o] reads is owned there: [None] of a read
    not planned, and owned only where every copy of the read is. *)
 let owned_at p o =
-  match List.filter (fun (o', _) -> Occurrence.equal o o') p.owned with
+  match List.filter (fun (o', _) -> Core.Occurrence.equal o o') p.owned with
   | [] -> None
   | copies -> Some (List.for_all snd copies)
 
@@ -1116,12 +1186,12 @@ module Use = struct
   let of_copy = function Retain -> Share | Duplicate -> Clone | Bits -> Copy
 end
 
-let read_type_at p o = List.find_map (fun (o', ty) -> if Occurrence.equal o o' then Some ty else None) p.read_types
+let read_type_at p o = List.find_map (fun (o', ty) -> if Core.Occurrence.equal o o' then Some ty else None) p.read_types
 
 let read_is_typed p o =
   let rec typed = function
-    | Tmeta {contents = Some t} -> typed t
-    | Tunknown | Tmeta {contents = None} | Thole _ -> false
+    | Core.Type.Meta {contents = Some t} -> typed t
+    | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Hole _ -> false
     | _ -> true
   in
   match read_type_at p o with Some (Some t) -> typed t | Some None | None -> false
@@ -1159,7 +1229,7 @@ let copy_of_declared ty = Use.of_copy (copy_of_cpp ty)
    a read the plan moves, or a capture it takes by move.  The call alone
    leaves its arguments unordered. *)
 let evaluated_first p at =
-  match List.find_opt (fun e -> Occurrence.equal e.at at) p.entered with
+  match List.find_opt (fun e -> Core.Occurrence.equal e.at at) p.entered with
   | None -> []
   | Some e ->
     let moved (_, o) = moves p o || fate_in p.captures o = Last_use in
@@ -1180,20 +1250,24 @@ let evaluated_first p at =
 exception Unplanned_turn
 
 let turn_term ?(arguments = fun (c : Control_ir.Term.continue_) -> c.arguments) t =
-  let rec go : Control_ir.Term.t -> ml_ast = function
+  let rec go : Control_ir.Term.t -> Core.Expr.t = function
     | Loop inner -> go inner.body
-    | Let {binder; binder_type; value; body} -> MLletin (binder, binder_type, value, go body, Occurrence.fresh ())
+    | Let {binder; binder_type; value; body} ->
+      Core.Expr.Let {binder; binder_type; value; body = go body; occurrence = Core.Occurrence.fresh ()}
     | Match {scrutinee_type; scrutinee; branches} ->
-      MLcase
-        ( scrutinee_type,
-          scrutinee,
-          Array.of_list
-            (List.map (fun (b : Control_ir.Term.branch) -> (b.binders, b.result_type, b.pattern, go b.body)) branches),
-          Occurrence.fresh () )
+      Core.Expr.Match {scrutinee_type; scrutinee; branches = Array.of_list
+            (List.map
+               (fun (b : Control_ir.Term.branch) ->
+                 { Core.Match.Branch.binders = b.binders;
+                   result_type = b.result_type;
+                   pattern = b.pattern;
+                   body = go b.body })
+               branches); occurrence = Core.Occurrence.fresh ()}
     | Return t -> t
-    | Continue c -> MLapp (MLdummy Kprop, arguments c)
+    | Continue c -> Core.Expr.Apply {callee = Core.Expr.Erased_value Core.Erasure_reason.Proof; arguments = arguments c}
     | Continue_into {cells; next} ->
-      MLtuple (List.concat_map (fun (c : Control_ir.Term.cell) -> c.arguments) cells @ [MLapp (MLdummy Kprop, arguments next)])
+      Core.Expr.Tuple (List.concat_map (fun (c : Control_ir.Term.cell) -> c.arguments) cells @ [Core.Expr.Apply {callee = Core.Expr.Erased_value Core.Erasure_reason.Proof;
+                                                                                                                 arguments = arguments next}])
     | Resume _ | Entry _ -> raise Unplanned_turn
   in
   go t
@@ -1218,9 +1292,9 @@ let continue_moves (l : Control_ir.Term.loop) =
     let last_but_by_name (c : Control_ir.Term.continue_) i k o =
       moves ~whole:true p o
       ||
-      let rec erase n t = match t with MLrel (j, _) when j = n -> MLdummy Kprop | t -> Mlutil.ast_map_lift erase n t in
+      let rec erase n t = match t with Core.Expr.Bound_variable {index = j; _} when j = n -> Core.Expr.Erased_value Core.Erasure_reason.Proof | t -> Mlutil.ast_map_lift erase n t in
       let arguments (c' : Control_ir.Term.continue_) =
-        if Occurrence.equal c'.occurrence c.occurrence then List.mapi (fun j a -> if j = i then a else erase k a) c'.arguments
+        if Core.Occurrence.equal c'.occurrence c.occurrence then List.mapi (fun j a -> if j = i then a else erase k a) c'.arguments
         else c'.arguments
       in
       match turn_term ~arguments l.body with
@@ -1233,14 +1307,16 @@ let continue_moves (l : Control_ir.Term.loop) =
           match (reads_of (n - i + depth) argument, strip argument) with
           | [o], argument
             when worth_moving ty
-                 && (match argument with MLrel _ -> false | _ -> true)
+                 && (match argument with Core.Expr.Bound_variable _ -> false | _ -> true)
                  && fate ~whole:true p o = Last_use ->
             Move_parameter
           (* A local of the turn -- [depth] binders stand between the
              Continue and the loop's parameters -- owned, read whole, and
              read after by nothing but this Continue's other arguments,
              naming it. *)
-          | [], MLrel (k, o) when k <= depth && worth_moving ty && last_but_by_name c i k o -> Move_argument
+          | [], Core.Expr.Bound_variable {index = k;
+                                          occurrence = o} when k <= depth && worth_moving ty && last_but_by_name c i k o ->
+            Move_argument
           | _ -> Keep )
         (List.combine l.parameters c.arguments)
     in
@@ -1259,8 +1335,8 @@ let continue_moves (l : Control_ir.Term.loop) =
 
 let rec takes_record p t =
   match t with
-  | MLrel (_, o) -> moves p o
-  | MLglob {callee = r; _} -> Table.is_cofixpoint r || Table.is_throwing_value r
+  | Core.Expr.Bound_variable {occurrence = o; _} -> moves p o
+  | Core.Expr.Global {callee = r; _} -> Table.is_cofixpoint r || Table.is_throwing_value r
   | t -> ( match field_of t with Some r -> takes_record p r | None -> true )
 
 let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p)
@@ -1275,13 +1351,13 @@ let projects_in_place p = Binding.projects_in_place ~owned:(owned p) ~fate:(fate
    of it, is owned. *)
 let taken_by_closure p o =
   ( match fate ~whole:true p o with Last_use | Inspected -> true | Read_again | Unplanned -> false )
-  && (owned p 0 o || List.exists (Occurrence.equal o) p.copied_reads)
+  && (owned p 0 o || List.exists (Core.Occurrence.equal o) p.copied_reads)
 
 (* The variables, by de Bruijn index at [closure], that [closure] takes by
    move: every read of each inside it is a last use, of a variable owned
    where the closure is made. *)
 let moved_captures p closure =
-  let every l o = match List.filter (fun (o', _) -> Occurrence.equal o o') l with
+  let every l o = match List.filter (fun (o', _) -> Core.Occurrence.equal o o') l with
     | [] -> false
     | copies -> List.for_all snd copies
   in
@@ -1304,7 +1380,7 @@ let moved_captures p closure =
    functions reading each variable, by index at [fix]. *)
 let moved_captures_by_member p fix =
   match fix with
-  | MLfix (_, _, funs, _, _) ->
+  | Core.Expr.Fixpoint {bodies = funs; _} | Core.Expr.Cofixpoint {bodies = funs; _} ->
     let n = Array.length funs in
     let reads =
       Array.map
@@ -1325,13 +1401,15 @@ let moved_captures_by_member p fix =
    [ts] takes by move ({!eta_captures}). *)
 let moved_reads p ts =
   let rec go acc = function
-    | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc
-    | MLmagic (_, t, _) -> go acc t
-    | MLapp (f, args) -> List.fold_left go acc (f :: args)
-    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left go acc args
+    | Core.Expr.Bound_variable {index = i; occurrence = o} -> if taken_by_closure p o then i :: acc else acc
+    | Core.Expr.Coerce {value = t; _}
+    | Core.Expr.Boxed_value {value = t; _}
+    | Core.Expr.Lambda_group_barrier {value = t; _} -> go acc t
+    | Core.Expr.Apply {callee = f; arguments = args} -> List.fold_left go acc (f :: args)
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.fold_left go acc args
     (* What a closure among them takes by move, the closure made around
        them takes by move first, to hand it on. *)
-    | (MLlam _ | MLfix _) as closure -> moved_captures p closure @ acc
+    | (Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _) as closure -> moved_captures p closure @ acc
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
@@ -1356,7 +1434,7 @@ let captures ?(in_place = false) p closure =
 
 let captures_by_member ?(in_place = false) p fix =
   match fix with
-  | MLfix (_, _, funs, _, _) ->
+  | Core.Expr.Fixpoint {bodies = funs; _} | Core.Expr.Cofixpoint {bodies = funs; _} ->
     let n = Array.length funs in
     let moved = if in_place then List.map (fun _ -> []) (Array.to_list funs) else moved_captures_by_member p fix in
     List.map2
@@ -1373,9 +1451,9 @@ let eta_captures p ts =
 module Local_passing = struct
   type t = Callable_abi.passing option list
 
-  let recorded : ((Occurrence.t * int) * t) list ref = State.cell State.Extraction []
+  let recorded : ((Core.Occurrence.t * int) * t) list ref = State.cell State.Extraction []
 
-  let same (o, j) (o', j') = Occurrence.equal o o' && Int.equal j j'
+  let same (o, j) (o', j') = Core.Occurrence.equal o o' && Int.equal j j'
 
   let lookup member = List.find_map (fun (m, t) -> if same m member then Some t else None) !recorded
 
@@ -1395,7 +1473,7 @@ let kept_by_frame p b =
     p.saves
 
 module Local_captures = struct
-  let recorded : ((Occurrence.t * int) * Capture.t list) list ref = State.cell State.Extraction []
+  let recorded : ((Core.Occurrence.t * int) * Capture.t list) list ref = State.cell State.Extraction []
 
   let lookup member = List.find_map (fun (m, t) -> if Local_passing.same m member then Some t else None) !recorded
 
@@ -1406,11 +1484,11 @@ module Local_captures = struct
 end
 
 let save_moves p let_ =
-  match List.filter (fun s -> Occurrence.equal s.save_at let_) p.saves with
+  match List.filter (fun s -> Core.Occurrence.equal s.save_at let_) p.saves with
   | [] -> None
   | saves ->
     let owned =
-      match List.filter_map (fun (o, l) -> if Occurrence.equal o let_ then Some l else None) p.saved_owned with
+      match List.filter_map (fun (o, l) -> if Core.Occurrence.equal o let_ then Some l else None) p.saved_owned with
       | [] -> Levels.empty
       | l :: ls -> List.fold_left Levels.inter l ls
     in
@@ -1447,14 +1525,14 @@ let entry_moves p =
   | Some {origin; depth; _} when p.certain ->
     let calls =
       List.fold_left
-        (fun acc e -> if List.exists (Occurrence.equal e.call) acc then acc else e.call :: acc)
+        (fun acc e -> if List.exists (Core.Occurrence.equal e.call) acc then acc else e.call :: acc)
         [] p.entries
     in
     List.map
       (fun call ->
-        let here = List.filter (fun e -> Occurrence.equal e.call call) p.entries in
+        let here = List.filter (fun e -> Core.Occurrence.equal e.call call) p.entries in
         let owned =
-          match List.filter_map (fun (o, l) -> if Occurrence.equal o call then Some l else None) p.entry_owned with
+          match List.filter_map (fun (o, l) -> if Core.Occurrence.equal o call then Some l else None) p.entry_owned with
           | [] -> Levels.empty
           | l :: ls -> List.fold_left Levels.inter l ls
         in
@@ -1479,9 +1557,9 @@ type region_plan = t
 module Entry_moves = struct
   type t = Core_binder.t list
 
-  let recorded : (Occurrence.t * t) list ref = State.cell State.Extraction []
+  let recorded : (Core.Occurrence.t * t) list ref = State.cell State.Extraction []
 
-  let lookup call = List.find_map (fun (c, t) -> if Occurrence.equal c call then Some t else None) !recorded
+  let lookup call = List.find_map (fun (c, t) -> if Core.Occurrence.equal c call then Some t else None) !recorded
 
   let record call t =
     match lookup call with
@@ -1490,7 +1568,7 @@ module Entry_moves = struct
       Probe.violation "entry moves"
         (Pp.str "a call entering an adopted entry is planned moving otherwise than it was before");
       let both = List.filter (fun b -> List.exists (Core_binder.equal b) t') t in
-      recorded := (call, both) :: List.filter (fun (c, _) -> not (Occurrence.equal c call)) !recorded
+      recorded := (call, both) :: List.filter (fun (c, _) -> not (Core.Occurrence.equal c call)) !recorded
     | None -> recorded := (call, t) :: !recorded
 
   let record_plan p = List.iter (fun (call, t) -> record call t) (entry_moves p)

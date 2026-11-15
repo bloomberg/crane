@@ -23,8 +23,9 @@ let functions struc =
   let add r b ty = if not (Table.is_custom r) then acc := (r, b, ty) :: !acc in
   Modutil.struct_iter
     (function
-      | Miniml.Dterm (r, b, ty) when Ml_type_util.ml_domains ty <> [] -> add r b ty
-      | Miniml.Dfix fds -> List.iter (fun (fd : Miniml.ml_fix_def) -> add fd.fd_ref fd.fd_body fd.fd_type) fds
+      | Core.Decl.Value {entity = r; body = b; type_ = ty} when Ml_type_util.ml_domains ty <> [] -> add r b ty
+      | Core.Decl.Recursive_group fds ->
+        Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity fd.body fd.type_) fds
       | _ -> () )
     (fun _ -> ())
     (fun _ -> ())

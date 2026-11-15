@@ -20,7 +20,6 @@ open ModPath
 open Namegen
 open Nameops
 open Table
-open Miniml
 
 (** {2 Generic utility functions} *)
 
@@ -241,7 +240,7 @@ let resolved_is_qualified = Cpp_name.is_qualified
 (** Convert identifier to lowercase. *)
 let lowercase_id id = Id.of_string (String.uncapitalize_ascii (ascii_of_id id))
 
-(** {!ascii_of_id} as an [Id.t]. *)
+(** {!ascii_of_id} as an [Core.Binder_name.Source.t]. *)
 let cpp_id_of_id id = Id.of_string (ascii_of_id id)
 
 (** Kind of global identifier: term, type, constructor, or module. *)
@@ -293,8 +292,8 @@ let rec next_ident_away_keyed key id avoid =
     projection to extract the identifier, a constructor to rebuild the element,
     and processes the list in reverse order to maintain the same renaming
     behavior as the original functions.
-    @param project Extracts the [Id.t] from an element
-    @param rebuild Constructs a new element given a fresh [Id.t] and the
+    @param project Extracts the [Core.Binder_name.Source.t] from an element
+    @param rebuild Constructs a new element given a fresh [Core.Binder_name.Source.t] and the
                    original element (for carrying along extra data such as types)
     @param avoid   Set of identifiers already in use; extended as new names are chosen
     @return The renamed element list paired with the updated avoid set *)
@@ -448,7 +447,7 @@ let add_mp_sibling, get_mp_siblings =
   and get mp = try MPmap.find mp !tbl with Not_found -> Id.Set.empty in
   (add, get)
 
-(** The module paths that are emitted as a C++ struct, i.e. the [SEmodule]s of
+(** The module paths that are emitted as a C++ struct, i.e. the [Core.Module.Structure_item.Module]s of
     the extracted structure.  A module type is {e not} one of these: it becomes
     a concept, whose associated types are not struct members.  Populated by
     {!detect_sibling_module_inductive_collisions}. *)
@@ -533,7 +532,7 @@ let empty_env () =
     We must hence compare only the user part, hence using a Hashtbl might be
     incorrect *)
 
-(** Create a mutable [Id.Map]-backed table with optional auto-cleanup.
+(** Create a mutable [Core.Binder_name.Source.Map]-backed table with optional auto-cleanup.
     @param autoclean Whether to register a cleanup hook that empties the table
                      when {!reset_renaming_tables} is called
     @return [(add, get, clear)] where [add k v] inserts a binding, [get k]
@@ -750,9 +749,9 @@ let modular_rename id = fst (modular_rename_ex id)
 let type_alias_name_of_decl = function
   (* An erased or custom-extracted alias is never emitted, so it competes for
      nothing. *)
-  | Dtype (_, _, Tdummy Ktype) -> None
-  | Dtype (r, _, _) when Table.is_any_inline_custom r -> None
-  | Dtype (GlobRef.ConstRef cst, _, _) ->
+  | Core.Decl.Type_alias {body = Core.Type.Erased Core.Erasure_reason.Type_argument; _} -> None
+  | Core.Decl.Type_alias {entity = r; _} when Table.is_any_inline_custom r -> None
+  | Core.Decl.Type_alias {entity = GlobRef.ConstRef cst; _} ->
     Some (modular_rename (Label.to_id (Constant.label cst)))
   | _ -> None
 
@@ -765,15 +764,16 @@ let inductive_names_of_sel sel =
       match se with
       (* A type class becomes a concept, which is hoisted to namespace scope
          rather than nested, so it never competes for a member name. *)
-      | SEdecl (Dind (_kn, {ind_kind = Core.Inductive.Kind.Type_class _; _})) -> []
-      | SEdecl (Dind (_kn, ind)) ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = _kn;
+                                                                     definition = {Core.Inductive.kind = Core.Inductive.Kind.Type_class _; _}}) -> []
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = _kn; definition = ind}) ->
         Array.to_list
-          (Array.map (fun p -> modular_rename p.ip_typename) ind.ind_packets)
+          (Array.map (fun (p : Core.Inductive.Packet.t) -> modular_rename p.name) ind.packets)
       (* A [Definition] returning a type is emitted as a [using] alias beside
          the module's struct, in the same scope: [Handler.v] declares both a
          [Module Handler] and a [Definition Handler], and one of the two names
          has to give way. *)
-      | SEdecl d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
+      | Core.Module.Structure_item.Declaration d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
       | _ -> [] )
     sel
 
@@ -794,12 +794,12 @@ let member_names_of_sel sel =
     (fun acc (l, se) ->
       let ids =
         match se with
-        | SEdecl (Dind (_, ind)) ->
-          Array.to_list (Array.map (fun p -> name p.ip_typename) ind.ind_packets)
-        | SEdecl (Dfix fds) ->
-          List.map (fun fd -> name (Label.to_id (label_of_r fd.fd_ref))) fds
-        | SEdecl _ -> [name (Label.to_id l)]
-        | SEmodule _ | SEmodtype _ -> [name (Label.to_id l)]
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {definition = ind; _}) ->
+          Array.to_list (Array.map (fun (p : Core.Inductive.Packet.t) -> name p.name) ind.packets)
+        | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) ->
+          List.map (fun (fd : Core.Recursion.Definition.t) -> name (Label.to_id (label_of_r fd.entity))) (Core.Nonempty.to_list fds)
+        | Core.Module.Structure_item.Declaration _ -> [name (Label.to_id l)]
+        | Core.Module.Structure_item.Module _ | Core.Module.Structure_item.Module_type _ -> [name (Label.to_id l)]
       in
       List.fold_left (fun acc id -> Id.Set.add id acc) acc ids )
     Id.Set.empty sel
@@ -816,10 +816,10 @@ let file_colliding_type_names sel =
   List.concat_map
     (fun (_l, se) ->
       match se with
-      | SEdecl (Dind (_kn, ind)) ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = _kn; definition = ind}) ->
         Array.to_list
-          (Array.map (fun p -> modular_rename p.ip_typename) ind.ind_packets)
-      | SEdecl d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
+          (Array.map (fun (p : Core.Inductive.Packet.t) -> modular_rename p.name) ind.packets)
+      | Core.Module.Structure_item.Declaration d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
       | _ -> [] )
     sel
 
@@ -836,22 +836,22 @@ let unmergeable_inductive_names_of_sel sel =
      function over the record is fine -- it becomes a method, and a member
      function's signature may name the class being defined. *)
   let rec type_head = function
-    | Tglob (GlobRef.IndRef ind, _, _) -> Some ind
-    | Tmeta {contents = Some t} -> type_head t
+    | Core.Type.Global_app {head = GlobRef.IndRef ind; _} -> Some ind
+    | Core.Type.Meta {contents = Some t} -> type_head t
     | _ -> None
   in
   let self_typed =
     List.filter_map
       (fun (_l, se) ->
-        match se with SEdecl (Dterm (_, _, t)) -> type_head t | _ -> None )
+        match se with Core.Module.Structure_item.Declaration (Core.Decl.Value {type_ = t; _}) -> type_head t | _ -> None )
       sel
   in
   List.concat_map
     (fun (_l, se) ->
       match se with
-      | SEdecl (Dind (kn, ind)) ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
         let mergeable =
-          match ind.ind_kind with
+          match ind.kind with
           | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> false
           | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _ -> true
         in
@@ -861,14 +861,14 @@ let unmergeable_inductive_names_of_sel sel =
             || List.exists (Names.Ind.CanOrd.equal (kn, i)) self_typed )
           (Array.to_list
              (Array.map
-                (fun p -> modular_rename p.ip_typename)
-                ind.ind_packets ) )
+                (fun (p : Core.Inductive.Packet.t) -> modular_rename p.name)
+                ind.packets ) )
       | _ -> [] )
     sel
 
 (** Body of a module entry, when it is a literal structure. *)
-let mod_struct_body m =
-  match m.ml_mod_expr with MEstruct (_, sel) -> Some sel | _ -> None
+let mod_struct_body (m : Core.Module.t) =
+  match m.expr with Core.Module.Expr.Structure {items = sel; _} -> Some sel | _ -> None
 
 (** Scan [s] for modules whose C++ name is already taken where the module is
     emitted, and pre-populate {!sibling_collision_renames} so that
@@ -884,8 +884,8 @@ let mod_struct_body m =
 
     The module is always the side that gets renamed: it is a struct only
     incidentally, whereas the name of a type is what its users refer to.
-    @param s The full [ml_structure] to scan (typically the whole extraction result) *)
-let detect_sibling_module_inductive_collisions (s : ml_structure) =
+    @param s The full [Core.Program.t] to scan (typically the whole extraction result) *)
+let detect_sibling_module_inductive_collisions (s : Core.Program.t) =
   Hashtbl.clear sibling_collision_renames;
   Hashtbl.clear struct_module_paths;
   let rec scan_sel ?enclosing parent_mp sel =
@@ -893,7 +893,7 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
     List.iter
       (fun (l, se) ->
         match se with
-        | SEmodule m ->
+        | Core.Module.Structure_item.Module m ->
           Hashtbl.replace struct_module_paths (MPdot (parent_mp, l)) ();
           let mod_name = modular_rename (Label.to_id l) in
           let clashes names = List.exists (String.equal mod_name) names in
@@ -922,9 +922,9 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
     List.iter
       (fun (l, se) ->
         match se with
-        | SEmodule m ->
-          ( match m.ml_mod_expr with
-          | MEstruct (inner_mp, inner_sel) ->
+        | Core.Module.Structure_item.Module m ->
+          ( match m.expr with
+          | Core.Module.Expr.Structure {path = inner_mp; items = inner_sel} ->
             (* The enclosing name a nested module competes with is the one the
                parent is finally emitted under, suffix included. *)
             let enclosing =
@@ -1471,7 +1471,7 @@ let pp_global_name k r =
     check reads a plan back. *)
 let decided_global_name r = Option.map List.hd (decided_ref_renaming r)
 
-(** {!pp_global_name} as an [Id.t]: the short C++ name a reference is emitted
+(** {!pp_global_name} as an [Core.Binder_name.Source.t]: the short C++ name a reference is emitted
     under, for the many places that need it as an identifier rather than a
     string (a struct field, a method, a [using] alias). *)
 let id_of_global k r = Id.of_string (pp_global_name k r)
@@ -1553,12 +1553,12 @@ let check_extract_ascii () =
 let is_list_cons l =
   List.for_all
     (function
-      | MLcons (_, GlobRef.ConstructRef (_, _), [], _) -> true
+      | Core.Expr.Construct {constructor = GlobRef.ConstructRef (_, _); arguments = []; _} -> true
       | _ -> false )
     l
 
 let is_native_char = function
-  | MLcons (_, gr, l, _) ->
+  | Core.Expr.Construct {constructor = gr; arguments = l; _} ->
     is_ascii_registered ()
     && Rocqlib.check_ref ascii_constructor_name gr
     && check_extract_ascii ()
@@ -1569,15 +1569,15 @@ let is_native_char = function
 let get_native_char c =
   let rec cumul = function
     | [] -> 0
-    | MLcons (_, GlobRef.ConstructRef (_, j), [], _) :: l -> 2 - j + (2 * cumul l)
+    | Core.Expr.Construct {constructor = GlobRef.ConstructRef (_, j); arguments = []; _} :: l -> 2 - j + (2 * cumul l)
     | _ ->
       CErrors.anomaly
         (Pp.str "get_native_char: malformed ascii constructor list")
   in
   let l =
     match c with
-    | MLcons (_, _, l, _) -> l
-    | _ -> CErrors.anomaly (Pp.str "get_native_char: expected MLcons")
+    | Core.Expr.Construct {arguments = l; _} -> l
+    | _ -> CErrors.anomaly (Pp.str "get_native_char: expected a Construct")
   in
   Char.chr (cumul l)
 
@@ -1623,9 +1623,9 @@ let check_extract_string () =
     @return [true] iff the ML expression is a statically-known string literal *)
 let rec is_native_string_rec empty_string_ref string_constructor_ref = function
   (* "EmptyString" constructor *)
-  | MLcons (_, gr, [], _) -> Rocqlib.check_ref empty_string_ref gr
+  | Core.Expr.Construct {constructor = gr; arguments = []; _} -> Rocqlib.check_ref empty_string_ref gr
   (* "String" constructor *)
-  | MLcons (_, gr, [hd; tl], _) ->
+  | Core.Expr.Construct {constructor = gr; arguments = [hd; tl]; _} ->
     Rocqlib.check_ref string_constructor_ref gr
     && is_native_char hd
     && is_native_string_rec empty_string_ref string_constructor_ref tl
@@ -1637,7 +1637,7 @@ let rec is_native_string_rec empty_string_ref string_constructor_ref = function
     we check every character via [is_native_string_rec]. *)
 let is_native_string c =
   match c with
-  | MLcons (_, GlobRef.ConstructRef (ind, j), l, _) ->
+  | Core.Expr.Construct {constructor = GlobRef.ConstructRef (ind, j); arguments = l; _} ->
     is_string_registered ()
     && Rocqlib.check_ref string_type_name (GlobRef.IndRef ind)
     && check_extract_string ()
@@ -1649,10 +1649,10 @@ let get_native_string c =
   let buf = Buffer.create 64 in
   let rec get = function
     (* "EmptyString" constructor *)
-    | MLcons (_, gr, [], _) when Rocqlib.check_ref empty_string_name gr ->
+    | Core.Expr.Construct {constructor = gr; arguments = []; _} when Rocqlib.check_ref empty_string_name gr ->
       Buffer.contents buf
     (* "String" constructor *)
-    | MLcons (_, gr, [hd; tl], _) when Rocqlib.check_ref string_constructor_name gr
+    | Core.Expr.Construct {constructor = gr; arguments = [hd; tl]; _} when Rocqlib.check_ref string_constructor_name gr
       ->
       Buffer.add_char buf (get_native_char hd);
       get tl
@@ -1861,7 +1861,7 @@ let enum_ctor_name s =
   else if is_reserved_cpp_name upper then upper ^ "_"
   else upper
 
-(** Compute the C++ enum constructor name for a single constructor [Id.t].
+(** Compute the C++ enum constructor name for a single constructor [Core.Binder_name.Source.t].
     Does not perform collision avoidance; use {!enum_ctor_names_of_packet} when
     the full sibling set is available, or {!Common.enum_ctor_name_of_ref} when
     looking up by position. *)

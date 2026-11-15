@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** ControlIR: a function's control as it is implemented, before any C++
-    is chosen for it.  The terms it does not change stay Core ({!Miniml.ml_ast}); what it
+    is chosen for it.  The terms it does not change stay Core ({!Core.Expr.t}); what it
     makes explicit is where control goes.
 
     It holds the loops of direct tail recursion: a function that recurses
@@ -24,7 +24,7 @@ type t =
   | Loop of loop
   | Let of let_
   | Match of match_
-  | Return of Miniml.ml_ast  (** Leaves the function with the Core value. *)
+  | Return of Core.Expr.t  (** Leaves the function with the Core value. *)
   | Continue of continue_
   | Continue_into of continue_into
   | Resume of resume
@@ -33,34 +33,34 @@ type t =
 (** The loop [loop] over [parameters], outermost first, running [body]. *)
 and loop = {
   loop : Loop.t;
-  parameters : (Miniml.ml_ident * Miniml.ml_type) list;
+  parameters : (Core.Binder_name.t * Core.Type.t) list;
   body : t;
 }
 
 (** [value] bound to [binder] while [body] runs: a let, or a sequential
     bind's action and its continuation's parameter. *)
 and let_ = {
-  binder : Miniml.ml_ident;
-  binder_type : Miniml.ml_type;
-  value : Miniml.ml_ast;
+  binder : Core.Binder_name.t;
+  binder_type : Core.Type.t;
+  value : Core.Expr.t;
   body : t;
 }
 
-(** A match whose branches carry control, the [MLcase] of Core it stands
+(** A match whose branches carry control, the [Core.Expr.Match] of Core it stands
     for with each branch's body in ControlIR. *)
 and match_ = {
-  scrutinee_type : Miniml.ml_type;
-  scrutinee : Miniml.ml_ast;
+  scrutinee_type : Core.Type.t;
+  scrutinee : Core.Expr.t;
   branches : branch list;
 }
 
-(** One branch of a {!match_}, as Core's {!Miniml.ml_branch}: the
+(** One branch of a {!match_}, as Core's {!Core.Match.Branch.t}: the
     pattern's binders, the branch's result type, the pattern, and [body]
     under those binders. *)
 and branch = {
-  binders : (Miniml.ml_ident * Miniml.ml_type) list;
-  result_type : Miniml.ml_type;
-  pattern : Miniml.ml_pattern;
+  binders : (Core.Binder_name.t * Core.Type.t) list;
+  result_type : Core.Type.t;
+  pattern : Core.Pattern.t;
   body : t;
 }
 
@@ -69,8 +69,8 @@ and branch = {
     of the member heading it. *)
 and continue_ = {
   target : Loop.t;
-  occurrence : Miniml.Occurrence.t;
-  arguments : Miniml.ml_ast list;
+  occurrence : Core.Occurrence.t;
+  arguments : Core.Expr.t list;
 }
 
 (** The next turn of a loop building what this one returns, tail modulo
@@ -87,7 +87,7 @@ and continue_into = {
 and cell = {
   constructor : Names.GlobRef.t;
   hole : int;
-  arguments : Miniml.ml_ast list;
+  arguments : Core.Expr.t list;
 }
 
 (** [value] run for the value [binder] takes while [body] runs, where
@@ -95,8 +95,8 @@ and cell = {
     afresh, and [body] resumes once that turn returns, its result bound to
     [binder]; each [Return] in it is the value bound so. *)
 and resume = {
-  binder : Miniml.ml_ident;
-  binder_type : Miniml.ml_type;
+  binder : Core.Binder_name.t;
+  binder_type : Core.Type.t;
   value : t;
   body : t;
 }
@@ -110,21 +110,21 @@ and resume = {
     loop re-enter that loop. *)
 and entry = {
   entered : loop;
-  name : (Miniml.ml_ident * Miniml.ml_type) option;
+  name : (Core.Binder_name.t * Core.Type.t) option;
   scope : t;
 }
 
 (** The occurrences of the calls [t] continues a loop by, in order, those
     resumed after and those of its entries' loops included. *)
-val continues : t -> Miniml.Occurrence.t list
+val continues : t -> Core.Occurrence.t list
 
 (** {!continues} of the loop [l] alone: those continuing it rather than
     the loop of one of [t]'s entries. *)
-val continues_of : Loop.t -> t -> Miniml.Occurrence.t list
+val continues_of : Loop.t -> t -> Core.Occurrence.t list
 
 (** The occurrences of the calls [t] enters its loop by afresh and resumes
     after, in order: the [Continue]s in the value of a [Resume]. *)
-val resumed : t -> Miniml.Occurrence.t list
+val resumed : t -> Core.Occurrence.t list
 
 (** The turns of [t] that build what they return, tail modulo cons, in
     order. *)
@@ -134,7 +134,7 @@ val continues_into : t -> continue_into list
 val entries : t -> loop list
 
 (** [t] with [f] applied to the value of every [Return] in it. *)
-val map_returns : (Miniml.ml_ast -> Miniml.ml_ast) -> t -> t
+val map_returns : (Core.Expr.t -> Core.Expr.t) -> t -> t
 
 (** For each parameter of the loop [l], outermost first, whether every
     [Continue] of [l] passes it on unchanged: its argument there is a read of
@@ -154,7 +154,7 @@ val invariant_parameters : loop -> bool list
     [l]. *)
 val parts_passed :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
-  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   loop ->
   bool list
 
@@ -166,7 +166,7 @@ val parts_passed :
     is derived from none.  [false] for each where no call continues [l]. *)
 val derived_passed :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
-  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   loop ->
   bool list
 
@@ -174,7 +174,7 @@ val derived_passed :
     [turn], and whether another of its arguments reads that parameter or a
     binder derived from it. *)
 type rebuilt = {
-  turn : Miniml.Occurrence.t;
+  turn : Core.Occurrence.t;
   read_elsewhere : bool;
 }
 
@@ -184,7 +184,7 @@ type rebuilt = {
     pointer cannot point at past it. *)
 val rebuilt :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
-  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   loop ->
   int ->
   rebuilt list

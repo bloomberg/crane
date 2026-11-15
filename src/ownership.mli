@@ -19,7 +19,7 @@
     far say of its callees: it lets the parameter escape
     ({!Escape.infer_owned_params}), or the parameter is a pair whose
     components it lets escape, which a pair taken by value moves out. *)
-val read_off : ('name * Miniml.ml_type) list -> Miniml.ml_ast -> bool list
+val read_off : ('name * Core.Type.t) list -> Core.Expr.t -> bool list
 
 (** The flags of [struc]'s functions, settled across calls: each
     function's, innermost first, for the parameters its head declares,
@@ -29,7 +29,7 @@ val read_off : ('name * Miniml.ml_type) list -> Miniml.ml_ast -> bool list
     parameter the function [r] generated as a method takes as its receiver,
     which is borrowed. *)
 val summarize :
-  ?receiver:(Names.GlobRef.t -> int option) -> Miniml.ml_structure -> (Names.GlobRef.t * bool list) list
+  ?receiver:(Names.GlobRef.t -> int option) -> Core.Program.t -> (Names.GlobRef.t * bool list) list
 
 (** Install a {!summarize}d program's flags for {!Escape} to consult. *)
 val install : (Names.GlobRef.t * bool list) list -> unit

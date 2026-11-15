@@ -10,16 +10,16 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** {1 Extraction from Rocq Terms to MiniML}
+(** {1 Extraction from Rocq Terms to Core}
 
     First stage of the extraction pipeline:
-    {v Rocq kernel terms  --[extraction.ml]-->  MiniML AST v}
+    {v Rocq kernel terms  --[extraction.ml]-->  Core AST v}
 
     Converts Rocq terms (the Predicative Calculus of Cumulative Inductive
     Constructions, PCUIC) into a simply-typed functional language
-    ({!Miniml}). This step performs type erasure (removing propositions,
+    ({!Core}). This step performs type erasure (removing propositions,
     universe levels, implicit arguments) and computes signatures tracking
-    which arguments survive extraction ([Keep]/[Kill]).  Its output is read by
+    which arguments survive extraction ([Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased]).  Its output is read by
     {!Extract_env}, which collects the declarations a run needs and hands them
     to translation.
 
@@ -32,28 +32,27 @@ open Names
 open Declarations
 open Environ
 open Evd
-open Miniml
 
-(** Extract a single constant definition into an ML declaration: a [Dtype]
-    for a type scheme, a [Dterm] for anything else (an axiom's body is
-    [MLaxiom], a logical constant's [MLdummy]).  A definition also records its
+(** Extract a single constant definition into an ML declaration: a [Core.Decl.Type_alias]
+    for a type scheme, a [Core.Decl.Value] for anything else (an axiom's body is
+    [Core.Expr.Axiom_value], a logical constant's [Core.Expr.Erased_value]).  A definition also records its
     instance class shape and context instance applications in {!Table}.
     @param access Indirect accessor used to force opaque proof bodies when [access_opaque ()] is set
     @param env Rocq global environment
     @param kn The constant name to extract
     @param cb The constant body (declaration) from the environment *)
 val extract_constant :
-  Global.indirect_accessor -> env -> Constant.t -> constant_body -> ml_decl
+  Global.indirect_accessor -> env -> Constant.t -> constant_body -> Core.Decl.t
 
 (** Extract the type signature of a constant (for module signatures).
     @param env Rocq global environment
     @param kn The constant name whose spec is extracted
     @param cb The constant body.  A type scheme's [Def] body becomes the
-    [Stype]'s abbreviation; a term's [Def] body is extracted as the [Sval]'s
+    [Core.Signature.Declaration.Type]'s abbreviation; a term's [Def] body is extracted as the [Core.Signature.Declaration.Value]'s
     value.  A type scheme taking a value argument whose body does not extract
     is recorded with {!Table.add_value_dep_type_scheme}. *)
 val extract_constant_spec :
-  env -> Constant.t -> ('a, 'b) pconstant_body -> ml_spec
+  env -> Constant.t -> ('a, 'b) pconstant_body -> Core.Signature.Declaration.t
 
 (** Extract a [module ... with Definition ... := ...] constraint.
     @param env Rocq global environment
@@ -61,9 +60,9 @@ val extract_constant_spec :
     @param c The constrained term (right-hand side of the [with] clause)
     @return [Some (vars, ty)] if [c] is an informative type scheme, [None] if logical *)
 val extract_with_type :
-  env -> evar_map -> EConstr.t -> (Id.t list * ml_type) option
+  env -> evar_map -> EConstr.t -> (Id.t list * Core.Type.t) option
 
-(** Extract a mutual fixpoint definition into one [Dfix], each member's body
+(** Extract a mutual fixpoint definition into one [Core.Decl.Recursive_group], each member's body
     with the group's recursive [Rel]s replaced by its constants.  A cofixpoint
     group's members are registered with {!Table.add_cofixpoint}.
     @param env Rocq global environment
@@ -77,24 +76,24 @@ val extract_fixpoint :
   Constant.t array ->
   bool ->
   EConstr.rec_declaration ->
-  ml_decl
+  Core.Decl.t
 
 (** Extract a (mutual) inductive type definition.  The result's constructor
     argument lists omit erased and implicit arguments; the cached
     {!Table.lookup_ind} entry keeps them. *)
-val extract_inductive : env -> MutInd.t -> ml_ind
+val extract_inductive : env -> MutInd.t -> Core.Inductive.t
 
 (** Extract a single term, for [Crane Show Extraction] on the current proof.
-    A type scheme extracts to [MLdummy Ktype], a logical term to
-    [MLdummy Kprop].
+    A type scheme extracts to [Core.Expr.Erased_value Core.Erasure_reason.Type_argument], a logical term to
+    [Core.Expr.Erased_value Core.Erasure_reason.Proof].
     @param env Rocq global environment
     @param sg Evar map for universe and constraint tracking
     @param c The term to extract
     @return A pair [(ast, ty)] of the extracted ML expression and its ML type *)
-val extract_constr : env -> evar_map -> EConstr.t -> ml_ast * ml_type
+val extract_constr : env -> evar_map -> EConstr.t -> Core.Expr.t * Core.Type.t
 
 (** Is the declaration purely logical (erased during extraction)? *)
-val logical_decl : ml_decl -> bool
+val logical_decl : Core.Decl.t -> bool
 
 (** Is the specification purely logical? *)
-val logical_spec : ml_spec -> bool
+val logical_spec : Core.Signature.Declaration.t -> bool

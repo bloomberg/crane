@@ -69,11 +69,11 @@ val empty : t
 val tail_loop :
   ?modulo_cons:bool ->
   ?frames:bool ->
-  ?adopted:Miniml.Occurrence.t ->
+  ?adopted:Core.Occurrence.t ->
   effects:Core_effects.t ->
   target:Control_ir.Loop.t ->
-  callee:(depth:int -> Miniml.ml_ast -> int option) ->
-  Miniml.ml_ast ->
+  callee:(depth:int -> Core.Expr.t -> int option) ->
+  Core.Expr.t ->
   Control_ir.Term.t
 
 (** [lower ~methods plan p] lowers the loops the plan [plan] of the
@@ -97,4 +97,4 @@ val loop : Control_ir.Loop.t -> Control_ir.Term.t option
     A call Core copied shares its occurrence with its copies, any of which
     may stay a call where the others are turns: only by position is it
     told apart from them, and these are the occurrences that are not. *)
-val taken_continues : Control_ir.Term.t -> Miniml.Occurrence.t list
+val taken_continues : Control_ir.Term.t -> Core.Occurrence.t list

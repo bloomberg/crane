@@ -4,7 +4,6 @@
 (** Whether a binder holds a box, planned from Core.  See
     [representation_plan.mli]. *)
 
-open Miniml
 open Util
 open Translation_state
 open Ml_type_util
@@ -45,12 +44,14 @@ let at_binding ty =
 (* [scope] under the binders [ids], innermost first, each planned at the
    conversion of its ML type. *)
 let push kind ids scope =
-  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value}) ids) scope.lex;
+  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x;
+                                                 eb_type = ty;
+                                                 eb_role = Lexenv.Value}) ids) scope.lex;
     planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
     kinds = List.map (fun _ -> kind) ids @ scope.kinds }
 
 (* The domains a slot of C++ type [t] declares, where it declares a
-   signature ({!Translation.gen_expr}'s [MLlam]). *)
+   signature ({!Translation.gen_expr}'s [Core.Expr.Lambda]). *)
 let rec slot_domains (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Non_deduced t | Const t | Reference (Lvalue, t) -> slot_domains t
@@ -61,7 +62,7 @@ let rec slot_domains (t : Cpp_ir.Lowered.Type.t) =
     | _ -> None )
 
 (* What a lambda's parameters [ids] (innermost first, over [body]) are read
-   at in its body ({!Translation.gen_expr}'s [MLlam]): each emitted one at
+   at in its body ({!Translation.gen_expr}'s [Core.Expr.Lambda]): each emitted one at
    the type it is declared ({!Translation_types.lambda_param_cpp_type}) and
    then assigned ({!Translation_types.lambda_param_assigned}) against the
    slot's domains [slot], in source order, where the slot declares a
@@ -109,15 +110,18 @@ let planned scope i = if i >= 1 then Option.flatten (List.nth_opt scope.planned 
 (* {!Translation_types.scrutinee_binder}, with the binder's ML type read in
    [lex]. *)
 let rec scrutinee_binder lex = function
-  | MLrel (i, _) -> Some i
-  | MLmagic (_, e, _) -> scrutinee_binder lex e
-  | MLapp (h, _) when not (head_is_callable lex h) -> scrutinee_binder lex h
+  | Core.Expr.Bound_variable {index = i; _} -> Some i
+  | Core.Expr.Coerce {value = e; _}
+  | Core.Expr.Boxed_value {value = e; _}
+  | Core.Expr.Lambda_group_barrier {value = e; _} ->
+    scrutinee_binder lex e
+  | Core.Expr.Apply {callee = h; _} when not (head_is_callable lex h) -> scrutinee_binder lex h
   | _ -> None
 
 and head_is_callable lex h =
   match scrutinee_binder lex h with
   | Some i -> (
-    let rec is_arrow = function Tmeta {contents = Some t} -> is_arrow t | Tarr _ -> true | _ -> false in
+    let rec is_arrow = function Core.Type.Meta {contents = Some t} -> is_arrow t | Core.Type.Arrow _ -> true | _ -> false in
     match Lexenv.type_opt lex i with Some t -> is_arrow t | None -> true )
   | None -> true
 
@@ -174,14 +178,15 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
   let planned = pinned_fields scope ~typ:ty ~scrut cname planned in
   let elems_are_any =
     (cs.cs_mlmagic || cs.cs_magic)
-    && match ty with Tglob (g, _ :: _, _) -> Ml_type_util.is_custom_list_global g | _ -> false
+    && match ty with Core.Type.Global_app {head = g;
+                                           type_arguments = _ :: _; _} -> Ml_type_util.is_custom_list_global g | _ -> false
   in
   if elems_are_any then
     let def_tys = (Ctor_fields.of_ctor cname).types in
     List.mapi
       (fun i p ->
         match List.nth_opt def_tys i with
-        | Some (Tglob (g, _, _)) when is_list_global g -> p
+        | Some (Core.Type.Global_app {head = g; _}) when is_list_global g -> p
         | _ -> pin p Any )
       planned
   else planned
@@ -196,11 +201,12 @@ let reads_boxed_component scope a =
     | None -> false
   in
   match a with
-  | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r && is_pair_projection r -> (
-    match List.filter (function MLdummy _ -> false | _ -> true) args with
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _};
+                     arguments = args} when Table.is_inline_custom r && is_pair_projection r -> (
+    match List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args with
     | arg :: _ -> (
       match strip_magic arg with
-      | MLrel (i, _) -> (
+      | Core.Expr.Bound_variable {index = i; _} -> (
         match Lexenv.type_opt scope.lex i with
         | Some t ->
           let t = resolve_tmeta t in
@@ -219,7 +225,7 @@ let region ~outer body =
   let ns = (!tctx).method_self_ns in
   let reified = (!tctx).itree_mode = Reified in
   let parameters ?slot_ty ~body ids scope = push_parameters ?slot_ty ~ns ~tvars:type_vars ~reified ~body ids scope in
-  let is_lambda a = match strip_magic a with MLlam _ -> true | _ -> false in
+  let is_lambda a = match strip_magic a with Core.Expr.Lambda _ -> true | _ -> false in
   (* A lambda stored in a constructor's field is written against [slot]
      where the constructor's lowering says what it is, otherwise against the
      field's type: its ML type converted. *)
@@ -238,7 +244,10 @@ let region ~outer body =
        types they are bound at, pinned by nothing: as statements, with a
        dependent parameter's field retyped as erased; in an expression, not
        ([pr_bound_boxed]).  The body is planned at the statement form's. *)
-    | MLcase (ty, scrut, ([|(ids, _, _, body)|] as branches), occ)
+    | Core.Expr.Match {scrutinee_type = ty;
+                       scrutinee = scrut;
+                       branches = ([|{Core.Match.Branch.binders = ids; body = body; _}|] as branches);
+                       occurrence = occ}
       when Match_kind.is_record (Match_kind.classify ty branches) ->
       walk scope scrut;
       let bound = List.map (fun (_, t) -> at_binding t) ids in
@@ -251,7 +260,7 @@ let region ~outer body =
         (List.combine retyped bound);
       let inner = push Kpattern (List.rev ids) scope in
       walk {inner with planned = List.rev retyped @ scope.planned} body
-    | MLcase (ty, scrut, branches, occ) ->
+    | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; occurrence = occ} ->
       walk scope scrut;
       let var_type = Lexenv.type_opt scope.lex in
       let fields =
@@ -269,11 +278,11 @@ let region ~outer body =
           pattern_binders scope ~typ ~scrut
       in
       Array.iteri
-        (fun bi (ids, _, pat, body) ->
+        (fun bi {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} ->
           let inner = push Kpattern (List.rev ids) scope in
           let inner =
             match pat with
-            | Pusual r | Pcons (r, _) when ids <> [] ->
+            | Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _} when ids <> [] ->
               let field_planned = fields r ids in
               List.iteri
                 (fun i p ->
@@ -294,7 +303,7 @@ let region ~outer body =
        parameter reads it boxed.  Decided at the constructor's own drafted
        instantiation, which is lowering's wherever the destination states no
        more than the annotation. *)
-    | MLcons (ty, r, args, _) when Table.is_custom r ->
+    | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; _} when Table.is_custom r ->
       let env = Common.empty_env () in
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
@@ -305,15 +314,15 @@ let region ~outer body =
       List.iteri
         (fun i e ->
           match strip_magic e with
-          | MLlam _ when stores_erased_fn env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
-          | MLlam _ as lam ->
+          | Core.Expr.Lambda _ when stores_erased_fn env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
+          | Core.Expr.Lambda _ as lam ->
             (* The slot's own signature where it erased only its domain
                ({!Translation.gen_expr_custom_cons}'s [erased_fn_slot]). *)
             let erased_fn_slot =
               if ctor_arg_is_passthrough r i || not (ml_expr_is_function_value e) then None
               else
                 match List.nth_opt field_tys i with
-                | Some (Miniml.Tvar (_, j)) -> (
+                | Some (Core.Type.Variable {variable = j; _}) -> (
                   match Option.map tvar_erase_type (List.nth_opt temps (j - 1)) with
                   | Some t when partially_erased_fun_ty t -> Some t
                   | _ -> None )
@@ -325,7 +334,9 @@ let region ~outer body =
     (* A record's field is written against the field's type at the record's
        arguments only where that type returns a function
        ({!Translation.gen_expr}'s record [expected_for_field]). *)
-    | MLcons (ty, r, args, _) when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
+    | Core.Expr.Construct {result_type = ty;
+                           constructor = r;
+                           arguments = args; _} when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
         | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
@@ -340,8 +351,8 @@ let region ~outer body =
       in
       let slot ft =
         match (ft, ty) with
-        | Miniml.Tvar _, _ -> None
-        | _, Miniml.Tglob (_, tys, _) -> (
+        | Core.Type.Variable _, _ -> None
+        | _, Core.Type.Global_app {type_arguments = tys; _} -> (
           match cpp_of_ml env (Mlutil.type_subst_list tys ft) with
           | ct -> (
             match codomain ct with
@@ -355,11 +366,11 @@ let region ~outer body =
       List.iteri
         (fun i e ->
           match (strip_magic e, List.nth_opt field_tys i) with
-          | (MLlam _ as lam), Some ft -> walk_field_lambda ~slot:(slot ft) scope (Some ft) lam
-          | (MLlam _ as lam), None -> walk_field_lambda ~slot:None scope None lam
+          | (Core.Expr.Lambda _ as lam), Some ft -> walk_field_lambda ~slot:(slot ft) scope (Some ft) lam
+          | (Core.Expr.Lambda _ as lam), None -> walk_field_lambda ~slot:None scope None lam
           | _ -> walk scope e )
         args
-    | MLcons (_, r, args, _) when List.exists is_lambda args ->
+    | Core.Expr.Construct {constructor = r; arguments = args; _} when List.exists is_lambda args ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
         | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
@@ -368,7 +379,7 @@ let region ~outer body =
       List.iteri
         (fun i e ->
           match strip_magic e with
-          | MLlam _ as lam -> walk_field_lambda scope (List.nth_opt field_tys i) lam
+          | Core.Expr.Lambda _ as lam -> walk_field_lambda scope (List.nth_opt field_tys i) lam
           | _ -> walk scope e )
         args
     (* A lambda passed to a global is generated in the slot of the parameter
@@ -376,7 +387,8 @@ let region ~outer body =
        ({!Translation_types.slot_refined_lambda}): the callee's declared
        type at the call's reading ({!Core_elaborate.instantiate}), where it
        erases nothing.  Read with no type the call's position states. *)
-    | MLapp (MLglob use, args) when List.exists is_lambda args ->
+    | Core.Expr.Apply {callee = Core.Expr.Global (use : Core.Global_use.t);
+                       arguments = args} when List.exists is_lambda args ->
       let call = Core_elaborate.elaborate_arguments ~lex:scope.lex use args in
       let inst =
         Core_elaborate.instantiate ~lex:scope.lex ~expected_ml:None ~stated_ml:None ~caller:(!tctx).body_owner
@@ -403,7 +415,7 @@ let region ~outer body =
       List.iter
         (fun a ->
           match (strip_magic a, regular_index a) with
-          | (MLlam _ as lam), Some i ->
+          | (Core.Expr.Lambda _ as lam), Some i ->
             let expected_ml_ty =
               match param_ml_ty i with Some t when not (ml_type_contains_erased t) -> Some t | _ -> None
             in
@@ -429,14 +441,17 @@ let region ~outer body =
        function's declared domain at its position, where the binding site
        declared one with no erased position ({!Translation.eta_fun}'s
        [declared_dom]). *)
-    | MLapp (((MLrel (h, _) | MLmagic (_, MLrel (h, _), _)) as f), args)
-      when List.exists (function MLlam _ -> true | _ -> false) args ->
+    | Core.Expr.Apply {callee = ( ( Core.Expr.Bound_variable {index = h; _}
+            | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = h; _}; _}
+            | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = h; _}; _}
+            | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = h; _}; _} ) as f ); arguments = args}
+      when List.exists (function Core.Expr.Lambda _ -> true | _ -> false) args ->
       walk scope f;
       let dom = match planned scope h with Some (Function (dom, _), _) -> dom | _ -> [] in
       List.iteri
         (fun k a ->
           match a with
-          | MLlam _ as lam ->
+          | Core.Expr.Lambda _ as lam ->
             let slot_ty =
               match List.nth_opt dom k with
               | Some t when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) -> Some t
@@ -445,29 +460,29 @@ let region ~outer body =
             let ids, body = Mlutil.collect_lams lam in
             walk (parameters ?slot_ty ~body ids scope) body
           | _ -> walk scope a )
-        (List.filter (function MLdummy _ -> false | _ -> true) args)
-    | MLletin (x, ty, a, body, _) ->
+        (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args)
+    | Core.Expr.Let {binder = x; binder_type = ty; value = a; body; _} ->
       walk scope a;
       (* A component read out of a boxed pair is a box, however concrete its
          ML type looks; lowering binds it at a dummy type, with no C++ type
          recorded, so an accessor reading it again sees the erasure
          ({!Translation_types.stmts_yield_boxed}). *)
-      let ty = if x <> Dummy && reads_boxed_component scope a then Tdummy Ktype else ty in
+      let ty = if x <> Core.Binder_name.Anonymous && reads_boxed_component scope a then Core.Type.Erased Core.Erasure_reason.Type_argument else ty in
       walk (push Klet [(x, ty)] scope) body
     (* Any other lambda's binders at the types they are annotated with.
        Lowering also declares a parameter by the C++ slot the lambda fills --
        [const auto &], or [std::any] where the slot's domain is a box --
        which the check holds to the same answer for every pattern binder
        rooted at one, and counts for every read of one. *)
-    | MLlam _ as e ->
+    | Core.Expr.Lambda _ as e ->
       let ids, body = Mlutil.collect_lams e in
       walk (parameters ~body ids scope) body
     (* A fixpoint with type variables of its own is lifted to a function of
        its own ({!Translation.gen_stmts}), its parameters bound at the
        conversion of their ML types ({!Translation.gen_fix}), not declared
        as a lambda's. *)
-    | MLfix (_, fs, defs, _, _) ->
-      let scope = push Kfix (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) scope in
+    | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+      let scope = push Kfix (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) scope in
       if
         Ml_type_util.own_type_variables ~n_outer:(List.length (!tctx).current_type_vars)
           (List.map snd (Array.to_list fs))
@@ -479,9 +494,11 @@ let region ~outer body =
           defs
       else Array.iter (walk scope) defs
     (* A read: whatever its binder is planned. *)
-    | MLrel (i, occ) ->
+    | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
       let rd_kind = Option.default Kouter (List.nth_opt scope.kinds (i - 1)) in
-      reads := (occ, {rd_boxed = boxed (planned scope i); rd_kind; rd_type = Option.map fst (planned scope i)}) :: !reads
+      reads := (occ, {rd_boxed = boxed (planned scope i);
+                      rd_kind;
+                      rd_type = Option.map fst (planned scope i)}) :: !reads
     | e -> Mlutil.ast_iter (walk scope) e
   in
   let depth = Lexenv.depth outer in
@@ -507,7 +524,7 @@ let region ~outer body =
   (* A lambda the region returns is written against the region's return
      type. *)
   ( match (strip_magic body, return) with
-  | (MLlam _ as e), Some t when slot_domains t <> None ->
+  | (Core.Expr.Lambda _ as e), Some t when slot_domains t <> None ->
     let ids, body = Mlutil.collect_lams e in
     walk (parameters ~slot_ty:t ~body ids scope) body
   | _ -> walk scope body );

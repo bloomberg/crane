@@ -29,29 +29,29 @@
     a partial application that captures its arguments. *)
 
 (** [apply f args], [f] and [args] canonical: the canonical form of
-    [MLapp (f, args)] ({!Mlutil.canonical_app}), a literal where it is a
+    [Core.Expr.Apply (f, args)] ({!Mlutil.canonical_app}), a literal where it is a
     numeral converter's application to a digit chain.  Every application
     built after {!structure} has run is built with this. *)
-val apply : Miniml.ml_ast -> Miniml.ml_ast list -> Miniml.ml_ast
+val apply : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
 
 (** [spine e] is [e] with every application canonical and every numeral
     literal written as one. *)
-val spine : Miniml.ml_ast -> Miniml.ml_ast
+val spine : Core.Expr.t -> Core.Expr.t
 
 (** Whether [f] may stand at the head of an application of a canonical
     term. *)
-val canonical_head : Miniml.ml_ast -> bool
+val canonical_head : Core.Expr.t -> bool
 
 (** Whether the node [e] is canonical: not an application with a head
     {!canonical_head} rejects, nor a term {!spine} writes as a literal. *)
-val canonical_application : Miniml.ml_ast -> bool
+val canonical_application : Core.Expr.t -> bool
 
 (** Whether every application in a term is canonical. *)
-val is_canonical : Miniml.ml_ast -> bool
+val is_canonical : Core.Expr.t -> bool
 
 (** [check s]: under [CRANE_CHECK_IR], a violation for each definition of
     [s] whose body is not canonical. *)
-val check : Miniml.ml_structure -> unit
+val check : Core.Program.t -> unit
 
 (** [structure s]: {!spine} on the body of every definition of [s]. *)
-val structure : Miniml.ml_structure -> Miniml.ml_structure
+val structure : Core.Program.t -> Core.Program.t

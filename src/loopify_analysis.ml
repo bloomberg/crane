@@ -44,7 +44,7 @@ type local_fixpoint = Cpp_ir.Expr.Local_fixpoint.t
 (** The signature of a call nothing is known about. *)
 let call_opaque : signature = {yields = Untyped; params = Unknown; constructs = None; occurrence = None}
 
-(** [signature ?yields ?params ?constructs ~nargs ()] is what a builder knows
+(** [Core.Signature.t ?yields ?params ?constructs ~nargs ()] is what a builder knows
     about a call on [nargs] arguments; [params] is kept only where it is one
     type per argument. *)
 let signature ?yields ?params ?constructs ~nargs () : signature =
@@ -136,8 +136,8 @@ let converting_ctor (ty : ty) (args : expr list) : expr =
 
 (** {2 Named Constants}
 
-    Frequently used [Id.t] values, defined once to avoid repeated
-    [Id.of_string] allocations across the loopify modules. *)
+    Frequently used [Core.Binder_name.Source.t] values, defined once to avoid repeated
+    [Core.Binder_name.Source.of_string] allocations across the loopify modules. *)
 
 let id_result       = Id.of_string "_result"
 let id_enter        = Generated_name.id "Enter"
@@ -558,7 +558,7 @@ type call_checker = expr -> call_site option
 let wraps (fixpoint : local_fixpoint option) (w : lambda) =
   match (fixpoint, w.fixpoint) with
   | Some {member = occ, j; _}, Some {member = occ', j'; encoding = Knot; _} ->
-    Miniml.Occurrence.equal occ occ' && Int.equal j j'
+    Core.Occurrence.equal occ occ' && Int.equal j j'
   | _ -> false
 
 (** The self-reference parameter of the lambda a single local fixpoint's
@@ -584,7 +584,7 @@ let planned_self_checker member : call_checker =
   fun e ->
     let planned =
       match e with
-      | Call ({occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
+      | Call ({occurrence = Some o; _}, _, _) -> List.exists (Core.Occurrence.equal o) calls
       | _ -> false
     in
     match e with
@@ -598,7 +598,7 @@ let planned_self_checker member : call_checker =
     occurrence it records, whatever heads it, its arguments reported the last
     first. *)
 let calls_checker calls : call_checker = function
-  | Call ({occurrence = Some o; _}, _, args) when List.exists (Miniml.Occurrence.equal o) calls ->
+  | Call ({occurrence = Some o; _}, _, args) when List.exists (Core.Occurrence.equal o) calls ->
     Some (mk_call_site (List.rev args))
   | _ -> None
 
@@ -690,7 +690,7 @@ let made_of = function Call (cs, _, _) -> cs.occurrence | _ -> None
     ({!made_of}), are the calls [planned], as many times each. *)
 let made_as_planned planned made =
   let made_occs = List.filter_map Fun.id made in
-  let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
+  let count o l = List.length (List.filter (Core.Occurrence.equal o) l) in
   List.length made_occs = List.length made
   && List.length planned = List.length made_occs
   && List.for_all (fun o -> count o planned = count o made_occs) planned
@@ -932,8 +932,10 @@ and expose_return check e =
   let return e = expose_return check e in
   match e with
   | Conditional (c, a, b) when holds a || holds b -> If {condition = c; then_ = [return a]; else_ = [return b]}
-  | Binary (Or, a, b) when holds b -> If {condition = a; then_ = [Return (Some (Literal (Bool true)))]; else_ = [return b]}
-  | Binary (And, a, b) when holds b -> If {condition = a; then_ = [return b]; else_ = [Return (Some (Literal (Bool false)))]}
+  | Binary (Or, a, b) when holds b ->
+    If {condition = a; then_ = [Return (Some (Literal (Bool true)))]; else_ = [return b]}
+  | Binary (And, a, b) when holds b ->
+    If {condition = a; then_ = [return b]; else_ = [Return (Some (Literal (Bool false)))]}
   | _ -> Return (Some e)
 
 (** Classify a function body's recursion pattern. Collects all recursive call

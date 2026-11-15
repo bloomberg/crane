@@ -5,7 +5,7 @@
 
     A lambda standing for a rank-2 argument -- [fun _ e => ...] at a parameter
     of type [forall X, E X -> M X] -- is handed a type the caller has not
-    chosen yet.  Extraction leaves that type as {!Miniml.Tunknown}, which
+    chosen yet.  Extraction leaves that type as {!Core.Type.Unknown}, which
     prints as [std::any], and a lambda written against [std::any] is a claim
     the body cannot keep: it would have to name a concrete result where only
     the caller knows one.
@@ -31,7 +31,7 @@ val carrier_type : Names.Id.t -> Cpp_ir.Lowered.Type.t
 
 (** Whether an argument's ML type quantifies a type extraction erased -- the
     mark of a rank-2 (or higher) argument. *)
-val quantifies_erased_type : Miniml.ml_type -> bool
+val quantifies_erased_type : Core.Type.t -> bool
 
 (** [at_carrier x ty] is [ty] with every erased position read as the carrier:
     inside a polymorphic function object that is what those positions denote. *)

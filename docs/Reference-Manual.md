@@ -824,12 +824,12 @@ Set Crane Extraction File Comment "<text>".
 
 ```coq
 Set Crane Extraction Optimize.       (* on by default *)
-Unset Crane Extraction Optimize.     (* disable all MiniML-level optimizations *)
+Unset Crane Extraction Optimize.     (* disable all Core-level optimizations *)
 Set Crane Extraction Flag <n>.       (* select individual optimizations by bitmask *)
 Set Crane Extraction Conservative Types.
 ```
 
-`Optimize` is a coarse switch over the MiniML-level simplifications inherited
+`Optimize` is a coarse switch over the Core-level simplifications inherited
 from Rocq's extraction (inlining, dummy-argument removal, let-reduction);
 `Flag` exposes the same set as a bitmask for finer control, where `0` is
 equivalent to `Unset Crane Extraction Optimize`. `Conservative Types` keeps

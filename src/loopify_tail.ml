@@ -385,7 +385,8 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
            let last v = List.exists (Id.equal v) last_reads && not (List.exists (Id.equal v) read) in
            let s =
              match s with
-             | Bind_variable (x, Existing, Local v) when by_value x && last v -> Bind_variable (x, Existing, Move (Local v))
+             | Bind_variable (x, Existing, Local v) when by_value x && last v ->
+               Bind_variable (x, Existing, Move (Local v))
              | Bind_variable (x, (Declare (ty, _) as d), Local v) when (not (pointer ty)) && last v ->
                Bind_variable (x, d, Move (Local v))
              | s -> s
@@ -757,7 +758,10 @@ and strip_loopify_stmt = function
   | If {condition = cond; then_ = then_br; else_ = else_br} ->
     If {condition = cond; then_ = strip_unnecessary_blocks then_br; else_ = strip_unnecessary_blocks else_br}
   | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
-    Switch {scrutinee = scrut; enum = r; branches = List.map (fun (id, body) -> (id, strip_unnecessary_blocks body)) branches; default = Option.map strip_unnecessary_blocks default}
+    Switch {scrutinee = scrut;
+            enum = r;
+            branches = List.map (fun (id, body) -> (id, strip_unnecessary_blocks body)) branches;
+            default = Option.map strip_unnecessary_blocks default}
   | Custom_match m ->
     Custom_match
       { m with
@@ -857,7 +861,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
       | Some site -> (
         let flags =
           Option.bind (made_of e) (fun o ->
-              List.find_map (fun (o', flags) -> if Miniml.Occurrence.equal o o' then Some flags else None) moves )
+              List.find_map (fun (o', flags) -> if Core.Occurrence.equal o o' then Some flags else None) moves )
         in
         match flags with
         | Some flags when List.compare_lengths flags params = 0 && List.compare_lengths site.cs_args params = 0 ->
@@ -892,7 +896,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
 let planned_last_reads ~moves e args =
   match
     Option.bind (made_of e) (fun o ->
-        List.find_map (fun (o', flags) -> if Miniml.Occurrence.equal o o' then Some flags else None) moves )
+        List.find_map (fun (o', flags) -> if Core.Occurrence.equal o o' then Some flags else None) moves )
   with
   | Some flags when List.compare_lengths flags args = 0 ->
     List.concat

@@ -1,14 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-open Miniml
 
 type extracted
 type optimized
 type frozen
 type normalized
 
-type normalizing = { structure : ml_structure; splices : Splices.t }
+type normalizing = { structure : Core.Program.t; splices : Splices.t }
 type 'phase program = normalizing
 
 let extracted structure = { structure; splices = Splices.empty }
@@ -27,37 +26,43 @@ let modules p = List.map (fun ((mp, _) as m) -> (mp, { p with structure = [m] })
     type definitions. *)
 let iter_types f p =
   let visit_body b = ignore (Mlutil.ast_map_types (fun t -> f t; t) b) in
-  let visit_ind ind = Array.iter (fun pk -> Array.iter (List.iter f) pk.ip_types) ind.ind_packets in
+  let visit_ind (ind : Core.Inductive.t) = Array.iter (fun (pk : Core.Inductive.Packet.t) -> Array.iter (List.iter f) pk.constructor_argument_types) ind.packets in
   Modutil.struct_iter
     (function
-      | Dind (_, ind) -> visit_ind ind
-      | Dtype (_, _, t) -> f t
-      | (Dterm _ | Dfix _) as d ->
-        List.iter (fun fd -> f fd.fd_type; visit_body fd.fd_body) (Mlutil.term_defs d) )
+      | Core.Decl.Inductive {definition = ind; _} -> visit_ind ind
+      | Core.Decl.Type_alias {body = t; _} -> f t
+      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> f fd.type_; visit_body fd.body) (Mlutil.term_defs d) )
     (function
-      | Sind (_, ind) -> visit_ind ind
-      | Stype (_, _, t) -> Option.iter f t
-      | Sval (_, b, t) -> f t; visit_body b )
+      | Core.Signature.Declaration.Inductive {definition = ind; _} -> visit_ind ind
+      | Core.Signature.Declaration.Type {body = t; _} -> Option.iter f t
+      | Core.Signature.Declaration.Value {body = b; type_ = t; _} -> f t; visit_body b )
     (fun _ -> ())
     p.structure
 
 (* A metavariable is its cell: extraction numbers each declaration's afresh. *)
 module Cells = Hashtbl.Make (struct
-  type t = ml_meta
+  type t = Core.Meta.t
 
   let equal = ( == )
-  let hash (m : ml_meta) = Hashtbl.hash m.id
+  let hash (m : Core.Meta.t) = Hashtbl.hash m.id
 end)
 
-module Opens = Hashtbl.Make (Open)
+module Opens = Hashtbl.Make (Core.Open)
 
 let open_annotations p =
   let seen = Opens.create 16 in
   let rec walk = function
-    | Topen o -> Opens.replace seen o ()
-    | Tarr (a, b) -> walk a; walk b
-    | Tglob (_, ts, _) | Tapp (_, ts) -> List.iter walk ts
-    | Tvar _ | Thole _ | Tmeta _ | Tdummy _ | Tunknown | Taxiom | Tstring -> ()
+    | Core.Type.Open o -> Opens.replace seen o ()
+    | Core.Type.Arrow {parameter = a; result = b} -> walk a; walk b
+    | Core.Type.Global_app {type_arguments = ts; _} | Core.Type.Variable_app {arguments = ts; _} -> List.iter walk ts
+    | Core.Type.Variable _
+    | Core.Type.Hole _
+    | Core.Type.Meta _
+    | Core.Type.Erased _
+    | Core.Type.Unknown
+    | Core.Type.Axiom
+    | Core.Type.String -> ()
   in
   iter_types walk p;
   Opens.length seen
@@ -79,32 +84,44 @@ let zonk p =
   let opens = Cells.create 64 in
   let rec ty t =
     match t with
-    | Tmeta {contents = Some u} -> ty u
-    | Tmeta ({contents = None} as m) -> (
+    | Core.Type.Meta {contents = Some u} -> ty u
+    | Core.Type.Meta ({contents = None} as m) -> (
       match Cells.find_opt opens m with
-      | Some o -> Topen o
+      | Some o -> Core.Type.Open o
       | None ->
-        let o = Open.fresh m.id in
+        let o = Core.Open.fresh m.id in
         Cells.add opens m o;
-        Topen o )
-    | Tarr (a, b) -> Tarr (ty a, ty b)
-    | Tglob (r, ts, args) -> Tglob (r, List.map ty ts, List.map body args)
-    | Tapp (i, ts) -> Tapp (i, List.map ty ts)
-    | Tvar _ | Thole _ | Topen _ | Tdummy _ | Tunknown | Taxiom | Tstring -> t
+        Core.Type.Open o )
+    | Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = ty a; result = ty b}
+    | Core.Type.Global_app {head = r; type_arguments = ts; index_arguments = args} ->
+      Core.Type.Global_app {head = r; type_arguments = List.map ty ts; index_arguments = List.map body args}
+    | Core.Type.Variable_app {head = i; arguments = ts} -> Core.Type.Variable_app {head = i; arguments = List.map ty ts}
+    | Core.Type.Variable _
+    | Core.Type.Hole _
+    | Core.Type.Open _
+    | Core.Type.Erased _
+    | Core.Type.Unknown
+    | Core.Type.Axiom
+    | Core.Type.String -> t
   and body e = Mlutil.ast_map_types ty e in
-  let inductive ind =
-    Array.iter (fun pk -> Array.iteri (fun i ts -> pk.ip_types.(i) <- List.map ty ts) pk.ip_types) ind.ind_packets
+  let inductive (ind : Core.Inductive.t) =
+    Array.iter (fun (pk : Core.Inductive.Packet.t) -> Array.iteri (fun i ts -> pk.constructor_argument_types.(i) <- List.map ty ts) pk.constructor_argument_types) ind.packets
   in
   let decl = function
-    | Dterm (r, b, t) -> Dterm (r, body b, ty t)
-    | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = body fd.fd_body; fd_type = ty fd.fd_type}) fds)
-    | Dtype (r, vars, t) -> Dtype (r, vars, ty t)
-    | Dind (_, ind) as d -> inductive ind; d
+    | Core.Decl.Value {entity = r; body = b; type_ = t} -> Core.Decl.Value {entity = r; body = body b; type_ = ty t}
+    | Core.Decl.Recursive_group fds ->
+      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = body fd.body;
+                                                                                               type_ = ty fd.type_}) fds)
+    | Core.Decl.Type_alias {entity = r; parameters = vars; body = t} ->
+      Core.Decl.Type_alias {entity = r; parameters = vars; body = ty t}
+    | Core.Decl.Inductive {definition = ind; _} as d -> inductive ind; d
   in
   let spec = function
-    | Sind (_, ind) as s -> inductive ind; s
-    | Stype (r, vars, t) -> Stype (r, vars, Option.map ty t)
-    | Sval (r, b, t) -> Sval (r, body b, ty t)
+    | Core.Signature.Declaration.Inductive {definition = ind; _} as s -> inductive ind; s
+    | Core.Signature.Declaration.Type {entity = r; parameters = vars; body = t} ->
+      Core.Signature.Declaration.Type {entity = r; parameters = vars; body = Option.map ty t}
+    | Core.Signature.Declaration.Value {entity = r; body = b; type_ = t} ->
+      Core.Signature.Declaration.Value {entity = r; body = body b; type_ = ty t}
   in
   Table.map_types ty;
   { p with structure = Modutil.map_struct ~spec ~with_type:ty decl p.structure }
@@ -113,20 +130,31 @@ let zonk p =
     from the type a global is registered at. *)
 let check_zonked p =
   let rec walk = function
-    | Tmeta _ -> fail "holds a metavariable"
-    | Tarr (a, b) -> walk a; walk b
-    | Tglob (_, ts, args) -> List.iter walk ts; List.iter (fun a -> ignore (Mlutil.ast_map_types (fun t -> walk t; t) a)) args
-    | Tapp (_, ts) -> List.iter walk ts
-    | Tvar _ | Thole _ | Topen _ | Tdummy _ | Tunknown | Taxiom | Tstring -> ()
+    | Core.Type.Meta _ -> fail "holds a metavariable"
+    | Core.Type.Arrow {parameter = a; result = b} -> walk a; walk b
+    | Core.Type.Global_app {type_arguments = ts; index_arguments = args; _} ->
+      List.iter walk ts; List.iter (fun a -> ignore (Mlutil.ast_map_types (fun t -> walk t; t) a)) args
+    | Core.Type.Variable_app {arguments = ts; _} -> List.iter walk ts
+    | Core.Type.Variable _
+    | Core.Type.Hole _
+    | Core.Type.Open _
+    | Core.Type.Erased _
+    | Core.Type.Unknown
+    | Core.Type.Axiom
+    | Core.Type.String -> ()
   in
   iter_types walk p;
   Table.iter_types walk
 
-(** Every recursive group is nonempty, and a local one selects a member it
-    has. *)
+(** Every local recursive group is nonempty and selects a member it has (a
+    top-level group is nonempty by its type). *)
 let check_recursive_groups p =
   let rec check_body = function
-    | MLfix (i, ids, funs, _, _) as e ->
+    | Core.Expr.Fixpoint {selected = i;
+                          functions = ids;
+                          bodies = funs; _} | Core.Expr.Cofixpoint {selected = i;
+                                                                    functions = ids;
+                                                                    bodies = funs; _} as e ->
       if Array.length ids <> Array.length funs || Array.length ids = 0 then
         fail "has a local recursive group whose names and bodies disagree";
       if i < 0 || i >= Array.length ids then fail "selects a recursive function its group lacks";
@@ -135,9 +163,9 @@ let check_recursive_groups p =
   in
   Modutil.struct_iter
     (function
-      | Dfix [] -> fail "has an empty recursive group"
-      | (Dterm _ | Dfix _) as d -> List.iter (fun fd -> check_body fd.fd_body) (Mlutil.term_defs d)
-      | Dind _ | Dtype _ -> () )
+      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Mlutil.term_defs d)
+      | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     (fun _ -> ())
     (fun _ -> ())
     p.structure
@@ -152,9 +180,11 @@ let check_declared_once p =
   in
   Modutil.struct_iter
     (function
-      | Dind (kn, ind) -> Array.iteri (fun i _ -> declare (Names.GlobRef.IndRef (kn, i))) ind.ind_packets
-      | Dtype (r, _, _) -> declare r
-      | (Dterm _ | Dfix _) as d -> List.iter (fun fd -> declare fd.fd_ref) (Mlutil.term_defs d) )
+      | Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
+        Array.iteri (fun i _ -> declare (Names.GlobRef.IndRef (kn, i))) ind.packets
+      | Core.Decl.Type_alias {entity = r; _} -> declare r
+      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> declare fd.entity) (Mlutil.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     p.structure
@@ -166,14 +196,20 @@ let check_declared_once p =
 let check_instantiations p =
   (* Frozen, a metavariable an instantiation held is an open annotation. *)
   let rec open_meta = function
-    | Tmeta {contents = None} | Topen _ -> true
-    | Tmeta {contents = Some t} -> open_meta t
-    | Tarr (a, b) -> open_meta a || open_meta b
-    | Tglob (_, ts, _) | Tapp (_, ts) -> List.exists open_meta ts
-    | Tvar _ | Thole _ | Tdummy _ | Tunknown | Taxiom | Tstring -> false
+    | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
+    | Core.Type.Meta {contents = Some t} -> open_meta t
+    | Core.Type.Arrow {parameter = a; result = b} -> open_meta a || open_meta b
+    | Core.Type.Global_app {type_arguments = ts; _} | Core.Type.Variable_app {arguments = ts; _} ->
+      List.exists open_meta ts
+    | Core.Type.Variable _
+    | Core.Type.Hole _
+    | Core.Type.Erased _
+    | Core.Type.Unknown
+    | Core.Type.Axiom
+    | Core.Type.String -> false
   in
   let check_use use =
-    let r = Global_use.callee use in
+    let r = Core.Global_use.callee use in
     let name () = Pp.string_of_ppcmds (Printer.pr_global r) in
     Option.iter
       (fun inst ->
@@ -186,18 +222,19 @@ let check_instantiations p =
           fail ("instantiates a use of " ^ name () ^ " at a scheme of another arity")
         | Some _ -> fail ("instantiates a use of " ^ name () ^ " at a scheme other than its own")
         | None -> () )
-      (Global_use.instantiation use);
-    if Global_use.exists_type open_meta use then
+      (Core.Global_use.instantiation use);
+    if Core.Global_use.exists_type open_meta use then
       fail ("holds a metavariable in the instantiation of a use of " ^ name ())
   in
   let rec check_body = function
-    | MLglob use as e -> check_use use; Mlutil.ast_iter check_body e
+    | Core.Expr.Global use as e -> check_use use; Mlutil.ast_iter check_body e
     | e -> Mlutil.ast_iter check_body e
   in
   Modutil.struct_iter
     (function
-      | (Dterm _ | Dfix _) as d -> List.iter (fun fd -> check_body fd.fd_body) (Mlutil.term_defs d)
-      | Dind _ | Dtype _ -> () )
+      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Mlutil.term_defs d)
+      | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     (fun _ -> ())
     (fun _ -> ())
     p.structure
@@ -208,24 +245,24 @@ let check_instantiations p =
 let iter_occurrences f p =
   Modutil.struct_iter
     (function
-      | (Dterm _ | Dfix _) as d ->
+      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
-          (fun fd ->
+          (fun (fd : Core.Recursion.Definition.t) ->
             let rec walk e =
               ( match e with
-              | MLrel (_, o) -> f fd.fd_ref "read" o
-              | MLletin (_, _, _, _, o) -> f fd.fd_ref "let" o
-              | MLcase (_, _, _, o) -> f fd.fd_ref "match" o
-              | MLcons (_, _, _, o) -> f fd.fd_ref "construction" o
-              | MLmagic (_, _, o) -> f fd.fd_ref "coercion" o
-              | MLfix (_, _, _, _, o) -> f fd.fd_ref "local fixpoint" o
-              | MLglob use -> f fd.fd_ref "use" (Global_use.occurrence use)
+              | Core.Expr.Bound_variable {occurrence = o; _} -> f fd.entity "read" o
+              | Core.Expr.Let {occurrence = o; _} -> f fd.entity "let" o
+              | Core.Expr.Match {occurrence = o; _} -> f fd.entity "match" o
+              | Core.Expr.Construct {occurrence = o; _} -> f fd.entity "construction" o
+              | Core.Expr.Coerce {occurrence = o; _} | Core.Expr.Boxed_value {occurrence = o; _} | Core.Expr.Lambda_group_barrier {occurrence = o; _} -> f fd.entity "coercion" o
+              | Core.Expr.Fixpoint {occurrence = o; _} | Core.Expr.Cofixpoint {occurrence = o; _} -> f fd.entity "local fixpoint" o
+              | Core.Expr.Global use -> f fd.entity "use" (Core.Global_use.occurrence use)
               | _ -> () );
               Mlutil.ast_iter walk e
             in
-            walk fd.fd_body )
+            walk fd.body )
           (Mlutil.term_defs d)
-      | Dind _ | Dtype _ -> () )
+      | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     (fun _ -> ())
     (fun _ -> ())
     p.structure
@@ -235,20 +272,20 @@ let iter_occurrences f p =
     ownership plan's reads, the C++ call a Core call makes -- reads each as
     one place in one definition. *)
 let check_occurrences phase p =
-  match Occurrence.shared (fun visit -> iter_occurrences (fun _ _ o -> visit o) p) with
+  match Core.Occurrence.shared (fun visit -> iter_occurrences (fun _ _ o -> visit o) p) with
   | [] -> ()
   | o :: _ ->
     let holders = ref [] in
     iter_occurrences
       (fun r what o' ->
-        if Occurrence.equal o o' then
+        if Core.Occurrence.equal o o' then
           holders := (what ^ " in " ^ Table.kername_of_global r) :: !holders )
       p;
     failure phase ("holds one occurrence at several terms: " ^ String.concat ", " (List.rev !holders))
 
 let freeze p =
   let p = zonk p in
-  Meta.freeze ();
+  Core.Meta.freeze ();
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_recursive_groups p;
     check_declared_once p;
