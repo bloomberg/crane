@@ -2912,7 +2912,7 @@ type slot = {
   eta_keep_moves : bool;
       (** The slot holds a single-use partial application whose closure may
           capture by reference and keep its [CPPmove] wrappers.  Read once, by
-          the {!Translation.eta_fun} that builds that closure. *)
+          the {!Translation_application.eta_fun} that builds that closure. *)
   call_result : Cpp_ir.Lowered.Type.t option;
       (** The type the call this slot is an argument of is expected to
           produce.  An instance passed as a value -- [MonadIter_itree] as

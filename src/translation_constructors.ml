@@ -4,7 +4,7 @@
 (** Where each value argument of a constructor is generated: the C++ type
     it is generated against and the slot it fills, decided from the
     constructor, its annotation and the position it is built at.
-    {!Translation.gen_expr} lowers a constructor by these, and
+    {!Translation_construct.gen_construction} lowers a constructor by these, and
     {!Position_plan} plans the coercions it stores by them. *)
 
 open Common

@@ -650,7 +650,7 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
 
     Both forms are rewritten as [Return (Some call)] so the statement-level
     rewriter can handle them as ordinary tail calls.  Translation
-    ({!Translation.gen_stmts}) produces this pattern for void- and
+    ({!Translation_stmts.gen_stmts}) produces this pattern for void- and
     unit-returning recursive functions. *)
 and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
   | Expression e :: Return _ :: rest

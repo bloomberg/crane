@@ -1669,7 +1669,7 @@ let recover_erased_body_types ty b =
 
 (** A constant's initialiser: its body, or -- for an erased proof, a lemma of
     a module whose other members are extracted -- the empty box an erased
-    constructor argument is.  The [Core.Expr.Erased_value] case of {!Translation.gen_expr}
+    constructor argument is.  The [Core.Expr.Erased_value] case of {!Translation_expr.gen_expr}
     is for dead code, an abort; a constant is evaluated, at static
     initialisation. *)
 let gen_constant_value ?expected_ty b =

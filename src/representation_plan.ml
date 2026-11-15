@@ -51,7 +51,7 @@ let push kind ids scope =
     kinds = List.map (fun _ -> kind) ids @ scope.kinds }
 
 (* The domains a slot of C++ type [t] declares, where it declares a
-   signature ({!Translation.gen_expr}'s [Core.Expr.Lambda]). *)
+   signature ({!Translation_lambda.gen_lambda}). *)
 let rec slot_domains (t : Cpp_ir.Lowered.Type.t) =
   match t with
   | Non_deduced t | Const t | Reference (Lvalue, t) -> slot_domains t
@@ -62,7 +62,7 @@ let rec slot_domains (t : Cpp_ir.Lowered.Type.t) =
     | _ -> None )
 
 (* What a lambda's parameters [ids] (innermost first, over [body]) are read
-   at in its body ({!Translation.gen_expr}'s [Core.Expr.Lambda]): each emitted one at
+   at in its body ({!Translation_lambda.gen_lambda}): each emitted one at
    the type it is declared ({!Translation_types.lambda_param_cpp_type}) and
    then assigned ({!Translation_types.lambda_param_assigned}) against the
    slot's domains [slot], in source order, where the slot declares a
@@ -153,11 +153,11 @@ let pinned_fields scope ~typ ~scrut cname planned =
     planned pins
 
 (* The pattern variables [ids], in field order, of a branch matching [cname]
-   in a match over [scrut] generated at [typ] ({!Translation.gen_cpp_case}). *)
+   in a match over [scrut] generated at [typ] ({!Translation_match.gen_cpp_case}). *)
 let pattern_binders scope ~typ ~scrut cname ids =
   pinned_fields scope ~typ ~scrut cname (List.map (fun (_, ty) -> at_binding ty) (retype_dependent_params typ ids))
 
-(* The same for a custom match annotated [ty] ({!Translation.gen_custom_cpp_case}):
+(* The same for a custom match annotated [ty] ({!Translation_match.gen_custom_cpp_case}):
    bound at the types {!Translation_types.custom_branch_binders} gives them,
    every field a box where the pair is read back as [pair<any, any>], then
    what the branch pins down, then every field a box that is not a list where
@@ -192,7 +192,7 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
   else planned
 
 (* Whether [a] projects a component out of a pair read from a binder that
-   holds a box ({!Translation.eta_fun}'s pair-accessor case): the
+   holds a box ({!Translation_application.eta_fun}'s pair-accessor case): the
    pair is recovered as [pair<any, any>], and its components are boxes. *)
 let reads_boxed_component scope a =
   let is_pair_projection r =
@@ -239,7 +239,7 @@ let region ~outer body =
     in
     walk (parameters ?slot_ty ~body ids scope) body
   and walk scope = function
-    (* A record projection ({!Translation.gen_expr}, {!Translation.gen_stmts}:
+    (* A record projection ({!Translation_match.gen_record_projection}, {!Translation_match.gen_record_match_stmts}:
        after a custom match, before any other) declares its fields at the
        types they are bound at, pinned by nothing: as statements, with a
        dependent parameter's field retyped as erased; in an expression, not
@@ -317,7 +317,7 @@ let region ~outer body =
           | Core.Expr.Lambda _ when stores_erased_fn env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
           | Core.Expr.Lambda _ as lam ->
             (* The slot's own signature where it erased only its domain
-               ({!Translation.gen_expr_custom_cons}'s [erased_fn_slot]). *)
+               ({!Translation_construct.gen_expr_custom_cons}'s [erased_fn_slot]). *)
             let erased_fn_slot =
               if ctor_arg_is_passthrough r i || not (ml_expr_is_function_value e) then None
               else
@@ -333,7 +333,7 @@ let region ~outer body =
         args
     (* A record's field is written against the field's type at the record's
        arguments only where that type returns a function
-       ({!Translation.gen_expr}'s record [expected_for_field]). *)
+       ({!Translation_construct.gen_construction}'s [expected_for_field]). *)
     | Core.Expr.Construct {result_type = ty;
                            constructor = r;
                            arguments = args; _} when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
@@ -439,7 +439,7 @@ let region ~outer body =
         args
     (* A lambda passed to a local function is written against that
        function's declared domain at its position, where the binding site
-       declared one with no erased position ({!Translation.eta_fun}'s
+       declared one with no erased position ({!Translation_application.eta_fun}'s
        [declared_dom]). *)
     | Core.Expr.Apply {callee = ( ( Core.Expr.Bound_variable {index = h; _}
             | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = h; _}; _}
@@ -478,8 +478,8 @@ let region ~outer body =
       let ids, body = Mlutil.collect_lams e in
       walk (parameters ~body ids scope) body
     (* A fixpoint with type variables of its own is lifted to a function of
-       its own ({!Translation.gen_stmts}), its parameters bound at the
-       conversion of their ML types ({!Translation.gen_fix}), not declared
+       its own ({!Translation_stmts.gen_stmts}), its parameters bound at the
+       conversion of their ML types ({!Translation_local_functions.gen_fix}), not declared
        as a lambda's. *)
     | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
       let scope = push Kfix (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) scope in

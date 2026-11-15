@@ -2488,7 +2488,7 @@ let rec has_open_meta t =
 (** [slot_refined_lambda env ~expected_ml_ty args body] -- the binders [args]
     (innermost first) of a lambda over [body], and [body], as lowering
     generates them in a slot of ML type [expected_ml_ty]
-    ({!Translation.gen_expr}'s [Core.Expr.Lambda] case; [None] where the slot is a box
+    ({!Translation_lambda.gen_lambda}; [None] where the slot is a box
     or states none).
 
     A binder's recorded type is whatever extraction managed to infer for it,
@@ -2609,7 +2609,7 @@ let binder_matched_at body =
 
 (** Whether binder [i] of a lambda's [binders] (innermost-first, over
     [body]) becomes a C++ parameter, the lambda written against a slot of C++
-    type [expected_ty] ({!Translation.gen_expr}'s [Core.Expr.Lambda]).  A binder typed
+    type [expected_ty] ({!Translation_lambda.gen_lambda}).  A binder typed
     [Core.Type.Erased] carries nothing, unless the body names it or the slot's
     declaration takes a value at its position: [Cat IFun]'s [cat] binds
     objects [a b c] that [obj := Type -> Type] erases, and [Cat] is a
@@ -2659,7 +2659,7 @@ let lambda_binder_emitted env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~bod
   || Mlutil.ast_occurs (i + 1) body
 
 (** The C++ type a lambda declares its parameter [(id, ty, owned)] at
-    ({!Translation.gen_expr}'s [Core.Expr.Lambda]), and the substitution its body is
+    ({!Translation_lambda.gen_lambda}), and the substitution its body is
     rewritten with, if any.  [slot_dom] is the domain the slot the lambda
     fills declares at this parameter's position, where it declares a
     signature; [unused], that the body never reads the parameter; [body], the
@@ -2782,7 +2782,7 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          rather than erased -- nothing in the term says which -- so it
          deduces.  Committing to [std::monostate] rejects every call through
          an erased tree.  The slot is still emitted; see the parameter filter
-         in {!Translation.gen_expr}. *)
+         in {!Translation_expr.gen_expr}. *)
       Reference (Lvalue, Const Auto)
     | None when Ml_type_util.has_tany_written bare_cpp_ty ->
       (* The type is spelled with erased positions (std::any).  Use
@@ -2843,7 +2843,7 @@ let ctor_arg_is_passthrough r i =
   | _ -> false
 
 (** The template arguments a custom constructor annotated [ty] is drafted
-    at, before its destination refines them ({!Translation.gen_expr_custom_cons}):
+    at, before its destination refines them ({!Translation_construct.gen_expr_custom_cons}):
     the inductive's parameters, converted, where every one erases the
     promoted types of [promoted_active]'s arity or, failing that, [return]'s
     arguments when it is the same inductive; an unresolved one written down as
@@ -3200,7 +3200,7 @@ let is_env_var_erased env tvars i =
   | None -> false
 
 (** Check whether an ML expression's C++ type is erased ([std::any]).
-    Used by the coercion handler ([Translation.gen_crossing]) to decide whether [any_cast] is needed. *)
+    Used by the coercion handler ([Translation_expr.gen_crossing]) to decide whether [any_cast] is needed. *)
 let rec ml_expr_is_erased env (t : Core.Expr.t) : bool =
   let tvars = get_current_type_vars () in
   match t with
@@ -3358,7 +3358,7 @@ let unbox_into into e =
   | _ -> e
 
 (** What a custom match over [t], annotated [typ], with branches [pv], knows
-    about whether its scrutinee is boxed, as {!Translation.gen_custom_cpp_case}
+    about whether its scrutinee is boxed, as {!Translation_match.gen_custom_cpp_case}
     decides it: [var_boxed i occ] says whether the variable read at [occ],
     of the binder at de Bruijn index [i], holds a box, [var_type] gives a
     binder's ML type.  Reads no binder itself. *)
