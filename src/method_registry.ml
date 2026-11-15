@@ -550,12 +550,13 @@ let settle_file_calls ~already_method ~calls ~ref_of cands =
   in
   settle cands
 
-(** The receiver position of [body : ty] as a method of [epon_ref], and the
-    inductive's type variables among its parameters, when it may be one.  Not
-    where reuse would consume the receiver: a method's [this] is borrowed, and
-    under [Crane Reuse] a shared variant's match rebuilds into the matched
-    value's own block, which only an owned parameter can give up. *)
-let method_receiver epon_ref body ty =
+(** The receiver position of function [func]'s [body : ty] as a method of
+    [epon_ref], and the inductive's type variables among its parameters, when
+    it may be one.  Not where reuse would consume the receiver: a method's
+    [this] is borrowed, and where [func] reuses ({!Table.should_reuse}) a
+    shared variant's match rebuilds into the matched value's own block, which
+    only an owned parameter can give up. *)
+let method_receiver ~func epon_ref body ty =
   match find_epon_arg_pos epon_ref ty with
   | Some (pos, _) as r
     when body_safe_for_method ~this_pos:pos
@@ -563,7 +564,7 @@ let method_receiver epon_ref body ty =
            body ->
     let params, inner = Mlutil.collect_lams body in
     let consumed () =
-      Table.reuse () && Table.is_shared_variant epon_ref
+      Table.should_reuse func && Table.is_shared_variant epon_ref
       && Escape.is_reuse_scrutinee (List.length params - pos) inner
     in
     if consumed () then None else r
@@ -571,7 +572,7 @@ let method_receiver epon_ref body ty =
 
 (** Whether the function qualifies as a method of the inductive, without
     registering anything. *)
-let would_register epon_ref body ty = Option.has_some (method_receiver epon_ref body ty)
+let would_register ~func epon_ref body ty = Option.has_some (method_receiver ~func epon_ref body ty)
 
 (** Top-level sibling candidates, each with the file functions it calls and
     the registration to run if it is kept.  Collected by
@@ -740,7 +741,7 @@ let register_methods_for_epon
             (fun {Core.Recursion.Definition.entity = r; body = body; type_ = ty} ->
               if same_module r && not (refs_forward ty) && not (refs_alias ty)
               then
-                match method_receiver epon_ref body ty with
+                match method_receiver ~func:r epon_ref body ty with
                 | Some (pos, ind_tvar_positions) ->
                   consider r body ty pos ind_tvar_positions
                 | _ -> () )
@@ -855,7 +856,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
       if refs_excluded_for best_ref ty then ()
       else if has_concrete_type_args best_ref ty then ()
       else
-        match method_receiver best_ref body ty with
+        match method_receiver ~func:r best_ref body ty with
         | Some (pos, ind_tvar_positions) ->
           add_candidate best_ref r body ty pos ind_tvar_positions
         | _ -> ()
@@ -1203,7 +1204,7 @@ let get_candidates (reg : t) (ind_ref : GlobRef.t) : method_candidate list =
     [CRANE_CHECK_IR] a method the scan missed is reported. *)
 let planned_candidate (reg : t) (epon_ref : GlobRef.t) (func_ref : GlobRef.t)
     (body : Core.Expr.t) (ty : Core.Type.t) : method_candidate option =
-  match method_receiver epon_ref body ty with
+  match method_receiver ~func:func_ref epon_ref body ty with
   | None -> None
   | Some (pos, _) -> (
     match RefTbl.find_opt reg.methods func_ref with

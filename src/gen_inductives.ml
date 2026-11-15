@@ -2947,13 +2947,13 @@ let gen_ind_header_v2
               Sec.Creators ) ]
         in
         let reuse_factory : Cpp_ir.Lowered.phase F.member list =
-          if Table.reuse () && (not is_coinductive) && Table.is_shared_variant name then
+          if Table.reuse_anywhere () && (not is_coinductive) && Table.is_shared_variant name then
             (* A constructor with no fields has no block to write into. *)
             if tys_list = [] then [] else shared_reuse_factory ()
           else
           match token_field with
           | Some (tok_j, rec_inner)
-            when Table.reuse () && Table.non_atomic_rc () && (not is_coinductive)
+            when Table.reuse_anywhere () && Table.non_atomic_rc () && (not is_coinductive)
                  (* A shared variant's slot holds no cell to recycle. *)
                  && not (Table.is_shared_variant name) ->
               let tok_id = Id.of_string "_tok" in

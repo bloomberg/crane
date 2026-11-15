@@ -51,7 +51,7 @@ let summarize ?(receiver = fun _ -> None) struc =
     List.iter
       (fun (r, b, ty) ->
         let params, body = Ml_type_util.declared_parameters ty b in
-        let f = unless_receiver r (read_off params body) in
+        let f = unless_receiver r (Table.with_decl_ref r (fun () -> read_off params body)) in
         if Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;
           flags := Ref.User.Map.add r f !flags ))

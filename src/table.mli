@@ -871,7 +871,8 @@ val loopifies_method : GlobRef.t -> bool
     the default. *)
 val loopifies_methods_of : GlobRef.t -> bool
 
-(** Declaration currently being translated; consulted by {!reuse_loopify_ok}. *)
+(** Declaration currently being translated; consulted by {!reuse_loopify_ok}
+    and {!reuse_here}. *)
 val current_decl_ref : GlobRef.t option ref
 
 (** Whether the Perceus reuse rewrite may apply inside the declaration being
@@ -892,12 +893,23 @@ val reset_extraction_loopify : unit -> unit
 
 (** {2 Reuse pass (Perceus-style in-place reuse)} *)
 
-(** Check if the reuse pass is enabled ([Crane Reuse], default off). *)
+(** The global [Set Crane Reuse] flag (default off).  A per-function
+    [Crane Reuse] / [Crane NoReuse] overrides it, so a decision about one
+    function asks {!should_reuse} or {!reuse_here} instead. *)
 val reuse : unit -> bool
 
 (** Check whether a specific function should reuse (per-function override first,
     then global setting). *)
 val should_reuse : GlobRef.t -> bool
+
+(** {!should_reuse} of the declaration being generated ({!current_decl_ref});
+    outside any declaration, the global setting. *)
+val reuse_here : unit -> bool
+
+(** Whether some function may reuse: the global setting, or a [Crane Reuse]
+    naming a function.  For what is generated per type rather than per
+    function, such as an inductive's [__reuse] factories. *)
+val reuse_anywhere : unit -> bool
 
 (** Mark references for reuse (true) or noreuse (false), overriding the global
     [Crane Reuse] setting. *)

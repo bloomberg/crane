@@ -288,8 +288,8 @@ val settle_file_calls :
   ref_of:('a -> GlobRef.t) ->
   'a list -> 'a list
 
-(** Whether the function qualifies as a method of the inductive. *)
-val would_register : GlobRef.t -> Core.Expr.t -> Core.Type.t -> bool
+(** Whether function [func] qualifies as a method of the inductive. *)
+val would_register : func:GlobRef.t -> GlobRef.t -> Core.Expr.t -> Core.Type.t -> bool
 
 (** {2 Eponymous-type helpers}
 

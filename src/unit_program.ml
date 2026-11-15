@@ -201,7 +201,15 @@ let finish jobs =
         if Probe.checking () && not (same_source d d') then
           Probe.violation "unit program" Pp.(str "two declarations finished as " ++ pp_id id)
       | None ->
-        let finished = Cpp_pipeline.finish d in
+        (* Passes that ask a per-function setting ({!Table.reuse_here}) ask
+           it of the entity the declaration was generated for. *)
+        let owner_ref =
+          match id.owner with
+          | Source e -> Some (Entity_id.to_ref e)
+          | Generated g -> Option.map Entity_id.to_ref (Generated_entity_id.owner g)
+        in
+        let finish () = Cpp_pipeline.finish d in
+        let finished = match owner_ref with Some r -> Table.with_decl_ref r finish | None -> finish () in
         Probe.hit "cpp_ir" (fun () -> "converted");
         demands := List.rev_append (Cpp_demands.of_decl finished) !demands;
         globals := List.rev_append (Cpp_demands.globals_of_decl finished) !globals;
