@@ -568,7 +568,7 @@ let constant_name e =
       | Some ("positive", 2), [p] -> Option.map (fun v -> Z.mul v (Z.of_int 2)) (pos p)
       | Some ("positive", 3), [] -> Some Z.one
       | _ -> None )
-    | MLmagic (_, a, _) -> pos a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> pos a
     | _ -> None
   in
   let rec nat = function
@@ -985,7 +985,7 @@ let rec gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slo
              list type (e.g. one built via a different code path that already
              collapses to the flat shape) must agree exactly, or the
              consumer's [any_cast] throws [std::bad_any_cast] at runtime.
-             See the matching invariant in [gen_expr]'s [MLrel]/[MLmagic]
+             See the matching invariant in [gen_expr]'s [MLrel]/[MLcoerce]
              cases. *)
           List.map (fun _ -> Cpp_ir.Type.Any) temps
         else temps
@@ -1720,7 +1720,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
         in
         (* Generate the body, then check if the body returns a lambda (this
            happens when extract_cons_app generates curried partial constructor
-           applications with an MLmagic (_, barrier, _)). If so, convert the returned
+           applications with an [MLbarrier] barrier). If so, convert the returned
            lambda to capture by value to avoid dangling references to the outer
            lambda's parameters. *)
         (* A lambda stored into an erased slot IS the value in that slot, so
@@ -2422,7 +2422,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
        [deque<std::any>] — at runtime) flows into a constructor/record field
        whose concrete type is a custom list with a NON-erased element type
        (e.g. [mkRec : list elt -> rec] → field [deque<elt>]), the [MLrel]/
-       [MLmagic] arg path only unwraps it to the erased [deque<std::any>].
+       [MLcoerce] arg path only unwraps it to the erased [deque<std::any>].
        Convert that to the concrete-element container with [crane_container_cast]
        here, where the field's concrete type is known — a plain aggregate
        initialization / [any_cast<deque<elt>>] would fail, since the value is a
@@ -2432,7 +2432,10 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     let container_cast_erased_field ml_ft ml_arg (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
       let is_erased_rel =
         match ml_arg with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+        | MLrel (j, occ)
+        | MLcoerce (_, _, MLrel (j, occ), _)
+        | MLboxed (MLrel (j, occ), _)
+        | MLbarrier (MLrel (j, occ), _) ->
           read_is_boxed j occ
         | _ -> false
       in
@@ -2447,7 +2450,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
           when Ml_type_util.is_custom_list_global g
                && not (resolves_to_any_type elem_ty) ->
           (* [expr] came out as the erased [deque<std::any>] from the
-             MLrel/MLmagic path; rebuild it as the concrete element container. *)
+             MLrel/MLcoerce path; rebuild it as the concrete element container. *)
           Container_cast (clean_ct, expr, false)
         | _ -> expr
       end
@@ -2494,7 +2497,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 (fun (t : ml_type) ->
                   match t with
                   | Tunknown ->
-                    (* Infer from first non-MLmagic/MLdummy constructor arg *)
+                    (* Infer from first non-coercion/MLdummy constructor arg *)
                     let first_elem =
                       List.find_opt
                         (fun a ->
@@ -2504,7 +2507,11 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                         ts_updated
                     in
                     ( match first_elem with
-                    | Some (MLmagic (_, MLcons (elem_ty, _, _, _), _)) -> elem_ty
+                    | Some
+                        ( MLcoerce (_, _, MLcons (elem_ty, _, _, _), _)
+                        | MLboxed (MLcons (elem_ty, _, _, _), _)
+                        | MLbarrier (MLcons (elem_ty, _, _, _), _) ) ->
+                      elem_ty
                     | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                     | _ -> t )
                   | _ -> t )
@@ -2762,7 +2769,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 let ml_concrete_param_tys =
                   let rec collect_lam_tys = function
                     | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                    | MLmagic (_, inner, _) -> collect_lam_tys inner
+                    | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> collect_lam_tys inner
                     | _ -> []
                   in
                   collect_lam_tys ml_e
@@ -2782,7 +2789,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                    flat shape; casting this parameter to the
                    structure-preserving shape would then throw
                    [std::bad_any_cast] at runtime.  See the matching
-                   invariant in [gen_expr]'s [MLrel]/[MLmagic] cases. *)
+                   invariant in [gen_expr]'s [MLrel]/[MLcoerce] cases. *)
                 let erase_custom_list_elems : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
                   | Entity_application (g, _ :: _, ns) when Ml_type_util.is_custom_list_global g ->
                     Entity_application (g, [Cpp_ir.Type.Any], ns)
@@ -2791,7 +2798,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 let ml_body_ret_ty =
                   let rec get_body = function
                     | MLlam (_, _, body) -> get_body body
-                    | MLmagic (_, inner, _) -> get_body inner
+                    | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> get_body inner
                     | body -> infer_ml_body_type body
                   in
                   get_body ml_e
@@ -2887,7 +2894,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                   | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _, _) ->
                     let ind = GlobRef.IndRef (kn, 0) in
                     Ml_type_util.is_custom_list_global ind
-                  | MLmagic (_, inner, _) -> is_custom_list_cons inner
+                  | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> is_custom_list_cons inner
                   | _ -> false
                 in
                 if is_custom_list_cons ml_e then begin
@@ -2934,7 +2941,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 let ml_body_ret_ty =
                   let rec get_body = function
                     | MLlam (_, _, body) -> get_body body
-                    | MLmagic (_, inner, _) -> get_body inner
+                    | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> get_body inner
                     | body -> infer_ml_body_type body
                   in
                   get_body ml_e
@@ -2942,7 +2949,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                 let ml_concrete_param_tys =
                   let rec collect_lam_tys = function
                     | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                    | MLmagic (_, inner, _) -> collect_lam_tys inner
+                    | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> collect_lam_tys inner
                     | _ -> []
                   in
                   collect_lam_tys ml_e
@@ -2985,7 +2992,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                          is [deque<std::any>] -- a bare [std::any] per
                          element, not a structure-preserving
                          [deque<pair<any,any>>].  See the matching invariant
-                         in [gen_expr]'s [MLrel]/[MLmagic] cases. *)
+                         in [gen_expr]'s [MLrel]/[MLcoerce] cases. *)
                       let concrete_ty : Cpp_ir.Lowered.Type.t =
                         match concrete_ty with
                         | Entity_application (g, _ :: _, ns) when is_list_global g ->
@@ -3137,7 +3144,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
             let ml_concrete_param_tys =
               let rec collect_lam_tys = function
                 | MLlam (_, ty, body) -> ty :: collect_lam_tys body
-                | MLmagic (_, inner, _) -> collect_lam_tys inner
+                | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> collect_lam_tys inner
                 | _ -> []
               in
               collect_lam_tys ml_e
@@ -3163,7 +3170,7 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                      the flat shape; casting this parameter to the
                      structure-preserving shape would then throw
                      [std::bad_any_cast] at runtime.  See the matching
-                     invariant in [gen_expr]'s [MLrel]/[MLmagic] cases. *)
+                     invariant in [gen_expr]'s [MLrel]/[MLcoerce] cases. *)
                   let concrete_ty : Cpp_ir.Lowered.Type.t =
                     match concrete_ty with
                     | Entity_application (g, _ :: _, ns) when is_list_global g ->
@@ -3425,11 +3432,11 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
         Project
           (base_expr, fld, record_field_cpp_ty env typ fld)
     in
-    (* Strip MLmagic wrappers from the body — promoted dependent records may
-       wrap field references in MLmagic due to Tvar/Tglob mismatches *)
+    (* Strip coercion wrappers from the body — promoted dependent records may
+       wrap field references in MLcoerce due to Tvar/Tglob mismatches *)
     let body' =
       match body with
-      | MLmagic (_, b, _) -> b
+      | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> b
       | b -> b
     in
     ( match (record_body, body') with
@@ -3543,7 +3550,10 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
                off the receiver, which names a concrete instance. *)
             let from_receiver =
               match t with
-              | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}, _) -> (
+              | MLglob {callee = r; _}
+              | MLcoerce (_, _, MLglob {callee = r; _}, _)
+              | MLboxed (MLglob {callee = r; _}, _)
+              | MLbarrier (MLglob {callee = r; _}, _) -> (
                 match resolve_tmeta (Table.find_type r) with
                 | Miniml.Tglob (_, (_ :: _ as args), _) -> Some args
                 | _ | (exception Not_found) -> None )
@@ -3818,169 +3828,10 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     let elems = Array.map (gen_expr env) elems in
     let def = gen_expr env def in
     Persistent_array (elems, def)
-  | MLmagic (m, t, occ) ->
-    let expected_ty = planned_position occ ~live:expected_ty in
-    (* A value crossing into a slot that is really [std::any] has to be built
-       at the canonical erased shape -- every component boxed -- because the
-       consumer recovers it with a fixed [any_cast] and cannot know the
-       concrete component types.  Extraction recorded both sides of this
-       boundary, so ask for that shape whenever [into] is the erased one and
-       [from] is not.  See {!Ml_type_util.slot_repr}. *)
-    let into_box_kind =
-      match m with
-      | Mcoerce (from, into)
-        when
-        (* The destination this value is actually being built into outranks
-           the coercion's inferred target: a call site that names a concrete
-           parameter type -- an instance's associated type, say -- has pinned
-           the slot down, while the recorded [into] is a type variable this
-           scope cannot resolve and so reads as erased. *)
-        (match expected_ty with
-            | Some t -> Cpp_ir.Types.prints_as_any t
-            | None -> true)
-        && Cpp_ir.Types.prints_as_any (cpp_of_ml env into)
-        && not (Cpp_ir.Types.prints_as_any (cpp_of_ml env from)) ->
-        Some (box_kind_of_cpp_type (cpp_of_ml env into))
-      | Mcoerce _ | Mboxed | Mbarrier -> None
-    in
-    (* A lambda is written against the slot it fills -- its binders and
-       arity are the slot's -- and a coercion cannot reshape a callable after
-       the fact. *)
-    let inner =
-      gen_expr
-        ?expected_ty:(match t with MLlam _ -> expected_ty | _ -> None)
-        ~slot:
-          (match into_box_kind with Some kind -> into_box kind slot | None -> slot)
-        env t
-    in
-    (* What extraction recorded about the term's own side of the boundary.
-       Not materialised: this is an inferred type, so a [Topaque] here stays
-       [Topaque] and licenses nothing. *)
-    let recorded_from =
-      match m with
-      (* A binder whose C++ type is decided outranks the coercion's recorded
-         source, for the reason given for [Mboxed] below: [md] destructured out
-         of a typed pattern is a [List<metadata<std::any>>], whatever erased
-         carrier application the coercion recorded for it. *)
-      | Mcoerce (from, _) -> (
-        match t with
-        | MLrel (i, occ) -> (
-          (* Read below only for whether it is a box, so the plan and
-             lowering need agree on no more than whether the binder is
-             decided at a type that is not one. *)
-          let decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
-          match planned_binder_type ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ with
-          | Some ty when not (Cpp_ir.Types.prints_as_any ty) -> Some ty
-          | _ -> Some (cpp_of_ml env from) )
-        | _ -> Some (cpp_of_ml env from) )
-      (* [Mboxed] is extraction's reading of the Coq typing.  A binder whose
-         C++ type was decided at its binding site outranks it: a type-class
-         method returning [M A] is opaque in Coq, but Crane emits the
-         instance's [M] as a template, so the value here has the concrete type
-         the binder was assigned and there is no box to open. *)
-      | Mboxed -> (
-        match t with
-        | MLrel (i, occ) -> (
-          match planned_binder_type ~use:"boxed from" ~agree:( = ) i occ with
-          | Some ty -> Some ty
-          | None -> Some Cpp_ir.Type.Any )
-        | _ -> Some Cpp_ir.Type.Any )
-      | Mbarrier -> None
-    in
-    ( match expected_ty with
-      | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void
-                    && not (match ty with Entity_application (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
-        (* The position's type, as the expressions below write it. *)
-        let ty_ir = ty in
-        let rec is_cpp_erased_var_rec = function
-          | MLrel (i, occ) -> read_is_boxed i occ
-          | MLmagic (_, t', _) -> is_cpp_erased_var_rec t'
-          | _ -> false
-        in
-        let is_cpp_erased_var = is_cpp_erased_var_rec t in
-        (* Namespace-collapsing erase: a namespaced leaf like [R] must become
-           plain [std::any], not the malformed [typename R::std::any] the shared
-           [erase_type_to_any] produces for a [Tnamespace]-wrapped [Tglob].
-           This unwraps the erased var to its runtime representation
-           ([deque<std::any>] for a custom list of [R]); a downstream consumer
-           that needs the CONCRETE element container (e.g. a constructor field
-           of type [deque<R>]) converts it with [crane_container_cast] at its
-           own site (mirroring [eta_fun]'s function-argument path). *)
-        if is_cpp_erased_var then
-          (* Canonical erased shape is [deque<std::any>] (a bare [std::any]
-             per element, not a structure-preserving [pair<any,any>]) -- see
-             the matching fix in the [MLrel] case above. *)
-          let erase_top_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-            | Entity_application (g, args, ns) when args <> [] ->
-              Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)
-            | In_namespace (ns_g, Entity_application (g, args, ns)) when args <> [] ->
-              In_namespace (ns_g, Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns))
-            | t -> t
-          in
-          coerce ~from:Any ~into:(erase_top_args ty) inner
-        else if ml_expr_is_erased env t then
-          (* Extraction's oracle reads a type-class method's [M A] as erased,
-             but the binder it is bound to was assigned an opaque type --
-             an admission that the shape could not be resolved, not a box.
-             Say so rather than assert [Tany]: {!coerce} recovers from a box
-             and must not invent one. *)
-          let opaque = Some (Cpp_ir.Type.Obligation Opaque_type) in
-          let rec binder_is_opaque = function
-            | MLrel (i, occ) ->
-              planned_binder_type ~use:"opaque binder"
-                ~agree:(fun p l -> (p = opaque) = (l = opaque))
-                i occ
-              = opaque
-            | MLmagic (_, t', _) -> binder_is_opaque t'
-            | _ -> false
-          in
-          coerce
-            ~from:(if binder_is_opaque t then Cpp_ir.Type.Obligation Opaque_type else Cpp_ir.Type.Any)
-            ~into:ty inner
-        else
-          (* [ml_expr_is_erased] only recognises a handful of shapes and says
-             [false] for the rest.  Extraction already unified the two sides
-             here, so fall back on what it recorded rather than on the
-             oracle's silence. *)
-          ( match recorded_from with
-            (* Only the boxed dimension: extraction's [from] describes the
-               Coq-level type, and the pointer- and converting-constructor
-               dimensions at this boundary have already been settled by the
-               sub-expression that produced [inner]. *)
-            (* Unless the value is a component just read out of an erased
-               pair and the type the context has in mind is itself a pair:
-               that read already handed back the component's own box, so the
-               context's type describes the enclosing pair, not the component,
-               and recovering here would name the wrong one.  When the context
-               wants a non-pair, it is talking about the component, and the
-               box does have to be opened. *)
-            | Some from
-              when Cpp_ir.Types.prints_as_any from
-                   && not
-                        ( reads_erased_pair_component env t
-                        &&
-                        match ty with
-                        | Entity_application (g, _, _) -> is_prod_global g
-                        | _ -> false ) ->
-              coerce ~from ~into:(boxed_shape_of ty_ir) inner
-            | Some _
-              when ( match m with
-                   | Mcoerce (from, _) -> absurd_coercion from ty
-                   | Mboxed | Mbarrier -> false ) -> (
-              match m with
-              (* Absurd only at some instantiations: [tt] read at the index [T1]
-                 of [Inc : incE unit] is dead unless [T1] is [unit] -- or the
-                 box an erased handler instantiates it at.  Which, C++ decides
-                 once it substitutes [T1]. *)
-              | Mcoerce (from, _) when contains_tvar ty ->
-                Cpp_ir.Build.iife (Some ty)
-                  [ If_constexpr
-                      { test = Convertible (ty, Reference (Lvalue, Const (cpp_of_ml env from)));
-                        then_ = [Return (Some (Convert (ty, inner)))];
-                        else_ = [Throw dead_branch_message] } ]
-              | _ -> Abort (dead_branch_message, ty) )
-            | _ -> inner )
-      | _ -> inner )
+  | MLcoerce (from, into, t, occ) ->
+    gen_crossing ?expected_ty ~slot env ~coercion:(Some (from, into)) ~boxed:false t occ
+  | MLboxed (t, occ) -> gen_crossing ?expected_ty ~slot env ~coercion:None ~boxed:true t occ
+  | MLbarrier (t, occ) -> gen_crossing ?expected_ty ~slot env ~coercion:None ~boxed:false t occ
   | MLdummy _ ->
     (* An erased proof or type reaching an expression position: a dead one,
        an absurd branch.  Where it is a value a constructor stores it is the
@@ -3991,6 +3842,173 @@ and gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) 
     Abort (msg, abort_ty expected_ty)
   | MLaxiom s -> Abort ("unrealized axiom: " ^ s, abort_ty expected_ty)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
+
+(** A term crossing a type gap erasure opened: an [MLcoerce] with its
+    [coercion] types, an [MLboxed] ([boxed]), or an [MLbarrier] (neither). *)
+and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coercion ~boxed t occ :
+    Cpp_ir.Lowered.Expr.t =
+  let expected_ty = planned_position occ ~live:expected_ty in
+  (* A value crossing into a slot that is really [std::any] has to be built
+     at the canonical erased shape -- every component boxed -- because the
+     consumer recovers it with a fixed [any_cast] and cannot know the
+     concrete component types.  Extraction recorded both sides of this
+     boundary, so ask for that shape whenever [into] is the erased one and
+     [from] is not.  See {!Ml_type_util.slot_repr}. *)
+  let into_box_kind =
+    match coercion with
+    | Some (from, into)
+      when
+      (* The destination this value is actually being built into outranks
+         the coercion's inferred target: a call site that names a concrete
+         parameter type -- an instance's associated type, say -- has pinned
+         the slot down, while the recorded [into] is a type variable this
+         scope cannot resolve and so reads as erased. *)
+      (match expected_ty with
+          | Some t -> Cpp_ir.Types.prints_as_any t
+          | None -> true)
+      && Cpp_ir.Types.prints_as_any (cpp_of_ml env into)
+      && not (Cpp_ir.Types.prints_as_any (cpp_of_ml env from)) ->
+      Some (box_kind_of_cpp_type (cpp_of_ml env into))
+    | Some _ | None -> None
+  in
+  (* A lambda is written against the slot it fills -- its binders and
+     arity are the slot's -- and a coercion cannot reshape a callable after
+     the fact. *)
+  let inner =
+    gen_expr
+      ?expected_ty:(match t with MLlam _ -> expected_ty | _ -> None)
+      ~slot:
+        (match into_box_kind with Some kind -> into_box kind slot | None -> slot)
+      env t
+  in
+  (* What extraction recorded about the term's own side of the boundary.
+     Not materialised: this is an inferred type, so a [Topaque] here stays
+     [Topaque] and licenses nothing. *)
+  let recorded_from =
+    match coercion with
+    (* A binder whose C++ type is decided outranks the coercion's recorded
+       source, for the reason given for [MLboxed] below: [md] destructured out
+       of a typed pattern is a [List<metadata<std::any>>], whatever erased
+       carrier application the coercion recorded for it. *)
+    | Some (from, _) -> (
+      match t with
+      | MLrel (i, occ) -> (
+        (* Read below only for whether it is a box, so the plan and
+           lowering need agree on no more than whether the binder is
+           decided at a type that is not one. *)
+        let decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
+        match planned_binder_type ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ with
+        | Some ty when not (Cpp_ir.Types.prints_as_any ty) -> Some ty
+        | _ -> Some (cpp_of_ml env from) )
+      | _ -> Some (cpp_of_ml env from) )
+    (* [MLboxed] is extraction's reading of the Coq typing.  A binder whose
+       C++ type was decided at its binding site outranks it: a type-class
+       method returning [M A] is opaque in Coq, but Crane emits the
+       instance's [M] as a template, so the value here has the concrete type
+       the binder was assigned and there is no box to open. *)
+    | None when boxed -> (
+      match t with
+      | MLrel (i, occ) -> (
+        match planned_binder_type ~use:"boxed from" ~agree:( = ) i occ with
+        | Some ty -> Some ty
+        | None -> Some Cpp_ir.Type.Any )
+      | _ -> Some Cpp_ir.Type.Any )
+    | None -> None
+  in
+  ( match expected_ty with
+    | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void
+                  && not (match ty with Entity_application (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
+      (* The position's type, as the expressions below write it. *)
+      let ty_ir = ty in
+      let rec is_cpp_erased_var_rec = function
+        | MLrel (i, occ) -> read_is_boxed i occ
+        | MLcoerce (_, _, t', _) | MLboxed (t', _) | MLbarrier (t', _) -> is_cpp_erased_var_rec t'
+        | _ -> false
+      in
+      let is_cpp_erased_var = is_cpp_erased_var_rec t in
+      (* Namespace-collapsing erase: a namespaced leaf like [R] must become
+         plain [std::any], not the malformed [typename R::std::any] the shared
+         [erase_type_to_any] produces for a [Tnamespace]-wrapped [Tglob].
+         This unwraps the erased var to its runtime representation
+         ([deque<std::any>] for a custom list of [R]); a downstream consumer
+         that needs the CONCRETE element container (e.g. a constructor field
+         of type [deque<R>]) converts it with [crane_container_cast] at its
+         own site (mirroring [eta_fun]'s function-argument path). *)
+      if is_cpp_erased_var then
+        (* Canonical erased shape is [deque<std::any>] (a bare [std::any]
+           per element, not a structure-preserving [pair<any,any>]) -- see
+           the matching fix in the [MLrel] case above. *)
+        let erase_top_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+          | Entity_application (g, args, ns) when args <> [] ->
+            Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)
+          | In_namespace (ns_g, Entity_application (g, args, ns)) when args <> [] ->
+            In_namespace (ns_g, Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns))
+          | t -> t
+        in
+        coerce ~from:Any ~into:(erase_top_args ty) inner
+      else if ml_expr_is_erased env t then
+        (* Extraction's oracle reads a type-class method's [M A] as erased,
+           but the binder it is bound to was assigned an opaque type --
+           an admission that the shape could not be resolved, not a box.
+           Say so rather than assert [Tany]: {!coerce} recovers from a box
+           and must not invent one. *)
+        let opaque = Some (Cpp_ir.Type.Obligation Opaque_type) in
+        let rec binder_is_opaque = function
+          | MLrel (i, occ) ->
+            planned_binder_type ~use:"opaque binder"
+              ~agree:(fun p l -> (p = opaque) = (l = opaque))
+              i occ
+            = opaque
+          | MLcoerce (_, _, t', _) | MLboxed (t', _) | MLbarrier (t', _) -> binder_is_opaque t'
+          | _ -> false
+        in
+        coerce
+          ~from:(if binder_is_opaque t then Cpp_ir.Type.Obligation Opaque_type else Cpp_ir.Type.Any)
+          ~into:ty inner
+      else
+        (* [ml_expr_is_erased] only recognises a handful of shapes and says
+           [false] for the rest.  Extraction already unified the two sides
+           here, so fall back on what it recorded rather than on the
+           oracle's silence. *)
+        ( match recorded_from with
+          (* Only the boxed dimension: extraction's [from] describes the
+             Coq-level type, and the pointer- and converting-constructor
+             dimensions at this boundary have already been settled by the
+             sub-expression that produced [inner]. *)
+          (* Unless the value is a component just read out of an erased
+             pair and the type the context has in mind is itself a pair:
+             that read already handed back the component's own box, so the
+             context's type describes the enclosing pair, not the component,
+             and recovering here would name the wrong one.  When the context
+             wants a non-pair, it is talking about the component, and the
+             box does have to be opened. *)
+          | Some from
+            when Cpp_ir.Types.prints_as_any from
+                 && not
+                      ( reads_erased_pair_component env t
+                      &&
+                      match ty with
+                      | Entity_application (g, _, _) -> is_prod_global g
+                      | _ -> false ) ->
+            coerce ~from ~into:(boxed_shape_of ty_ir) inner
+          | Some _
+            when ( match coercion with
+                 | Some (from, _) -> absurd_coercion from ty
+                 | None -> false ) -> (
+            match coercion with
+            (* Absurd only at some instantiations: [tt] read at the index [T1]
+               of [Inc : incE unit] is dead unless [T1] is [unit] -- or the
+               box an erased handler instantiates it at.  Which, C++ decides
+               once it substitutes [T1]. *)
+            | Some (from, _) when contains_tvar ty ->
+              Cpp_ir.Build.iife (Some ty)
+                [ If_constexpr
+                    { test = Convertible (ty, Reference (Lvalue, Const (cpp_of_ml env from)));
+                      then_ = [Return (Some (Convert (ty, inner)))];
+                      else_ = [Throw dead_branch_message] } ]
+            | _ -> Abort (dead_branch_message, ty) )
+          | _ -> inner )
+    | _ -> inner )
 
 (* Call class field [x] as a static member of the instance struct [inst].
 
@@ -4116,7 +4134,7 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
        only 2 arrows.  Flattening all 3 into a single C++ lambda produces
        a 3-arg function, which doesn't match the 2-arg is_invocable_v constraint.
 
-       Fix: insert an [MLmagic] barrier after the expected number of
+       Fix: insert an [MLbarrier] after the expected number of
        binders so that [collect_lams] in [gen_expr] stops there.  The
        inner binders become a returned inner lambda.  We use the
        {i non-substituted} parameter type to count arrows, because type
@@ -4146,7 +4164,7 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
               Mlutil.collect_n_lams expected ml_arg
             in
             let barrier =
-              Mlutil.named_lams outer_ids (MLmagic (Mbarrier, inner_body, Occurrence.fresh ()))
+              Mlutil.named_lams outer_ids (MLbarrier (inner_body, Occurrence.fresh ()))
             in
             (* Compute the return type from the substituted param type by
                stripping [expected] top-level arrows.  The remaining type
@@ -4301,7 +4319,10 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
        non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
     let ml_arg_is_erased_rel =
       match ml_arg with
-      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) -> read_is_boxed j occ
+      | MLrel (j, occ)
+      | MLcoerce (_, _, MLrel (j, occ), _)
+      | MLboxed (MLrel (j, occ), _)
+      | MLbarrier (MLrel (j, occ), _) -> read_is_boxed j occ
       | _ -> false
     in
     match param_ml_ty with
@@ -4359,7 +4380,7 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         let erased_ty : Cpp_ir.Lowered.Type.t =
           (* Canonical erased shape is [deque<std::any>] -- a bare [std::any]
              per element, not a structure-preserving [deque<pair<any,any>>]
-             (see the matching invariant in [gen_expr]'s [MLrel]/[MLmagic]
+             (see the matching invariant in [gen_expr]'s [MLrel]/[MLcoerce]
              cases).  Using the structure-preserving erasure here would
              disagree with a sibling producer for the same Coq list type
              that already erased to the flat shape, and — when [as_value ()]
@@ -4461,7 +4482,10 @@ and gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
        accepts void-returning functions. *)
     | Some param_ty
       when (match ml_arg with
-            | MLglob {callee = r; _} | MLmagic (_, MLglob {callee = r; _}, _) -> is_void_ified_ref r
+            | MLglob {callee = r; _}
+            | MLcoerce (_, _, MLglob {callee = r; _}, _)
+            | MLboxed (MLglob {callee = r; _}, _)
+            | MLbarrier (MLglob {callee = r; _}, _) -> is_void_ified_ref r
             | _ -> false)
            && (match param_ty with Miniml.Tarr _ -> true | _ -> false)
            && ml_type_is_unit (ml_codomain param_ty)
@@ -5409,11 +5433,11 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                specialised, so the variable holds the concrete pair.  Judge by
                the variable's type when it is known; a coercion is still the
                only evidence available when it is not. *)
-            | MLmagic (_, MLrel (i, _), _) -> (
+            | MLcoerce (_, _, MLrel (i, _), _) | MLboxed (MLrel (i, _), _) | MLbarrier (MLrel (i, _), _) -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
               | None -> true )
-            | MLmagic (_, _, _) -> true
+            | MLcoerce _ | MLboxed _ | MLbarrier _ -> true
             | MLapp (MLglob {callee = r; _}, args) as node ->
               (* If the callee is itself a pair accessor (.first/.second) and
                  its product arg was coerced, result is also std::any *)
@@ -5544,7 +5568,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        call goes through. *)
     let erased_callee =
       match f with
-      | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> erased_member i
+      | MLrel (i, _)
+      | MLcoerce (_, _, MLrel (i, _), _)
+      | MLboxed (MLrel (i, _), _)
+      | MLbarrier (MLrel (i, _), _) -> erased_member i
       | _ -> false
     in
     let callee_fun_ml_ty =
@@ -5567,9 +5594,15 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             (* A member of a group recursing at a ground instance takes its
                arguments adapted to its erased parameters
                ({!erased_member_types}). *)
-            | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) when erased_callee ->
+            | MLrel (i, _)
+            | MLcoerce (_, _, MLrel (i, _), _)
+            | MLboxed (MLrel (i, _), _)
+            | MLbarrier (MLrel (i, _), _) when erased_callee ->
               get_env_type_opt i
-            | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> (
+            | MLrel (i, _)
+            | MLcoerce (_, _, MLrel (i, _), _)
+            | MLboxed (MLrel (i, _), _)
+            | MLbarrier (MLrel (i, _), _) -> (
               match get_env_type_opt i with
               | Some (Miniml.Tglob (GlobRef.ConstRef _, _, _) as ty) -> (
                 match expand_ml_fun_alias ty with
@@ -5593,7 +5626,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       match callee_fun_ml_ty with Some fty -> extract_params fty | None -> []
     in
     let callee_rel_idx = match f with
-      | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> Some i
+      | MLrel (i, _)
+      | MLcoerce (_, _, MLrel (i, _), _)
+      | MLboxed (MLrel (i, _), _)
+      | MLbarrier (MLrel (i, _), _) -> Some i
       | _ -> None
     in
     let callee_env_ty =
@@ -5603,7 +5639,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     in
     let callee_cpp_erased =
       match f with
-      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ), _) -> read_is_boxed i occ
+      | MLrel (i, occ)
+      | MLcoerce (_, _, MLrel (i, occ), _)
+      | MLboxed (MLrel (i, occ), _)
+      | MLbarrier (MLrel (i, occ), _) -> read_is_boxed i occ
       | _ -> false
     in
     (* A pattern binder whose definition-site field type is a type variable
@@ -5696,7 +5735,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     let declared_dom i =
       match
         match f with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+        | MLrel (j, occ)
+        | MLcoerce (_, _, MLrel (j, occ), _)
+        | MLboxed (MLrel (j, occ), _)
+        | MLbarrier (MLrel (j, occ), _) ->
           let respelled = Option.map default_tvar_names in
           respelled (planned_binder_type ~use:"declared domain" ~agree:(fun p l -> respelled p = respelled l) j occ)
         | _ -> None
@@ -5715,7 +5757,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           wrap_void_call_as_value (gen_expr ~slot:arg_slot env x)
         | MLlam _ ->
           gen_expr ?expected_ty:(declared_dom i) ~slot:arg_slot env x
-        | MLmagic (_, _, _) ->
+        | MLcoerce _ | MLboxed _ | MLbarrier _ ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
         | MLrel (j, occ) when read_is_boxed j occ ->
@@ -5740,7 +5782,10 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
       let rel_idx_f = match f with
-        | MLrel (i, occ) | MLmagic (_, MLrel (i, occ), _) -> Some (i, occ)
+        | MLrel (i, occ)
+        | MLcoerce (_, _, MLrel (i, occ), _)
+        | MLboxed (MLrel (i, occ), _)
+        | MLbarrier (MLrel (i, occ), _) -> Some (i, occ)
         | _ -> None
       in
       match rel_idx_f with
@@ -5850,7 +5895,7 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
          is not callable, so we must wrap it with std::any_cast to recover the
          std::function type before calling.  Both arg and return types
          default to std::any since the original types are erased.
-         The MLmagic wrapper is transparent — peel it to find the MLrel. *)
+         The coercion wrapper is transparent — peel it to find the MLrel. *)
       let callee_expr = gen_callee () in
       (* Check whether this call returns [std::any] (erased type) but the
          enclosing function expects a concrete type, requiring an
@@ -5883,7 +5928,9 @@ and eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           let proj_idx =
             match br_body with
             | MLrel (i, _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
-            | MLmagic (_, MLrel (i, _), _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | MLcoerce (_, _, MLrel (i, _), _)
+            | MLboxed (MLrel (i, _), _)
+            | MLbarrier (MLrel (i, _), _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
             | _ -> None
           in
           ( match proj_idx with
@@ -6374,12 +6421,19 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     let at bt = match_scrutinee_type env typ t pv ~var_type ~var_cpp_type:(fun _ -> bt) in
     (* Asked only of the variable the scrutinee reads; the binder's type
        matters only through the match type it gives. *)
-    let read = match t with MLrel (_, occ) | MLmagic (_, MLrel (_, occ), _) -> Some occ | _ -> None in
+    let read =
+      match t with
+      | MLrel (_, occ)
+      | MLcoerce (_, _, MLrel (_, occ), _)
+      | MLboxed (MLrel (_, occ), _)
+      | MLbarrier (MLrel (_, occ), _) -> Some occ
+      | _ -> None
+    in
     match_scrutinee_type env typ t pv ~var_type
       ~var_cpp_type:(fun i ->
         Option.bind read (fun occ -> planned_binder_type ~use:"scrutinee" ~agree:(fun p l -> at p = at l) i occ))
   in
-  let scrut_is_mlmagic_case = match t with MLmagic (_, _, _) -> true | _ -> false in
+  let scrut_is_mlmagic_case = match t with MLcoerce _ | MLboxed _ | MLbarrier _ -> true | _ -> false in
   (* Check if this is an enum inductive type *)
   let is_enum =
     match typ with
@@ -6842,7 +6896,10 @@ and gen_cpp_custom_body env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
     | Variable _ ->
       let body_is_erased =
         match body with
-        | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ), _) ->
+        | MLrel (i, occ)
+        | Miniml.MLcoerce (_, _, MLrel (i, occ), _)
+        | Miniml.MLboxed (MLrel (i, occ), _)
+        | Miniml.MLbarrier (MLrel (i, occ), _) ->
           not (read_is_boxed i occ) && is_env_var_erased env tvars i
         | _ -> false
       in
@@ -6945,7 +7002,7 @@ and gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
          erased to the flat shape, and casting this scrutinee to the
          structure-preserving shape instead would throw [std::bad_any_cast]
          at runtime.  See the matching invariant in [gen_expr]'s
-         [MLrel]/[MLmagic] cases. *)
+         [MLrel]/[MLcoerce] cases. *)
       let cast_ty : Cpp_ir.Lowered.Type.t = match concrete_match_type with
         | Entity_application (g, (_ :: _), ns) when is_list_global g ->
           Entity_application (g, [Any], ns)
@@ -7968,7 +8025,10 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
            zero-copy closure generation. *)
         let is_single_use_partial_app =
           match a with
-          | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args), _) ->
+          | MLapp (head, ml_args)
+          | MLcoerce (_, _, MLapp (head, ml_args), _)
+          | MLboxed (MLapp (head, ml_args), _)
+          | MLbarrier (MLapp (head, ml_args), _) ->
             (match Escape.partial_app_remaining head ml_args with
              | Some remaining ->
                Escape.nb_occur_match 1 b <= 1
@@ -8047,7 +8107,10 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
                   match args with
                   | [] -> None
                   | (Miniml.MLrel (r, _)) :: _ when r = target_rel -> Some i
-                  | (Miniml.MLmagic (_, Miniml.MLrel (r, _), _)) :: _ when r = target_rel -> Some i
+                  | ( Miniml.MLcoerce (_, _, Miniml.MLrel (r, _), _)
+                    | Miniml.MLboxed (Miniml.MLrel (r, _), _)
+                    | Miniml.MLbarrier (Miniml.MLrel (r, _), _) ) :: _
+                    when r = target_rel -> Some i
                   | _ :: rest -> find_pos rest (i + 1)
                 in
                 (match find_pos app_args 0 with
@@ -8601,8 +8664,8 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
     (* Generate throw statement for unreachable/absurd cases (e.g., empty
        match) *)
     [Throw msg]
-  | MLmagic (_, MLexn msg, _) ->
-    (* Handle MLexn wrapped in MLmagic *)
+  | MLcoerce (_, _, MLexn msg, _) | MLboxed (MLexn msg, _) | MLbarrier (MLexn msg, _) ->
+    (* Handle MLexn wrapped in a coercion *)
     [Throw msg]
   | MLcase (typ, t, pv, case_occ) when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
     let ids, _r, _pat, body = pv.(0) in
@@ -8708,7 +8771,10 @@ and gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowe
        variables are direct values (bind desugars to let-binding); in
        reified mode, they are trees returned as-is. *)
     let is_void_tail = match t with
-      | MLapp (f, args) | MLmagic (_, MLapp (f, args), _) ->
+      | MLapp (f, args)
+      | MLcoerce (_, _, MLapp (f, args), _)
+      | MLboxed (MLapp (f, args), _)
+      | MLbarrier (MLapp (f, args), _) ->
         ml_callee_is_void f
         (* Only treat as void if fully applied — partial applications
            return a function value, not void. *)

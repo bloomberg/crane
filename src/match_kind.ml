@@ -30,10 +30,12 @@ let classify ty branches =
     | [|(ids, _, _, body)|] when Table.record_fields_of_type ty <> [] ->
       let n = List.length ids in
       let body =
-        match (match body with MLmagic (_, b, _) -> b | b -> b) with
+        match (match body with MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> b | b -> b) with
         | MLrel (i, _) when i <= n -> Projection {field = n - i; application = Read}
         | MLapp (MLrel (i, _), _) when i <= n -> Projection {field = n - i; application = Call}
-        | MLapp (MLmagic (_, MLrel (i, _), _), _) when i <= n -> Projection {field = n - i; application = Coerced_call}
+        | MLapp ((MLcoerce (_, _, MLrel (i, _), _) | MLboxed (MLrel (i, _), _) | MLbarrier (MLrel (i, _), _)), _)
+          when i <= n ->
+          Projection {field = n - i; application = Coerced_call}
         | _ -> Destructure
       in
       Record {typeclass = Table.is_typeclass_type ty; body}

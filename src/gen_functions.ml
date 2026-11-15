@@ -1920,14 +1920,14 @@ let gen_spec__inner n b ty =
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
       with_cpp_return_type (Some ty_ir) @@ fun () ->
-      (* Strip MLmagic wrapper and track whether a type coercion from std::any
-         is needed.  MLmagic wraps expressions when the extraction detects a
+      (* Strip a coercion wrapper and track whether a type coercion from std::any
+         is needed.  MLcoerce wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
          is canonical ({!Core_normalize}), so no application in it has a
          coercion at its head. *)
       let has_magic, inner_body =
         match b with
-        | MLmagic (_, inner, _) -> (true, inner)
+        | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> (true, inner)
         | _ -> (false, b)
       in
       (* A constant typed by a name -- an instance of a single-method class is
@@ -1949,10 +1949,10 @@ let gen_spec__inner n b ty =
       let b_expr = with_region inner_body (fun () -> gen_constant_value ~expected_ty:ty_ir inner_body) in
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
-         (a) MLmagic — the extraction explicitly flagged a type coercion.
+         (a) MLcoerce — the extraction explicitly flagged a type coercion.
          (b) Record field projection — the field's return type is a promoted
              type var (erased to std::any) but Coq's type system sees the
-             concrete type, so no MLmagic is generated. *)
+             concrete type, so no MLcoerce is generated. *)
       let is_concrete_target =
         match ty_ir with
         | Any | Variable _ | Obligation Unresolved_type | Void | Auto -> false

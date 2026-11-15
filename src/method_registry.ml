@@ -172,7 +172,7 @@ let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body el
 
     The check works by: 1. Stripping outer lambdas to find the inner body and
     computing the de Bruijn index of the first argument. 2. Recursing through
-    tail positions (match branches, let bodies, fixpoint bodies, MLmagic
+    tail positions (match branches, let bodies, fixpoint bodies, coercion
     wrappers) to see if any tail position is a bare [MLrel] pointing at the
     first argument. 3. Special-casing top-level matches on the first argument
     (common pattern for destructors) — only the branches are checked, not the
@@ -216,7 +216,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
              returns_target (depth + n_bindings) branch_body )
            branches
     | MLletin (_, _, _, b, _) -> returns_target (depth + 1) b
-    | MLmagic (_, a, _) -> returns_target depth a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> returns_target depth a
     (* All other forms (MLapp, MLcons, MLlam, etc.) produce a NEW value, not a
        bare return of the argument. So they're safe. *)
     | _ -> false

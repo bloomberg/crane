@@ -101,7 +101,9 @@ and ml_ast w = function
   | MLexn s -> tag w "MLexn"; str w s
   | MLdummy k -> tag w "MLdummy"; kill_reason w k
   | MLaxiom s -> tag w "MLaxiom"; str w s
-  | MLmagic (m, a, _) -> tag w "MLmagic"; magic w m; ml_ast w a
+  | MLcoerce (from, into, a, _) -> tag w "MLcoerce"; ml_type w from; ml_type w into; ml_ast w a
+  | MLboxed (a, _) -> tag w "MLboxed"; ml_ast w a
+  | MLbarrier (a, _) -> tag w "MLbarrier"; ml_ast w a
   | MLuint n -> tag w "MLuint"; str w (Uint63.to_string n)
   | MLfloat f -> tag w "MLfloat"; str w (Float64.to_hex_string f)
   | MLstring s -> tag w "MLstring"; str w (Pstring.to_string s)
@@ -112,11 +114,6 @@ and fix w i ids bodies =
   int w i;
   array w (fun (x, ty) -> id w x; ml_type w ty) ids;
   array w (ml_ast w) bodies
-
-and magic w = function
-  | Mcoerce (a, b) -> tag w "Mcoerce"; ml_type w a; ml_type w b
-  | Mboxed -> tag w "Mboxed"
-  | Mbarrier -> tag w "Mbarrier"
 
 and branch w (binders, ty, pat, body) =
   list w (fun (x, t) -> ml_ident w x; ml_type w t) binders;

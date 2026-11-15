@@ -712,7 +712,9 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
     MLcofixpoint (i, Array.map (fun (n, ty) -> (n, f ty)) ids, Array.map (map_types_in_ast f) funs, occ)
   | MLapp (fn, args) ->
     MLapp (map_types_in_ast f fn, List.map (map_types_in_ast f) args)
-  | MLmagic (m, a, mocc) -> MLmagic (Mlutil.map_magic_types f m, map_types_in_ast f a, mocc)
+  | MLcoerce (from, into, a, mocc) -> MLcoerce (f from, f into, map_types_in_ast f a, mocc)
+  | MLboxed (a, mocc) -> MLboxed (map_types_in_ast f a, mocc)
+  | MLbarrier (a, mocc) -> MLbarrier (map_types_in_ast f a, mocc)
   | MLparray (arr, def) ->
     MLparray (Array.map (map_types_in_ast f) arr, map_types_in_ast f def)
   | MLtuple args -> MLtuple (List.map (map_types_in_ast f) args)

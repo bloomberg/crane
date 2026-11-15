@@ -462,7 +462,7 @@ let try_mgu t1 t2 = try mgu (t1, t2) with Impossible -> ()
 
 let skip_typing () = is_extrcompute ()
 
-(** Returns [true] if a type coercion (MLmagic) is needed because the two types
+(** Returns [true] if a type coercion ([MLcoerce]) is needed because the two types
     in pair [p] cannot be unified. *)
 let needs_magic p =
   if skip_typing () then
@@ -478,7 +478,7 @@ let needs_magic p =
     unordered ([mgu] is symmetric) while a backend needs to know which side
     the term is on and which side the context wants. *)
 let put_magic_if ~from ~into b =
-  if b then fun a -> MLmagic (Mcoerce (from, into), a, Occurrence.fresh ()) else Fun.id
+  if b then fun a -> MLcoerce (from, into, a, Occurrence.fresh ()) else Fun.id
 
 (** [put_magic ~from ~into a] wraps [a] in a coercion iff its own type [from]
     fails to unify with the type [into] its context requires. *)
@@ -1000,7 +1000,9 @@ let rec eq_ml_ast t1 t2 =
   | MLexn e1, MLexn e2 -> String.equal e1 e2
   | MLdummy k1, MLdummy k2 -> k1 == k2
   | MLaxiom _, MLaxiom _ -> true (* ignore the name of the axiom *)
-  | MLmagic (_, t1, _), MLmagic (_, t2, _) -> eq_ml_ast t1 t2
+  | ( (MLcoerce (_, _, t1, _) | MLboxed (t1, _) | MLbarrier (t1, _)),
+      (MLcoerce (_, _, t2, _) | MLboxed (t2, _) | MLbarrier (t2, _)) ) ->
+    eq_ml_ast t1 t2
   | MLuint i1, MLuint i2 -> Uint63.equal i1 i2
   | MLnumeral (r1, n1), MLnumeral (r2, n2) -> GlobRef.CanOrd.equal r1 r2 && Z.equal n1 n2
   | MLfloat f1, MLfloat f2 -> Float64.equal f1 f2
@@ -1019,7 +1021,7 @@ let rec eq_ml_ast t1 t2 =
       | MLexn _
       | MLdummy _
       | MLaxiom _
-      | MLmagic _
+      | MLcoerce _ | MLboxed _ | MLbarrier _
       | MLuint _ | MLnumeral _
       | MLfloat _
       | MLstring _
@@ -1067,7 +1069,7 @@ let ast_iter_rel_applied f =
       iter n a;
       List.iter (iter n) l
     | MLcons (_, _, l, _) | MLtuple l -> List.iter (iter n) l
-    | MLmagic (_, a, _) -> iter n a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> iter n a
     | MLparray (t, def) ->
       Array.iter (iter n) t;
       iter n def
@@ -1099,7 +1101,9 @@ let ast_map f = function
   | MLapp (a, l) -> MLapp (f a, List.map f l)
   | MLcons (typ, c, l, occ) -> MLcons (typ, c, List.map f l, occ)
   | MLtuple l -> MLtuple (List.map f l)
-  | MLmagic (m, a, mocc) -> MLmagic (m, f a, mocc)
+  | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, f a, mocc)
+  | MLboxed (a, mocc) -> MLboxed (f a, mocc)
+  | MLbarrier (a, mocc) -> MLbarrier (f a, mocc)
   | MLparray (t, def) -> MLparray (Array.map f t, f def)
   | ( MLrel _
     | MLglob _
@@ -1109,13 +1113,6 @@ let ast_map f = function
     | MLuint _ | MLnumeral _
     | MLfloat _
     | MLstring _ ) as a -> a
-
-(** Rewrite the types an [MLmagic] carries.  A coercion's two types must be
-    rewritten alongside every other type in the term, or the boundary it
-    records stops matching the term around it; a barrier has none. *)
-let map_magic_types f = function
-  | Mcoerce (from, into) -> Mcoerce (f from, f into)
-  | (Mbarrier | Mboxed) as m -> m
 
 (** [ast_map_types f a] rewrites every [ml_type] embedded in [a] with [f],
     recursing through the whole term.  Unlike {!ast_map} it descends on its
@@ -1142,7 +1139,13 @@ let rec ast_map_types f = function
   | MLcofixpoint (i, ids, v, occ) ->
     MLcofixpoint (i, Array.map (fun (id, t) -> (id, f t)) ids, Array.map (ast_map_types f) v, occ)
   | MLapp (a, l) -> MLapp (ast_map_types f a, List.map (ast_map_types f) l)
-  | MLmagic (m, a, mocc) -> MLmagic (map_magic_types f m, ast_map_types f a, mocc)
+  | MLcoerce (from, into, a, mocc) ->
+    (* A coercion's two types must be rewritten alongside every other type in
+       the term, or the boundary it records stops matching the term around
+       it; a box or a barrier has none. *)
+    MLcoerce (f from, f into, ast_map_types f a, mocc)
+  | MLboxed (a, mocc) -> MLboxed (ast_map_types f a, mocc)
+  | MLbarrier (a, mocc) -> MLbarrier (ast_map_types f a, mocc)
   | MLparray (t, def) ->
     MLparray (Array.map (ast_map_types f) t, ast_map_types f def)
   | ( MLrel _
@@ -1372,7 +1375,9 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
           List.map2 (fun d e -> go env d e) (callee_doms use args) args )
     | MLapp (f, args) ->
       MLapp (go env None f, List.map (go env None) args)
-    | MLmagic (m, e, mocc) -> MLmagic (m, go env expected e, mocc)
+    | MLcoerce (from, into, e, mocc) -> MLcoerce (from, into, go env expected e, mocc)
+    | MLboxed (e, mocc) -> MLboxed (go env expected e, mocc)
+    | MLbarrier (e, mocc) -> MLbarrier (go env expected e, mocc)
     | a -> a
   in
   go [] (Some expected) a
@@ -1394,7 +1399,9 @@ let ast_map_lift f n = function
   | MLapp (a, l) -> MLapp (f n a, List.map (f n) l)
   | MLcons (typ, c, l, occ) -> MLcons (typ, c, List.map (f n) l, occ)
   | MLtuple l -> MLtuple (List.map (f n) l)
-  | MLmagic (m, a, mocc) -> MLmagic (m, f n a, mocc)
+  | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, f n a, mocc)
+  | MLboxed (a, mocc) -> MLboxed (f n a, mocc)
+  | MLbarrier (a, mocc) -> MLbarrier (f n a, mocc)
   | MLparray (t, def) -> MLparray (Array.map (f n) t, f n def)
   | ( MLrel _
     | MLglob _
@@ -1422,7 +1429,7 @@ let ast_iter f = function
     f a;
     List.iter f l
   | MLcons (_, _, l, _) | MLtuple l -> List.iter f l
-  | MLmagic (_, a, _) -> f a
+  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> f a
   | MLparray (t, def) ->
     Array.iter f t;
     f def
@@ -1473,7 +1480,7 @@ let nb_occur_match =
     | MLlam (_, _, a) -> nb (k + 1) a
     | MLapp (a, l) -> List.fold_left (fun r a -> r + nb k a) (nb k a) l
     | MLcons (_, _, l, _) | MLtuple l -> List.fold_left (fun r a -> r + nb k a) 0 l
-    | MLmagic (_, a, _) -> nb k a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> nb k a
     | MLparray (t, def) ->
       Array.fold_left (fun r a -> r + nb k a) 0 t + nb k def
     | MLglob _
@@ -1528,9 +1535,15 @@ let dump_unused_vars a =
     | MLtuple l ->
       let l' = List.Smart.map (ren env) l in
       if l' == l then a else MLtuple l'
-    | MLmagic (m, b, mocc) ->
+    | MLcoerce (from, into, b, mocc) ->
       let b' = ren env b in
-      if b' == b then a else MLmagic (m, b', mocc)
+      if b' == b then a else MLcoerce (from, into, b', mocc)
+    | MLboxed (b, mocc) ->
+      let b' = ren env b in
+      if b' == b then a else MLboxed (b', mocc)
+    | MLbarrier (b, mocc) ->
+      let b' = ren env b in
+      if b' == b then a else MLbarrier (b', mocc)
     | MLparray (t, def) ->
       let t' = Array.Smart.map (ren env) t in
       let def' = ren env def in
@@ -1580,7 +1593,7 @@ let rec ast_size e =
   +
   match e with
   | MLapp (f, a) -> ast_size f + ast_sizes a
-  | MLlam (_, _, b) | MLmagic (_, b, _) -> ast_size b
+  | MLlam (_, _, b) | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> ast_size b
   | MLletin (_, _, a, b, _) -> ast_size a + ast_size b
   | MLcons (_, _, a, _) | MLtuple a -> ast_sizes a
   | MLcase (_, s, brs, _) -> Array.fold_left (fun n (_, _, _, b) -> n + ast_size b) (ast_size s) brs
@@ -1598,7 +1611,7 @@ and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
 let rec canonical_app f args =
   match f with
   | MLapp ((MLglob _ as g), inner) -> MLapp (g, inner @ args)
-  | MLmagic (_, f, _) -> canonical_app f args
+  | MLcoerce (_, _, f, _) | MLboxed (f, _) | MLbarrier (f, _) -> canonical_app f args
   | MLexn _ | MLdummy _ -> f
   | MLcase (ty, scrut, [|(ids, rty, pat, body)|], occ) ->
     let args = List.map (ast_lift (List.length ids)) args in
@@ -2105,7 +2118,7 @@ let is_exn = function
     change that: nothing gets to be bound, because the raise comes first. *)
 let rec only_throws = function
   | MLexn _ | MLaxiom _ -> true
-  | MLlam (_, _, a) | MLmagic (_, a, _) -> only_throws a
+  | MLlam (_, _, a) | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> only_throws a
   | _ -> false
 
 (** Permutes a case expression with surrounding function applications when all
@@ -2206,15 +2219,15 @@ let expand_linear_let o id e =
 
 (* Some beta-iota reductions + simplifications. *)
 
-(* Rocq's own [simpl] additionally moved an [MLmagic] away from the node it
-   was inserted at -- out of an application's result onto its head, into each
-   branch of a match, under a lambda, off an argument altogether -- and
-   collapsed the [MLmagic] on nested ones.  That is sound only while the node
-   carries no types, as it did upstream.  Here [Mcoerce] names the two types
-   of one specific boundary (see {!Miniml.ml_magic}), so relocating the node
-   leaves it describing a gap it is no longer at, and the backend's [coerce]
-   reads those types as authoritative.  Those rewrites are therefore not
-   made here; they would buy only a slightly smaller AST.
+(* Rocq's own [simpl] additionally moved its [MLmagic] (our [MLcoerce]) away
+   from the node it was inserted at -- out of an application's result onto its
+   head, into each branch of a match, under a lambda, off an argument
+   altogether -- and collapsed the [MLmagic] on nested ones.  That is sound
+   only while the node carries no types, as it did upstream.  Here [MLcoerce]
+   names the two types of one specific boundary (see {!Miniml.ml_ast}), so
+   relocating the node leaves it describing a gap it is no longer at, and the
+   backend's [coerce] reads those types as authoritative.  Those rewrites are
+   therefore not made here; they would buy only a slightly smaller AST.
 
    The one case that is handled is a coercion wrapping a lambda that is
    then applied ([simpl_app] below), because leaving that beta-redex standing
@@ -2227,12 +2240,13 @@ let expand_linear_let o id e =
     against the arrow, so that half is reversed.  Returns [None] unless both
     sides are arrows, in which case the coercion describes something other
     than a function boundary and must be left where it is. *)
-let split_arrow_coercion = function
-  | Mcoerce (Tarr (d, c), Tarr (d', c')) ->
+let split_arrow_coercion from into =
+  match (from, into) with
+  | Tarr (d, c), Tarr (d', c') ->
     Some
       ( put_magic_if ~from:d' ~into:d (needs_magic (d', d)),
         put_magic_if ~from:c ~into:c' (needs_magic (c, c')) )
-  | Mcoerce _ | Mboxed | Mbarrier -> None
+  | _ -> None
 
 (** Core ML simplification: beta-reduction, iota-reduction, let-inlining, and
     other optimizations. *)
@@ -2261,7 +2275,7 @@ let rec simpl o = function
     (* Dummy fixpoint *)
   (* An exception never yields a value, so there is no representation gap for
      a coercion around it to describe. *)
-  | MLmagic (_, (MLexn _ as e), _) -> e
+  | MLcoerce (_, _, (MLexn _ as e), _) | MLboxed ((MLexn _ as e), _) | MLbarrier ((MLexn _ as e), _) -> e
   | MLlam _ as e ->
     ( match atomic_eta_red e with
     | Some e' -> e'
@@ -2287,11 +2301,11 @@ and simpl_app o a = function
     | _ ->
       let a' = List.map (ast_lift 1) (List.tl a) in
       simpl o (MLletin (id, ty, List.hd a, MLapp (t, a'), Occurrence.fresh ())) )
-  | MLmagic (m, (MLlam _ as lam), _) as f -> (
+  | MLcoerce (from, into, (MLlam _ as lam), _) as f -> (
     (* [(coerce (fun x => t)) a] -- reduce the redex without relocating the
        coercion: it is split along its own arrow, the domain half landing on
        the argument and the codomain half on the result. *)
-    match split_arrow_coercion m with
+    match split_arrow_coercion from into with
     | Some (on_dom, on_cod) ->
       let arg = on_dom (List.hd a) in
       simpl o (on_cod (MLapp (lam, [arg])) |> fun r -> MLapp (r, List.tl a))
@@ -2490,7 +2504,7 @@ let kill_dummy_args (ids, bl) r t =
   let sign = List.rev bl in
   let rec found n = function
     | MLrel (r', _) when Int.equal r' (r + n) -> true
-    | MLmagic (_, e, _) -> found n e
+    | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> found n e
     | _ -> false
   in
   let rec killrec n = function
@@ -2733,7 +2747,7 @@ let rec ml_size = function
   | MLcase (_, t, pv, _) -> 1 + ml_size t + ml_size_branch ml_size pv
   | MLfixpoint (_, _, f, _) | MLcofixpoint (_, _, f, _) -> ml_size_array f
   | MLletin (_, _, _, t, _) -> ml_size t
-  | MLmagic (_, t, _) -> ml_size t
+  | MLcoerce (_, _, t, _) | MLboxed (t, _) | MLbarrier (t, _) -> ml_size t
   | MLparray (t, def) -> ml_size_array t + ml_size def
   | MLglob _
    |MLrel _
@@ -2809,7 +2823,7 @@ let rec non_stricts add cand = function
       []
       v
     (* [merge] may duplicates some indices, but I don't mind. *)
-  | MLmagic (_, t, _) -> non_stricts add cand t
+  | MLcoerce (_, _, t, _) | MLboxed (t, _) | MLbarrier (t, _) -> non_stricts add cand t
   | _ -> cand
 
 (* The real test: we are looking for internal non-strict variables, so we start
@@ -2916,7 +2930,9 @@ let remap_tvars f =
       MLfixpoint (idx, Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys, Array.map remap_ast bodies, occ)
     | MLcofixpoint (idx, ids_tys, bodies, occ) ->
       MLcofixpoint (idx, Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys, Array.map remap_ast bodies, occ)
-    | MLmagic (m, a, mocc) -> MLmagic (m, remap_ast a, mocc)
+    | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, remap_ast a, mocc)
+    | MLboxed (a, mocc) -> MLboxed (remap_ast a, mocc)
+    | MLbarrier (a, mocc) -> MLbarrier (remap_ast a, mocc)
     | MLparray (arr, def) -> MLparray (Array.map remap_ast arr, remap_ast def)
     | a -> a (* MLrel, MLexn, MLdummy, MLaxiom, MLuint, MLfloat, MLstring, MLnumeral *)
   in

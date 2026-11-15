@@ -58,7 +58,7 @@ let nb_occur_match =
       List.fold_left (fun total arg -> total + nb k arg) (nb k head) args
     | MLcons (_, _, args, _) | MLtuple args ->
       List.fold_left (fun total arg -> total + nb k arg) 0 args
-    | MLmagic (_, a, _) -> nb k a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> nb k a
     | MLparray (elts, def) ->
       Array.fold_left (fun total elt -> total + nb k elt) 0 elts + nb k def
     | MLglob _
@@ -88,7 +88,7 @@ let rec occurs k = function
     let k' = k + Array.length ids in
     Array.exists (occurs k') bodies
   | MLcons (_, _, args, _) | MLtuple args -> List.exists (occurs k) args
-  | MLmagic (_, a, _) -> occurs k a
+  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> occurs k a
   | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
   | MLglob _
    |MLexn _
@@ -144,7 +144,7 @@ let is_partial_app head args =
 
     Non-escaping positions:
     - Case scrutinee (MLcase) → destructured immediately
-    - Under MLmagic → transparent wrapper
+    - Under MLcoerce/MLboxed/MLbarrier → transparent wrapper
     - Function arguments (MLapp) → callee's responsibility
     - Constructor argument (MLcons/MLtuple), for an [Of_param] query →
       callee's responsibility too: building [(s, a)] or [Ctor s] reads [s]
@@ -187,7 +187,11 @@ let passed_to_owned g k args =
   | None -> false
   | Some flags ->
     let n = List.length flags in
-    let rec direct = function MLrel (i, _) -> i = k | MLmagic (_, a, _) -> direct a | _ -> false in
+    let rec direct = function
+      | MLrel (i, _) -> i = k
+      | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> direct a
+      | _ -> false
+    in
     List.exists
       (fun (j, a) -> j < n && direct a && List.nth flags (n - 1 - j))
       (List.mapi (fun j a -> (j, a)) args)
@@ -224,7 +228,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
     | MLcons (_, _, args, _) ->
       List.exists (check k cons_escapes false) args
     | MLtuple args -> List.exists (check k cons_escapes false) args
-    | MLmagic (_, a, _) -> check k in_tail false a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> check k in_tail false a
     | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
     | MLglob _
      |MLexn _
@@ -248,7 +252,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
 
     A parameter can be borrowed when it only appears in:
     - Case scrutinee (destructured immediately)
-    - Under MLmagic (transparent wrapper)
+    - Under MLcoerce/MLboxed/MLbarrier (transparent wrapper)
     - Call arguments, other than one the callee owns
     - Constructor arguments (read once to copy into the new field)
 
@@ -279,7 +283,7 @@ let sub_bindings_escape k body =
          ) branches
     | MLletin (_, _, rhs, cont, _) ->
       check k rhs || check (k + 1) cont
-    | MLmagic (_, a, _) -> check k a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> check k a
     | _ -> false
   in
   check k body
@@ -290,7 +294,7 @@ let sub_bindings_escape k body =
    [let]s, and in each branch of a match it ends in -- a map's update
    rebuilds its node in whichever branch the key comparison picks. *)
 let rec tail_constructions = function
-  | MLmagic (_, a, _) -> tail_constructions a
+  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> tail_constructions a
   | MLletin (_, _, _, b, _) -> tail_constructions b
   | MLcons _ as c -> [c]
   | MLcase (_, _, brs, _) ->
@@ -359,7 +363,7 @@ let is_reuse_scrutinee k body =
   let rec scan d = function
     | MLcase (typ, scrut, branches, _) ->
       ( match scrut with
-      | MLrel (j, _) | MLmagic (_, MLrel (j, _), _) ->
+      | MLrel (j, _) | MLcoerce (_, _, MLrel (j, _), _) | MLboxed (MLrel (j, _), _) | MLbarrier (MLrel (j, _), _) ->
         if j > d && j - d = k && recyclable typ
            && find_reuse_candidates branches <> []
         then found := true
@@ -374,7 +378,7 @@ let is_reuse_scrutinee k body =
     | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->
       Array.iter (scan (d + Array.length ids)) bodies
     | MLcons (_, _, ts, _) | MLtuple ts -> List.iter (scan d) ts
-    | MLmagic (_, a, _) -> scan d a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> scan d a
     | MLparray (arr, def) -> Array.iter (scan d) arr; scan d def
     | _ -> ()
   in
@@ -384,11 +388,16 @@ let is_reuse_scrutinee k body =
 (* Whether [MLrel k] is matched on in [t]. *)
 let rec matched k = function
   | MLcase (_, scrut, branches, _) ->
-    (match scrut with MLrel (i, _) | MLmagic (_, MLrel (i, _), _) -> i = k | _ -> false)
+    (match scrut with
+     | MLrel (i, _)
+     | MLcoerce (_, _, MLrel (i, _), _)
+     | MLboxed (MLrel (i, _), _)
+     | MLbarrier (MLrel (i, _), _) -> i = k
+     | _ -> false)
     || matched k scrut
     || Array.exists (fun (ids, _, _, b) -> matched (k + List.length ids) b) branches
   | MLletin (_, _, rhs, cont, _) -> matched k rhs || matched (k + 1) cont
-  | MLmagic (_, a, _) -> matched k a
+  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> matched k a
   | _ -> false
 
 (* A parameter that is matched on, and otherwise only ever returned as it is
@@ -429,7 +438,7 @@ let infer_sub_bindings_escape_params n_params body =
 let returns_receiver_field ~this_pos fn =
   let params, body = Mlutil.collect_lams fn in
   let receiver = List.length params - this_pos in
-  let rec bare = function MLmagic (_, a, _) -> bare a | a -> a in
+  let rec bare = function MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> bare a | a -> a in
   List.length params = 1
   &&
   match bare body with
@@ -466,7 +475,7 @@ let free_rels depth t =
       let d' = d + Array.length ids in
       Array.iter (collect d') bodies
     | MLcons (_, _, args, _) | MLtuple args -> List.iter (collect d) args
-    | MLmagic (_, a, _) -> collect d a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> collect d a
     | MLparray (elts, def) ->
       Array.iter (collect d) elts;
       collect d def
@@ -487,7 +496,13 @@ let free_rels depth t =
 let single_use_nargs k t =
   let result = ref 0 in
   let rec search k = function
-    | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _), _)), args) when i = k ->
+    | MLapp
+        ( ( MLrel (i, _)
+          | MLcoerce (_, _, MLrel (i, _), _)
+          | MLboxed (MLrel (i, _), _)
+          | MLbarrier (MLrel (i, _), _) ),
+          args )
+      when i = k ->
       result :=
         List.length
           (List.filter (function MLdummy _ -> false | _ -> true) args)
@@ -508,7 +523,7 @@ let single_use_nargs k t =
       List.iter (search k) args
     | MLcons (_, _, args, _) -> List.iter (search k) args
     | MLtuple args -> List.iter (search k) args
-    | MLmagic (_, a, _) -> search k a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> search k a
     | MLparray (elts, def) ->
       Array.iter (search k) elts;
       search k def

@@ -32,16 +32,16 @@ let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
 let named_env (lex : Lexenv.t) : Common.env = (List.map (fun (b : Lexenv.binder) -> b.eb_id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
 
 (* The slot a coercion's inner term is generated in
-   ({!Translation.gen_expr}'s [MLmagic]): boxed where it crosses from a
+   ({!Translation.gen_expr}'s [MLcoerce]): boxed where it crosses from a
    type that is not a box into one that is, unless the position states a
    type that is not one. *)
-let coerced_slot env ~(pos : Cpp_ir.Lowered.Type.t option) slot = function
-  | Mcoerce (from, into)
-    when (match pos with Some t -> Cpp_ir.Types.prints_as_any t | None -> true)
-         && Cpp_ir.Types.prints_as_any (cpp_of_ml env into)
-         && not (Cpp_ir.Types.prints_as_any (cpp_of_ml env from)) ->
-    into_box (box_kind_of_cpp_type (cpp_of_ml env into)) slot
-  | Mcoerce _ | Mboxed | Mbarrier -> slot
+let coerced_slot env ~(pos : Cpp_ir.Lowered.Type.t option) slot ~from ~into =
+  if
+    (match pos with Some t -> Cpp_ir.Types.prints_as_any t | None -> true)
+    && Cpp_ir.Types.prints_as_any (cpp_of_ml env into)
+    && not (Cpp_ir.Types.prints_as_any (cpp_of_ml env from))
+  then into_box (box_kind_of_cpp_type (cpp_of_ml env into)) slot
+  else slot
 
 let region ~outer ~reads body =
   let found = ref [] in
@@ -51,10 +51,13 @@ let region ~outer ~reads body =
      [pos], into [slot], with [ret] the return type in force. *)
   let rec expr ~(pos : Cpp_ir.Lowered.Type.t option) ~(ret : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) lex e =
     match e with
-    | MLmagic (m, t, occ) ->
+    | MLcoerce (from, into, t, occ) ->
       found := (occ, pos) :: !found;
       let env = named_env lex in
-      expr ~pos:(match t with MLlam _ -> pos | _ -> None) ~ret ~slot:(coerced_slot env ~pos slot m) lex t
+      expr ~pos:(match t with MLlam _ -> pos | _ -> None) ~ret ~slot:(coerced_slot env ~pos slot ~from ~into) lex t
+    | MLboxed (t, occ) | MLbarrier (t, occ) ->
+      found := (occ, pos) :: !found;
+      expr ~pos:(match t with MLlam _ -> pos | _ -> None) ~ret ~slot lex t
     | MLcons (ty, r, ts, _) when Table.is_custom r -> with_cpp_return_type ret (fun () -> custom ~pos ~slot lex ty r ts)
     | MLcons (_, _, [], _) -> ()
     | MLcons (ty, r, ts, _) -> with_cpp_return_type ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)

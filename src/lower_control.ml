@@ -12,7 +12,7 @@ type t = (Loop.t * Term.t) list
 
 let empty = []
 
-let rec strip = function MLmagic (_, e, _) -> strip e | e -> e
+let rec strip = function MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> strip e | e -> e
 
 (* The occurrence of the call headed by [f]: the global's use, or the read
    of the member. *)
@@ -173,7 +173,10 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
                  (fun (ids, result_type, pattern, b) ->
                    {binders = ids; result_type; pattern; body = lower callee (depth + List.length ids) b} )
                  branches ) }
-    | MLmagic (m, a, mocc) -> map_returns (fun v -> MLmagic (m, v, mocc)) (lower callee depth a)
+    | MLcoerce (from, into, a, mocc) ->
+      map_returns (fun v -> MLcoerce (from, into, v, mocc)) (lower callee depth a)
+    | MLboxed (a, mocc) -> map_returns (fun v -> MLboxed (v, mocc)) (lower callee depth a)
+    | MLbarrier (a, mocc) -> map_returns (fun v -> MLbarrier (v, mocc)) (lower callee depth a)
     | MLcons _ when modulo_cons -> (
       match chain callee depth e with Some c -> Continue_into c | None -> Return e )
     | e -> Return e

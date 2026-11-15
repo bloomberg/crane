@@ -169,8 +169,9 @@ val eta_fun :
   env -> ml_ast -> ml_ast list -> Cpp_ir.Lowered.Expr.t
 (** [slot] is {!gen_expr}'s, carried into the argument expressions. *)
 
-(** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
-    in the ML AST and should be ignored by numeral-folding traversals. *)
+(** Strip [MLcoerce], [MLboxed] and [MLbarrier] wrappers recursively — each
+    is a transparent coercion in the ML AST and should be ignored by
+    numeral-folding traversals. *)
 val strip_magic : ml_ast -> ml_ast
 
 (** {2 Declaration-Generation Helper Functions}

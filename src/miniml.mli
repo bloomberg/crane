@@ -130,7 +130,7 @@ type ml_type =
 
           The two do not unify with each other even at the same index, which
           is the whole point: it is that failure that makes {!Mlutil.needs_magic}
-          insert an [MLmagic] where a definition's own variable meets a
+          insert an [MLcoerce] where a definition's own variable meets a
           schematic one.  Note that {!Mlutil.type_subst_list} substitutes both
           flavours -- rigidity constrains unification, not substitution.
 
@@ -242,9 +242,9 @@ and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
     cofixpoints;
     [MLexn] a runtime error raised for an unrealisable term; [MLdummy] the value
     of an erased/logical slot; [MLaxiom] a value left abstract by an axiom;
-    [MLmagic] a marker at a type gap opened by erasure — either an unsafe
-    coercion carrying both of its types, or a lambda-grouping barrier, as
-    {!ml_magic} records; the
+    [MLcoerce], [MLboxed] and [MLbarrier] markers at a type gap opened by
+    erasure -- an unsafe coercion carrying both of its types, an assertion
+    that a value is boxed, or a lambda-grouping barrier; the
     primitive literals [MLuint], [MLfloat] and [MLstring]; [MLparray] a
     persistent-array literal (element array plus default value); and
     [MLnumeral] a literal of a numeral inductive.
@@ -289,10 +289,25 @@ and ml_ast =
   | MLexn of string
   | MLdummy of kill_reason
   | MLaxiom of string
-  | MLmagic of ml_magic * ml_ast * Occurrence.t
-      (** What the gap is, the term crossing it, and the occurrence telling
-          this crossing apart from every other one, so that what is planned
-          of the position it fills is found again where it is lowered. *)
+  | MLcoerce of ml_type * ml_type * ml_ast * Occurrence.t
+      (** [MLcoerce (from, into, a, o)]: the term [a] has type [from], the
+          context requires [into], and the two do not unify.  Both types are
+          kept so that a backend can see exactly which representation
+          boundary is being crossed instead of rediscovering it.  The
+          occurrence tells this crossing apart from every other one, so that
+          what is planned of the position it fills is found again where it is
+          lowered; likewise for [MLboxed] and [MLbarrier]. *)
+  | MLboxed of ml_ast * Occurrence.t
+    (* Not a coercion either: an assertion by the backend that, whatever the
+       term's ML type says, its value is physically inside a [std::any] at
+       runtime.  Emitted where the C++ calling convention boxes a value behind
+       extraction's back (see [crane_erase_fn]'s fallback), so a read of it
+       must go through an [any_cast]. *)
+  | MLbarrier of ml_ast * Occurrence.t
+      (** Not a coercion but a separator, placed between two groups of
+          [MLlam] nodes so that a backend collecting consecutive lambdas stops
+          between them.  There is no type gap here and nothing may be cast on
+          account of it. *)
   | MLuint of Uint63.t
   | MLfloat of Float64.t
   | MLstring of Pstring.t
@@ -323,27 +338,6 @@ and global_use = private {
 and global_instance =
   | Monomorphic
   | Polymorphic of ml_type Scheme.Instantiation.t
-
-(** What an [MLmagic] node is doing.  Extraction emits these wherever erasure
-    has opened a gap between the type a term has and the type its context
-    wants, but not every such marker is a coercion. *)
-and ml_magic =
-  | Mcoerce of ml_type * ml_type
-      (** [Mcoerce (from, into)]: the term has type [from], the context
-          requires [into], and the two do not unify.  Both types are kept so
-          that a backend can see exactly which representation boundary is
-          being crossed instead of rediscovering it. *)
-  | Mboxed
-    (* Not a coercion either: an assertion by the backend that, whatever the
-       term's ML type says, its value is physically inside a [std::any] at
-       runtime.  Emitted where the C++ calling convention boxes a value behind
-       extraction's back (see [crane_erase_fn]'s fallback), so a read of it
-       must go through an [any_cast]. *)
-  | Mbarrier
-      (** Not a coercion but a separator, placed between two groups of
-          [MLlam] nodes so that a backend collecting consecutive lambdas stops
-          between them.  There is no type gap here and nothing may be cast on
-          account of it. *)
 
 (** A match pattern. [Pcons (r, ps)] matches constructor [r] with sub-patterns
     [ps]; [Ptuple] matches a tuple; [Prel] refers to a bound branch variable by
@@ -446,7 +440,7 @@ type ml_signature = (ModPath.t * ml_module_sig) list
 (** Which "unsafe" backend features an extracted program requires, so the
     preamble can emit the corresponding helpers: [mldummy] for {!MLdummy}
     values, [tdummy] for {!Tdummy} types, [tunknown] for {!Tunknown} types, and
-    [magic] for {!MLmagic} coercions. *)
+    [magic] for {!MLcoerce} coercions. *)
 type unsafe_needs = {
   mldummy : bool;
   tdummy : bool;

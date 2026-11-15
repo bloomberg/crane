@@ -203,7 +203,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
        ind_packet) *)
     let fields = Table.record_field_bindings_of_type inner_ty in
     (* Promoted dependent records may have their constructor wrapped in
-       MLmagic due to Tvar/Tglob mismatches during extraction unification. *)
+       MLcoerce due to Tvar/Tglob mismatches during extraction unification. *)
     let inner_body = Instance_methods.record_body name class_ref inner_ty lam_params inner_body in
     ( match inner_body with
     | MLcons (cons_ty, _ctor_ref, method_bodies, _) ->
@@ -521,7 +521,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                       when List.for_all
                              (function MLdummy _ -> true | _ -> false) args ->
                       body_ref f
-                    | MLmagic (_, e, _) -> body_ref e
+                    | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> body_ref e
                     | _ -> None
                   in
                   match body_ref inner_body with
@@ -740,7 +740,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
          - [MLglob r] → named type [Entity_application (r, ...)]
          - [MLapp(MLglob r, args)] → template type with type args
          - [MLrel i] → the named template parameter it binds
-         - [MLmagic e] → strip magic wrapper
+         - [MLcoerce]/[MLboxed]/[MLbarrier] → strip the wrapper
          - a single-branch [MLcase] projecting a field → [Member] *)
       let rec ml_expr_to_cpp_type body : Cpp_ir.Lowered.Type.t =
         match body with
@@ -759,7 +759,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
             let name = get_db_name i base_env in
             Cpp_ir.Build.named_variable name
           with Failure _ -> Any )
-        | MLmagic (_, e, _) -> ml_expr_to_cpp_type e
+        | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> ml_expr_to_cpp_type e
         | MLcase (_, scrutinee, branches, _)
           when Array.length branches = 1 ->
           (* Single-branch case = record field projection.  The branch

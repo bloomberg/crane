@@ -224,10 +224,10 @@ let () =
   check "calling the second is a call projection"
     (kind (one (MLapp (fresh_rel 1, [a]))) = Record {typeclass = false; body = Projection {field = 1; application = Call}});
   check "calling it through a coercion is a coerced call"
-    (kind (one (MLapp (MLmagic (Mboxed, fresh_rel 1, occ ()), [a])))
+    (kind (one (MLapp (MLboxed (fresh_rel 1, occ ()), [a])))
     = Record {typeclass = false; body = Projection {field = 1; application = Coerced_call}});
   check "a projection is looked at through one coercion"
-    (kind (one (MLmagic (Mboxed, fresh_rel 2, occ ())))
+    (kind (one (MLboxed (fresh_rel 2, occ ())))
     = Record {typeclass = false; body = Projection {field = 0; application = Read}});
   check "a variable bound outside the branch is no projection"
     (kind (one (fresh_rel 3)) = Record {typeclass = false; body = Destructure});
@@ -260,7 +260,7 @@ let () =
   check "a staged application is not canonical" (not (Core_normalize.is_canonical staged));
   check "a global applied in stages is applied once" (Core_normalize.spine staged = MLapp (MLglob f, [a; b]));
   check "a coercion of the head is dropped"
-    (Core_normalize.apply (MLmagic (Mboxed, MLglob f, occ ())) [a; b] = MLapp (MLglob f, [a; b]));
+    (Core_normalize.apply (MLboxed (MLglob f, occ ())) [a; b] = MLapp (MLglob f, [a; b]));
   check "an erased head is itself, its arguments never evaluated"
     (Core_normalize.apply (MLdummy Kprop) [a] = MLdummy Kprop
     && Core_normalize.apply (MLexn "absurd") [a] = MLexn "absurd");

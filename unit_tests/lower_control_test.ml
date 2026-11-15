@@ -65,12 +65,16 @@ let () =
      another branch returns. *)
   let u = use () in
   let coerced =
-    MLmagic
-      ( Mboxed,
-        MLcase (nat, fresh_rel 2, [| ([], nat, Pwild, fresh_rel 1); ([], nat, Pwild, call u [fresh_rel 2; fresh_rel 1]) |], Occurrence.fresh ()) , Occurrence.fresh ())
+    MLboxed
+      ( MLcase
+          ( nat,
+            fresh_rel 2,
+            [| ([], nat, Pwild, fresh_rel 1); ([], nat, Pwild, call u [fresh_rel 2; fresh_rel 1]) |],
+            Occurrence.fresh () ),
+        Occurrence.fresh () )
   in
   match lower coerced with
-  | Term.Match {branches = [{body = Return (MLmagic (Mboxed, _, _)); _}; {body = Continue _; _}]; _} -> ()
+  | Term.Match {branches = [{body = Return (MLboxed _); _}; {body = Continue _; _}]; _} -> ()
   | _ -> check "a coerced body continues, its returns coerced" false
 
 (* The parameters a loop keeps: those every Continue passes on as they

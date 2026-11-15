@@ -110,7 +110,11 @@ let list_propagated_args (ty : ml_type) ts =
                     ts
                 in
                 ( match first_elem with
-                | Some (MLmagic (_, MLcons (elem_ty, _, _, _), _)) -> elem_ty
+                | Some
+                    ( MLcoerce (_, _, MLcons (elem_ty, _, _, _), _)
+                    | MLboxed (MLcons (elem_ty, _, _, _), _)
+                    | MLbarrier (MLcons (elem_ty, _, _, _), _) ) ->
+                  elem_ty
                 | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                 | _ -> t )
               | _ -> t )
@@ -133,7 +137,9 @@ let list_propagated_args (ty : ml_type) ts =
               MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts, arg_occ)
             | _ ->
               MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts, arg_occ) )
-          | MLmagic (m, inner, mocc) -> MLmagic (m, update_nested_ty inner, mocc)
+          | MLcoerce (from, into, inner, mocc) -> MLcoerce (from, into, update_nested_ty inner, mocc)
+          | MLboxed (inner, mocc) -> MLboxed (update_nested_ty inner, mocc)
+          | MLbarrier (inner, mocc) -> MLbarrier (update_nested_ty inner, mocc)
           | other -> other
         in
         List.map update_nested_ty ts
@@ -232,7 +238,10 @@ let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps
 let erase_past_type_arg ts_updated temps =
   let rec first_ktype_dummy i = function
     | [] -> max_int
-    | (MLdummy Ktype | MLmagic (_, MLdummy Ktype, _)) :: _ -> i
+    | ( MLdummy Ktype
+      | MLcoerce (_, _, MLdummy Ktype, _)
+      | MLboxed (MLdummy Ktype, _)
+      | MLbarrier (MLdummy Ktype, _) ) :: _ -> i
     | _ :: rest -> first_ktype_dummy (i + 1) rest
   in
   let cutoff = first_ktype_dummy 0 ts_updated in
@@ -345,7 +354,10 @@ let regular_field env ~is_boxed c ~slot i e =
     | Some ft ->
       let is_erased_rel =
         match e with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+        | MLrel (j, occ)
+        | MLcoerce (_, _, MLrel (j, occ), _)
+        | MLboxed (MLrel (j, occ), _)
+        | MLbarrier (MLrel (j, occ), _) ->
           is_boxed j occ
         | _ -> false
       in
@@ -608,7 +620,10 @@ let record_field env ~is_boxed (ty : ml_type) r ~slot i e =
     | Some ft ->
       let is_erased_rel =
         match e with
-        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ), _) ->
+        | MLrel (j, occ)
+        | MLcoerce (_, _, MLrel (j, occ), _)
+        | MLboxed (MLrel (j, occ), _)
+        | MLbarrier (MLrel (j, occ), _) ->
           is_boxed j occ
         | _ -> false
       in

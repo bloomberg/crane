@@ -176,7 +176,7 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLmagic _
+     |MLcoerce _ | MLboxed _ | MLbarrier _
      |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _

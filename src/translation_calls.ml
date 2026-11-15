@@ -1653,7 +1653,10 @@ let argument_position ~local_callable env id plan i ml_arg =
     match ml_arg with
     (* A lambda under a coercion is written against the slot all the
        same. *)
-    | MLlam _ | MLmagic (_, MLlam _, _) -> param_expected_at_declared_arity ()
+    | MLlam _
+    | MLcoerce (_, _, MLlam _, _)
+    | MLboxed (MLlam _, _)
+    | MLbarrier (MLlam _, _) -> param_expected_at_declared_arity ()
     | _ ->
     ( match
         match Param_pos.nth fn_param_ml_tys_orig param_index with
@@ -1664,7 +1667,7 @@ let argument_position ~local_callable env id plan i ml_arg =
     | Some _ as t -> t
     | None ->
     ( match ml_arg with
-    | MLmagic (_, _, _) -> param_expected_subst ()
+    | MLcoerce _ | MLboxed _ | MLbarrier _ -> param_expected_subst ()
     (* [MLglob]: a bare function name handed over as a value may need
        re-currying.  Count the arrows in the callee's {e unsubstituted}
        parameter type: arrows past the point where the codomain becomes a
@@ -1766,7 +1769,7 @@ let argument_position ~local_callable env id plan i ml_arg =
   in
   let arg_expected_ty =
     match ml_arg with
-    | (MLlam _ | MLmagic (_, MLlam _, _)) when deduced_callable ->
+    | (MLlam _ | MLcoerce (_, _, MLlam _, _) | MLboxed (MLlam _, _) | MLbarrier (MLlam _, _)) when deduced_callable ->
       Option.map deduce_erased_domains arg_expected_ty
     | _ -> arg_expected_ty
   in

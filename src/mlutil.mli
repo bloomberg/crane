@@ -231,7 +231,7 @@ val try_mgu : ml_type -> ml_type -> unit
 
 (** Determine if a type coercion requires magic (unsafe cast).
     @param p a pair [(expected, actual)] of ML types to compare
-    @return [true] if the types cannot be unified and [MLmagic] is needed *)
+    @return [true] if the types cannot be unified and [MLcoerce] is needed *)
 val needs_magic : ml_type * ml_type -> bool
 
 (** Conditionally wrap an ML term in a coercion.  The two types are passed
@@ -514,10 +514,6 @@ val mlapp : ml_ast -> ml_ast list -> ml_ast
     @param f the transformation to apply to each direct child
     @param t the ML AST node whose children are to be mapped *)
 val ast_map : (ml_ast -> ml_ast) -> ml_ast -> ml_ast
-
-(** [map_magic_types f m] rewrites the types recorded on a coercion marker.
-    [Mbarrier] carries none and passes through unchanged. *)
-val map_magic_types : (ml_type -> ml_type) -> ml_magic -> ml_magic
 
 (** [ast_map_types f a] rewrites every [ml_type] embedded in [a] with [f],
     recursing through the whole term. *)

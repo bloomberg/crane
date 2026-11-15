@@ -201,7 +201,7 @@ let classify ~effects ~callee body =
     | MLcase (_, s, branches, _) ->
       walk ~tail:false s;
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) ~tail b) branches
-    | MLmagic (_, a, _) -> walk ~tail a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> walk ~tail a
     | MLlam _ -> ()
     | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->
       Array.iter
@@ -317,7 +317,9 @@ let modulo_cons_chains ~effects ~member ~bodies self =
     | MLletin (_, _, a, b, _) ->
       general_if (calls ~depth a > 0);
       walk_under 1 b
-    | MLmagic (_, a, _) -> general_if ((not (self_call ~depth a)) && calls ~depth a > 0)
+    | MLcoerce (_, _, a, _)
+    | MLboxed (a, _)
+    | MLbarrier (a, _) -> general_if ((not (self_call ~depth a)) && calls ~depth a > 0)
     | MLcons (_, c, [a], _) when identity c -> walk_under 0 a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk_under 0 a
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
@@ -421,7 +423,7 @@ let value_levels ~heads ~depth e =
   go 0 e;
   List.sort_uniq Int.compare !found
 
-let rec strip = function MLmagic (_, e, _) -> strip e | e -> e
+let rec strip = function MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> strip e | e -> e
 
 let in_place from into =
   match (Mlutil.type_simpl from, Mlutil.type_simpl into) with
@@ -436,11 +438,14 @@ let in_place from into =
 (* [e] through the coercions keeping its representation: the value a
    parameter is passed where the argument is [e]. *)
 let rec as_passed = function
-  | MLmagic (Mcoerce (from, into), e, _) when in_place from into -> as_passed e
+  | MLcoerce (from, into, e, _) when in_place from into -> as_passed e
   | e -> e
 
 (* The arguments a call is applied to, through coercions. *)
-let rec arguments = function MLmagic (_, e, _) -> arguments e | MLapp (_, args) -> args | _ -> []
+let rec arguments = function
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> arguments e
+  | MLapp (_, args) -> args
+  | _ -> []
 
 (* Whether translation generates a match standing as a let's right-hand
    side as statements, each branch assigning the binder -- a custom match,
@@ -518,7 +523,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | MLcase (_, s, branches, _) ->
         go ~enters:false d s;
         Array.iter (fun (ids, _, _, b) -> go ~enters (d + List.length ids) b) branches
-      | MLmagic (_, e, _) -> go ~enters d e
+      | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> go ~enters d e
       | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
         match List.rev args with
         | MLlam (_, _, k) :: action :: others ->
@@ -602,7 +607,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
             (fun (ids, _, _, b) -> ending (depth + List.length ids) b)
             (Array.to_list branches)
         | MLletin (_, _, _, b, _) -> ending (depth + 1) b
-        | MLmagic (_, b, _) -> ending depth b
+        | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> ending depth b
         | _ -> [] )
     in
     (* The levels [levels], with those the closures among them read: a
@@ -648,7 +653,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
             (fun (ids, _, _, b) -> arguments_read (depth + List.length ids) b)
             (Array.to_list branches)
         | MLletin (_, _, _, b, _) -> arguments_read (depth + 1) b
-        | MLmagic (_, b, _) -> arguments_read depth b
+        | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> arguments_read depth b
         | _ -> [] )
     in
     let go = walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures in
@@ -673,7 +678,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       go depth a;
       let rec closure = function
         | MLlam _ | MLfixpoint _ | MLcofixpoint _ -> true
-        | MLmagic (_, e, _) -> closure e
+        | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> closure e
         | _ -> false
       in
       let closures = if closure a then (depth, a) :: closures else closures in
@@ -684,7 +689,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         | MLfixpoint (_, [|_|], [|_|], occ) when entered occ ->
           let level = depth in
           let rec entering ~depth:d = function
-            | MLmagic (_, e, _) -> entering ~depth:d e
+            | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> entering ~depth:d e
             | MLapp (MLrel (k, read), _) when d - k = level -> [{target = Member (occ, 0); occurrence = read}]
             | e -> targets ~depth:d e
           in
@@ -716,7 +721,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       (* The member [m] is bound at level [depth + m], the last innermost. *)
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
-        | MLmagic (_, e, _) -> member ~depth e
+        | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> member ~depth e
         | MLapp (MLrel (k, read), _) when first <= depth - k && depth - k < first + n ->
           [{target = Member (occ, depth - k - first); occurrence = read}]
         | _ -> []
@@ -948,7 +953,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
             made_of = Global_use.occurrence use }
           :: !found;
       List.iter operand args
-    | MLmagic (_, a, _) -> go pos a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> go pos a
     | MLcons (_, c, [a], _) when identity c -> go pos a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> go pos a
     | MLcons (Tglob (n, _, _), c, args, _)
@@ -1412,7 +1417,7 @@ let analyze groups program =
         (* A call with fewer arguments than its callee's parameters is a
            closure the C++ makes, whose call runs where the closure does. *)
         let rec targets = function
-          | MLmagic (_, e, _) -> targets e
+          | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> targets e
           | MLapp (MLglob use, args)
             when List.exists (Common.globref_equal use.callee) members
                  && List.length args >= parameters defs use.callee ->

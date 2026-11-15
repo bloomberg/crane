@@ -472,14 +472,14 @@ let wrap_void_call_as_value (call_expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     produce a void-returning call in C++.  Handles:
     - [MLglob(r, _)]  — named function, look up type in extraction table
     - [MLrel(i)]       — variable (e.g. callback), look up type in env
-    - [MLmagic] — transparent wrapper, recurse *)
+    - [MLcoerce]/[MLboxed]/[MLbarrier] — transparent wrapper, recurse *)
 let rec ml_callee_is_void = function
   (* A record field of a [unit]-returning function type is stored as a
      [std::function<void(...)>]: [globals_object.(globals_set) gs]. *)
   | MLglob {callee = r; _} when Table.is_projection r -> (
     try ml_type_is_void_call (Table.find_type r) with Not_found -> false )
   | MLglob {callee = r; _} -> is_void_ified_ref r
-  | MLmagic (_, inner, _) -> ml_callee_is_void inner
+  | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> ml_callee_is_void inner
   | MLrel (i, _) -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
 
@@ -496,7 +496,7 @@ let ml_expr_is_void_call = function
     [unit]-returning function type, stored as [std::function<void(...)>]. *)
 let rec ml_value_is_void_call = function
   | MLapp (f, _) -> ml_callee_is_void f
-  | MLmagic (_, e, _) -> ml_value_is_void_call e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> ml_value_is_void_call e
   | MLcase (_, _, pv, _) ->
     Array.length pv > 0
     && Array.for_all
@@ -509,7 +509,7 @@ let rec ml_value_is_void_call = function
              | e -> ml_value_is_void_call e
            in
            match body with
-           | MLmagic (_, b, _) -> applies_void_binder b
+           | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> applies_void_binder b
            | b -> applies_void_binder b )
          pv
   | _ -> false
@@ -1073,8 +1073,9 @@ let rec is_reified_monadic_expr ml_expr =
   match ml_expr with
   (* A coercion changes the type a value is read at, not whether it is a
      tree: the question is asked of what is under it. *)
-  | MLmagic (_, e, _) -> is_reified_monadic_expr e
-  | MLapp (MLmagic (_, f, _), args) -> is_reified_monadic_expr (MLapp (f, args))
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> is_reified_monadic_expr e
+  | MLapp ((MLcoerce (_, _, f, _) | MLboxed (f, _) | MLbarrier (f, _)), args) ->
+    is_reified_monadic_expr (MLapp (f, args))
   | MLrel (i, _) ->
     (match get_env_type_opt i with Some ty -> says_monadic ty | None -> false)
   | MLapp (MLrel (i, _), args) ->
@@ -1215,7 +1216,7 @@ let rec ml_is_value = function
   | MLrel _ | MLlam _ | MLdummy _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
   | MLglob {callee = r; _} -> thunk_reason r = None
   | MLcons (_, _, args, _) | MLtuple args -> List.for_all ml_is_value args
-  | MLmagic (_, e, _) -> ml_is_value e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> ml_is_value e
   | _ -> false
 
 (** Whether [body] calls [r] somewhere a suspension does not reach: outside
@@ -1477,7 +1478,7 @@ let rec collect_tvars_ast acc = function
     Array.fold_left collect_tvars_ast acc funs
   | MLapp (f, args) ->
     List.fold_left collect_tvars_ast (collect_tvars_ast acc f) args
-  | MLmagic (_, a, _) -> collect_tvars_ast acc a
+  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> collect_tvars_ast acc a
   | MLparray (arr, def) ->
     collect_tvars_ast (Array.fold_left collect_tvars_ast acc arr) def
   | MLtuple args -> List.fold_left collect_tvars_ast acc args
@@ -1504,7 +1505,7 @@ let rec ast_may_throw = function
     || Array.exists (fun (_, _, _, body) -> ast_may_throw body) brs
   | MLfixpoint (_, _, funs, _) | MLcofixpoint (_, _, funs, _) -> Array.exists ast_may_throw funs
   | MLapp (f, args) -> ast_may_throw f || List.exists ast_may_throw args
-  | MLmagic (_, a, _) -> ast_may_throw a
+  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> ast_may_throw a
   | MLparray (arr, def) -> Array.exists ast_may_throw arr || ast_may_throw def
   | MLtuple args -> List.exists ast_may_throw args
   | MLrel _ | MLdummy _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false
@@ -1751,7 +1752,10 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
   let is_forwarded depth i arg =
     let expected_db = n_params - i + depth in
     match arg with
-    | MLmagic (_, MLrel (db, _), _) | MLrel (db, _) -> db = expected_db
+    | MLcoerce (_, _, MLrel (db, _), _)
+    | MLboxed (MLrel (db, _), _)
+    | MLbarrier (MLrel (db, _), _)
+    | MLrel (db, _) -> db = expected_db
     | _ -> false
   in
   let rec walk depth = function
@@ -1779,7 +1783,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
     | MLfixpoint (_, _, bodies, _) | MLcofixpoint (_, _, bodies, _) ->
       let n = Array.length bodies in
       Array.iter (walk (depth + n)) bodies
-    | MLmagic (_, e, _) -> walk depth e
+    | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> walk depth e
     | MLparray (elts, def) ->
       Array.iter (walk depth) elts;
       walk depth def
@@ -1864,7 +1868,7 @@ let escaping_params ~suspended n_params body =
       (* A local fixpoint is a closure over its free variables. *)
       let n = Array.length bodies in
       Array.iter (walk true (depth + n)) bodies
-    | MLmagic (_, e, _) -> walk under depth e
+    | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> walk under depth e
     | MLparray (elts, def) ->
       Array.iter (walk under depth) elts;
       walk under depth def
@@ -1884,7 +1888,7 @@ let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
     ~is_self_call:(fun depth f ->
       (* A coercion around the self-reference (extraction inserts one when the
          fixpoint's type was generalised) must not hide the recursive call. *)
-      let rec strip = function MLmagic (_, e, _) -> strip e | e -> e in
+      let rec strip = function MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> strip e | e -> e in
       match strip f with
       | MLrel (db, _) -> db = base_self_db + depth
       | _ -> false )
@@ -1932,7 +1936,7 @@ type local_source = Local_closure | Local_param of int | Local_other
     named global, a pattern variable or a literal has one type whatever
     instantiation of the function it is written in. *)
 let rec argument_source n_params locals = function
-  | MLmagic (_, e, _) -> argument_source n_params locals e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> argument_source n_params locals e
   | MLrel (db, _) ->
     let depth = List.length locals in
     if db <= depth then
@@ -1984,7 +1988,7 @@ let closure_feedback_params ~callee bodies =
   let scan self body =
     let params, body = collect_lams body in
     let n = List.length params in
-    let rec strip = function MLmagic (_, e, _) -> strip e | e -> e in
+    let rec strip = function MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> strip e | e -> e in
     let rec walk locals e =
       match e with
       | MLapp (f, args) ->
@@ -2022,7 +2026,7 @@ let closure_feedback_params ~callee bodies =
         let locals = List.init (Array.length bodies) (fun _ -> Local_closure) @ locals in
         Array.iter (walk locals) bodies
       | MLcons (_, _, args, _) | MLtuple args -> List.iter (walk locals) args
-      | MLmagic (_, e, _) -> walk locals e
+      | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> walk locals e
       | MLparray (elts, def) ->
         Array.iter (walk locals) elts;
         walk locals def
@@ -2356,7 +2360,7 @@ let rec collect_free_rels_set n_bound acc = function
       funs
   | MLcons (_, _, args, _) ->
     List.fold_left (collect_free_rels_set n_bound) acc args
-  | MLmagic (_, a, _) -> collect_free_rels_set n_bound acc a
+  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> collect_free_rels_set n_bound acc a
   | MLtuple args -> List.fold_left (collect_free_rels_set n_bound) acc args
   | MLparray (arr, def) ->
     collect_free_rels_set
@@ -2575,9 +2579,18 @@ let ml_projection_field_type = function
     let ids, _, _, proj_body = pv.(0) in
     let n = List.length ids in
     let projected = function
-      | Miniml.MLrel (i, _) | MLmagic (_, MLrel (i, _), _) when i >= 1 && i <= n ->
+      | Miniml.MLrel (i, _)
+      | MLcoerce (_, _, MLrel (i, _), _)
+      | MLboxed (MLrel (i, _), _)
+      | MLbarrier (MLrel (i, _), _) when i >= 1 && i <= n ->
         Some (n - i, 0)
-      | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _), _)), args) when i >= 1 && i <= n ->
+      | MLapp
+          ( ( MLrel (i, _)
+            | MLcoerce (_, _, MLrel (i, _), _)
+            | MLboxed (MLrel (i, _), _)
+            | MLbarrier (MLrel (i, _), _) ),
+            args )
+        when i >= 1 && i <= n ->
         Some (n - i, count_real_ml_args args)
       | _ -> None
     in
@@ -2606,7 +2619,9 @@ let ml_projection_field_type = function
 let rec ml_body_returns_erased_field = function
   | Miniml.MLapp
       ( ( MLglob ({callee = r; _} as use)
-        | MLmagic (_, MLglob ({callee = r; _} as use), _) ),
+        | MLcoerce (_, _, MLglob ({callee = r; _} as use), _)
+        | MLboxed (MLglob ({callee = r; _} as use), _)
+        | MLbarrier (MLglob ({callee = r; _} as use), _) ),
         args ) as full ->
     let direct =
       match find_type_opt r with
@@ -2620,7 +2635,7 @@ let rec ml_body_returns_erased_field = function
     direct ||
     (match full with Miniml.MLapp (f, _) -> ml_body_returns_erased_field f | _ -> false)
   | Miniml.MLapp (f, _) -> ml_body_returns_erased_field f
-  | MLmagic (_, f, _) -> ml_body_returns_erased_field f
+  | MLcoerce (_, _, f, _) | MLboxed (f, _) | MLbarrier (f, _) -> ml_body_returns_erased_field f
   | MLcase _ as c ->
     ( match ml_projection_field_type c with
     | Some field_ty -> ml_return_type_is_erased field_ty
@@ -2780,7 +2795,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
     extraction. *)
 let rec ml_ast_type_hint = function
   | Miniml.MLcons (t, _, _, _) -> Some t
-  | Miniml.MLmagic (Miniml.Mcoerce (from, _), inner, _) ->
+  | Miniml.MLcoerce (from, _, inner, _) ->
     ( match Ml_type_util.resolve_tmeta from with
     | Miniml.Tunknown | Miniml.Tdummy _ -> ml_ast_type_hint inner
     (* A function value's representation at a slot it is coerced into is the
@@ -2788,7 +2803,7 @@ let rec ml_ast_type_hint = function
        it would defeat the boxing and the consumer's fixed [any_cast]. *)
     | Miniml.Tarr _ -> None
     | t -> Some t )
-  | Miniml.MLmagic (_, inner, _) -> ml_ast_type_hint inner
+  | Miniml.MLboxed (inner, _) | Miniml.MLbarrier (inner, _) -> ml_ast_type_hint inner
   | _ -> None
 
 (** What the position a subterm occupies tells the generator about how to

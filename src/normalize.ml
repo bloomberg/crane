@@ -139,7 +139,7 @@ let rec reaches_call group ~depth e =
     reaches_call group ~depth scrut || branch_reaches_call group ~depth branches
   | MLapp (f, args) -> List.exists (reaches_call group ~depth) (f :: args)
   | MLcons (_, _, args, _) | MLtuple args -> List.exists (reaches_call group ~depth) args
-  | MLmagic (_, e, _) -> reaches_call group ~depth e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> reaches_call group ~depth e
   | _ -> false
 
 (* Whether a local fixpoint's bodies, below their parameters, reach [group]. *)
@@ -314,8 +314,9 @@ let rec scope ~group ~depth ?expected e =
       MLfixpoint (i, ids, Array.map (inner ~group n) bodies, occ)
     | MLcofixpoint (i, ids, bodies, occ) ->
       MLcofixpoint (i, ids, Array.map (inner ~group (Array.length ids)) bodies, occ)
-    | MLmagic ((Mcoerce (_, into) as m), a, mocc) -> MLmagic (m, strict ~reading:(Coerced into) ~tail a, mocc)
-    | MLmagic (m, a, mocc) -> MLmagic (m, strict ~tail a, mocc)
+    | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, strict ~reading:(Coerced into) ~tail a, mocc)
+    | MLboxed (a, mocc) -> MLboxed (strict ~tail a, mocc)
+    | MLbarrier (a, mocc) -> MLbarrier (strict ~tail a, mocc)
     | _ -> e
   in
   let body = strict ~tail:true e in

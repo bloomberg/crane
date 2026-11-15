@@ -110,7 +110,7 @@ let planned scope i = if i >= 1 then Option.flatten (List.nth_opt scope.planned 
    [lex]. *)
 let rec scrutinee_binder lex = function
   | MLrel (i, _) -> Some i
-  | MLmagic (_, e, _) -> scrutinee_binder lex e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> scrutinee_binder lex e
   | MLapp (h, _) when not (head_is_callable lex h) -> scrutinee_binder lex h
   | _ -> None
 
@@ -429,7 +429,12 @@ let region ~outer body =
        function's declared domain at its position, where the binding site
        declared one with no erased position ({!Translation.eta_fun}'s
        [declared_dom]). *)
-    | MLapp (((MLrel (h, _) | MLmagic (_, MLrel (h, _), _)) as f), args)
+    | MLapp
+        ( ( ( MLrel (h, _)
+            | MLcoerce (_, _, MLrel (h, _), _)
+            | MLboxed (MLrel (h, _), _)
+            | MLbarrier (MLrel (h, _), _) ) as f ),
+          args )
       when List.exists (function MLlam _ -> true | _ -> false) args ->
       walk scope f;
       let dom = match planned scope h with Some (Function (dom, _), _) -> dom | _ -> [] in

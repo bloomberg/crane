@@ -214,7 +214,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   | MLlam (_, ty, body) ->
     Option.map (fun rty -> Tarr (ty, rty)) (infer_ml_body_type body)
   | MLglob {callee = r; _} -> find_type_opt r
-  | MLmagic (_, e, _) -> infer_ml_body_type e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> infer_ml_body_type e
   | _ -> None
 
 (** [tvar_instantiation_found callee_ty args] is the callee's type-variable
@@ -615,9 +615,10 @@ let ref_is_instance r =
   | Some ty -> ml_type_is_instance ty
   | None -> false
 
-(** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
-    in the ML AST and should be ignored by numeral-folding traversals. *)
-let rec strip_magic = function MLmagic (_, e, _) -> strip_magic e | e -> e
+(** Strip [MLcoerce], [MLboxed] and [MLbarrier] wrappers recursively — each
+    is a transparent coercion in the ML AST and should be ignored by
+    numeral-folding traversals. *)
+let rec strip_magic = function MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> strip_magic e | e -> e
 
 (** A dictionary as an argument, without what only wraps it: coercions, and
     the lambdas over a singleton class method's erased type arguments that
@@ -734,7 +735,11 @@ let dict_carrier_ml_type ~lex ~caller id args =
     go 0 [] (ml_domains ty)
   in
   let rec head_glob = function
-    | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b, _) | Miniml.MLapp (b, _) ->
+    | Miniml.MLlam (_, _, b)
+    | Miniml.MLcoerce (_, _, b, _)
+    | Miniml.MLboxed (b, _)
+    | Miniml.MLbarrier (b, _)
+    | Miniml.MLapp (b, _) ->
       head_glob b
     | Miniml.MLglob {callee = r; _} -> Some r
     | _ -> None
@@ -750,7 +755,7 @@ let dict_carrier_ml_type ~lex ~caller id args =
      the shape that made this findable. *)
   let rec dict_ml_type ?(depth = 0) = function
     | Miniml.MLlam (_, _, b) -> dict_ml_type ~depth:(depth + 1) b
-    | Miniml.MLmagic (_, b, _) -> dict_ml_type ~depth b
+    | Miniml.MLcoerce (_, _, b, _) | Miniml.MLboxed (b, _) | Miniml.MLbarrier (b, _) -> dict_ml_type ~depth b
     | Miniml.MLapp (b, dicts) as tm ->
       (* The head's codomain still names its own class parameters; the
          dictionaries it is applied to are what say which carriers those are.
@@ -849,7 +854,7 @@ let binder_is_instance lex i =
 (* Check if an ML arg is a type class instance (a reference to a struct that
    implements a type class).
 
-   [MLmagic] is a transparent coercion -- extraction inserts one around an
+   [MLcoerce] is a transparent coercion -- extraction inserts one around an
    instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt] with
    [Opt : Type -> Type]).  Look through it, or the instance is left in value
    position and the generated call names the instance struct as if it were a

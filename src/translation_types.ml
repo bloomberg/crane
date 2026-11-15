@@ -297,7 +297,7 @@ let ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
     itself, and that is where the value's C++ type was pinned down. *)
 let rec scrutinee_binder = function
   | MLrel (i, _) -> Some i
-  | MLmagic (_, e, _) -> scrutinee_binder e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> scrutinee_binder e
   | MLapp (h, _) when not (scrutinee_head_is_callable h) ->
     scrutinee_binder h
   | _ -> None
@@ -813,7 +813,7 @@ let promoted_tys_of_arity n =
     because that is exactly what [crane_erase_fn]'s CTAD-non-viable fallback
     forwards. If the lambda's own bound parameter [n] is immediately
     pattern-matched via a custom (e.g. pair) match, that match must therefore
-    treat the scrutinee as erased — wrap it in [MLmagic] so
+    treat the scrutinee as erased — wrap it in [MLboxed] so
     [gen_custom_cpp_case] emits [any_cast<pair<any,any>>(...)] instead of a
     structured binding directly on the (at runtime erased) parameter. Without
     this, a domain type that is a pair with a mix of erased/concrete fields
@@ -824,8 +824,10 @@ let promoted_tys_of_arity n =
 let rec mark_own_param_for_pair_erasure n body =
   match body with
   | MLcase (ty, (MLrel (i, _) as scrut), pv, occ) when i = n && is_custom_match pv ->
-    MLcase (ty, MLmagic (Mboxed, scrut, Occurrence.fresh ()), pv, occ)
-  | MLmagic (m, a, mocc) -> MLmagic (m, mark_own_param_for_pair_erasure n a, mocc)
+    MLcase (ty, MLboxed (scrut, Occurrence.fresh ()), pv, occ)
+  | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, mark_own_param_for_pair_erasure n a, mocc)
+  | MLboxed (a, mocc) -> MLboxed (mark_own_param_for_pair_erasure n a, mocc)
+  | MLbarrier (a, mocc) -> MLbarrier (mark_own_param_for_pair_erasure n a, mocc)
   | other -> other
 
 (** [field_stores_erased_fn_value ~field_cpp_ty field_types i e] — true when
@@ -1702,7 +1704,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
   in
   let typ =
     match t with
-    | MLrel (i, _) | MLmagic (_, MLrel (i, _), _) ->
+    | MLrel (i, _) | MLcoerce (_, _, MLrel (i, _), _) | MLboxed (MLrel (i, _), _) | MLbarrier (MLrel (i, _), _) ->
       (* Scrutinee is a variable reference — use its concrete type, the one
          its binder was given, a parameter's as much as a let's.  Unwrap Tmeta
          wrappers since env_types may store types in Tmeta form. *)
@@ -1948,7 +1950,7 @@ let reads_erased_pair_component env t =
   match t with
   | MLapp (MLglob _, args) -> (
     match List.filter (function MLdummy _ -> false | _ -> true) args with
-    | [MLmagic (Mcoerce (from, _), _, occ)] -> (
+    | [MLcoerce (from, _, _, occ)] -> (
       Cpp_ir.Types.prints_as_any (cpp_of_ml env from)
       &&
       match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
@@ -2439,14 +2441,14 @@ let ml_expr_is_function_value ?(var = fun i occ -> (read_is_boxed i occ, get_env
     (not boxed) && ( match ty with Some t -> count_ml_value_arrows t >= 1 | None -> false )
   (* A partial application of a global whose codomain mentions a
      value-dependent erased type (e.g. [mk_action n : domty n -> bool]) is
-     wrapped in [MLmagic] by the kernel's typing coercion even at the
+     wrapped in [MLcoerce] by the kernel's typing coercion even at the
      application node itself, not just around the whole expression — so
      [strip_magic] above (which only strips the outer expression) does not
      expose the [MLglob] underneath. Look through it here, locally, rather
      than in [infer_ml_body_type] itself (whose result also feeds unrelated
      callers like lambda return-type annotation), so this fix cannot change
      behavior anywhere but function-value detection. *)
-  | MLapp (MLmagic (_, f, _), args) ->
+  | MLapp ((MLcoerce (_, _, f, _) | MLboxed (f, _) | MLbarrier (f, _)), args) ->
     ( match infer_ml_body_type (MLapp (f, args)) with
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
@@ -3106,7 +3108,7 @@ let value_cpp_type ~agree env e =
 (** Whether a coercion is one the Rocq indices rule out, rather than one C++
     can perform.
 
-    Extraction records [Mcoerce (unit, nat)] for the [vnil] branch of a match
+    Extraction records [MLcoerce (unit, nat, _, _)] for the [vnil] branch of a match
     on [vec (S n)] whose [return] clause computes [unit] there: a branch whose
     type differs from the type the match was instantiated at is one the
     scrutinee's index makes impossible.  [unit] is where this shows up
@@ -3175,7 +3177,7 @@ let is_env_var_erased env tvars i =
   | None -> false
 
 (** Check whether an ML expression's C++ type is erased ([std::any]).
-    Used by the [MLmagic] handler to decide whether [any_cast] is needed. *)
+    Used by the coercion handler ([Translation.gen_crossing]) to decide whether [any_cast] is needed. *)
 let rec ml_expr_is_erased env (t : ml_ast) : bool =
   let tvars = get_current_type_vars () in
   match t with
@@ -3197,7 +3199,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
     ( match callee_ml_type r with
       | Some ml_ty -> Cpp_ir.Types.prints_as_any (cpp_of_ml env ml_ty)
       | None -> false )
-  | MLmagic (_, inner, _) -> ml_expr_is_erased env inner
+  | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> ml_expr_is_erased env inner
   | MLcase (case_ty, _, _, _) ->
     ( match case_ty with
       | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
@@ -3236,21 +3238,19 @@ let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
 let recover_boxed_component into (e : Cpp_ir.Lowered.Expr.t) =
   if yields_boxed_component e then coerce ~from:Any ~into e else e
 
-(** Whether an [MLmagic] node says its subterm is physically inside a
-    [std::any] here, and so has to be opened before it can be used.
+(** Whether an [MLcoerce (from, into, _, _)] node says its subterm is
+    physically inside a [std::any] here, and so has to be opened before it can
+    be used.  (An [MLboxed] always does; an [MLbarrier] carries no type gap at
+    all.)
 
-    A [Mbarrier] carries no type gap at all.  An [Mcoerce] is a box only when
-    one of its two types erases at this instantiation: a coercion between two
-    types that are both written down concretely -- a typeclass carrier
-    resolved by the instance being generated, say -- is a static mismatch the
-    C++ types already agree on, and casting on account of it would read a box
-    that was never built. *)
-let magic_is_boxed env = function
-  | Mboxed -> true
-  | Mbarrier -> false
-  | Mcoerce (from, into) ->
-    let erases ty = ml_erases_to_box env ty in
-    erases from || erases into
+    A coercion is a box only when one of its two types erases at this
+    instantiation: a coercion between two types that are both written down
+    concretely -- a typeclass carrier resolved by the instance being
+    generated, say -- is a static mismatch the C++ types already agree on, and
+    casting on account of it would read a box that was never built. *)
+let coercion_is_boxed env ~from ~into =
+  let erases ty = ml_erases_to_box env ty in
+  erases from || erases into
 
 (** [recover_erased_scrutinee env ~is_magic typ expr] casts a scrutinee that is
     carried at runtime as [std::any] -- an existential witness, say -- back to
@@ -3353,7 +3353,7 @@ let rec flatten_app = function
     ( match flatten_app f with
     | MLapp (f', inner_args) -> flatten_app (MLapp (f', inner_args @ args))
     | f' -> MLapp (f', args) )
-  | MLmagic (_, e, _) -> flatten_app e
+  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> flatten_app e
   | other -> other
 
 let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
@@ -3361,13 +3361,20 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
      [std::any]) even though the ML AST may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
      by an outer [fix_a_fired] pair match (detected via its binder). *)
-  let scrut_is_mlmagic = match t with MLmagic (m, _, _) -> magic_is_boxed env m | _ -> false in
+  let scrut_is_mlmagic = match t with
+    | MLcoerce (from, into, _, _) -> coercion_is_boxed env ~from ~into
+    | MLboxed _ -> true
+    | MLbarrier _ -> false
+    | _ -> false
+  in
   let scrut_is_cpp_erased = match t with
     | MLrel (i, occ) -> var_boxed i occ
     | _ -> false
   in
   let scrut_is_magic = match t with
-    | MLmagic (m, _, _) -> magic_is_boxed env m
+    | MLcoerce (from, into, _, _) -> coercion_is_boxed env ~from ~into
+    | MLboxed _ -> true
+    | MLbarrier _ -> false
     | MLrel (i, occ) ->
       var_boxed i occ
       || (match var_type i with
@@ -3382,7 +3389,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
     | _ -> false
   in
   (* [scrut_callee_ret_erased]: the scrutinee is a call to a global function
-     ([MLapp (MLglob {callee = r; _}, args)], possibly [MLmagic]-wrapped) whose
+     ([MLapp (MLglob {callee = r; _}, args)], possibly coercion-wrapped) whose
      DECLARED (un-instantiated) codomain resolves to [std::any] — e.g.
      [rev_tuple : forall xs, syms_semty xs -> syms_semty (rev xs)], a single
      C++ function generic over [xs], so its actual return type is the
@@ -3437,7 +3444,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
     | _ -> None
   in
   let scrut_is_trivial_ml = match t with
-    | MLrel _ | MLmagic (_, MLrel _, _) -> true
+    | MLrel _ | MLcoerce (_, _, MLrel _, _) | MLboxed (MLrel _, _) | MLbarrier (MLrel _, _) -> true
     | _ -> false
   in
   let needs_pair_any_cast =

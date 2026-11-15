@@ -217,7 +217,7 @@ let iter_occurrences f p =
               | MLletin (_, _, _, _, o) -> f fd.fd_ref "let" o
               | MLcase (_, _, _, o) -> f fd.fd_ref "match" o
               | MLcons (_, _, _, o) -> f fd.fd_ref "construction" o
-              | MLmagic (_, _, o) -> f fd.fd_ref "coercion" o
+              | MLcoerce (_, _, _, o) | MLboxed (_, o) | MLbarrier (_, o) -> f fd.fd_ref "coercion" o
               | MLfixpoint (_, _, _, o) | MLcofixpoint (_, _, _, o) -> f fd.fd_ref "local fixpoint" o
               | MLglob use -> f fd.fd_ref "use" (Global_use.occurrence use)
               | _ -> () );

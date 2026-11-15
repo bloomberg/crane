@@ -9,7 +9,7 @@ open Miniml
 type group = Lifted | In_place | Closures
 
 (* The function an application applies, under any coercion. *)
-let rec callee = function MLmagic (_, f, _) -> callee f | f -> f
+let rec callee = function MLcoerce (_, _, f, _) | MLboxed (f, _) | MLbarrier (f, _) -> callee f | f -> f
 
 let arity f = List.length (fst (Mlutil.collect_lams f))
 
@@ -54,7 +54,7 @@ and escapes ~n_outer k t =
         | ids, body -> go (k + List.length ids) body )
       | [] -> false )
     | MLapp (f, args) -> go k f || List.exists (go k) args
-    | MLmagic (_, a, _) -> go k a
+    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> go k a
     | MLlam (_, _, body) -> Mlutil.ast_occurs (k + 1) body
     | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->
       Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies

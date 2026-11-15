@@ -60,7 +60,7 @@ let layers ty body =
 let record_body name class_ref inner_ty lam_params inner_body =
   let inner_body =
     match inner_body with
-    | MLmagic (_, b, _) -> b
+    | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> b
     | b -> b
   in
   let as_method m = function
@@ -226,10 +226,10 @@ let declared_args_and_ret m = split_at_arity m.declared_arity m.field_ml_ty
 
 let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instance_tvar_count} as inst)
     method_ref field_ml_ty field_body =
-  (* Strip MLmagic wrappers from the field body -- promoted dependent
-     records produce MLmagic due to Tvar/Tglob mismatches. *)
+  (* Strip coercion wrappers from the field body -- promoted dependent
+     records produce MLcoerce due to Tvar/Tglob mismatches. *)
   let rec strip_magic = function
-    | MLmagic (_, b, _) -> strip_magic b
+    | MLcoerce (_, _, b, _) | MLboxed (b, _) | MLbarrier (b, _) -> strip_magic b
     | b -> b
   in
   (* The method is generated more than once -- declared, then defined --

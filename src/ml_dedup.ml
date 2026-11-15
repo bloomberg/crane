@@ -30,7 +30,9 @@ let rec canonical self body =
     MLfixpoint (i, Array.map (fun _ -> (Id.of_string "f", Tunknown)) fns, Array.map (canonical self) bodies, occ)
   | MLcofixpoint (i, fns, bodies, occ) ->
     MLcofixpoint (i, Array.map (fun _ -> (Id.of_string "f", Tunknown)) fns, Array.map (canonical self) bodies, occ)
-  | MLmagic (m, a, mocc) -> MLmagic (m, canonical self a, mocc)
+  | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, canonical self a, mocc)
+  | MLboxed (a, mocc) -> MLboxed (canonical self a, mocc)
+  | MLbarrier (a, mocc) -> MLbarrier (canonical self a, mocc)
   | e -> Mlutil.ast_map (canonical self) e
 
 (* A forwarder with [body]'s parameters, calling [target] at its own type
