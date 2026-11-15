@@ -19,7 +19,7 @@ let () = Translation_types.type_term_arg := fun env a -> gen_expr env a
 let () = Translation_state.plan_representation := Representation_plan.region
 let () = Translation_state.plan_positions := Position_plan.region
 
-(** [with_method_ns_for_locals () f] runs [f] with the module's local
+(** [with_method_ns_for_locals ?base f] runs [f] with the module's local
     inductives added to {!Translation_state.method_self_ns}, and puts the
     enclosing namespace back on the way out however [f] leaves.
 

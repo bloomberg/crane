@@ -111,7 +111,7 @@ let abort_ty : Cpp_ir.Lowered.Type.t option -> Cpp_ir.Lowered.Type.t = function
 
     The pipeline:
     + Extraction ({!Extraction.extract_really_ind}) populates
-      {!Core.Inductive.Packet.t.ip_consarg_names} from the kernel binder names.
+      [Core.Inductive.Packet.t.constructor_argument_names] from the kernel binder names.
     + {!compute_and_register_field_names} transforms each binder into a
       C++-safe identifier and registers the mapping in
       {!Common.ctor_field_names}.
@@ -159,7 +159,7 @@ let sanitize_binder_name name =
     not collide with a C++ keyword, or the positional name ["d_a<k>"]
     otherwise.
 
-    @param consarg_names  binder names from {!Core.Inductive.Packet.t.ip_consarg_names}
+    @param consarg_names  binder names from [Core.Inductive.Packet.t.constructor_argument_names]
     @param k              0-based field index *)
 let field_name_str_of_idx consarg_names k =
   match List.nth_opt consarg_names k with
@@ -266,7 +266,7 @@ let augment_with_args_renaming cref kernel_arg_names =
 (* The shared mutable translation state ([tctx] and its accessors) lives in
    {!Translation_state}, opened at the top of this file. *)
 
-(** Extract the innermost result type from a (possibly monadic) ML type.
+(** Extract the innermost result type from a (possibly monadic) Core type.
     For [nat -> itree ioE unit], returns [unit].
     For [nat -> unit], returns [unit].
     For [itree ioE unit] (zero-arg monadic), returns [unit].
@@ -334,7 +334,7 @@ let is_sequential_effect op use =
    global asks {!ref_is_instance} and one with a binder asks
    {!Core_query.binder_is_instance}. *)
 
-(** Collect [Core.Binder_name.Source.t]s for typeclass-typed parameters in an ML arrow type.
+(** Collect [Core.Binder_name.Source.t]s for typeclass-typed parameters in a Core arrow type.
 
     Only a parameter whose class Crane kept: each becomes a concept-constrained
     template parameter, and one whose class was skipped has nothing to be
@@ -359,7 +359,7 @@ type hkt_tvar_position = {
   htp_field : Id.t;  (** the class's type parameter the variable fills *)
 }
 
-(** The type variables of an ML arrow type that stand for a higher-kinded
+(** The type variables of a Core arrow type that stand for a higher-kinded
     class parameter: [mret : forall M, Mon M -> forall A, A -> M A] passes the
     variable for [M A] as the type-constructor argument of its [Mon]
     parameter.  Such a variable is not a C++ template parameter but the
@@ -468,7 +468,7 @@ let is_void_ified_ref (r : GlobRef.t) : bool =
 let wrap_void_call_as_value (call_expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   Cpp_ir.Build.iife None [Expression call_expr; Return (Some (mk_tt_expr ()))]
 
-(** Check whether an ML function expression [f] in [Core.Expr.Apply(f, args)] would
+(** Check whether a Core function expression [f] in [Core.Expr.Apply(f, args)] would
     produce a void-returning call in C++.  Handles:
     - [Core.Expr.Global(r, _)]  — named function, look up type in extraction table
     - [Core.Expr.Bound_variable(i)]       — variable (e.g. callback), look up type in env
@@ -486,13 +486,13 @@ let rec core_callee_is_void = function
   | Core.Expr.Bound_variable {index = i; _} -> ( try core_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
 
-(** Whether the C++ for an ML expression is a statement rather than a value:
+(** Whether the C++ for a Core expression is a statement rather than a value:
     a call to something void-ified, applied or not. *)
 let core_expr_is_void_call = function
   | Core.Expr.Apply {callee = f; _} -> core_callee_is_void f
   | e -> core_callee_is_void e
 
-(** Whether an ML expression in a value position may compile to a [void] call,
+(** Whether a Core expression in a value position may compile to a [void] call,
     and so has to be wrapped by {!wrap_void_call_as_value}: a call to something
     void-ified, or a match whose every branch is one -- the projection
     extraction writes [r.(f) x] as, applying a field binder of a
@@ -528,10 +528,10 @@ let rec core_value_is_void_call = function
 
     In reified mode, [itree E R] extracts to [std::shared_ptr<ITree<R>>]
     instead of being erased to [R].  The helpers below build C++ AST nodes
-    for ITree types and constructors, and detect whether an ML expression
+    for ITree types and constructors, and detect whether a Core expression
     already carries a reified tree value. *)
 
-(** Extract the result type [R] from a monadic ML type [itree E R].
+(** Extract the result type [R] from a monadic Core type [itree E R].
     Returns the second non-erased type argument, or [Core.Type.Unknown] if
     the type does not have the expected shape. *)
 let extract_itree_result_core (core_ty : Core.Type.t) : Core.Type.t =
@@ -660,11 +660,11 @@ let rec is_access_path : Cpp_ir.Lowered.Expr.t -> bool = function
   | _ -> false
 
 (** When [expr] is a single-argument IIFE
-    [CPPfun_call(CPPlambda
-      { cl_params = [(ty, id)];
-        cl_ret = ret;
-        cl_body = body;
-        cl_capture = Immediate }, [arg])], lift the
+    [Call(_, Lambda
+      { params = [(ty, Some id)];
+        return_type = Some ret;
+        body;
+        capture = Runs_in_place }, [arg])], lift the
     lambda body into assignment statements targeting [target_var]:
     {[
       Type target_var{};
@@ -717,7 +717,7 @@ let retype_dependent_params (typ : Core.Type.t) ids =
         (n, Core.Type.Erased Core.Erasure_reason.Type_argument) | _ -> (n, core_ty)) ids
   else ids
 
-(** The declared ML types of constructor [ctor]'s value fields, instantiated at
+(** The declared Core types of constructor [ctor]'s value fields, instantiated at
     scrutinee type [typ]'s type arguments — the types a branch's pattern
     variables have by construction, in field order.
 
@@ -753,7 +753,7 @@ let ctor_field_types_at ctor (typ : Core.Type.t) =
     when extraction left it as an unresolved meta-variable ([Core.Type.Meta
     {contents=None}]).
 
-    For a [prod A B] scrutinee destructured as [(x, y)], [x]'s and [y]'s ML
+    For a [prod A B] scrutinee destructured as [(x, y)], [x]'s and [y]'s Core
     types are exactly [A] and [B] — but when [A]/[B] come from a
     non-reducible dependent computation (e.g. projecting an element out of
     [tuple (List.map symbol_semty gamma)] for a nonterminal/production
@@ -956,7 +956,7 @@ let mk_itree_ret (r_cpp : Cpp_ir.Lowered.Type.t) (args : Cpp_ir.Lowered.Expr.t l
   Cpp_ir.Build.call (Type_member (itree_ty, Id.of_string "ret")) args
 
 (** Build [ITree<R>::ret(v)], or [ITree<void>::ret()] where there is no value
-    to carry.  [r_cpp] is the C++ result type, [r_core] the ML one, [v] the value.
+    to carry.  [r_cpp] is the C++ result type, [r_core] the Core one, [v] the value.
 
     Only a type extracted as C++ [void] is valueless.  Rocq's [unit] is not: it
     has an inhabitant, spelled [std::monostate], and a tree carrying it is a
@@ -983,7 +983,7 @@ let reify_monadic_param_type core_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.L
   end
   else cpp_ty
 
-(** Check whether an ML expression already produces a reified monadic value
+(** Check whether a Core expression already produces a reified monadic value
     (a [shared_ptr<ITree<R>>]).  A local whose type is monadic is one, and
     so is [Core.Expr.Apply(Core.Expr.Bound_variable f, args)] where [f] is a local function whose return
     type is monadic.  Such calls already return a tree, so wrapping in
@@ -1001,7 +1001,7 @@ let reify_monadic_param_type core_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.L
     values are trees, so its mappings -- [itree_trigger], [itree_ret] -- are
     spelled as expressions that build one, and wrapping would double it. *)
 let rec is_reified_monadic_expr core_expr =
-  (* The result of applying [n] arguments to something of ML type [ty].  A
+  (* The result of applying [n] arguments to something of Core type [ty].  A
      dummy domain is an erased type parameter, which the term does not pass, so
      it is stepped over without spending an argument; an alias still owed
      arguments is the arrows it names ([stateT S M T] is [S -> M (S * T)]). *)
@@ -1263,7 +1263,7 @@ let calls_eagerly r body =
   in
   try walk body; false with Found -> true
 
-(** Whether the definition [r], whose ML result type is [core_ret], is suspended
+(** Whether the definition [r], whose Core result type is [core_ret], is suspended
     whole: a coinductive result, and a body [b] that calls [r] outside every
     constructor -- Rocq's guard condition holds only up to unfolding.  Any
     other coinductive body is suspended at its constructors
@@ -1387,7 +1387,7 @@ let rec declared_by_reference : Cpp_ir.Lowered.Type.t -> bool = function
 
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type worth moving.  That is one
-    {!Ownership_ir.worth_moving} accepts as reading [ty]; but an erased ML
+    {!Ownership_ir.worth_moving} accepts as reading [ty]; but an erased Core
     type says nothing of how the value is held, and there the type the head
     [declared] it at is read instead ({!Ownership_ir.worth_moving_cpp}):
     [x] in an instance's [fun (A : Type) (x : A) => Some x] is a boxed
@@ -1475,7 +1475,7 @@ let saturate_at_any (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   | In_namespace (ns, Entity_application (g, args, es)) -> In_namespace (ns, Entity_application (g, pad g args, es))
   | t -> t
 
-(** Collect all Core.Type.Variable indices from an ML AST, using collect_tvars on embedded
+(** Collect all Core.Type.Variable indices from a Core term, using collect_tvars on embedded
     types. Used to find all type variables referenced in a function body. *)
 let rec collect_tvars_ast acc = function
   | Core.Expr.Lambda {parameter_type = ty; body; _} -> collect_tvars_ast (collect_tvars acc ty) body
@@ -1521,7 +1521,7 @@ let rec collect_tvars_ast acc = function
    |Core.Expr.Float64 _
    |Core.Expr.String _ -> acc
 
-(** True when evaluating an ML AST may throw through an extracted axiom or
+(** True when evaluating a Core term may throw through an extracted axiom or
     exception. Functions whose bodies can throw must not be marked
     [__attribute__((pure))]: Clang may otherwise move calls across local
     exception handlers or discard them when their result is unused. *)
@@ -1551,7 +1551,7 @@ let rec ast_may_throw = function
   | Core.Expr.Float64 _
   | Core.Expr.String _ -> false
 
-(** Build Core.Type.Variable i -> concrete_type substitution by unifying two ML types
+(** Build Core.Type.Variable i -> concrete_type substitution by unifying two Core types
     structurally. Walks both types in parallel; when one side has Core.Type.Variable i and the
     other has a concrete type, records the mapping. Conflicting mappings are
     discarded. *)
@@ -1785,7 +1785,7 @@ let subst_lifted_members ?(extra_args = []) renamed refs targs (body : Cpp_ir.Lo
     (fun body id r -> List.map (local_var_subst_stmt ~extra_args id (mk_cppglob r targs)) body)
     body renamed (Array.to_list refs)
 
-(* Walk an ML AST and collect source-order parameter indices that are NOT
+(* Walk a Core term and collect source-order parameter indices that are NOT
    simply forwarded unchanged at recursive call sites.  [is_self_call depth f]
    returns true when the head [f] of an application is a self-recursive
    reference at the given binder depth.
@@ -2257,7 +2257,7 @@ let ungeneralised_callables_of_definition r ty b =
 let generalises_callable ~kept_as_fn ~primary f =
   (not kept_as_fn) && not (IntSet.is_empty primary && is_fully_erased_fun_ty f)
 
-(** Convert ML params to C++ types with const/ref wrapping, and create
+(** Convert Core params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params, except
     those at [non_fwd_source_indices] (source order), which keep their
     function type.  A [std::shared_ptr] parameter is taken by [const &],
@@ -2410,7 +2410,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
   in
   subst
 
-(** Collect de Bruijn indices of free variables in an ML AST. n_bound is the
+(** Collect de Bruijn indices of free variables in a Core term. n_bound is the
     number of locally bound variables (lambda params, let bindings, etc.).
     Returns indices relative to the outer scope (i.e., i - n_bound for each free
     Core.Expr.Bound_variable i). *)
@@ -2460,7 +2460,7 @@ let rec collect_free_rels_set n_bound acc = function
    |Core.Expr.Float64 _
    |Core.Expr.String _ -> acc
 
-(** Collect all free de Bruijn variables (rels) from an ML AST, wrapping
+(** Collect all free de Bruijn variables (rels) from a Core term, wrapping
     [collect_free_rels_set]. Used to detect which lambda parameters are
     captured. *)
 let collect_free_rels n_bound body =
@@ -2514,7 +2514,7 @@ let infer_owned_flags ?owner body params =
   | _ -> read_off_body ()
 
 (** Whether the C++ type [cpp_ty] names a value inductive
-    ({!Type_util.is_inductive_value_type}), as itself or through a type
+    (an inductive neither enum, coinductive nor custom scalar), as itself or through a type
     abbreviation: [Definition t elt := list (key * elt)] declares [t<T2>] an
     alias of [List<std::pair<key, T2>>], a value copied whole as surely as one
     named [List] is. *)
@@ -2637,10 +2637,10 @@ let param_passing ~owned (t : Cpp_ir.Lowered.Type.t) =
   | Reference (Forwarding, _) -> Callable_abi.Forwarded
   | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
 
-(** Check if the return type of an ML function type is erased — i.e., it
+(** Check if the return type of a Core function type is erased, i.e. it
     becomes [std::any] in C++.  This covers three cases:
     - Promoted type vars (erased carrier projections like [Obj C]).
-    - [Tunresolved] arising from dependent type families.
+    - [Core.Type.Unknown] arising from dependent type families.
     - Erased type constants — non-promoted type-valued record fields
       (e.g. [Hom : Obj -> Obj -> Type] in [PreCategory]) registered during
       extraction via {!Table.add_erased_type_const}. *)
@@ -2655,7 +2655,7 @@ let rec core_return_type_is_erased = function
 (** [core_projection_field_type a] -- the type of the field a single-branch
     record projection reads, applied to whatever the projection applies it to.
 
-    A projection is an [Core.Expr.Match] over the instance whose one branch returns a
+    A projection is a [Core.Expr.Match] over the instance whose one branch returns a
     destructured field, and the class declares that field's type.  The
     branch's own return annotation does not: it is written where the class's
     carrier is erased, so it says [Core.Type.Unknown] in the position the field names.
@@ -2690,14 +2690,14 @@ let core_projection_field_type = function
     | None -> None )
   | _ -> None
 
-(** Check if an ML expression is (or starts with) a record field projection
+(** Check if a Core expression is (or starts with) a record field projection
     whose projected field returns a promoted type var (erased to [std::any] in
     C++).  This detects the gap between Coq-level types and C++ types that
     arises when a record like [Functor] uses erased carriers ([Obj = std::any])
     in its field types.
 
     For example, [object_of forward_functor 7] is an [Core.Expr.Apply] wrapping an
-    [Core.Expr.Match] record projection.  The projected field [object_of] has ML type
+    [Core.Expr.Match] record projection.  The projected field [object_of] has Core type
     [carrier → carrier] whose return type [carrier] is a promoted var.  The
     Coq type says the result is [nat = unsigned int], but the C++ expression
     [forward_functor->object_of(7u)] actually returns [std::any]. *)
@@ -2879,7 +2879,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
   and rewrite_stmt s = Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:rewrite_expr ~stmt:rewrite_stmt ~type_:Fun.id ()) s in
   (rewrite_expr, rewrite_stmt)
 
-(** [core_ast_type_hint e] is the ML type [e] carries, when it carries one: a
+(** [core_ast_type_hint e] is the Core type [e] carries, when it carries one: a
     constructor's own annotation, or the source type of a coercion extraction
     inserted around it.  Used to recover a type argument left [Tunresolved] by
     extraction. *)
@@ -2913,7 +2913,7 @@ type slot = {
           erased to [deque<Prod<any, any>>] is what [std::bad_any_cast] at the
           consumer looks like. *)
   expected_core_ty : Core.Type.t option;
-      (** The ML type of the slot, when the caller knows it more precisely than
+      (** The Core type of the slot, when the caller knows it more precisely than
           the expression's own annotation does.  It lets a constructor whose
           annotation carries unresolved metas (a [nil] whose element type
           extraction left open, say) recover the concrete type arguments from
@@ -2924,7 +2924,7 @@ type slot = {
           out-of-range [Core.Type.Variable] here is an erased field, which is [std::any]. *)
   eta_keep_moves : bool;
       (** The slot holds a single-use partial application whose closure may
-          capture by reference and keep its [CPPmove] wrappers.  Read once, by
+          capture by reference and keep its [Move] wrappers.  Read once, by
           the {!Translation_application.eta_fun} that builds that closure. *)
   call_result : Cpp_ir.Lowered.Type.t option;
       (** The type the call this slot is an argument of is expected to
@@ -2934,7 +2934,7 @@ type slot = {
           argument extraction erased from it is read back
           ({!Translation_calls.instance_family_binding}). *)
   stated_core_ty : Core.Type.t option;
-      (** The ML type the position states, erased parts and all -- the
+      (** The Core type the position states, erased parts and all -- the
           parameter an argument is passed at, [stateT nat (itree BotE) T] with
           [BotE] applied at its erased index.  [expected_core_ty] withholds a
           type with erasures in it, which is right for what it is used for;
@@ -3132,7 +3132,7 @@ let tvar_name_at tvars i =
   if i >= 1 then List.nth_opt tvars (pred i) else None
 
 (** Checks the plan [abi] of a function against [live], the C++ type of its
-    declared ML type as a call site rebuilds it: the plan declares one value
+    declared Core type as a call site rebuilds it: the plan declares one value
     parameter per domain other than a class dictionary or a skipped type, and
     one dictionary template parameter per dictionary domain.  Its types are
     not compared: the declaration spells its parameters after its head's

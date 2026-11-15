@@ -2,7 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Lambdas lowered to C++ closures: which binders become parameters, what
     the closure captures and by which mode, how it passes its parameters,
-    and the return type it is written against. *)
+    and the return type it is written against.  One of the modules lowering Core
+    bodies to CppIR that {!Translation} drives; it calls back into
+    expression and statement lowering through {!Translation_knot}. *)
 
 open Common
 open Names
@@ -16,7 +18,7 @@ open Translation_types
 open Translation_calls
 open Translation_knot
 
-(* The names of the variables at the de Bruijn indices [is] a closure
+(** The names of the variables at the de Bruijn indices [is] a closure
    captures, in the order a capture list spells them; a class instance is a
    template parameter, not a value it captures. *)
 let capture_names env is =
@@ -25,16 +27,16 @@ let capture_names env is =
        (fun id -> not (Common.is_tc_instance_id id))
        (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
 
-(* The names of the variables [captures] says a closure takes by move. *)
+(** The names of the variables [captures] says a closure takes by move. *)
 let moved_names env captures =
   capture_names env (List.filter_map (function i, Ownership_ir.Capture.By_move -> Some i | _ -> None) captures)
 
-(* A local fixpoint's wrapper parameter, of ML type [ty], forwarded to the
+(** A local fixpoint's wrapper parameter, of Core type [ty], forwarded to the
    impl: its one read, a move where the wrapper takes it by value. *)
 let forwarded ~by_value ty (v : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   if by_value && Ownership_ir.worth_moving ty && not (core_type_is_unit ty) then Move v else v
 
-(* Whether a lambda generated as [passing] says owns each parameter it
+(** Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
 let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.filter_map Fun.id passing)
 
@@ -107,7 +109,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
        [(pair, list) -> list].  Writing the missing binders here instead
        makes the body a saturated call, so that expansion never fires.
 
-       The binders are given no ML type on purpose: the derivation below
+       The binders are given no Core type on purpose: the derivation below
        reads an erased parameter's type out of [expected_ty]'s domain at
        the same index, which is the only place that says what it is. *)
     (* [extend n] -- the binders the expected signature takes that the term
@@ -137,7 +139,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         None
       else if k = 0 then None
       else if
-        (* The expected C++ arity has to be backed by the same number of ML
+        (* The expected C++ arity has to be backed by the same number of Core
            domains that genuinely carry a value.  A reified tree's
            continuation is typed [unit -> itree ...] and takes one
            [std::monostate]: the value carries nothing but the slot is real,
@@ -453,7 +455,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
              parameter fixes, so the enclosing function's return type is
              not merely unhelpful here -- it is the wrong answer, and the
              body would spell it in place of the carrier.  What the body
-             does return is the lambda's own ML codomain read at the
+             does return is the lambda's own Core codomain read at the
              carrier: the rank-2 variable is erased in that type, and the
              carrier is the name the parameter gave it back. *)
           let ret =
@@ -572,11 +574,10 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
                 modify_last_return body_stmts ) )
         | _ -> (cpp_args, body_stmts)
       in
-      (* The return type annotation is left as [None]; loopify's
-         [infer_saved_type] infers it from the body when computing frame
-         struct field types.  Annotating here caused regressions for inner
-         lambdas whose bodies return further closures (the inferred type
-         became [std::function<...>] instead of the plain return type). *)
+      (* The return type annotation is left as [None], for C++ to deduce.
+         Annotating here caused regressions for inner lambdas whose bodies
+         return further closures (the inferred type became
+         [std::function<...>] instead of the plain return type). *)
       let body_stmts =
         match carrier with
         | None -> body_stmts
@@ -672,7 +673,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
     (* All lambda params are dummy (type abstractions). Skip the lambda
        wrapper and generate the body expression directly. However, when the
        body is a reference to a template function (detectable by having
-       Core.Type.Erased-typed leading params in its ML type), we must wrap it in a
+       Core.Type.Erased-typed leading params in its Core type), we must wrap it in a
        generic forwarding lambda — C++ cannot pass overloaded or template
        function names as first-class values. *)
     ( match a with
@@ -710,7 +711,7 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
         else
         let arg_ids = List.init n field_param_id in
         let arg_vars = List.map (fun id : Cpp_ir.Lowered.Expr.t -> Local id) arg_ids in
-        (* Collect all tvars from the ML type *)
+        (* Collect all tvars from the Core type *)
         let all_tvars_set =
           List.fold_left
             collect_tvars_set

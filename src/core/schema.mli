@@ -1,11 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A constant's Core type scheme, with the layout of the source binders
-    its variables come from.
+(** [Core.Schema]: a constant's Core type scheme, with the layout of the
+    source binders its variables come from.  Extraction builds one per
+    constant it types ({!make}) and the tables register it, so every use of
+    the constant ([Core.Global_use]) instantiates the same identity.
 
-    The body mentions [Type.Variable 1 .. Type.Variable (arity)]; {!Scheme.Var.of_tvar} names
-    them.  The layout has one entry per binder of the declaration's Rocq
+    The body mentions [Core.Type.Variable 1 .. Core.Type.Variable (arity)];
+    {!Scheme.Var.of_tvar} names them.  The layout has one entry per binder of the declaration's Rocq
     product spine, in source order -- value and proof binders included, so a
     call's arguments walk it in lockstep with no projection to a "type-level"
     sublist.  A binder's role (whether a call passes an argument for it) and
@@ -52,7 +54,7 @@ val id : t -> Scheme.Id.t
 (** The constant whose type it is. *)
 val owner : t -> Names.GlobRef.t
 
-(** The type, its variables [Type.Variable 1 .. Type.Variable (arity)]. *)
+(** The type, its variables [Core.Type.Variable 1 .. Core.Type.Variable (arity)]. *)
 val body : t -> Type.t
 
 (** The number of variables it quantifies. *)

@@ -1,8 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Global calls elaborated from Core, ahead of translation
-    (docs/Pipeline-Disentangling-Plan.md, section 4.7): each global
+(** Global calls elaborated from Core, ahead of translation (after backend
+    planning, before lowering to CppIR): each global
     application of a unit's frozen program, with the role each of its
     arguments has, elaborated in a lexical environment of the walk's own.
 
@@ -18,7 +18,7 @@
     the traversal's environment.  Under [CRANE_CHECK_IR] every elaboration
     taken from here is checked against that one.  The same holds of each
     call's instantiation ({!instantiation}), planned where the walk meets the
-    call at the ML types the walk gives its position. *)
+    call at the Core types the walk gives its position. *)
 
 (** [elaborate_arguments ~lex use args] -- the call [use args] as Core
     elaborates it from the call alone: which arguments are dictionaries,
@@ -28,9 +28,9 @@
 val elaborate_arguments : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
 (** [instantiate ~lex ~expected_core ~stated_core ~caller ~scope call] -- the
-    semantic half of planning [call] (section 3.4's [ElaboratedCall]): the
+    semantic half of planning [call], an {!Elaborated_call.instantiated}: the
     holes of its reading that its context states resolved -- an event family
-    the ML type its position expects ([expected_core]) or states
+    the Core type its position expects ([expected_core]) or states
     ([stated_core]) for its result names, a type-level function a dictionary
     argument's type names -- then, for a partial application in a
     declaration other than [caller], the variables the lambda it is
@@ -39,10 +39,10 @@ val elaborate_arguments : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list 
     position is generated under, by name: a variable of the callee's is
     misread where it is spelled like one of them.
 
-    Everything it reads is Core: the call, the ML types [lex] binds, the
+    Everything it reads is Core: the call, the Core types [lex] binds, the
     callee's declared type, [caller]'s -- whose constraints name a
     dictionary binder's class where its recorded type lost it -- and its
-    position's ML types; no C++ type is decided or read, and nothing of the
+    position's Core types; no C++ type is decided or read, and nothing of the
     traversal that asks. *)
 val instantiate :
   lex:Lexenv.t ->
@@ -67,7 +67,7 @@ type t
     included; and every global named there unapplied, as its call with no
     arguments.  Each application is so elaborated where it is generated, at
     the variables it is generated under, and instantiated ({!instantiate})
-    at the ML types its position expects and states as translation threads
+    at the Core types its position expects and states as translation threads
     them: a regular argument at its parameter's type (its call's, where that
     has an erasure in it), an argument past the arity or of a local callee
     at its call's, a lambda's body past the lambda's arrows, a let-bound
@@ -122,7 +122,7 @@ val elaboration : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Exp
     naming its callee by [use], at the position the walk gave it, taken at
     the argument nodes being translated ({!Elaborated_call.at_call}); or,
     where they planned none or disagree, {!instantiate} of its
-    {!elaboration} here, with the ML types the traversal says its position
+    {!elaboration} here, with the Core types the traversal says its position
     expects and states -- which under [CRANE_CHECK_IR] is a violation, bar a
     call translation extended itself.  Under [CRANE_CHECK_IR] a planned one
     is checked against that one.  Planning takes a planned instantiation

@@ -27,22 +27,34 @@ type 'p t = {
 let make ?stmts ~expr ~stmt ~type_ () =
   {expr; stmt; type_; stmts = (match stmts with Some f -> f | None -> List.map stmt)}
 
+(** [list f xs] is [List.map f xs]. *)
 let list = List.map
+
+(** [opt f o] is [Option.map f o]. *)
 let opt = Option.map
+
+(** [typed m ps] rewrites the type of each [(type, name)] pair in [ps]. *)
 let typed m ps = list (fun (t, x) -> (m.type_ t, x)) ps
+
+(** [fields m ps] rewrites the type of each [(name, type)] pair in [ps]. *)
 let fields m ps = list (fun (x, t) -> (x, m.type_ t)) ps
 
-(* The arguments of a call, last first: the order the earlier IR held them in, which
-   the names a rewriter numbers as it lifts them out ([_litN], [_onceN],
-   [_lcN]) follow. *)
+(** [arguments m args] rewrites a call's [args], kept in source order,
+    last first: the order calls held their arguments in before CppIR, which
+    the names a rewriter numbers as it lifts them out ([_litN], [_onceN],
+    [_lcN]) still follow. *)
 let arguments m args = List.rev (list m.expr (List.rev args))
 
+(** [foreign m f] is the instantiated mapping [f] with its result type,
+    value arguments and type arguments rewritten, in that order. *)
 let foreign m (f : 'p Foreign.t) : 'p Foreign.t =
   let yields = opt m.type_ f.yields in
   let values = list m.expr f.values in
   let types = list m.type_ f.types in
   {f with types; values; yields}
 
+(** [template_parameters m ps] is [ps] with each type a parameter holds
+    rewritten: a default, a callable's constraint, a concept's arguments. *)
 let template_parameters : type p. p t -> p Template.parameters -> p Template.parameters =
  fun m ps ->
   list
@@ -62,6 +74,8 @@ let template_parameters : type p. p t -> p Template.parameters -> p Template.par
       (k, x) )
     ps
 
+(** [lambda m l] is [l] with its body, return type and parameter types
+    rewritten, in that order. *)
 let lambda m (l : 'p Lambda.t) : 'p Lambda.t =
   let body = m.stmts l.body in
   let return_type = opt m.type_ l.return_type in
@@ -271,12 +285,15 @@ let stmt : type p. p t -> p Stmt.t -> p Stmt.t =
     let values = list ex b.values in
     Foreign_block {b with result_type = ty b.result_type; values; type_args}
 
+(** [method_ m f] is the member function [f] with its body, parameter
+    types, return type and template parameters rewritten. *)
 let method_ m (f : 'p Method.t) : 'p Method.t =
   let body = m.stmts f.body in
   let params = fields m f.params in
   let return_type = m.type_ f.return_type in
   {f with type_params = template_parameters m f.type_params; return_type; params; body}
 
+(** [out_of_line m o] is the member [o] with each child rewritten. *)
 let out_of_line m : 'p Out_of_line.t -> 'p Out_of_line.t = function
   | Method f -> Method (method_ m f)
   | Destructor ss -> Destructor (m.stmts ss)
@@ -307,6 +324,8 @@ let rec member m ((f, v, s) : 'p Field.member) : 'p Field.member =
   in
   (f, v, s)
 
+(** [struct_ m s] is [s] with its constraint, members (down to their
+    children) and template parameters rewritten. *)
 let struct_ m (s : 'p Struct.t) : 'p Struct.t =
   let constraint_ = opt m.expr s.constraint_ in
   let fields = list (member m) s.fields in

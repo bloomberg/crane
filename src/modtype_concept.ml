@@ -114,14 +114,14 @@ let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
   | Function (dom, cod) -> Function (args dom, concept_type signature cod)
   | ty -> Plain (ir_type ty)
 
-(* The domains and codomain of an ML arrow type. *)
+(* The domains and codomain of a Core arrow type. *)
 let rec arrows = function
   | Core.Type.Arrow {parameter = arg; result = rest} ->
     let args, ret = arrows rest in
     (arg :: args, ret)
   | ret -> ([], ret)
 
-(* An ML type as translation converts it, outside any function. *)
+(* A Core type as translation converts it, outside any function. *)
 let convert t = Translation_types.cpp_ir_of_core_type (Common.empty_env ()) [] t
 
 (* The requirements one specification of the signature at [Core.Signature.t]

@@ -246,7 +246,7 @@ let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps
    ([SigT<std::any, Bool0>] vs. the declared
    [SigT<std::any, List<std::any>>]).  {!index_erase_type} is the
    same erasure the type side applies to those positions in
-   {!convert_core_type_to_cpp_type}, so the two agree by construction. *)
+   {!cpp_ir_of_core_type}, so the two agree by construction. *)
 let erase_past_type_arg ts_updated temps =
   let rec first_ktype_dummy i = function
     | [] -> max_int
@@ -407,7 +407,7 @@ let regular_field env ~is_boxed c ~slot i e =
            <typename> class] parameters ([F A]).  Nothing in the
            argument names the instantiation -- a [None] has no value to
            read it off -- so it can only come from this call's own type
-           arguments.  The substitution is done on the ML type: only
+           arguments.  The substitution is done on the Core type: only
            there does applying [option] to [nat] reduce, since the C++
            side of a custom-extracted [option] is a template string. *)
         let ct = cpp_of_core env (Core_util.type_subst_list ty_core_tparams ft) in
@@ -528,13 +528,13 @@ let regular_field env ~is_boxed c ~slot i e =
      producers must erase to the SAME canonical C++ representation.  For
      [list (nat*nat)] the empty ("nil") production erases to
      [deque<pair<any,any>>] (its element type is already opaque in the
-     ML annotation), whereas a non-empty ("cons") production built from
+     Core annotation), whereas a non-empty ("cons") production built from
      concrete pair values would otherwise stay [deque<Prod<Nat,Nat>>] --
      a different C++ type for the same Coq type, causing
      [std::bad_any_cast] at the consumer.  Generate the body with
      a [Boxed] slot so cons productions deep-erase their element
      type to match nil.  See the mirror in the record-constructor path. *)
-  (* The same field type on the ML side.  A field's declared type says
+  (* The same field type on the Core side.  A field's declared type says
      nothing on its own -- a bare parameter ([A]) or an applied one
      ([F A]) names the inductive's variables, not this value's types --
      but substituting the constructor's own type arguments turns it
@@ -830,7 +830,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
   (* A position the term leaves unknown that the expected C++ type states as
      one of this scope's own variables -- [Some (tfmap f t)] returned at
      [std::optional<T1>] -- is that variable.  Only a variable: it is the one
-     C++ type with an ML reading to take back. *)
+     C++ type with a Core reading to take back. *)
   let ty =
     (* With no slot of its own, a constructor in a tail statement lands in
        the enclosing function's result ({!with_cpp_return_type}, as
@@ -885,7 +885,7 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
   (* Generate args with expected type hints: pass the i-th type arg of the
      constructor's inductive type before generating the i-th value arg.  This
      allows gen_ctor_call to recover concrete element types for nil lists whose
-     ML annotation has unresolved metas (Core.Type.Meta{None}).  Specifically:
+     Core annotation has unresolved metas (Core.Type.Meta{None}).  Specifically:
      in pair(fr, nil), the pair type args [A, B] tell us B = list(A), so the
      nil's element type can be recovered as A even if its annotation is
      Core.Type.Meta. *)
@@ -1075,7 +1075,7 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
 
 (** Where an argument of a custom constructor is built: under the return
     type [ca_ret], as the term [ca_term] (a function value stored erased
-    adapted), into the slot [ca_slot] at the ML type [ca_expected_core],
+    adapted), into the slot [ca_slot] at the Core type [ca_expected_core],
     against the C++ type [ca_expected]; [ca_erased_fn_slot] is the slot's
     own signature where it erased only its domain. *)
 type custom_arg = {
@@ -1110,10 +1110,10 @@ let custom_field ?var env c ~slot r i e =
          type argument (e.g. a [prod]'s component type inferred through a
          non-reducible dependent [match] like [nt_semty x] at a literal
          [x], which is dependently well-typed in Coq but whose component
-         types the ML type annotation on this specific node leaves as
+         types the Core type annotation on this specific node leaves as
          placeholders) -- it carries no more information than [None], so
          fall back the same way: to the concrete field type when the
-         enclosing constructor has an erased ML type (e.g. pair(pred,
+         enclosing constructor has an erased Core type (e.g. pair(pred,
          action) with Core.Type.Meta{None}).  Combined with the Core.Expr.Lambda
          Core.Type.Arrow-stripping logic, this lets gen_ctor_call recover the
          concrete element type for nil constructors, and lets a "cons"

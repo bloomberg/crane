@@ -2,6 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Crane's functional Core IR: an extracted program, at a named phase.
+    Extraction hands a program to {!extracted}; the Core passes, freezing and
+    normalization take it to the [normalized] program per-unit analysis,
+    planning and lowering to CppIR read.
 
     The phases share Core's grammar.  What tells them apart is which passes
     have run, and the type says it: a backend entry point takes a
@@ -52,9 +55,9 @@ val optimize : (Core.Program.t -> Core.Program.t) -> extracted program -> optimi
     metavariable in its instantiation, and no two terms -- reads, lets,
     local fixpoints, global uses -- are one {!Core.Occurrence.t}, which
     every consumer reads as one place in one definition.  Its annotations
-    hold no metavariable either: each is replaced by its solution, or by an open annotation where
-    extraction left it unsolved, and from here until the extraction ends none
-    is made or solved.  Under [CRANE_TRACE_PIPELINE] it reports how many open
+    hold no metavariable either: each is replaced by its solution, or by an
+    open annotation where extraction left it unsolved, and from here until
+    the extraction ends none is made or solved.  Under [CRANE_TRACE_PIPELINE] it reports how many open
     annotations the program holds. *)
 val freeze : optimized program -> frozen program
 
@@ -64,8 +67,9 @@ val freeze : optimized program -> frozen program
     partners of each loopified function into it and binds each call a
     function Loopify transforms makes to its own recursive group, where it
     is evaluated strictly and not in tail position, to a temporary of its
-    own, in evaluation order.  It runs on the frozen program and so solves nothing: a temporary whose type
-    the call does not say is given an open annotation.  Under
+    own, in evaluation order.  It runs on the frozen program and so solves
+    nothing: a temporary whose type the call does not say is given an open
+    annotation.  Under
     [CRANE_CHECK_IR] the result is a fixed point of [pass] -- normalizing it
     again rewrites no top-level element and decides no partner otherwise --
     which is what says that no such call was left unbound, and no two of its

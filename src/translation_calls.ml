@@ -71,7 +71,7 @@ let stored_adapter params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
 
     A class method projected through its instance ([opN::op]) is a function
     named the same way, and is curried the same way: {!curry_value_to_expected}
-    takes the callee's ML type rather than its name.
+    takes the callee's Core type rather than its name.
 
     [callee_site] is the arrow site the callee is spelled at
     ({!Cpp_ir.Types.arrow_site}), where [core_ty] is an instantiation of it: an
@@ -560,7 +560,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
      extraction didn't supply type args at the call site, but the callee has
      Core.Type.Erased Core.Erasure_reason.Type_argument domain entries (erased type params).
 
-     In both cases, if the callee's ML return type is a Core.Type.Variable that refers to
+     In both cases, if the callee's Core return type is a Core.Type.Variable that refers to
      one of those erased type params, and we know the concrete return type
      from the enclosing function context (current_cpp_return_type), we can
      supply it as an explicit C++ template arg.
@@ -1263,13 +1263,13 @@ let deduce_erased_domains : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = fun
         cod )
   | t -> t
 
-(** [record_call_sig env callee_ty e] records what the callee's ML type says
+(** [record_call_sig env callee_ty e] records what the callee's Core type says
     about [e], when [e] is a call nothing has been recorded on yet.
 
     The application site is where the answer is known; the call node
     is built further down, in {!eta_fun}, so the answer is stamped on here
     rather than threaded through every intermediate that only forwards it.  A
-    callee with no ML type, or one that is not a call at all, keeps
+    callee with no Core type, or one that is not a call at all, keeps
     its untyped signature: a consumer must defer to C++ deduction rather than invent
     a type.
 
@@ -1494,7 +1494,7 @@ let plan_call ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Ela
 
 (** Where the [i]th regular argument of a call is generated: the parameter
     it is passed at ([ap_index] of the unsubstituted list, [ap_param] its
-    substituted ML type), the C++ type it is generated against
+    substituted Core type), the C++ type it is generated against
     ([ap_expected]), and the return type in force while it is ([ap_ret]),
     with what {!gen_call_args} reads of these afterwards. *)
 type argument_position = {
@@ -1509,7 +1509,7 @@ type argument_position = {
 }
 
 (** Whether the variable [j], read at [occ], holds a function, by the C++
-    type the representation plan gives its binder, failing one by its ML
+    type the representation plan gives its binder, failing one by its Core
     type; under [CRANE_CHECK_IR] held to the same reading of the type
     lowering recorded for the binder. *)
 let local_callable env j occ =
@@ -1549,8 +1549,8 @@ let argument_position ~local_callable env id plan i core_arg =
      indexes the substituted one (see [subst_index_of_orig]). *)
   let param_index = Param_pos.of_regular ~leading:leading_params i in
   (* Where that parameter stands in the substituted list.  The
-     conversion is a statement about the callee's ML type, and it is worth
-     making only where the ML type is what the callee's C++ signature was
+     conversion is a statement about the callee's Core type, and it is worth
+     making only where the Core type is what the callee's C++ signature was
      built from.
 
      For a callee whose C++ form is written out by hand it is not: the
@@ -1833,7 +1833,7 @@ let argument_position ~local_callable env id plan i core_arg =
 (** [lower_call ~caller ~slot ?expected_ty env use args]: the call [use]
     [args] in the declaration [caller], lowered against its callee before any
     of its arguments is -- its semantic half first, as Core planned it at
-    the ML types its position states ({!Core_elaborate.instantiation}), then how its
+    the Core types its position states ({!Core_elaborate.instantiation}), then how its
     arguments meet the callee's parameters in C++ ({!plan_call}), and the
     template application planned and validated against the callee's ABI
     ({!call_type_args}).  Generating the arguments reads the result and

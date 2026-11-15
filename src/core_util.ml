@@ -23,7 +23,7 @@ exception Found
 
 exception Impossible
 
-(** {1 Generic traversals of ML types}
+(** {1 Generic traversals of Core types}
 
     Every traversal below sees through a resolved meta and visits every child,
     a [Core.Type.Variable_app]'s arguments as much as a [Core.Type.Global_app]'s.  A walk written by hand has to
@@ -72,7 +72,8 @@ let dummy_name = Id.of_string "_x"
 
 let anonymous = Core.Binder_name.Source anonymous_name
 
-(** Converts a Rocq [Name.t] to an [Core.Binder_name.Source.t], mapping anonymous names to ["x"]. *)
+(** Converts a Rocq [Name.t] to an identifier, mapping an anonymous name and
+    [dummy_name] to [anonymous_name]. *)
 let id_of_name = function
   | Name.Anonymous -> anonymous_name
   | Name.Name id when Id.equal id dummy_name -> anonymous_name
@@ -127,7 +128,7 @@ let is_tmp = function
   | Core.Binder_name.Generated _ -> true
   | _ -> false
 
-(** {1 Operations upon ML types (with meta)} *)
+(** {1 Operations upon Core types (with meta)} *)
 
 let meta_count = ref 0
 
@@ -156,7 +157,7 @@ let new_meta _ =
   if Core.Extracted.Meta.is_frozen () then Core.Type.Open (Core.Open.fresh !meta_count)
   else Core.Type.Meta (Core.Extracted.Meta.fresh !meta_count)
 
-(** Structural equality on ML types. *)
+(** Structural equality on Core types. *)
 let rec eq_core_type t1 t2 =
   match (t1, t2) with
   | Core.Type.Arrow {parameter = tl1; result = tr1}, Core.Type.Arrow {parameter = tl2; result = tr2} ->
@@ -377,13 +378,13 @@ let type_subst_fun f t =
   subst t
 
 (** Simultaneously substitutes [[Core.Type.Variable 1; ...; Core.Type.Variable n]] by the types in [l]
-    within ML type [t].  A variable out of range is left unchanged (promoted
+    within Core type [t].  A variable out of range is left unchanged (promoted
     dependent-record variables). *)
 let type_subst_list l t =
   type_subst_fun (fun j -> if j >= 1 then List.nth_opt l (j - 1) else None) t
 
 (** Simultaneously substitutes [[|Core.Type.Variable 1; ...; Core.Type.Variable n|]] by the types in
-    array [v] within ML type [t]. Type vars with indices > n are left unchanged
+    array [v] within Core type [t]. Type vars with indices > n are left unchanged
     (per-constructor existential type variables). *)
 let type_subst_vect v t =
   let n = Array.length v in
@@ -526,7 +527,7 @@ let put_magic_if ~from ~into b =
     fails to unify with the type [into] its context requires. *)
 let put_magic ~from ~into a = put_magic_if ~from ~into (needs_magic (from, into)) a
 
-(** Checks if an ML expression can be generalized (polymorphic let). In C++,
+(** Checks if a Core expression can be generalized (polymorphic let). In C++,
     applications are excluded. *)
 let generalizable a =
   lang () != Cpp
@@ -538,7 +539,7 @@ let generalizable a =
    let-binding at two distinct types, so over-generalization from non-app
    expressions cannot be triggered by valid Rocq input. *)
 
-(** {1 ML type env} *)
+(** {1 Core type environment} *)
 
 module Type_env = struct
   let meta_cmp (m : Core.Extracted.Meta.t) (m' : Core.Extracted.Meta.t) = compare m.id m'.id
@@ -549,7 +550,7 @@ module Type_env = struct
     let compare = meta_cmp
   end)
 
-  (* Main MLenv type. [env] is the real environment, whereas [free] (tries to)
+  (* Main Type_env type. [env] is the real environment, whereas [free] (tries to)
      record the free meta variables occurring in [env]. *)
 
   type t = {
@@ -639,7 +640,7 @@ module Type_env = struct
   let push_std_type type_env t = {env = (0, t) :: type_env.env; free = type_env.free}
 end
 
-(** {1 Operations upon ML types (without meta)} *)
+(** {1 Operations upon Core types (without meta)} *)
 
 (** {2 Frozen instantiations} *)
 
@@ -713,7 +714,7 @@ end
 
 (** {2 A global use's written type arguments, read by scheme variable} *)
 
-(** A one-line rendering of an ML type, for diagnostics. *)
+(** A one-line rendering of a Core type, for diagnostics. *)
 let rec debug_core_type = function
   | Core.Type.Arrow {parameter = a; result = b} -> "(" ^ debug_core_type a ^ " -> " ^ debug_core_type b ^ ")"
   | Core.Type.Global_app {head = r; type_arguments = []; _} -> Pp.string_of_ppcmds (GlobRef.print r)
@@ -864,7 +865,7 @@ let instantiate_written ~reader (use : Core.Global_use.t) t =
       (Core.Global_use.instantiation use);
   by_variable
 
-(** {2 Does a section path occur in a ML type ?} *)
+(** {2 Does a section path occur in a Core type ?} *)
 
 let rec type_mem_kn kn = function
   | Core.Type.Meta {contents = Some t} -> type_mem_kn kn t
@@ -910,7 +911,7 @@ let rec rigidify = function
 
 type abbrev_map = GlobRef.t -> Core.Type.t option
 
-(** {2 Delta-reduction of type constants everywhere in a ML type [t]. [env] is an
+(** {2 Delta-reduction of type constants everywhere in a Core type [t]. [env] is an
     {!abbrev_map}} *)
 
 let type_expand env t =
@@ -929,7 +930,7 @@ let type_expand env t =
 
 let type_simpl = type_expand (fun _ -> None)
 
-(** {2 Generating a signature from a ML type} *)
+(** {2 Generating a signature from a Core type} *)
 
 let type_to_sign env t =
   match type_expand env t with
@@ -994,7 +995,7 @@ let rec sign_no_final_keeps = function
   | Core.Signature.Argument.Runtime, [] -> []
   | k, l -> k :: l
 
-(** {2 Removing [Core.Type.Erased] from the top level of a ML type} *)
+(** {2 Removing [Core.Type.Erased] from the top level of a Core type} *)
 
 let type_expunge_from_sign env s t =
   let rec expunge s t =
@@ -1018,7 +1019,7 @@ let type_expunge_from_sign env s t =
 
 let type_expunge env t = type_expunge_from_sign env (type_to_signature env t) t
 
-(** {1 Generic functions over ML ast terms} *)
+(** {1 Generic functions over Core terms} *)
 
 let apply_args f a = if List.is_empty a then f else Core.Expr.Apply {callee = f; arguments = a}
 
@@ -1164,7 +1165,7 @@ let ast_iter_rel_applied f =
 
 let ast_iter_rel f = ast_iter_rel_applied (fun n i _ -> f (i - n))
 
-(** {2 Map over asts} *)
+(** {2 Map over Core terms} *)
 
 let ast_map_branch f (br : Core.Match.Branch.t) = {br with Core.Match.Branch.body = f br.body}
 
@@ -1482,7 +1483,7 @@ let recover_erased_types ?only ?(refine_only = false) (expected : Core.Type.t)
   in
   go [] (Some expected) a
 
-(** {2 Map over asts, with binding depth as parameter} *)
+(** {2 Map over Core terms, with binding depth as parameter} *)
 
 let ast_map_lift_branch f n (br : Core.Match.Branch.t) =
   {br with Core.Match.Branch.body = f (n + List.length br.binders) br.body}
@@ -1523,7 +1524,7 @@ let ast_map_lift f n = function
     | Core.Expr.Float64 _
     | Core.Expr.String _ ) as a -> a
 
-(** {2 Iter over asts} *)
+(** {2 Iter over Core terms} *)
 
 let ast_iter_branch f (br : Core.Match.Branch.t) = f br.body
 
@@ -1609,7 +1610,7 @@ let nb_occur_match =
   in
   nb 1
 
-(** Replaces unused bound variables by [Core.Binder_name.Anonymous] (["_"]) throughout an ML AST. *)
+(** Replaces unused bound variables by [Core.Binder_name.Anonymous] (["_"]) throughout a Core term. *)
 let dump_unused_vars a =
   let rec ren env a =
     match a with
@@ -2115,7 +2116,7 @@ let rec ast_glob_subst s t =
     (try body use with Not_found -> t)
   | _ -> ast_map (ast_glob_subst s) t
 
-(** {1 Auxiliary functions used in simplification of ML cases} *)
+(** {1 Auxiliary functions used in simplification of Core matches} *)
 
 (* Factorisation of some match branches into a common "x -> f x" branch may
    break types sometimes. Example: [type 'x a = A]. Then [let id = function A ->
@@ -2264,7 +2265,7 @@ let rec merge_ids' ids ids' =
   | i :: ids, i' :: ids' ->
     (if fst i == Core.Binder_name.Anonymous then i' else i) :: merge_ids' ids ids'
 
-(** Checks if an ML AST node is an exception/error expression. *)
+(** Checks if a Core node is an exception/error expression. *)
 let is_exn = function
   | Core.Expr.Runtime_error _ -> true
   | _ -> false
@@ -2355,7 +2356,7 @@ let iota_gen br hd =
   in
   iota 0 hd
 
-(** Checks if an ML expression is atomic (has no subexpressions). *)
+(** Checks if a Core expression is atomic (has no subexpressions). *)
 let is_atomic = function
   | Core.Expr.Bound_variable _ | Core.Expr.Global _ | Core.Expr.Runtime_error _ | Core.Expr.Erased_value _ -> true
   | _ -> false
@@ -2412,7 +2413,7 @@ let split_arrow_coercion from into =
         put_magic_if ~from:c ~into:c' (needs_magic (c, c')) )
   | _ -> None
 
-(** Core ML simplification: beta-reduction, iota-reduction, let-inlining, and
+(** Core simplification: beta-reduction, iota-reduction, let-inlining, and
     other optimizations. *)
 let rec simpl o = function
   | Core.Expr.Apply {callee = f; arguments = []} -> simpl o f
@@ -2572,7 +2573,7 @@ let is_impl_kill = function
   | Core.Signature.Argument.Erased (Core.Erasure_reason.Configured_implicit _) -> true
   | _ -> false
 
-(** Removes head lambdas at positions marked Kill in signature [bl]. Adjusts de
+(** Removes head lambdas at positions marked [Erased] in signature [bl]. Adjusts de
     Bruijn indices accordingly. *)
 let kill_some_lams bl (ids, c) =
   let n = List.length bl in
@@ -2601,8 +2602,8 @@ let kill_some_lams bl (ids, c) =
     nothing to do, or if there is no lambda left at all. In addition, it
     accepts a signature that may mention some implicits} *)
 
-(** Merges an implicit signature with identifier list, creating a full Keep/Kill
-    signature. *)
+(** Merges an implicit signature with an identifier list, creating a full
+    [Runtime]/[Erased] signature. *)
 let rec merge_implicits ids s =
   match (ids, s) with
   | [], _ -> []
@@ -2663,7 +2664,7 @@ let eta_expansion_sign ?(types = []) s (ids, c) =
   abs ids [] 1 types s
 
 (** Removes erased arguments from match branches by eta-expanding and
-    eliminating Kill'd lambdas. *)
+    eliminating the erased lambdas. *)
 let case_expunge ?(types = []) s e =
   let m = List.length s in
   let n = nb_lams e in
@@ -2691,7 +2692,7 @@ let term_expunge s (ids, c) =
       named_lams ids c
 
 (** Removes dummy arguments from applications of [Core.Expr.Bound_variable r], purging arguments
-    marked Kill. *)
+    marked [Erased]. *)
 let kill_dummy_args (ids, bl) r t =
   let m = List.length ids in
   let sign = List.rev bl in
@@ -2716,7 +2717,8 @@ let kill_dummy_args (ids, bl) r t =
   in
   killrec 0 t
 
-(** Extracts signature from argument list (Kill for Core.Expr.Erased_value, Keep otherwise). *)
+(** Extracts a signature from an argument list ([Erased] for a
+    [Core.Expr.Erased_value], [Runtime] otherwise). *)
 let sign_of_args a =
   List.map
     (function
@@ -2724,7 +2726,7 @@ let sign_of_args a =
       | _ -> Core.Signature.Argument.Runtime )
     a
 
-(** Removes all dummy (erased) bindings and arguments from an ML AST. *)
+(** Removes all dummy (erased) bindings and arguments from a Core term. *)
 let rec kill_dummy = function
   | Core.Expr.Fixpoint g ->
     kill_dummy_fix_term g.selected (Core.Recursion.Group.bodies g) (fun c ->
@@ -2893,7 +2895,7 @@ let apply_eta_args f args =
     in
     own (canonical (simpl_app (optims ()) args f))
 
-(** {1 Special treatment of fixpoint for pretty-printing purpose} *)
+(** {1 Special treatment of fixpoints: argument reordering} *)
 
 (** Optimizes a fixpoint by reordering arguments so that [n] leading arguments
     are directly accessible, reducing eta-expansion overhead. *)
@@ -2981,7 +2983,7 @@ let optimize_fix a =
 let core_size_branch size pv =
   Array.fold_left (fun a (br : Core.Match.Branch.t) -> a + size br.body) 0 pv
 
-(** Computes the size (node count) of an ML AST for inlining heuristics. *)
+(** Computes the size (node count) of a Core term for inlining heuristics. *)
 let rec core_size = function
   | Core.Expr.Apply {callee = t; arguments = l} -> List.length l + core_size t + core_size_list l
   | Core.Expr.Lambda {body = t; _} -> 1 + core_size t
@@ -3006,7 +3008,7 @@ and core_size_list l = List.fold_left (fun a t -> a + core_size t) 0 l
 
 and core_size_array a = Array.fold_left (fun a t -> a + core_size t) 0 a
 
-(** Checks if an ML expression is a fixpoint definition. *)
+(** Checks if a Core expression is a fixpoint definition. *)
 let is_fix = function
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> true
   | _ -> false
@@ -3141,7 +3143,7 @@ let manual_inline = function
   | GlobRef.ConstRef c -> Cset_env.mem c manual_inline_set
   | _ -> false
 
-(** Remaps type variable indices in an ML AST using function [f]. Used for
+(** Remaps type variable indices in a Core term using function [f]. Used for
     cross-module type variable renumbering. *)
 let remap_tvars f =
   let rec remap_type = function

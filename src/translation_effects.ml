@@ -2,7 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Monadic effects: [ret] and [bind] of a monad mapped to an effect
     ({!Core_effects}), sequenced as statements in sequential mode and kept
-    as interaction-tree constructors in reified mode. *)
+    as interaction-tree constructors in reified mode.  One of the modules
+    lowering Core bodies to CppIR that {!Translation} drives. *)
 
 open Common
 open Names
@@ -117,7 +118,7 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       in
       (* Generate the continuation first, then check if the variable is
          actually referenced in the generated C++ (unit-match elimination
-         and Ret-in-void optimization may drop ML-level references). *)
+         and Ret-in-void optimization may drop Core-level references). *)
       let body = gen_stmts ~slot env k f in
       let cpp_ty = cpp_of_core env core_ty in
       let decl : Cpp_ir.Lowered.Stmt.t list =
@@ -188,7 +189,9 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   end
 
 (** [ret] of an effect monad, [use] applied to [a1 :: l], in statement
-    position ending in [k]. *)
+    position ending in [k]: [k] of the returned value (a bare [return;] in a
+    function returning [void]) in sequential mode, [k] of the whole term
+    lowered as an [ITree<R>::ret] in reified mode. *)
 let gen_return_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l :
   Cpp_ir.Lowered.Stmt.t list =
   if not (is_sequential_effect Core_effects.Return use) then begin

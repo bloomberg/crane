@@ -10,7 +10,10 @@
    and concept-placement tables.  Much of the surface is mutable global state
    (refs and hashtables) that {!reset_cpp_state} empties between extractions;
    it lives here so the other [cpp_*] modules can share it without depending
-   on each other. *)
+   on each other.  The facts a unit's plan decides -- the accessors, the
+   unmerged wrappers, the nested struct names -- are not reset but bound
+   for the unit's extent ({!with_accessors}, {!with_unmerged_wrappers},
+   {!with_nested_struct_names}, all through {!Accumulated_plan.bind}). *)
 
 (** {2 Owned cells}
 

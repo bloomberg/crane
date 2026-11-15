@@ -184,7 +184,7 @@ let region ~outer ~reads body =
     | e -> expr ~pos:ret ~ret ~slot lex e
   (* A global call's arguments, each against the parameter it is passed at
      ({!Translation_calls.argument_position}), into the call's slot at the
-     parameter's ML type. *)
+     parameter's Core type. *)
   and call ~pos ~ret ~slot lex (use : Core.Global_use.t) args =
     match Core_elaborate.planned_instantiation ~walk:(elaborations ()) use args with
     | None -> List.iter (expr ~pos:None ~ret lex) args

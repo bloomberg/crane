@@ -45,9 +45,9 @@ type t
 (** Nothing planned: no read is a last use. *)
 val empty : t
 
-(** Whether a body owning a value of ML type [ty] moves it at its last use:
+(** Whether a body owning a value of Core type [ty] moves it at its last use:
     one a copy of which costs more than a move.  This is the reading
-    {!worth_moving_cpp} makes, made of the ML type: an inductive that is not
+    {!worth_moving_cpp} makes, made of the Core type: an inductive that is not
     an enum or coinductive, a closure, a type variable or one applied to
     arguments, a type nothing determined (held in the box), and a mapped type
     unless it is a scalar or declared trivially copyable with arguments that are

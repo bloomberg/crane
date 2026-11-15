@@ -43,7 +43,7 @@ let fold_slots f g acc =
 
 (* What a slot's [Written] evidence stands for in the written list the
    readers were built on: an argument extraction could not read is the
-   [Type.Erased] it wrote there. *)
+   [Core.Type.Erased] it wrote there. *)
 let written_type = function
   | Scheme.Written {observed = Some t; _} -> Some t
   | Scheme.Written {observed = None; _} -> Some (Type.Erased Erasure_reason.Type_argument)

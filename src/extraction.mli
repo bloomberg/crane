@@ -26,7 +26,7 @@
     to translation.
 
     For the C++ backend it also records facts later stages cannot recover from
-    the ML AST alone: promoted type variables of type classes, higher-kinded
+    the Core term alone: promoted type variables of type classes, higher-kinded
     parameter positions, class-argument shapes of instances, sigma-type
     preconditions, and value-dependent type schemes (all in {!Table}). *)
 
@@ -35,7 +35,7 @@ open Declarations
 open Environ
 open Evd
 
-(** Extract a single constant definition into an ML declaration: a [Core.Decl.Type_alias]
+(** Extract a single constant definition into a Core declaration: a [Core.Decl.Type_alias]
     for a type scheme, a [Core.Decl.Value] for anything else (an axiom's body is
     [Core.Expr.Axiom_value], a logical constant's [Core.Expr.Erased_value]).  A definition also records its
     instance class shape and context instance applications in {!Table}.
@@ -92,7 +92,7 @@ val extract_inductive : env -> MutInd.t -> Core.Inductive.t
     @param env Rocq global environment
     @param sg Evar map for universe and constraint tracking
     @param c The term to extract
-    @return A pair [(ast, ty)] of the extracted ML expression and its ML type *)
+    @return A pair [(ast, ty)] of the extracted Core expression and its Core type *)
 val extract_constr : env -> evar_map -> EConstr.t -> Core.Expr.t * Core.Type.t
 
 (** Is the declaration purely logical (erased during extraction)? *)

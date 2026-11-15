@@ -4,7 +4,7 @@
 (** What exists of Core only while types are reconstructed: the
     metavariables extraction and the Core passes make and solve.  Freezing
     the program ({!Core_phase.freeze}) replaces each by its solution, or by a
-    {!Type.Open} where there is none, in the program and in the types its
+    {!Core.Type.Open} where there is none, in the program and in the types its
     globals are registered at, and from then on none is made
     ({!Core_util.new_meta} makes an open annotation instead) and none solved.
     Under [CRANE_CHECK_IR] freezing checks that no metavariable is reachable,
@@ -18,7 +18,7 @@ module Meta : sig
       answer to the terms mentioning the hole instead of writing it
       ({!Type_util.refine_erased}). *)
 
-  (** A metavariable cell ({!Type.Meta}): read anywhere, made and solved
+  (** A metavariable cell ({!Core.Type.Meta}): read anywhere, made and solved
       only here. *)
   type t = Grammar.Meta.t = private {
     id : int;
@@ -31,6 +31,8 @@ module Meta : sig
   (** A cell numbered [id], already solved to [t]. *)
   val solved : int -> Type.t -> t
 
+  (** [solve m t] fills [m] with [t]; an anomaly under [CRANE_CHECK_IR]
+      after {!freeze}. *)
   val solve : t -> Type.t -> unit
 
   (** From here nothing solves a metavariable. *)

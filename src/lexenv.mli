@@ -38,7 +38,7 @@ val push : binder list -> t -> t
     range or non-positive. *)
 val binder : t -> int -> binder option
 
-(** The ML type of the binder at index [i], as {!binder}. *)
+(** The Core type of the binder at index [i], as {!binder}. *)
 val type_opt : t -> int -> Core.Type.t option
 
 (** The number of binders in scope. *)

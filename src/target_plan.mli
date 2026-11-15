@@ -2,14 +2,21 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** What the backend decided about a unit before rendering it: policy, read
-    from the structure, as a value.  Built after {!Program_facts} and before
-    translation; {!plan} takes the facts but reads none of them yet.
+    from the structure, as a value.  Built by [Extract_env] after the unit's
+    {!Program_facts} and before its bodies are lowered; of the facts,
+    {!plan} reads only the customs the program names.
 
-    Transitional: the plan holds the decisions converted so far -- the kinds
-    inductives are emitted as, the kinds of their template parameters, the
-    layout, the names of the globals the unit declares and of their
-    constructors' fields, which of those fields are stored behind the
-    pointer, and the callable plan of every generated function and method. *)
+    The plan holds the unit's configuration, the kinds inductives are
+    emitted as, the kinds of their template parameters, the layout, the
+    names of the modules and globals the unit declares and refers to and of
+    its constructors' fields, how those fields are stored, and the callable
+    plan of every generated function and method.  It is filled in stages
+    ({!plan}, {!with_template_kinds}, {!with_layout}).  Its readers do not
+    ask it: the configuration is bound with {!Table.with_unit_config}, the
+    inductive kinds are written into the structure ({!record_kinds}), and
+    each layout decision is bound as it is taken, over the earlier units'
+    ({!Accumulated_plan}).  Under [CRANE_CHECK_IR] the plan is what the
+    emitted result is compared against once the unit is rendered. *)
 
 (** Why an inductive is emitted as a kind other than the one extraction
     classified it as. *)
@@ -25,7 +32,7 @@ type kind_reason =
 type kind_decision = {
   block : Names.MutInd.t;  (** the mutual block, every packet of it *)
   kind : Core.Inductive.Kind.t;  (** the kind emitted *)
-  reason : kind_reason;
+  reason : kind_reason;  (** why it differs from extraction's *)
 }
 
 (** How the unit's declarations are spelled and stored, decided once its
@@ -65,9 +72,9 @@ type representation = {
           variables. *)
 }
 
-(** A unit's plan.  {!plan} fills [inductive_kinds]; the later fields
-    start empty and are filled by {!with_template_kinds} and
-    {!with_layout} as each stage is decided. *)
+(** A unit's plan.  {!plan} fills [input], [config] and
+    [inductive_kinds]; the later fields start empty and are filled by
+    {!with_template_kinds} and {!with_layout} as each stage is decided. *)
 type t = {
   input : Core.Fingerprint.t option;
       (** The structure planned, where something reads it: under
@@ -84,16 +91,16 @@ type t = {
   template_kinds : (Names.GlobRef.t * Tparam_kinds.t) list;
       (** The kinds of the template parameters of each inductive and type
           alias the unit generates, decided once the inductive kinds are
-          installed ({!with_template_kinds}). *)
+          recorded ({!with_template_kinds}). *)
   modules : Module_plan.t;
       (** Where each declaration lives and what it is called, decided once
-          the template-parameter kinds are installed ({!with_layout}). *)
+          the template-parameter kinds are decided ({!with_layout}). *)
   representation : representation;
       (** How declarations are spelled and stored, decided with the layout
           ({!with_layout}). *)
   callables : Callable_abi.t list;
       (** The callable plan of each function and method the unit generates,
-          decided once the layout is installed ({!with_layout}). *)
+          decided once the layout is bound ({!with_layout}). *)
   instance_methods : (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list;
       (** The callable plan of each method of each instance's struct, by
           name, decided with the callable plans. *)
@@ -125,11 +132,13 @@ val record_kinds : t -> Core.Program.t -> unit
     each kind [t] decided ({!record_kinds}). *)
 val check_kinds_recorded : t -> unit
 
-(** [plan] with the template-parameter kinds decided. *)
+(** [with_template_kinds t kinds] is [t] with the template-parameter kinds
+    [kinds]. *)
 val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t
 
-(** [plan] with its layout, the representation of its declarations, the
-    callable plans and the assumed callables decided. *)
+(** [with_layout t modules representation (callables, instance_methods)
+    assumed] is [t] with its layout, the representation of its
+    declarations, the callable plans and the assumed callables. *)
 val with_layout :
   t ->
   Module_plan.t ->

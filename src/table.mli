@@ -46,7 +46,8 @@
       [erased_type_consts], [value_dep_type_schemes], [erased_fix_groups].
       A phase result: its owner is the extracted program.
     - {b Plan facts bound for a dynamic extent}, not enrolled for a reset:
-      the unit's configuration ({!with_unit_config}), and
+      the unit's configuration ([current_unit_config], {!with_unit_config}),
+      and
       [instance_promoted_types] and [promoted_inductives], bound from the
       plans of the unit and the earlier units of its extraction
       ([Accumulated_plan]).  The plan's decided kinds are recorded in
@@ -69,8 +70,8 @@
       ([claimed_output_targets]), and the units earlier libraries were
       extracted into ([extracted_units], kept in the [.vo]).
 
-    Every cell but configuration and the session-long ones is emptied with
-    {!State}. *)
+    Every cell but configuration, the session-long ones and the bound plan
+    facts is emptied with {!State}. *)
 
 open Names
 open Libnames
@@ -227,7 +228,7 @@ val labels_of_ref : GlobRef.t -> ModPath.t * Label.t list
 (** Add type definition to cache.
     @param kn the constant being cached
     @param cb the constant body used as a checksum to detect stale entries
-    @param t  the extracted ML type to store *)
+    @param t  the extracted Core type to store *)
 val add_typedef : Constant.t -> constant_body -> Core.Type.t -> unit
 
 (** Lookup type definition from cache.
@@ -244,7 +245,7 @@ val lookup_typedef_unchecked : Constant.t -> Core.Type.t option
 (** Add constant type schema to cache.
     @param kn the constant being cached
     @param cb the constant body used as a checksum to detect stale entries
-    @param s  the extracted ML type schema to store *)
+    @param s  the extracted Core type scheme to store *)
 val add_cst_type : Constant.t -> constant_body -> Core.Schema.t -> unit
 
 (** Lookup constant type schema from cache.
@@ -261,7 +262,7 @@ val constant_schema : Constant.t -> Core.Schema.t option
 (** Add inductive to cache.
     @param kn    the mutual inductive name being cached
     @param mib   the inductive body used as a checksum to detect stale entries
-    @param Core.Inductive.t the extracted ML inductive to store *)
+    @param Core.Inductive.t the extracted Core inductive to store *)
 val add_ind : MutInd.t -> mutual_inductive_body -> Core.Inductive.t -> unit
 
 (** Lookup inductive from cache.
@@ -305,7 +306,7 @@ val is_coinductive : GlobRef.t -> bool
 (** Check if any coinductive types exist. *)
 val has_any_coinductive : unit -> bool
 
-(** Check if ML type is coinductive. *)
+(** Check if a Core type is coinductive. *)
 val is_coinductive_type : Core.Type.t -> bool
 
 (** {2 Demands}
@@ -393,15 +394,15 @@ val needs_itree_header : unit -> bool
     field; empty for anything else. *)
 val get_record_fields : GlobRef.t -> GlobRef.t option list
 
-(** Get record fields from ML type. *)
+(** Get record fields from a Core type. *)
 val record_fields_of_type : Core.Type.t -> GlobRef.t option list
 
-(** The fields of a record or type class, each paired with its ML type.  Use
+(** The fields of a record or type class, each paired with its Core type.  Use
     this rather than zipping {!get_record_fields} against
     {!record_field_types}, which can disagree in length. *)
 val get_record_field_bindings : GlobRef.t -> Core.Record.Field.t list
 
-(** {!get_record_field_bindings} for a record named by an ML type. *)
+(** {!get_record_field_bindings} for a record named by a Core type. *)
 val record_field_bindings_of_type : Core.Type.t -> Core.Record.Field.t list
 
 (** Get types of record fields. *)
@@ -456,7 +457,7 @@ val add_type_scheme_arity : GlobRef.t -> int -> unit
     parameters or is unknown. *)
 val get_type_scheme_arity : GlobRef.t -> int
 
-(** Get the ML field types for a constructor, as stored in [constructor_argument_types].
+(** Get the Core field types for a constructor, as stored in [constructor_argument_types].
     Returns [None] if the inductive is not in the extraction table.
     The list order matches the constructor argument order. *)
 val get_ctor_ip_types_opt : GlobRef.t -> Core.Type.t list option
@@ -497,7 +498,7 @@ val singleton_instance_class : ?env:Environ.env -> GlobRef.t -> GlobRef.t option
     its arguments applied, is a class. *)
 val builds_instance : ?env:Environ.env -> GlobRef.t -> bool
 
-(** Check if ML type is a typeclass. *)
+(** Check if a Core type is a typeclass. *)
 val is_typeclass_type : Core.Type.t -> bool
 
 (** Mark inductive as flat (single-ctor, no variant wrapper). *)
@@ -544,7 +545,7 @@ val has_dependent_params : GlobRef.t -> bool
 (** Check if an inductive packet qualifies as an enum based on its structure.
     Returns true if all constructors are nullary, no type parameters are kept,
     and at least one constructor exists.
-    @param ind the extracted ML inductive (contains all packets)
+    @param ind the extracted Core inductive (contains all packets)
     @param i   0-based index of the packet within [ind] to test *)
 val is_enum_inductive_packet : Core.Inductive.t -> int -> bool
 
@@ -650,7 +651,7 @@ type class_arg = Carg of GlobRef.t * class_arg list | Carg_unknown
     instance of and the instances that class is applied to, each with its own
     arguments.
 
-    A class argument is erased from the ML type -- [PIV : @PI ProvenanceV
+    A class argument is erased from the Core type -- [PIV : @PI ProvenanceV
     PointerV] reaches translation as an instance of [PI] and nothing more -- so
     the promoted type variables that belong to those arguments arrive with no
     way back to them.  The Rocq type is the only place the connection is still
@@ -663,7 +664,7 @@ val get_instance_class_shape : GlobRef.t -> (GlobRef.t * class_arg list) option
 (** [add_context_instance_apps r apps] records the instances [r]'s Rocq type
     applies to [r]'s own class-typed binders: each is the instance and, for
     each argument, the ordinal of the binder among those binders.  Like
-    {!add_instance_class_shape}, it records what the ML type drops. *)
+    {!add_instance_class_shape}, it records what the Core type drops. *)
 val add_context_instance_apps : GlobRef.t -> (GlobRef.t * int list) list -> unit
 
 (** The applications recorded by {!add_context_instance_apps}, or [[]]. *)
@@ -673,7 +674,7 @@ val get_context_instance_apps : GlobRef.t -> (GlobRef.t * int list) list
     payloads of [kn] mention, in order of first appearance.
 
     An inductive declared under a [Context] may carry a field whose type is a
-    field of that context variable.  The dictionary is erased, so the ML
+    field of that context variable.  The dictionary is erased, so the Core
     inductive has no parameter for it and the field falls back to the
     file-scope alias: the emitted struct claims to be one type when it is one
     per instance.  These names are what it is really parameterised by, and
@@ -703,7 +704,7 @@ val type_alias_head : GlobRef.t -> GlobRef.t
     [r] names the applied instance [arg] -- the same shape
     {!add_instance_class_shape} records, and read by the same rule.  The Rocq
     constructor type is the only place an inductive's dependence on an instance
-    is written down; the ML inductive keeps no parameter for it. *)
+    is written down; the Core inductive keeps no parameter for it. *)
 val add_ind_class_arg : GlobRef.t -> class_arg -> unit
 
 (** The shapes recorded by {!add_ind_class_arg}, in order of first
@@ -983,8 +984,10 @@ val unit_config : names:Ref.User.Set.t -> unit_config
 
 (** [with_unit_config c f] is [f ()] extracting a unit of configuration
     [c]: what {!unit_is_concurrent}, {!non_atomic_rc}, {!single_threaded}
-    and the smart pointer's spelling answer.  Outside one, a unit is taken
-    to run on one thread. *)
+    and the smart pointer's spelling answer.  [Extract_env] binds the
+    unit's planned configuration ({!Target_plan.t.config}) right after
+    planning it, for the rest of the unit.  Outside one, a unit is taken to
+    run on one thread. *)
 val with_unit_config : unit_config -> (unit -> 'a) -> 'a
 
 (** Whether the unit being extracted runs on several threads, as its
@@ -1090,7 +1093,7 @@ val to_keep : GlobRef.t -> bool
 (** Get set of implicit argument positions for global reference. *)
 val implicits_of_global : GlobRef.t -> Int.Set.t
 
-(** {2 Custom ML extractions table} *)
+(** {2 Custom extractions table} *)
 
 
 (** [same_mutual_block r1 r2] holds when both are inductive types from the
@@ -1409,7 +1412,7 @@ val extract_numeral : qualid -> string -> unit
 
 (** Register global definition with type.
     @param id the global reference of the definition being registered
-    @param ty the ML type to associate with it, used for type-directed
+    @param ty the Core type to associate with it, used for type-directed
               code generation at call sites *)
 val register_glob_def : GlobRef.t -> Core.Type.t -> unit
 

@@ -1,8 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Statements: an expression in statement position, ending in a
-    continuation ([k]) that says what its value becomes.  Lets bind locals;
-    local functions, effects and record matches go to their modules. *)
+    continuation ([k]) that says what its value becomes.  Lets bind locals
+    and tails hand their value to [k] here; local functions
+    ({!Translation_local_functions}), effects ({!Translation_effects}) and
+    custom and record matches ({!Translation_match}) go to their modules.
+    Comes after {!Translation_local_functions} and before
+    {!Translation_expr} in the chain of lowering modules
+    ({!Translation_knot}). *)
 
 open Common
 open Names
@@ -69,7 +74,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
         | Expression (Local _) -> false
         | _ -> true) rhs in
       (* Generate the body first, then check if the variable is actually referenced in the
-         generated C++ (not just the ML AST, since optimizations like
+         generated C++ (not just the Core term, since optimizations like
          unit-match elimination may drop references). *)
       let body =
         gen_stmts ~slot env' k b
@@ -98,7 +103,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
            application and the bound variable is used at most once in the
            continuation without escaping, AND all free variables of the RHS are
            dead in the continuation (so [&] capture references stay valid),
-           tell eta_fun to keep CPPmove wrappers and use [&] capture for
+           tell eta_fun to keep [Move] wrappers and use [&] capture for
            zero-copy closure generation. *)
         let is_single_use_partial_app =
           match a with
@@ -117,9 +122,9 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
           | _ -> false
         in
         let afun v : Cpp_ir.Lowered.Stmt.t = Bind_variable (x_renamed, Existing, v) in
-        (* Thread the let-binding's type annotation as the expected ML type
+        (* Thread the let-binding's type annotation as the expected Core type
            so that gen_ctor_call can recover the concrete element type for
-           constructors (like nil) whose ML annotation has unresolved metas or
+           constructors (like nil) whose Core annotation has unresolved metas or
            erased type args.  For example: let sk = [] : list parser_frame — the
            let-binding knows the element type even when the nil's own annotation
            has Core.Type.Erased Core.Erasure_reason.Type_argument. *)
@@ -133,8 +138,8 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
           let t_has_erased = core_type_contains_erased t in
           if not t_has_erased then t
           else begin
-            (* Try to infer from an Core.Expr.Construct that immediately follows in the body.
-               The body b may be directly an Core.Expr.Construct, or wrapped in one more Core.Expr.Let. *)
+            (* Try to infer from a Core.Expr.Construct that immediately follows in the body.
+               The body b may be directly a Core.Expr.Construct, or wrapped in one more Core.Expr.Let. *)
             let try_cons_body (b_inner : Core.Expr.t) db_offset =
               (* db_offset: how many let-bindings above b_inner, so Core.Expr.Bound_variable (1+db_offset) = x *)
               let target_rel = 1 + db_offset in
@@ -171,8 +176,8 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                 !result
               | _ -> None
             in
-            (* Try to infer t from an Core.Expr.Apply body: find the position of target_rel
-               in the application args, look up the function's ML type, and extract
+            (* Try to infer t from a Core.Expr.Apply body: find the position of target_rel
+               in the application args, look up the function's Core type, and extract
                the type of that arg.  This handles the pattern:
                  let sk0 : Core.Type.Meta = (fr, nil) in multistep(..., sk0, ...)
                where multistep's type tells us sk0 has type parser_frame × list(parser_frame). *)
@@ -282,7 +287,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
         match asgn with
           | [Bind_variable (_, Existing, e)] ->
             let cpp_ty = cpp_of_core env t in
-            (* When the type contains Tany (from erased carrier projections) but
+            (* When the type contains [Any] (from erased carrier projections) but
                the generated expression is a lambda with concrete types, derive
                the std::function type from the lambda's parameter and return
                types. *)
@@ -307,7 +312,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                      || Cpp_ir.Types.exists
                           (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Promoted_member _ -> true | _ -> false)
                           cpp_ty ->
-                (* Type contains erased positions (Tany or dummy_type marker)
+                (* Type contains erased positions ([Any] or dummy_type marker)
                    but the expression is not a lambda with inferable types.
                    Use [auto] so the C++ compiler deduces the concrete type
                    from the RHS — e.g. for pair-projection bindings like
@@ -358,8 +363,6 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
     and funs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
     Translation_local_functions.gen_standalone_fix env k ~x ~ids ~funs ~occ ~fix_term
-  (* | Core.Expr.Apply (Core.Expr.Global {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
-     (Core.Expr.Apply (a1, a2::[])) *)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: a2 :: l} when is_effect Core_effects.Bind use ->
     Translation_effects.gen_bind_stmts ~slot env k ast ~r ~use ~a1 ~a2 ~l
@@ -446,7 +449,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       let k_returns = match k (Literal (Int 0)) with Return _ -> true | _ -> false in
       let e = gen_expr ~slot ?expected_ty:(position_cpp_ty None) env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
-         time even though its ML type is concrete.  In tail position that value
+         time even though its Core type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
          recovery the let-binding path performs by marking the bound variable
          erased. *)

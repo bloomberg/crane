@@ -1,16 +1,17 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A digest of what a Core structure says, for asserting that two readers
-    saw the same program.
+(** [Core.Fingerprint]: a digest of what a Core program says, for asserting
+    that two readers saw the same program.
 
     An analysis or plan computed from a structure can record the structure's
     fingerprint, and a later reader can compare it against the structure it
     holds: a mismatch means the structure was rewritten or mutated in between
-    (an [kind] demoted, an [type_variables] renamed, a metavariable solved), and
-    the recorded facts describe a different program.  {!Core_phase} uses it
-    to find the elements a second normalization would still rewrite, and
-    [Extract_env] to find the elements rendering changed.
+    (an inductive's [kind] demoted, a packet's [type_variables] renamed, a
+    metavariable solved), and the recorded facts describe a different
+    program.  {!Core_phase} uses it to find the elements a second
+    normalization would still rewrite, [Extract_env] to find the elements
+    rendering changed, and [Target_plan] to record the program it planned.
 
     The digest is of the structure's meaning, not its representation:
     - a solved metavariable reads as its solution, so a structure does not

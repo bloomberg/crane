@@ -75,12 +75,12 @@ type t = {
           omits it, if it does *)
   relaxations : Head_relaxation.t list;
   core_type : Core.Type.t option;
-      (** the callee's ML type the plan was made against: the signature a
+      (** the callee's Core type the plan was made against: the signature a
           call's head is rebuilt from, before relaxation *)
   phase : Common.phase;  (** when the plan was decided, for diagnostics *)
 }
 
-(* The ML type recorded for [r], if any. *)
+(* The Core type recorded for [r], if any. *)
 let recorded_core_type r = try Some (Table.find_type r) with Not_found -> None
 
 let callee abi = abi.callee

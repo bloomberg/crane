@@ -38,9 +38,12 @@ val gen_stmts :
   Core.Expr.t ->
   Cpp_ir.Lowered.Stmt.t list
 
-(** [with_method_ns_for_locals () f] runs [f] with the module's local
-    inductives added to [method_self_ns], restoring the enclosing namespace on
-    the way out however [f] leaves. *)
+(** [with_method_ns_for_locals ?base f] runs [f] with the local inductives in
+    scope that have recursive fields (enumerations excepted) added to
+    [base] (default: the ambient {!Translation_state.method_self_ns}) as the
+    method-self namespace, restoring the enclosing one on the way out however
+    [f] leaves.  Containers built inside such a scope then spell those
+    inductives' type parameters as their struct fields do. *)
 val with_method_ns_for_locals : ?base:Ref.User.Set.t -> (unit -> 'a) -> 'a
 
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method

@@ -1,7 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Expressions: {!gen_expr} lowers a Core expression to a CppIR expression,
-    dispatching on its form.  A variable read, a global used as a value, a
+    dispatching on its form.  The last of the lowering modules
+    ({!Translation_knot} lists the order), driven by {!Translation}.  A variable read, a global used as a value, a
     literal and a coercion's crossing ({!gen_crossing}) are lowered here; a
     lambda, an application, a constructor, a match, an effect and a let or
     local fixpoint (as an immediately invoked lambda over statements) go to
@@ -52,9 +53,12 @@ let check_binder_scopes env i =
           ++ name (Option.map (fun b -> b.eb_id) b)
           ++ str " to the binders typed in scope")
 
-(** Generate C++ expression from ML AST. Main expression compiler - handles
-    lambdas, applications, constructors, pattern matching, etc. Monadic
-    non-function globals are wrapped in CPPfun_call by the Core.Expr.Global case below.
+(** [gen_expr ?expected_ty ?slot env core_e] -- the CppIR expression for the
+    Core expression [core_e], generated against [expected_ty] where the
+    position states one.  A global that is called when named
+    ({!naming_calls}: a definition that only throws, emitted as a
+    zero-parameter function) becomes a call of no arguments in the
+    [Core.Expr.Global] case.
 
     A [Boxed] slot says that [core_e] flows into a slot that is really
     [std::any], so any constructor it builds has to use the canonical erased
@@ -82,7 +86,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
        ({!Ownership_ir.use}); a boxed variable is unboxed whole, whatever
        component of it Core reads.  Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
-       [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
+       [std::move(_tcI0)::method()].  Recognised by identity rather than by Core
        type: this binder is synthesised by {!Common.tc_instance_id}, and inside
        a generated instance method it is a template parameter of the enclosing
        struct, with no entry of its own in [env_types]. *)
@@ -135,7 +139,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
              the concrete-element container (a constructor field via
              [crane_container_cast], or [eta_fun]'s function-argument path)
              converts it.  Scalar targets keep the direct concrete [any_cast]. *)
-          (* Does [ty] denote a list container, possibly under a [Tnamespace]
+          (* Does [ty] denote a list container, possibly under an [In_namespace]
              wrapper?  (A namespaced list — e.g. a functor-qualified
              [Datatypes::List] — must be recognized too, otherwise the fallback
              below emits the target verbatim and leaks an abstract/unresolved
@@ -452,7 +456,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
       with_iife_return_type expected_ty (fun () ->
         Cpp_ir.Build.iife None (gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) ) )
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as a ->
-    (* Bare fixpoint in expression context — wrap in IIFE, delegate to
+    (* Bare fixpoint in expression context: wrap in IIFE, delegate to
        gen_stmts. *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       Cpp_ir.Build.iife None (gen_stmts env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
@@ -485,8 +489,11 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
   | Core.Expr.Axiom_value s -> Abort ("unrealized axiom: " ^ s, abort_ty expected_ty)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
-(** A term crossing a type gap erasure opened: an [Core.Expr.Coerce] with its
-    [coercion] types, an [Core.Expr.Boxed_value] ([boxed]), or an [Core.Expr.Lambda_group_barrier] (neither). *)
+(** A term crossing a type gap erasure opened: a [Core.Expr.Coerce] with its
+    [coercion] types, a [Core.Expr.Boxed_value] ([boxed]), or a
+    [Core.Expr.Lambda_group_barrier] (neither), lowered against the position
+    type {!Position_plan} planned for its occurrence [occ]. *)
+
 and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coercion ~boxed t occ :
     Cpp_ir.Lowered.Expr.t =
   let expected_ty = planned_position occ ~live:expected_ty in
@@ -524,8 +531,8 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
       env t
   in
   (* What extraction recorded about the term's own side of the boundary.
-     Not materialised: this is an inferred type, so a [Topaque] here stays
-     [Topaque] and licenses nothing. *)
+     Not materialised: this is an inferred type, so an [Obligation Opaque_type] here
+     stays one and licenses nothing. *)
   let recorded_from =
     match coercion with
     (* A binder whose C++ type is decided outranks the coercion's recorded
@@ -573,7 +580,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
       let is_cpp_erased_var = is_cpp_erased_var_rec t in
       (* Namespace-collapsing erase: a namespaced leaf like [R] must become
          plain [std::any], not the malformed [typename R::std::any] the shared
-         [erase_type_to_any] produces for a [Tnamespace]-wrapped [Core.Type.Global_app].
+         [erase_type_to_any] produces for an [In_namespace]-wrapped type.
          This unwraps the erased var to its runtime representation
          ([deque<std::any>] for a custom list of [R]); a downstream consumer
          that needs the CONCRETE element container (e.g. a constructor field
@@ -595,7 +602,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
         (* Extraction's oracle reads a type-class method's [M A] as erased,
            but the binder it is bound to was assigned an opaque type --
            an admission that the shape could not be resolved, not a box.
-           Say so rather than assert [Tany]: {!coerce} recovers from a box
+           Say so rather than assert [Any]: {!coerce} recovers from a box
            and must not invent one. *)
         let opaque = Some (Cpp_ir.Type.Obligation Opaque_type) in
         let rec binder_is_opaque = function

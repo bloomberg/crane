@@ -268,7 +268,7 @@ let lifted_views ~module_ ?(may_hoist = true) ((_, d) as placed : Unit_program.i
     Anything else a member's type can name -- a Rocq definition used as a type,
     which reaches C++ as a [using] alias at the point it was defined -- is not.
 
-    Read off the members' ML types rather than the rendered text, because the
+    Read off the members' Core types rather than the rendered text, because the
     text cannot tell [tbl] the alias from [a] the parameter. *)
 let module_members_name_only_inductives sel =
   let rec ty_ok = function

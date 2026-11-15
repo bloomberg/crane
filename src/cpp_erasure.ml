@@ -1286,7 +1286,7 @@ let tvar_spellings (ty : ty) =
 
     A declaration's head is the authority on what type variables it has.  The
     head is built from the instance context a definition sits in; the body is
-    generated against the ML type, which still carries the definition's own
+    generated against the Core type, which still carries the definition's own
     [forall].  Where the two disagree the body wins nothing -- it names [T2]
     under a head declaring [T1], and a name nothing declares does not compile.
     Erasing the use is the same repair {!Head_relaxation.settle_lowered_lambda} makes for a

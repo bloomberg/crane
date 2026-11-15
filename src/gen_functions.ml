@@ -514,14 +514,14 @@ type body_scope = {
 }
 
 (** Settle the {!body_scope} the function [n] is generated under, from its
-    ML body [b].
+    Core body [b].
 
-    When the body has fewer lambda binders than the ML type's domain (i.e. it
+    When the body has fewer lambda binders than the Core type's domain (i.e. it
     is under-applied), missing parameters are eta-expanded by synthesising
     [Core.Expr.Bound_variable] arguments.  [Core.Type.Erased]-typed entries in the missing list are skipped:
     they represent erased type parameters (e.g. [A : Type] in
     [apply : forall A, A -> A]) that have no C++ runtime representation.
-    Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
+    Including them would produce a spurious [Abort "unreachable"] IIFE as an
     extra argument, causing [std::function] call sites to receive the wrong
     number of arguments.
 
@@ -529,10 +529,10 @@ type body_scope = {
     plan the head without generating the function.
 
     @param n     the global reference for the function being defined
-    @param b     the ML AST body
+    @param b     the Core body
     @param cty   the C++ type of the function (decomposed internally into domain
                  and codomain)
-    @param ty    the original ML type (used for domain decomposition and type
+    @param ty    the original Core type (used for domain decomposition and type
                  inference)
     @param temps template type parameters, and [minted] what their builder
                  recorded of each ({!Callable_abi.minted}) *)
@@ -540,13 +540,13 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   let dom, cod =
     match cty with Function (d, c) -> (d, c) | t -> ([ (Void : Cpp_ir.Lowered.Type.t) ], t)
   in
-  (* Suppress __attribute__((pure)) for functions whose ML return type is
+  (* Suppress __attribute__((pure)) for functions whose Core return type is
      monadic — these perform side effects even though the C++ return type
      may look pure after type erasure. *)
   let no_pure = is_monadic_core_type (core_codomain ty) || Translation_support.ast_may_throw b in
   with_itree_mode_for ty @@ fun () ->
   (* Void-ify unit codomain: unit as return type maps to C++ void.
-     Check the ML result type (unwrapping monad if present) to determine
+     Check the Core result type (unwrapping monad if present) to determine
      if the function returns unit. Then recursively replace the unit enum
      with Tvoid in the C++ codomain type.
      - Sequential mode: Unit → void directly (the monad wrapper is erased,
@@ -756,7 +756,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
          Fixpoint mfold (M : Monoid) (l : list (m_carrier M)) : m_carrier M
 
        Extraction intermediate form:
-         ML type has [Core.Type.Global_app(m_carrier, [])] ← marked as promoted type var
+         Core type has [Core.Type.Global_app(m_carrier, [])] ← marked as promoted type var
          Converts to [Tpromoted "m_carrier"] ← needs resolution
 
        This map provides the resolution:
@@ -860,7 +860,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
         && not (is_skipped_core_type ty) )
       all_ids_with_owned
   in
-  (* Convert ML types to C++ types and wrap with const. Owned shared_ptr params:
+  (* Convert Core types to C++ types and wrap with const. Owned shared_ptr params:
      pass by value (shared_ptr<T>) Borrowed shared_ptr params: pass by const ref
      (const shared_ptr<T>&) *)
   let ids =
@@ -1071,7 +1071,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      at the declaration's own parameters -- except under polymorphic
      recursion.  A function recursing over a nested (non-uniform) inductive
      is at [nest (A * A)] in its self-call, not at [nest A], although Core
-     records the call at its own variables (ML recursion is monomorphic).
+     records the call at its own variables (recursion in Core is monomorphic).
      Repeating the enclosing template arguments would force the wrong
      instantiation, so let C++ deduce them from the argument instead -- the
      recursive argument always mentions the inductive, so deduction
@@ -1262,7 +1262,7 @@ let declare_planned n decl =
   | [] -> decl
   | head -> Template (head, None, decl)
 
-(** Generate the C++ definition of the function [n] from its ML body [b]:
+(** Generate the C++ definition of the function [n] from its Core body [b]:
     its {!body_scope}, the head its plan declares, the body with every
     self-call written as {!self_call_reference} says, the sigma-type
     precondition assertions, and the entry-point rewrite of a monadic
@@ -1270,10 +1270,10 @@ let declare_planned n decl =
     has one, and the environment its parameters were named in.
 
     @param n     the global reference for the function being defined
-    @param b     the ML AST body
+    @param b     the Core body
     @param cty   the C++ type of the function (decomposed internally into domain
                  and codomain)
-    @param ty    the original ML type
+    @param ty    the original Core type
     @param temps template type parameters, and [minted] what their builder
                  recorded of each ({!Callable_abi.minted}) *)
 let gen_dfun ~minted n b cty ty temps =
@@ -1300,10 +1300,10 @@ let gen_dfun ~minted n b cty ty temps =
   let cod = scope.bs_cod in
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
-     Exclude typeclass instance params — they are not ML type variables
+     Exclude typeclass instance params: they are not Core type variables
      and should not participate in Core.Type.Variable index resolution.
 
-     The scope is read by ML variable -- entry [i - 1] names [Core.Type.Variable i] -- and
+     The scope is read by Core variable -- entry [i - 1] names [Core.Type.Variable i] -- and
      the head is not: it leaves out a variable the C++ type never spells
      ([after_family]'s [A], mentioned only by an erased family), and a
      parameter declared for scheme variable [i] ({!Callable_abi}) is then
@@ -1383,7 +1383,7 @@ let gen_dfun ~minted n b cty ty temps =
     else
       let all_id_arr = Array.of_list (List.rev all_ids) in
       (* outermost param first; [all_params] runs in the same order and
-         carries the ML types, which say whether a parameter is a [sig]. *)
+         carries the Core types, which say whether a parameter is a [sig]. *)
       let all_core_arr = Array.of_list (List.rev all_params) in
       (* A template's placeholders are numbered outwards from the parameter
          the assertion was registered for: [%0] is that parameter's witness,
@@ -1450,7 +1450,7 @@ let gen_dfun ~minted n b cty ty temps =
   set_lexical (fun l -> { l with current_cpp_return_type = Some scope.bs_cod });
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
-     implementation instead of the default CPPabort throw. *)
+     implementation instead of the default [Abort] throw. *)
   let custom_forwarding_body =
     match b with
     | Core.Expr.Axiom_value _ when is_custom n && not (to_inline n) ->
@@ -1535,7 +1535,7 @@ let gen_dfun ~minted n b cty ty temps =
        plain imperative C++ returning [void].  Instead of emitting a separate
        [_main] + wrapper, we convert the definition directly into
        [int main()] by changing the return type to [int] and replacing every
-       [Sreturn None] (i.e. [return;]) with [Sreturn (Some (CPPint 0))]
+       [Return None] (i.e. [return;]) with [Return (Some (Literal (Int 0)))]
        (i.e. [return 0;]).  No wrapper is needed.
 
      {b 3. Top-level, reified mode} ([struct_name = None, needs_run = true]):
@@ -1565,8 +1565,8 @@ let gen_dfun ~minted n b cty ty temps =
           inner
         | None, false ->
           (* Case 2: top-level sequential — emit [int main()] directly.
-             Replace [Tvoid] return type with [int] and every [Sreturn None]
-             with [Sreturn (Some (CPPint 0))]. *)
+             Replace the [Void] return type with [int] and every [Return None]
+             with [Return (Some (Literal (Int 0)))]. *)
           let int_ty : Cpp_ir.Lowered.Type.t = External ("int", []) in
           let rec void_return_to_zero : Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t = function
             | Return None -> Return (Some (Literal (Int 0)))
@@ -1680,7 +1680,7 @@ let gen_constant_value ?expected_ty b =
   | _ -> gen_expr ?expected_ty (empty_env ()) b
 
 (** The parameters a head declares for the type variables [cty] spells,
-    and for the ML variables [extra] it does not, by the variable each
+    and for the Core variables [extra] it does not, by the variable each
     stands for: the name {!Plan_templates.phantom_aware_temps} gives it. *)
 let scheme_params ?(extra = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   let spelled =
@@ -1718,7 +1718,7 @@ let variable n ty init : Cpp_ir.Lowered.Decl.t =
   Variable {ref_ = n; type_ = ty; init; constexpr = Undecided}
 
 (** Generate the C++ declaration of [n], which is not a function, from its
-    ML definition: a constant whose body only throws (as a zero-argument
+    Core definition: a constant whose body only throws (as a zero-argument
     function), or a constant initialised with its value.  Returns the
     declaration, its environment and the C++ type's variables. *)
 let gen_decl__inner n b ty =
@@ -1768,7 +1768,7 @@ let gen_decl n b ty =
   Table.with_decl_ref n (fun () -> gen_decl__inner n b ty)
 
 (** What a top-level function is generated under: its body with erased types
-    recovered and type variables resolved against its ML type, its C++ type,
+    recovered and type variables resolved against its Core type, its C++ type,
     its template head, and the template parameters callers must see. *)
 type function_head = {
   fh_body : Core.Expr.t;
@@ -1897,7 +1897,7 @@ let gen_spec__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
   let ty = type_simpl ty in
-  let core_ty = ty in  (* preserve ML type before C++ conversion *)
+  let core_ty = ty in  (* preserve Core type before C++ conversion *)
   with_method_ns_for_locals @@ fun () ->
   let ty_ir = Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty in
   let temps = Cpp_ir.Build.typenames (get_tvars ty_ir) in
@@ -1977,7 +1977,7 @@ let gen_spec__inner n b ty =
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
-             [std::any] whatever its ML type says, and neither (a) nor (b)
+             [std::any] whatever its Core type says, and neither (a) nor (b)
              sees that. *)
           Translation_types.recover_boxed_component ty_ir b_expr
       in

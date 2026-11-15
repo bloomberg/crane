@@ -57,7 +57,7 @@ type t = {
 
 (** {2 Return type helpers} *)
 
-(** Check if the return type of an ML arrow type contains [ref].
+(** Check if the return type of a Core arrow type contains [ref].
 
     Used to determine whether [replace_return_this_stmt] will be applied during
     method generation: when the return type contains the eponymous inductive
@@ -164,7 +164,7 @@ let renumber_body r body = if r.renamed then Core_util.remap_tvars r.rename body
     When [~ret_has_shared_epon] is [true], the function is considered safe even
     if it returns [this] directly, because [replace_return_this_stmt] (in
     [gen_single_method]) will convert [return this] to
-    [return shared_from_this()].  This flag should be set when the ML return
+    [return shared_from_this()].  This flag should be set when the Core return
     type contains the eponymous inductive wrapped in [shared_ptr].
 
     Note: we only check for DIRECT returns of the first argument. Using the
@@ -435,18 +435,18 @@ let arg_reaches_cpp d =
   && (not (Type_util.core_type_is_void d))
   && not (Type_util.core_type_is_instance d)
 
-(** Number of value parameters in a curried ML type: the arrows whose domain
+(** Number of value parameters in a curried Core type: the arrows whose domain
     reaches C++ as a parameter. *)
 let core_value_arity ty =
   List.length (List.filter arg_reaches_cpp (Type_util.core_domains ty))
 
 (** [pos] counted among the arguments C++ is given, rather than among all the
-    arrows of the ML type.
+    arrows of the Core type.
 
-    {!find_epon_arg_pos} answers in ML numbering, which is what reading the
-    body wants -- a de Bruijn index is an ML notion.  A call site is C++, and
+    {!find_epon_arg_pos} answers in Core numbering, which is what reading the
+    body wants -- a de Bruijn index is a Core notion.  A call site is C++, and
     the two numberings drift apart the moment an argument is erased: a helper
-    taking a [ReSum] dictionary and then its event has its receiver at ML
+    taking a [ReSum] dictionary and then its event has its receiver at Core
     position 1 and at C++ position 0, and a printer told 1 reaches past the
     receiver for it. *)
 let cpp_arg_pos ty pos =
@@ -1044,7 +1044,7 @@ and pre_register_methods_from_module_expr
 
     The algorithm: 1. Build a mapping from each inductive [GlobRef] to its
     parameter variable names (the [type_variables] that correspond to kept parameters).
-    2. For each registered method, find its ML type in the structure, extract
+    2. For each registered method, find its Core type in the structure, extract
     the return type, and ask [ret_is_erased] whether it has a C++ spelling. 3.
     If it does not, set [returns_any = true] in the method's entry.
 
@@ -1056,7 +1056,7 @@ let compute_returns_any
     ~(ret_is_erased : Id.t list -> Core.Type.t -> bool) tbl
     (s : Core.Program.t) =
   (* Step 1: In a single walk of the structure, build (a) IndRef -> param_vars
-     for all inductives and (b) a term-ref -> ML type index so step 2 can look
+     for all inductives and (b) a term-ref -> Core type index so step 2 can look
      up each method's type in O(1) instead of re-walking the whole structure
      per method. *)
   let ind_param_vars : Id.t list Ref.User.Tbl.t = Ref.User.Tbl.create 32 in
@@ -1088,7 +1088,7 @@ let compute_returns_any
       sel
   in
   List.iter (fun (_mp, sel) -> collect_from_sel sel) s;
-  (* Step 2: For each registered method, find its ML type and check whether the
+  (* Step 2: For each registered method, find its Core type and check whether the
      return type is erased. *)
   RefTbl.iter
     (fun func_ref info ->
@@ -1100,7 +1100,7 @@ let compute_returns_any
           | Core.Type.Arrow {result = t2; _} -> get_return_type t2
           | ret -> ret
         in
-        (* Step 3: Look up this method's ML type (indexed in step 1) and check
+        (* Step 3: Look up this method's Core type (indexed in step 1) and check
            whether its return type is erased. *)
         ( match Ref.User.Tbl.find_opt method_types func_ref with
         | None -> ()

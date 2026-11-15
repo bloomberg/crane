@@ -871,7 +871,7 @@ let rebuilt_receiver_read =
 (** The position of the receiver of the method [mf] among the arguments a
     C++ call of it writes: the registry's
     ({!Cpp_names.lookup_method_this_pos}).  The method's own [this_position]
-    counts the arrows of its ML type, and an erased one before the receiver
+    counts the arrows of its Core type, and an erased one before the receiver
     -- a dictionary, a type binder kept under Conservative Types -- takes
     no argument.  A static method has no receiver to strip from a call: its
     calls never carry more arguments than it has parameters, so position

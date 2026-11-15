@@ -1551,7 +1551,7 @@ let check_extract_ascii () =
     String.equal (find_custom @@ ascii_type_ref ()) char_type
   with Not_found -> false
 
-(** Check if a list of ML AST nodes consists entirely of nullary constructors
+(** Check if a list of Core expressions consists entirely of nullary constructors
     (used for char list → string optimization). *)
 let is_list_cons l =
   List.for_all
@@ -1623,7 +1623,7 @@ let check_extract_string () =
     arguments.
     @param empty_string_ref      Library key for the [EmptyString] constructor
     @param string_constructor_ref Library key for the [String] constructor
-    @return [true] iff the ML expression is a statically-known string literal *)
+    @return [true] iff the Core expression is a statically-known string literal *)
 let rec is_native_string_rec empty_string_ref string_constructor_ref = function
   (* "EmptyString" constructor *)
   | Core.Expr.Construct {constructor = gr; arguments = []; _} -> Rocqlib.check_ref empty_string_ref gr

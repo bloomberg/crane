@@ -38,11 +38,14 @@ type lowering = {
     Cpp_ir.Lowered.Stmt.t list;
 }
 
+(** The installed entry points; [None] until {!Translation} loads. *)
 let installed : lowering option ref = ref None
 
 (** Tie the knot.  Called once, by {!Translation}. *)
 let install (l : lowering) = installed := Some l
 
+(** The installed entry points.  An anomaly if lowering runs before
+    {!install}. *)
 let get () =
   match !installed with
   | Some l -> l

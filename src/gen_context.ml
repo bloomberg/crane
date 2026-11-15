@@ -205,7 +205,7 @@ let class_promoted_vars_arities class_ref =
 let class_promoted_vars class_ref =
   List.map fst (class_promoted_vars_arities class_ref)
 
-(** A class's fields paired with their ML types, as extraction recorded the
+(** A class's fields paired with their Core types, as extraction recorded the
     pairing. *)
 let class_fields_with_types = Table.get_record_field_bindings
 
@@ -260,7 +260,7 @@ let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
 
     [PIV : @PI ProvenanceV PointerV] owns no type of its own: [ptr] belongs to
     [PointerV] and [prov] to [ProvenanceV].  Both are given concretely, so
-    neither becomes a template parameter and neither survives into the ML type
+    neither becomes a template parameter and neither survives into the Core type
     -- the class stands there alone as [PI] -- and their promoted variables
     keep their names while losing the path that gave them meaning, falling back
     to the file-scope [using prov = std::any;].  The variables that {e do}
@@ -336,7 +336,7 @@ let instance_arg_resolutions ~own_instances inst_ref =
     inductive whose constructor fields name an instance -- see
     {!Table.get_type_class_args}.  [boxed : @dval natIPtr] is what says which
     [IPtr] the [ptr] inside [dval] belongs to, and the only thing that does:
-    the ML type keeps neither the argument nor the dependence. *)
+    the Core type keeps neither the argument nor the dependence. *)
 let ind_type_resolutions r =
   match Table.get_instance_class_shape r with
   | Some (head, arg_shapes) ->

@@ -4,6 +4,13 @@
 (** The C++ type each coercion's position is generated against, planned
     from Core ahead of lowering.
 
+    It runs once per region (a body, or a lambda's body), from
+    {!Translation_state.with_region} through the
+    {!Translation_state.plan_positions} hook, after {!Representation_plan}
+    has planned the region's reads; lowering then reads the answers from
+    {!Translation_state.lexical.planned_positions}.
+
+
     A coercion ([Core.Expr.Coerce], [Core.Expr.Boxed_value],
     [Core.Expr.Lambda_group_barrier]) is lowered against the type of the
     position it fills: the parameter a global call passes it at, the return type

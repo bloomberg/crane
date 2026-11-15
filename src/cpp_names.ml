@@ -886,7 +886,7 @@ let struct_declaration_name ~merged ~promoted ~local id =
     argument where [n] is a method, [None] otherwise.
 
     The answer is in the numbering of the arguments a C++ call site writes,
-    not of the ML type's arrows: a candidate records the ML position, which is
+    not of the Core type's arrows: a candidate records the Core position, which is
     what reading its body wants, and an erased argument -- a dictionary, a
     [void] -- separates the two; the registry records the C++ one. *)
 let lookup_method_this_pos n = Option.map snd (is_registered_method n)

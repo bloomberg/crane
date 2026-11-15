@@ -2,7 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Constructor applications and the values they store: a constructor's
     factory call or aggregate, a custom constructor's template, and each
-    argument generated against the field it fills ({!gen_stored_value}). *)
+    argument generated against the field it fills ({!gen_stored_value}).  One of the modules lowering Core
+    bodies to CppIR that {!Translation} drives; it calls back into
+    expression and statement lowering through {!Translation_knot}. *)
 
 open Common
 open Names
@@ -19,7 +21,7 @@ open Translation_knot
 open Translation_lambda
 open Translation_application
 
-(* The name a hoisted constant is declared under (see {!Cpp_constants}): a
+(** The name a hoisted constant is declared under (see {!Cpp_constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
    [nat] -- [pos_10], [z_neg_5], [pos] past twenty digits -- and [k]
    otherwise. *)
@@ -79,6 +81,12 @@ let gen_stored_value ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e :
   | e when core_value_is_void_call e -> wrap_void_call_as_value (gen_expr ~slot env e)
   | _ -> gen_expr ?expected_ty ~slot env e
 
+(** The constructor [r] of a custom-extracted inductive at [ty] applied to
+    [ts]: the user's constructor template instantiated at the type arguments
+    the slot and annotation agree on, each argument generated against the
+    field it fills and boxed where that field is erased (never for a
+    pass-through constructor such as ["%a0"], which has no field storage),
+    and an identity template collapsed to its one argument. *)
 let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) env (ty : Core.Type.t)
     r ts : Cpp_ir.Lowered.Expr.t =
   let slot = into_erased_return slot in
@@ -117,14 +125,14 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
        std::any_cast<unsigned int>(...)  // cast to concrete type
 
      Setting [in_constructor_expr] makes unresolvable promoted vars (those
-     NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
+     NOT in [promoted_var_map]) fall back to [Any] = [std::any].
 
      We do NOT clear [promoted_var_map] here: inside template functions,
      promoted vars must resolve to qualified types (e.g., typename _tcI0::Obj)
      so that constructor type args match the function's declared return type.
      At module level, [promoted_var_map] is already empty, so the
      [in_constructor_expr] fallback handles it naturally. *)
-  (* Inside a polymorphic function object the erased type the ML annotation
+  (* Inside a polymorphic function object the erased type the Core annotation
      withheld is the lambda's own template parameter, so a type-argument list
      erasure left empty says the carrier rather than printing [std::any] for a
      value the parameter has already pinned down.  See {!Rank2}. *)
@@ -154,7 +162,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
       in
 
       (* Where this argument is stored, as far as its representation goes:
-         [Some Tany] when the slot is erased and the value has to be boxed
+         [Some [Any]] when the slot is erased and the value has to be boxed
          into it, [None] when it is stored as itself. *)
       let field_slot =
         (* A pass-through constructor (registered as ["%a0"]) has no field
@@ -167,7 +175,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
             ( match List.nth_opt ctor_temps_at_slot (j - 1) with
               (* The slot's real type may be a value-dependent erased type's
                  own alias (e.g. [pred_ty = crane::obj]) rather than the bare
-                 [Tany] node, so unfold it before comparing -- otherwise a
+                 [Any] node, so unfold it before comparing -- otherwise a
                  function value stored there is never boxed at all, and the
                  declaration's constraint on the callable (still stated
                  against its concrete, un-erased signature) never gets
@@ -312,7 +320,7 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
           (* Not an inductive ref - keep all type args *)
           tys
       in
-      (* Step 2: Convert ML types to C++ types.  The enclosing type-variable
+      (* Step 2: Convert Core types to C++ types.  The enclosing type-variable
          names matter: inside a member template a [Core.Type.Variable] is one of the
          method's own parameters ([_A0]), not an anonymous [T2].  The
          arguments instantiate an {i inductive's} parameters, so a stored
@@ -390,13 +398,13 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
         | Core.Type.Meta {contents = Some t} -> core_ty_all_dummy t
         | _ -> false
       in
-      (* [hollow_container] fires when the list's ML element annotation is all
+      (* [hollow_container] fires when the list's Core element annotation is all
          [Core.Type.Erased] (extraction couldn't reduce it, e.g. an opaque alias like
          [symbol_semty]).  Collapsing to bare [std::any] is only correct when
          the concrete C++ element type ([temps]) is ITSELF erased — i.e. a
          sibling production for the same erased list would build [deque<any>]
          and the two must agree.  When [temps] recovers a fully-concrete
-         element type despite the hollow ML annotation (e.g. an abstract
+         element type despite the hollow Core annotation (e.g. an abstract
          [frame] seen through a module type, which still resolves to the
          concrete [typename D::Defs::frame]), the list is a genuine
          [deque<frame>] flowing into a concretely-typed consumer, so the
@@ -450,7 +458,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
   let slot = into_erased_return slot in
   let ty = refined_by_slot slot ty in
   (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
-     NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
+     NOT in [promoted_var_map]) fall back to [Any] = [std::any].
 
      For non-record constructors (fds = []), we keep [promoted_var_map] so
      that template type annotations (e.g., SigT<..., Path<typename
@@ -520,7 +528,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             | None -> tys )
           | _ -> tys
         in
-        (* Resolve Tunresolved type args from constructor element types. For
+        (* Resolve Core.Type.Unknown type args from constructor element types. For
            cons(elem, rest), elem's type provides the list's type param. *)
         let has_unknown =
           List.exists
@@ -590,7 +598,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
         (* For inductives with dependent parameters (e.g. sigT where the
            second param's type references the first), the dependent type arg
            extracts as a bare reference to the same inductive as an earlier
-           arg.  Erase the duplicate to Tany to avoid mismatched template
+           arg.  Erase the duplicate to [Any] to avoid mismatched template
            instantiations. *)
         let temps =
           if Table.has_dependent_params n then
@@ -622,7 +630,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
               | _ -> temps
           else temps
         in
-        (* When all template params resolved to Tany (all type args were
+        (* When all template params resolved to [Any] (all type args were
            unresolved Core.Type.Meta), try to recover the concrete element type from
            an expected type threaded down from an enclosing constructor.
            Example: the pair (Fr [...], []) has a concrete pair annotation
@@ -753,7 +761,9 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
             Type_member (Entity_application (r, [], []), Id.of_string fname),
             List.rev args )
     in
-    (* [CPPfun_call] stores args reversed; [List.rev_map] compensates. *)
+    (* [gen_ctor_call] is handed its arguments last first, as the
+       [List.rev (List.mapi ...)] at its call builds them, and reverses them
+       into the source order a [Call] holds. *)
     let gen_ctor_arg ?expected_ty ?(slot = slot) e =
       gen_stored_value ?expected_ty ~slot env e
     in
@@ -965,7 +975,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                    that [any_cast] throws at runtime.
 
                    The domain/codomain of such a function are typically
-                   value-dependent (erased to [std::any] in the generic ML
+                   value-dependent (erased to [std::any] in the generic Core
                    type), so the concrete argument types needed for the
                    [any_cast] inside the adapter are only known at C++
                    instantiation.  Rather than reconstruct them here, defer to
@@ -1220,7 +1230,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                && List.nth erased_param_tys j = Cpp_ir.Type.Any then
               match orig_id with
               | Some id ->
-                (* Get concrete type from ML lambda param, not C++ lambda *)
+                (* Get concrete type from the Core lambda param, not the C++ lambda *)
                 let concrete_ty =
                   match List.nth_opt core_concrete_param_tys j with
                   | Some core_ty ->
@@ -1246,7 +1256,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
                     In_namespace (ns_g, Entity_application (g, [Cpp_ir.Type.Any], ns))
                   | t -> t
                 in
-                (* [Topaque] is no more castable than [Tany]: both print
+                (* [Obligation Opaque_type] is no more castable than [Any]: both print
                    as [std::any], and neither names a representation to
                    recover the parameter into. *)
                 if (not (Cpp_ir.Types.prints_as_any concrete_ty)) && concrete_ty <> Cpp_ir.Type.Auto

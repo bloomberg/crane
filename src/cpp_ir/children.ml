@@ -21,9 +21,16 @@ type 'p visitor = {
   type_ : 'p Type.t -> unit;
 }
 
+(** [opt f o] calls [f] on the value [o] holds, if any. *)
 let opt f = Option.iter f
+
+(** [each f xs] calls [f] on each of [xs], first to last. *)
 let each f = List.iter f
+
+(** [typed v ps] visits the type of each [(type, name)] pair in [ps]. *)
 let typed v ps = each (fun (t, _) -> v.type_ t) ps
+
+(** [fields v ps] visits the type of each [(name, type)] pair in [ps]. *)
 let fields v ps = each (fun (_, t) -> v.type_ t) ps
 
 (** The types a template parameter list holds: a default, a callable's

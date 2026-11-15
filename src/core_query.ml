@@ -40,12 +40,12 @@ let safe_firstn n lst =
   in
   aux n lst []
 
-(** Collect all Core.Type.Variable indices from an Core.Type.t. Used to find type variables beyond
+(** Collect all Core.Type.Variable indices from a Core.Type.t. Used to find type variables beyond
     those of the containing inductive/record. *)
 let collect_tvars_set acc ty = IntSet.union acc (Core_util.core_tvars ty)
 
 (** Convert an IntSet of type variable indices back to a list, wrapping
-    [collect_tvars_set]. Used to collect all Core.Type.Variable indices from an Core.Type.t. *)
+    [collect_tvars_set]. Used to collect all Core.Type.Variable indices from a Core.Type.t. *)
 let collect_tvars acc ty =
   IntSet.elements (collect_tvars_set (IntSet.of_list acc) ty)
 
@@ -176,12 +176,12 @@ let deducible_tvars_of_glob id =
          IntSet.empty
          (List.map resolve_meta (core_domains core_ty_orig)) )
 
-(** Infer the ML type of a body expression from its structure, or [None] where
+(** Infer the Core type of a body expression from its structure, or [None] where
     the structure does not say.
 
     This reads a type off a typed AST -- [Core.Expr.Construct] and [Core.Expr.Match] carry theirs,
     and a global's is in the table -- rather than guessing one back out of an
-    untyped C++ expression.  Its answer annotates a [CPPlambda]'s return type,
+    untyped C++ expression.  Its answer annotates a lambda's ([Cpp_ir.Expr.Lambda]) return type,
     so the frame a loopified call builds is typed instead of falling back on
     [decltype(lambda)].
 
@@ -221,7 +221,7 @@ let rec infer_core_body_type (a : Core.Expr.t) : Core.Type.t option =
   | _ -> None
 
 (** [tvar_instantiation_found callee_ty args] is the callee's type-variable
-    instantiation, read off the arguments' own ML types.
+    instantiation, read off the arguments' own Core types.
 
     A call site does not always carry its type arguments: where the use wrote
     none, the callee's schema stays uninstantiated at the written arguments,
@@ -631,8 +631,8 @@ let ref_is_instance r =
   | Some ty -> core_type_is_instance ty
   | None -> false
 
-(** Strip [Core.Expr.Coerce], [Core.Expr.Boxed_value] and [Core.Expr.Lambda_group_barrier] wrappers recursively — each
-    is a transparent coercion in the ML AST and should be ignored by
+(** Strip [Core.Expr.Coerce], [Core.Expr.Boxed_value] and [Core.Expr.Lambda_group_barrier] wrappers recursively -- each
+    is a transparent coercion in Core and should be ignored by
     numeral-folding traversals. *)
 let strip_magic = Core.Expr.strip_crossings
 
@@ -678,14 +678,14 @@ let subst_dict_carrier ?(at = 1) carrier ty =
   in
   go ty
 
-(** The carrier a call's dictionary argument fixes, as an ML type.
+(** The carrier a call's dictionary argument fixes, as a Core type.
 
     The dictionary reaches the call wrapped in the adapter lambda that erases
     its arguments, so the instance is found by descending to the head of the
     lambda's body.  It need not be an instance at all: where the enclosing
     function abstracts over the instance, the dictionary is a binder, and the
     carrier is written in the constraint that binder's own type spells.  Both
-    sources end at an ML type headed by the carrier, and are consumed as one.
+    sources end at a Core type headed by the carrier, and are consumed as one.
     A binder is read in [lex], the environment the call stands in, and the
     constraints of [caller], the declaration it stands in. *)
 let dict_carrier_core_type ~lex ~caller id args =
@@ -729,7 +729,7 @@ let dict_carrier_core_type ~lex ~caller id args =
   (* Two sources, one consumer.  A dictionary that {e is} a named instance
      says what its carrier is through the method it defines; a dictionary that
      is a binder -- the enclosing function abstracting over the instance --
-     says so through the constraint its own type spells.  Both end at an ML
+     says so through the constraint its own type spells.  Both end at a Core
      type whose head is the carrier and whose last argument is the one the
      carrier varies in. *)
   (* A dictionary-producing global abstracts over the class parameters of the
@@ -842,21 +842,16 @@ let with_dict_carrier ~lex ~caller id value_args ty =
   | Some carrier -> subst_dict_carrier carrier ty
   | None -> ty
 
+(** [ty], global [id]'s declared type, instantiated at the call's type
+    arguments [tys] after {!with_dict_carrier} has substituted the carrier
+    its dictionary argument fixes. *)
 let instantiate_at_call ~lex ~caller id tys value_args ty =
   Core_util.Var_types.apply tys (with_dict_carrier ~lex ~caller id value_args ty)
 
-(** Handle eta expansion, curried function application, and promoted type arg
-    resolution. Recovers erased template type args at call sites where C++ can't
-    deduce them from lambda arguments, using the enclosing function's return
-    type.
-
-    In the normal (exact-application) case, also detects calls that return
-    [std::any] because the callee is higher-rank polymorphic — either a record
-    field (e.g. [apply : forall A, A -> A] stored as
-    [std::function<std::any(std::any)>]) or an [Core.Expr.Bound_variable] callback with a
-    [Core.Type.Erased]-guarded [Core.Type.Variable] codomain.  When such a call is made in a context
-    where the enclosing function's return type is a concrete C++ type [T], the
-    result is wrapped with [std::any_cast<T>].  See [core_codomain_erases_to_any]. *)
+(** Whether the binder at de Bruijn index [i] in [lex] is an instance
+    argument rather than a value: a declaration's dictionary parameter, or
+    a binder at a class Crane skips.  [false] for an index [lex] does not
+    bind. *)
 let binder_is_instance lex i =
   (* An instance parameter is not a value argument.  A declaration's
      class-typed parameter is its dictionary, as the binder records where it
@@ -873,8 +868,8 @@ let binder_is_instance lex i =
   | Some {eb_type; eb_role = Value; _} -> core_ret_is_skipped eb_type
   | None -> false
 
-(* Check if an ML arg is a type class instance (a reference to a struct that
-   implements a type class).
+(** Whether the Core argument [core_arg] is a type class instance (a
+   reference to a struct that implements a type class), read in [lex].
 
    [Core.Expr.Coerce] is a transparent coercion -- extraction inserts one around an
    instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt] with
@@ -885,7 +880,7 @@ let is_typeclass_instance_arg ~lex core_arg =
   match strip_dictionary core_arg with
   | Core.Expr.Global {callee = r; _} ->
     (* An instance parameterised over types alone carries its parameters in
-       the [Core.Expr.Global]'s type arguments, so its ML type is still an arrow --
+       the [Core.Expr.Global]'s type arguments, so its Core type is still an arrow --
        [MList : forall A, Monoid (list A)].  Read the codomain, as the
        application case below does, or such an instance is left in value
        position and the call names the instance struct as if it were one. *)
@@ -903,7 +898,7 @@ let is_typeclass_instance_arg ~lex core_arg =
        arg — e.g., [base_category(PS)] projects a [PreCategory]-typed
        field from a [PreStableCategory] record.
        Look up the record's field types from the case type rather than
-       relying on branch binding types (which may be Tunresolved). *)
+       relying on branch binding types (which may be unresolved). *)
     let {Core.Match.Branch.binders = binds; body = br_body; _} = branches.(0) in
     ( match br_body with
     | Core.Expr.Bound_variable {index = j; _} when j >= 1 && j <= List.length binds ->
@@ -926,8 +921,8 @@ let is_typeclass_instance_arg ~lex core_arg =
     | _ -> false )
   | _ -> false
 
-(* Convert type class instance args to template type arguments *)
-
+(** Whether the instance argument [core_arg] is passed at no template
+    parameter: its class, or the instance itself, is one Crane skips. *)
 let instance_arg_is_erased ~lex core_arg =
   (* An instance argument is not a value argument, but only one whose class
      Crane kept is a template argument either: {!collect_typeclass_param_ids}
@@ -949,8 +944,9 @@ let instance_arg_is_erased ~lex core_arg =
     | None -> false )
   | _ -> false
 
-(* The class an instance argument is an instance of, as an ML type, a
-   variable's read off its binder in [lex]. *)
+(** The class an instance argument is an instance of, as a Core type, a
+   variable's read off its binder in [lex]; [Core.Type.Unknown] where none
+   is recorded. *)
 let instance_class_ty ~lex core_arg =
   let of_ref r =
     match Table.find_type r with
@@ -965,7 +961,8 @@ let instance_class_ty ~lex core_arg =
     | None -> Core.Type.Unknown )
   | _ -> Core.Type.Unknown
 
-(* The instance a projection call would project through, where Crane kept it.
+(** Among [args], the instance a projection call of the class field [x]
+   would project through, where Crane kept it.
 
    A mapping on a class field is written for a mode that erases the class's
    instances: with nothing left to project from, the field's C++ text has to
@@ -988,7 +985,8 @@ let kept_instance_of_projection ~lex x args =
            (record_fields_of_type (instance_class_ty ~lex a)) )
     args
 
-(* The value parameters of class field [use] called through [inst] in
+(** The value parameters of class field [use] called through [inst] in
+
    [lex], as the method declares them.
 
    Two substitutions, because the projection's type quantifies over the

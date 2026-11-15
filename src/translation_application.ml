@@ -3,7 +3,9 @@
 (** Applications: a call of a global or a local, its arguments generated
     against the callee's parameters, a class field projected through an
     instance, and partial applications eta-expanded into closures
-    ({!eta_fun}). *)
+    ({!eta_fun}).  One of the modules lowering Core
+    bodies to CppIR that {!Translation} drives; it calls back into
+    expression and statement lowering through {!Translation_knot}. *)
 
 open Common
 open Names
@@ -18,13 +20,13 @@ open Translation_calls
 open Translation_knot
 open Translation_lambda
 
-(* The types of the members of the local fixpoint groups being generated
+(** The types of the members of the local fixpoint groups being generated
    that recurse at a ground instance ({!Table.is_erased_fix_group}), as the
    environment binds them: a call of one is written at its own instance, and
    its arguments are adapted to the erased parameters. *)
 let erased_member_types : Core.Type.t list ref = State.cell State.Unit []
 
-(* Record the members [ids] of the local fixpoint [occ] -- and the type
+(** Record the members [ids] of the local fixpoint [occ] -- and the type
    [let_ty] of the name it is bound to, if any -- in {!erased_member_types}
    where the group is one.  Kept by identity, so a type recorded for one
    group is no other binding's. *)
@@ -33,7 +35,7 @@ let register_erased_members ?let_ty occ ids =
     erased_member_types :=
       (match let_ty with Some t -> [t] | None -> []) @ List.map snd (Array.to_list ids) @ !erased_member_types
 
-(* Whether the variable [i] is a member of a group {!erased_member_types}
+(** Whether the variable [i] is a member of a group {!erased_member_types}
    knows, its type erasing a domain. *)
 let erased_member i =
   match get_env_type_opt i with
@@ -41,7 +43,7 @@ let erased_member i =
     List.memq t !erased_member_types && List.exists Core_util.has_unknown (core_domains t)
   | _ -> false
 
-(* [expr], the argument [a] to a parameter of type [param_ty] that
+(** [expr], the argument [a] to a parameter of type [param_ty] that
    erased a domain ({!erased_member_types}), adapted to it -- unless it is
    a variable already of that type, which an adapter would only wrap again at
    every call that passes it on. *)
@@ -53,7 +55,7 @@ let adapt_to_erased_param env param_ty a expr =
           | None -> false) -> expr
   | _ -> erase_fn_arg_for_param env param_ty a expr
 
-(* [stmts] with the declaration of the local [id] standing for the Core
+(** [stmts] with the declaration of the local [id] standing for the Core
    binder [b]. *)
 let declaring id b stmts =
   List.map
@@ -63,13 +65,13 @@ let declaring id b stmts =
       | s -> s )
     stmts
 
-(* [made_of occurrence e] is the call [e] recording the Core call it is
+(** [made_of occurrence e] is the call [e] recording the Core call it is
    made of; any other expression unchanged. *)
 let made_of occurrence : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t = function
   | Call (cs, f, args) -> Call ({cs with occurrence = Some occurrence}, f, args)
   | e -> e
 
-(* [erased_lambda l ~params ~ret ~body] is the lambda [l] rewritten to
+(** [erased_lambda l ~params ~ret ~body] is the lambda [l] rewritten to
    take [params] (source order) and return [ret], with [body] doing whatever
    casting back the erasure of its parameters now needs, and with no template
    parameters of its own: a polymorphic function object cannot stand where an
@@ -77,7 +79,7 @@ let made_of occurrence : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t = functi
 let erased_lambda (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) ~params ~ret ~body : Cpp_ir.Lowered.Expr.t =
   Lambda {l with type_params = []; params; return_type = ret; body}
 
-(* The instance parameter, the class and its one method, where the variable
+(** The instance parameter, the class and its one method, where the variable
    [i], read at [occ] at the head of an application, is a singleton class's
    dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
    {!singleton_dictionary} is the traversal's own reading, checked against
@@ -90,7 +92,7 @@ let singleton_call env i occ =
   | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
   | None -> None
 
-(* Call class field [x] as a static member of the instance struct [inst].
+(** Call class field [x] as a static member of the instance struct [inst].
 
    Rocq hands a projection over already applied where the instance is
    concrete, so the term is an ordinary application and not the single-branch
@@ -157,9 +159,9 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
              gen_expr ?expected_ty:expected ~slot env a ) )
        operands )
 
-(** [gen_call_args ~slot ?expected_ty env plan] -- the C++ arguments of the
-    call [plan] describes, each generated against the parameter it is passed
-    at.  The dictionaries' promoted variables are in scope for them. *)
+(** [gen_call_args ~slot ?expected_ty env id plan] -- the C++ arguments of
+    the call of the global [id] that [plan] describes, each generated against
+    the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
 let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan : Cpp_ir.Lowered.Expr.t list =
   let {
     cp_instantiated =
@@ -336,7 +338,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
        parameter's type is what says what the box holds. *)
     let expr : Cpp_ir.Lowered.Expr.t =
       let receiver_is_boxed =
-        (* The receiver's own ML type has to say it is gone -- a projection
+        (* The receiver's own Core type has to say it is gone -- a projection
            out of a dependent pair is a bare type variable, and extraction
            leaves a [Core.Type.Erased] behind. *)
         ( match
@@ -349,7 +351,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         (* And it has to have come out of an accessor on a value that
            carries erasure: a [SigT<std::any, std::any>] hands back a box, a
            [SigT<List<uint64_t>, List<uint64_t>>] hands back a list.  A call
-           whose arguments are all concrete does not qualify however its ML
+           whose arguments are all concrete does not qualify however its Core
            type reads -- a free template function's result is resolved by
            the type arguments the call site states. *)
         match strip_magic core_arg with
@@ -413,7 +415,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
     | Some param_ty
       when ( core_body_returns_erased_field core_arg || core_arg_is_erased_rel
            (* A component read out of a pair that was itself recovered from
-              a box is a [std::any] whatever its ML type says, and the
+              a box is a [std::any] whatever its Core type says, and the
               emitted expression is the evidence -- see
               {!yields_boxed_component}. *)
            || yields_boxed_component (as_value ()) )
@@ -423,7 +425,7 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
            (* [param_ty] comes from the callee's own (call-site-substituted)
               type signature, whose [Core.Type.Variable] indices are not anchored to this
               function's [tvars] scope. When conversion produces an
-              unresolved [Core.Type.Variable (Tv_index (_, None))] (would print as a bogus template
+              unresolved C++ [Variable (Index (_, None))] (would print as a bogus template
               parameter like "T3"), we cannot build a meaningful concrete
               cast here — skip this branch and fall back to [as_value ()]
               unchanged; a later pass (e.g. [gen_match_branch]'s field
@@ -609,6 +611,17 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
     | _ -> as_value ()
   ) regular_core_args
 
+(** The call of [f] applied to [args].  A global callee is called as
+    {!Translation_calls.lower_call} plans it: missing value arguments are
+    eta-expanded into a closure taking them, and arguments past the
+    callee's declared arrows are applied to the primary call's result.  Any
+    other callee (a local, a projection) is called directly with its erased
+    arguments dropped and its class-typed ones moved into its template
+    arguments, the call split the same way where the callee's type has fewer
+    value arrows, made through the canonical
+    [std::function<std::any(std::any...)>] adapter where the callee's type
+    erases to [std::any], and its result recovered from a box where the
+    callee's codomain is erased. *)
 let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) env f args : Cpp_ir.Lowered.Expr.t =
   let core_args = args in
 
@@ -743,7 +756,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        unsigned int> for qualified access like ::to_nat. *)
     let id_is_typeclass_instance = ref_returns_typeclass id in
     (* {b Curried excess args.}  When a call site provides more value args
-       than the callee's ML type has arrows, the extras are curried onto the
+       than the callee's Core type has arrows, the extras are curried onto the
        result: [f(primary_args)(excess_args)].
 
        This is valid when the callee genuinely returns a function:
@@ -863,7 +876,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
            overrun it.  The args go in the groups the type accepts them in. *)
         (* The callee's codomain as the call writes it: its declared type at
            the written type arguments, which is what C++ returns -- [case_]'s
-           [T2] written [std::function<std::any(std::any)>] where the ML
+           [T2] written [std::function<std::any(std::any)>] where the Core
            instantiation erased the morphism type. *)
         let written_cod =
           let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
@@ -1034,8 +1047,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
         (* Filter domain to exclude type class types (they're now template
            params) and erased types.  Proof params like wf witnesses may
            extract as function types containing dummy_type (e.g.
-           Tfun([List<T1>], dummy_type)) rather than plain dummy_type. These
-           entries must be removed to match the ML arg list which already
+           [Function ([List<T1>], dummy_type)]) rather than plain dummy_type. These
+           entries must be removed to match the Core argument list which already
            filters out Core.Expr.Erased_value entries. *)
         (* Only a dummy -- an erased proof or type -- is filtered.  A value
            parameter whose type erases, [e : a T] at an erased family, prints
@@ -1096,13 +1109,13 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           in
           in_declared_order untaken from_dom
         in
-        (* When excess args exist (from the ML-level arity split above), do
+        (* When excess args exist (from the Core-level arity split above), do
            NOT eta-expand even if the flattened C++ type has more domain
-           elements than ML args.  The mismatch occurs when the callee's
+           elements than Core arguments.  The mismatch occurs when the callee's
            return type is itself a function type (e.g. [fst] returning
-           [Obj -> Path<Obj>]): convert_core_type_to_cpp_type merges the
-           return-type arrows into the domain, inflating [dom_len] beyond the
-           ML-level arity.  The excess args will be chained by [wrap_excess]
+           [Obj -> Path<Obj>]): the C++ type conversion merges the
+           return-type arrows into the domain, making the domain list longer
+           than the Core-level arity.  The excess args will be chained by [wrap_excess]
            below. *)
         (* A mapping that writes no argument placeholder stands for a value,
            not for a call that is short of arguments: it renders as-is, and
@@ -1127,7 +1140,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
-             types may contain [Tpromoted "carrier"] — a promoted type var.
+             types may contain [Promoted_member carrier], a promoted type var.
              We resolve these to the concrete type from the typeclass instance
              (e.g., unsigned int from nat_magma::carrier). *)
           let missing_args, cod =
@@ -1187,7 +1200,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             (List.map name_free missing_args, name_free cod)
           in
           (* The domains the callee's own declaration spells.  [ty] came from
-             the ML type {e this call} instantiates, and a higher-kinded class
+             the Core type {e this call} instantiates, and a higher-kinded class
              parameter is erased there, so a parameter the declaration writes
              [std::optional<T1<std::any>>] arrives as [std::optional<std::any>]
              -- the carrier is simply gone.  It is not gone from the call,
@@ -1258,7 +1271,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                   | Shared_pointer _ -> Reference (Lvalue, Const ty)
                   (* A parameter erased in part takes whatever instantiation
                      the caller has and is read at this one by
-                     [crane_convert] (see [call_args]): a slot spelled
+                     [crane_convert] (see crane_fn.h): a slot spelled
                      [std::function<std::optional<box<Nat>>(...)>] cannot
                      call a lambda declared [std::optional<box<std::any>>],
                      because [std::optional]'s conversion between the two
@@ -1342,7 +1355,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           (* The result is the callee's, so it is read off the declaration for
              the same reason the parameters are: what the call returns is
              [std::optional<T1<std::any>>], not the [std::optional<std::any>]
-             the erased ML type says. *)
+             the erased Core type says. *)
           let cod =
             match decl_cod with
             | Some slot when !decl_spoke ->
@@ -1367,7 +1380,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
                inline-custom template stops at its last [%aN] placeholder:
                arguments past it are dropped when it is rendered, and a
                placeholder with no argument cannot be rendered at all.  A
-               function whose codomain is a type variable stops at its ML
+               function whose codomain is a type variable stops at its Core
                arrows, because its declaration had no way to flatten a
                codomain it could not see -- the extra arrows only appear at
                this call site, where the variable is instantiated at a
@@ -1495,7 +1508,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       | _ -> primary_result
     in
     (* Wrap pair-accessor inline custom arguments in any_cast when the
-       argument's ML type is erased.  E.g. [fst vs] where [vs : std::any]
+       argument's Core type is erased.  E.g. [fst vs] where [vs : std::any]
        generates [any_cast<pair<any,any>>(vs).first] instead of [vs.first].
        This is the inline-custom analog of the scrutinee any_cast in
        [gen_custom_cpp_case]. *)
@@ -1506,7 +1519,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
               | Some {shape = Pair_projection _; _} -> true
               | _ -> false) ->
         let arg_core_erased =
-          (* A variable is erased when its ML type is, or when the C++ type
+          (* A variable is erased when its Core type is, or when the C++ type
              it converts to is [std::any] -- a value-dependent type such as
              [symbols_semty gamma] is only opaque after conversion. *)
           let rel_is_erased ty =
@@ -1602,7 +1615,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             Cpp_ir.Build.call cglob'
               [Cpp_erasure.unbox_tolerant (Entity_application (g, glob_tys, [])) single_arg]
           | Some g, _ ->
-            (* Tolerantly: the ML type says the argument is a box, but a
+            (* Tolerantly: the Core type says the argument is a box, but a
                producer that could name the pair's shape may have emitted the
                [pair<any, any>] itself rather than a box around it.
                [crane_any_cast] accepts both -- it opens a box and passes a
@@ -1741,7 +1754,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        variable concretely — [populate_erased_field_env] recorded it in
        [cpp_binder_types] at that concrete type, and the plan does not box
        it ({!read_is_boxed}).
-       Its erased ML type must not be taken at face value here, or a perfectly
+       Its erased Core type must not be taken at face value here, or a perfectly
        concrete [std::function<uint64_t(uint64_t)>] field gets wrapped in an
        [any_cast] that does not compile. *)
     let callee_known_concrete =
@@ -1768,8 +1781,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     in
     (* A callee is only callable through the canonical adapter when nothing
        with a C++ call operator is left of its type -- which is what
-       [std::any] means here.  The ML type may say so outright ([Core.Type.Erased],
-       [Tunresolved], a bare [Core.Type.Variable]) or only once converted: a type-level
+       [std::any] means here.  The Core type may say so outright ([Core.Type.Erased],
+       [Core.Type.Unknown], a bare [Core.Type.Variable]) or only once converted: a type-level
        [Fixpoint] applied to an argument is a perfectly concrete [Core.Type.Global_app] in
        Core and still lands on a [using sem = std::any] alias in C++. *)
     let erases_to_any ty =
@@ -1868,7 +1881,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       | None -> expr) args
     in
     (* Detect over-application: when a local variable's C++ type has fewer
-       value-domain arrows than the number of ML args, the call must be split
+       value-domain arrows than the number of Core arguments, the call must be split
        into a primary call and a chained application of excess args. Example: [f
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
@@ -1889,12 +1902,12 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
             (* The declaration is what says how the arrows are taken.  A
                parameter the class declares as [A -> m B], whose [m] this
                instance fixes at something itself arrow-shaped, has one domain
-               in C++ and two arrows in ML; flattened, the call hands both at
+               in C++ and two arrows in Core; flattened, the call hands both at
                once to a callable that takes one.  Where the region's plan
                gives the binder a function type -- a method's parameter at
                the type its head declares it -- that is the answer, but only
                where it takes {e fewer}, since a declaration with more
-               domains is the under-application the ML count already
+               domains is the under-application the Core count already
                handles and a re-derived type is not a declaration. *)
             let declared = function
               | Some (Cpp_ir.Type.Function (dom, _)) when List.length dom < n -> List.length dom
@@ -1982,8 +1995,8 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
           Call (Cpp_ir.Build.signature ~nargs:0 (), gen_callee (), primary),
           excess )
     else
-      (* When the callee is a local variable whose ML type is a bare type
-         variable (Core.Type.Variable/Tunresolved), its C++ type is std::any.  std::any
+      (* When the callee is a local variable whose Core type is a bare type
+         variable (Core.Type.Variable/Core.Type.Unknown), its C++ type is std::any.  std::any
          is not callable, so we must wrap it with std::any_cast to recover the
          std::function type before calling.  Both arg and return types
          default to std::any since the original types are erased.
@@ -2010,7 +2023,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
       let erased_cod =
         (* A callee recovered from a bare [std::any] is called through the
            canonical [std::function<std::any(std::any...)>] adapter, so its
-           result is a [std::any] no matter what the ML type says. *)
+           result is a [std::any] no matter what the Core type says. *)
         callee_is_bare_any
         ||
         match f with
@@ -2128,7 +2141,7 @@ let gen_application ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Expr.t
   in
   (* A binder whose declared C++ type boxes its result -- a rank-2 parameter
      typed [std::function<std::any(std::any)>], say -- hands back a box
-     however the term's ML type reads.  The assignment made where the binder
+     however the term's Core type reads.  The assignment made where the binder
      was bound is the authority on that; only a saturated call reaches the
      codomain it names. *)
   let binder_result_is_boxed =

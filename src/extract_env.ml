@@ -391,7 +391,7 @@ and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
      (* Fall back to expanding the signature *)
      extract_msignature_spec env mp mb.mod_delta mb.mod_type
 
-(** Recursively extracts a module structure to ML declarations. When all=false,
+(** Recursively extracts a module structure to Core declarations. When all=false,
     only extracts needed declarations based on dependency analysis. Evaluation
     order (last to first) ensures correct dependencies. *)
 let rec extract_structure access env mp reso ~all = function
@@ -537,7 +537,7 @@ and extract_msignature access env mp reso ~all = function
                               parameter_type = extract_mbody_spec env mp1 mtb;
                               body = extract_msignature access env' mp reso ~all me}
 
-(** Builds the ML module structure for a given module body. Extracts both the
+(** Builds the Core module structure for a given module body. Extracts both the
     implementation and type signature. *)
 and extract_module access env mp ~all mb =
   (* A module has an empty [mod_expr] when : - it is a module variable (for
@@ -611,7 +611,7 @@ and extract_module access env mp ~all mb =
   {Core.Module.expr = impl; type_ = typ}
 
 (** Extracts a monomorphic environment for the given references and module
-    paths. Computes which declarations are needed and builds ML structures. *)
+    paths. Computes which declarations are needed and builds Core structures. *)
 let mono_environment ~opaque_access refs mpl =
   Visit.reset ();
   List.iter Visit.add_ref refs;
@@ -1704,8 +1704,11 @@ let declares struc =
     ignore struc;
   fun r -> Ref.User.Set.mem r !declared
 
-(** Renders an entire ML structure to C++ header and implementation files:
-    plans the unit, renders each file once, then writes and formats them. *)
+(** Renders an entire Core structure to C++ header and implementation files:
+    plans the unit over what the units before it decided ([earlier], bound
+    for the whole unit), renders each file once, checks the result against
+    the plan, then writes and formats them.  Returns what the next unit of
+    a separate extraction starts from ({!Accumulated_plan.for_next_unit}). *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
     (fn, si, mo) dry (core : Core_phase.normalized Core_phase.program) =
@@ -2647,7 +2650,7 @@ let extract_and_compile ~opaque_access file l =
 
 (** {2 Extraction of one decl to stdout} *)
 
-(** Renders the single ML declaration [decl], of the module [mp], to C++
+(** Renders the single Core declaration [decl], of the module [mp], to C++
     output, once the unit [struc] it belongs to is planned. *)
 let print_one_decl struc mp decl =
   let d = descr () in

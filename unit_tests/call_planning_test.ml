@@ -1,14 +1,14 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Call planning on Core alone (Milestone 5's acceptance test): a call's
+(* Call planning on Core alone, with no lowering to CppIR: a call's
    instantiation -- a partial application's eta reading, a hole filled from
    an argument's type, a hole a full application leaves, a self-call -- the
    facts the elaboration walk records for a unit (closed heads, member
    templates, static projections, closed instances, singleton dictionaries,
    shared constants, match kinds), canonical spines, numeral folding where
    nothing is registered, and match-kind classification.  Every input is a
-   Core term, an ML type or a table entry; no CppIR value is built. *)
+   Core term, a Core type or a table entry; no CppIR value is built. *)
 
 open Crane_plugin
 open Names

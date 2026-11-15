@@ -338,16 +338,23 @@ type ptr_field = Recursive of int | Boxed of int
 
 let ptr_field_index = function Recursive i | Boxed i -> i
 
+(** A constructor struct's key: {!Common.ctor_owner_key} of its inductive
+    and the struct's name (see {!ctor_ptr_fields}). *)
 module Struct_key = struct
   type t = string * string
 
   let compare (o, c) (o', c') = match String.compare o o' with 0 -> String.compare c c' | n -> n
 end
 
+(** Maps keyed by constructor struct. *)
 module Struct_map = Map.Make (Struct_key)
 
+(** The fields each constructor struct stores behind the pointer, by
+    struct: the [pointer_fields] of {!Accumulated_plan.t}, accumulated over
+    the units of an extraction by {!add_pointer_fields}. *)
 type pointer_fields = ptr_field list Struct_map.t
 
+(** No constructor struct with a pointer field. *)
 let no_pointer_fields = Struct_map.empty
 
 (** [m] with the pointer fields of each constructor struct planned before
@@ -376,6 +383,9 @@ let add_pointer_fields m planned =
     list of the constructor's pointer fields, by 0-based index. *)
 let ctor_ptr_fields = ref no_pointer_fields
 
+(** [with_pointer_fields m f] is [f ()] with [m] the pointer fields every
+    query below answers from, bound by {!Accumulated_plan.bind}; outside it
+    no struct has any. *)
 let with_pointer_fields m f = State.bind ctor_ptr_fields m f
 
 (** The pointer fields of the constructor struct [key], if it has any. *)

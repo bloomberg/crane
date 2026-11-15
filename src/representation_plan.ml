@@ -12,14 +12,14 @@ open Translation_types
 open Core_query
 
 (* What decided a binder's C++ type, as {!Translation_state.binder_origin}
-   says for the recorded one: the conversion of its ML type where it is
+   says for the recorded one: the conversion of its Core type where it is
    bound, or the instantiation a match pinned down for a pattern binder. *)
 type origin =
   | Binding
   | Pattern
 
 (* The C++ type a binder in scope is planned to have, if one is: innermost
-   first, beside the binder's ML type in {!Lexenv}. *)
+   first, beside the binder's Core type in {!Lexenv}. *)
 type scope = {
   lex : Lexenv.t;
   planned : (Cpp_ir.Lowered.Type.t * origin) option list;
@@ -31,9 +31,9 @@ let boxed : (Cpp_ir.Lowered.Type.t * origin) option -> bool = function
   | Some (Obligation Opaque_type, _) | None -> false
   | Some (t, _) -> resolves_to_any_type t
 
-(* The type a binder of ML type [ty] is given where it is bound
+(* The type a binder of Core type [ty] is given where it is bound
    ({!Translation_types.assign_binder_types}): none where the conversion is
-   [Topaque], a dummy, or fails. *)
+   [Obligation Opaque_type], a dummy, or fails. *)
 let at_binding ty =
   match cpp_of_core (Common.empty_env ()) ty with
   | Obligation Opaque_type -> None
@@ -42,7 +42,7 @@ let at_binding ty =
   | exception _ -> None
 
 (* [scope] under the binders [ids], innermost first, each planned at the
-   conversion of its ML type. *)
+   conversion of its Core type. *)
 let push kind ids scope =
   { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_binder_name x;
                                                  eb_type = ty;
@@ -66,7 +66,7 @@ let rec slot_domains (t : Cpp_ir.Lowered.Type.t) =
    the type it is declared ({!Translation_types.lambda_param_cpp_type}) and
    then assigned ({!Translation_types.lambda_param_assigned}) against the
    slot's domains [slot], in source order, where the slot declares a
-   signature; one not emitted at the conversion of its ML type. *)
+   signature; one not emitted at the conversion of its Core type. *)
 let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
   let scope = push Kparameter ids scope in
   let n = List.length ids in
@@ -107,7 +107,7 @@ let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
 (* The type the binder at de Bruijn index [i] is planned to have. *)
 let planned scope i = if i >= 1 then Option.flatten (List.nth_opt scope.planned (i - 1)) else None
 
-(* {!Translation_types.scrutinee_binder}, with the binder's ML type read in
+(* {!Translation_types.scrutinee_binder}, with the binder's Core type read in
    [lex]. *)
 let rec scrutinee_binder lex = function
   | Core.Expr.Bound_variable {index = i; _} -> Some i
@@ -229,7 +229,7 @@ let region ~outer body =
   let is_lambda a = match strip_magic a with Core.Expr.Lambda _ -> true | _ -> false in
   (* A lambda stored in a constructor's field is written against [slot]
      where the constructor's lowering says what it is, otherwise against the
-     field's type: its ML type converted. *)
+     field's type: its Core type converted. *)
   let rec walk_field_lambda ?slot scope field_ty lam =
     let ids, body = Core_util.collect_lams lam in
     let slot_ty =
@@ -386,7 +386,7 @@ let region ~outer body =
           | _ -> walk scope e )
         args
     (* A lambda passed to a global is generated in the slot of the parameter
-       it is passed at, its binders refined against that parameter's ML type
+       it is passed at, its binders refined against that parameter's Core type
        ({!Translation_types.slot_refined_lambda}): the callee's declared
        type at the call's reading ({!Core_elaborate.instantiate}), where it
        erases nothing.  Read with no type the call's position states. *)
@@ -468,7 +468,7 @@ let region ~outer body =
     | Core.Expr.Let {binder = x; binder_type = ty; value = a; body; _} ->
       walk scope a;
       (* A component read out of a boxed pair is a box, however concrete its
-         ML type looks; lowering binds it at a dummy type, with no C++ type
+         Core type looks; lowering binds it at a dummy type, with no C++ type
          recorded, so an accessor reading it again sees the erasure
          ({!Translation_types.stmts_yield_boxed}). *)
       let ty =
@@ -485,7 +485,7 @@ let region ~outer body =
       walk (parameters ~body ids scope) body
     (* A fixpoint with type variables of its own is lifted to a function of
        its own ({!Translation_stmts.gen_stmts}), its parameters bound at the
-       conversion of their ML types ({!Translation_local_functions.gen_fix}), not declared
+       conversion of their Core types ({!Translation_local_functions.gen_fix}), not declared
        as a lambda's. *)
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
@@ -511,7 +511,7 @@ let region ~outer body =
   let depth = Lexenv.depth outer in
   (* The outer binders a declaration's head declares, at the types it
      declares them, as {!Translation_types.assign_binder_types} records a
-     declared type; the rest at the conversion of their ML types. *)
+     declared type; the rest at the conversion of their Core types. *)
   let declared =
     match (!tctx).lexical.declared_outer with
     | Some (d, tys) when Int.equal d depth -> tys

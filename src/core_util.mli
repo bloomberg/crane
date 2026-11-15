@@ -10,7 +10,7 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Utility functions over ML types and terms, type environments, and
+(** Utility functions over Core types and terms, type environments, and
     optimization passes.  Shared by every stage that handles Core: type
     reconstruction in extraction, the {!normalize} simplifier that
     {!Modutil.optimize_struct} runs, and the backend's readers of types and
@@ -44,7 +44,7 @@ val map_core_type : (Core.Type.t -> Core.Type.t) -> Core.Type.t -> Core.Type.t
 (** The indices of every type variable in [t], an applied one included. *)
 val core_tvars : Core.Type.t -> IntSet.t
 
-(** {2 Utility functions over ML types with meta} *)
+(** {2 Utility functions over Core types with meta} *)
 
 (** Reset the meta variable counter. *)
 val reset_meta_count : unit -> unit
@@ -66,14 +66,14 @@ val apply_core_type : Core.Type.t -> Core.Type.t list -> Core.Type.t
 
 (** Substitute type variables using a list of types.
     @param l replacement types for [Core.Type.Variable 1], [Core.Type.Variable 2], ... in order
-    @param t the ML type to substitute into *)
+    @param t the Core type to substitute into *)
 val type_subst_list : Core.Type.t list -> Core.Type.t -> Core.Type.t
 
 (** [type_subst_fun f t] substitutes each [Core.Type.Variable j] for which [f j] answers,
     leaving the others unchanged. *)
 val type_subst_fun : (int -> Core.Type.t option) -> Core.Type.t -> Core.Type.t
 
-(** A one-line rendering of an ML type, for diagnostics. *)
+(** A one-line rendering of a Core type, for diagnostics. *)
 val debug_core_type : Core.Type.t -> string
 
 (** The scheme extraction recorded for [r], with the source binders its
@@ -211,7 +211,7 @@ val instantiate_written : reader:string -> Core.Global_use.t -> Core.Type.t -> C
 
 (** Substitute type variables using an array of types.
     @param v replacement types for [Core.Type.Variable 1], [Core.Type.Variable 2], ... (zero-indexed in the array)
-    @param t the ML type to substitute into *)
+    @param t the Core type to substitute into *)
 val type_subst_vect : Core.Type.t array -> Core.Type.t -> Core.Type.t
 
 (** [instantiate_prenex n t] instantiates the prenex type [t], quantifying
@@ -229,33 +229,33 @@ val instantiate_unknowns : Core.Type.t -> Core.Type.t
 val try_mgu : Core.Type.t -> Core.Type.t -> unit
 
 (** Determine if a type coercion requires magic (unsafe cast).
-    @param p a pair [(expected, actual)] of ML types to compare
+    @param p a pair [(expected, actual)] of Core types to compare
     @return [true] if the types cannot be unified and [Core.Expr.Coerce] is needed *)
 val needs_magic : Core.Type.t * Core.Type.t -> bool
 
-(** Conditionally wrap an ML term in a coercion.  The two types are passed
+(** Conditionally wrap a Core term in a coercion.  The two types are passed
     explicitly because {!needs_magic}'s pair is unordered ([mgu] is
     symmetric) whereas a backend must know which side the term is on.
     @param from the type the term itself has
     @param into the type the context requires
     @param b    when [true], wraps [a]
-    @param a    the ML expression to (possibly) wrap *)
+    @param a    the Core expression to (possibly) wrap *)
 val put_magic_if :
   from:Core.Type.t -> into:Core.Type.t -> bool -> Core.Expr.t -> Core.Expr.t
 
-(** Wrap an ML term in a coercion iff its own type fails to unify with the one
+(** Wrap a Core term in a coercion iff its own type fails to unify with the one
     its context requires.
     @param from the type the term itself has
     @param into the type the context requires
-    @param a    the ML expression to (possibly) wrap *)
+    @param a    the Core expression to (possibly) wrap *)
 val put_magic : from:Core.Type.t -> into:Core.Type.t -> Core.Expr.t -> Core.Expr.t
 
-(** Check if an ML term can be generalized at a let.  For C++ an
+(** Check if a Core term can be generalized at a let.  For C++ an
     application never is; anything else is, an approximation that well-typed
     Rocq never exercises. *)
 val generalizable : Core.Expr.t -> bool
 
-(** {2 ML type environment} *)
+(** {2 Core type environment} *)
 
 module Type_env : sig
   (** Type schemas of the binders in scope, innermost first, with the free
@@ -273,25 +273,25 @@ module Type_env : sig
 
   (** Add a type to the environment, after generalizing free meta variables.
       @param type_env the current environment
-      @param t  the ML type to generalize and push *)
+      @param t  the Core type to generalize and push *)
   val push_gen : t -> Core.Type.t -> t
 
   (** Add a type with no [Core.Type.Variable] (no generalization needed).
       @param type_env the current environment
-      @param t  the monomorphic ML type to push *)
+      @param t  the monomorphic Core type to push *)
   val push_type : t -> Core.Type.t -> t
 
   (** Add a type with no [Core.Type.Variable] nor [Core.Type.Meta] (no generalization, no free metas).
       @param type_env the current environment
-      @param t  the ground ML type to push *)
+      @param t  the ground Core type to push *)
   val push_std_type : t -> Core.Type.t -> t
 end
 
-(** {2 Utility functions over ML types without meta} *)
+(** {2 Utility functions over Core types without meta} *)
 
 (** Check if a mutual inductive name occurs in a type.
     @param kn the mutual inductive kernel name to search for
-    @param t  the ML type to search in
+    @param t  the Core type to search in
     @return [true] if [kn] appears inside a [Core.Type.Global_app] node of [t] *)
 val type_mem_kn : MutInd.t -> Core.Type.t -> bool
 
@@ -325,12 +325,12 @@ val constructor_params : GlobRef.t -> int list
     type-level lambda {!type_has_hole} recognises, applied to [a]. *)
 val fill_type_hole : Core.Type.t -> Core.Type.t -> Core.Type.t
 
-(** Decompose an ML type into a list of argument types and a result type.
+(** Decompose a Core type into a list of argument types and a result type.
     @return [(args, result)] where [args] are the curried parameter types
             and [result] is the final return type *)
 val type_decomp : Core.Type.t -> Core.Type.t list * Core.Type.t
 
-(** Recompose an ML type from a list of argument types and a result type.
+(** Recompose a Core type from a list of argument types and a result type.
     @param args the list of argument types (left-to-right)
     @param result the final return type *)
 val type_recomp : Core.Type.t list * Core.Type.t -> Core.Type.t
@@ -346,60 +346,60 @@ type abbrev_map = GlobRef.t -> Core.Type.t option
 (** Expand type abbreviations using the given map.
     @param env lookup function mapping global references to their type bodies;
                return [None] to leave a [Core.Type.Global_app] unexpanded
-    @param t   the ML type to expand *)
+    @param t   the Core type to expand *)
 val type_expand : abbrev_map -> Core.Type.t -> Core.Type.t
 
-(** Simplify an ML type: {!type_expand} with no abbreviation, which only
+(** Simplify a Core type: {!type_expand} with no abbreviation, which only
     replaces solved metavariables by their contents (when type expansion is
     enabled). *)
 val type_simpl : Core.Type.t -> Core.Type.t
 
-(** Convert an ML type to a signature element for its outermost position.
+(** Convert a Core type to a signature element for its outermost position.
     @param env abbreviation map for expanding type aliases
-    @param t   the ML type to classify
+    @param t   the Core type to classify
     @return [Core.Signature.Argument.Erased d] if the outermost type is [Core.Type.Erased d] (and not conservative),
             [Core.Signature.Argument.Runtime] otherwise *)
 val type_to_sign : abbrev_map -> Core.Type.t -> Core.Signature.Argument.t
 
-(** Convert an ML type to a full argument signature by decomposing arrows.
+(** Convert a Core type to a full argument signature by decomposing arrows.
     @param env abbreviation map for expanding type aliases
-    @param t   the ML type to decompose
+    @param t   the Core type to decompose
     @return a [Core.Signature.t] with one entry per curried argument position *)
 val type_to_signature : abbrev_map -> Core.Type.t -> Core.Signature.t
 
-(** Expunge dummy arguments from an ML type using the abbreviation map.
+(** Expunge dummy arguments from a Core type using the abbreviation map.
     @param env abbreviation map for expanding type aliases
-    @param t   the ML type from which to remove [Core.Type.Erased] arrows *)
+    @param t   the Core type from which to remove [Core.Type.Erased] arrows *)
 val type_expunge : abbrev_map -> Core.Type.t -> Core.Type.t
 
-(** Expunge dummy arguments from an ML type guided by a pre-computed signature.
+(** Expunge dummy arguments from a Core type guided by a pre-computed signature.
     @param env abbreviation map for expanding type aliases
-    @param s   the signature indicating which arguments are [Core.Signature.Argument.Erased]ed
-    @param t   the ML type from which to remove the killed arrow positions *)
+    @param s   the signature indicating which arguments are [Core.Signature.Argument.Erased]
+    @param t   the Core type from which to remove the killed arrow positions *)
 val type_expunge_from_sign : abbrev_map -> Core.Signature.t -> Core.Type.t -> Core.Type.t
 
-(** Test equality of two ML types. *)
+(** Test equality of two Core types. *)
 val eq_core_type : Core.Type.t -> Core.Type.t -> bool
 
 (** Check if a type is Core.Type.Erased. *)
 val is_erased_type : Core.Type.t -> bool
 
-(** Check if an ML term is Core.Expr.Erased_value. *)
+(** Check if a Core term is Core.Expr.Erased_value. *)
 val is_erased_value : Core.Expr.t -> bool
 
 (** The term definitions a declaration makes: a [Core.Decl.Value]'s one, a [Core.Decl.Recursive_group]'s
     group, and none for anything else. *)
 val term_defs : Core.Decl.t -> Core.Recursion.Definition.t list
 
-(** Check if a sign is Kill. *)
+(** Whether a signature entry is [Erased] (any reason). *)
 val isKill : Core.Signature.Argument.t -> bool
 
 (** Expunge dummy arguments from a case expression, eta-expanding as needed.
     @param types
       one type per signature element, used to type the binders introduced when
       eta-expanding; binders past the end of the list get [Core.Type.Unknown]
-    @param s the signature indicating which leading arguments are [Core.Signature.Argument.Erased]ed
-    @param e the ML expression (typically a match branch body) to process
+    @param s the signature indicating which leading arguments are [Core.Signature.Argument.Erased]
+    @param e the Core expression (typically a match branch body) to process
     @return [(ids, body)] with the surviving binders and the stripped body *)
 val case_expunge :
   ?types:Core.Type.t list -> Core.Signature.t -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
@@ -409,13 +409,12 @@ val case_expunge :
     language is strict.
     @param s        the signature indicating which leading lambdas are [Core.Signature.Argument.Erased]ed
     @param ids_body a pair [(binders, body)] as returned by [collect_lams]
-    @return the term with killed lambdas removed *)
+    @return the term with the erased lambdas removed *)
 val term_expunge : Core.Signature.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t -> Core.Expr.t
 
 (** {2 Special identifiers}
 
-    [dummy_name] is to be used for dead code and will be printed as [_] in
-    concrete (Caml) code. *)
+    [anonymous_name] is [x]; [dummy_name], [_x], marks dead code. *)
 
 (** The anonymous identifier used for unnamed binders. *)
 val anonymous_name : Id.t
@@ -423,7 +422,8 @@ val anonymous_name : Id.t
 (** The dummy identifier used for dead code. *)
 val dummy_name : Id.t
 
-(** Convert a Name.t to an Id.t, using anonymous_name for anonymous names. *)
+(** Convert a Rocq [Name.t] to an [Id.t]: {!anonymous_name} for an anonymous
+    name or {!dummy_name}. *)
 val id_of_name : Name.t -> Id.t
 
 (** Move a name out of the space Crane reserves for the locals it invents
@@ -492,7 +492,7 @@ val dummy_lams : Core.Expr.t -> int -> Core.Expr.t
     signature: a [Core.Signature.Argument.Runtime] entry becomes an anonymous lambda at its type among
     [types], a [Core.Signature.Argument.Erased k] entry a [Core.Binder_name.Anonymous] lambda at [Core.Type.Erased k].
     @param a     the body to wrap
-    @param types one ML type per signature entry, matched positionally;
+    @param types one Core type per signature entry, matched positionally;
                  falls back to [Core.Type.Axiom] when the list runs out
     @param s     the signature driving the lambda structure *)
 val anonym_or_dummy_lams_typed : Core.Expr.t -> Core.Type.t list -> Core.Signature.t -> Core.Expr.t
@@ -504,14 +504,14 @@ val anonym_or_dummy_lams_typed : Core.Expr.t -> Core.Type.t list -> Core.Signatu
     @return the list of [Core.Expr.Bound_variable] arguments for the kept positions *)
 val eta_args_sign : int -> Core.Signature.t -> Core.Expr.t list
 
-(** {2 Utility functions over ML terms} *)
+(** {2 Utility functions over Core terms} *)
 
-(** Apply an ML term to a list of arguments. Returns [f] unchanged when [a] is empty. *)
+(** Apply a Core term to a list of arguments. Returns [f] unchanged when [a] is empty. *)
 val apply_args : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
 
 (** Map a function over all immediate subterms.
     @param f the transformation to apply to each direct child
-    @param t the ML AST node whose children are to be mapped *)
+    @param t the Core node whose children are to be mapped *)
 val ast_map : (Core.Expr.t -> Core.Expr.t) -> Core.Expr.t -> Core.Expr.t
 
 (** [ast_map_types f a] rewrites every [Core.Type.t] embedded in [a] with [f],
@@ -546,12 +546,12 @@ val recover_erased_types :
 (** Map a function over all immediate subterms with a binding-depth counter.
     @param f   the transformation; receives the current depth and the child term
     @param n   the current binding depth (passed to [f] for each child)
-    @param t   the ML AST node whose children are to be mapped *)
+    @param t   the Core node whose children are to be mapped *)
 val ast_map_lift : (int -> Core.Expr.t -> Core.Expr.t) -> int -> Core.Expr.t -> Core.Expr.t
 
 (** Iterate a function over all immediate subterms.
     @param f the action to perform on each direct child
-    @param t the ML AST node to iterate over *)
+    @param t the Core node to iterate over *)
 val ast_iter : (Core.Expr.t -> unit) -> Core.Expr.t -> unit
 
 (** Check if a de Bruijn index occurs in a term.
@@ -623,7 +623,7 @@ val ast_glob_subst : Core.Expr.t Ref.User.Map.t -> Core.Expr.t -> Core.Expr.t
 (** Remove unused variable bindings from a term. *)
 val dump_unused_vars : Core.Expr.t -> Core.Expr.t
 
-(** Normalize an ML term by beta-reduction and simplification. *)
+(** Normalize a Core term by beta-reduction and simplification. *)
 val normalize : Core.Expr.t -> Core.Expr.t
 
 (** [apply_eta_args f args] is [f] applied to [args], with the application
@@ -672,11 +672,11 @@ type sign_kind =
             [UnsafeLogicalSig] otherwise *)
 val sign_kind : Core.Signature.t -> sign_kind
 
-(** Remove trailing Keep elements from a signature. *)
+(** Remove the trailing [Runtime] entries from a signature. *)
 val sign_no_final_keeps : Core.Signature.t -> Core.Signature.t
 
 (** Remap type variable indices in a term using the given function.
     @param f   a function from old type variable index to new index; applied to
                every [Core.Type.Variable] annotation occurring in the term
-    @param t   the ML AST in which to remap type variable indices *)
+    @param t   Core in which to remap type variable indices *)
 val remap_tvars : (int -> int) -> Core.Expr.t -> Core.Expr.t

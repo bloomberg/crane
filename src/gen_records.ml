@@ -429,7 +429,7 @@ let gen_typeclass_cpp name fields =
 type binder_kind = [`Value | `Instance | `Erased]
 
 (** One binder an instance method's body opens with, as {!binder_kind}
-    classified it.  The ML type is the one the body spells it by and the C++
+    classified it.  The Core type is the one the body spells it by and the C++
     type the one the accessor declares: the three travel together, and reading
     the kind of the [i]th binder out of a list beside them is how they come
     apart. *)

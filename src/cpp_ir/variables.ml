@@ -6,7 +6,10 @@
 open Names
 open Grammar
 
+(** Whether [x] is among [xs]. *)
 let mem x xs = List.exists (Id.equal x) xs
+
+(** [xs] without the variables in [bound]. *)
 let without bound xs = List.filter (fun x -> not (mem x bound)) xs
 
 (** The variables an expression refers to without binding them, in the
@@ -168,9 +171,10 @@ let evaluates_operands : type p. p Expr.t -> bool = function
   | _ -> true
 
 (** [lambda_needs_capture params body] is [(needs_capture, uses_this)]:
-    whether a lambda of these parameters and this body names a variable it
-    neither binds nor declares -- its own, or one a nested lambda names --
-    and so must capture, and whether it names the enclosing [this]. *)
+    whether a lambda of these parameters and this body must capture, as it
+    names a variable it neither binds nor declares (its own, or one a nested
+    lambda names) or names the enclosing [this]; and whether it names
+    [this]. *)
 let lambda_needs_capture : type p. (p Type.t * Id.t option) list -> p Stmt.t list -> bool * bool =
  fun params body ->
   let names ps =

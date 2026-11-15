@@ -10,15 +10,14 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
+(** Core module utilities: traversal, search, and optimization functions
+    over a Core program's module structure ({!Core.Program.t}).
+    {!optimize_struct} is the first of the Core passes ([core_passes] in
+    [extract_env.ml], run under {!Core_phase.optimize}): beta-iota
+    simplification, inlining and dead-code elimination.  The iterators and
+    maps are shared by every later pass that walks a structure. *)
+
 open Names
-
-(** {1 ML Module Utilities}
-
-    Traversal, search, and optimization functions over the Core module
-    structure ({!Core.Program.t}).  {!optimize_struct} is the
-    simplification and dead-code pass extraction runs on the structure before
-    it reaches the backend; the iterators and maps are shared by every later
-    pass that walks a structure. *)
 
 (** Search for an AST node satisfying a predicate anywhere in the structure.
     @param f predicate to test each [Core.Expr.t] node
@@ -53,7 +52,7 @@ val struct_iter :
     {!ast_iter_references}, and friends). *)
 type do_ref = GlobRef.t -> unit
 
-(** Apply [do_ref] to every [GlobRef.t] in an ML type.
+(** Apply [do_ref] to every [GlobRef.t] in a Core type.
     @param do_ref callback invoked for each global reference encountered
     @param t the type to traverse *)
 val type_iter_references : do_ref -> Core.Type.t -> unit

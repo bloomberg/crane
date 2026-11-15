@@ -1,8 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Global calls elaborated from Core, ahead of translation
-    (docs/Pipeline-Disentangling-Plan.md, section 4.7).  See
+(** Global calls elaborated from Core, ahead of translation.  See
     [core_elaborate.mli]. *)
 
 open Names
@@ -16,14 +15,14 @@ open Table
     ({!Elaborated_call.role}): a dictionary, a regular argument, one past the
     callee's arity and so applied to its result, or one at no value position.
     A variable argument is read off the binder it names in [lex], the
-    environment the call is typed in, by its ML type and its role
+    environment the call is typed in, by its Core type and its role
     ({!Lexenv.binder}); no C++ name is consulted, and nothing of the
     traversal that asks. *)
 let classify ~lex id written =
   (* Each argument with its position, so that the partition below says
      where each one went rather than handing back the arguments. *)
   let args = List.mapi (fun i a -> (i, a)) written in
-  (* When the call has more args than the function's ML value-domain, the
+  (* When the call has more args than the function's Core value-domain, the
      excess args are curried applications to the result. This is common with
      Rocq's Function vernacular _correct proof terms, where the extraction
      produces e.g. div2_rect f f0 f1 n _res __ but div2_rect only has 4
@@ -149,7 +148,7 @@ let classify ~lex id written =
   let erased, kept = List.partition (fun (_, a) -> instance_arg_is_erased ~lex a) instances in
   (* The erased arguments left among the regular ones are the ones the
      declaration takes a value at (see [value_args] above); they are
-     generated as empty boxes rather than as the [CPPabort] an [Core.Expr.Erased_value] is
+     generated as empty boxes rather than as the [Abort] an [Core.Expr.Erased_value] is
      elsewhere. *)
   let role_of i =
     let at l = List.exists (fun (j, _) -> Int.equal i j) l in
@@ -179,7 +178,7 @@ let of_roles (use : Core.Global_use.t) args roles =
 let elaborate_arguments ~lex (use : Core.Global_use.t) args = of_roles use args (classify ~lex use.callee args)
 
 (* The holes of [call]'s reading of its scheme variables that its context
-   states: the ML type its position expects or states for its result
+   states: the Core type its position expects or states for its result
    ([expected_core], else [stated_core]), and the heads its arguments' types give
    a type-level function a domain names. *)
 let resolve_from_context ~lex ~expected_core ~stated_core (call : Elaborated_call.t) =
@@ -397,7 +396,7 @@ let add_keyed key occ fact m =
 
 (* Whether the call [use args], standing in [lex], builds a typeclass
    instance -- its Rocq type says so ({!Table.builds_instance}): a singleton
-   class's method is a function, so its instance's ML type is an arrow, not
+   class's method is a function, so its instance's Core type is an arrow, not
    the class -- from no value of [lex]: its only free variables are instance
    parameters, which C++ takes as template arguments ({!binder_is_instance}).
    Such a call is the same value every time it is evaluated. *)
@@ -451,7 +450,7 @@ let singleton_dictionary_head lex i =
    {!structure}. *)
 type builder = t ref
 
-(* The ML types a position expects ([expected]) and states ([stated]) for
+(* The Core types a position expects ([expected]) and states ([stated]) for
    the value generated there: the slot translation threads, kept as
    translation keeps it. *)
 type position = {expected : Core.Type.t option; stated : Core.Type.t option}

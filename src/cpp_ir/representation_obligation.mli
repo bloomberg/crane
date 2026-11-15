@@ -12,9 +12,11 @@
     yet instantiated, a pointer whose slot is not written down, a match
     whose scrutinee no local holds, a lambda whose capture is not decided.
 
-    Each is discharged by one resolution pass, and a resolved declaration
-    owes none.  The list is closed: a new kind of debt the printer must not
-    see is a new constructor here, with the pass that pays it. *)
+    Each but {!Unresolved_type} is discharged by one pass of CppIR
+    finishing ({!Cpp_pipeline}, which checks each with [owes]), and a
+    resolved declaration owes none.  The list is closed: a new kind of debt
+    the printer must not see is a new constructor here, with the pass that
+    pays it. *)
 
 type t =
   | Unresolved_type
@@ -64,5 +66,7 @@ type t =
       (** a variable initialised by an expression holding a lambda that
           captures, not invoked in place *)
 
-(** Every obligation, in the order resolution discharges them. *)
+(** Every obligation.  Apart from {!Unsettled_callable}, whose pass runs
+    before the seam that discharges {!Opaque_type} and
+    {!Unspellable_binder}, they are listed in the order their passes run. *)
 val all : t list

@@ -6,7 +6,7 @@
 
 open Grammar
 
-(** [Core.Signature.t ?yields ?params ~nargs ()] is what a builder knows about a
+(** [signature ?yields ?params ~nargs ()] is what a builder knows about a
     call of [nargs] arguments.  [params] is recorded only when it is aligned
     with the arguments; a length mismatch is no knowledge at all, so it is
     dropped rather than stored misaligned. *)

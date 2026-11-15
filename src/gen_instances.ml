@@ -661,7 +661,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                 with_parameters (List.map snd (parameter_binders env renamed_core)) @@ fun () ->
                 (* The declared parameter types, so the body reads the
                    arities the signature was written at rather than
-                   re-deriving them from ML types substitution has since
+                   re-deriving them from Core types substitution has since
                    given extra arrows.  Same order as [renamed_core]. *)
                 with_method_env_types ~outer:outer_binders
                   ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
@@ -741,11 +741,11 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
       (* Generate [using] declarations for promoted typeclass-typed fields
          from the constructor body.  For such fields, the constructor arg
          is a value expression (e.g., [Core.Expr.Global nat_category] or
-         [Core.Expr.Apply(opposite_category, [MLproj(...)])]) that must be
+         [Core.Expr.Apply(opposite_category, [<field projection>])]) that must be
          translated to a C++ TYPE expression (e.g., [nat_category] or
          [opposite_category<typename _tcI0::base_category>]).
 
-         This function interprets an ML expression at the type level:
+         This function interprets a Core expression at the type level:
          - [Core.Expr.Global r] → named type [Entity_application (r, ...)]
          - [Core.Expr.Apply(Core.Expr.Global r, args)] → template type with type args
          - [Core.Expr.Bound_variable i] → the named template parameter it binds
@@ -803,7 +803,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
       let using_name ((f, _, _) : Cpp_ir.Lowered.phase Cpp_ir.Field.member) =
         match f with Nested_type_alias (_, id, _) -> Some id | _ -> None
       in
-      (* Check if an ML expression is a parameterized reference whose
+      (* Check if a Core expression is a parameterized reference whose
          typeclass arguments have been erased — e.g.,
          [Core.Expr.Apply(Core.Expr.Global opposite_category,
          [Core.Expr.Erased_value Core.Erasure_reason.Type_argument])].  Such
@@ -976,7 +976,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
           (fun m ->
             match using_name m with
             | Some using_name ->
-              (* Find this field's ML type in the typeclass definition *)
+              (* Find this field's Core type in the typeclass definition *)
               let field_core_ty =
                 List.find_map
                   (fun {Core.Record.Field.projection = fld_opt; type_ = fml_ty} ->

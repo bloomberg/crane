@@ -1,8 +1,16 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Local functions: a local fixpoint as a loop, a Y-combinator closure or
-    a by-reference group ({!gen_fix}), and a let-bound lambda or fixpoint
-    lifted out of the body as a helper declaration. *)
+(** Lowering of local functions to CppIR: a local fixpoint declared in
+    place as a loop ({!local_fix_stmts}), a Y-combinator closure
+    ({!gen_local_fix_ycomb}) or a by-reference group
+    ({!gen_local_fix_by_ref}), each member's body lowered by {!gen_fix};
+    and a let-bound lambda or fixpoint lifted out of the body as a helper
+    declaration ({!gen_let_lambda}, {!gen_let_fix}, {!gen_applied_fix}).
+
+    Sits between {!Translation_effects} and {!Translation_stmts} in the
+    chain of lowering modules; its entry points are called from
+    {!Translation_stmts.gen_stmts}, and it lowers the bodies it declares by
+    calling back up through {!Translation_knot}. *)
 
 open Common
 open Names
@@ -17,7 +25,7 @@ open Translation_knot
 open Translation_lambda
 open Translation_application
 
-(* The binders of the local fixpoint [occ], as the source has them, each
+(** The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
    member's parameters, as [compiled], what {!gen_fix} made of each member,
    has them, and with them the Core binders of the locals of [env] the fixpoint
@@ -36,16 +44,18 @@ let local_fix_binders env fix occ ids compiled =
   List.mapi (fun j ((x, _), (_, _, _, params)) -> (x, (occ, j), params, captured))
     (List.combine (Array.to_list ids) compiled)
 
-(* The local fixpoint bound to [binder], the function [member] of a Core
+(** The local fixpoint bound to [binder], the function [member] of a Core
    fixpoint whose parameters stand for the Core binders [params] and that
    reads the locals [captured] stand for, in the declaration being
    generated, called [name] and encoded as [encoding]. *)
 let local_fixpoint ~name ~encoding (binder, member, _, captured) : Cpp_ir.Expr.Local_fixpoint.t option =
   Some {binder; name; member; captured; encoding}
 
+(** The Core binders of the parameters of a member of
+    {!local_fix_binders}. *)
 let fixpoint_parameters (_, _, params, _) = params
 
-(* The statements a local fixpoint is declared by: for a fixpoint of one
+(** The statements a local fixpoint is declared by: for a fixpoint of one
    member, its loop, lowered from its ControlIR, where it is one
    ({!Control_to_cpp_ir.local_loop}), and otherwise the Y-combinator
    [self_passing ()] -- the impl lambdas [impl_stmts], taking their
@@ -96,12 +106,12 @@ let local_passing ~closures funs =
   in
   Array.to_list (Array.map member funs)
 
-(* Record that the functions [binders] name pass their parameters as
+(** Record that the functions [binders] name pass their parameters as
    [passing] says, each the plan of the one at its position. *)
 let record_local_passing ~binders passing =
   List.iter2 (fun (_, member, _, _) t -> Ownership_ir.Local_passing.record member t) binders passing
 
-(* Record that the functions [binders] name hold their captures as
+(** Record that the functions [binders] name hold their captures as
    [captures] says, each the modes of the one at its position: what
    {!Move_check} holds their lambdas to. *)
 let record_local_captures ~binders captures =
@@ -112,8 +122,8 @@ let record_local_captures ~binders captures =
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.
 
-    Replaces the [shared_ptr<std::function>] pattern with a generic-lambda
-    self-passing pattern:
+    Uses a generic-lambda self-passing pattern rather than a
+    [shared_ptr<std::function>]:
     {v
       auto go_impl = [=](auto &_self, A... args) mutable -> R {
         ... _self(_self, args) ...
@@ -279,7 +289,7 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
 
     Uses a Y-combinator pattern to avoid [std::function] type erasure
     overhead (heap allocation, virtual dispatch).  Parameters are passed
-    by value (same as the old pattern) to preserve move/mutation semantics.
+    by value to preserve move/mutation semantics.
 
     Generated C++:
     {v
@@ -291,7 +301,8 @@ let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_pa
       };
     v}
 
-    @return [(decls, defs)] — declaration and definition statement lists.
+    @return [(decls, defs)], declaration and definition statement lists;
+    [defs] is empty.
     @see gen_local_fix_ycomb for the escaping-fixpoint alternative. *)
 let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_params =
   record_local_passing ~binders passing;
@@ -391,14 +402,11 @@ let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_p
   let self_passing () = impl_stmts @ wrapper_stmts in
   (local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params, [])
 
-(* How the lambda of each function of the local fixpoint [fix] holds each
+(** How the lambda of each function of the local fixpoint [fix] holds each
    variable it captures, generated as closures or else [in_place]
    ({!Ownership_ir.captures_by_member}). *)
 let fix_captures ~in_place fix = Ownership_ir.captures_by_member ~in_place (!tctx).lexical.move_plan fix
 
-(* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
-   does whether [let _ : ty := a] binds the closure [a] to a local, which the
-   plan owns and moves. *)
 (** Report, under [CRANE_CHECK_IR], a let-bound lambda [what] that reached
     translation other than as it is generated: Core puts every one so
     before ({!Normalize.let_lambdas}), and translation only binds or lifts
@@ -407,6 +415,9 @@ let ungenerated_let_lambda what =
   if Probe.checking () then
     Probe.violation "let-bound lambda" Pp.(str "Core_phase.normalize left " ++ str what ++ str " to translation")
 
+(** Under [CRANE_CHECK_IR], the region's plan must have decided as translation
+    does whether [let _ : ty := a] binds the closure [a] to a local
+    ([local]), which the plan owns and moves; a violation otherwise. *)
 let check_closure_local ty a ~local =
   if Probe.checking () then
     match Ownership_ir.closure_local (!tctx).lexical.move_plan ty a with
@@ -418,7 +429,7 @@ let check_closure_local ty a ~local =
               (if local then "a local" else "no local") ) )
     | _ -> ()
 
-(* Under [CRANE_CHECK_IR], the local fixpoint [name], whose group Core takes
+(** Under [CRANE_CHECK_IR], the local fixpoint [name], whose group Core takes
    to hold copies where [closures] says so ({!Analyze_closures}), must be
    one its generated code lets escape just as much: named, after its binding
    or in its own bodies, other than as the function a call applies, or
@@ -432,7 +443,8 @@ let check_fixpoint_escape name ~closures generated_escapes =
              ( if closures then " escapes in Core but nowhere in its generated code"
                else " escapes in its generated code but nowhere in Core" ) )
 
-(* The helper [r] lifted out of a body: the function returning [ret] that
+(** The helper [r] lifted out of a body: the function returning [ret] that
+
    takes [params], last first as {!build_lifted_cpp_params} gives them,
    standing for the Core binders [binders], with body [body], under the
    template parameters [tparams]. *)
@@ -449,9 +461,14 @@ let lifted_definition ~binders ~ret r params body tparams : Cpp_ir.Lowered.Decl.
           binders;
           loop = None } )
 
-(** Generate a fixpoint (recursive function) definition. Handles both single and
-    mutually recursive functions. [all_fix_ids] contains names of all mutual
-    fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
+(** Lower the body of member [fix_idx] of a fixpoint group, the member
+    [(n, ty)] with lambda [f], under the group's names [all_fix_ids] (array
+    order; empty for a single fixpoint, which is then [(n, ty)] alone).
+    Returns the member's renamed name and type, its runtime parameters, its
+    lowered body statements and its parameters' Core binders.  [by_value]:
+    every parameter is owned (the group holds copies); [local] or [lifted]
+    names the occurrence or the helper whose machine plans the frames the
+    body saves. *)
 let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
   let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids in
@@ -566,7 +583,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
     let all_temps = Cpp_ir.Build.typenames all_tvar_names in
     (* The body being lifted was written against the enclosing declaration's
        class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
-       concept-constrained parameter is not an ML type variable, so
+       concept-constrained parameter is not a Core type variable, so
        [fix_tvar_indices] cannot mention one.  Carry the head's own
        instances over, ahead of the type variables and explicit at every
        reference: nothing deduces a class instance from an argument. *)
@@ -654,7 +671,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
     let extra_args = List.rev free_args in
     List.map (fun st -> local_var_subst_stmt ~extra_args fix_name lifted_call st) result )
   else
-    (* No extra Tvars — proceed with local fixpoint approach.
+    (* No extra type variables: proceed with local fixpoint approach.
 
        Three sub-steps:
        1. Compile all mutual fixpoint bodies via {!gen_fix}.
@@ -799,7 +816,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       let asgn = gen_stmts env afun a in
       (* When the RHS was a pair accessor on an erased argument (e.g.
          snd vs where vs : std::any), the result is std::any at runtime
-         even though the ML type says prod(...).  Override to Core.Type.Erased so
+         even though the Core type says prod(...).  Override to Core.Type.Erased so
          downstream pair accessor calls (fst tail) detect erasure. *)
       let t_for_env = if stmts_yield_boxed asgn then Core.Type.Erased Core.Erasure_reason.Type_argument else t in
       (* Push env_types AFTER generating the value expression [a]. *)
@@ -865,7 +882,7 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     (* The body being lifted was written against the enclosing
        declaration's class instances -- it spells [typename
        _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an
-       ML type variable, so [tvar_indices] cannot mention one.  Carry the
+       Core type variable, so [tvar_indices] cannot mention one.  Carry the
        head's own instances over, ahead of the type variables and explicit
        at every reference: nothing deduces a class instance. *)
     let class_temps = current_class_temps () in
@@ -879,9 +896,9 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     (* 3. Generate the lifted function name *)
     let lifted_ref = lifted_ref (Lifted.Let let_occ) x' in
 
-    (* 4. Substitution helper for call sites: replace CPPfun_call(CPPvar x',
-       args) with CPPfun_call(CPPglob(lifted_ref, []), free_var_cpps @
-       args) *)
+    (* 4. Substitution helper for call sites: replace a call [Call (_, Local
+       x', args)] with a call of [Entity (lifted_ref, [])] on
+       [free_var_cpps @ args]. *)
     (* The lifted function is a template over the binder's type
        arguments, so a parameter declared at one of them is a template
        parameter C++ has to deduce.  A closure has no name to deduce, and
@@ -1043,7 +1060,8 @@ let gen_let_lambda ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     in
 
     (* 7. Now substitute free variable references in compiled body: Free
-       vars in the body were compiled as CPPvar(name_from_outer_env). In the
+       vars in the body were compiled as [Local name_from_outer_env]. In the
+
        lifted function, they become parameters. The names are the same, so
        no substitution of the body is needed — the free var params have the
        same names as the outer scope variables. *)
@@ -1185,7 +1203,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
       let all_temps = Cpp_ir.Build.typenames all_tvar_names in
       (* The body being lifted was written against the enclosing declaration's
          class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
-         concept-constrained parameter is not an ML type variable, so
+         concept-constrained parameter is not a Core type variable, so
          [fix_tvar_indices] cannot mention one.  Carry the head's own
          instances over, ahead of the type variables and explicit at every
          reference: nothing deduces a class instance from an argument. *)

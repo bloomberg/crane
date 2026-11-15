@@ -1,9 +1,12 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Pattern matches: a match over a variant as a visit with one branch per
-    constructor ({!gen_cpp_case}), a custom match through its template
-    ({!gen_custom_cpp_case}), and a match taking a record apart into its
-    fields, in expression and in statement position. *)
+(** Pattern matches: a match over a variant as a [Match] statement with one
+    branch per constructor, or a [Switch] over an enumeration
+    ({!gen_cpp_case}); a custom match through its template
+    ({!gen_custom_cpp_case}); and a match taking a record apart into its
+    fields, in expression and in statement position.  One of the modules
+    lowering Core bodies to CppIR that {!Translation} drives; it calls back
+    into expression and statement lowering through {!Translation_knot}. *)
 
 open Common
 open Names
@@ -19,17 +22,17 @@ open Translation_calls
 open Translation_knot
 open Translation_construct
 
-(* How a match branch reads a field of the constructor it matched: as the
+(** How a match branch reads a field of the constructor it matched: as the
    structured binding has it; through the pointer the field is stored behind
    (a recursive field, or under [Crane BoxedFields] one holding an inductive);
    or through [crane::unbox] (a type-parameter field under [Crane
    BoxedFields], boxed or not per instantiation). *)
 type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
 
-(* Whether a record's fields are moved out of what [base] reads it from. *)
+(** Whether a record's fields are moved out of what [base] reads it from. *)
 let moved_out (base : Cpp_ir.Lowered.Expr.t) = match base with Move _ -> true | _ -> false
 
-(* Whether a match taking the record [t] apart, a class instance's fields
+(** Whether a match taking the record [t] apart, a class instance's fields
    unless [is_typeclass], takes its value, as the plan says
    ({!Ownership_ir.takes_record}); under [CRANE_CHECK_IR], the code reading
    it from [base] must agree. *)
@@ -42,16 +45,16 @@ let record_taken ~is_typeclass t base =
            else "a record the plan reads in place is taken apart by value" ) );
   taken
 
-(* Runs [f], which generates the body of [case], a match taking a record
+(** Runs [f], which generates the body of [case], a match taking a record
    apart into the fields [asgns] declares, under the plan in which each field
    moved out of the record into a local of its own is the body's.  A field
    copied out of a record still held is not: it may be read in place. *)
 let with_fields_plan case asgns f =
   with_plan (Ownership_ir.fields_by_value (!tctx).lexical.move_plan ~case ~by_value:(List.map snd asgns)) f
 
-(** Generate a single branch of an {!Smatch} if/else-if pattern match chain.
+(** Generate a single branch of a [Match] statement's if/else-if chain.
 
-    Produces an {!smatch_branch} record whose body statements live directly
+    Produces a [Cpp_ir.Grammar.Match.branch] whose body statements live directly
     in the enclosing if-block.
 
     {b Structured bindings.}  Field accesses use
@@ -61,7 +64,7 @@ let with_fields_plan case asgns f =
 
     {b [match_i] suffix generation.}  [match_i] is the match-level counter
     (0 for the outermost match).  Nested matches increment the counter so
-    binding names get suffixed (e.g. [d_a00], [d_a10]) to avoid shadowing
+    binding names get suffixed (field [d_a0] binds [d_a00] at level 1, [d_a01] at level 2) to avoid shadowing
     outer bindings.
 
     {b [dummies] mask.}  A [bool list] parallel to [ids]: [true] means the
@@ -70,7 +73,7 @@ let with_fields_plan case asgns f =
     avoids generating unused variable warnings in the C++ output.
 
     @param env      current name environment
-    @param typ      the scrutinee's ML type (used to resolve the inductive)
+    @param typ      the scrutinee's Core type (used to resolve the inductive)
     @param rty      the branch's return type
     @param cname    the constructor's [GlobRef.t]
     @param ids      renamed pattern variable names with types
@@ -156,7 +159,7 @@ let gen_match_branch env (typ : Core.Type.t) rty cname ids dummies body sname
   let tvars = get_current_type_vars () in
 (* A non-self-referential field in a type-indexed inductive (no template
      params) whose def-site type contains an unnamed Core.Type.Variable is stored as
-     [std::any] in the struct.  At the match site we recover the ML-known
+     [std::any] in the struct.  At the match site we recover the Core-known
      type with [std::any_cast<bare_ty>].  This handles every access pattern
      uniformly — fst, snd, or any other function — because the cast is
      applied at the binding site, not at individual use sites. *)
@@ -217,7 +220,7 @@ let gen_match_branch env (typ : Core.Type.t) rty cname ids dummies body sname
         (* A non-coinductive field is shared_ptr-wrapped only for UNIFORM
            self-recursion.  Non-uniform recursion (e.g. tree<pair<T,T>> inside
            tree<T>) stores as a bare value type.  Find the self/mutual reference
-           anywhere in the ML type (direct or nested in type args) and check if
+           anywhere in the Core type (direct or nested in type args) and check if
            its type arguments match the parent's params uniformly. *)
         let is_uniform_self_ref_at_def i =
           match List.nth_opt non_erased_def_site_field_tys i with
@@ -363,7 +366,7 @@ let gen_match_branch env (typ : Core.Type.t) rty cname ids dummies body sname
   let branch_has_lambda = List.exists stmt_has_lambda body_stmts in
   (* True when the enclosing function returns a coinductive type and will
      wrap each branch result in a [lazy_] thunk via [cofix_wrap].  The
-     thunk is a [CPPlambda] that captures by [=], so non-coinductive
+     thunk is a [Lambda] that captures by [=], so non-coinductive
      self-ref (shared_ptr) fields bound in the branch need pre-extraction
      before the lambda to ensure they are captured as value types.
      This flag triggers pre-extraction even when [branch_has_lambda] is
@@ -401,7 +404,7 @@ let gen_match_branch env (typ : Core.Type.t) rty cname ids dummies body sname
             else if is_uptr_field && branch_needs_sptr_preextract then
               Local (Id.of_string (Id.to_string binding_name ^ "_value"))
             else if is_uptr_field then
-              (* field_ty = Tshared_ptr storage_inner.  Deref the outer
+              (* field_ty = Shared_pointer storage_inner.  Deref the outer
                  shared_ptr, then convert storage_inner → bare_ty if they
                  differ (e.g. optional<shared_ptr<T>> → optional<T>). *)
               let deref : Cpp_ir.Lowered.Expr.t = Dereference (Local binding_name) in
@@ -504,18 +507,21 @@ let gen_match_branch env (typ : Core.Type.t) rty cname ids dummies body sname
     extra_conditions = [];
     body = body_stmts }
 
-(** Generate C++ pattern matching for an [Core.Expr.Match].
+(** The match of [t] at [typ] with branches [pv] (the match [case_occ]), in
+    expression position, as an immediately invoked lambda.
 
     Dispatches based on the inductive's structure:
-    - {b Enum types}: generate a [switch] statement on tag values
-      ({!gen_enum_branches}).
-    - {b Variant types}: generate an if/else-if chain using
+    - {b Enum types}: a [Switch] statement on the tag.
+    - {b Variant types}: a [Match] statement, an if/else-if chain using
       [std::holds_alternative] guards and [std::get] structured bindings
-      ({!gen_match_branch}).
+      ({!gen_match_branch}), with a Perceus reuse path where the plan
+      rebuilds a constructor in the cell the match frees.  A flat
+      single-constructor inductive is bound directly, with no variant
+      access.
 
-    {b Type resolution.}  When the match type contains unresolved [Core.Type.Variable]s,
-    attempts to resolve them from [env_types] so that field types and
-    constructor type parameters are concrete for code generation. *)
+    {b Type resolution.}  The match type is first refined from the type of
+    the variable the scrutinee reads ({!Translation_types.match_scrutinee_type}), so that
+    field types and constructor type parameters are concrete. *)
 let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
   let typ =
     let var_type i = try Some (get_env_type i) with _ -> None in
@@ -617,7 +623,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     Cpp_ir.Build.iife iife_ret_opt body
   else
     (* Generate if/else-if pattern matching using [std::holds_alternative]
-       and [std::get].  Produces an {!Smatch} node wrapped in an IIFE. *)
+       and [std::get].  Produces a [Match] statement wrapped in an IIFE. *)
     let scrut_db = scrutinee_binder t in
     (* Allocate a unique [_m] name for this match level.  All branches of
        the same match reuse this name (each [if (auto* _m = ...)] creates
@@ -685,7 +691,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
       in
       (ids', env', dummies)
     in
-    (* Generate one {!smatch_branch} per constructor pattern, collecting
+    (* Generate one [Match.branch] per constructor pattern, collecting
        a wildcard body from [Core.Pattern.Wildcard] / [Core.Pattern.Bound_variable]. *)
     let rec gen_branches i = function
       | [] -> ([], None)
@@ -720,7 +726,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     (* Perceus reuse (Crane Reuse): rebuild a same-inductive constructor in
        a cell the match frees instead of allocating, via the [<ctor>__reuse]
        factory.  Dual path guarded by [scrut.v().index()==branch_idx] and a
-       uniqueness test; otherwise the normal [Smatch].  Which cell:
+       uniqueness test; otherwise the normal [Match].  Which cell:
        - a shared variant: the scrutinee's own block, when no other value
          holds it -- the fields are moved out, and the factory writes the new
          ones in (or allocates, if the rebuilt constructor is another);
@@ -955,6 +961,12 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     | None ->
       Cpp_ir.Build.iife iife_ret_opt [Match (scrut, branches, wildcard)] )
 
+(** One branch of a custom match: its parameters [ids] typed for the
+    template (a self-reference of the scrutinee's inductive [scrut_ind_opt]
+    spelled as the struct stores it), its C++ return type from [rty], and
+    [body] as statements ending in [k], an erased variable returned at a
+    template-parameter type unboxed first.  [site] is the branch, binding
+    [ids]. *)
 let gen_cpp_custom_body env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) rty ids body scrut_ind_opt ~site =
   let tvars = get_current_type_vars () in
   let ret = cpp_of_core env rty in
@@ -1017,12 +1029,12 @@ let gen_cpp_custom_body env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
 
 (** Generate a custom case expression using user-provided extraction syntax.
     Entry point for custom pattern match generation.
-    Returns a [cpp_stmt list]: when the scrutinee is non-trivial and the
+    Returns statements: when the scrutinee is non-trivial and the
     template uses [%scrut] more than once, a cache declaration
-    [auto _cs = expr;] is prepended before the [Scustom_case] node. *)
+    [auto _cs = expr;] is prepended before the [Custom_match] statement. *)
 let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (typ : Core.Type.t) t pv case_occ :
     Cpp_ir.Lowered.Stmt.t list =
-  (* Save the ML type for temps computation after fix_a_fired is known. *)
+  (* Save the Core type for temps computation after fix_a_fired is known. *)
   let core_typ = typ in
   let cs = custom_match_scrutinee env typ t pv ~var_boxed:read_is_boxed ~var_type:get_env_type_opt in
   let scrut_is_wrapped = cs.cs_wrapped in
@@ -1046,7 +1058,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)
-  (* The scrutinee's binder, resolved while [t] is still the ML scrutinee:
+  (* The scrutinee's binder, resolved while [t] is still the Core scrutinee:
      below it is rebound to the generated C++ expression, and inside
      [gen_cases] the name belongs to a branch body. *)
   let scrut_db = scrutinee_binder t in
@@ -1119,7 +1131,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
     else
       (t, false, None)
   in
-  (* When [fix_a_fired], pass [pair<any,any>] as the [Scustom_case] type so
+  (* When [fix_a_fired], pass [pair<any,any>] as the [Custom_match] type so
      that {!Cpp_erasure.lower_boxed_reads} reads the scrutinee at
      [pair<any,any>] instead of the concrete nested pair type. *)
   let case_typ : Cpp_ir.Lowered.Type.t =
@@ -1135,8 +1147,8 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
   (* Compute template type parameters ([%t0], [%t1], ...) after [fix_a_fired]
      is known.  When [fix_a_fired], the scrutinee is cast to [pair<any,any>],
      so all fields are [std::any] regardless of the original field types.
-     Force [Tauto] so the binding uses [auto] and C++ deduces the type.
-     Also force [Tauto] when a type contains erased positions ([Tany]),
+     Force [Auto] so the binding uses [auto] and C++ deduces the type.
+     Also force [Auto] when a type contains erased positions ([Any]),
      since an explicit type annotation would block valid concrete-type calls. *)
   let temps =
     match core_typ with
@@ -1180,7 +1192,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
       (* When [fix_a_fired], all pair fields are [std::any] at runtime.
          Variables whose C++ type is a pair (e.g. [pair<any,pair<any,…>>]) are
          also [std::any] — they came from [.second] of a [pair<any,any>].
-         Re-type them as [Tany] so that:
+         Re-type them as [Any] so that:
          (1) inner pair matches see an erased scrutinee and emit [any_cast],
          (2) {!Cpp_erasure.lower_boxed_reads} treats them as boxed.
          Non-pair leaf types (e.g. [List<any>]) are left unchanged so the
@@ -1284,7 +1296,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
                         so each element is any_cast'd correctly.
-                        Preserve any Tnamespace wrapper for correct rendering. *)
+                        Preserve any In_namespace wrapper for correct rendering. *)
                      let list_any_ty : Cpp_ir.Lowered.Type.t =
                        match cpp_ty with
                        | In_namespace (ns_g, _) ->
@@ -1311,7 +1323,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
       in
       (* Strip explicit template type args from function calls where any
          argument has erased-type content (either wrapped in [any_cast<T>]
-         with [Tany] inside, or a pattern var whose C++ type contains [Tany]).
+         with [Any] inside, or a pattern var whose C++ type contains [Any]).
          Lets C++ deduce the correct type from the argument itself instead of
          using a stale concrete annotation that conflicts with the erased
          runtime type. *)
@@ -1443,7 +1455,8 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
         hold = (if pair_by_value then Owned else Borrowed);
         pieces = Uninstantiated } ]
 
-(** {2 IIFE Inlining}
+(* IIFE inlining ({!Translation_types.inline_iife}), which the statement
+    forms here and in {!Translation_effects} rely on.
 
     When [gen_expr] wraps multi-statement code in an immediately-invoked
     function expression (IIFE):
@@ -1454,8 +1467,8 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
         return (x + y);
       \}()
     ]}
-    and the result is consumed at statement level (e.g. by [Sreturn] or
-    [Sasgn]), the lambda wrapper is unnecessary.  {!inline_iife} detects
+    and the result is consumed at statement level (e.g. by [Return] or
+    [Assign]), the lambda wrapper is unnecessary.  [inline_iife] detects
     this pattern and flattens the body statements, replacing the final
     [return] with the enclosing continuation:
     {[
@@ -1466,10 +1479,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
     This produces more readable C++ and avoids interfering with compiler
     optimisations (e.g. copy elision / RVO through a lambda boundary). *)
 
-(** Generate C++ statements from an ML AST. The continuation [k] transforms the
-    final expression into a statement (e.g., return, assignment). Handles
-    let-bindings, pattern matching, fix expressions, and monadic operations. *)
-(* The record [t] a match takes apart into its fields, read once however many
+(** The record [t] a match takes apart into its fields, read once however many
    fields are bound out of it: a call standing in its place is evaluated into
    a temporary first, rather than once per field -- which a recursive call
    taken apart into three fields made three calls per level.  The temporary
@@ -1629,8 +1639,8 @@ let gen_record_projection ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ ~t 
     in
     let _, env' = push_vars' branch_binders env in
     ( match fld with
-    (* [CPPfun_call] expects args in reverse order; [List.rev_map] both
-       converts and reverses.  Filter [Core.Expr.Erased_value] args — these are erased type
+    (* Erased arguments ([Core.Expr.Erased_value]) whose parameter is erased
+       too are dropped from [value_args]: they are erased type
        parameters (e.g. [A : Type] in [f : forall A, A -> A]) with no C++
        runtime representation.  When the field's codomain erases to [std::any]
        (see [core_codomain_erases_to_any]), wrap the result with
@@ -1772,7 +1782,7 @@ let gen_record_projection ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ ~t 
          and the method declares it as a template parameter.  It leaves the
          argument list for the callee's explicit template arguments, which is
          the only place that parameter can be given. *)
-      (* The arguments live under the branch's binders, so the ML type
+      (* The arguments live under the branch's binders, so the Core type
          environment is pushed alongside [env'] wherever they are read:
          without it, a binder's type is some other binder's. *)
       let under_branch_binders f =

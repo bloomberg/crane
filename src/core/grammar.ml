@@ -10,31 +10,36 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Core: the language-agnostic functional program extraction produces.
+(** Core: the language-agnostic functional program extraction produces, and
+    the first IR of Crane's pipeline.
 
-    The pipeline is
-
-    {[ Rocq PCUIC --[extraction.ml]--> Core --[translation.ml]--> CppIR
-       --[cpp.ml]--> C++ ]}
+    {[ Rocq PCUIC --[extraction.ml]--> Core --[Core passes]--> Core
+       --[Translation and the Translation_* modules]--> CppIR
+       --[resolution]--> CppAST --[Cpp_print]--> C++ ]}
 
     Extraction from Rocq's PCUIC first erases everything with no
     computational content -- types, logical ([Prop]) subterms, and
     user-declared implicit arguments -- recording what was removed in a
-    {!Signature.t}.  The surviving computation is expressed in these
-    families: {!Type} for type expressions, {!Expr} for terms, {!Inductive}
-    for inductive declarations, {!Decl} and {!Module} for whole definitions
-    and module components.  Core-level optimisations (inlining, dead-code
-    elimination, currying fixes) run over these trees before {!Translation}
-    lowers them to {!Cpp_ir}.
+    {!Core.Signature.t}.  The surviving computation is expressed in these
+    families: {!Core.Type} for type expressions, {!Core.Expr} for terms,
+    {!Core.Inductive} for inductive declarations, {!Core.Decl} and
+    {!Core.Module} for whole definitions and module components.  The Core
+    passes ({!Core_phase}: inlining, dead-code elimination, deduplication,
+    specialisation, knot-tying, freezing, normalisation) run over these trees
+    before lowering turns them into CppIR.
 
-    The language descends from Rocq's own extraction plugin's Core; Crane
-    extends it (notably {!Inductive.Packet}'s constructor argument names) to
-    carry the extra information the C++ backend needs.
+    The language descends from the intermediate language of Rocq's own
+    extraction plugin; Crane extends it (notably
+    {!Core.Inductive.Packet}'s constructor argument names, occurrences, and
+    use-site instantiations) to carry the extra information the C++ backend
+    needs.
 
     The families are mutually recursive -- a type names a value argument, an
     expression names a type -- so they are defined here together, as
-    recursive modules holding only types; each family's own file
-    ([Core.Type], [Core.Expr], ...) re-exports it under its final name. *)
+    recursive modules holding (almost) only types; each family's own file
+    ([Core.Type], [Core.Expr], ...) re-exports it under its final name, and
+    this module itself is not exported from [Core].  Like every module of
+    [src/core/], it depends on nothing of the compiler but {!Scheme}. *)
 
 open Names
 
@@ -65,7 +70,7 @@ end =
 and Type : sig
   module Rigidity : sig
     (** Whether a type variable can be instantiated by unification.  See
-        {!Type.Variable}. *)
+        {!Core.Type.Variable}. *)
     type t =
       | Schematic
       | Rigid
@@ -97,7 +102,7 @@ and Type : sig
 
             The two do not unify with each other even at the same index,
             which is the whole point: it is that failure that makes
-            {!Core_util.needs_magic} insert a {!Expr.Coerce} where a definition's
+            {!Core_util.needs_magic} insert a {!Core.Expr.Coerce} where a definition's
             own variable meets a schematic one.  Note that
             {!Core_util.type_subst_list} substitutes both flavours -- rigidity
             constrains unification, not substitution.
@@ -171,7 +176,7 @@ and Record : sig
         together -- walking binder names and constructor argument types in
         step, dropping the same positions from both -- so they are stored
         together; a consumer that zips a name list against a type list
-        rebuilt from {!Inductive.Packet.constructor_argument_types} gets a
+        rebuilt from {!Core.Inductive.Packet.constructor_argument_types} gets a
         length mismatch, because that list still holds the implicit
         arguments the selection dropped. *)
     type t = {
@@ -213,7 +218,7 @@ and Inductive : sig
         kernel [one_inductive_body].  When [logical] holds the type has no
         computational content and the other fields are unused; otherwise
         [name] is the type's name, [constructor_names] the constructor
-        names, [Core.Signature.t] the {!Signature.t} of the inductive's own
+        names, [signature] the {!Core.Signature.t} of the inductive's own
         arguments, [type_variables] the names of the type variables
         surviving extraction, and [constructor_argument_types] the argument
         types of each constructor (indexed by constructor ordinal).
@@ -238,7 +243,7 @@ and Inductive : sig
 
   (** A whole (possibly mutual) inductive definition: [kind] its
       classification, [parameter_count] the number of uniform parameters,
-      [packets] one {!Packet.t} per mutually-defined body, and [equivalence]
+      [packets] one {!Core.Inductive.Packet.t} per mutually-defined body, and [equivalence]
       any sharing or redirection information. *)
   type t = {
     mutable kind : Kind.t;
@@ -252,7 +257,7 @@ end =
 and Expr : sig
   (** An erased term -- the computational residue of a PCUIC term.
 
-      [Construct] and [Match] deliberately carry a {!Type.t} -- the type of
+      [Construct] and [Match] deliberately carry a {!Core.Type.t} -- the type of
       the applied constructor, or of the matched head -- so that later
       optimisations remain type-safe.  [Tuple] and the extension of [Match]
       to general patterns come from P.N. Tollitte's Relation Extraction
@@ -365,7 +370,7 @@ and Global_use : sig
       other is [Core.Global_use.Polymorphic], with an instantiation at the callee's scheme:
       one slot per variable, indexed by {!Scheme.Var.t}, each holding what
       the use solved the variable to -- a type that may contain
-      {!Type.Hole}s but no [Type.Meta], or [Identity] for a rigid self-call
+      {!Core.Type.Hole}s but no [Core.Type.Meta], or [Identity] for a rigid self-call
       -- and the argument the source wrote at the variable's binder, if it
       reached it.  There is no list of type arguments: which of them C++
       writes, and where, is a question about the callee's declaration, not
@@ -401,7 +406,7 @@ end
 
 and Match : sig
   module Branch : sig
-    (** A single {!Expr.Match} branch.  [binders] are the variables bound by
+    (** A single {!Core.Expr.Match} branch.  [binders] are the variables bound by
         [pattern] paired with their types, [result_type] is the branch's
         result type, and [body] the term run when [pattern] matches. *)
     type t = {
@@ -424,7 +429,7 @@ and Pattern : sig
     | Tuple of t list
     | Bound_variable of int
         (** a branch binder by De Bruijn index: [Bound_variable 1] is the
-            last of {!Match.Branch.binders} *)
+            last of {!Core.Match.Branch.binders} *)
     | Wildcard
 end =
   Pattern
@@ -438,7 +443,7 @@ and Signature : sig
       | Erased of Erasure_reason.t
   end
 
-  (** Per-argument decisions for a PCUIC object, one {!Argument.t} per
+  (** Per-argument decisions for a PCUIC object, one {!Core.Signature.Argument.t} per
       argument, outermost first: it tells how many arguments the object
       expects and what each becomes. *)
   type t = Argument.t list
@@ -489,7 +494,7 @@ and Recursion : sig
 
   module Group : sig
     (** A block of local mutually (co)recursive functions, the value of an
-        {!Expr.Fixpoint} or {!Expr.Cofixpoint}: its [members], in binding
+        {!Core.Expr.Fixpoint} or {!Core.Expr.Cofixpoint}: its [members], in binding
         order -- the last is the innermost binder, so in every body the
         member [i] of [n] is read as [Bound_variable (n - i)] -- the member
         [selected] the block evaluates to, by its position, and the

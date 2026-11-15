@@ -200,7 +200,7 @@ and stmt_has_shared_from_this : Cpp_ir.Lowered.Stmt.t -> bool = function
     before {!method_head} decides which of its own variables it keeps. *)
 type method_scope = {
   ms_ty : Core.Type.t;  (** The function's type, renumbered. *)
-  ms_ret_ty : Core.Type.t;  (** Its ML return type, renumbered. *)
+  ms_ret_ty : Core.Type.t;  (** Its Core return type, renumbered. *)
   ms_body : Core.Expr.t;  (** Its body, renumbered. *)
   ms_all_tvars : int list;
       (** The variables of the type before renumbering, sorted. *)
@@ -749,14 +749,14 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      extraction produces a self reference whose variables stand for themselves
      and are written nowhere ({!Core_util.self_reference}). When the function is a
      method, the recursive call needs
-     explicit template args for non-deducible params. Replace CPPglob(func_ref,
-     []) with CPPglob(func_ref, all_type_args).
+     explicit template args for non-deducible params. Replace [Entity (func_ref,
+     [], _)] with [Entity (func_ref, all_type_args, _)].
 
      The type args must be in the ORIGINAL tys order (matching the
      inductive's variable positions {!Cpp_names.method_type_args} filters out
      at the call site, {!Cpp_state.lookup_method_ind_tvar_positions}).
      Position i in tys
-     corresponds to Core.Type.Variable (i+1) in the original ML type. After remapping, Core.Type.Variable
+     corresponds to Core.Type.Variable (i+1) in the original Core type. After remapping, Core.Type.Variable
      (i+1) → remap_core_tvar(i+1). We construct the C++ type arg from
      extended_vars at that remapped position. *)
   let extended_vars = vars @ extra_tvar_names in
@@ -781,9 +781,9 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let stmts =
     match this_arg_id with
     | Some id ->
-      (* For value-type methods, substitute with [CPPderef CPPthis] so that
+      (* For value-type methods, substitute with [Dereference This] so that
          return positions produce a value copy rather than a raw pointer.
-         For shared_ptr/coinductive methods, keep bare [CPPthis]. *)
+         For shared_ptr/coinductive methods, keep bare [This]. *)
       let this_expr : Cpp_ir.Lowered.Expr.t =
         if not (Table.is_coinductive name) && not (is_enum_inductive name) then
           Dereference This
@@ -792,7 +792,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       List.map (var_subst_stmt id this_expr) stmts
     | None -> stmts
   in
-  (* Replace [CPPthis] with [CPPshared_from_this] in return expressions.  When a
+  (* Replace [This] with [Shared_from_this] in return expressions.  When a
      method body returns or stores [this] in a position that expects [shared_ptr]
      (e.g. [return this;], [return std::make_pair(this, this);]), the raw pointer
      cannot convert to [shared_ptr].  Using [shared_from_this()] produces a valid
@@ -809,7 +809,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       List.map (replace_return_this_stmt self_type) stmts
     else stmts
   in
-  (* Replace [CPPthis] inside by-value lambda bodies with a copy of the
+  (* Replace [This] inside by-value lambda bodies with a copy of the
      receiver bound at the top of the method ({!replace_this_in_lambdas}).
      When a method returns a closure that captures [this], the raw pointer
      would dangle once the receiver is gone; the closure holding its own copy
@@ -1002,7 +1002,7 @@ let gen_methods ?(merged = false) name vars candidates =
        (fun c -> Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c))
        candidates )
 
-(** Does the ML type [core_ty] contain [ind_ref] (or a mutual sibling) anywhere
+(** Does the Core type [core_ty] contain [ind_ref] (or a mutual sibling) anywhere
     in its type arguments, but NOT at the top level?  Used to detect fields
     like [list(tree(A))] inside [tree]'s definition, which need field-level
     [shared_ptr] wrapping instead of type-argument wrapping. *)
@@ -1135,7 +1135,7 @@ let constructor_pointer_fields ~name ~is_coinductive vars tys =
          | _ -> [] )
        tys )
 
-(** Whether ML type [t] is a reference to [ref_name] applied to the same type
+(** Whether Core type [t] is a reference to [ref_name] applied to the same type
     variables [ref_vars], its parameters (i.e., a direct recursive or mutual
     recursive occurrence).  The arguments after them are a family's type
     indices, which its C++ type does not take: [succE : expr nat -> expr nat]
@@ -2714,7 +2714,7 @@ let gen_ind_header_v2
         let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
         let fname = Translation_support.factory_name_of_ctor ~fallback_idx:i c in
         let factory_name = Id.of_string fname in
-        (* Convert ML types both as public API types and constructor storage
+        (* Convert Core types both as public API types and constructor storage
            types.  Public APIs remain value-shaped (empty ns); storage uses
            [name] in ns so non-coinductive recursive occurrences are
            [shared_ptr]-wrapped. *)
@@ -3006,7 +3006,7 @@ let gen_ind_header_v2
                       A coinductive's alternative is built inside its new
                       lazy cell, from the arguments themselves: no move
                       through the alternative, the variant and the cell on
-                      the way in.  Use CPPglob with the inductive ref so
+                      the way in.  Use an [Entity] with the inductive ref so
                       the printer emits the correct name (handles both
                       top-level and module-nested inductives).  The type
                       arguments must be spelled out: when the inductive is

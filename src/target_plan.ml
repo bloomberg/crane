@@ -50,10 +50,10 @@ let decided decisions kn =
 
 let kind_of t kn = decided t.inductive_kinds kn
 
-(** The kind [ind] has once [decisions] are installed. *)
+(** The kind [ind] has once [decisions] apply. *)
 let kind_after decisions kn (ind : Core.Inductive.t) = Option.default ind.kind (decided decisions kn)
 
-(** {!Table.is_typeclass}, once [decisions] are installed. *)
+(** {!Table.is_typeclass}, once [decisions] apply. *)
 let is_typeclass_after decisions r =
   let of_block kn =
     match decided decisions kn with

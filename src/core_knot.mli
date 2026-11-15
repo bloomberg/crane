@@ -21,7 +21,10 @@
     recursion -- a clause helper [Equations] generates for a [with] or a
     [where] -- whose body, instantiated there, reads it so in turn; and [f]
     is not polymorphic.  The functional and its helpers are left in
-    place. *)
+    place.
+
+    One of the Core passes run before the program is frozen ([core_passes]
+    in [extract_env.ml]), after {!Core_specialize}. *)
 
 (** [structure s]: [s] with every knot of a single-member fixpoint that
     satisfies the conditions above tied; anything else unchanged. *)

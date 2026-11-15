@@ -63,7 +63,7 @@ let applied_tvar_arities (cty : head_type) =
 (** Re-declare as template template parameters those entries of [temps] that
     [cty] applies to arguments; see {!applied_tvar_arities}.
 
-    [core_ty], when given, vetoes the promotion for a variable whose ML type does
+    [core_ty], when given, vetoes the promotion for a variable whose Core type does
     not demand the higher kind ({!Type_util.higher_kinded_core_tvars}: applied
     to something erasure left behind, or written where a generated constructor
     expects a template name).  Being applied is not on its own a reason to be
@@ -123,13 +123,13 @@ let with_applied_tvars ?core_ty (cty : head_type) (temps : head_params) : head_p
 (** Template parameter list for a declaration whose parameters [vars] are used
     by the types [tys] -- an inductive's constructor fields, or the body of a
     type alias -- with the kinds of its positions.  The arities are read off
-    the ML types rather than the converted C++ ones because the parameter list
+    the Core types rather than the converted C++ ones because the parameter list
     has to be fixed before the types are converted.  [applied], when given,
     is the rendered C++ body of a type alias, read instead of [tys] for the
     arities and for which parameters are phantom.  Returns the parameter list
     and its {!Tparam_kinds.t}; records nothing ({!hkt_templates} records). *)
 let template_kinds ?(applied : head_type option) vars tys =
-  (* Read from the rendered type where there is one: the ML body still applies
+  (* Read from the rendered type where there is one: the Core body still applies
      a variable that erasure removed, and the parameter list has to agree with
      what the users of this name can see.  See
      {!Type_util.rendered_tvar_arities}. *)
@@ -485,7 +485,7 @@ let relax_applied_param (temps : head_params) (signature : Callable_abi.signatur
         pick (List.length !fresh)
       in
       (* One name per distinct application, not per occurrence: two positions
-         spelled [T1<std::any>] came from the one ML type and denote the one
+         spelled [T1<std::any>] came from the one Core type and denote the one
          C++ type, and giving them separate deduced parameters would let a
          call deduce them apart.  Sharing is also what lets the body be
          rewritten: it spells the application the same way the parameter did,
@@ -739,10 +739,10 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
       [typename T]) even if they don't appear in the C++ function type.
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies.
-    @param also_declared  Set of tvar indices the ML type has but the C++
+    @param also_declared  Set of tvar indices the Core type has but the C++
       type may not spell; each is declared, as a defaulted phantom unless
       it is primary.
-    @param core_ty  The ML type of the declaration, passed to
+    @param core_ty  The Core type of the declaration, passed to
       {!with_applied_tvars} to veto higher kinds it does not demand. *)
 let phantom_aware_temps
     ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?core_ty (cty : head_type)
@@ -767,10 +767,10 @@ let phantom_aware_temps
     let tvars_indexed = get_tvars_indexed cty in
     let primary = primary_tvar_indices dom cod in
     let primary = IntSet.union primary force_required in
-    (* [also_declared] is every variable the ML type has, which is not every
+    (* [also_declared] is every variable the Core type has, which is not every
        variable the C++ type spells: an erased one is written nowhere in the
        signature, yet the body and the call sites still number their arguments
-       by the ML type.  Declared as a defaulted phantom, the numbering lines up
+       by the Core type.  Declared as a defaulted phantom, the numbering lines up
        and nothing is demanded of a use site that supplies nothing. *)
     let extra =
       IntSet.fold (fun i acc ->
