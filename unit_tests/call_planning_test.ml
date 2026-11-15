@@ -134,9 +134,9 @@ let () =
   let kn = mutind "CP" "C" in
   let fld = r "fld" and fld_mono = r "fld_mono" in
   Table.add_inductive_kind kn
-    (Core.Inductive.Kind.Type_class [(Some fld, Core.Type.Arrow {parameter = v 1;
-                                                                 result = v 1}); (Some fld_mono, Core.Type.Arrow {parameter = nat;
-                                                                                                                  result = nat})]);
+    (Core.Inductive.Kind.Type_class
+       [ {Core.Record.Field.projection = Some fld; type_ = Core.Type.Arrow {parameter = v 1; result = v 1}};
+         {Core.Record.Field.projection = Some fld_mono; type_ = Core.Type.Arrow {parameter = nat; result = nat}} ]);
   let cls = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   Table.add_type fld (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = v 1; result = v 1}});
   Table.add_type fld_mono (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
@@ -217,9 +217,11 @@ let () =
 let () =
   let kn = mutind "CP" "R" and kc = mutind "CP" "K" in
   let fx = r "rx" and fy = r "ry" in
-  Table.add_inductive_kind kn (Core.Inductive.Kind.Record [(Some fx, nat); (Some fy, Core.Type.Arrow {parameter = nat;
-                                                                                                      result = nat})]);
-  Table.add_inductive_kind kc (Core.Inductive.Kind.Type_class [(Some fx, nat)]);
+  Table.add_inductive_kind kn
+    (Core.Inductive.Kind.Record
+       [ {Core.Record.Field.projection = Some fx; type_ = nat};
+         {Core.Record.Field.projection = Some fy; type_ = Core.Type.Arrow {parameter = nat; result = nat}} ]);
+  Table.add_inductive_kind kc (Core.Inductive.Kind.Type_class [{Core.Record.Field.projection = Some fx; type_ = nat}]);
   let rec_ty = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0);
                                      type_arguments = [];
                                      index_arguments = []} and cls_ty = Core.Type.Global_app {head = GlobRef.IndRef (kc, 0);

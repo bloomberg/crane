@@ -560,7 +560,7 @@ let methods name body ty =
         let type_args = record_type_args cons_ty type_args in
         let tvar_count = tvar_count ~instance_tvars:(instance_tvars ty inner_ty) ty type_args in
         let inst = {class_ref; type_args; tvar_count} in
-        let method_of (field, field_ty) field_body =
+        let method_of {Core.Record.Field.projection = field; type_ = field_ty} field_body =
           match (field, field_ty) with
           (* A class-typed field is promoted, not generated as a method. *)
           | Some _, Core.Type.Global_app {head = r; _} when Table.is_typeclass r -> None

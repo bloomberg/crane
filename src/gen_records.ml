@@ -82,7 +82,7 @@ let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
   in
   let l : Cpp_ir.Lowered.phase Cpp_ir.Field.member list =
     List.mapi
-      (fun i (x, t) : Cpp_ir.Lowered.phase Cpp_ir.Field.member ->
+      (fun i {Core.Record.Field.projection = x; type_ = t} : Cpp_ir.Lowered.phase Cpp_ir.Field.member ->
         (Entity_data (field_name i x, field_cpp_ty vars t), Public, Untagged) )
       fields
   in
@@ -96,7 +96,7 @@ let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
       ~name ~templates:(Cpp_ir.Build.typenames vars) ~vars
       ~fields:
         (List.mapi
-           (fun i (x, t) ->
+           (fun i {Core.Record.Field.projection = x; type_ = t} ->
              ( Id.of_string_soft
                  (Common.pp_global_name Type (field_name i x)),
                fun param_names -> field_cpp_ty param_names t ) )
@@ -259,7 +259,7 @@ let gen_typeclass_cpp name fields =
      everywhere except in the error count of whatever used it. *)
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
     List.iter
-      (fun (field_opt, field_ty) ->
+      (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
         match field_opt with
         | Some fr when not (is_typeclass_field_type field_ty) ->
           let fid = Common.id_of_global Term fr in
@@ -276,7 +276,7 @@ let gen_typeclass_cpp name fields =
      [`Type t] for a superclass field (a [typename I::field] requirement),
      [`Disjunctive e] for a field whose type is a bare promoted Core.Type.Variable, and
      [`Normal (params, (call, constraint))] for every other method. *)
-  let gen_method_req (field_opt, field_ty) =
+  let gen_method_req {Core.Record.Field.projection = field_opt; type_ = field_ty} =
     match field_opt with
     | None -> None (* Anonymous field, skip *)
     | Some field_ref ->
@@ -361,7 +361,7 @@ let gen_typeclass_cpp name fields =
         Some (`Normal ([], (call, constraint_expr)))
   in
   let all_reqs =
-    List.filter_map (fun pair -> gen_method_req pair) fields
+    List.filter_map gen_method_req fields
   in
   (* Superclass fields contribute [typename I::field;] alongside the promoted
      associated types.  Without them a class made purely of superclasses would

@@ -1336,14 +1336,14 @@ and extract_really_ind env kn mib =
           when isTdummy (expand env typ) || Int.Set.mem i implicits ->
           select_fields (i + 1) l typs
         | {binder_name = Anonymous} :: l, typ :: typs ->
-          (None, typ) :: select_fields (i + 1) l typs
+          {Core.Record.Field.projection = None; type_ = typ} :: select_fields (i + 1) l typs
         | {binder_name = Name id} :: l, typ :: typs ->
           let knp = Constant.make2 mp (Label.of_id id) in
           (* Is it safe to use [id] for projections [foo.id] ? *)
           if List.for_all (( == ) Core.Signature.Argument.Runtime) (type2signature env typ) then
             (* for OCaml inlining: *)
             add_projection nparams knp ip;
-          (Some (GlobRef.ConstRef knp), typ) :: select_fields (i + 1) l typs
+          {Core.Record.Field.projection = Some (GlobRef.ConstRef knp); type_ = typ} :: select_fields (i + 1) l typs
         | _ -> assert false
       in
       let field_glob = select_fields (1 + npar) field_names typ in

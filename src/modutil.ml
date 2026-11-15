@@ -122,7 +122,7 @@ type do_ref = GlobRef.t -> unit
 (** Iterate over field references in an inductive kind (Record/Type_class). *)
 let record_iter_references do_term = function
   | Core.Inductive.Kind.Record l | Core.Inductive.Kind.Type_class l ->
-    List.iter (fun (r, _) -> Option.iter do_term r) l
+    List.iter (fun (f : Core.Record.Field.t) -> Option.iter do_term f.projection) l
   | _ -> ()
 
 (** Iterate over all GlobRef.t occurring in an ML type. *)

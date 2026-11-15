@@ -178,7 +178,7 @@ let () =
      one branch: generated as statements assigning the binder, the call in
      the branch resumes. *)
   let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "R")) in
-  Table.add_inductive_kind kn (Core.Inductive.Kind.Record [(Some (r "a"), nat)]);
+  Table.add_inductive_kind kn (Core.Inductive.Kind.Record [{Core.Record.Field.projection = Some (r "a"); type_ = nat}]);
   let record = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   let inner = use () and tail = use () in
   let rhs =

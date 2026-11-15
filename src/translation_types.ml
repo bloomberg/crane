@@ -3235,7 +3235,7 @@ let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
   | Core.Type.Global_app {head = r; type_arguments = args; _} -> (
     let declared =
       List.find_map
-        (fun (f, ty) ->
+        (fun {Core.Record.Field.projection = f; type_ = ty} ->
           match f with
           | Some f when GlobRef.CanOrd.equal f fld -> Some ty
           | _ -> None )

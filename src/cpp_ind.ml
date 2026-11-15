@@ -1467,8 +1467,8 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
     ~same:(fun tys tys' -> compare tys tys' = 0)
     (fun () ->
       List.map
-        (fun (_, ty) ->
-          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars ty)) with
+        (fun (f : Core.Record.Field.t) ->
+          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars f.type_)) with
           | t -> t
           | exception Cpp_ir.Resolve.Owed form ->
             CErrors.anomaly

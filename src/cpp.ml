@@ -997,8 +997,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                 (* [fields] already pairs each projection with its type:
                    extraction selected the two together. *)
                 let field_types = Cpp_ind.record_field_types ~module_ epon_ref ty_vars fields in
-                let field_name i (field_ref, _) =
-                  match field_ref with
+                let field_name i (f : Core.Record.Field.t) =
+                  match f.projection with
                   | Some r -> Common.pp_global_name Term r
                   (* Index anonymous fields so multiple of them don't all
                      collapse to a single duplicate "_field" member (which
@@ -2240,7 +2240,8 @@ let plan_names s =
              (Array.to_list ind.packets) )
         (* A record's fields, named as its struct spells them. *)
         @ ( match ind.kind with
-          | Core.Inductive.Kind.Record fields -> List.concat_map (fun (f, _) -> Option.cata (name Type) [] f) fields
+          | Core.Inductive.Kind.Record fields ->
+            List.concat_map (fun (f : Core.Record.Field.t) -> Option.cata (name Type) [] f.projection) fields
           | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Type_class _ -> [] )
       | Core.Decl.Type_alias {entity = r; _} -> name Type r
       | Core.Decl.Value {entity = r; _} -> name Term r
@@ -2336,7 +2337,7 @@ let plan_referenced_names s =
   let inductive kn (ind : Core.Inductive.t) =
     ( match ind.kind with
     | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields ->
-      List.iter (fun (f, _) -> Option.iter (name Term) f) fields
+      List.iter (fun (f : Core.Record.Field.t) -> Option.iter (name Term) f.projection) fields
     | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> () );
     Array.iteri
       (fun i (p : Core.Inductive.Packet.t) ->

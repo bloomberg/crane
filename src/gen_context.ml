@@ -180,7 +180,7 @@ let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
     whether it stayed one. *)
 let promoted_var_is_associated_type class_ref v =
   List.for_all
-    (fun (field_opt, field_ty) ->
+    (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
       match (field_opt, field_ty) with
       | Some fr, Core.Type.Global_app {head = r; _}
         when Id.equal (Common.id_of_global Term fr) v ->
@@ -239,7 +239,7 @@ let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
   let is_direct v = List.exists (Id.equal v) direct in
   let nested =
     List.concat_map
-      (fun (field_opt, field_ty) ->
+      (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
         match (field_opt, field_ty) with
         | Some field_ref, Core.Type.Global_app {head = r; _} when Table.is_typeclass r ->
           let field_id = Common.id_of_global Term field_ref in

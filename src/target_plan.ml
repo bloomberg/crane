@@ -321,7 +321,8 @@ let same_callables a b =
        a
 
 let kind_equal a b =
-  let fields_equal = List.equal (fun (r, _) (r', _) -> Option.equal GlobRef.UserOrd.equal r r') in
+  let fields_equal = List.equal (fun (f : Core.Record.Field.t) (f' : Core.Record.Field.t) ->
+        Option.equal GlobRef.UserOrd.equal f.projection f'.projection) in
   match (a, b) with
   | Core.Inductive.Kind.Coinductive, Core.Inductive.Kind.Coinductive
   | Core.Inductive.Kind.Inductive, Core.Inductive.Kind.Inductive -> true

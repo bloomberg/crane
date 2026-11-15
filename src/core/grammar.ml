@@ -153,15 +153,18 @@ end =
 
 and Record : sig
   module Field : sig
-    (** One field of a record or type class: its projection ([None] when
-        the field is anonymous) paired with its type.  Extraction selects the
-        two together -- walking binder names and constructor argument types
-        in step, dropping the same positions from both -- so they are stored
+    (** One field of a record or type class: its [projection] ([None] when
+        the field is anonymous) and its type.  Extraction selects the two
+        together -- walking binder names and constructor argument types in
+        step, dropping the same positions from both -- so they are stored
         together; a consumer that zips a name list against a type list
         rebuilt from {!Inductive.Packet.constructor_argument_types} gets a
         length mismatch, because that list still holds the implicit
         arguments the selection dropped. *)
-    type t = GlobRef.t option * Type.t
+    type t = {
+      projection : GlobRef.t option;
+      type_ : Type.t;
+    }
   end
 end =
   Record

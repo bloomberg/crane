@@ -663,13 +663,14 @@ let get_record_field_bindings r =
   | Some (Core.Inductive.Kind.Record f | Core.Inductive.Kind.Type_class f) -> f
   | _ -> (
     match singleton_shape r with
-    | Some {sc_field = m, ty; _} -> [(Some m, ty)]
+    | Some {sc_field = m, ty; _} -> [{Core.Record.Field.projection = Some m; type_ = ty}]
     | None -> [] )
 
 (** The field references of a record or type class.  Anything else has none:
     {!record_fields_of_type} asks this of whatever a [Core.Type.Global_app] carries, and an
     ML type may perfectly well be headed by a constant. *)
-let get_record_fields r = List.map fst (get_record_field_bindings r)
+let get_record_fields r =
+  List.map (fun (f : Core.Record.Field.t) -> f.projection) (get_record_field_bindings r)
 
 (** {!get_record_field_bindings} for a record named by an ML type. *)
 let record_field_bindings_of_type = function
@@ -1361,7 +1362,7 @@ let fold_type_body_types f r acc =
              [iptr].  Skipping the class would leave both spellings to the
              file-scope [using ptr = std::any;]. *)
           | Core.Inductive.Kind.Type_class _ ->
-            List.map snd (get_record_field_bindings r)
+            List.map (fun (f : Core.Record.Field.t) -> f.type_) (get_record_field_bindings r)
           | _ ->
             Array.fold_left
               (fun acc (p : Core.Inductive.Packet.t) ->
@@ -1429,8 +1430,8 @@ let type_key = function
    ordinary dependence. *)
 let declares_promoted_var r g =
   List.exists
-    (fun (field_opt, _) ->
-      match field_opt with
+    (fun (f : Core.Record.Field.t) ->
+      match f.projection with
       | Some fr -> GlobRef.CanOrd.equal fr g
       | None -> false )
     (get_record_field_bindings (type_key r))

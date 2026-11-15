@@ -146,7 +146,7 @@ and global_use w u =
           option w (type_ w) observed )
       inst ()
 
-let field w (r, ty) = option w (globref w) r; type_ w ty
+let field w {Core.Record.Field.projection = r; type_ = ty} = option w (globref w) r; type_ w ty
 
 let kind w = function
   | Core.Inductive.Kind.Coinductive -> tag w "Kind.Coinductive"
