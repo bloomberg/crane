@@ -85,7 +85,7 @@ let erased_lambda (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) ~params ~ret ~
 let singleton_call env i occ =
   let live () = Option.map (fun (_, c, m) -> (c, m)) (singleton_dictionary env (Core.Expr.Bound_variable {index = i;
                                                                                                           occurrence = occ})) in
-  match Core_elaborate.singleton_dictionary_call ~live occ with
+  match Core_elaborate.singleton_dictionary_call ~walk:(elaborations ()) ~live occ with
   | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
   | None -> None
 
@@ -649,7 +649,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
        the call can change, as Core decided it
        ({!Core_elaborate.closed_head_call}). *)
     let closed_head =
-      (not slot.building_constant) && Core_elaborate.closed_head_call ~lex:(current_lexenv ()) use args
+      (not slot.building_constant) && Core_elaborate.closed_head_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args
     in
     let args =
       let slot = if closed_head then {slot with building_constant = true} else slot in
@@ -725,7 +725,7 @@ let eta_fun ?(slot = empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t option) e
     let cglob =
       match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
       | [inst], [Some inst_ty], _ :: method_targs
-        when Core_elaborate.member_template_call ~lex:(current_lexenv ()) use ml_args ->
+        when Core_elaborate.member_template_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use ml_args ->
         (Scope (Type_name inst_ty, Common.id_of_global Term id, method_targs) : Cpp_ir.Lowered.Expr.t)
       | _ ->
         mk_cppglob
@@ -2058,7 +2058,7 @@ let gen_singleton_dictionary_call env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
     names, as Core decided it ({!Core_elaborate.static_projection_call}); a
     projection missing arguments is eta-expanded over them first. *)
 let gen_instance_projection ~expected_ty ~slot env ~use ~args : Cpp_ir.Lowered.Expr.t =
-  let projection = Option.get (Core_elaborate.static_projection_call ~lex:(current_lexenv ()) use args) in
+  let projection = Option.get (Core_elaborate.static_projection_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args) in
   match projection.missing with
   | [] -> project_through_instance env use args projection
   | missing ->

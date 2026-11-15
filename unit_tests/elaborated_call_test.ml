@@ -112,21 +112,21 @@ let () =
   check "the globals the declaration names, applied or not, are referenced"
     (List.sort GlobRef.UserOrd.compare (Core_elaborate.referenced elaborated)
     = List.sort GlobRef.UserOrd.compare [f; r "pa"]);
-  Core_elaborate.install elaborated;
   Common.end_planning ();
-  ignore (Core_elaborate.elaboration ~lex:Lexenv.empty rewritten [a]);
-  ignore (Core_elaborate.elaboration ~lex:Lexenv.empty again [a]);
+  let walk = Some elaborated in
+  ignore (Core_elaborate.elaboration ~walk ~lex:Lexenv.empty rewritten [a]);
+  ignore (Core_elaborate.elaboration ~walk ~lex:Lexenv.empty again [a]);
   (* The argument, a global named unapplied, is planned as its call with no
      arguments. *)
   check "a call whose use was rewritten is found planned, one built afresh is not"
-    (Core_elaborate.report ()
+    (Core_elaborate.report elaborated
     = "elaborated calls: 2 planned; emission found 1, elaborated 1 itself; took 0 instantiations planned, \
        0 instantiated itself");
   (* Its instantiation is the walk's, taken at the argument nodes being
      translated, which a rewrite rebuilt. *)
   let a' = match a with Core.Expr.Global u -> Core.Expr.Global (Core.Global_use.map_types Fun.id u) | e -> e in
   let inst =
-    Core_elaborate.instantiation ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None ~scope:[]
+    Core_elaborate.instantiation ~walk ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None ~scope:[]
       rewritten [a']
   in
   check "a call's instantiation is the one planned, at the arguments translated"
@@ -134,7 +134,7 @@ let () =
        (Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None ~scope:[]
           (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty rewritten [a']) )
     && List.equal ( == ) inst.call.args [a']
-    && Core_elaborate.report ()
+    && Core_elaborate.report elaborated
        = "elaborated calls: 2 planned; emission found 2, elaborated 1 itself; took 1 instantiations planned, \
           0 instantiated itself")
 

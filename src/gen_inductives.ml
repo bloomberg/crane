@@ -331,7 +331,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
-  let method_owned_flags = Ownership.read_off ids_with_types inner_body in
+  let method_owned_flags = Ownership.read_off ~settled:settled_ownership ids_with_types inner_body in
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with
      body *)

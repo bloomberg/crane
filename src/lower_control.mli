@@ -3,8 +3,8 @@
 
 (** LowerControl: the {!Control_ir} of a normalized program, from its Core
     bodies and its recursion plan.  It runs after {!Recursion_plan} has
-    chosen each function's strategy and before translation, which reads the
-    loops installed here.
+    chosen each function's strategy and before translation, whose loop
+    lowering reads the loops it decided ({!loop}, {!Loop_facts}).
 
     It lowers the loops of direct tail recursion
     ({!Recursion_plan.tail_loops}): a function, or a local fixpoint of one
@@ -85,11 +85,8 @@ val tail_loop :
     machine has one result. *)
 val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core_phase.normalized Core_phase.program -> t
 
-(** Make [t] the extraction's, the one {!loop} reads. *)
-val install : t -> unit
-
-(** The loop [l], if it is lowered: a [Control_ir.Term.Loop]. *)
-val loop : Control_ir.Loop.t -> Control_ir.Term.t option
+(** The loop [l] in [t], if it is lowered: a [Control_ir.Term.Loop]. *)
+val loop : t -> Control_ir.Loop.t -> Control_ir.Term.t option
 
 (** The {!Control_ir.Term.continues} of [t] the code made of it keeps no call of: those
     made of an occurrence no other [Continue] shares, nor any Core term [t]

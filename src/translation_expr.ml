@@ -228,7 +228,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
      survived, whatever mapping the field carries, as Core decided it
      ({!Core_elaborate.static_projection_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args}
-    when Core_elaborate.static_projection_call ~lex:(current_lexenv ()) use args <> None ->
+    when Core_elaborate.static_projection_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args <> None ->
     Translation_application.gen_instance_projection ~expected_ty ~slot env ~use ~args
   (* A closed call building a typeclass instance -- an event injection
      [ReSum_inr] composed from instances and closed lambdas, say -- is the
@@ -239,7 +239,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
      decides which calls those are ({!Core_elaborate.closed_instance_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use); arguments = args} as e
     when (not slot.building_constant)
-         && Core_elaborate.closed_instance_call ~lex:(current_lexenv ()) use args -> (
+         && Core_elaborate.closed_instance_call ~walk:(elaborations ()) ~lex:(current_lexenv ()) use args -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
     | Call _ ->
@@ -424,7 +424,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
      left as it is.  Core decides which terms those are
      ({!Core_elaborate.shared_constant}). *)
   | Core.Expr.Construct {arguments = ts; _} as e
-    when (not slot.building_constant) && Core_elaborate.shared_constant e
+    when (not slot.building_constant) && Core_elaborate.shared_constant ~walk:(elaborations ()) e
          && not (takes_reuse_token e) -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
@@ -437,10 +437,10 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
-                     occurrence = case_occ} when Core_elaborate.match_kind typ pv case_occ = Match_kind.Custom ->
+                     occurrence = case_occ} when Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ = Match_kind.Custom ->
     Translation_match.gen_custom_match_expr env ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ}
-    when Match_kind.is_record (Core_elaborate.match_kind typ pv case_occ) ->
+    when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ) ->
     Translation_match.gen_record_projection ~expected_ty ~slot env ml_e ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ} when lang () == Cpp ->
     gen_cpp_case typ t env pv case_occ

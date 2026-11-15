@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 
 TRANSLATION="Translation Translation_knot Translation_expr Translation_stmts Translation_lambda Translation_application Translation_construct Translation_match Translation_effects Translation_local_functions Translation_state Translation_support Translation_types Translation_calls Gen_decls Gen_context Gen_records Gen_instances Gen_functions Gen_inductives Plan_templates Cpp_leaf_plan Cpp_ind Cpp Extract_env Structure_analysis Method_registry"
 PRINTER="Cpp_print"
-FINISHING="Cpp_pipeline Cpp_constraints Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Cpp_depth Borrow_projection Cpp_erasure Function_entity Cpp_constants Cpp_local_closures Cpp_shared_args Cpp_simplify Cpp_temporaries Move_check Ownership_ir Return_moves Control_to_cpp_ir"
+FINISHING="Cpp_pipeline Cpp_constraints Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Cpp_depth Borrow_projection Cpp_erasure Function_entity Cpp_constants Cpp_local_closures Cpp_shared_args Cpp_simplify Cpp_temporaries Move_check Ownership_ir Return_moves Control_to_cpp_ir Loop_facts"
 
 # The printer reads Cpp_erasure's settled declarations; nothing else of the
 # finishing passes.
@@ -38,7 +38,7 @@ rules=(
   # extraction produces, and depends on nothing of the compiler but Scheme.
   "$CORE_FILES : $TRANSLATION $PRINTER $FINISHING Table Common Mlutil Modutil Extraction Core_phase Cpp_ir Backend"
   "$CORE_PLANNING : $CORE_FORBIDDEN"
-  "cpp_pipeline cpp_constraints loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_cpp_ir : $TRANSLATION $PRINTER"
+  "cpp_pipeline cpp_constraints loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_cpp_ir loop_facts : $TRANSLATION $PRINTER"
   # CppIR is one node of the dependency graph (src/cpp_ir/ is a namespace), so
   # none of its files may reach a module that names it: not the program,
   # not a pass.

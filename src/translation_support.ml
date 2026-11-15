@@ -288,12 +288,12 @@ let is_monad_reified = Table.is_monad_reified
 
 (** The effect operation the use [use] heads, as Core elaborated it
     ({!Core_effects}): its operation, and the mode it is generated in, read
-    from the unit's facts, which are installed before anything is planned
-    ({!Install_legacy_plan.install}).  One the analysis did not reach heads
+    from the unit's facts, set before anything is planned
+    ({!Translation_state.unit_facts}).  One the analysis did not reach heads
     none.  Under [CRANE_CHECK_IR] both are checked against what the global's
     registration and the mode of the generation translating it would say. *)
 let effect_of (use : Core.Global_use.t) =
-  let found = Core_effects.find use in
+  let found = Core_effects.lookup (!tctx).input.unit.effects use in
   if Option.has_some found then Core_effects.tally ();
   if Probe.checking () then begin
     let here =
@@ -1205,7 +1205,7 @@ type thunk_reason = Cofixpoint | Throws | Monadic
     decides it, which the declaration of [r] and every reference to it read. *)
 let thunk_reason r =
   if Table.is_cofixpoint r then Some Cofixpoint
-  else if Table.is_throwing_value r then Some Throws
+  else if is_throwing_value r then Some Throws
   else
     match find_type_opt r with
     | Some t when is_monadic_ml_type t -> Some Monadic
@@ -1521,7 +1521,7 @@ let rec collect_tvars_ast acc = function
     exception handlers or discard them when their result is unused. *)
 let rec ast_may_throw = function
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> true
-  | Core.Expr.Global {callee = r; _} -> Table.is_throwing_value r
+  | Core.Expr.Global {callee = r; _} -> is_throwing_value r
   | Core.Expr.Lambda {body; _} -> ast_may_throw body
   | Core.Expr.Let {value = a; body = b; _} -> ast_may_throw a || ast_may_throw b
   | Core.Expr.Construct {arguments = args; _} -> List.exists ast_may_throw args
@@ -2205,16 +2205,6 @@ let lifted_fix_ungeneralised_params funs =
       detect_non_forwarded_params_fix (List.length lam_params) n_fix i body @ partners.(i) )
     funs
 
-(** The extraction's {!partner_closure_params}. *)
-let partner_closure_params_table : int list Ref.User.Map.t ref =
-  State.cell State.Extraction Ref.User.Map.empty
-
-(** Install the extraction's {!partner_closure_params}, as computed for the
-    whole structure before any function is generated. *)
-let install_partner_closure_params l =
-  partner_closure_params_table :=
-    List.fold_left (fun m (g, is) -> Ref.User.Map.add g is m) Ref.User.Map.empty l
-
 (** The source-order indices of the callable parameters, among the first
     [n_params], that a function made from [self_ref] takes as a [crane::fn]
     rather than generalising to [F &&]: those a self-call passes something
@@ -2226,7 +2216,7 @@ let ungeneralised_callable_params ~self_ref ~suspended n_params body =
   let partners =
     List.filter
       (fun i -> i < n_params)
-      (Option.default [] (Ref.User.Map.find_opt self_ref !partner_closure_params_table))
+      (Option.default [] (Ref.User.Map.find_opt self_ref (!tctx).input.program.partner_closure_params))
   in
   Escape.IntSet.of_list
     (detect_non_forwarded_params self_ref n_params body
@@ -2494,8 +2484,8 @@ let lifted_free_vars ~class_temps env free_indices =
     the global [owner] where they cover [params], and otherwise -- a global
     nothing settled, a lambda -- what its own body reads. *)
 let infer_owned_flags ?owner body params =
-  let read_off_body () = Ownership.read_off params body in
-  match Option.bind owner Ownership.settled with
+  let read_off_body () = Ownership.read_off ~settled:settled_ownership params body in
+  match Option.bind owner settled_ownership with
   | Some settled when List.length settled = List.length params ->
     if Probe.checking () && settled <> read_off_body () then
       Probe.violation "ownership summary"

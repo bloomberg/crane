@@ -104,7 +104,7 @@ type resumes = {
   parameter_type : int -> Core.Type.t option;
 }
 
-(** [region ~owned ~copied ~resumes ~n_outer t] is the plan of [t]'s reads,
+(** [region ~owned ~copied ~resumes ~effects ~n_outer t] is the plan of [t]'s reads,
     [t] standing under binders it reads but does not bind, of which it owns
     those at the de Bruijn indices [owned], and generated under a head of
     [n_outer] type variables.  The closures it makes capture a copy of each
@@ -119,13 +119,15 @@ type resumes = {
     is, the saves are planned ({!save_moves}) but no read relies on one
     having been made.  [outer i]: the Core type of the variable bound
     outside [t] at the index [i] there, which says what a copy of it is
-    ({!Use}). *)
+    ({!Use}).  [effects] are the unit's effect operations: a bind generated
+    as sequencing runs its continuation inline. *)
 val region :
   ?owned:int list ->
   ?copied:int list ->
   ?outer:(int -> Core.Type.t option) ->
   ?resumes:resumes ->
   ?certain:bool ->
+  effects:Core_effects.t ->
   n_outer:int ->
   Core.Expr.t ->
   t
@@ -245,9 +247,10 @@ val evaluated_first : t -> Core.Occurrence.t -> int list
     plans it, rather than reading it in place: [t] is not a variable read by
     copy or in place, a global naming which reads it, or a field of one.
     What else it is, a value computed, a variable moved, or a global named by
-    calling it -- a cofixpoint, or one that only throws -- is evaluated once
-    into a local of its own, which the fields are moved out of. *)
-val takes_record : t -> Core.Expr.t -> bool
+    calling it -- a cofixpoint, or one [throws] says only throws -- is
+    evaluated once into a local of its own, which the fields are moved out
+    of. *)
+val takes_record : throws:(Names.GlobRef.t -> bool) -> t -> Core.Expr.t -> bool
 
 (** Whether a variant match takes apart a scrutinee the region owns, binding
     its fields by mutable reference: the scrutinee is a variable owned there.
@@ -340,8 +343,9 @@ end
     be bound into it: the lowering, which orders the arguments' evaluation,
     moves it at the last of those reads it makes.  Whether a
     parameter is kept in a local, rather than by pointer, is the lowering's
-    to say.  A machine's loop moves nothing so. *)
-val continue_moves : Control_ir.Term.loop -> (Core.Occurrence.t * Continue_move.t list) list
+    to say.  A machine's loop moves nothing so.  [effects] are the unit's
+    effect operations ({!region}). *)
+val continue_moves : effects:Core_effects.t -> Control_ir.Term.loop -> (Core.Occurrence.t * Continue_move.t list) list
 
 (** [save_moves p let_]: of the let at the occurrence [let_], a point a
     machine with a stack of frames resumes at ({!resumes}), the binders the

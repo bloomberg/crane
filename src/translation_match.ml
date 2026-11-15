@@ -34,7 +34,7 @@ let moved_out (base : Cpp_ir.Lowered.Expr.t) = match base with Move _ -> true | 
    ({!Ownership_ir.takes_record}); under [CRANE_CHECK_IR], the code reading
    it from [base] must agree. *)
 let record_taken ~is_typeclass t base =
-  let taken = (not is_typeclass) && Ownership_ir.takes_record (!tctx).lexical.move_plan t in
+  let taken = (not is_typeclass) && Ownership_ir.takes_record ~throws:is_throwing_value (!tctx).lexical.move_plan t in
   if Probe.checking () && taken <> moved_out base then
     Probe.violation "ownership plan"
       (Pp.str
@@ -1518,7 +1518,7 @@ let gen_record_projection ~expected_ty ~slot env (ml_e : Core.Expr.t) ~typ ~t ~p
   let {Core.Match.Branch.binders = ids; result_type = r; pattern = pat; body = body} = pv.(0) in
   let n = List.length ids in
   let is_typeclass, record_body =
-    match Core_elaborate.match_kind typ pv case_occ with
+    match Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ with
     | Match_kind.Record {typeclass; body} -> (typeclass, body)
     | Custom | Variant -> CErrors.anomaly (Pp.str "gen_expr: a record projection Core did not classify as one")
   in
@@ -1942,7 +1942,7 @@ let gen_record_match_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
   let {Core.Match.Branch.binders = ids; body = body; _} = pv.(0) in
   let n = List.length ids in
   let is_typeclass, is_simple =
-    match Core_elaborate.match_kind typ pv case_occ with
+    match Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ with
     | Match_kind.Record {typeclass; body = Projection {application = Read | Call; _}} -> (typeclass, true)
     | Record {typeclass; body = Projection {application = Coerced_call; _} | Destructure} -> (typeclass, false)
     | Custom | Variant -> CErrors.anomaly (Pp.str "gen_stmts: a record projection Core did not classify as one")

@@ -4,8 +4,6 @@
 
 let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
   Table.set_named_customs facts.used_customs;
-  Table.set_higher_order_projections facts.higher_order_projections;
-  Core_effects.install facts.effects;
   List.iter
     (fun ({block; kind; _} : Target_plan.kind_decision) ->
       Table.add_inductive_kind block kind;
@@ -16,16 +14,6 @@ let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
         (fun _ -> ())
         struc )
     plan.inductive_kinds
-
-let install_program (facts : Program_facts.program) =
-  List.iter Table.add_throwing_value facts.throwing_values;
-  Ownership.install facts.parameter_ownership;
-  Translation_support.install_partner_closure_params facts.partner_closure_params;
-  Recursion_plan.install facts.recursion;
-  Lower_control.install facts.control
-
-let install_template_kinds (plan : Target_plan.t) =
-  List.iter (fun (r, kinds) -> Tparam_kinds.record r kinds) plan.template_kinds
 
 let install_modules = Module_plan.install
 
@@ -56,8 +44,6 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
         Pp.(str ("Crane: the installed " ^ what ^ " no longer agree with the plan."))
     in
     if not (Ref.User.Set.equal facts.used_customs (Table.named_customs ())) then fail "named custom references";
-    if not (Ref.User.Set.equal (Table.higher_order_projections ()) facts.higher_order_projections)
-    then fail "higher-order projections";
     List.iter
       (fun ({block; _} : Target_plan.kind_decision) ->
         let installed = Table.inductive_kind_of (Names.GlobRef.IndRef (block, 0)) in

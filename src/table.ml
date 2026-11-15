@@ -1482,20 +1482,6 @@ let get_type_class_args r =
     (get_class_args_own r)
     (type_globals_reached ~seen:[] r)
 
-(* Table of projections used in higher-order positions (as function values).
-   Projections not in this set are only accessed via record->field syntax and
-   don't need standalone C++ function definitions. *)
-let higher_order_projection_set = ref Ref.User.Set.empty
-
-let () =
-  register_census "higher_order_projections" (fun () ->
-      Ref.User.Set.cardinal !higher_order_projection_set );
-  on_reset (fun () -> higher_order_projection_set := Ref.User.Set.empty)
-
-let set_higher_order_projections s = higher_order_projection_set := s
-let higher_order_projections () = !higher_order_projection_set
-let is_higher_order_projection r = Ref.User.Set.mem r !higher_order_projection_set
-
 (** {2 Table of used axioms} *)
 
 let info_axioms = ref Ref.Can.Set.empty
@@ -1508,15 +1494,12 @@ let log_axioms = ref Ref.Can.Set.empty
    through a module alias is called as the definition's own name is. *)
 let cofixpoints = ref Ref.Can.Set.empty
 
-let throwing_values = ref Ref.Can.Set.empty
-
 let symbols = ref Ref.User.Map.empty
 
 let init_axioms () =
   info_axioms := Ref.Can.Set.empty;
   log_axioms := Ref.Can.Set.empty;
   cofixpoints := Ref.Can.Set.empty;
-  throwing_values := Ref.Can.Set.empty;
   symbols := Ref.User.Map.empty
 
 let () = on_reset init_axioms
@@ -1530,10 +1513,6 @@ let add_log_axiom r = log_axioms := Ref.Can.Set.add r !log_axioms
 let add_cofixpoint r = cofixpoints := Ref.Can.Set.add r !cofixpoints
 
 let is_cofixpoint r = Ref.Can.Set.mem r !cofixpoints
-
-let add_throwing_value r = throwing_values := Ref.Can.Set.add r !throwing_values
-
-let is_throwing_value r = Ref.Can.Set.mem r !throwing_values
 
 let add_symbol r =
   symbols :=

@@ -1049,12 +1049,13 @@ let layout_pass_names =
     ({!Core_elaborate.structure}), so that planning the callables reads
     them as emission does, then plan the callable of each
     function and method a render will generate, installing each before the
-    next is decided.  Returns all of them, with the callables assumed of the
-    functions that have no plan, and the elaborations.  Under [CRANE_CHECK_IR] the callables are
+    next is decided.  Hands all of them, with the callables assumed of the
+    functions that have no plan, and the elaborations, to [k], which runs
+    lowering with the elaborations.  Under [CRANE_CHECK_IR] the callables are
     planned a second time with every list reversed, and the two must agree:
     a head is a function of its declaration, not of what was planned before
     it.  Runs in the planning phase, which is the one that names modules. *)
-let plan_layout struc =
+let plan_layout struc k =
   Pipeline_trace.event "layout" prepare_layout;
   let modules = Cpp.prepare_structure struc in
   Install_legacy_plan.install_modules modules;
@@ -1096,7 +1097,8 @@ let plan_layout struc =
       ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods kn ind))
       struc
   in
-  Core_elaborate.install elaborations;
+  Translation_state.with_unit_facts { (Translation_state.unit_facts ()) with elaborations = Some elaborations }
+  @@ fun () ->
   Pipeline_trace.event "layout" plan_callables;
   let ((callables, instance_methods) as planned) = Cpp.plan_callables struc in
   if
@@ -1111,6 +1113,7 @@ let plan_layout struc =
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
   Install_legacy_plan.install_instance_methods instance_methods;
+  k
   ( modules,
     { Target_plan.module_names;
       names;
@@ -1472,19 +1475,22 @@ let check_structure_unchanged planned struc =
             ++ prlist_with_sep pr_comma Label.print changed) )
     planned
 
-(** [freeze core]: the frozen program ({!Core_phase.freeze}), normalized
-    ({!Core_phase.normalize}), with the facts the whole of it is analysed for --
-    which definitions only throw, which parameters are owned, settled across
-    calls, how each function recurses -- installed before any unit is
-    planned ({!Program_facts.analyze_program}). *)
-let freeze core =
-  Translation_state.generating_outside_modules @@ fun () ->
-  let normalized =
-    Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core_phase.freeze core)
+(** [freeze core f]: [f] of the frozen program ({!Core_phase.freeze}),
+    normalized ({!Core_phase.normalize}), lowered with the facts the whole of
+    it is analysed for -- which definitions only throw, which parameters
+    are owned, settled across calls, how each function recurses
+    ({!Program_facts.analyze_program}). *)
+let freeze core f =
+  let normalized, program =
+    Translation_state.generating_outside_modules @@ fun () ->
+    let normalized =
+      Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core_phase.freeze core)
+    in
+    Pipeline_trace.event "core" "analyze_program";
+    (normalized, Program_facts.analyze_program normalized)
   in
-  Pipeline_trace.event "core" "analyze_program";
-  Install_legacy_plan.install_program (Program_facts.analyze_program normalized);
-  normalized
+  Translation_state.with_program_facts (Program_facts.lowering program) @@ fun () ->
+  Loop_facts.with_program ~recursion:program.recursion ~control:program.control @@ fun () -> f normalized
 
 (** The extracted structure [struc] through the Core passes
     ({!core_pass_names}), keeping what [to_appear] names. *)
@@ -1543,8 +1549,7 @@ let unit_pass_names = Pipeline_trace.names (unit_passes ~namespace:None)
 
 (** The steps of {!plan_representation}, in order. *)
 let template_kinds = "template_kinds"
-let install_template_kinds = "install_template_kinds"
-let represent_pass_names = [template_kinds; install_template_kinds]
+let represent_pass_names = [template_kinds]
 
 (** The steps run on the unit's Core once its target is planned, in order. *)
 let plan_foreign_callables = "plan_foreign_callables"
@@ -1567,9 +1572,9 @@ let elaborate_unit elaborations =
        (Core_elaborate.referenced elaborations) )
 
 (** Decide the kinds of the template parameters of the unit's inductives and
-    type aliases, into [plan], and install them for the readers not yet
-    converted.  They are decided from the inductive kinds {!analyze_and_plan}
-    installed, so after it.  Deciding records each as it goes (see
+    type aliases, into [plan].  They are decided from the inductive kinds
+    {!analyze_and_plan} installed, so after it.  Deciding records each as it
+    goes, which is what the readers of {!Tparam_kinds} take (see
     {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
     second time, against the first's, and the two must agree. *)
 let plan_representation plan struc =
@@ -1580,8 +1585,6 @@ let plan_representation plan struc =
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
     && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Cpp_ind.template_kinds struc)))
   then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.");
-  Pipeline_trace.event "represent" install_template_kinds;
-  Install_legacy_plan.install_template_kinds plan;
   plan
 
 (** Whether the unit [struc] declares a reference: an inductive of its, a
@@ -1635,10 +1638,14 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     }
   in
   let facts, plan = analyze_and_plan struc in
+  Translation_state.with_unit_facts
+    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
+  @@ fun () ->
+  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  let modules, representation, callables, assumed, elaborations = plan_layout struc in
+  plan_layout struc @@ fun (modules, representation, callables, assumed, elaborations) ->
   let plan = Target_plan.with_layout plan modules representation callables assumed in
   elaborate_unit elaborations;
   let planned_checkpoint = checkpoint () in
@@ -1706,8 +1713,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Install_legacy_plan.check_installed facts plan;
   check_structure_unchanged planned struc;
   if Pipeline_trace.enabled () then begin
-    Pipeline_trace.event "emit" (Core_elaborate.report ());
-    Pipeline_trace.event "emit" (Core_effects.report ());
+    Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
+    Pipeline_trace.event "emit" (Core_effects.report facts.effects);
     Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
@@ -2024,7 +2031,7 @@ let full_extr_reading opaque_access f (refs, mps) read =
         if source <> "" then
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
-      print_structure_to_file ~unit_includes filenames false (freeze core);
+      freeze core (print_structure_to_file ~unit_includes filenames false);
       read refs )
 
 let full_extr opaque_access f refs =
@@ -2304,7 +2311,7 @@ let separate_extraction ~opaque_access lr =
         user_err
           (str "Separate Extraction from inside a module is not supported.") )
     (Core_phase.modules core);
-  print_per_library ~dry:(fun _ -> false) (freeze core)
+  freeze core (print_per_library ~dry:(fun _ -> false))
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
@@ -2322,7 +2329,7 @@ let simple_extraction ~opaque_access r =
         warns ();
         if is_any_custom r then
           Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-        print_structure_to_file (mono_filename None) false (freeze core) )
+        freeze core (print_structure_to_file (mono_filename None) false) )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -2355,7 +2362,7 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
     | MPfile dir -> (not is_rec) && not (DirPath.equal dir dir_m)
     | _ -> false
   in
-  print_per_library ~dry (freeze core)
+  freeze core (print_per_library ~dry)
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable
@@ -2552,7 +2559,12 @@ let extract_and_compile ~opaque_access file l =
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
-  let _, _, _, _, elaborations = plan_layout struc in
+  let facts = Program_facts.analyze struc in
+  Translation_state.with_unit_facts
+    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
+  @@ fun () ->
+  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
+  plan_layout struc @@ fun (_, _, _, _, elaborations) ->
   elaborate_unit elaborations;
   end_planning ();
   let ans =
@@ -2576,10 +2588,11 @@ let show_extraction ~pstate =
     let l = Label.of_id (Declare.Proof.get_name pstate) in
     let fake_ref = GlobRef.ConstRef (Constant.make2 mp l) in
     let decl = Core.Decl.Value {entity = fake_ref; body = ast; type_ = ty} in
-    (* Frozen and normalized unoptimised, as it is shown: that is what
-       installs the facts about the whole program -- its recursion plan
-       among them -- that lowering the term reads. *)
-    let frozen = freeze (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])])) in
-    print_one_decl (Core_phase.structure frozen) mp decl
+    (* Frozen and normalized unoptimised, as it is shown: that is what the
+       facts about the whole program -- its recursion plan among them --
+       that lowering the term reads are analysed from. *)
+    freeze
+      (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])]))
+      (fun frozen -> print_one_decl (Core_phase.structure frozen) mp decl)
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

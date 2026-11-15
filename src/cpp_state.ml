@@ -1164,19 +1164,19 @@ let is_eponymous_record_projection r =
     else
       false
 
-(** Whether a projection is suppressed: it is not a higher-order projection,
-    so it is not rendered as a standalone function. *)
-let is_suppressed_projection r =
-  Table.is_projection r && not (Table.is_higher_order_projection r)
+(** Whether a projection is suppressed: [higher_order] does not say it is
+    used as a function value, so it is not rendered as a standalone
+    function. *)
+let is_suppressed_projection ~higher_order r = Table.is_projection r && not (higher_order r)
 
 (** Filter a Core.Decl.Recursive_group group, removing entries that are inline customs, registered
     methods (every method candidate is one), eponymous record projections, or
     suppressed projections: what is left is rendered directly. *)
-let filter_dfix fds =
+let filter_dfix ~higher_order fds =
   List.filter
     (fun {Core.Recursion.Definition.entity = x; _} ->
       (not (is_inline_custom x))
       && is_registered_method x = None
       && (not (is_eponymous_record_projection x))
-      && not (is_suppressed_projection x) )
+      && not (is_suppressed_projection ~higher_order x) )
     (Core.Nonempty.to_list fds)

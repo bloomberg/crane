@@ -50,15 +50,11 @@ let var_type (inst : Elaborated_call.instantiated) i =
 let mutind m l = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string m])) (Label.make l))
 let unit_path = ModPath.MPfile (DirPath.make [Id.of_string "CP"])
 
-(* A unit of the given declarations, walked and installed: what lowering
-   reads the walk's facts from. *)
-let walk_and_install decls =
-  let t =
-    Core_elaborate.structure ~methods:(fun _ _ -> [])
-      [(unit_path, List.map (fun d -> (Label.make "d", Core.Module.Structure_item.Declaration d)) decls)]
-  in
-  Core_elaborate.install t;
-  t
+(* A unit of the given declarations, walked: what lowering reads the
+   walk's facts from. *)
+let walk decls =
+  Core_elaborate.structure ~methods:(fun _ _ -> [])
+    [(unit_path, List.map (fun d -> (Label.make "d", Core.Module.Structure_item.Declaration d)) decls)]
 
 (* The walk's answers are told apart from the live ones by asking in an
    environment, or of a term, that disagrees; under [CRANE_CHECK_IR] that
@@ -160,7 +156,7 @@ let () =
   in
   let d = r "cd" in
   let dty = Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}} in
-  let t = walk_and_install [Core.Decl.Value {entity = d; body = Core.Expr.Lambda {parameter = id "inst"; parameter_type = cls; body = Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body}}; type_ = dty}] in
+  let t = walk [Core.Decl.Value {entity = d; body = Core.Expr.Lambda {parameter = id "inst"; parameter_type = cls; body = Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body}}; type_ = dty}] in
   check "the declaration's class-typed parameter is its dictionary"
     (Core_elaborate.roles t closed 3 = Some [Elaborated_call.Dictionary; Regular; Excess]);
   let lex =
@@ -171,26 +167,26 @@ let () =
   in
   let args_closed = [inst (); c; y ()] and args_open = [inst (); y (); y ()] in
   check "a head of the dictionary and a global is closed"
-    (Core_elaborate.closed_head_call ~lex closed args_closed);
+    (Core_elaborate.closed_head_call ~walk:(Some t) ~lex closed args_closed);
   check "a head naming a value binder is not"
-    (not (Core_elaborate.closed_head_call ~lex open_ args_open));
+    (not (Core_elaborate.closed_head_call ~walk:(Some t) ~lex open_ args_open));
   check "a projection through a kept instance of a polymorphic field is a member template"
-    (Core_elaborate.member_template_call ~lex member [inst (); y ()]);
+    (Core_elaborate.member_template_call ~walk:(Some t) ~lex member [inst (); y ()]);
   check "one of a field with no variable of its own is not"
-    (not (Core_elaborate.member_template_call ~lex plain [inst (); y ()]));
+    (not (Core_elaborate.member_template_call ~walk:(Some t) ~lex plain [inst (); y ()]));
   check "a field neither mapped nor a singleton's method is no static projection"
-    (Core_elaborate.static_projection_call ~lex member [inst (); y ()] = None);
+    (Core_elaborate.static_projection_call ~walk:(Some t) ~lex member [inst (); y ()] = None);
   check "a call of a global Rocq does not know is no closed instance"
-    (not (Core_elaborate.closed_instance_call ~lex closed args_closed));
+    (not (Core_elaborate.closed_instance_call ~walk:(Some t) ~lex closed args_closed));
   if not checking then (
     (* Asked in an environment with no binders, the live answer differs:
        the walk's is the one given. *)
     check "the closed head is the walk's, not the asker's environment's"
-      (Core_elaborate.closed_head_call ~lex:Lexenv.empty closed args_closed);
+      (Core_elaborate.closed_head_call ~walk:(Some t) ~lex:Lexenv.empty closed args_closed);
     check "the member template is the walk's"
-      (Core_elaborate.member_template_call ~lex:Lexenv.empty member [inst (); y ()]);
+      (Core_elaborate.member_template_call ~walk:(Some t) ~lex:Lexenv.empty member [inst (); y ()]);
     check "a singleton dictionary the walk did not find there is none, whatever the asker says"
-      (Core_elaborate.singleton_dictionary_call ~live:(fun () -> Some (d, d)) (occ ()) = None) )
+      (Core_elaborate.singleton_dictionary_call ~walk:(Some t) ~live:(fun () -> Some (d, d)) (occ ()) = None) )
 
 (* A shared constant is a construction of a shared variant, which only
    [Set Crane SharedVariant] makes one: setting that option needs a Rocq
@@ -208,10 +204,10 @@ let () =
                                       arguments = [Core.Expr.UInt63 (Uint63.of_int 3); Core.Expr.Erased_value Core.Erasure_reason.Proof];
                                       occurrence = occ ()} in
   check "without the option no construction is a shared constant"
-    ((not (Table.is_shared_variant ind)) && not (Core_elaborate.shared_constant constant));
-  ignore (walk_and_install [Core.Decl.Value {entity = r "sd"; body = constant; type_ = ty}]);
-  check "the walk agrees for the occurrence" (not (Core_elaborate.shared_constant constant));
-  check "a term that is no construction is never one" (not (Core_elaborate.shared_constant (Core.Expr.UInt63 (Uint63.of_int 3))))
+    ((not (Table.is_shared_variant ind)) && not (Core_elaborate.shared_constant ~walk:None constant));
+  let walk = Some (walk [Core.Decl.Value {entity = r "sd"; body = constant; type_ = ty}]) in
+  check "the walk agrees for the occurrence" (not (Core_elaborate.shared_constant ~walk constant));
+  check "a term that is no construction is never one" (not (Core_elaborate.shared_constant ~walk (Core.Expr.UInt63 (Uint63.of_int 3))))
 
 (* How a match is lowered, from its annotated type and branches alone. *)
 let () =
@@ -263,13 +259,13 @@ let () =
                            scrutinee = a;
                            branches = one (Core.Expr.fresh_rel 2);
                            occurrence = at} in
-  ignore (walk_and_install [Core.Decl.Value {entity = r "md"; body = m; type_ = nat}]);
+  let walk = Some (walk [Core.Decl.Value {entity = r "md"; body = m; type_ = nat}]) in
   check "lowering reads the kind the walk recorded"
-    (Core_elaborate.match_kind rec_ty (one (Core.Expr.fresh_rel 2)) at
+    (Core_elaborate.match_kind ~walk rec_ty (one (Core.Expr.fresh_rel 2)) at
     = Record {typeclass = false; body = Projection {field = 0; application = Read}});
   if not checking then
     check "the recorded kind stands for the occurrence, whatever type it is asked at"
-      (Core_elaborate.match_kind nat (one (Core.Expr.fresh_rel 2)) at
+      (Core_elaborate.match_kind ~walk nat (one (Core.Expr.fresh_rel 2)) at
       = Record {typeclass = false; body = Projection {field = 0; application = Read}})
 
 (* Canonical spines: each call read whole, written once. *)

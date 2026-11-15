@@ -614,11 +614,16 @@ val reset_cpp_state : unit -> unit
     module struct. *)
 val is_eponymous_record_projection : Names.GlobRef.t -> bool
 
-(** [true] for a projection that is not a higher-order projection, and so should
-    not be rendered as a standalone function. *)
-val is_suppressed_projection : Names.GlobRef.t -> bool
+(** [true] for a projection that [higher_order] does not say is used as a
+    function value, and so should not be rendered as a standalone
+    function. *)
+val is_suppressed_projection : higher_order:(Names.GlobRef.t -> bool) -> Names.GlobRef.t -> bool
 
 (** Drop from a [Core.Decl.Recursive_group] group the entries that are inline customs, local or
     globally registered method candidates, eponymous-record projections, or
-    suppressed projections.  What is left is a list, and may be empty. *)
-val filter_dfix : Core.Recursion.Definition.t Core.Nonempty.t -> Core.Recursion.Definition.t list
+    suppressed projections ({!is_suppressed_projection}).  What is left is
+    a list, and may be empty. *)
+val filter_dfix :
+  higher_order:(Names.GlobRef.t -> bool) ->
+  Core.Recursion.Definition.t Core.Nonempty.t ->
+  Core.Recursion.Definition.t list

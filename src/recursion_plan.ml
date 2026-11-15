@@ -1684,11 +1684,7 @@ let modulo_cons_loops t =
   in
   (List.rev functions, locals)
 
-let installed : t ref = State.cell State.Extraction empty
-
-let install t = installed := t
-
-let group_of r = Ref.User.Map.find_opt r !installed.by_member
+let group_of t r = Ref.User.Map.find_opt r t.by_member
 
 type strategy =
   | No_loop
@@ -1726,13 +1722,13 @@ let strategy_of ~pointer_fields ~suspends kind chains =
 
 (* A member's kind is its own calls'.  It suspends where some member of its
    group does, whose body may be spliced into its own. *)
-let strategy ~pointer_fields r =
-  if Ref.User.Set.mem r !installed.defined then
-    let kind = Option.default No_recursion (Ref.User.Map.find_opt r !installed.kinds) in
-    let members = match group_of r with Some g -> g.members | None -> [r] in
-    let suspends = List.exists (fun m -> Ref.User.Set.mem m !installed.suspended) members in
+let strategy t ~pointer_fields r =
+  if Ref.User.Set.mem r t.defined then
+    let kind = Option.default No_recursion (Ref.User.Map.find_opt r t.kinds) in
+    let members = match group_of t r with Some g -> g.members | None -> [r] in
+    let suspends = List.exists (fun m -> Ref.User.Set.mem m t.suspended) members in
     Some
-      (strategy_of ~pointer_fields ~suspends kind (Ref.User.Map.find_opt r !installed.modulo_cons))
+      (strategy_of ~pointer_fields ~suspends kind (Ref.User.Map.find_opt r t.modulo_cons))
   else None
 
 (* One strategy for two plans of what is lowered as one function. *)
@@ -1748,7 +1744,7 @@ let both a b =
 
 (* A copy of a fixpoint keeps its occurrence, so a definition holding two
    copies plans it twice: the copies are lowered by one strategy. *)
-let strategy_at ~pointer_fields (occurrence, member) =
+let strategy_at t ~pointer_fields (occurrence, member) =
   List.fold_left
     (fun found (l : local_group) ->
       if Core.Occurrence.equal l.occurrence occurrence then
@@ -1758,57 +1754,55 @@ let strategy_at ~pointer_fields (occurrence, member) =
           Some (match found with Some f -> both f this | None -> this)
         | None -> found
       else found )
-    None !installed.locals
+    None t.locals
 
 let adoptable_in t r = Option.default [] (Ref.User.Map.find_opt r t.adoptable)
 
-let adoptable r = adoptable_in !installed r
-
 (* Copies of a fixpoint share its occurrence, and plan alike. *)
-let adoptable_at (occurrence, member) =
+let adoptable_at t (occurrence, member) =
   List.find_map
     (fun (l : local_group) ->
       if Core.Occurrence.equal l.occurrence occurrence then List.nth_opt l.adoptable member else None )
-    !installed.locals
+    t.locals
   |> Option.default []
 
-let adoptable_by_fixpoint ~lifted occurrence =
+let adoptable_by_fixpoint t ~lifted occurrence =
   List.exists
     (fun (l : local_group) ->
       List.exists (Core.Occurrence.equal l.occurrence) lifted
       && List.exists (List.exists (Core.Occurrence.equal occurrence)) l.adoptable )
-    !installed.locals
+    t.locals
 
-let adoptable_somewhere ~lifted occurrence =
-  Ref.User.Map.exists (fun _ os -> List.exists (Core.Occurrence.equal occurrence) os) !installed.adoptable
-  || adoptable_by_fixpoint ~lifted occurrence
+let adoptable_somewhere t ~lifted occurrence =
+  Ref.User.Map.exists (fun _ os -> List.exists (Core.Occurrence.equal occurrence) os) t.adoptable
+  || adoptable_by_fixpoint t ~lifted occurrence
 
-let calls r = Option.default [] (Ref.User.Map.find_opt r !installed.calls)
+let calls t r = Option.default [] (Ref.User.Map.find_opt r t.calls)
 
 (* Copies of a fixpoint share its occurrence, and so do their calls. *)
-let member_calls (occurrence, member) =
+let member_calls t (occurrence, member) =
   List.concat_map
     (fun (l : local_group) ->
       if Core.Occurrence.equal l.occurrence occurrence then Option.default [] (List.nth_opt l.calls member)
       else [] )
-    !installed.locals
+    t.locals
 
-let named_as_value (occurrence, member) =
+let named_as_value t (occurrence, member) =
   List.exists
     (fun (l : local_group) -> Core.Occurrence.equal l.occurrence occurrence && List.nth_opt l.named member = Some true)
-    !installed.locals
+    t.locals
 
-let entering occurrence =
-  member_calls (occurrence, 0)
+let entering t occurrence =
+  member_calls t (occurrence, 0)
   @ List.concat_map
       (fun (l : local_group) -> if Core.Occurrence.equal l.occurrence occurrence then l.entered else [])
-      !installed.locals
+      t.locals
 
-let resumes_binding (b : Core_binder.t) =
-  match Ref.User.Map.find_opt b.origin !installed.resumes with
+let resumes_binding t (b : Core_binder.t) =
+  match Ref.User.Map.find_opt b.origin t.resumes with
   | Some rs -> List.filter (fun r -> Core_binder.equal r.binder b && Core_binder.same_site r.binder b) rs
   | None -> []
 
 (* A lambda a let binds does not call itself. *)
-let strategy_of_let occurrence =
-  if List.exists (Core.Occurrence.equal occurrence) !installed.let_lambdas then Some No_loop else None
+let strategy_of_let t occurrence =
+  if List.exists (Core.Occurrence.equal occurrence) t.let_lambdas then Some No_loop else None

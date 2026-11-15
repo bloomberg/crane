@@ -937,11 +937,11 @@ let generate scope ~module_ d =
      ({!Method_registry.planned_candidate}). *)
   let skipped r =
     is_eponymous_record_projection r
-    || is_suppressed_projection r
+    || is_suppressed_projection ~higher_order:Translation_state.is_higher_order_projection r
     || is_registered_method r <> None
   in
   let group fds =
-    match filter_dfix fds with
+    match filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds with
     | [] -> Nothing
     | fds ->
       functions ~module_

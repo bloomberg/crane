@@ -58,13 +58,7 @@ let equal =
   Ref.User.Map.equal
     (List.equal (fun a b -> Core.Occurrence.equal a.occurrence b.occurrence && a.effect_ = b.effect_))
 
-let installed = State.cell State.Unit empty
-
 let found_count = State.cell State.Unit 0
-
-let install t =
-  installed := t;
-  found_count := 0
 
 (* A body's annotations may be rewritten before it is translated, which
    rebuilds every node, so the use's occurrence is what identifies it. *)
@@ -78,10 +72,8 @@ let lookup t (use : Core.Global_use.t) =
     | e :: rest when List.for_all (fun e' -> e'.effect_ = e.effect_) rest -> Some e.effect_
     | _ -> None )
 
-let find use = lookup !installed use
-
 let tally () = incr found_count
 
-let report () =
-  let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) !installed 0 in
+let report t =
+  let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) t 0 in
   Printf.sprintf "effect operations: %d analysed; translation found %d" n !found_count

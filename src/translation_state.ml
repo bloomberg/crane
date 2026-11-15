@@ -121,6 +121,43 @@ and generation_site =
   | In_module of Names.ModPath.t  (** the body of this module *)
   | Outside_modules  (** a pass over the whole unit or program *)
 
+(** What the analysis of the whole program decided that lowering reads
+    ({!Program_facts.analyze_program}), for every unit of the extraction:
+    the definitions whose body only throws, which are spelled as
+    zero-argument functions ({!Translation_support.thunk_reason}), which
+    parameters of each function it owns, innermost first, settled across
+    calls ({!Ownership.summarize}), and the parameters of a member of a
+    recursive group a partner's call passes a closure for
+    ({!Translation_support.partner_closure_params}). *)
+type program_facts = {
+  throwing_values : Ref.Can.Set.t;
+  parameter_ownership : bool list Ref.User.Map.t;
+  partner_closure_params : int list Ref.User.Map.t;
+}
+
+(** The facts of a program nothing was analysed for: lowering outside an
+    extraction's units, or before its program is frozen. *)
+let no_program_facts =
+  { throwing_values = Ref.Can.Set.empty;
+    parameter_ownership = Ref.User.Map.empty;
+    partner_closure_params = Ref.User.Map.empty }
+
+(** What analysing and planning the unit being extracted decided that
+    lowering reads, set for the extent of the unit
+    ({!with_unit_facts}): the projections used as function values, which
+    are written as standalone functions, and the effect operations its
+    applications are ({!Program_facts.t}), and the elaborations of the
+    unit's calls ({!Core_elaborate.structure}), [None] until the unit is
+    walked. *)
+type unit_facts = {
+  higher_order_projections : Ref.User.Set.t;
+  effects : Core_effects.t;
+  elaborations : Core_elaborate.t option;
+}
+
+(** The facts of no unit: lowering outside a unit's extent. *)
+let no_unit_facts = {higher_order_projections = Ref.User.Set.empty; effects = Core_effects.empty; elaborations = None}
+
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
     parameters, owner, effect mode and module.  A declaration emitter sets
@@ -171,6 +208,13 @@ type input = {
      may ask ({!local_inductives_in_scope}).  The plan is asked on each
      read rather than its answer kept here. *)
   generating : generation_site option;
+  (* What the analysis of the whole program decided ({!program_facts}),
+     set for the extent of the extraction's units
+     ({!with_program_facts}). *)
+  program : program_facts;
+  (* What analysing and planning the unit decided ({!unit_facts}), set for
+     the extent of the unit ({!with_unit_facts}). *)
+  unit : unit_facts;
 }
 
 (** What holds for the scope being lowered: the binders in scope and their
@@ -303,7 +347,9 @@ let tctx =
           body_function = false;
           itree_mode = Sequential;
           method_self_ns = Ref.User.Set.empty;
-          generating = None };
+          generating = None;
+          program = no_program_facts;
+          unit = no_unit_facts };
       lexical =
         { current_type_vars = [];
           current_cpp_return_type = None;
@@ -432,6 +478,36 @@ let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
     (fun ns -> set_input (fun i -> { i with method_self_ns = ns }))
     ns f
 
+(** [with_program_facts facts f] runs [f] lowering the units of a program
+    analysed for [facts] ({!input.program}). *)
+let with_program_facts (facts : program_facts) (f : unit -> 'a) : 'a =
+  with_field (fun c -> c.input.program) (fun p -> set_input (fun i -> { i with program = p })) facts f
+
+(** [with_unit_facts facts f] runs [f] lowering a unit analysed and
+    planned for [facts] ({!input.unit}). *)
+let with_unit_facts (facts : unit_facts) (f : unit -> 'a) : 'a =
+  with_field (fun c -> c.input.unit) (fun u -> set_input (fun i -> { i with unit = u })) facts f
+
+(** The facts of the unit being lowered ({!input.unit}). *)
+let unit_facts () = (!tctx).input.unit
+
+(** Whether the unit uses the projection [r] as a function value, which is
+    then written as a standalone function ({!unit_facts}). *)
+let is_higher_order_projection r = Ref.User.Set.mem r (!tctx).input.unit.higher_order_projections
+
+(** The elaborations of the unit's calls ({!unit_facts}): [None] until the
+    unit is walked. *)
+let elaborations () = (!tctx).input.unit.elaborations
+
+(** Whether the analysis of the program found that the body of the
+    definition [r] only throws ({!program_facts}). *)
+let is_throwing_value r = Ref.Can.Set.mem r (!tctx).input.program.throwing_values
+
+(** The ownership of the global [r]'s parameters, innermost first, settled
+    across calls ({!program_facts}): [None] for one the analysis did not
+    settle. *)
+let settled_ownership r = Ref.User.Map.find_opt r (!tctx).input.program.parameter_ownership
+
 (** [generating_at site f] runs [f] with generation at [site]
     ({!input.generating}); the entries below are the only callers. *)
 let generating_at (site : generation_site) (f : unit -> 'a) : 'a =
@@ -553,7 +629,7 @@ let plan_positions :
 let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
   let outer = Lexenv.type_opt (!tctx).lexical.env_types in
   let p =
-    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~n_outer:(List.length (!tctx).lexical.current_type_vars) body
+    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~effects:(!tctx).input.unit.effects ~n_outer:(List.length (!tctx).lexical.current_type_vars) body
   in
   (* The frames a machine enters its entries by are planned with it. *)
   Ownership_ir.Entry_moves.record_plan p;
