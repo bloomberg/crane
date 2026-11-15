@@ -39,7 +39,7 @@ type evidence =
 type t
 
 (** The reading of [use]'s written arguments; empty for a monomorphic use. *)
-val of_use : Miniml.global_use -> t
+val of_use : Core.Global_use.t -> t
 
 (** The global the call names. *)
 val callee : t -> Names.GlobRef.t
@@ -69,18 +69,18 @@ val beyond_extent : t -> Scheme.Var.t list
 (** [resolve e answer vs t] resolves each hole among [vs] for which [answer]
     gives a type that is no erased placeholder, as read from [e]. *)
 val resolve :
-  evidence -> (Scheme.Var.t -> Miniml.ml_type option) -> Scheme.Var.t list -> t -> t
+  evidence -> (Scheme.Var.t -> Core.Type.t option) -> Scheme.Var.t list -> t -> t
 
 (** {!resolve}, all or nothing: [t] itself unless every hole among [vs] is
     answered. *)
 val resolve_all :
-  evidence -> (Scheme.Var.t -> Miniml.ml_type option) -> Scheme.Var.t list -> t -> t
+  evidence -> (Scheme.Var.t -> Core.Type.t option) -> Scheme.Var.t list -> t -> t
 
 (** Whether some variable was resolved from [e]. *)
 val resolved_from : evidence -> t -> bool
 
 (** The reading as call planning substitutes with: each variable's type, up
     to the last variable known or written unreadably, a hole before it
-    spelled [Tdummy Ktype] -- the erased placeholder the erasure filters
+    spelled [Core.Type.Erased Core.Erasure_reason.Type_argument] -- the erased placeholder the erasure filters
     leave to deduction. *)
 val by_variable : t -> Mlutil.Var_types.t

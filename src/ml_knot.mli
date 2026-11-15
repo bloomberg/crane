@@ -25,4 +25,4 @@
 
 (** [structure s]: [s] with every knot of a single-member fixpoint that
     satisfies the conditions above tied; anything else unchanged. *)
-val structure : Miniml.ml_structure -> Miniml.ml_structure
+val structure : Core.Program.t -> Core.Program.t

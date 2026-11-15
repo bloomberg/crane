@@ -1,23 +1,22 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-open Miniml
 
 let apply f args = Numeral_literal.fold (Mlutil.canonical_app f args)
 
 let rec spine = function
-  | MLapp (f, args) -> apply (spine f) (List.map spine args)
-  | MLcons _ as e when Numeral_literal.folds e -> Numeral_literal.fold e
+  | Core.Expr.Apply {callee = f; arguments = args} -> apply (spine f) (List.map spine args)
+  | Core.Expr.Construct _ as e when Numeral_literal.folds e -> Numeral_literal.fold e
   | e -> Mlutil.ast_map spine e
 
 let canonical_head = function
-  | MLapp (MLglob _, _) | MLcoerce _ | MLboxed _ | MLbarrier _ | MLexn _ | MLdummy _ -> false
-  | MLcase (_, _, [|_|], _) -> false
+  | Core.Expr.Apply {callee = Core.Expr.Global _; _} | Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _ | Core.Expr.Runtime_error _ | Core.Expr.Erased_value _ -> false
+  | Core.Expr.Match {branches = [|_|]; _} -> false
   | _ -> true
 
 let canonical_application = function
-  | MLapp (f, _) as e -> canonical_head f && not (Numeral_literal.folds e)
-  | MLcons _ as e -> not (Numeral_literal.folds e)
+  | Core.Expr.Apply {callee = f; _} as e -> canonical_head f && not (Numeral_literal.folds e)
+  | Core.Expr.Construct _ as e -> not (Numeral_literal.folds e)
   | _ -> true
 
 let rec is_canonical e =
@@ -32,10 +31,10 @@ let check s =
     Modutil.struct_iter
       (fun d ->
         List.iter
-          (fun (fd : ml_fix_def) ->
-            if not (is_canonical fd.fd_body) then
+          (fun (fd : Core.Recursion.Definition.t) ->
+            if not (is_canonical fd.body) then
               Probe.violation "non-canonical application"
-                Pp.(str "a body of " ++ Printer.pr_global fd.fd_ref ++ str " after normalization") )
+                Pp.(str "a body of " ++ Printer.pr_global fd.entity ++ str " after normalization") )
           (Mlutil.term_defs d) )
       (fun _ -> ())
       (fun _ -> ())
@@ -43,6 +42,7 @@ let check s =
 
 let structure =
   Modutil.map_struct_decls (function
-    | Dterm (r, b, ty) -> Dterm (r, spine b, ty)
-    | Dfix fds -> Dfix (Core.Nonempty.map (fun fd -> {fd with fd_body = spine fd.fd_body}) fds)
+    | Core.Decl.Value {entity = r; body = b; type_ = ty} -> Core.Decl.Value {entity = r; body = spine b; type_ = ty}
+    | Core.Decl.Recursive_group fds ->
+      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = spine fd.body}) fds)
     | d -> d )

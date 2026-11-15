@@ -7,7 +7,7 @@
     arguments has, elaborated in a lexical environment of the walk's own.
 
     Transitional.  The roles are installed for the unit, by the occurrence of
-    the use naming the callee ({!Miniml.Occurrence}), which the annotation
+    the use naming the callee ({!Core.Occurrence}), which the annotation
     rewrites a body goes through before it is translated keep, and emission
     takes a call's roles from there when it translates that application; a
     call translation built itself -- a global a let-bound alias names,
@@ -22,7 +22,7 @@
     regular, or past the callee's arity and so applied to its result.  A
     variable argument is read off the binder it names in [lex].  The holes
     the call's context states are not resolved here. *)
-val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
+val elaborate_arguments : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
 (** [instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call] -- the
     semantic half of planning [call] (section 3.4's [ElaboratedCall]): the
@@ -43,8 +43,8 @@ val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast lis
     traversal that asks. *)
 val instantiate :
   lex:Lexenv.t ->
-  expected_ml:Miniml.ml_type option ->
-  stated_ml:Miniml.ml_type option ->
+  expected_ml:Core.Type.t option ->
+  stated_ml:Core.Type.t option ->
   caller:Names.GlobRef.t option ->
   scope:Names.Id.t list ->
   Elaborated_call.t ->
@@ -71,8 +71,8 @@ type t
     value at the binder's annotation, a bound lambda and every other
     recursion translation makes without a position at none. *)
 val structure :
-  methods:(Names.MutInd.t -> Miniml.ml_ind -> (Names.Id.t list * Method_registry.method_candidate) list) ->
-  Miniml.ml_structure ->
+  methods:(Names.MutInd.t -> Core.Inductive.t -> (Names.Id.t list * Method_registry.method_candidate) list) ->
+  Core.Program.t ->
   t
 
 (** [declaration_scope ty body] is the lexical environment a definition of
@@ -81,7 +81,7 @@ val structure :
     normalized program ({!Core_phase.normalize}) that body is the one generated:
     eta-expanded, its let-bound lambdas as {!generated_definition} puts
     them. *)
-val declaration_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_ast
+val declaration_scope : Core.Type.t -> Core.Expr.t -> Lexenv.t * Core.Expr.t
 
 (** [generated_definition ty body] is the definition [body] of type [ty],
     eta-expanded ({!Normalize.eta_expand}), with every let-bound lambda in
@@ -91,7 +91,7 @@ val declaration_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_
     value arrow of its type ({!Core_query.eta_bound_lambda}).  An
     inlined alias binds nothing, so a binder after one is a level shallower
     than in the body as written. *)
-val generated_definition : Miniml.ml_type -> Miniml.ml_ast -> Miniml.ml_ast
+val generated_definition : Core.Type.t -> Core.Expr.t -> Core.Expr.t
 
 (** Every global the declarations walked name, applied or not, in their
     bodies or in a term a custom type is applied to in any type the unit
@@ -102,7 +102,7 @@ val referenced : t -> Names.GlobRef.t list
 (** [roles t use n] -- the roles of the arguments of the application, with
     [n] arguments, that names its callee by [use], as [t] elaborated it; none
     for an application [t] did not walk. *)
-val roles : t -> Miniml.global_use -> int -> Elaborated_call.role list option
+val roles : t -> Core.Global_use.t -> int -> Elaborated_call.role list option
 
 (** Make [t] the unit's elaborations, the ones {!elaboration} reads.  They
     are installed before the unit's callables are planned, so planning reads
@@ -116,7 +116,7 @@ val install : t -> unit
     violation: every call emission translates was elaborated from Core.
     Planning takes the installed roles alike, and elaborates a call they
     have none for itself, which is no violation there. *)
-val elaboration : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
+val elaboration : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
 (** [instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args]
     -- the semantic half of the call [use args] while emitting: the
@@ -132,12 +132,12 @@ val elaboration : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Ela
     violation there. *)
 val instantiation :
   lex:Lexenv.t ->
-  expected_ml:Miniml.ml_type option ->
-  stated_ml:Miniml.ml_type option ->
+  expected_ml:Core.Type.t option ->
+  stated_ml:Core.Type.t option ->
   caller:Names.GlobRef.t option ->
   scope:Names.Id.t list ->
-  Miniml.global_use ->
-  Miniml.ml_ast list ->
+  Core.Global_use.t ->
+  Core.Expr.t list ->
   Elaborated_call.instantiated
 
 (** [planned_instantiation use args] -- the instantiation the installed walk
@@ -145,7 +145,7 @@ val instantiation :
     one with the roles it gave the call; none otherwise.  Unlike
     {!instantiation} it neither counts nor checks the lookup: it is for a
     planner reading the walk, not for lowering. *)
-val planned_instantiation : Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.instantiated option
+val planned_instantiation : Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.instantiated option
 
 (** [closed_instance_call ~lex use args] -- whether the call [use args]
     builds a typeclass instance from nothing but instance parameters, so
@@ -155,7 +155,7 @@ val planned_instantiation : Miniml.global_use -> Miniml.ml_ast list -> Elaborate
     made no single decision there, or is not installed yet, it is decided
     from the call and [lex]; under [CRANE_CHECK_IR] a planned decision is
     checked against that one. *)
-val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
+val closed_instance_call : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
 (** [static_projection_call ~lex use args] -- where the call [use args]
     calls a class field as a static member of the instance it projects
@@ -167,7 +167,7 @@ val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast li
     installed yet, it is decided from the call and [lex]; under
     [CRANE_CHECK_IR] a planned decision is checked against that one. *)
 val static_projection_call :
-  lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.static_projection option
+  lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.static_projection option
 
 (** [closed_head_call ~lex use args] -- whether the call [use args] applies
     arguments past its callee's arity to a head, the callee applied to the
@@ -178,7 +178,7 @@ val static_projection_call :
     decision there, or is not installed yet, decided from the call and
     [lex]; under [CRANE_CHECK_IR] a planned decision is checked against that
     one. *)
-val closed_head_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
+val closed_head_call : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
 (** [member_template_call ~lex use args] -- whether the call [use args]
     projects a class field through its one dictionary argument, an instance
@@ -186,7 +186,7 @@ val closed_head_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -
     declares the field as a member template, so the instance's own method can
     stand for the field's dispatcher.  Decided, and checked, as
     {!closed_head_call} is. *)
-val member_template_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
+val member_template_call : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
 (** [singleton_dictionary_call ~live occ] -- the class and its one method
     where the variable read at the occurrence [occ], at the head of an
@@ -196,7 +196,7 @@ val member_template_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast li
     [CRANE_CHECK_IR] a planned decision is checked against that one. *)
 val singleton_dictionary_call :
   live:(unit -> (Names.GlobRef.t * Names.GlobRef.t) option) ->
-  Miniml.Occurrence.t ->
+  Core.Occurrence.t ->
   (Names.GlobRef.t * Names.GlobRef.t) option
 
 (** [shared_constant e] -- whether the construction [e] is a closed
@@ -207,7 +207,7 @@ val singleton_dictionary_call :
     there, or is not installed yet, decided from [e]; under [CRANE_CHECK_IR]
     a planned decision is checked against that one.  [false] of anything
     but a construction. *)
-val shared_constant : Miniml.ml_ast -> bool
+val shared_constant : Core.Expr.t -> bool
 
 (** [match_kind ty branches occ] -- how the match annotated [ty] with
     [branches] at the occurrence [occ] is lowered ({!Match_kind.classify}):
@@ -215,7 +215,7 @@ val shared_constant : Miniml.ml_ast -> bool
     single decision there, or is not installed yet, decided from [ty] and
     [branches]; under [CRANE_CHECK_IR] a planned decision is checked against
     that one. *)
-val match_kind : Miniml.ml_type -> Miniml.ml_branch array -> Miniml.Occurrence.t -> Match_kind.t
+val match_kind : Core.Type.t -> Core.Match.Branch.t array -> Core.Occurrence.t -> Match_kind.t
 
 (** How many calls the unit elaborated ahead, and how many emission found
     there or elaborated itself. *)

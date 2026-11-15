@@ -4,7 +4,6 @@
 (** The Perceus reuse cursor of a loop built tail modulo cons.  See
     [reuse_cursor.mli]. *)
 
-open Miniml
 module Term = Control_ir.Term
 
 type action =
@@ -12,7 +11,7 @@ type action =
   | Release
 
 type step = {
-  turn : Occurrence.t;
+  turn : Core.Occurrence.t;
   action : action;
   arguments_read_first : int list;
 }
@@ -46,44 +45,56 @@ let unrelated = {cursor = false; pointer_field = None; parts = []}
    variable it reads, a closure's captures included. *)
 let reads env e =
   let rec go depth acc = function
-    | MLrel (db, _) ->
+    | Core.Expr.Bound_variable {index = db; _} ->
       if db > depth then match List.nth_opt env (db - depth - 1) with Some b -> b.parts @ acc | None -> acc
       else acc
-    | MLlam (_, _, b) -> go (depth + 1) acc b
-    | MLletin (_, _, a, b, _) -> go (depth + 1) (go depth acc a) b
-    | MLcase (_, s, branches, _) ->
+    | Core.Expr.Lambda {body = b; _} -> go (depth + 1) acc b
+    | Core.Expr.Let {value = a; body = b; _} -> go (depth + 1) (go depth acc a) b
+    | Core.Expr.Match {scrutinee = s; branches; _} ->
       Array.fold_left
-        (fun acc {br_binders = ids; br_body = b; _} -> go (depth + List.length ids) acc b)
+        (fun acc {Core.Match.Branch.binders = ids; body = b; _} -> go (depth + List.length ids) acc b)
         (go depth acc s) branches
-    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+    | Core.Expr.Fixpoint {functions = ids;
+                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
       Array.fold_left (go (depth + Array.length ids)) acc funs
-    | MLapp (f, args) -> List.fold_left (go depth) acc (f :: args)
-    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go depth) acc args
-    | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> go depth acc e
-    | MLparray (elements, default) -> Array.fold_left (go depth) (go depth acc default) elements
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> acc
+    | Core.Expr.Apply {callee = f; arguments = args} -> List.fold_left (go depth) acc (f :: args)
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.fold_left (go depth) acc args
+    | Core.Expr.Coerce {value = e; _}
+    | Core.Expr.Boxed_value {value = e; _}
+    | Core.Expr.Lambda_group_barrier {value = e; _} ->
+      go depth acc e
+    | Core.Expr.Persistent_array {elements; default} -> Array.fold_left (go depth) (go depth acc default) elements
+    | Core.Expr.Global _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ -> acc
   in
   go 0 [] e
 
 (* [e] without the in-place coercions around it: they change nothing a
    parameter stands for. *)
 let rec strip ~in_place = function
-  | MLcoerce (from, into, e, _) when in_place from into -> strip ~in_place e
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = e; _} when in_place from into -> strip ~in_place e
   | e -> e
 
 (* The declared argument of its constructor each binder of [b] is bound at,
-   [Prel 1] first, where the pattern binds it directly at one. *)
+   [Core.Pattern.Bound_variable 1] first, where the pattern binds it directly at one. *)
 let declared_arguments (b : Term.branch) =
   let count = List.length b.binders in
   let bound = Array.make count None in
   let at r j k = if k >= 1 && k <= count then bound.(k - 1) <- Some (r, j) in
   ( match b.pattern with
-  | Pcons (r, ps) -> List.iteri (fun j -> function Prel k -> at r j k | _ -> ()) ps
-  | Pusual r -> List.iteri (at r) (List.init count (fun i -> count - i))
-  | Pwild | Prel _ | Ptuple _ -> () );
+  | Core.Pattern.Constructor {constructor = r; fields = ps} ->
+    List.iteri (fun j -> function Core.Pattern.Bound_variable k -> at r j k | _ -> ()) ps
+  | Core.Pattern.Shallow_constructor r -> List.iteri (at r) (List.init count (fun i -> count - i))
+  | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> () );
   Array.to_list bound
 
-(* The binders of the branch [b] of a match on [scrutinee], [Prel 1]
+(* The binders of the branch [b] of a match on [scrutinee], [Core.Pattern.Bound_variable 1]
    first, under [env].  A match on the cursor itself binds its fields; one
    on anything else binds parts of what it reads, a field stored behind the
    pointer leading to what it points at.  A binder a match on the cursor
@@ -92,7 +103,8 @@ let branch_binders ~pointer_fields ~in_place env scrutinee (b : Term.branch) =
   let base = List.length env and count = List.length b.binders in
   let on_cursor =
     match strip ~in_place scrutinee with
-    | MLrel (db, _) -> ( match List.nth_opt env (db - 1) with Some {cursor; _} -> cursor | None -> false )
+    | Core.Expr.Bound_variable {index = db; _} ->
+      ( match List.nth_opt env (db - 1) with Some {cursor; _} -> cursor | None -> false )
     | _ -> false
   in
   if on_cursor then
@@ -141,16 +153,28 @@ let reads_cell ~field = List.exists (function Whole | Field _ -> true | Pointee 
    value of its own; one that is a handle to a cell holds its own count. *)
 let own_value ty value =
   let rec closure_free = function
-    | MLlam _ | MLfixpoint _ | MLcofixpoint _ -> false
-    | MLapp (f, args) -> List.for_all closure_free (f :: args)
-    | MLcons (_, _, args, _) | MLtuple args -> List.for_all closure_free args
-    | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> closure_free e
-    | MLletin (_, _, a, b, _) -> closure_free a && closure_free b
-    | MLcase (_, s, branches, _) -> closure_free s && Array.for_all (fun br -> closure_free br.br_body) branches
-    | MLparray (elements, default) -> Array.for_all closure_free elements && closure_free default
-    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
+    | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> false
+    | Core.Expr.Apply {callee = f; arguments = args} -> List.for_all closure_free (f :: args)
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.for_all closure_free args
+    | Core.Expr.Coerce {value = e; _}
+    | Core.Expr.Boxed_value {value = e; _}
+    | Core.Expr.Lambda_group_barrier {value = e; _} ->
+      closure_free e
+    | Core.Expr.Let {value = a; body = b; _} -> closure_free a && closure_free b
+    | Core.Expr.Match {scrutinee = s; branches; _} ->
+      closure_free s && Array.for_all (fun (br : Core.Match.Branch.t) -> closure_free br.body) branches
+    | Core.Expr.Persistent_array {elements; default} -> Array.for_all closure_free elements && closure_free default
+    | Core.Expr.Bound_variable _
+    | Core.Expr.Global _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ -> true
   in
-  let rec head = function MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> head e | e -> e in
+  let rec head = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> head e | e -> e in
   (* A custom computes a value of its own unless its text binds the result
      itself or yields its argument, or a field of it, as an lvalue. *)
   let computes r =
@@ -164,10 +188,10 @@ let own_value ty value =
   in
   let fresh =
     match head value with
-    | MLapp (MLglob {callee; _}, _) -> computes callee
-    | MLapp (MLrel _, _) -> true
-    | MLcons (_, r, _, _) -> computes r
-    | MLtuple _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee; _}; _} -> computes callee
+    | Core.Expr.Apply {callee = Core.Expr.Bound_variable _; _} -> true
+    | Core.Expr.Construct {constructor = r; _} -> computes r
+    | Core.Expr.Tuple _ | Core.Expr.UInt63 _ | Core.Expr.Numeral _ | Core.Expr.Float64 _ | Core.Expr.String _ -> true
     | _ -> false
   in
   fresh && (not (Ml_type_util.is_prod_ml_type ty)) && closure_free value
@@ -184,7 +208,7 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
   let passed env (c : Term.continue_) =
     if not (Control_ir.Loop.equal c.target l.loop) then raise Not_walked;
     match Option.map (strip ~in_place) (List.nth_opt c.arguments cursor) with
-    | Some (MLrel (db, _)) -> (
+    | Some (Core.Expr.Bound_variable {index = db; _}) -> (
       match List.nth_opt env (db - 1) with
       | Some {cursor = true; _} -> None
       | Some {pointer_field = Some field; _} -> Some field
@@ -233,7 +257,9 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
     | Loop _ | Resume _ | Entry _ -> raise Not_walked
   in
   let env =
-    List.init n (fun k -> if n - 1 - k = cursor then {cursor = true; pointer_field = None; parts = [Whole]} else unrelated)
+    List.init n (fun k -> if n - 1 - k = cursor then {cursor = true;
+                                                      pointer_field = None;
+                                                      parts = [Whole]} else unrelated)
   in
   List.rev (walk env None [] l.body)
 
@@ -262,4 +288,4 @@ let positioned c positions =
             c.steps } )
     (at c.parameter)
 
-let step_at c turn = List.find_opt (fun s -> Occurrence.equal s.turn turn) c.steps
+let step_at c turn = List.find_opt (fun s -> Core.Occurrence.equal s.turn turn) c.steps

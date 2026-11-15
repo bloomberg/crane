@@ -74,7 +74,7 @@ type t = {
       (** every variable of the callee's scheme, with why the convention
           omits it, if it does *)
   relaxations : Head_relaxation.t list;
-  ml_type : Miniml.ml_type option;
+  ml_type : Core.Type.t option;
       (** the callee's ML type the plan was made against: the signature a
           call's head is rebuilt from, before relaxation *)
   phase : Common.phase;  (** when the plan was decided, for diagnostics *)

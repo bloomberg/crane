@@ -64,9 +64,9 @@
     read. *)
 val region :
   outer:Lexenv.t ->
-  Miniml.ml_ast ->
+  Core.Expr.t ->
   (Core_binder.site * int * Translation_state.planned_repr) list
-  * (Miniml.Occurrence.t * Translation_state.planned_read) list
+  * (Core.Occurrence.t * Translation_state.planned_read) list
 
 (** [check ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless the
     region's plan ({!Translation_state.translation_ctx.representation}) boxes

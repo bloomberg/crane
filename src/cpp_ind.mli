@@ -1,10 +1,10 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Which C++ declarations a MiniML declaration becomes.
+(** Which C++ declarations a Core declaration becomes.
 
-   This module turns MiniML inductives ([ml_ind]) and declarations
-   ([ml_decl]) into {!Cpp_ir.Lowered} declarations, between translation
+   This module turns Core inductives ([Core.Inductive.t]) and declarations
+   ([Core.Decl.t]) into {!Cpp_ir.Lowered} declarations, between translation
    ({!Translation}, {!Gen_decls}) and the printer ({!Cpp}).  Everything a
    declaration becomes is generated once, ahead of both files
    ({!generate_ahead}), finished in the unit's program
@@ -30,7 +30,7 @@
     in. *)
 type generated = (Common.env * Cpp_ir.Lowered.Decl.t) list
 
-(** Declarations finished for the printer: what one MiniML declaration
+(** Declarations finished for the printer: what one Core declaration
     became, as the unit's program finished it ({!Unit_program.finish}), in
     CppIR. *)
 type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
@@ -44,15 +44,15 @@ val pp_decls : Cpp_state.render_ctx -> rendered -> Cpp_ast.t
     concept.  Both belong at namespace scope, wherever the instance was
     declared. *)
 val instance_decls :
-  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated
+  Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> generated
 
 (** The callable plan of each method of the instance's struct, by name: the
     head {!instance_decls} declares it with, planned without a body. *)
 val plan_instance_methods :
-  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> (Names.Id.t * Callable_abi.t) list
+  Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> (Names.Id.t * Callable_abi.t) list
 
 (** [generated_once ~module_ ?on_reuse ?on_peek ?planned node gen] is [gen ()] ahead
-    of the files ({!generating_ahead}), recorded by the physical MiniML node
+    of the files ({!generating_ahead}), recorded by the physical Core node
     [node] and the module [module_] it is generated in -- the module whose
     element it is, as for everything below that takes one -- and handed to
     [planned] to plan what
@@ -166,7 +166,7 @@ val funs_entities :
     ({!instance_entity}), or what the header alone writes of it, generated in
     the scope the header writes it in ({!header_scope}); and say what of it
     to finish. *)
-val generate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> ahead
+val generate_ahead : module_:Names.ModPath.t -> Core.Decl.t -> ahead
 
 (** How the header writes a module's body: inside a struct or not, and with
     the module's class concepts already declared ahead of its struct or not,
@@ -268,14 +268,14 @@ val concept_placement : concept_plan -> Cpp_state.held_concept -> concept_placem
     generated ahead of the files ({!generating_ahead}) in the module
     declaring the class, and taken from there by the header, which generates
     it again under [CRANE_CHECK_IR] to compare. *)
-val concept : module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.record_field list -> Cpp_ir.Lowered.Decl.t
+val concept : module_:Names.ModPath.t -> Names.GlobRef.t -> Core.Record.Field.t list -> Cpp_ir.Lowered.Decl.t
 
 (** [modtype_concept path ~params mt] is the concept of the module type [mt]
     at [path], over the functor parameters [params]: generated ahead of the
     files where the header writes it, and taken from there by the header,
     which generates it again under [CRANE_CHECK_IR] to compare. *)
 val modtype_concept :
-  module_:Names.ModPath.t -> Names.ModPath.t -> params:Names.ModPath.t list -> Miniml.ml_module_type -> Modtype_concept.t
+  module_:Names.ModPath.t -> Names.ModPath.t -> params:Names.ModPath.t list -> Core.Module.Type.t -> Modtype_concept.t
 
 (** [record_methods r vars candidates] is the methods the eponymous record
     [r], of variables [vars], is given, made of [candidates], with the
@@ -295,7 +295,7 @@ val record_methods :
     ahead of the files, and taken from there by the header, which converts
     them again under [CRANE_CHECK_IR] to compare. *)
 val record_field_types :
-  module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Miniml.record_field list -> Cpp_ir.Resolved.Type.t list
+  module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Core.Record.Field.t list -> Cpp_ir.Resolved.Type.t list
 
 (** Every module type's concept generated ahead of the files
     ({!modtype_concept}). *)
@@ -338,7 +338,7 @@ val peeking : (unit -> 'a) -> 'a
 
 (** [regenerate_ahead d] generates again what {!generate_ahead} generated
     for [d], checking it ({!regenerating}). *)
-val regenerate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
+val regenerate_ahead : module_:Names.ModPath.t -> Core.Decl.t -> unit
 
 (** [finished_placed (id, d)] is [d], the declaration [id] placed beside
     the generation it was lifted out of or handed on with, as the unit's
@@ -388,7 +388,7 @@ val finalized :
     ahead of the declaration passes what its definition declares.  Decided in
     declaration order, each recorded as it is: an alias's kinds come out of
     its converted body, which reads the kinds of the declarations it names. *)
-val template_kinds : Miniml.ml_structure -> (Names.GlobRef.t * Tparam_kinds.t) list
+val template_kinds : Core.Program.t -> (Names.GlobRef.t * Tparam_kinds.t) list
 
 (** {2 Recording the generated program}
 
@@ -411,9 +411,9 @@ val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> un
     ({!generating_ahead}) and taken from there by the header; that it was
     not is an anomaly.  [CRANE_CHECK_IR] regenerates and checks. *)
 val instance_entity :
-  module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated * Cpp_ir.Lowered.Decl.t list
+  module_:Names.ModPath.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> generated * Cpp_ir.Lowered.Decl.t list
 
-(** What a file writes for one MiniML declaration, and the helpers lifted
+(** What a file writes for one Core declaration, and the helpers lifted
     out of it that the element places: a constant's or a function's.  A
     fixpoint's helpers are written in front of it, and are not among them. *)
 type element = {
@@ -426,28 +426,28 @@ type element = {
           of the file: only a datatype's, and only in the header. *)
 }
 
-(** The implementation-file declarations for one MiniML declaration, written
+(** The implementation-file declarations for one Core declaration, written
     at the position given. *)
-val impl_decls : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
+val impl_decls : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
-(** The header declarations for one MiniML declaration, written at the
+(** The header declarations for one Core declaration, written at the
     position given. *)
-val header_decls : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
+val header_decls : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** What {!header_decls} gives for a declaration, read off what was generated
     ahead of the files without taking it: nothing is recorded or claimed,
     and the helpers are those the header is planned to place there.  Read
     at the position given. *)
-val header_element_ahead : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
+val header_element_ahead : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** What the implementation writes for a declaration, read off what was
     generated ahead of the files without taking it, at the position
     given. *)
-val impl_element_ahead : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
+val impl_element_ahead : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** Whether the inductive [d] declares, promoted to its module's struct,
     makes that struct derive from [enable_shared_from_this], read off what
     was generated ahead of the files in the module [module_], written at
     the position given. *)
-val promoted_shared_from_this : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> bool
+val promoted_shared_from_this : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> bool
 

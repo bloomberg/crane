@@ -31,9 +31,9 @@ let is_global_scope_enum _ r = Module_plan.is_global_scope_enum r
 let get_ind_kind t r = Ref.User.Tbl.find_opt t.ind_kinds r
 
 (** Classifies packet [i] of an inductive using side-effect-free queries. *)
-let classify_inductive (kn : MutInd.t) (i : int) (ind : Miniml.ml_ind) : Kind.t =
+let classify_inductive (kn : MutInd.t) (i : int) (ind : Core.Inductive.t) : Kind.t =
   let ind_ref = GlobRef.IndRef (kn, i) in
-  match ind.Miniml.ind_kind with
+  match ind.Core.Inductive.kind with
   | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive ->
     if is_enum_inductive ind_ref then Enum else Sum
   | Core.Inductive.Kind.Record fields ->
@@ -54,14 +54,14 @@ let create s =
     List.iter
       (fun (_l, se) ->
         match se with
-        | Miniml.SEdecl (Miniml.Dind (kn, ind)) ->
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           Array.iteri
             (fun i _p ->
               Ref.User.Tbl.replace ind_kinds (GlobRef.IndRef (kn, i)) (classify_inductive kn i ind) )
-            ind.Miniml.ind_packets
-        | Miniml.SEmodule m ->
-          ( match m.Miniml.ml_mod_expr with
-          | Miniml.MEstruct (_mp, inner_sel) -> scan_sel inner_sel
+            ind.Core.Inductive.packets
+        | Core.Module.Structure_item.Module m ->
+          ( match m.Core.Module.expr with
+          | Core.Module.Expr.Structure {path = _mp; items = inner_sel} -> scan_sel inner_sel
           | _ -> () )
         | _ -> () )
       sel

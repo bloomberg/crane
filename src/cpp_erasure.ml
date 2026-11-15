@@ -82,7 +82,7 @@ let rec is_any_shaped : type p. p Cpp_ir.Type.t -> bool = function
     is_axiom_type_ref (GlobRef.ConstRef c)
     || ( try
            let t = Table.find_type (GlobRef.ConstRef c) in
-           t = Miniml.Tunknown || t = Miniml.Taxiom
+           t = Core.Type.Unknown || t = Core.Type.Axiom
          with Not_found -> false )
   | _ -> false
 
@@ -534,7 +534,8 @@ let rec reads_decl (d : settled) : settled =
     match d with
     | Struct s -> Struct {s with fields = List.map field s.fields}
     | Merged_struct_members s -> Merged_struct_members {s with fields = List.map field s.fields}
-    | Member_definition ({member = Method m; _} as md) -> Member_definition {md with member = Method (reads_method no_reads m)}
+    | Member_definition ({member = Method m; _} as md) ->
+      Member_definition {md with member = Method (reads_method no_reads m)}
     | d -> Map.decl (reads no_reads) d )
 
 let lower_boxed_reads (d : settled) : settled = reads_decl d
@@ -1188,7 +1189,8 @@ let rec is_literal_type (ty : ty) =
   | Entity_application (r, [], _) when Table.is_custom_scalar_ref r -> true
   (* A generated inductive other than an enum has user-provided constructors
      that are not [constexpr], so it is not a literal type. *)
-  | Entity_application ((GlobRef.IndRef _ as r), tys, _) -> Table.is_enum_inductive r && List.for_all is_literal_type tys
+  | Entity_application ((GlobRef.IndRef _ as r), tys, _) ->
+    Table.is_enum_inductive r && List.for_all is_literal_type tys
   | Const t | Reference (_, t) | Pointer t | Non_deduced t | In_namespace (_, t) | Member (t, _) -> is_literal_type t
   | Variant (_, tys) -> List.for_all is_literal_type tys
   (* A defined constant with no arguments is an alias nothing here sees
@@ -1322,7 +1324,8 @@ let bind_free_tvars (d : settled) : settled =
       let restore (b' : phase Match.branch) (b : phase Match.branch) = {b' with field_bindings = b.field_bindings} in
       let branches =
         match s with
-        | Match (_, branches, _) when List.length branches = List.length branches' -> List.map2 restore branches' branches
+        | Match (_, branches, _) when List.length branches = List.length branches' ->
+          List.map2 restore branches' branches
         | _ -> branches'
       in
       Match (scrut, branches, dflt)

@@ -6,7 +6,7 @@
     decided here: which types are [M]'s own members (spelled
     [typename M::x]), which belong to a functor parameter, which come from a
     custom mapping.  The printer only spells those answers
-    ({!Cpp_concepts}).  The concept is built from the MiniML module type: each
+    ({!Cpp_concepts}).  The concept is built from the Core module type: each
     type is converted through translation's type conversion and lowered to
     CppIR, which the concept holds. *)
 
@@ -80,11 +80,11 @@ type t =
 (** [constraint_of ~params mt] is what the module type [mt] contributes
     where a concept body is expected, [params] the functor parameters
     visible in it. *)
-val constraint_of : params:ModPath.t list -> Miniml.ml_module_type -> constraint_
+val constraint_of : params:ModPath.t list -> Core.Module.Type.t -> constraint_
 
 (** [generate ~params mt] is the concept of the module type [mt], over the
     functor parameters [params] as well as [M]. *)
-val generate : params:ModPath.t list -> Miniml.ml_module_type -> t
+val generate : params:ModPath.t list -> Core.Module.Type.t -> t
 
 (** [names_member mp c] is whether printing [c] names, from outside the
     module [mp], one of [mp]'s members: a concept that does cannot be

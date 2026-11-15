@@ -60,7 +60,7 @@ let owned_ref init =
   r
 
 (** The method registry, created once per extraction pass by scanning the
-    full ml_structure.  Queries go through {!get_method_registry}. *)
+    full Core.Program.t.  Queries go through {!get_method_registry}. *)
 let method_registry : Method_registry.t option ref = owned_ref None
 
 (** In separate extraction, a pre-built method registry from the full
@@ -753,7 +753,7 @@ let eponymous_promote_ref : GlobRef.t option ref = owned_ref None
     current eponymous type. this_position is the index (0-based) of the first
     argument that matches the eponymous type. *)
 let method_candidates :
-    (GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int) list ref =
+    (GlobRef.t * Core.Expr.t * Core.Type.t * int) list ref =
   owned_list "method_candidates"
 
 (** Eponymous record: when a module M contains a record with the same name
@@ -761,7 +761,7 @@ let method_candidates :
     module struct to avoid C++ name conflicts. Stores: (record_ref, field_refs,
     ind_packet) *)
 let eponymous_record :
-    (GlobRef.t * Miniml.record_field list * Miniml.ml_ind_packet) option ref =
+    (GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option ref =
   owned_ref None
 
 (** {2 Scoped render state}
@@ -1146,7 +1146,7 @@ let method_returns_any (func_ref : GlobRef.t) : bool =
 (** Track current structure's declarations for finding methods from sibling
     modules. When processing a module like List inside tree.v, we need to also
     scan sibling declarations (like app) that are from the same Rocq module. *)
-let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref =
+let current_structure_decls : (Label.t * Core.Module.Structure_item.t) list ref =
   owned_list ~census:false "current_structure_decls"
 
 (** [promoted_inductives] lives in {!Table} but is reset and censused here,
@@ -1181,12 +1181,12 @@ let is_eponymous_record_projection r =
 let is_suppressed_projection r =
   Table.is_projection r && not (Table.is_higher_order_projection r)
 
-(** Filter a Dfix group, removing entries that are inline customs, registered
+(** Filter a Core.Decl.Recursive_group group, removing entries that are inline customs, registered
     methods (every method candidate is one), eponymous record projections, or
     suppressed projections: what is left is rendered directly. *)
 let filter_dfix fds =
   List.filter
-    (fun {Miniml.fd_ref = x; _} ->
+    (fun {Core.Recursion.Definition.entity = x; _} ->
       (not (is_inline_custom x))
       && is_registered_method x = None
       && (not (is_eponymous_record_projection x))

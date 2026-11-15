@@ -4,7 +4,6 @@
 (** The C++ type each coercion's position is generated against, planned
     from Core.  See [position_plan.mli]. *)
 
-open Miniml
 open Translation_state
 open Ml_type_util
 open Translation_support
@@ -18,7 +17,7 @@ let push ids lex =
     lex
 
 (* The return type a let's right-hand side is generated under
-   ({!Translation.gen_stmts}' [MLletin]): the binder's own type where it
+   ({!Translation.gen_stmts}' [Core.Expr.Let]): the binder's own type where it
    says one, else the one in force. *)
 let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
   let c = cpp_of_ml env t in
@@ -32,7 +31,7 @@ let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
 let named_env (lex : Lexenv.t) : Common.env = (List.map (fun (b : Lexenv.binder) -> b.eb_id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
 
 (* The slot a coercion's inner term is generated in
-   ({!Translation.gen_expr}'s [MLcoerce]): boxed where it crosses from a
+   ({!Translation.gen_expr}'s [Core.Expr.Coerce]): boxed where it crosses from a
    type that is not a box into one that is, unless the position states a
    type that is not one. *)
 let coerced_slot env ~(pos : Cpp_ir.Lowered.Type.t option) slot ~from ~into =
@@ -51,49 +50,55 @@ let region ~outer ~reads body =
      [pos], into [slot], with [ret] the return type in force. *)
   let rec expr ~(pos : Cpp_ir.Lowered.Type.t option) ~(ret : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) lex e =
     match e with
-    | MLcoerce (from, into, t, occ) ->
+    | Core.Expr.Coerce {source_type = from; target_type = into; value = t; occurrence = occ} ->
       found := (occ, pos) :: !found;
       let env = named_env lex in
-      expr ~pos:(match t with MLlam _ -> pos | _ -> None) ~ret ~slot:(coerced_slot env ~pos slot ~from ~into) lex t
-    | MLboxed (t, occ) | MLbarrier (t, occ) ->
+      expr ~pos:(match t with Core.Expr.Lambda _ -> pos | _ -> None) ~ret ~slot:(coerced_slot env ~pos slot ~from ~into) lex t
+    | Core.Expr.Boxed_value {value = t;
+                             occurrence = occ} | Core.Expr.Lambda_group_barrier {value = t; occurrence = occ} ->
       found := (occ, pos) :: !found;
-      expr ~pos:(match t with MLlam _ -> pos | _ -> None) ~ret ~slot lex t
-    | MLcons (ty, r, ts, _) when Table.is_custom r -> with_cpp_return_type ret (fun () -> custom ~pos ~slot lex ty r ts)
-    | MLcons (_, _, [], _) -> ()
-    | MLcons (ty, r, ts, _) -> with_cpp_return_type ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)
+      expr ~pos:(match t with Core.Expr.Lambda _ -> pos | _ -> None) ~ret ~slot lex t
+    | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when Table.is_custom r ->
+      with_cpp_return_type ret (fun () -> custom ~pos ~slot lex ty r ts)
+    | Core.Expr.Construct {arguments = []; _} -> ()
+    | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} ->
+      with_cpp_return_type ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)
     (* Only the returned value is generated, at no position. *)
-    | MLapp (MLglob use, (_ :: _ as args)) when is_effect Core_effects.Return use ->
+    | Core.Expr.Apply {callee = Core.Expr.Global use;
+                       arguments = (_ :: _ as args)} when is_effect Core_effects.Return use ->
       expr ~pos:None ~ret lex (Common.last args)
     (* A sequential bind in an expression is the statements it desugars to. *)
-    | MLapp (MLglob use, _ :: _ :: _) when is_sequential_effect Core_effects.Bind use -> stmts ~ret lex e
-    | MLapp (MLglob use, args) -> call ~pos ~ret ~slot lex use args
-    | MLapp ((MLfixpoint _ | MLcofixpoint _ as f), args) ->
+    | Core.Expr.Apply {callee = Core.Expr.Global use;
+                       arguments = _ :: _ :: _} when is_sequential_effect Core_effects.Bind use ->
+      stmts ~ret lex e
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} -> call ~pos ~ret ~slot lex use args
+    | Core.Expr.Apply {callee = (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as f); arguments = args} ->
       stmts ~ret lex f;
       List.iter (expr ~pos:None ~ret lex) args
-    | MLletin _ -> stmts ~ret:pos lex e
-    | MLfixpoint _ | MLcofixpoint _ -> stmts ~ret lex e
-    | MLcase (typ, scrut, branches, occ) -> (
+    | Core.Expr.Let _ -> stmts ~ret:pos lex e
+    | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> stmts ~ret lex e
+    | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} -> (
       expr ~pos:None ~ret lex scrut;
       match Core_elaborate.match_kind typ branches occ with
       | Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
       | Match_kind.Custom ->
-        let rty = match Array.to_list branches with {br_type = rty; _} :: _ -> rty | [] -> typ in
+        let rty = match Array.to_list branches with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ in
         let r = cpp_of_ml env rty in
         let ret = if is_cpp_unit_type r || ml_type_is_void_call rty then Some Void else ret in
         Array.iter (branch ~ret lex) branches
       | Match_kind.Variant ->
         let is_enum =
-          match typ with Miniml.Tglob ((Names.GlobRef.IndRef _ as r), _, _) -> Table.is_enum_inductive r | _ -> false
+          match typ with Core.Type.Global_app {head = (Names.GlobRef.IndRef _ as r); _} -> Table.is_enum_inductive r | _ -> false
         in
         let ret = if is_enum && iife_void_return env typ branches = Some Void then Some Void else ret in
         Array.iter (branch ~ret lex) branches )
     (* A lambda's body is a region of its own, planned where it begins. *)
-    | MLlam _ -> ()
+    | Core.Expr.Lambda _ -> ()
     | e -> Mlutil.ast_iter (expr ~pos:None ~ret lex) e
   (* A value a constructor stores ({!Translation.gen_stored_value}). *)
   and stored ~pos ~ret ~slot lex e =
     match e with
-    | MLdummy _ -> ()
+    | Core.Expr.Erased_value _ -> ()
     | e when ml_value_is_void_call e -> expr ~pos:None ~ret ~slot lex e
     | e -> expr ~pos ~ret ~slot lex e
   (* A constructor of Crane's own, each argument at the field it fills
@@ -134,36 +139,38 @@ let region ~outer ~reads body =
         let a = Translation_constructors.custom_field ~var env c ~slot r i e in
         with_cpp_return_type a.ca_ret (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
       ts
-  and branch ~ret ?slot lex {br_binders = ids; br_body = body; _} =
+  and branch ~ret ?slot lex {Core.Match.Branch.binders = ids; body = body; _} =
     stmts ~ret ?slot (push (List.rev ids) lex) body
   (* [stmts ~ret ~slot lex e]: [e] generated as statements whose tail is
      the result, under the return type [ret], into [slot]. *)
   and stmts ~ret ?(slot = empty_slot) lex e =
     match e with
-    | MLletin (x, t, a, b, _) ->
+    | Core.Expr.Let {binder = x; binder_type = t; value = a; body = b; _} ->
       ( match x with
-      | Dummy -> ()
+      | Core.Binder_name.Anonymous -> ()
       | _ ->
         let slot = {slot with repr = Native; expected_ml_ty = Some t} in
         if ml_type_is_unit t then stmts ~ret ~slot lex a else stmts ~ret:(let_result env ~ret t) ~slot lex a );
       stmts ~ret ~slot (push [(x, t)] lex) b
-    | MLcase (typ, scrut, branches, occ) ->
+    | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} ->
       expr ~pos:None ~ret lex scrut;
       let slot = match Core_elaborate.match_kind typ branches occ with Match_kind.Record _ -> slot | _ -> empty_slot in
       Array.iter (branch ~ret ~slot lex) branches
-    | MLfixpoint (_, fs, defs, _) | MLcofixpoint (_, fs, defs, _) ->
-      let lex = push (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) lex in
+    | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+      let lex = push (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) lex in
       Array.iter (expr ~pos:None ~ret lex) defs
     (* A sequential bind is its action, generated at no position, then its
        continuation's body as statements under the same return type. *)
-    | MLapp (MLglob use, (_ :: _ :: _ as args)) when is_effect Core_effects.Bind use ->
+    | Core.Expr.Apply {callee = Core.Expr.Global use;
+                       arguments = (_ :: _ :: _ as args)} when is_effect Core_effects.Bind use ->
       if is_sequential_effect Core_effects.Bind use then (
         let a, f = Common.last_two args in
         expr ~pos:None ~ret lex a;
         let ids, body = Mlutil.collect_lams f in
         stmts ~ret ~slot (push ids lex) body )
       else expr ~pos:None ~ret lex e
-    | MLapp (MLglob use, (_ :: _ as args)) when is_effect Core_effects.Return use ->
+    | Core.Expr.Apply {callee = Core.Expr.Global use;
+                       arguments = (_ :: _ as args)} when is_effect Core_effects.Return use ->
       if is_sequential_effect Core_effects.Return use then (
         if ret <> Some Void then expr ~pos:ret ~ret lex (Common.last args) )
       else expr ~pos:None ~ret lex e
@@ -171,7 +178,7 @@ let region ~outer ~reads body =
   (* A global call's arguments, each against the parameter it is passed at
      ({!Translation_calls.argument_position}), into the call's slot at the
      parameter's ML type. *)
-  and call ~pos ~ret ~slot lex use args =
+  and call ~pos ~ret ~slot lex (use : Core.Global_use.t) args =
     match Core_elaborate.planned_instantiation use args with
     | None -> List.iter (expr ~pos:None ~ret lex) args
     | Some inst ->
@@ -187,7 +194,7 @@ let region ~outer ~reads body =
       List.iter
         (fun a ->
           match regular_index a with
-          | Some i when (match strip_magic a with MLdummy _ -> false | _ -> true) ->
+          | Some i when (match strip_magic a with Core.Expr.Erased_value _ -> false | _ -> true) ->
             (* Whether a local read is a callable decides only the position
                of that read, which holds no coercion. *)
             let ap =

@@ -1,8 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** This module collects the predicates and transformations over MiniML types
-   ([Miniml.ml_type]) and C++ types ([Cpp_ir.Lowered.Type.t]) that are used
+(** This module collects the predicates and transformations over Core types
+   ([Core.Type.t]) and C++ types ([Cpp_ir.Lowered.Type.t]) that are used
    throughout the Coq -> C++ extraction pipeline. It provides type
    classification (erased / unit / void / list / option / prod / monadic /
    value types), arrow and codomain analysis, type-variable substitution and
@@ -25,7 +25,7 @@
       These look only at the type node in front of them.  They cannot see
       through a [using] alias, so a caller holding a type that {e might} be
       an alias must run [Translation.unfold_cpp_typedef] first.  Note also
-      that a [Tdummy] converts to a [dummy_type] marker, not to [Tany]:
+      that a [Core.Type.Erased] converts to a [dummy_type] marker, not to [Tany]:
       {!has_tany_in_type} misses it and {!has_erased_type_in_type} does not.
     - {b Environment-aware} ({!Translation}, defined in
       [translation_types.ml]): [resolves_to_any_type],
@@ -39,9 +39,9 @@
 
 (** [instance_type_args args] -- a typeclass's type arguments as both the
     instance's signature and its call sites must spell them.  A type argument
-    extraction erased to [Tdummy] becomes [Tunknown]: the parameter standing
+    extraction erased to [Core.Type.Erased] becomes [Core.Type.Unknown]: the parameter standing
     at it keeps its slot, at the erased type the concept also spells it. *)
-val instance_type_args : Miniml.ml_type list -> Miniml.ml_type list
+val instance_type_args : Core.Type.t list -> Core.Type.t list
 
 (** {2 Constructor name resolution} *)
 
@@ -54,12 +54,12 @@ val ctor_struct_id_of_ref :
 
 (** {2 Type resolution and variable maps} *)
 
-(** Resolve a MiniML type through any metavariable indirection. *)
-val resolve_tmeta : Miniml.ml_type -> Miniml.ml_type
+(** Resolve a Core type through any metavariable indirection. *)
+val resolve_tmeta : Core.Type.t -> Core.Type.t
 
 (** Unfold a type alias whose body is a function type, substituting the
     alias's own type arguments; any other type is returned unchanged. *)
-val expand_ml_fun_alias : Miniml.ml_type -> Miniml.ml_type
+val expand_ml_fun_alias : Core.Type.t -> Core.Type.t
 
 (** Build the substitution mapping type variables of one C++ type to the
     corresponding sub-types of another. *)
@@ -69,43 +69,43 @@ val extract_tvar_map :
 (** Find the arguments of a self- or mutually-recursive occurrence in a type. *)
 val find_self_ref_args :
   is_self_or_mutual:(Names.GlobRef.t -> bool) ->
-  Miniml.ml_type -> Miniml.ml_type list option
+  Core.Type.t -> Core.Type.t list option
 
 (** {2 Erasure classification} *)
 
-(** Whether a MiniML type is erased at its root (not looking inside it): an
-    unresolved [Tmeta], a [Topen] hole, a [Tdummy], or a schematic [Tvar]. *)
-val is_erased_ml_type : Miniml.ml_type -> bool
+(** Whether a Core type is erased at its root (not looking inside it): an
+    unresolved [Core.Type.Meta], a [Core.Type.Open] hole, a [Core.Type.Erased], or a schematic [Core.Type.Variable]. *)
+val is_erased_ml_type : Core.Type.t -> bool
 
-(** Whether a MiniML type contains an erased component anywhere within it.
+(** Whether a Core type contains an erased component anywhere within it.
     Arrows are opaque unless [~in_arrows:true]. *)
-val ml_type_contains_erased : ?in_arrows:bool -> Miniml.ml_type -> bool
+val ml_type_contains_erased : ?in_arrows:bool -> Core.Type.t -> bool
 
-(** Whether a type variable survives anywhere in a MiniML type — a variable no
+(** Whether a type variable survives anywhere in a Core type — a variable no
     substitution reached, which would be spelled as an out-of-scope template
     parameter. *)
-val ml_type_contains_tvar : Miniml.ml_type -> bool
+val ml_type_contains_tvar : Core.Type.t -> bool
 
 (** {2 Arrow and codomain analysis} *)
 
-(** The codomain (final result type) of a MiniML arrow type. *)
-val ml_codomain : Miniml.ml_type -> Miniml.ml_type
+(** The codomain (final result type) of a Core arrow type. *)
+val ml_codomain : Core.Type.t -> Core.Type.t
 
 (** The registered monad ({!Table.is_monad}) a computation of this type runs
     in: its codomain's head, seen through type aliases -- [stateT S (itree E)
     T] is [S -> itree E (S * T)], a computation in [itree]. *)
-val codomain_monad : Miniml.ml_type -> Names.GlobRef.t option
+val codomain_monad : Core.Type.t -> Names.GlobRef.t option
 
 (** The registered monad heading the type itself, seen through aliases --
     [CFGtop A] for [itree CFGEtop A] -- or [None] for one that is not a
     computation (a function type among them, however it is spelled).
     {!is_monadic_ml_type} reads the spelling alone. *)
-val type_monad : Miniml.ml_type -> Names.GlobRef.t option
+val type_monad : Core.Type.t -> Names.GlobRef.t option
 
-(** The domains of a MiniML arrow type, in argument order -- every arrow,
+(** The domains of a Core arrow type, in argument order -- every arrow,
     erased ones included, so a position in the result is a position in the
     type. Only the arrow spine is chased through metavariables. *)
-val ml_domains : Miniml.ml_type -> Miniml.ml_type list
+val ml_domains : Core.Type.t -> Core.Type.t list
 
 (** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
     not a parameter at run time: extraction erased it, its type being a type
@@ -126,19 +126,19 @@ type binder_role =
   | Erased of erasure
 
 (** The role of a binder of the type. *)
-val binder_role : Miniml.ml_type -> binder_role
+val binder_role : Core.Type.t -> binder_role
 
 (** The erasure extraction recorded in a binder's type ([Type_binder],
     [Proof] or [Implicit]), if it did. *)
-val extraction_erasure : Miniml.ml_type -> erasure option
+val extraction_erasure : Core.Type.t -> erasure option
 
 (** Whether extraction erased a binder of the type: no call passes an
     argument for it.  A [void] binder is not one -- see {!binder_role}. *)
-val erased_by_extraction : Miniml.ml_type -> bool
+val erased_by_extraction : Core.Type.t -> bool
 
-(** The domains of a MiniML arrow type, in argument order, with the ones
+(** The domains of a Core arrow type, in argument order, with the ones
     extraction erased dropped -- one entry per argument a C++ call passes. *)
-val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
+val ml_value_domains : Core.Type.t -> Core.Type.t list
 
 (** A definition's parameters as its function takes them: the leading
     lambdas of [b], innermost first, as many as its type [ty] has domains.
@@ -146,14 +146,14 @@ val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
     type ([State S A]); the lambdas past the type's arrows stay in the body,
     as the closure it returns. *)
 val collect_typed_lams :
-  Miniml.ml_type -> Miniml.ml_ast -> (Miniml.ml_ident * Miniml.ml_type) list * Miniml.ml_ast
+  Core.Type.t -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
 
 (** [eta_parameters ty params]: the parameters, innermost first, a function
     of type [ty] whose leading lambdas bind [params] ({!collect_typed_lams})
     is given past them -- an [_xI] at each domain the lambdas stop short
     of. *)
 val eta_parameters :
-  Miniml.ml_type -> (Miniml.ml_ident * Miniml.ml_type) list -> (Miniml.ml_ident * Miniml.ml_type) list
+  Core.Type.t -> (Core.Binder_name.t * Core.Type.t) list -> (Core.Binder_name.t * Core.Type.t) list
 
 (** [unwritten_parameters ty params body]: the {!eta_parameters} of a
     definition whose leading lambdas bind [params] over [body].  In a
@@ -162,24 +162,24 @@ val eta_parameters :
     an exception, which has no body to bind them; under [CRANE_CHECK_IR] any
     other definition missing one is a violation. *)
 val unwritten_parameters :
-  Miniml.ml_type -> (Miniml.ml_ident * Miniml.ml_type) list -> Miniml.ml_ast -> (Miniml.ml_ident * Miniml.ml_type) list
+  Core.Type.t -> (Core.Binder_name.t * Core.Type.t) list -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list
 
 (** The parameters a function of type [ty] defined by [b] is generated with,
     innermost first -- its {!unwritten_parameters}, then the lambdas
     {!collect_typed_lams} finds -- and the body under them. *)
 val declared_parameters :
-  Miniml.ml_type -> Miniml.ml_ast -> (Miniml.ml_ident * Miniml.ml_type) list * Miniml.ml_ast
+  Core.Type.t -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
 
 (** [eta_expand_to ty b] gives [b] as many binders as [ty] has value arrows,
     added innermost so the lambdas already written keep their names. A body
     that stops short of its type is a partial application, which no C++ slot of
     a known signature can hold. *)
-val eta_expand_to : Miniml.ml_type -> Miniml.ml_ast -> Miniml.ml_ast
+val eta_expand_to : Core.Type.t -> Core.Expr.t -> Core.Expr.t
 
 (** A class method's type with the leading domains a concept erased -- its own
     [forall A] binders and the class instance -- stripped back off, as read
     from the projection constant which kept them. *)
-val strip_erased_method_prefix : Miniml.ml_type -> Miniml.ml_type
+val strip_erased_method_prefix : Core.Type.t -> Core.Type.t
 
 (** How many of the class's parameters the projection [proj] takes in front
     of its dictionary, erased; [0] when its type is not known. *)
@@ -188,14 +188,14 @@ val projection_class_arity : Names.GlobRef.t -> int
 (** The arguments a higher-kinded carrier has already fixed: [Fn (prod X)]
     fixes the pair's first component, while the eta-expanded [option _] fixes
     nothing.  What is left is what the class still applies. *)
-val hkt_carrier_fixed_args : int -> Miniml.ml_type -> Miniml.ml_type list
+val hkt_carrier_fixed_args : int -> Core.Type.t -> Core.Type.t list
 
 (** [recover_method_quantifier class_ref field_ref erased] is the type of a
     class field with its own [forall A] intact -- the projection constant's
     type with the class's erased prefix stripped -- or [erased] when the
     projection's type is not known. *)
 val recover_method_quantifier :
-  Names.GlobRef.t -> Names.GlobRef.t -> Miniml.ml_type -> Miniml.ml_type
+  Names.GlobRef.t -> Names.GlobRef.t -> Core.Type.t -> Core.Type.t
 
 (** Whether an instance declares class field [field_ref] of [class_ref] as a
     member template: where {!recover_method_quantifier} takes the quantifier
@@ -206,67 +206,67 @@ val method_is_member_template : Names.GlobRef.t -> Names.GlobRef.t -> bool
     instance method of type [ty] emits: the type variables the method
     quantifies on its own, past the class's parameters.  The instance, the
     concept's requirement and a call agree on it by reading it here. *)
-val method_tvar_count : Names.GlobRef.t -> Miniml.ml_type -> int
+val method_tvar_count : Names.GlobRef.t -> Core.Type.t -> int
 
 (** [ml_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
-    arrows have been applied; [Tunknown] if it has fewer than [n]. *)
-val ml_drop_arrows : int -> Miniml.ml_type -> Miniml.ml_type
+    arrows have been applied; [Core.Type.Unknown] if it has fewer than [n]. *)
+val ml_drop_arrows : int -> Core.Type.t -> Core.Type.t
 
-(** Count the number of value-carrying arrows in a MiniML type. *)
-val count_ml_value_arrows : Miniml.ml_type -> int
+(** Count the number of value-carrying arrows in a Core type. *)
+val count_ml_value_arrows : Core.Type.t -> int
 
-(** Whether the codomain of a MiniML type is a type variable. *)
-val ml_codomain_is_tvar : Miniml.ml_type -> bool
+(** Whether the codomain of a Core type is a type variable. *)
+val ml_codomain_is_tvar : Core.Type.t -> bool
 
-(** Count the total number of arrows in a MiniML type. *)
-val count_ml_arrows : Miniml.ml_type -> int
+(** Count the total number of arrows in a Core type. *)
+val count_ml_arrows : Core.Type.t -> int
 
-(** Whether a MiniML type is monadic. *)
-val is_monadic_ml_type : Miniml.ml_type -> bool
+(** Whether a Core type is monadic. *)
+val is_monadic_ml_type : Core.Type.t -> bool
 
 (** {2 Unit and void classification} *)
 
-(** Whether a MiniML type is void. *)
-val ml_type_is_void : Miniml.ml_type -> bool
+(** Whether a Core type is void. *)
+val ml_type_is_void : Core.Type.t -> bool
 
 (** Whether a binder of the type is a parameter at run time: its
     {!binder_role} is [Runtime]. *)
-val is_runtime_binder_type : Miniml.ml_type -> bool
+val is_runtime_binder_type : Core.Type.t -> bool
 
 (** Whether a binder of the type is erased for being [void] ([Erased Void]):
     an argument list keeps it, a C++ signature does not. *)
-val void_binder : Miniml.ml_type -> bool
+val void_binder : Core.Type.t -> bool
 
-(** Whether a MiniML type is unit. *)
-val ml_type_is_unit : Miniml.ml_type -> bool
+(** Whether a Core type is unit. *)
+val ml_type_is_unit : Core.Type.t -> bool
 
 (** [own_type_variables ~n_outer tys] -- whether a local definition whose
     types are [tys], lowered under a head of [n_outer] type variables, has a
     variable of its own: one past the head's.  Such a definition is lifted
     to a function template, or inlined, rather than bound to a local. *)
-val own_type_variables : n_outer:int -> Miniml.ml_type list -> bool
+val own_type_variables : n_outer:int -> Core.Type.t list -> bool
 
 (** Whether a C++ type is the unit type. *)
 val is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool
 
-(** Whether a MiniML type is unit or void. *)
-val ml_type_is_unit_or_void : Miniml.ml_type -> bool
+(** Whether a Core type is unit or void. *)
+val ml_type_is_unit_or_void : Core.Type.t -> bool
 
 (** {2 Value-type filtering} *)
 
-(** Keep only the value-carrying types from a list of MiniML types. *)
-val filter_value_types : Miniml.ml_type list -> Miniml.ml_type list
+(** Keep only the value-carrying types from a list of Core types. *)
+val filter_value_types : Core.Type.t list -> Core.Type.t list
 
 (** [ml_codomain_erases_to_any n ty]: whether [ty]'s codomain, past [n]
     value arrows, erases to [std::any] -- a type variable reached after a
-    [Tdummy Ktype] domain, the mark of a higher-rank quantified function.
+    [Core.Type.Erased Core.Erasure_reason.Type_argument] domain, the mark of a higher-rank quantified function.
     [has_dummy] is the accumulator; callers omit it. *)
 val ml_codomain_erases_to_any :
-  ?has_dummy:bool -> int -> Miniml.ml_type -> bool
+  ?has_dummy:bool -> int -> Core.Type.t -> bool
 
-(** What a MiniML type returns once [n] value arguments have been applied,
+(** What a Core type returns once [n] value arguments have been applied,
     skipping erased domains.  [None] where it has fewer value arrows. *)
-val ml_codomain_after : int -> Miniml.ml_type -> Miniml.ml_type option
+val ml_codomain_after : int -> Core.Type.t -> Core.Type.t option
 
 (** {2 Type variables in C++ types} *)
 
@@ -354,10 +354,10 @@ val is_all_erased : Cpp_ir.Lowered.Type.t -> bool
 (** The template arguments of a C++ type. *)
 val extract_template_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list
 
-(** Whether a MiniML type stands at an erased position, [std::any] in C++: a
-    type variable, [Tunknown], an unresolved [Tmeta] or a [Topen] hole.
-    Unlike {!is_erased_ml_type} it counts every [Tvar] and not [Tdummy]. *)
-val is_ml_erased_ty : Miniml.ml_type -> bool
+(** Whether a Core type stands at an erased position, [std::any] in C++: a
+    type variable, [Core.Type.Unknown], an unresolved [Core.Type.Meta] or a [Core.Type.Open] hole.
+    Unlike {!is_erased_ml_type} it counts every [Core.Type.Variable] and not [Core.Type.Erased]. *)
+val is_ml_erased_ty : Core.Type.t -> bool
 
 (** {2 Skipped types} *)
 
@@ -368,8 +368,8 @@ val is_skipped_cpp_type : Cpp_ir.Lowered.Type.t -> bool
     [shared_ptr]. *)
 val is_typeclass_type_cpp : Cpp_ir.Lowered.Type.t -> bool
 
-(** Whether a MiniML type should be skipped during extraction. *)
-val is_skipped_ml_type : Miniml.ml_type -> bool
+(** Whether a Core type should be skipped during extraction. *)
+val is_skipped_ml_type : Core.Type.t -> bool
 
 (** {2 [any] and erasure detection} *)
 
@@ -378,16 +378,16 @@ val has_erased_type_in_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** {2 Type-variable presence, substitution, and erasure} *)
 
-(** Whether a MiniML type contains a type variable. *)
-val has_tvar : Miniml.ml_type -> bool
+(** Whether a Core type contains a type variable. *)
+val has_tvar : Core.Type.t -> bool
 
-(** Map a transformation over all MiniML types embedded in an AST. *)
+(** Map a transformation over all Core types embedded in an AST. *)
 val map_types_in_ast :
-  (Miniml.ml_type -> Miniml.ml_type) -> Miniml.ml_ast -> Miniml.ml_ast
+  (Core.Type.t -> Core.Type.t) -> Core.Expr.t -> Core.Expr.t
 
-(** Substitute type variables (by index) within a MiniML type. *)
+(** Substitute type variables (by index) within a Core type. *)
 val subst_tvars_type :
-  (int * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
+  (int * Core.Type.t) list -> Core.Type.t -> Core.Type.t
 
 (** Erase type variables within a C++ type. *)
 val tvar_erase_type : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
@@ -401,8 +401,8 @@ val type_is_erased : Cpp_ir.Lowered.Type.t -> bool
 
 (** {2 Function argument and return decomposition} *)
 
-(** The final return type of a MiniML type. *)
-val ml_return_type : Miniml.ml_type -> Miniml.ml_type
+(** The final return type of a Core type. *)
+val ml_return_type : Core.Type.t -> Core.Type.t
 
 (** Whether a global has no C++ spelling: whatever mapped it mapped it to the
     empty string. *)
@@ -427,27 +427,27 @@ val has_no_cpp_spelling : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether an ML type's result is a skipped type, such as a [ReSum]
     instance. *)
-val ml_ret_is_skipped : Miniml.ml_type -> bool
+val ml_ret_is_skipped : Core.Type.t -> bool
 
 (** Whether a value of this ML type is a typeclass instance -- kept or
     skipped.  An instance parameterised over types is still one, so the
     question is put to the result. *)
-val ml_type_is_instance : Miniml.ml_type -> bool
+val ml_type_is_instance : Core.Type.t -> bool
 
-(** Split a MiniML type into its argument types and return type, given the
+(** Split a Core type into its argument types and return type, given the
     already-known leading argument types. *)
 val get_args_and_ret :
-  Miniml.ml_type list ->
-  Miniml.ml_type -> Miniml.ml_type list * Miniml.ml_type
+  Core.Type.t list ->
+  Core.Type.t -> Core.Type.t list * Core.Type.t
 
-(** Strip [n] leading arrows from a MiniML type, if possible. *)
-val strip_tarr_n : int -> Miniml.ml_type -> Miniml.ml_type option
+(** Strip [n] leading arrows from a Core type, if possible. *)
+val strip_tarr_n : int -> Core.Type.t -> Core.Type.t option
 
 (** Strip reference and const qualifiers from a C++ type. *)
 val strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
-(** Count the real (non-erased) arguments among a list of MiniML AST nodes. *)
-val count_real_ml_args : Miniml.ml_ast list -> int
+(** Count the real (non-erased) arguments among a list of Core AST nodes. *)
+val count_real_ml_args : Core.Expr.t list -> int
 
 (** {2 Value-type and copyability classification} *)
 
@@ -456,7 +456,7 @@ val count_real_ml_args : Miniml.ml_ast list -> int
     inductive, custom-mapped or not, that is not coinductive (its value is a
     lazy cell already) and whose copy is not free.  A field typed by a
     parameter is not: its type is not known where the field is declared. *)
-val boxes_field : Miniml.ml_type -> bool
+val boxes_field : Core.Type.t -> bool
 
 (** Under [Crane BoxedFields], whether a constructor field of inductive
     [owner] declared at ML type [ty] is one of the inductive's type
@@ -464,14 +464,14 @@ val boxes_field : Miniml.ml_type -> bool
     by what copying the instantiating type costs.  Not in a shared variant:
     its alternative is a block already, shared rather than copied, and a box
     inside it would be a second allocation sharing nothing more. *)
-val boxes_param_field : owner:Names.GlobRef.t -> Miniml.ml_type -> bool
+val boxes_param_field : owner:Names.GlobRef.t -> Core.Type.t -> bool
 
 (** How a constructor stores its fields, as its declaration types them.  A
     pattern on the constructor binds its non-erased fields, numbered from 0. *)
 module Ctor_fields : sig
   type t = private {
     inductive : Names.GlobRef.t;  (** the constructor's inductive *)
-    types : Miniml.ml_type list;  (** the non-erased fields, in order *)
+    types : Core.Type.t list;  (** the non-erased fields, in order *)
   }
 
   (** The fields of a constructor, as its declaration records them; no
@@ -512,8 +512,8 @@ end
     are themselves trivially copyable. *)
 val is_trivially_copyable_type : Cpp_ir.Lowered.Type.t -> bool
 
-(** Whether a MiniML type is a product type. *)
-val is_prod_ml_type : Miniml.ml_type -> bool
+(** Whether a Core type is a product type. *)
+val is_prod_ml_type : Core.Type.t -> bool
 
 
 (** {2 Well-known Coq constructor tag indices} *)
@@ -637,7 +637,7 @@ val refine_erased_by : expected:Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -
     different arity, means the two are not talking about the same position and
     [have] stands.
 
-    A [Topen] is the hole extraction left, and the term shares it with every
+    A [Core.Type.Open] is the hole extraction left, and the term shares it with every
     other mention of the same unknown -- the annotation on a match over the
     value as well as the value's own type.  It is immutable: each hole
     filled is added to [fills],
@@ -650,18 +650,18 @@ val refine_erased_by : expected:Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t -
     concrete [want] looks; the caller supplies that judgement because only it
     knows which names its scope declares. *)
 val refine_erased :
-  ?fills:(Miniml.Open.t * Miniml.ml_type) list ref ->
-  writable:(Miniml.ml_type -> bool) ->
-  Miniml.ml_type ->
-  Miniml.ml_type ->
-  Miniml.ml_type
+  ?fills:(Core.Open.t * Core.Type.t) list ref ->
+  writable:(Core.Type.t -> bool) ->
+  Core.Type.t ->
+  Core.Type.t ->
+  Core.Type.t
 
 (** [fill_holes_type fills t] is [t] with each hole of [fills] standing as
     the type it is paired with; [t] itself where it mentions none of them. *)
-val fill_holes_type : (Miniml.Open.t * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
+val fill_holes_type : (Core.Open.t * Core.Type.t) list -> Core.Type.t -> Core.Type.t
 
 (** {!fill_holes_type} in every annotation of a term. *)
-val fill_holes : (Miniml.Open.t * Miniml.ml_type) list -> Miniml.ml_ast -> Miniml.ml_ast
+val fill_holes : (Core.Open.t * Core.Type.t) list -> Core.Expr.t -> Core.Expr.t
 
 (** [refine_param_from_slot ~tvars ~slot bare] spells a parameter from the
     slot it flows into rather than from its own uninferred type.  Type
@@ -741,22 +741,22 @@ val primary_tvar_indices : Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t -
 (** The type-variable indices appearing in type INDEX positions of inductives
     in an ML type. [convert_ml_type_to_cpp_type] strips these from the C++
     type, but function bodies may still need them for [any_cast]. *)
-val collect_ml_type_index_tvars : Miniml.ml_type -> IntSet.t
+val collect_ml_type_index_tvars : Core.Type.t -> IntSet.t
 
 (** Every type variable index the ML type mentions, in any position -- the
     parameters a declaration has, as against the ones its C++ type spells. *)
-val collect_ml_tvars : Miniml.ml_type -> IntSet.t
+val collect_ml_tvars : Core.Type.t -> IntSet.t
 
 (** Arity of every type variable the given types apply to arguments, keyed by
     its 1-based de Bruijn index.  Such a variable is declared
     [template <typename> class], so it is spelled -- wherever it is declared
     and wherever a call supplies it -- as a bare template name. *)
-val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
+val applied_ml_tvar_arities : Core.Type.t list -> (int, int) Hashtbl.t
 
 (** The type variables the given types demand be declared
     [template <typename> class] rather than plain [typename].
 
-    MiniML never names a higher-kinded variable bare -- every occurrence
+    Core never names a higher-kinded variable bare -- every occurrence
     arrives already applied -- so "is it applied" is not the question.  Two
     things are: the variable is applied to an argument that survived erasure
     (no single plain [typename] stands for two different real arguments), or it
@@ -767,40 +767,40 @@ val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
     mapping spells its own parameters, and the ones taking an event family take
     it at plain [typename], because the index it is applied at is erased.  For
     those the application can simply be taken back off. *)
-val higher_kinded_ml_tvars : Miniml.ml_type list -> IntSet.t
+val higher_kinded_ml_tvars : Core.Type.t list -> IntSet.t
 
 (** The higher-kinded variables a declaration relaxes out of its head
     ({!relaxed_applied_ml_tvars}): the parameter left at such a variable is
     a phantom defaulted to [void], the application it stood for deduced. *)
-val relaxed_higher_kinded_tvars : Miniml.ml_type -> IntSet.t
+val relaxed_higher_kinded_tvars : Core.Type.t -> IntSet.t
 
 (** The type variables a declaration of type [ml_ty] relaxes out of its
     template head: applied somewhere in the domains, and spelled nowhere
     unapplied and nowhere in the codomain.  {!Plan_templates.relax_applied_return}
     turns each such application into its own deduced parameter and leaves the
     original a phantom, so a call must not write a template name there. *)
-val relaxed_applied_ml_tvars : Miniml.ml_type -> IntSet.t
+val relaxed_applied_ml_tvars : Core.Type.t -> IntSet.t
 
 (** The type variables [tys] uses as the event family of a reified tree.  Such
     a family is emitted as a plain struct, so there is no template name a call
     could ever pass for it, and {!higher_kinded_ml_tvars} refuses the higher
     kind for one however it is applied elsewhere. *)
-val event_family_ml_tvars : Miniml.ml_type list -> IntSet.t
+val event_family_ml_tvars : Core.Type.t list -> IntSet.t
 
 (** [hkt_arg_ml_tvar_arities tys] maps a type variable's index to the arity it
     is higher-kinded at because [tys] hands it, bare, to a position another
     constructor declares [template <typename> class].  Application is the
     usual evidence for the higher kind but not the only one. *)
-val hkt_arg_ml_tvar_arities : Miniml.ml_type list -> (int * int) list
+val hkt_arg_ml_tvar_arities : Core.Type.t list -> (int * int) list
 
 (** Whether a function type returns a type variable its arguments carry only as
     an inductive's type index ([eval : expr A -> A]).  Such a result cannot be
     a template parameter -- the branches return genuinely different types -- so
     it is erased to [std::any] and recovered at the call. *)
-val result_is_index_only_tvar : Miniml.ml_type -> bool
+val result_is_index_only_tvar : Core.Type.t -> bool
 
-(** The variable {!result_is_index_only_tvar} finds, [Some n] for [Tvar n]. *)
-val index_only_result_tvar : Miniml.ml_type -> int option
+(** The variable {!result_is_index_only_tvar} finds, [Some n] for [Core.Type.Variable n]. *)
+val index_only_result_tvar : Core.Type.t -> int option
 
 (** [explicit_tvar_prefix ~force_required cty] is how many leading template
     parameters of a signature of type [cty] a call must supply explicitly

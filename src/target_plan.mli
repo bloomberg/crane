@@ -25,7 +25,7 @@ type kind_reason =
 (** One inductive block emitted as a kind other than extraction's. *)
 type kind_decision = {
   block : Names.MutInd.t;  (** the mutual block, every packet of it *)
-  kind : Miniml.record_field Core.Inductive.Kind.t;  (** the kind emitted *)
+  kind : Core.Inductive.Kind.t;  (** the kind emitted *)
   reason : kind_reason;
 }
 
@@ -61,7 +61,7 @@ type representation = {
       (** How a definition written outside its struct's body names the
           struct, for each module emitted as one, and which modules are
           written inside a struct's body. *)
-  instance_promoted_types : (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list;
+  instance_promoted_types : (Names.GlobRef.t * (Names.Id.t * Core.Type.t) list) list;
       (** The concrete types each instance gives its class's promoted
           variables. *)
 }
@@ -103,7 +103,7 @@ type t = {
     copies aligned with their functor body's ({!Functor_alignment}), then
     type classes used as data demoted to records ({!Used_as_value}).  It
     writes nothing. *)
-val plan : Program_facts.t -> Miniml.ml_structure -> t
+val plan : Program_facts.t -> Core.Program.t -> t
 
 (** [plan] with the template-parameter kinds decided. *)
 val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t
@@ -128,10 +128,10 @@ val same_instance_methods :
   bool
 
 (** The kind decided for [block], if any. *)
-val kind_of : t -> Names.MutInd.t -> Miniml.record_field Core.Inductive.Kind.t option
+val kind_of : t -> Names.MutInd.t -> Core.Inductive.Kind.t option
 
 (** The same kind; a record or class by its field references. *)
-val kind_equal : Miniml.record_field Core.Inductive.Kind.t -> Miniml.record_field Core.Inductive.Kind.t -> bool
+val kind_equal : Core.Inductive.Kind.t -> Core.Inductive.Kind.t -> bool
 
 (** The same decisions, the input aside. *)
 val equal : t -> t -> bool

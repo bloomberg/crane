@@ -3,7 +3,7 @@
 
 (** {1 Structure Analysis}
 
-    Pre-analyzes the full [ml_structure] before any C++ rendering begins. This
+    Pre-analyzes the full [Core.Program.t] before any C++ rendering begins. This
     is the second pass in Crane's multi-pass extraction pipeline (after
     {!Method_registry}).
 
@@ -21,7 +21,7 @@
       use a disambiguated name (suffixed [_Mod]), and a colliding child module
       is forced inside a parent wrapper ([collision_wrappers]).
     + {b Global-scope enum collection.} After enum registration, identifies
-      which enums appear at global scope (i.e. as top-level [SEdecl] entries
+      which enums appear at global scope (i.e. as top-level [Core.Module.Structure_item.Declaration] entries
       rather than inside sub-modules). These are emitted before any wrapper
       modules or the main module.
     + {b Module classification and topological sort.} Orders each module's
@@ -49,14 +49,13 @@
       analysis runs). *)
 
 open Names
-open Miniml
 
 (** Per-module analysis result. *)
 type module_info = {
   modpath : ModPath.t;  (** The Rocq module path for this module. *)
-  sels : (Label.t * ml_structure_elem) list;
+  sels : (Label.t * Core.Module.Structure_item.t) list;
       (** The module's declaration list (labels and structure elements). This is
-          the same list that appears in the original [ml_structure], preserved
+          the same list that appears in the original [Core.Program.t], preserved
           here so that rendering can iterate over it without re-extracting from
           the original structure.  Its inductive declarations are reordered so
           that each follows the inductives its inline methods need complete. *)
@@ -69,8 +68,8 @@ type module_info = {
           it is the main module, or because it lacks function declarations.
 
           A module qualifies as a wrapper when:
-          - It contains at least one function declaration ([Dterm] or [Dfix]),
-          - All its entries are bare declarations (no [SEmodule] or [SEmodtype]
+          - It contains at least one function declaration ([Core.Decl.Value] or [Core.Decl.Recursive_group]),
+          - All its entries are bare declarations (no [Core.Module.Structure_item.Module] or [Core.Module.Structure_item.Module_type]
             children),
           - It is a file-level module ([is_modfile mp]),
           - It is not the main module. *)
@@ -90,7 +89,7 @@ type t = {
           each module's declarations for references to other modules. If a cycle
           is detected, the original order is preserved as a fallback. *)
   global_scope_enums : GlobRef.t list;
-      (** Enum inductives that appear at global scope (top-level [SEdecl]
+      (** Enum inductives that appear at global scope (top-level [Core.Module.Structure_item.Declaration]
           entries). These are emitted as [enum class] declarations before any
           wrapper modules or the main module, ensuring they are available for
           use in all subsequent declarations.
@@ -176,20 +175,20 @@ type t = {
       from method calls. When a function calls a method on a type from another
       module, there is an implicit dependency on the module that defines the
       type (because the method is emitted inside that module's struct).
-    @param ml_structure The full extraction structure to analyze.
+    @param Core.Program.t The full extraction structure to analyze.
     @return Analysis results, turned into the unit's {!Module_plan}. *)
-val analyze : Method_registry.t -> ml_structure -> t
+val analyze : Method_registry.t -> Core.Program.t -> t
 
 (** Register the inductives stored as shared variants
     ([Table.is_shared_variant_packet]), once the structure's declarations are
     final and before anything asks: the type's declaration, every slot holding
     it and the method registry must give one answer. *)
-val register_shared_variants : ml_structure -> unit
+val register_shared_variants : Core.Program.t -> unit
 
 (** The definitions of [s] whose final bodies only raise: emitted as
     zero-argument functions, and called wherever they are named.  Pure;
     {!Program_facts} records the list. *)
-val throwing_values : ml_structure -> GlobRef.t list
+val throwing_values : Core.Program.t -> GlobRef.t list
 
 (** The template parameter every module-type concept is written over ([M]). *)
 val concept_self_param : string

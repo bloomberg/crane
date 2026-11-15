@@ -21,8 +21,8 @@
       parameterless [CoFixpoint] is already emitted as such a function. *)
 
 (** [fix F (h := H F) (l : L) := b] as [fix F (l : L) := let h := H F in b]. *)
-val float_lets_under_lams : Miniml.ml_ast -> Miniml.ml_ast
+val float_lets_under_lams : Core.Expr.t -> Core.Expr.t
 
 (** Both rewrites, over every definition of a structure: each fixpoint, local
-    or top-level, and each top-level [Dfix] body. *)
-val structure : Miniml.ml_structure -> Miniml.ml_structure
+    or top-level, and each top-level [Core.Decl.Recursive_group] body. *)
+val structure : Core.Program.t -> Core.Program.t

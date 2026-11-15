@@ -48,7 +48,7 @@ type parameter =
     abbreviation as what it abbreviates ([Definition t := list (key * elt)]).
     An abstract type -- a functor parameter's [X.t] -- is no value inductive
     the program knows. *)
-val value_inductive : abbreviations:bool -> Miniml.ml_type -> bool
+val value_inductive : abbreviations:bool -> Core.Type.t -> bool
 
 (** Whether a frame can hold by pointer a parameter of Core type [ty] that
     its callable passes as [passing] says: lent by const reference, or under
@@ -57,7 +57,7 @@ val value_inductive : abbreviations:bool -> Miniml.ml_type -> bool
     through an abbreviation ({!Translation_support.wrap_param_by_ownership}
     declares either by reference).  A parameter of no runtime value
     ([None]) is held by none. *)
-val passed_holdable : Callable_abi.passing option -> Miniml.ml_type -> bool
+val passed_holdable : Callable_abi.passing option -> Core.Type.t -> bool
 
 (** Whether a frame can hold the parameter at position [i] of the loop [l]
     by pointer, as the plan of the local fixpoint's function [l] is made
@@ -84,7 +84,7 @@ val check_local : int -> planned:bool -> declared:(unit -> bool) -> unit
     it lies in the frame. *)
 val plan :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
-  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  in_place:(Core.Type.t -> Core.Type.t -> bool) ->
   holdable:(parameter -> bool) ->
   Control_ir.Term.loop ->
   t

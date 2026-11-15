@@ -1,14 +1,13 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A constant's MiniML type scheme and its binder layout.  See
+(** A constant's Core type scheme and its binder layout.  See
     [ml_schema.mli]. *)
 
-open Miniml
 
 type binder_role =
   | Value
-  | Erased of kill_reason
+  | Erased of Core.Erasure_reason.t
 
 type binder_info = {
   binder : Scheme.Binder.t;
@@ -17,23 +16,23 @@ type binder_info = {
 }
 
 type raw_binder = {
-  raw_erased : kill_reason option;
+  raw_erased : Core.Erasure_reason.t option;
   raw_tvar : int option;
 }
 
 type t = {
   id : Scheme.Id.t;
-  body : ml_type;
+  body : Core.Type.t;
   layout : binder_info list;
 }
 
 let max_tvar t =
   let rec parse n = function
-    | Tmeta {contents = Some t} -> parse n t
-    | Tvar (Schematic, i) -> max i n
-    | Tapp (i, l) -> List.fold_left parse (max i n) l
-    | Tarr (a, b) -> parse (parse n a) b
-    | Tglob (_, l, _) -> List.fold_left parse n l
+    | Core.Type.Meta {contents = Some t} -> parse n t
+    | Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i} -> max i n
+    | Core.Type.Variable_app {head = i; arguments = l} -> List.fold_left parse (max i n) l
+    | Core.Type.Arrow {parameter = a; result = b} -> parse (parse n a) b
+    | Core.Type.Global_app {type_arguments = l; _} -> List.fold_left parse n l
     | _ -> n
   in
   parse 0 t
@@ -79,7 +78,7 @@ let validate s =
   let body_max = max_tvar s.body in
   let dense =
     if body_max <= arity s then []
-    else [Printf.sprintf "body mentions Tvar %d past arity %d" body_max (arity s)]
+    else [Printf.sprintf "body mentions Variable %d past arity %d" body_max (arity s)]
   in
   let ordered =
     List.concat

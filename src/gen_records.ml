@@ -3,13 +3,12 @@
 
 (** Records and type classes: a record's struct, a class's concept and the
     constraint a class-typed parameter states.  Part of declaration
-    generation (MiniML to CppIR), re-exported by {!Gen_decls}: {!Cpp_ind}
+    generation (Core to CppIR), re-exported by {!Gen_decls}: {!Cpp_ind}
     asks it for a record's struct and a class's concept, {!Gen_functions}
     and {!Gen_instances} for the constraint on a class-typed parameter.
     The declarations it returns are {!Cpp_ir.Lowered.Decl.t}. *)
 
 open Common
-open Miniml
 open Names
 open Util
 open Ml_type_util
@@ -20,24 +19,24 @@ module IntSet = Escape.IntSet
 
 (** Generate C++ struct for a record type.
 
-    Only actual type parameters ([Keep] in [ip_sign]) become C++ template
-    parameters.  Promoted Type-valued fields (present in [ip_vars] but past
-    the [Keep] entries) are erased to [std::any]: they have no C++ template
+    Only actual type parameters ([Core.Signature.Argument.Runtime] in [signature]) become C++ template
+    parameters.  Promoted Type-valued fields (present in [type_variables] but past
+    the [Core.Signature.Argument.Runtime] entries) are erased to [std::any]: they have no C++ template
     counterpart in a plain struct (unlike typeclasses, which turn them into
     [typename I::field] requirements).  The promoted variables the fields
     {e mention} without the record declaring them are the exception: those
     lead the template parameter list, see {!Table.promoted_type_params}.
     The struct also carries a conversion to every other instantiation of
     its parameters, from {!Gen_context.conversion_to_other_instantiation}. *)
-let gen_record_cpp name fields ind =
-  let nb_keep = count_keep_params ind.ip_sign in
-  let param_ip_vars = List.filteri (fun i _ -> i < nb_keep) ind.ip_vars in
+let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
+  let nb_keep = count_keep_params ind.signature in
+  let param_ip_vars = List.filteri (fun i _ -> i < nb_keep) ind.type_variables in
   let vars = List.map Common.tparam_name param_ip_vars in
-  (* Use full ip_vars for type name resolution so Tvars resolve to names,
+  (* Use full type_variables for type name resolution so Tvars resolve to names,
      then replace promoted Tvars (not in template params) with std::any. *)
-  let all_vars = List.map Common.tparam_name ind.ip_vars in
+  let all_vars = List.map Common.tparam_name ind.type_variables in
   let promoted_var_names =
-    List.filteri (fun i _ -> i >= nb_keep) ind.ip_vars
+    List.filteri (fun i _ -> i >= nb_keep) ind.type_variables
     |> List.map (fun id -> Id.to_string (Common.tparam_name id))
   in
   let replace_promoted : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
@@ -51,7 +50,7 @@ let gen_record_cpp name fields ind =
   in
   (* A field's type at a given spelling of the template parameters.  The
      promoted tail is not a template parameter and keeps its own name; only
-     the [Keep] prefix is respelled, which is what the conversion function
+     the [Core.Signature.Argument.Runtime] prefix is respelled, which is what the conversion function
      below needs. *)
   let field_cpp_ty param_names t =
     let spelling =
@@ -132,7 +131,7 @@ let gen_record_cpp name fields ind =
       reaches every other position in the signature.}} *)
 let concept_constraint_of_class_type ty : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t option =
   match ty with
-  | Miniml.Tglob (class_ref, type_args, _) ->
+  | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} ->
     let kept =
       if Table.get_ind_nb_tparams class_ref = 0 then []
       else List.map (cpp_ir_of_ml_type (empty_env ()) []) (Table.drop_hkt_args class_ref type_args)
@@ -170,7 +169,7 @@ let gen_typeclass_cpp name fields =
     if List.mem "I" param_names then Generated_name.id "Inst"
     else Id.of_string "I"
   in
-  (* Split ip_vars into param vars (real type params) and promoted vars
+  (* Split type_variables into param vars (real type params) and promoted vars
      (associated types).  Param vars go through {!Common.tparam_name}, which
      prefixes them with t_ under the BDE convention. *)
   (* A parameter that is itself a type constructor ([M : Type -> Type]) is not
@@ -213,7 +212,7 @@ let gen_typeclass_cpp name fields =
     promoted_resolutions ~fields name (Instance (inst_id, name))
   in
   (* Substitute promoted Tvars in cpp_type trees.  After conversion, a promoted
-     var appears as [Tvar (Tv_index (_, Some name) | Tv_named name)]; [promoted_map] says which qualified
+     var appears as [Core.Type.Variable (Tv_index (_, Some name) | Tv_named name)]; [promoted_map] says which qualified
      type that bare name really denotes ([typename I::Obj], or
      [typename I::base_category::Obj] when it comes from a typeclass-typed
      promoted field).  A name with no entry is left as a plain type variable. *)
@@ -234,7 +233,7 @@ let gen_typeclass_cpp name fields =
   let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
     Scope (Local inst_id, Id.of_string method_name, type_args)
   in
-  (* Check if a type is a bare promoted Tvar: a Tvar whose index is beyond the
+  (* Check if a type is a bare promoted Core.Type.Variable: a Core.Type.Variable whose index is beyond the
      real type parameters. This indicates the field's type is entirely
      determined by a promoted associated type, so we can't decompose it into
      args and return type at concept time (the concrete type might be a
@@ -242,7 +241,7 @@ let gen_typeclass_cpp name fields =
      rigidified; rigidity says nothing here either way. *)
   let is_bare_promoted_tvar ty =
     match ty with
-    | Miniml.Tvar (_, n) -> not (is_tparam (n - 1))
+    | Core.Type.Variable {variable = n; _} -> not (is_tparam (n - 1))
     | _ -> false
   in
   (* Check if a field type is a typeclass-typed promoted field.  Such
@@ -250,7 +249,7 @@ let gen_typeclass_cpp name fields =
      and should NOT generate method requirements in the concept body. *)
   let is_typeclass_field_type ty =
     match ty with
-    | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
+    | Core.Type.Global_app {head = r; _} -> Table.is_typeclass r
     | _ -> false
   in
   (* This is the same question {!Gen_context.promoted_var_is_associated_type} asks, so the
@@ -276,7 +275,7 @@ let gen_typeclass_cpp name fields =
       fields;
   (* Generate a single field's requirement: [None] for an anonymous field,
      [`Type t] for a superclass field (a [typename I::field] requirement),
-     [`Disjunctive e] for a field whose type is a bare promoted Tvar, and
+     [`Disjunctive e] for a field whose type is a bare promoted Core.Type.Variable, and
      [`Normal (params, (call, constraint))] for every other method. *)
   let gen_method_req (field_opt, field_ty) =
     match field_opt with
@@ -294,7 +293,7 @@ let gen_typeclass_cpp name fields =
             (Member (Instance (inst_id, name), Common.id_of_global Term field_ref)
               : Cpp_ir.Lowered.Type.t))
       else if is_bare_promoted_tvar field_ty then
-        (* Field type is a bare promoted Tvar (e.g., fun_ind_prf :
+        (* Field type is a bare promoted Core.Type.Variable (e.g., fun_ind_prf :
            fun_ind_prf_ty). The concrete type could be a plain value or a
            function with any arity. Generate a disjunctive concept requirement:
            requires { { I::method() } -> std::convertible_to<T>; } || requires {
@@ -392,7 +391,7 @@ let gen_typeclass_cpp name fields =
       all_reqs
   in
   (* Build the concept body. Normal requirements go in a single requires{}
-     block. Disjunctive requirements (for bare-Tvar fields) are &&-ed
+     block. Disjunctive requirements (for bare-Core.Type.Variable fields) are &&-ed
      separately, each wrapped in parentheses via the || rendering. *)
   let requires constraints type_requirements : Cpp_ir.Lowered.Expr.t =
     Requires {params = []; constraints; type_requirements}
@@ -437,7 +436,7 @@ type binder_kind = [`Value | `Instance | `Erased]
     apart. *)
 type method_binder = {
   mb_name : Id.t;
-  mb_ml_ty : ml_type;
+  mb_ml_ty : Core.Type.t;
   mb_cpp_ty : Cpp_ir.Lowered.Type.t;
   mb_kind : binder_kind;
 }

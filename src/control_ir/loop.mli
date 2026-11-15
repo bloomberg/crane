@@ -9,7 +9,7 @@
     [m] of the local fixpoint [occurrence]. *)
 type t =
   | Function of Names.GlobRef.t
-  | Member of Miniml.Occurrence.t * int
+  | Member of Core.Occurrence.t * int
 
 (** Same function (compared as the user wrote it, {!Names.GlobRef.UserOrd}),
     or same member of the same fixpoint occurrence. *)

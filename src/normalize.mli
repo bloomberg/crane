@@ -9,7 +9,7 @@
     recursive argument of a constructor that builds a cell -- what tail modulo
     cons rewrites.
 
-    MiniML is pure and strict, so binding an argument before its application
+    Core is pure and strict, so binding an argument before its application
     preserves meaning; nothing is taken out of a branch, a lambda body or a
     let body, which may not run.  What follows a match bound to a variable
     is copied into its branches instead ({!into_branches}), so the calls
@@ -20,7 +20,7 @@
     body translation generates, here once for every consumer instead of
     re-derived by each.  It runs first in {!Core_phase.normalize}, so the calls
     {!structure} names are those of that body. *)
-val eta_expand : Miniml.ml_structure -> Miniml.ml_structure
+val eta_expand : Core.Program.t -> Core.Program.t
 
 (** [let_lambdas s] puts every let-bound lambda in [s]'s definitions as it is
     generated ({!Core_elaborate.generated_definition}): an alias of a
@@ -28,7 +28,7 @@ val eta_expand : Miniml.ml_structure -> Miniml.ml_structure
     one bound as a value eta-expanded.  It runs after {!eta_expand} and
     before {!structure}, which then names the calls an inlined alias
     makes. *)
-val let_lambdas : Miniml.ml_structure -> Miniml.ml_structure
+val let_lambdas : Core.Program.t -> Core.Program.t
 
 (** [into_branches ~fresh ~rty (id, ty, occ) branches rest]: the branches
     of [let id : ty := match _ with branches in rest] ([occ] the let's) with
@@ -40,12 +40,12 @@ val let_lambdas : Miniml.ml_structure -> Miniml.ml_structure
     own.  [None] where the copies would add more than a fixed budget of
     nodes. *)
 val into_branches :
-  fresh:(unit -> Miniml.ml_ident) ->
-  rty:Miniml.ml_type ->
-  Miniml.ml_ident * Miniml.ml_type * Miniml.Occurrence.t ->
-  Miniml.ml_branch array ->
-  Miniml.ml_ast ->
-  Miniml.ml_branch array option
+  fresh:(unit -> Core.Binder_name.t) ->
+  rty:Core.Type.t ->
+  Core.Binder_name.t * Core.Type.t * Core.Occurrence.t ->
+  Core.Match.Branch.t array ->
+  Core.Expr.t ->
+  Core.Match.Branch.t array option
 
 (** [structure p] normalizes every loopified fixpoint group in [p], a
     frozen program ({!Core_phase.normalize}), once each partner a loopified

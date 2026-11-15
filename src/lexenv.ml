@@ -9,7 +9,7 @@ type role =
 
 type binder = {
   eb_id : Names.Id.t;
-  eb_type : Miniml.ml_type;
+  eb_type : Core.Type.t;
   eb_role : role;
 }
 

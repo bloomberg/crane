@@ -29,8 +29,8 @@ type t
     occurrence and the member's index.  A copy of a term keeps its
     occurrence, so the helpers lifted from two copies of one let are one. *)
 type site =
-  | Let of Miniml.Occurrence.t
-  | Fixpoint of Miniml.Occurrence.t * int
+  | Let of Core.Occurrence.t
+  | Fixpoint of Core.Occurrence.t * int
 
 (** [make ~origin ~binder site] is the identity of the helper bound to
     [binder] by [site] inside [origin], creating it if this is the first time
@@ -68,7 +68,7 @@ val site : t -> site
 
 (** The Core fixpoint, and the member of it, the helper lowers, if it
     lowers one. *)
-val fixpoint : t -> (Miniml.Occurrence.t * int) option
+val fixpoint : t -> (Core.Occurrence.t * int) option
 
 (** Helpers ordered by origin and binder; two of one origin bound to one
     name, which no source order tells apart, in the order they were made. *)

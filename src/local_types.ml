@@ -4,57 +4,66 @@
 (** The types a local definition leaves open are its own variables.  See
     [local_types.mli]. *)
 
-open Miniml
 
 (* [f] at every type [e] annotates, in order.  A global use is not walked:
    its instantiation was frozen by extraction and holds no metavariable. *)
 let rec iter_annotations f = function
-  | MLlam (_, ty, body) ->
+  | Core.Expr.Lambda {parameter_type = ty; body; _} ->
     f ty;
     iter_annotations f body
-  | MLletin (_, ty, a, b, _) ->
+  | Core.Expr.Let {binder_type = ty; value = a; body = b; _} ->
     f ty;
     iter_annotations f a;
     iter_annotations f b
-  | MLglob _ -> ()
-  | MLcons (ty, _, args, _) ->
+  | Core.Expr.Global _ -> ()
+  | Core.Expr.Construct {result_type = ty; arguments = args; _} ->
     f ty;
     List.iter (iter_annotations f) args
-  | MLcase (ty, e, brs, _) ->
+  | Core.Expr.Match {scrutinee_type = ty; scrutinee = e; branches = brs; _} ->
     f ty;
     iter_annotations f e;
     Array.iter
-      (fun {br_binders = ids; br_type = ty; br_body = body; _} ->
+      (fun {Core.Match.Branch.binders = ids; result_type = ty; body = body; _} ->
         List.iter (fun (_, t) -> f t) ids;
         f ty;
         iter_annotations f body )
       brs
-  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
     Array.iter (fun (_, ty) -> f ty) ids;
     Array.iter (iter_annotations f) funs
-  | MLapp (g, args) ->
+  | Core.Expr.Apply {callee = g; arguments = args} ->
     iter_annotations f g;
     List.iter (iter_annotations f) args
-  | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> iter_annotations f a
-  | MLparray (arr, def) ->
+  | Core.Expr.Coerce {value = a; _}
+  | Core.Expr.Boxed_value {value = a; _}
+  | Core.Expr.Lambda_group_barrier {value = a; _} ->
+    iter_annotations f a
+  | Core.Expr.Persistent_array {elements = arr; default = def} ->
     Array.iter (iter_annotations f) arr;
     iter_annotations f def
-  | MLtuple args -> List.iter (iter_annotations f) args
-  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> ()
+  | Core.Expr.Tuple args -> List.iter (iter_annotations f) args
+  | Core.Expr.Bound_variable _
+  | Core.Expr.Runtime_error _
+  | Core.Expr.Erased_value _
+  | Core.Expr.Axiom_value _
+  | Core.Expr.UInt63 _
+  | Core.Expr.Numeral _
+  | Core.Expr.Float64 _
+  | Core.Expr.String _ -> ()
 
 (* Solves each unsolved metavariable of a type, in order, to the rigid
    variable [!next], advancing [next], and tells [minted] the variable. *)
 let rec mint ~minted ~next = function
-  | Tmeta ({contents = None} as m) ->
-    let v = Tvar (Rigid, !next) in
-    Meta.solve m v;
+  | Core.Type.Meta ({contents = None} as m) ->
+    let v = Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = !next} in
+    Core.Meta.solve m v;
     incr next;
     minted v
-  | Tmeta {contents = Some t} -> mint ~minted ~next t
-  | Tarr (a, b) ->
+  | Core.Type.Meta {contents = Some t} -> mint ~minted ~next t
+  | Core.Type.Arrow {parameter = a; result = b} ->
     mint ~minted ~next a;
     mint ~minted ~next b
-  | Tglob (_, args, _) -> List.iter (mint ~minted ~next) args
+  | Core.Type.Global_app {type_arguments = args; _} -> List.iter (mint ~minted ~next) args
   | _ -> ()
 
 (* The number each let-bound lambda's variables were minted past, by the
@@ -63,7 +72,7 @@ let rec mint ~minted ~next = function
    where it replaces the cell solved to it ({!Core_phase.freeze}): numbers say
    nothing, every lambda's starting past a head of its own. *)
 module Minted = Hashtbl.Make (struct
-  type t = ml_type
+  type t = Core.Type.t
 
   let equal = ( == )
   let hash = Hashtbl.hash
@@ -74,30 +83,30 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
 
 (** The type a term builds in tail position, where its own annotations say so.
 
-    A constructor application answers: [MLcons] carries the inductive it
-    builds (see the typing note on {!Miniml.ml_ast}), so it knows its type
+    A constructor application answers: [Core.Expr.Construct] carries the inductive it
+    builds (see the typing note on {!Core.Expr.t}), so it knows its type
     without reconstruction.  So does a fully applied global, from its declared
     codomain as the call instantiates it
     ({!Translation_types.ml_app_result_type}).  A recursive call, its head a
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
 let rec tail_result_type = function
-  | MLlam (_, _, b)
-  | MLletin (_, _, _, b, _)
-  | MLcoerce (_, _, b, _)
-  | MLboxed (b, _)
-  | MLbarrier (b, _) -> tail_result_type b
-  | MLcons (ty, _, _, _) -> Some ty
-  | MLapp (f, args) -> Translation_types.ml_app_result_type f args
-  | MLcase (_, _, brs, _) ->
+  | Core.Expr.Lambda {body = b; _}
+  | Core.Expr.Let {body = b; _}
+  | Core.Expr.Coerce {value = b; _}
+  | Core.Expr.Boxed_value {value = b; _}
+  | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type b
+  | Core.Expr.Construct {result_type = ty; _} -> Some ty
+  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_types.ml_app_result_type f args
+  | Core.Expr.Match {branches = brs; _} ->
     Array.fold_left
-      (fun acc {br_body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type b)
+      (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type b)
       None brs
   | _ -> None
 
 (** Recover a fixpoint's return type from its body.
 
-    An eliminator's motive is erased, so the fixpoint MiniML builds for
+    An eliminator's motive is erased, so the fixpoint Core builds for
     [nat_rect] carries a type variable where its result type belongs -- one no
     parameter mentions and no caller supplies.  Lifted to a C++ template that
     becomes a template parameter nothing deduces, leaving the call site to
@@ -112,10 +121,10 @@ let rec tail_result_type = function
     alone.  So is one whose body builds nothing:
     [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
     integer literals, and its call site supplies the argument. *)
-let recover_fix_codomain ((id, ty) : Names.Id.t * ml_type) (body : ml_ast) =
+let recover_fix_codomain ((id, ty) : Names.Id.t * Core.Type.t) (body : Core.Expr.t) =
   let dom, cod = Mlutil.type_decomp ty in
   match cod with
-  | Tvar (_, i) when not (List.exists (fun t -> Mlutil.IntSet.mem i (Mlutil.ml_tvars t)) dom) -> (
+  | Core.Type.Variable {variable = i; _} when not (List.exists (fun t -> Mlutil.IntSet.mem i (Mlutil.ml_tvars t)) dom) -> (
     match tail_result_type body with
     | Some t ->
       let subst = Ml_type_util.subst_tvars_type [(i, t)] in
@@ -134,7 +143,7 @@ let recover_fix_codomains ids funs =
    no longer asking what the body builds. *)
 let fill_codomain_hole (_, ty) body =
   match snd (Mlutil.type_decomp ty) with
-  | Tmeta ({contents = None} as cell) -> Option.iter (Meta.solve cell) (tail_result_type body)
+  | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Meta.solve cell) (tail_result_type body)
   | _ -> ()
 
 (* Settles one group as translation reads it: codomains filled and recovered,
@@ -149,10 +158,10 @@ let settle ids funs =
 
 (* Whether [ty] still holds an unsolved metavariable or an open type. *)
 let rec left_open = function
-  | Tmeta {contents = None} | Topen _ -> true
-  | Tmeta {contents = Some t} -> left_open t
-  | Tarr (a, b) -> left_open a || left_open b
-  | Tglob (_, args, _) -> List.exists left_open args
+  | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
+  | Core.Type.Meta {contents = Some t} -> left_open t
+  | Core.Type.Arrow {parameter = a; result = b} -> left_open a || left_open b
+  | Core.Type.Global_app {type_arguments = args; _} -> List.exists left_open args
   | _ -> false
 
 let violation what = Probe.violation "frozen program" (Pp.str what)
@@ -167,13 +176,14 @@ let check_let_lambda ~outer t a =
   if Probe.checking () then begin
     let base = ref None and unsolved = ref false in
     let rec visit = function
-      | Tmeta {contents = None} | Topen _ -> unsolved := true
-      | Tmeta {contents = Some t} -> visit t
-      | Tvar (Rigid, _) as v -> if !base = None then base := Minted.find_opt let_lambda_bases v
-      | Tarr (x, y) ->
+      | Core.Type.Meta {contents = None} | Core.Type.Open _ -> unsolved := true
+      | Core.Type.Meta {contents = Some t} -> visit t
+      | Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; _} as v ->
+        if !base = None then base := Minted.find_opt let_lambda_bases v
+      | Core.Type.Arrow {parameter = x; result = y} ->
         visit x;
         visit y
-      | Tglob (_, args, _) -> List.iter visit args
+      | Core.Type.Global_app {type_arguments = args; _} -> List.iter visit args
       | _ -> ()
     in
     visit t;
@@ -192,20 +202,26 @@ let check_let_lambda ~outer t a =
 (* Mints the open variables of the local definitions in [e], under a
    declaration whose own variables number up to [outer]. *)
 let rec expr ~outer = function
-  | MLletin (_, _, (MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _)), b, _) ->
+  | Core.Expr.Let {value = (Core.Expr.Fixpoint {functions = ids;
+                                                bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids;
+                                                                                          bodies = funs; _});
+                   body = b; _} ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs;
     expr ~outer b
-  | MLapp ((MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _)), args) ->
+  | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {functions = ids;
+                                                   bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids;
+                                                                                             bodies = funs; _});
+                     arguments = args} ->
     let recovered, mint = settle ids funs in
     Array.iter (iter_annotations mint) recovered;
     List.iter (iter_annotations mint) args;
     Array.iter (expr ~outer) funs;
     List.iter (expr ~outer) args
-  | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs
-  | MLletin (_, t, (MLlam _ as a), b, _) ->
+  | Core.Expr.Let {binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; _} ->
     let minted v = Minted.replace let_lambda_bases v outer in
     let mint = mint ~minted ~next:(ref (outer + 1)) in
     mint t;
@@ -216,9 +232,9 @@ let rec expr ~outer = function
 let structure =
   Modutil.struct_iter
     (function
-      | (Dterm _ | Dfix _) as d ->
+      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
-          (fun fd -> expr ~outer:(Mlutil.IntSet.fold max (Mlutil.ml_tvars fd.fd_type) 0) fd.fd_body)
+          (fun (fd : Core.Recursion.Definition.t) -> expr ~outer:(Mlutil.IntSet.fold max (Mlutil.ml_tvars fd.type_) 0) fd.body)
           (Mlutil.term_defs d)
-      | Dind _ | Dtype _ -> () )
+      | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     ignore ignore

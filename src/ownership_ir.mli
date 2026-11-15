@@ -51,7 +51,7 @@ val empty : t
     an enum or coinductive, a closure, a type variable or one applied to
     arguments, a type nothing determined (held in the box), and a mapped type unless it is a scalar or declared trivially
     copyable with arguments that are too. *)
-val worth_moving : Miniml.ml_type -> bool
+val worth_moving : Core.Type.t -> bool
 
 (** The same question asked of the C++ type a value is declared at: a
     reference count to bump, an inductive to clone, an erased box, or a type
@@ -77,7 +77,7 @@ val worth_moving_ref : ('a -> bool) -> Names.GlobRef.t -> 'a list -> bool
     as a pointer to it, for an entry taking that parameter by pointer, so
     what follows does not own it. *)
 type resume = {
-  calls : Miniml.Occurrence.t list;
+  calls : Core.Occurrence.t list;
   kept : Core_binder.t list;
   held : Core_binder.t list;
   passed : Core_binder.t list;
@@ -101,7 +101,7 @@ type resumes = {
   depth : int;
   resume_at : Core_binder.t -> resume option;
   entry_captures : int option;
-  parameter_type : int -> Miniml.ml_type option;
+  parameter_type : int -> Core.Type.t option;
 }
 
 (** [region ~owned ~copied ~resumes ~n_outer t] is the plan of [t]'s reads,
@@ -123,25 +123,25 @@ type resumes = {
 val region :
   ?owned:int list ->
   ?copied:int list ->
-  ?outer:(int -> Miniml.ml_type option) ->
+  ?outer:(int -> Core.Type.t option) ->
   ?resumes:resumes ->
   ?certain:bool ->
   n_outer:int ->
-  Miniml.ml_ast ->
+  Core.Expr.t ->
   t
 
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda
     with no type variable of its own past the head's
     ({!Ml_type_util.own_type_variables}).  [None] where nothing is planned. *)
-val closure_local : t -> Miniml.ml_type -> Miniml.ml_ast -> bool option
+val closure_local : t -> Core.Type.t -> Core.Expr.t -> bool option
 
 (** [reuse_arm p ~scrutinee ~branch ~constructor] is [p] for the branch
     numbered [branch] of the match on the variable [scrutinee], generated to
     rebuild a [constructor] in the scrutinee's storage: the fields it binds
     are moved out into locals of its own, and the scrutinee, which keeps the
     storage, is not read by value. *)
-val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> constructor:Names.GlobRef.t -> t
+val reuse_arm : t -> scrutinee:Core.Expr.t -> branch:int -> constructor:Names.GlobRef.t -> t
 
 (** Where a construction is built. *)
 module Allocation : sig
@@ -156,20 +156,20 @@ end
 
 (** [allocation p e] -- where, as [p] plans it, the construction [e] is
     built. *)
-val allocation : t -> Miniml.ml_ast -> Allocation.t
+val allocation : t -> Core.Expr.t -> Allocation.t
 
 (** [fields_by_value p ~case ~by_value] is [p] for the body of [case], a
     match taking a record apart, whose fields translation binds as locals of
     their own where [by_value] says so, in the order the pattern binds them:
     those are the body's own. *)
-val fields_by_value : t -> case:Miniml.ml_ast -> by_value:bool list -> t
+val fields_by_value : t -> case:Core.Expr.t -> by_value:bool list -> t
 
 (** [bound_at_instance p ~let_] is [p] for the let at the occurrence [let_],
     binding a lambda with a type variable of its own that translation binds
     to a local all the same, at the one instance its uses agree on
     ({!Core_query.let_lambda}): the local is the region's own, and
     copies what it closes over where it is made. *)
-val bound_at_instance : t -> let_:Miniml.Occurrence.t -> t
+val bound_at_instance : t -> let_:Core.Occurrence.t -> t
 
 
 (** What [p] says of a read. *)
@@ -211,7 +211,7 @@ end
     place ({!Inspected}): a closure captures the whole of what it reads, and
     a variable held boxed is unboxed whole by a cast.  With [~boxed], of a
     variable held boxed: read whole, and a copy of it copies the box, a
-    [Clone].  A variable whose type erasure removed ([Tunknown]: an
+    [Clone].  A variable whose type erasure removed ([Core.Type.Unknown]: an
     existential index, a variable of the callee's the scope cannot name, a
     type computed from a value) is held as a value of its own, a box or a
     deduced one, and a copy of it is a [Clone].  Its mode is never read off
@@ -219,13 +219,13 @@ end
     lowered is a violation under [CRANE_CHECK_IR].  [None] of a read the
     plan was not made of: translation lowering it reached a term the region
     it planned does not contain. *)
-val use : ?whole:bool -> ?boxed:bool -> t -> Miniml.Occurrence.t -> Use.t option
+val use : ?whole:bool -> ?boxed:bool -> t -> Core.Occurrence.t -> Use.t option
 
 (** Whether Core says what type the variable the read [o] reads has, other
     than one erasure removed: where it does not, the C++ it is declared at --
     [auto], a box, the slot's spelling -- is no evidence of what a copy of it
     is. *)
-val read_is_typed : t -> Miniml.Occurrence.t -> bool
+val read_is_typed : t -> Core.Occurrence.t -> bool
 
 (** What a copy of a variable declared at the C++ type [ty] is, as {!Use}
     names it: what the C++ a read is lowered to does, which the plan's
@@ -239,7 +239,7 @@ val copy_of_declared : 'p Cpp_ir.Type.t -> Use.t
     last use of a variable an earlier one reads; a call leaves its
     arguments unordered, and the earlier one is evaluated first: each
     reading a variable, or a part of one, that a later argument moves. *)
-val evaluated_first : t -> Miniml.Occurrence.t -> int list
+val evaluated_first : t -> Core.Occurrence.t -> int list
 
 (** Whether a match taking the record [t] apart takes its value, as [p]
     plans it, rather than reading it in place: [t] is not a variable read by
@@ -247,21 +247,21 @@ val evaluated_first : t -> Miniml.Occurrence.t -> int list
     What else it is, a value computed, a variable moved, or a global named by
     calling it -- a cofixpoint, or one that only throws -- is evaluated once
     into a local of its own, which the fields are moved out of. *)
-val takes_record : t -> Miniml.ml_ast -> bool
+val takes_record : t -> Core.Expr.t -> bool
 
 (** Whether a variant match takes apart a scrutinee the region owns, binding
     its fields by mutable reference: the scrutinee is a variable owned there.
     One named through an application is read in place. *)
-val owns_scrutinee : t -> Miniml.ml_ast -> bool
+val owns_scrutinee : t -> Core.Expr.t -> bool
 
 (** Whether a custom match on a pair binds its components by value, being
     the pair's last reader: the pair its scrutinee has just built, or a
     variable owned there that its one branch does not read whole. *)
-val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
+val pair_by_value : t -> Core.Expr.t -> Core.Match.Branch.t array -> bool
 
 (** Whether a let of type [ty] bound to [a] binds by reference the field [a]
     projects out of a record that is not moved there. *)
-val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
+val projects_in_place : t -> Core.Type.t -> Core.Expr.t -> bool
 
 (** How a closure holds a variable it reads from the scope it is made in. *)
 module Capture : sig
@@ -295,7 +295,7 @@ end
     with how it holds it: generated as closures that copy what they
     capture, [By_move] or [Shared]; with [~in_place], generated in place,
     [By_reference]. *)
-val captures : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.t) list
+val captures : ?in_place:bool -> t -> Core.Expr.t -> (int * Capture.t) list
 
 (** Of the local fixpoint [fix], generated as closures, one per function,
     for each function in order, each variable its closure reads from the
@@ -303,7 +303,7 @@ val captures : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.t) list
     function reading a variable {!captures} takes [By_move] takes it so,
     those made before it share it; with [~in_place], generated in place,
     [By_reference].  [[]] where [fix] is no fixpoint. *)
-val captures_by_member : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.t) list list
+val captures_by_member : ?in_place:bool -> t -> Core.Expr.t -> (int * Capture.t) list list
 
 (** Each variable the terms [ts] read, by its de Bruijn index where they
     stand, with how a closure made around them holds it -- the
@@ -311,15 +311,15 @@ val captures_by_member : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.
     [By_move] what they read by move ({!use}) directly, not inside a let or
     a match they contain, and what a closure among them takes by move
     ({!captures}); the rest [Shared]. *)
-val eta_captures : t -> Miniml.ml_ast list -> (int * Capture.t) list
+val eta_captures : t -> Core.Expr.t list -> (int * Capture.t) list
 
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
     copy is one. *)
-val fate : ?whole:bool -> t -> Miniml.Occurrence.t -> fate
+val fate : ?whole:bool -> t -> Core.Occurrence.t -> fate
 
 (** What a [Continue] moves into the next value of one of its loop's
-    parameters: nothing ([Keep]); the parameter itself, read once by the
+    parameters: nothing ([Core.Signature.Argument.Runtime]); the parameter itself, read once by the
     argument passed it ([Move_parameter]); or the argument whole, a local of
     the turn, at the last read of it the lowering makes ([Move_argument]). *)
 module Continue_move : sig
@@ -341,7 +341,7 @@ end
     moves it at the last of those reads it makes.  Whether a
     parameter is kept in a local, rather than by pointer, is the lowering's
     to say.  A machine's loop moves nothing so. *)
-val continue_moves : Control_ir.Term.loop -> (Miniml.Occurrence.t * Continue_move.t list) list
+val continue_moves : Control_ir.Term.loop -> (Core.Occurrence.t * Continue_move.t list) list
 
 (** [save_moves p let_]: of the let at the occurrence [let_], a point a
     machine with a stack of frames resumes at ({!resumes}), the binders the
@@ -351,7 +351,7 @@ val continue_moves : Control_ir.Term.loop -> (Miniml.Occurrence.t * Continue_mov
     reads it at a closure's uses or after the let, and the frame keeps no
     part of it, nor anything it is a part of, beside it.  What follows the
     let reads it in the frame.  [None] of a let no point resumes at. *)
-val save_moves : t -> Miniml.Occurrence.t -> Core_binder.t list option
+val save_moves : t -> Core.Occurrence.t -> Core_binder.t list option
 
 (** Which binders each frame saved at a resume point moves into it, by the
     Core binder of the let the machine resumes at: what translation, which
@@ -386,11 +386,11 @@ module Local_passing : sig
       occurrence, and the function's position in it -- passes its
       parameters as [t].  A member generated twice is generated alike:
       under [CRANE_CHECK_IR], recording another plan is a violation. *)
-  val record : Miniml.Occurrence.t * int -> t -> unit
+  val record : Core.Occurrence.t * int -> t -> unit
 
   (** What was recorded of [member]: [None] where it is generated as no
       lambda (a lifted helper's plan is its global's). *)
-  val lookup : Miniml.Occurrence.t * int -> t option
+  val lookup : Core.Occurrence.t * int -> t option
 end
 
 (** [kept_by_frame p b]: whether a frame of the machine [p]'s region is
@@ -410,11 +410,11 @@ module Local_captures : sig
   (** [record member modes]: the function [member] -- the fixpoint's
       occurrence, and the function's position in it -- holds its captures
       as [modes] say, one per variable it reads from the scope. *)
-  val record : Miniml.Occurrence.t * int -> Capture.t list -> unit
+  val record : Core.Occurrence.t * int -> Capture.t list -> unit
 
   (** Whether what was recorded of [member] holds a capture
       [By_reference]. *)
-  val by_reference : Miniml.Occurrence.t * int -> bool
+  val by_reference : Core.Occurrence.t * int -> bool
 end
 
 (** [entry_moves p]: of each call [p]'s region makes that may enter a
@@ -427,7 +427,7 @@ end
     after the call nor beside it, each owned there, or held by the entry's
     frame.  The frame holds each by value, where the callee may have lent
     it. *)
-val entry_moves : t -> (Miniml.Occurrence.t * Core_binder.t list) list
+val entry_moves : t -> (Core.Occurrence.t * Core_binder.t list) list
 
 (** A region's plan, as {!Entry_moves} names it. *)
 type region_plan = t
@@ -442,12 +442,12 @@ module Entry_moves : sig
   (** [record call t]: the frame entering an entry at [call] moves [t].
       Recording another set is a violation under [CRANE_CHECK_IR], and only
       what both move is moved. *)
-  val record : Miniml.Occurrence.t -> t -> unit
+  val record : Core.Occurrence.t -> t -> unit
 
   (** [record_plan p]: {!record} of every call {!entry_moves} plans. *)
   val record_plan : region_plan -> unit
 
   (** What was recorded of [call]: [None] where no frame entering an entry
       there takes anything. *)
-  val lookup : Miniml.Occurrence.t -> t option
+  val lookup : Core.Occurrence.t -> t option
 end

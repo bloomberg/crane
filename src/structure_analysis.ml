@@ -16,13 +16,12 @@
 open Util
 open Names
 open Table
-open Miniml
 open Common
 
 (** Information about a single module in the extraction structure. *)
 type module_info = {
   modpath : ModPath.t;
-  sels : (Label.t * ml_structure_elem) list;
+  sels : (Label.t * Core.Module.Structure_item.t) list;
   wrapper_name : string option;
   is_main : bool;
 }
@@ -45,21 +44,21 @@ type t = {
 
 (** The module a module expression ultimately names, if any: an alias names it
     directly, an application names the functor being applied, and a functor
-    names whatever its body names.  A [MEstruct] names nothing -- it {i is} the
+    names whatever its body names.  A [Core.Module.Expr.Structure] names nothing -- it {i is} the
     module. *)
 let rec module_expr_source = function
-  | MEident mp -> Some mp
-  | MEapply (me, _) -> module_expr_source me
-  | MEfunctor (_, _, body) -> module_expr_source body
-  | MEstruct _ -> None
+  | Core.Module.Expr.Path mp -> Some mp
+  | Core.Module.Expr.Apply {functor_ = me; _} -> module_expr_source me
+  | Core.Module.Expr.Functor {body; _} -> module_expr_source body
+  | Core.Module.Expr.Structure _ -> None
 
-(** The [MEstruct] body a module expression eventually reaches, past any
+(** The [Core.Module.Expr.Structure] body a module expression eventually reaches, past any
     functor parameters, together with the module path that body was declared
     under. *)
 let rec module_expr_struct = function
-  | MEfunctor (_, _, body) -> module_expr_struct body
-  | MEstruct (mp, sel) -> Some (mp, sel)
-  | MEident _ | MEapply _ -> None
+  | Core.Module.Expr.Functor {body; _} -> module_expr_struct body
+  | Core.Module.Expr.Structure {path = mp; items = sel} -> Some (mp, sel)
+  | Core.Module.Expr.Path _ | Core.Module.Expr.Apply _ -> None
 
 (** {2 Traversal} *)
 
@@ -76,16 +75,16 @@ let rec module_expr_struct = function
 let fold_structure
     ~(root : ModPath.t -> 'ctx)
     ~(enter : 'ctx -> ModPath.t -> 'ctx)
-    (f : 'ctx -> ModPath.t -> Label.t -> ml_structure_elem -> 'a -> 'a)
-    (s : ml_structure)
+    (f : 'ctx -> ModPath.t -> Label.t -> Core.Module.Structure_item.t -> 'a -> 'a)
+    (s : Core.Program.t)
     (acc : 'a) : 'a =
   let rec go ctx mp sel acc =
     List.fold_left
       (fun acc (l, se) ->
         let acc = f ctx mp l se acc in
         match se with
-        | SEmodule m -> (
-          match module_expr_struct m.ml_mod_expr with
+        | Core.Module.Structure_item.Module m -> (
+          match module_expr_struct m.expr with
           | Some (body_mp, inner) -> go (enter ctx body_mp) body_mp inner acc
           | None -> acc )
         | _ -> acc )
@@ -97,8 +96,8 @@ let fold_structure
 (** {!fold_structure} for the collectors that carry no context and accumulate
     by side effect. *)
 let iter_structure
-    (f : ModPath.t -> Label.t -> ml_structure_elem -> unit)
-    (s : ml_structure) : unit =
+    (f : ModPath.t -> Label.t -> Core.Module.Structure_item.t -> unit)
+    (s : Core.Program.t) : unit =
   fold_structure ~root:ignore
     ~enter:(fun () _ -> ())
     (fun () mp l se () -> f mp l se)
@@ -109,8 +108,8 @@ let iter_structure
     none contributes nothing, which is what lets the collectors below say what
     they do with an inductive without each repeating how to find one. *)
 let element_inductives = function
-  | SEdecl (Dind (kn, ind)) ->
-    List.init (Array.length ind.ind_packets) (fun i ->
+  | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)}) ->
+    List.init (Array.length ind.packets) (fun i ->
       (GlobRef.IndRef (kn, i), i, ind) )
   | _ -> []
 
@@ -118,21 +117,21 @@ let element_inductives = function
     application of, another module.  They are a property of the structure,
     decided here before rendering, so a use rendered before the [using]
     declaration for the alias can still resolve it. *)
-let collect_functor_app_sources (s : ml_structure) :
+let collect_functor_app_sources (s : Core.Program.t) :
     (ModPath.t * ModPath.t) list =
   List.rev
     (fold_structure ~root:ignore
        ~enter:(fun () _ -> ())
        (fun () mp l se acc ->
          match se with
-         | SEmodule m -> (
-           match module_expr_source m.ml_mod_expr with
+         | Core.Module.Structure_item.Module m -> (
+           match module_expr_source m.expr with
            | Some src -> (MPdot (mp, l), src) :: acc
            | None -> acc )
          | _ -> acc )
        s [])
 
-let declares_module_type sel = List.exists (function _, SEmodtype _ -> true | _ -> false) sel
+let declares_module_type sel = List.exists (function _, Core.Module.Structure_item.Module_type _ -> true | _ -> false) sel
 
 (** The concept scope of the functor [f] outside the structure -- in another
     file of a separate extraction, whose own unit declares the concepts --
@@ -163,14 +162,14 @@ let declared_functor_scope f =
     functor's parameters, so its concept is declared at file scope over
     those parameters too; the name it goes by there, and the arguments every
     use passes, are settled here. *)
-let collect_functor_concept_scopes (s : ml_structure) : (ModPath.t * Module_plan.concept_scope) list =
+let collect_functor_concept_scopes (s : Core.Program.t) : (ModPath.t * Module_plan.concept_scope) list =
   let rec params acc = function
-    | MEfunctor (mbid, _, body) -> params (MPbound mbid :: acc) body
+    | Core.Module.Expr.Functor {parameter = mbid; body; _} -> params (MPbound mbid :: acc) body
     | body -> (List.rev acc, body)
   in
   let rec application args = function
-    | MEapply (f, MEident arg) -> application (arg :: args) f
-    | MEident f -> Some (f, args)
+    | Core.Module.Expr.Apply {functor_ = f; argument = Core.Module.Expr.Path arg} -> application (arg :: args) f
+    | Core.Module.Expr.Path f -> Some (f, args)
     | _ -> None
   in
   let found scopes mp = List.find_map (fun (key, scope) -> if ModPath.equal key mp then Some scope else None) scopes in
@@ -181,12 +180,12 @@ let collect_functor_concept_scopes (s : ml_structure) : (ModPath.t * Module_plan
        ~enter:(fun () _ -> ())
        (fun () mp l se scopes ->
          match se with
-         | SEmodule {ml_mod_expr = MEfunctor _ as me; _} -> (
+         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Functor _ as me; _} -> (
            match params [] me with
-           | ps, MEstruct (body_mp, sel) when declares_module_type sel ->
+           | ps, Core.Module.Expr.Structure {path = body_mp; items = sel} when declares_module_type sel ->
              (body_mp, {Module_plan.functor_ = body_mp; args = ps}) :: scopes
            | _ -> scopes )
-         | SEmodule {ml_mod_expr = me; _} -> (
+         | Core.Module.Structure_item.Module {Core.Module.expr = me; _} -> (
            match application [] me with
            | Some (f, (_ :: _ as args)) -> (
              let scope = match found scopes f with None -> declared_functor_scope f | scope -> scope in
@@ -210,7 +209,7 @@ let collect_functor_concept_scopes (s : ml_structure) : (ModPath.t * Module_plan
     last three are {!Table.is_enum_inductive_packet}):
     - It is not a custom-extracted type ([is_custom] returns false).
     - It is not part of a mutual inductive block (only single inductives).
-    - All constructors are nullary (no arguments — [ip_types] are all [[]]).
+    - All constructors are nullary (no arguments — [constructor_argument_types] are all [[]]).
     - It has no kept type parameters ([num_param_vars = 0]).
     - It has at least one constructor ([Array.length p.ip_types > 0]).
 
@@ -221,15 +220,15 @@ let collect_functor_concept_scopes (s : ml_structure) : (ModPath.t * Module_plan
     global flag queryable by [Table.is_enum_inductive].
 
     Recurses into sub-modules to find enums at any nesting depth. *)
-let register_enum_inductives (s : ml_structure) : unit =
+let register_enum_inductives (s : Core.Program.t) : unit =
   iter_structure
     (fun _mp _l se ->
       List.iter
-        (fun (ind_ref, i, ind) ->
-          match ind.ind_kind with
+        (fun (ind_ref, i, (ind : Core.Inductive.t)) ->
+          match ind.kind with
           | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _ -> ()
           | _ ->
-            let is_mutual = Array.length ind.ind_packets > 1 in
+            let is_mutual = Array.length ind.packets > 1 in
             if
               (not (is_custom ind_ref))
               && (not is_mutual)
@@ -238,7 +237,7 @@ let register_enum_inductives (s : ml_structure) : unit =
         (element_inductives se) )
     s
 
-let register_shared_variants (s : ml_structure) : unit =
+let register_shared_variants (s : Core.Program.t) : unit =
   if Table.shared_variant () then
     iter_structure
       (fun _mp _l se ->
@@ -259,12 +258,13 @@ let register_shared_variants (s : ml_structure) : unit =
     that throws during static initialisation, and every reference must call
     it.  Read off the final bodies, since simplification is what can turn
     [False_rect _ h] into the throw. *)
-let throwing_values (s : ml_structure) : GlobRef.t list =
+let throwing_values (s : Core.Program.t) : GlobRef.t list =
   let found = ref [] in
   iter_structure
     (fun _mp _l se ->
       match se with
-      | SEdecl (Dterm (r, e, _)) when Mlutil.only_throws e -> found := r :: !found
+      | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = e; _}) when Mlutil.only_throws e ->
+        found := r :: !found
       | _ -> () )
     s;
   List.rev !found
@@ -282,7 +282,7 @@ let throwing_values (s : ml_structure) : GlobRef.t list =
     ({!collect_collision_wrappers}).
 
     Recurses into sub-modules to collect inductives at all nesting depths. *)
-let collect_inductive_names (s : ml_structure) : (string * ModPath.t) list =
+let collect_inductive_names (s : Core.Program.t) : (string * ModPath.t) list =
   fold_structure ~root:ignore
     ~enter:(fun () _ -> ())
     (fun () _mp _l se acc ->
@@ -302,7 +302,7 @@ let collect_inductive_names (s : ml_structure) : (string * ModPath.t) list =
 
 (** {2 Global scope enum collection} *)
 
-(** Collect enum inductives that appear at global scope (top-level SEdecl
+(** Collect enum inductives that appear at global scope (top-level Core.Module.Structure_item.Declaration
     entries, not nested inside sub-modules).
 
     This must run AFTER [register_enum_inductives] has been called, because it
@@ -315,20 +315,20 @@ let collect_inductive_names (s : ml_structure) : (string * ModPath.t) list =
     Note: only the top-level declarations are scanned (no recursion into
     sub-modules). Enums inside sub-modules are emitted within their containing
     module's scope when that module is rendered. *)
-let collect_global_scope_enums (s : ml_structure) : GlobRef.t list =
+let collect_global_scope_enums (s : Core.Program.t) : GlobRef.t list =
   let acc = ref [] in
   List.iter
     (fun (_mp, sel) ->
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl (Dind (kn, ind)) ->
+          | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
             Array.iteri
               (fun i _p ->
                 let ind_ref = GlobRef.IndRef (kn, i) in
                 if Table.is_enum_inductive ind_ref then
                   acc := ind_ref :: !acc )
-              ind.ind_packets
+              ind.packets
           | _ -> () )
         sel )
     s;
@@ -336,23 +336,23 @@ let collect_global_scope_enums (s : ml_structure) : GlobRef.t list =
 
 (** {2 Module classification} *)
 
-(** Test whether a structure element is a function declaration (Dterm or Dfix).
+(** Test whether a structure element is a function declaration (Core.Decl.Value or Core.Decl.Recursive_group).
     Used by [classify_module] to determine if a module contains any functions —
     a prerequisite for wrapping. *)
 let is_func_decl (_, se) =
   match se with
-  | SEdecl (Dterm _ | Dfix _) -> true
+  | Core.Module.Structure_item.Declaration (Core.Decl.Value _ | Core.Decl.Recursive_group _) -> true
   | _ -> false
 
 (** Classify a module as a wrapper or non-wrapper.
 
     A module becomes a wrapper (its declarations are emitted inside a C++
     struct) when ALL of these hold:
-    - [has_bare]: It contains at least one bare [SEdecl] entry.
-    - [all_bare]: It contains ONLY bare declarations (no [SEmodule] or
-      [SEmodtype] children).
+    - [has_bare]: It contains at least one bare [Core.Module.Structure_item.Declaration] entry.
+    - [all_bare]: It contains ONLY bare declarations (no [Core.Module.Structure_item.Module] or
+      [Core.Module.Structure_item.Module_type] children).
     - [is_modfile]: It is a file-level module (not a sub-module).
-    - [has_func]: It contains at least one function ([Dterm] or [Dfix]).
+    - [has_func]: It contains at least one function ([Core.Decl.Value] or [Core.Decl.Recursive_group]).
     - [not is_main]: It is not the main module being extracted.
 
     When a module qualifies, returns [Some name] where [name] is the capitalized
@@ -370,7 +370,7 @@ let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
     List.exists
       (fun (_, se) ->
         match se with
-        | SEdecl _ -> true
+        | Core.Module.Structure_item.Declaration _ -> true
         | _ -> false )
       sel
   in
@@ -379,7 +379,7 @@ let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
       (List.exists
          (fun (_, se) ->
            match se with
-           | SEmodule _ | SEmodtype _ -> true
+           | Core.Module.Structure_item.Module _ | Core.Module.Structure_item.Module_type _ -> true
            | _ -> false )
          sel )
   in
@@ -428,8 +428,8 @@ let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
     input order is returned unchanged. *)
 let topological_sort
     (reg : Method_registry.t)
-    (entries : ((ModPath.t * ml_module_structure) * string option) list) :
-    ((ModPath.t * ml_module_structure) * string option) list =
+    (entries : ((ModPath.t * Core.Module.Structure.t) * string option) list) :
+    ((ModPath.t * Core.Module.Structure.t) * string option) list =
   let n = List.length entries in
   if n <= 1 then
     entries
@@ -566,8 +566,8 @@ let topological_sort
     A method is rendered as an inline member of the inductive's struct, so what
     its body needs is part of what the inductive needs -- even though the
     declaration itself may live in another module. *)
-let methods_by_owner (reg : Method_registry.t) (s : ml_structure) =
-  let tbl : ml_decl list Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
+let methods_by_owner (reg : Method_registry.t) (s : Core.Program.t) =
+  let tbl : Core.Decl.t list Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
   let add r d =
     match Method_registry.is_registered_method reg r with
     | Some (owner, _pos) ->
@@ -580,7 +580,8 @@ let methods_by_owner (reg : Method_registry.t) (s : ml_structure) =
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl d -> List.iter (fun fd -> add fd.fd_ref d) (Mlutil.term_defs d)
+          | Core.Module.Structure_item.Declaration d ->
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity d) (Mlutil.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -588,15 +589,15 @@ let methods_by_owner (reg : Method_registry.t) (s : ml_structure) =
 
 (** Index every term declaration in the structure by the reference it defines,
     so a method body's dependencies can be followed one call further. *)
-let decls_by_ref (s : ml_structure) =
-  let tbl : ml_decl Ref.User.Tbl.t = Ref.User.Tbl.create 64 in
+let decls_by_ref (s : Core.Program.t) =
+  let tbl : Core.Decl.t Ref.User.Tbl.t = Ref.User.Tbl.create 64 in
   List.iter
     (fun (_mp, sel) ->
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl d ->
-            List.iter (fun fd -> Ref.User.Tbl.replace tbl fd.fd_ref d) (Mlutil.term_defs d)
+          | Core.Module.Structure_item.Declaration d ->
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace tbl fd.entity d) (Mlutil.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -611,12 +612,12 @@ let decls_by_ref (s : ml_structure) =
     [nat] and [prod] are both declared in [Datatypes], [nat] first.  Only the
     inductives move; every other structure element keeps its slot, and a
     dependency cycle leaves the order untouched. *)
-let sort_inductives_within_module reg (s : ml_structure) sel =
+let sort_inductives_within_module reg (s : Core.Program.t) sel =
   let arr = Array.of_list sel in
   let ind_slots =
     Array.to_list (Array.mapi (fun i x -> (i, x)) arr)
     |> List.filter_map (fun (i, (_l, se)) ->
-           match se with SEdecl (Dind _) -> Some i | _ -> None )
+           match se with Core.Module.Structure_item.Declaration (Core.Decl.Inductive _) -> Some i | _ -> None )
   in
   if List.length ind_slots <= 1 then
     sel
@@ -628,22 +629,23 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
     List.iter
       (fun i ->
         match arr.(i) with
-        | _l, SEdecl (Dind (kn, ind)) ->
+        | _l, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           Array.iteri
             (fun j _p ->
               Ref.User.Tbl.replace slot_of_ref (GlobRef.IndRef (kn, j)) i )
-            ind.ind_packets
+            ind.packets
         | _ -> () )
       ind_slots;
     (* The module's type aliases.  A field typed through an alias -- a record
        holding [list final_instruction], where [final_instruction] is
        [instruction pc] -- needs the inductive the alias names just as much as
        a field that names it directly. *)
-    let alias_body : ml_type Ref.User.Tbl.t = Ref.User.Tbl.create 8 in
+    let alias_body : Core.Type.t Ref.User.Tbl.t = Ref.User.Tbl.create 8 in
     List.iter
       (fun (_l, se) ->
         match se with
-        | SEdecl (Dtype (r, _, ty)) -> Ref.User.Tbl.replace alias_body r ty
+        | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; body = ty; _}) ->
+          Ref.User.Tbl.replace alias_body r ty
         | _ -> () )
       sel;
     let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
@@ -679,7 +681,7 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
           end
         in
         ( match arr.(i) with
-        | _l, SEdecl (Dind (kn, ind) as d) ->
+        | _l, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind} as d) ->
           scan d;
           Array.iteri
             (fun j _p ->
@@ -688,7 +690,7 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
                 (Option.default
                    []
                    (Ref.User.Tbl.find_opt methods (GlobRef.IndRef (kn, j)))) )
-            ind.ind_packets
+            ind.packets
         | _ -> () );
         Hashtbl.replace deps i !acc )
       ind_slots;
@@ -723,9 +725,9 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
 (** Does the child module [se] itself define an inductive whose C++ name is
     [child_name]?  If it does, the name is the child's own and no wrapper is
     needed. *)
-let child_has_eponymous_ind (child_name : string) (se : ml_structure_elem) :
+let child_has_eponymous_ind (child_name : string) (se : Core.Module.Structure_item.t) :
     bool =
-  let names_it kn ind =
+  let names_it kn (ind : Core.Inductive.t) =
     let found = ref false in
     Array.iteri
       (fun i _p ->
@@ -734,15 +736,17 @@ let child_has_eponymous_ind (child_name : string) (se : ml_structure_elem) :
             (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
         in
         if String.equal n child_name then found := true )
-      ind.ind_packets;
+      ind.packets;
     !found
   in
   match se with
-  | SEmodule {ml_mod_expr = MEstruct (_inner_mp, inner_sel); _} ->
+  | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = _inner_mp;
+                                                                                      items = inner_sel}; _} ->
     List.exists
       (fun (_l, se') ->
         match se' with
-        | SEdecl (Dind (kn, ind)) -> names_it kn ind
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+          names_it kn ind
         | _ -> false )
       inner_sel
   | _ -> false
@@ -751,11 +755,11 @@ let child_has_eponymous_ind (child_name : string) (se : ml_structure_elem) :
     name is [child_name]?  Then the collision is with a sibling, which the
     ordinary namespace rules already separate. *)
 let has_sibling_inductive
-    (sel : (Label.t * ml_structure_elem) list) (child_name : string) : bool =
+    (sel : (Label.t * Core.Module.Structure_item.t) list) (child_name : string) : bool =
   List.exists
     (fun (_l, se') ->
       match se' with
-      | SEdecl (Dind (kn, ind)) ->
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
         let found = ref false in
         Array.iteri
           (fun i _p ->
@@ -764,7 +768,7 @@ let has_sibling_inductive
                 (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
             in
             if String.equal n child_name then found := true )
-          ind.ind_packets;
+          ind.packets;
         !found
       | _ -> false )
     sel
@@ -799,7 +803,7 @@ let collect_collision_wrappers
           List.filter
             (fun (l, se) ->
               match se with
-              | SEmodule _ -> is_colliding_child l se
+              | Core.Module.Structure_item.Module _ -> is_colliding_child l se
               | _ -> false )
             sel
         in
@@ -812,7 +816,7 @@ let collect_collision_wrappers
            spelled with the wrapper in place of the child. *)
         let is_flattened_child l se =
           match se with
-          | SEmodule {ml_mod_expr = MEstruct _ | MEident _; _} ->
+          | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure _ | Core.Module.Expr.Path _; _} ->
             is_colliding_child l se
           | _ -> false
         in
@@ -830,7 +834,7 @@ let collect_collision_wrappers
             List.exists
               (fun (l, se) ->
                 match se with
-                | SEmodule _ ->
+                | Core.Module.Structure_item.Module _ ->
                   String.equal base (Common.emitted_module_name (MPdot (mp, l)))
                 | _ -> false )
               sel
@@ -843,9 +847,9 @@ let collect_collision_wrappers
             List.iter
               (fun (_l, se') ->
                 match se' with
-                | SEdecl d ->
+                | Core.Module.Structure_item.Declaration d ->
                   List.iter
-                    (fun fd -> add (modpath_of_r fd.fd_ref) parent_name)
+                    (fun (fd : Core.Recursion.Definition.t) -> add (modpath_of_r fd.entity) parent_name)
                     (Mlutil.term_defs d)
                 | _ -> () )
               inner_sel
@@ -853,11 +857,12 @@ let collect_collision_wrappers
           List.iter
             (fun (l, se) ->
               match se with
-              | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
+              | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = inner_mp;
+                                                                                                  items = inner_sel}; _} ->
                 add (MPdot (mp, l)) parent_name;
                 add inner_mp parent_name;
                 register_decl_modpaths inner_sel
-              | SEmodule {ml_mod_expr = MEident alias_mp; _} ->
+              | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Path alias_mp; _} ->
                 add (MPdot (mp, l)) parent_name;
                 add alias_mp parent_name
               | _ -> () )
@@ -879,11 +884,11 @@ let collect_collision_wrappers
           List.iter
             (fun (l, se) ->
               match se with
-              | SEmodule m when not (is_flattened_child l se) ->
+              | Core.Module.Structure_item.Module m when not (is_flattened_child l se) ->
                 add_bystander (MPdot (mp, l)) parent_name;
-                ( match m.ml_mod_expr with
-                | MEstruct (inner_mp, _) -> add_bystander inner_mp parent_name
-                | MEident alias_mp -> add_bystander alias_mp parent_name
+                ( match m.expr with
+                | Core.Module.Expr.Structure {path = inner_mp; _} -> add_bystander inner_mp parent_name
+                | Core.Module.Expr.Path alias_mp -> add_bystander alias_mp parent_name
                 | _ -> () )
               | _ -> () )
             sel
@@ -899,7 +904,7 @@ let collect_collision_wrappers
     Like the collision wrappers, this is layout, and the name resolver copies
     the set when it is built.  Discovering it while rendering would mean
     discovering it after the resolver had already answered. *)
-let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
+let collect_eponymous_records (s : Core.Program.t) : GlobRef.t list =
   List.rev
     (fold_structure
        ~root:(fun mp ->
@@ -916,8 +921,8 @@ let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
          Some (String.lowercase_ascii (Common.emitted_module_name mp)) )
        (fun module_name _mp _l se acc ->
          List.fold_left
-           (fun acc (ind_ref, _i, ind) ->
-             match ind.ind_kind with
+           (fun acc (ind_ref, _i, (ind : Core.Inductive.t)) ->
+             match ind.kind with
              | Core.Inductive.Kind.Record _
                when Option.equal String.equal
                       (Some
@@ -955,19 +960,19 @@ let concept_name_of_label l =
     the order they were rendered in.  A module type declared in a functor's
     body is named after the functor already ({!collect_functor_concept_scopes})
     and is not among them. *)
-let collect_concept_renames (s : ml_structure) :
+let collect_concept_renames (s : Core.Program.t) :
     (GlobRef.t * string) list * (ModPath.t * string) list =
   let classes, modtypes =
     fold_structure ~root:ignore
       ~enter:(fun () _ -> ())
       (fun () mp l se (classes, modtypes) ->
         match se with
-        | SEmodtype _ ->
+        | Core.Module.Structure_item.Module_type _ ->
           (classes, (MPdot (mp, l), concept_name_of_label l) :: modtypes)
         | _ ->
           ( List.fold_left
-              (fun acc (ind_ref, _i, ind) ->
-                match ind.ind_kind with
+              (fun acc (ind_ref, _i, (ind : Core.Inductive.t)) ->
+                match ind.kind with
                 | Core.Inductive.Kind.Type_class _ -> (ind_ref, Common.pp_global_name Type ind_ref) :: acc
                 | _ -> acc )
               classes (element_inductives se),
@@ -989,13 +994,13 @@ let collect_concept_renames (s : ml_structure) :
 
 (** Whether a term of type [ty] is a type-class instance: its type, past any
     arrows, is a type class. *)
-let is_instance_type (ty : ml_type) : bool =
+let is_instance_type (ty : Core.Type.t) : bool =
   let rec return_type = function
-    | Tarr (_, rest) -> return_type rest
+    | Core.Type.Arrow {result = rest; _} -> return_type rest
     | t -> t
   in
   match return_type ty with
-  | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
+  | Core.Type.Global_app {head = class_ref; _} -> Table.is_typeclass class_ref
   | _ -> false
 
 (** The instances a wrapper struct does not keep.  An instance is emitted as a
@@ -1010,7 +1015,9 @@ let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
         List.filter_map
           (fun (_l, se) ->
             match se with
-            | SEdecl (Dterm (r, _a, t)) when is_instance_type t ->
+            | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
+                                                                       body = _a;
+                                                                       type_ = t}) when is_instance_type t ->
               Some r
             | _ -> None )
           m.sels )
@@ -1033,7 +1040,7 @@ let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
 
     The main module is identified as the last module in the input structure
     (following Rocq's convention that the extracted module is listed last). *)
-let analyze (reg : Method_registry.t) (s : ml_structure) : t =
+let analyze (reg : Method_registry.t) (s : Core.Program.t) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   register_enum_inductives s;
   (* 2. Collect inductive names for name collision detection. *)
@@ -1083,8 +1090,8 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
                 Method_registry.is_registered_method reg r <> None
               in
               match se with
-              | SEdecl ((Dterm _ | Dfix _) as d) ->
-                List.for_all (fun fd -> methodified fd.fd_ref) (Mlutil.term_defs d)
+              | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
+                List.for_all (fun (fd : Core.Recursion.Definition.t) -> methodified fd.entity) (Mlutil.term_defs d)
               | _ -> true )
             sel )
   in

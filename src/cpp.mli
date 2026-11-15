@@ -12,7 +12,7 @@
 
 (** {1 C++ extraction driver}
 
-    Final stage of the extraction pipeline, from a MiniML structure to the
+    Final stage of the extraction pipeline, from a Core structure to the
     text of a header and an implementation file.  Before either file is
     rendered it analyses the structure ({!prepare_structure}), plans what
     rendering reads (the [plan_*] values: names, scopes, callable heads,
@@ -24,7 +24,7 @@
     {ul
     {- {!Cpp_state}: per-unit render state and plans;}
     {- {!Cpp_names}: name resolution and qualification;}
-    {- {!Cpp_ind}: which C++ declarations a MiniML declaration becomes;}
+    {- {!Cpp_ind}: which C++ declarations a Core declaration becomes;}
     {- {!Cpp_leaf_plan} and {!Cpp_print}: what a CppIR leaf asks of
        resolution and scheduling, and its printing;}
     {- {!Cpp_concepts}: module-type concepts as text.}} *)
@@ -32,17 +32,17 @@
 (** Language descriptor for C++. Provides the preamble, file suffix,
     pretty-printers, and other hooks that {!Extract_env} needs to drive a full
     extraction pass. *)
-val cpp_descr : Miniml.language_descr
+val cpp_descr : Backend.t
 
 (** The methods registered for the inductives of a structure
     ({!Method_registry.create}), decided outside every module body. *)
-val method_registry_of : Miniml.ml_structure -> Method_registry.t
+val method_registry_of : Core.Program.t -> Method_registry.t
 
 (** Decide the unit's layout before either file is rendered: analyse the
     structure ({!Structure_analysis}), record what rendering reads of the
     analysis, and return the {!Module_plan} it decides, which is not yet
     installed. *)
-val prepare_structure : Miniml.ml_structure -> Module_plan.t
+val prepare_structure : Core.Program.t -> Module_plan.t
 
 (** [registered_methods kn ind] -- each function registered as a method of
     one of [ind]'s inductives, generated with it: the inductive, the
@@ -51,7 +51,7 @@ val prepare_structure : Miniml.ml_structure -> Module_plan.t
 val registered_methods :
   ?order:(Method_registry.method_candidate list -> Method_registry.method_candidate list) ->
   Names.MutInd.t ->
-  Miniml.ml_ind ->
+  Core.Inductive.t ->
   (Names.GlobRef.t * Names.Id.t list * Method_registry.method_candidate) list
 
 (** The callable plan of each function the renders will generate, in the
@@ -63,23 +63,23 @@ val registered_methods :
     struct's methods, by name. *)
 val plan_callables :
   ?reversed:bool ->
-  Miniml.ml_structure ->
+  Core.Program.t ->
   Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list
 
 (** Generate every function the renders write, and every instance's struct,
     before either file is rendered, for both files
     ({!Cpp_ind.generating_ahead}). *)
-val generate_ahead : Miniml.ml_structure -> unit
+val generate_ahead : Core.Program.t -> unit
 
 (** Generate what one declaration, an element of the module [module_], is
     written as, before it is rendered, and finish it into the unit's
     program: the walk {!generate_ahead} would make for a structure holding
     only it. *)
-val generate_decl_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
+val generate_decl_ahead : module_:Names.ModPath.t -> Core.Decl.t -> unit
 
 (** The files the names of the unit [s] are written through, read off what
     {!generate_ahead} generated: what its files include. *)
-val files_named_ahead : Miniml.ml_structure -> Names.ModPath.t list
+val files_named_ahead : Core.Program.t -> Names.ModPath.t list
 
 (** The customs the unit's files write, read off what {!generate_ahead}
     generated: whose imports its files include. *)
@@ -98,18 +98,18 @@ val plan_function_reads : unit -> unit
     modules' structs it declares ahead of the file: a struct of nothing but
     static function declarations whose types are declared by the file's
     forward declarations and name nothing inside another struct. *)
-val plan_file_layout : Miniml.ml_structure -> unit
+val plan_file_layout : Core.Program.t -> unit
 
 (** Plan the synthesised templates each file writes, before either is
     rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
-val plan_ctor_aliases : Miniml.ml_structure -> unit
+val plan_ctor_aliases : Core.Program.t -> unit
 
 (** The C++ name of each global the unit declares, a functor's body
     included, decided in declaration order ({!Common.pp_global_name}): an
     inductive's, then its constructors', then a record's fields, at the kind
     a declaration is printed at.  A custom mapping's name is its text, and is
     not among them. *)
-val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
+val plan_names : Core.Program.t -> (Names.GlobRef.t * string) list
 
 (** The C++ name of each global the unit refers to, decided once
     {!plan_names} has named what it declares, in the order a walk of the
@@ -121,11 +121,11 @@ val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
     for a variant-shaped custom's constructor structs or a custom class's
     fields.  With these and {!plan_names} decided, rendering computes no
     global's name but a helper's lifted out of a body as it is generated. *)
-val plan_referenced_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
+val plan_referenced_names : Core.Program.t -> (Names.GlobRef.t * string) list
 
 (** The C++ name of each module the unit declares, a functor's body's
     included, decided in declaration order ({!Common.emitted_module_name}). *)
-val plan_module_names : Miniml.ml_structure -> (Names.ModPath.t * string) list
+val plan_module_names : Core.Program.t -> (Names.ModPath.t * string) list
 
 (** The C++ names of the fields of each constructor whose struct the unit
     generates -- an inductive's, not a class's or a
@@ -133,13 +133,13 @@ val plan_module_names : Miniml.ml_structure -> (Names.ModPath.t * string) list
     constructor was declared with
     ({!Translation_support.compute_and_register_field_names}), once the
     constructors' names are. *)
-val plan_field_names : Miniml.ml_structure -> (Names.GlobRef.t * Names.Id.t list) list
+val plan_field_names : Core.Program.t -> (Names.GlobRef.t * Names.Id.t list) list
 
 (** The inductives promoted to their eponymous module's struct, which the
     module's struct then is ({!Table.promote_inductive}): those of the
     modules outside a functor's body, which the implementation renders
     outside every struct. *)
-val plan_promoted_inductives : Miniml.ml_structure -> Names.GlobRef.t list
+val plan_promoted_inductives : Core.Program.t -> Names.GlobRef.t list
 
 (** The constants emitted as an accessor function returning a function-local
     static (a Meyers singleton), which a use spells as a call: one written in
@@ -147,12 +147,12 @@ val plan_promoted_inductives : Miniml.ml_structure -> Names.GlobRef.t list
     inductive's struct where that has parameters -- and, inside a module's
     struct, one that is a template itself, or any under separate extraction;
     each a constant its generation does not make a function. *)
-val plan_accessors : Miniml.ml_structure -> Names.GlobRef.t list
+val plan_accessors : Core.Program.t -> Names.GlobRef.t list
 
 (** The scope of each module the unit emits as a struct: how a definition of
     one of its members, written outside the struct's body, names the
     struct. *)
-val plan_scopes : Miniml.ml_structure -> Scope_plan.t
+val plan_scopes : Core.Program.t -> Scope_plan.t
 
 (** The structs written inside another struct, each with the name it is
     written under: a module's, and an inductive's -- its struct or its enum
@@ -160,13 +160,13 @@ val plan_scopes : Miniml.ml_structure -> Scope_plan.t
     [::name] where one of them would capture it, and a reference to one of
     them is qualified by its enclosing struct. *)
 val plan_nested_structs :
-  Miniml.ml_structure -> (string * Cpp_state.nested_struct_owner) list
+  Core.Program.t -> (string * Cpp_state.nested_struct_owner) list
 
 (** The concrete types each instance the unit declares gives its class's
     promoted variables ({!Gen_decls.instance_promoted_types}), which a call
     through it substitutes for them. *)
 val plan_instance_promoted_types :
-  Miniml.ml_structure -> (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list
+  Core.Program.t -> (Names.GlobRef.t * (Names.Id.t * Core.Type.t) list) list
 
 (** The wrapper structs that hold declarations of their module's -- its
     functions, generated as the wrapper's members -- and so cannot be merged
@@ -181,7 +181,7 @@ val plan_unmerged_wrappers : unit -> (string * Names.ModPath.t) list
     header cannot be read without, which move ahead of them.  Asked once the
     wrappers holding declarations are installed: whether an inductive is
     spelled qualified by its wrapper depends on them. *)
-val plan_concept_prerequisites : Module_plan.t -> Miniml.ml_structure -> Module_plan.t
+val plan_concept_prerequisites : Module_plan.t -> Core.Program.t -> Module_plan.t
 
 (** The fields each constructor struct of an inductive the unit generates
     stores behind the smart pointer
@@ -189,4 +189,4 @@ val plan_concept_prerequisites : Module_plan.t -> Miniml.ml_structure -> Module_
     constructor's struct name, and each field's index with whether it holds
     the inductive itself.  A flat inductive has no constructor struct. *)
 val plan_pointer_fields :
-  Miniml.ml_structure -> (Names.GlobRef.t * string * (int * bool) list) list
+  Core.Program.t -> (Names.GlobRef.t * string * (int * bool) list) list

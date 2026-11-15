@@ -5,7 +5,6 @@
     [target_plan.mli]. *)
 
 open Names
-open Miniml
 
 type kind_reason =
   | Functor_alignment
@@ -13,7 +12,7 @@ type kind_reason =
 
 type kind_decision = {
   block : MutInd.t;
-  kind : record_field Core.Inductive.Kind.t;
+  kind : Core.Inductive.Kind.t;
   reason : kind_reason;
 }
 
@@ -28,7 +27,7 @@ type representation = {
   accessors : GlobRef.t list;
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
   scopes : Scope_plan.t;
-  instance_promoted_types : (GlobRef.t * (Id.t * Miniml.ml_type) list) list;
+  instance_promoted_types : (GlobRef.t * (Id.t * Core.Type.t) list) list;
 }
 
 type t = {
@@ -51,7 +50,7 @@ let decided decisions kn =
 let kind_of t kn = decided t.inductive_kinds kn
 
 (** The kind [ind] has once [decisions] are installed. *)
-let kind_after decisions kn ind = Option.default ind.ind_kind (decided decisions kn)
+let kind_after decisions kn (ind : Core.Inductive.t) = Option.default ind.kind (decided decisions kn)
 
 (** {!Table.is_typeclass}, once [decisions] are installed. *)
 let is_typeclass_after decisions r =
@@ -85,70 +84,76 @@ let is_typeclass_after decisions r =
 let functor_alignment struc =
   (* Every module body's inductive kinds, keyed by the module's own path and
      the inductive's label -- the pair a functor application can name. *)
-  let body_kinds : (string * Label.t, record_field Core.Inductive.Kind.t) Hashtbl.t = Hashtbl.create 16 in
-  let rec body_of (me : ml_module_expr) =
-    match me with MEfunctor (_, _, me) -> body_of me | me -> me
+  let body_kinds : (string * Label.t, Core.Inductive.Kind.t) Hashtbl.t = Hashtbl.create 16 in
+  let rec body_of (me : Core.Module.Expr.t) =
+    match me with Core.Module.Expr.Functor {body = me; _} -> body_of me | me -> me
   in
-  let rec collect_expr (me : ml_module_expr) =
+  let rec collect_expr (me : Core.Module.Expr.t) =
     match me with
-    | MEstruct (mp, sel) ->
+    | Core.Module.Expr.Structure {path = mp; items = sel} ->
       List.iter
         (fun (l, se) ->
           match se with
-          | SEdecl (Dind (_, ind)) -> Hashtbl.replace body_kinds (ModPath.to_string mp, l) ind.ind_kind
-          | SEmodule m -> collect_expr (body_of m.ml_mod_expr)
+          | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {definition = ind; _}) ->
+            Hashtbl.replace body_kinds (ModPath.to_string mp, l) ind.kind
+          | Core.Module.Structure_item.Module m -> collect_expr (body_of m.expr)
           | _ -> () )
         sel
-    | MEfunctor (_, _, me) -> collect_expr me
-    | MEident _ | MEapply _ -> ()
+    | Core.Module.Expr.Functor {body = me; _} -> collect_expr me
+    | Core.Module.Expr.Path _ | Core.Module.Expr.Apply _ -> ()
   in
   (* The functor an application applies, however many arguments it takes. *)
-  let rec applied_functor (me : ml_module_expr) =
+  let rec applied_functor (me : Core.Module.Expr.t) =
     match me with
-    | MEapply (me, _) -> applied_functor me
-    | MEident mp -> Some mp
-    | MEstruct _ | MEfunctor _ -> None
+    | Core.Module.Expr.Apply {functor_ = me; _} -> applied_functor me
+    | Core.Module.Expr.Path mp -> Some mp
+    | Core.Module.Expr.Structure _ | Core.Module.Expr.Functor _ -> None
   in
   let decisions = ref [] in
-  let align_sig mp_functor (mt : ml_module_type) =
+  let align_sig mp_functor (mt : Core.Module.Type.t) =
     match mt with
-    | MTsig (_, sigl) ->
+    | Core.Module.Type.Signature {items = sigl; _} ->
       List.iter
         (fun (l, sp) ->
           match sp with
-          | Spec (Sind (kn, ind)) -> (
+          | Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Inductive {entity = kn;
+                                                                                          definition = ind}) -> (
             let aligned =
               match
                 ( Hashtbl.find_opt body_kinds (ModPath.to_string mp_functor, l),
                   kind_after !decisions kn ind )
               with
-              | Some (Core.Inductive.Kind.Type_class _), Core.Inductive.Kind.Record fields -> Some (Core.Inductive.Kind.Type_class fields)
-              | Some (Core.Inductive.Kind.Record _), Core.Inductive.Kind.Type_class fields -> Some (Core.Inductive.Kind.Record fields)
+              | Some (Core.Inductive.Kind.Type_class _), Core.Inductive.Kind.Record fields ->
+                Some (Core.Inductive.Kind.Type_class fields)
+              | Some (Core.Inductive.Kind.Record _), Core.Inductive.Kind.Type_class fields ->
+                Some (Core.Inductive.Kind.Record fields)
               | _ -> None
             in
             match aligned with
             | Some kind -> decisions := {block = kn; kind; reason = Functor_alignment} :: !decisions
             | None -> () )
-          | Spec _ | Smodule _ | Smodtype _ -> () )
+          | Core.Module.Signature_item.Declaration _
+          | Core.Module.Signature_item.Module _
+          | Core.Module.Signature_item.Module_type _ -> () )
         sigl
-    | MTident _ | MTfunsig _ | MTwith _ -> ()
+    | Core.Module.Type.Path _ | Core.Module.Type.Functor _ | Core.Module.Type.Refined _ -> ()
   in
-  let rec walk_expr (me : ml_module_expr) =
+  let rec walk_expr (me : Core.Module.Expr.t) =
     match me with
-    | MEstruct (_, sel) -> List.iter walk_elem sel
-    | MEfunctor (_, _, me) -> walk_expr me
-    | MEident _ | MEapply _ -> ()
+    | Core.Module.Expr.Structure {items = sel; _} -> List.iter walk_elem sel
+    | Core.Module.Expr.Functor {body = me; _} -> walk_expr me
+    | Core.Module.Expr.Path _ | Core.Module.Expr.Apply _ -> ()
   and walk_elem (_l, se) =
     match se with
-    | SEmodule m ->
-      Option.iter (fun mp -> align_sig mp m.ml_mod_type) (applied_functor m.ml_mod_expr);
-      walk_expr m.ml_mod_expr
-    | SEdecl _ | SEmodtype _ -> ()
+    | Core.Module.Structure_item.Module m ->
+      Option.iter (fun mp -> align_sig mp m.type_) (applied_functor m.expr);
+      walk_expr m.expr
+    | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> ()
   in
   List.iter
     (fun (_mp, sel) ->
       List.iter
-        (fun (_l, se) -> match se with SEmodule m -> collect_expr (body_of m.ml_mod_expr) | _ -> ())
+        (fun (_l, se) -> match se with Core.Module.Structure_item.Module m -> collect_expr (body_of m.expr) | _ -> ())
         sel )
     struc;
   List.iter (fun (_mp, sel) -> List.iter walk_elem sel) struc;
@@ -173,33 +178,33 @@ let value_use_demotion prior struc =
   let demote kn = demoted := Mindmap_env.add kn () !demoted in
   let rec scan_arg t =
     match t with
-    | Tglob ((GlobRef.IndRef (kn, _) as r), l, _) ->
+    | Core.Type.Global_app {head = (GlobRef.IndRef (kn, _) as r); type_arguments = l; _} ->
       if is_typeclass r then demote kn;
       List.iter scan_arg l
-    | Tglob (_, l, _) -> List.iter scan_arg l
-    | Tarr (a, b) ->
+    | Core.Type.Global_app {type_arguments = l; _} -> List.iter scan_arg l
+    | Core.Type.Arrow {parameter = a; result = b} ->
       scan_arg a;
       scan_arg b
-    | Tmeta {contents = Some t} -> scan_arg t
+    | Core.Type.Meta {contents = Some t} -> scan_arg t
     | _ -> ()
   in
   let rec scan_type = function
-    | Tglob (_, l, _) -> List.iter scan_arg l
-    | Tarr (a, b) ->
+    | Core.Type.Global_app {type_arguments = l; _} -> List.iter scan_arg l
+    | Core.Type.Arrow {parameter = a; result = b} ->
       scan_type a;
       scan_type b
-    | Tmeta {contents = Some t} -> scan_type t
+    | Core.Type.Meta {contents = Some t} -> scan_type t
     | _ -> ()
   in
   (* A constructor field is data outright, so a class named as the field's own
      type is used as data too -- not only one buried in its arguments.  A
      class's own field is not: a superclass field is what a concept refines,
      and demoting it would turn the refinement into a member. *)
-  let scan_ind kn ind =
+  let scan_ind kn (ind : Core.Inductive.t) =
     let scan_field =
       match kind_after prior kn ind with Core.Inductive.Kind.Type_class _ -> scan_type | _ -> scan_arg
     in
-    Array.iter (fun p -> Array.iter (List.iter scan_field) p.ip_types) ind.ind_packets
+    Array.iter (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter scan_field) p.constructor_argument_types) ind.packets
   in
   (* A class value a definition computes from data is data: the struct an
      instance is otherwise emitted as is fixed at compile time, so it cannot
@@ -208,16 +213,16 @@ let value_use_demotion prior struc =
      template parameters. *)
   let scan_computed_class ty =
     let rec walk had_value = function
-      | Tarr (a, b) ->
+      | Core.Type.Arrow {parameter = a; result = b} ->
         let is_erased =
           match a with
-          | Tdummy _ -> true
-          | Tglob (r, _, _) -> is_typeclass r
+          | Core.Type.Erased _ -> true
+          | Core.Type.Global_app {head = r; _} -> is_typeclass r
           | _ -> false
         in
         walk (had_value || not is_erased) b
-      | Tmeta {contents = Some t} -> walk had_value t
-      | Tglob ((GlobRef.IndRef (kn, _) as r), _, _) when had_value ->
+      | Core.Type.Meta {contents = Some t} -> walk had_value t
+      | Core.Type.Global_app {head = (GlobRef.IndRef (kn, _) as r); _} when had_value ->
         if is_typeclass r then demote kn
       | _ -> ()
     in
@@ -238,19 +243,19 @@ let value_use_demotion prior struc =
          body)
   in
   let scan_decl = function
-    | Dind (kn, ind) -> scan_ind kn ind
-    | Dtype (_, _, u) -> scan_type u
-    | (Dterm _ | Dfix _) as d ->
+    | Core.Decl.Inductive {entity = kn; definition = ind} -> scan_ind kn ind
+    | Core.Decl.Type_alias {body = u; _} -> scan_type u
+    | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
       List.iter
-        (fun fd ->
-          scan_term_type fd.fd_type;
-          scan_body fd.fd_body )
+        (fun (fd : Core.Recursion.Definition.t) ->
+          scan_term_type fd.type_;
+          scan_body fd.body )
         (Mlutil.term_defs d)
   in
   let scan_spec = function
-    | Sind (kn, ind) -> scan_ind kn ind
-    | Stype (_, _, ot) -> Option.iter scan_type ot
-    | Sval (_, _, u) -> scan_term_type u
+    | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> scan_ind kn ind
+    | Core.Signature.Declaration.Type {body = ot; _} -> Option.iter scan_type ot
+    | Core.Signature.Declaration.Value {type_ = u; _} -> scan_term_type u
   in
   Modutil.struct_iter scan_decl scan_spec (fun _ -> ()) struc;
   let decisions = ref [] in
@@ -262,8 +267,8 @@ let value_use_demotion prior struc =
   in
   if not (Mindmap_env.is_empty !demoted) then
     Modutil.struct_iter
-      (function Dind (kn, ind) -> decide kn ind | _ -> ())
-      (function Sind (kn, ind) -> decide kn ind | _ -> ())
+      (function Core.Decl.Inductive {entity = kn; definition = ind} -> decide kn ind | _ -> ())
+      (function Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> decide kn ind | _ -> ())
       (fun _ -> ())
       struc;
   List.rev !decisions
@@ -318,8 +323,11 @@ let same_callables a b =
 let kind_equal a b =
   let fields_equal = List.equal (fun (r, _) (r', _) -> Option.equal GlobRef.UserOrd.equal r r') in
   match (a, b) with
-  | Core.Inductive.Kind.Coinductive, Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive, Core.Inductive.Kind.Inductive -> true
-  | Core.Inductive.Kind.Record f, Core.Inductive.Kind.Record f' | Core.Inductive.Kind.Type_class f, Core.Inductive.Kind.Type_class f' -> fields_equal f f'
+  | Core.Inductive.Kind.Coinductive, Core.Inductive.Kind.Coinductive
+  | Core.Inductive.Kind.Inductive, Core.Inductive.Kind.Inductive -> true
+  | Core.Inductive.Kind.Record f, Core.Inductive.Kind.Record f'
+  | Core.Inductive.Kind.Type_class f, Core.Inductive.Kind.Type_class f' ->
+    fields_equal f f'
   | (Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _), _ -> false
 
 (* The same global under the same name. *)

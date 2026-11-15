@@ -6,10 +6,9 @@
     variables and higher-kinded carriers in scope.  It sits between
     {!Translation} (expressions and statements) and the declaration
     generators ([Gen_functions], [Gen_records], [Gen_instances],
-    [Gen_inductives]) that build CppIR declarations from MiniML ones. *)
+    [Gen_inductives]) that build CppIR declarations from Core ones. *)
 
 open Common
-open Miniml
 open Names
 open Mlutil
 open Util
@@ -90,15 +89,15 @@ let with_method_env_types ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(oute
       restore_erased_env saved_erased )
     f
 
-(** Count the actual (non-promoted) type parameters in [ip_sign].  Entries
-    marked [Keep] correspond to real template parameters; the remaining
+(** Count the actual (non-promoted) type parameters in [signature].  Entries
+    marked [Core.Signature.Argument.Runtime] correspond to real template parameters; the remaining
     entries are promoted Type-valued fields. *)
 let count_keep_params sign =
-  List.length (List.filter (fun x -> x == Keep) sign)
+  List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) sign)
 
-(** True when [i] (an index into a class's [ip_vars]) is a real C++ template
+(** True when [i] (an index into a class's [type_variables]) is a real C++ template
     type parameter.  Everything else — the promoted [Type]-valued fields past
-    the [Keep] parameters, and any [Keep] parameter that is itself a type
+    the [Core.Signature.Argument.Runtime] parameters, and any [Core.Signature.Argument.Runtime] parameter that is itself a type
     constructor ([M : Type -> Type]) — becomes an associated type of the
     instance, spelled [typename I::name]. *)
 let is_class_tparam class_ref i =
@@ -126,8 +125,9 @@ let hkt_carrier_fixed_args = Ml_type_util.hkt_carrier_fixed_args
 let hkt_carrier_alias base arity ml_ty =
   let is_lambda =
     match ml_ty with
-    | Miniml.Tglob (r, args, _) -> Mlutil.writes_binder ~constructors:(Mlutil.constructor_params r) args
-    | Miniml.Tapp (_, args) -> Mlutil.writes_binder args
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
+      Mlutil.writes_binder ~constructors:(Mlutil.constructor_params r) args
+    | Core.Type.Variable_app {arguments = args; _} -> Mlutil.writes_binder args
     | _ -> Mlutil.type_has_hole ml_ty
   in
   match ml_ty with
@@ -137,31 +137,28 @@ let hkt_carrier_alias base arity ml_ty =
      The alias applies it to its parameter. *)
   | _ when arity = 1 && is_lambda ->
     ( [hkt_alias_param_name 0],
-      Mlutil.fill_type_hole (Miniml.Tvar (Schematic, base + 1)) ml_ty )
-  | Miniml.Tglob (r, args, es) ->
+      Mlutil.fill_type_hole (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) ml_ty )
+  | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = es} ->
     let kept = hkt_carrier_fixed_args arity ml_ty in
     let params =
       max arity (max (List.length args) (Table.get_type_scheme_arity r))
       - List.length kept
     in
     ( List.init params hkt_alias_param_name,
-      Miniml.Tglob
-        ( r,
-          kept
-          @ List.init params (fun i -> Miniml.Tvar (Schematic, base + 1 + i)),
-          es ) )
-  | Miniml.Tapp (j, args) ->
+      Core.Type.Global_app {head = r; type_arguments = kept
+          @ List.init params (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                           variable = base + 1 + i}); index_arguments = es} )
+  | Core.Type.Variable_app {head = j; arguments = args} ->
     let kept = hkt_carrier_fixed_args arity ml_ty in
     let params = max arity (List.length args) - List.length kept in
     ( List.init params hkt_alias_param_name,
-      Miniml.Tapp
-        ( j,
-          kept
-          @ List.init params (fun i -> Miniml.Tvar (Schematic, base + 1 + i)) )
+      Core.Type.Variable_app {head = j; arguments = kept
+          @ List.init params (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                           variable = base + 1 + i})}
     )
   | _ when arity = 1 ->
     (* An unnamed carrier is the identity constructor: [F<_A0> = _A0]. *)
-    ([hkt_alias_param_name 0], Miniml.Tvar (Schematic, (base + 1)))
+    ([hkt_alias_param_name 0], Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = (base + 1)})
   | _ -> ([], ml_ty)
 
 (** The concrete types a class's associated types take in an instance, read off
@@ -177,7 +174,7 @@ let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
     type_args
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
 
-(** Whether an [ip_vars] entry named [v] is really an associated type of
+(** Whether an [type_variables] entry named [v] is really an associated type of
     [class_ref].
 
     A field whose type is a class is promoted while extraction still sees a
@@ -194,13 +191,13 @@ let promoted_var_is_associated_type class_ref v =
   List.for_all
     (fun (field_opt, field_ty) ->
       match (field_opt, field_ty) with
-      | Some fr, Miniml.Tglob (r, _, _)
+      | Some fr, Core.Type.Global_app {head = r; _}
         when Id.equal (Common.id_of_global Term fr) v ->
         Table.is_typeclass r
       | _ -> true )
     (Table.get_record_field_bindings class_ref)
 
-(** The associated-type ("promoted") variables of a class, in [ip_vars] order,
+(** The associated-type ("promoted") variables of a class, in [type_variables] order,
     each paired with its arity: [0] for a plain associated type, [n] for a
     higher-kinded carrier, which is an alias template of [n] parameters. *)
 let class_promoted_vars_arities class_ref =
@@ -210,7 +207,7 @@ let class_promoted_vars_arities class_ref =
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
   |> List.filter (fun (v, _) -> promoted_var_is_associated_type class_ref v)
 
-(** The associated-type ("promoted") variables of a class, in [ip_vars]
+(** The associated-type ("promoted") variables of a class, in [type_variables]
     order. *)
 let class_promoted_vars class_ref =
   List.map fst (class_promoted_vars_arities class_ref)
@@ -253,7 +250,7 @@ let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
     List.concat_map
       (fun (field_opt, field_ty) ->
         match (field_opt, field_ty) with
-        | Some field_ref, Miniml.Tglob (r, _, _) when Table.is_typeclass r ->
+        | Some field_ref, Core.Type.Global_app {head = r; _} when Table.is_typeclass r ->
           let field_id = Common.id_of_global Term field_ref in
           List.filter_map
             (fun v ->
@@ -441,7 +438,7 @@ let promoted_resolutions_of_body ?r ?ty b =
   let closed e =
     let ok = ref true in
     let rec go t =
-      (match t with MLrel _ -> ok := false | _ -> ());
+      (match t with Core.Expr.Bound_variable _ -> ok := false | _ -> ());
       Mlutil.ast_iter go t
     in
     go e;
@@ -458,7 +455,7 @@ let promoted_resolutions_of_body ?r ?ty b =
       match Table.find_type r with
       | ty -> (
         match Mlutil.type_simpl (Ml_type_util.ml_codomain ty) with
-        | Miniml.Tglob (c, _, _) when Table.is_typeclass c -> Some c
+        | Core.Type.Global_app {head = c; _} when Table.is_typeclass c -> Some c
         | _ -> None )
       | exception Not_found -> None )
   in
@@ -472,7 +469,7 @@ let promoted_resolutions_of_body ?r ?ty b =
      and on: an instance applied to one of them, [MemStateV Pa] under
      [Existing Instance], is [MemStateV<_tcI0>] and resolves the fields of
      its class as much as a closed one does.  [leading] names the leading
-     binders innermost-first, the order an [MLrel] reads them in; [None]
+     binders innermost-first, the order an [Core.Expr.Bound_variable] reads them in; [None]
      for one that is not an instance. *)
   let leading =
     match ty with
@@ -500,16 +497,16 @@ let promoted_resolutions_of_body ?r ?ty b =
     let ok = ref true in
     let rec go depth t =
       ( match t with
-      | MLrel (i, _) when i > depth ->
+      | Core.Expr.Bound_variable {index = i; _} when i > depth ->
         let k = i - depth - d - 1 in
         ( match if k >= 0 then List.nth_opt leading k else None with
         | Some (Some _) -> ()
         | _ -> ok := false )
-      | MLrel _ -> ()
+      | Core.Expr.Bound_variable _ -> ()
       | _ -> () );
       match t with
-      | MLlam (_, _, b) -> go (depth + 1) b
-      | MLletin (_, _, a, b, _) -> go depth a; go (depth + 1) b
+      | Core.Expr.Lambda {body = b; _} -> go (depth + 1) b
+      | Core.Expr.Let {value = a; body = b; _} -> go depth a; go (depth + 1) b
       | _ -> Mlutil.ast_iter (go depth) t
     in
     go 0 e;
@@ -521,7 +518,7 @@ let promoted_resolutions_of_body ?r ?ty b =
   in
   let rec walk_at d e =
     match strip_magic e with
-    | MLapp (MLglob {callee = r; _}, args)
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
       when instance_class_at r <> None && (not (closed (strip_magic e)))
            && leading <> [] && spellable d (strip_magic e) ->
       Option.iter
@@ -532,22 +529,24 @@ let promoted_resolutions_of_body ?r ?ty b =
       List.iter
         (fun a ->
           match strip_magic a with
-          | MLglob {callee = r'; _} | MLapp (MLglob {callee = r'; _}, _)
+          | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
             when instance_class r' <> None ->
             ()
           | _ -> walk_at d a )
         args
-    | MLlam (_, _, b') -> walk_at (d + 1) b'
-    | MLletin (_, _, a, b', _) -> walk_at d a; walk_at (d + 1) b'
-    | MLcase (_, sc, pv, _) ->
+    | Core.Expr.Lambda {body = b'; _} -> walk_at (d + 1) b'
+    | Core.Expr.Let {value = a; body = b'; _} -> walk_at d a; walk_at (d + 1) b'
+    | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
       walk_at d sc;
-      Array.iter (fun {br_binders = ids; br_body = br; _} -> walk_at (d + List.length ids) br) pv
-    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) -> Array.iter (walk_at (d + Array.length ids)) funs
+      Array.iter (fun {Core.Match.Branch.binders = ids; body = br; _} -> walk_at (d + List.length ids) br) pv
+    | Core.Expr.Fixpoint {functions = ids;
+                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+      Array.iter (walk_at (d + Array.length ids)) funs
     | e' -> Mlutil.ast_iter (walk_at d) e'
   in
   let rec walk e =
         match strip_magic e with
-    | MLapp (MLglob {callee = r; _}, args)
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
       when instance_class r <> None && closed (strip_magic e) ->
       Option.iter (add r)
         (ml_arg_to_template_type (empty_env ()) (strip_magic e));
@@ -560,12 +559,12 @@ let promoted_resolutions_of_body ?r ?ty b =
       List.iter
         (fun a ->
           match strip_magic a with
-          | MLglob {callee = r'; _} | MLapp (MLglob {callee = r'; _}, _)
+          | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
             when instance_class r' <> None ->
             ()
           | _ -> walk a )
         args
-    | MLglob {callee = r; _} -> add r (Entity_application (r, [], []))
+    | Core.Expr.Global {callee = r; _} -> add r (Entity_application (r, [], []))
     | _ -> Mlutil.ast_iter walk e
   in
   walk b;
@@ -591,7 +590,8 @@ let promoted_resolutions_of_body ?r ?ty b =
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> fresh_rel (n - i)))
+            Core.Expr.Apply {callee = Core.Expr.Global (Mlutil.open_reference inst);
+                             arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
           in
           Option.iter (add_at class_ref inst)
             (ml_arg_to_template_type
@@ -613,7 +613,7 @@ let type_resolutions_of_referenced_globals b =
   let found = ref [] in
   let rec walk e =
     ( match strip_magic e with
-    | MLglob {callee = r; _} -> found := !found @ ind_type_resolutions r
+    | Core.Expr.Global {callee = r; _} -> found := !found @ ind_type_resolutions r
     | _ -> () );
     Mlutil.ast_iter walk e
   in

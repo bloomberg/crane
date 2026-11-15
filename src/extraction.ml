@@ -23,7 +23,6 @@ open Reductionops
 open Retyping
 open Inductiveops
 open Namegen
-open Miniml
 open Table
 open Mlutil
 open Common
@@ -33,7 +32,7 @@ open Context.Rel.Declaration
 (** Raised during inductive extraction to signal the kind of an inductive type
     ([Inductive], [Coinductive], [Record] or [Type_class]). Caught by
     {!extract_really_ind}'s third pass to classify the result. *)
-exception I of record_field Core.Inductive.Kind.t
+exception I of Core.Inductive.Kind.t
 
 (* The constants of the fixpoint group {!extract_fixpoint} is extracting, so
    a call inside the group is told apart from a call to an outside constant
@@ -53,7 +52,7 @@ let let_fix_entries = ref (None : (EConstr.t * EConstr.t array list) option)
    with the recorded erased type.  So [nil] in the deque_action_mismatch test
    (meta stays None) is filled with [pair<any,any>], while sigma_types (the
    [cons] meta is resolved to [nat]) is left alone. *)
-let pending_cpp_meta_fills : (ml_meta * ml_type) list ref = ref []
+let pending_cpp_meta_fills : (Core.Meta.t * Core.Type.t) list ref = ref []
 
 (* NB: [type_of] and [sort_of] might raise
    [SingletonInductiveBecomesProp]. This exception is caught in late
@@ -127,14 +126,14 @@ let is_default env sg t =
   | _ -> false
 
 (** Raised by {!check_default} with the reason the term is erased. *)
-exception NotDefault of kill_reason
+exception NotDefault of Core.Erasure_reason.t
 
 (** Raises {!NotDefault} unless a term of type [t] is an informative value:
-    [Ktype] for a type scheme, [Kprop] for a logical term. *)
+    [Core.Erasure_reason.Type_argument] for a type scheme, [Core.Erasure_reason.Proof] for a logical term. *)
 let check_default env sg t =
   match flag_of_type env sg t with
-  | _, TypeScheme -> raise (NotDefault Ktype)
-  | Logic, _ -> raise (NotDefault Kprop)
+  | _, TypeScheme -> raise (NotDefault Core.Erasure_reason.Type_argument)
+  | Logic, _ -> raise (NotDefault Core.Erasure_reason.Proof)
   | _ -> ()
 
 (** Whether [t] is the type of an informative type scheme: a binder at such a
@@ -239,12 +238,12 @@ let decompose_lambda_n sg n =
 (** {2 [type_sign] generates a signature aimed at treating a type application}
 *)
 
-(** One entry per product of [c]: [Keep] for a binder at an informative type
-    scheme, [Kill Kprop] for any other binder. *)
+(** One entry per product of [c]: [Core.Signature.Argument.Runtime] for a binder at an informative type
+    scheme, [Core.Signature.Argument.Erased Core.Erasure_reason.Proof] for any other binder. *)
 let rec type_sign env sg c =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
-    (if is_info_scheme env sg t then Keep else Kill Kprop)
+    (if is_info_scheme env sg t then Core.Signature.Argument.Runtime else Core.Signature.Argument.Erased Core.Erasure_reason.Proof)
     :: type_sign (push_rel_assum (n, t) env) sg d
   | _ -> []
 
@@ -256,7 +255,7 @@ let rec type_scheme_nb_args env sg c =
     if is_info_scheme env sg t then n + 1 else n
   | _ -> 0
 
-(** Positions, 0-based among the [Keep] entries of [type_sign], of the
+(** Positions, 0-based among the [Core.Signature.Argument.Runtime] entries of [type_sign], of the
     parameters that are type CONSTRUCTORS ([F : Type -> Type]) rather than
     plain types ([A : Type]), each paired with that constructor's arity.
     {!Table.add_ind_hkt_params} records these for
@@ -300,16 +299,16 @@ let make_typvar n vl =
   let vl = Id.Set.of_list vl in
   next_ident_away id' vl
 
-(** {!type_sign}, plus the names of the type variables its [Keep] entries
+(** {!type_sign}, plus the names of the type variables its [Core.Signature.Argument.Runtime] entries
     introduce, outermost first. *)
 let rec type_sign_vl env sg c =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
     let s, vl = type_sign_vl (push_rel_assum (n, t) env) sg d in
     if not (is_info_scheme env sg t) then
-      (Kill Kprop :: s, vl)
+      (Core.Signature.Argument.Erased Core.Erasure_reason.Proof :: s, vl)
     else
-      (Keep :: s, make_typvar n.binder_name vl :: vl)
+      (Core.Signature.Argument.Runtime :: s, make_typvar n.binder_name vl :: vl)
   | _ -> ([], [])
 
 (** Counts the number of default (non-erased) parameters in a type signature. *)
@@ -320,17 +319,18 @@ let rec nb_default_params env sg c =
     if is_default env sg t then n + 1 else n
   | _ -> 0
 
-(** Enriches a type signature by marking implicit arguments as [Kill Kimplicit],
+(** Enriches a type signature by marking implicit arguments as [Core.Signature.Argument.Erased Core.Erasure_reason.Configured_implicit],
     skipping the first [nb_params] parameters.
     @param r Global reference whose declared implicits are looked up
-    @param s Type signature to enrich (list of [Keep]/[Kill] entries)
+    @param s Type signature to enrich (list of [Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased] entries)
     @param nb_params Number of leading parameters to skip before applying implicits *)
 let sign_with_implicits r s nb_params =
   let implicits = implicits_of_global r in
   let rec add_impl i = function
     | [] -> []
-    | Keep :: s when Int.Set.mem i implicits ->
-      Kill (Kimplicit (r, i)) :: add_impl (i + 1) s
+    | Core.Signature.Argument.Runtime :: s when Int.Set.mem i implicits ->
+      Core.Signature.Argument.Erased (Core.Erasure_reason.Configured_implicit {entity = r;
+                                                                               position = i}) :: add_impl (i + 1) s
     | sign :: s -> sign :: add_impl (i + 1) s
   in
   add_impl (1 + nb_params) s
@@ -356,14 +356,14 @@ let schema_view r schema =
       match role with
       | Ml_schema.Erased _ when conservative_types () -> Ml_schema.Value
       | Ml_schema.Value when Int.Set.mem i implicits ->
-        Ml_schema.Erased (Kimplicit (r, i))
+        Ml_schema.Erased (Core.Erasure_reason.Configured_implicit {entity = r; position = i})
       | role -> role )
     schema
 
 (** {1 Management of type variable contexts} *)
 
 (* A De Bruijn variable context (db) is a context for translating Rocq [Rel]
-   into ML type [Tvar]. *)
+   into ML type [Core.Type.Variable]. *)
 
 (** {2 From a type signature toward a type variable context (db)} *)
 
@@ -371,8 +371,8 @@ let schema_view r schema =
 let db_from_sign s =
   let rec make i acc = function
     | [] -> acc
-    | Keep :: l -> make (i + 1) (i :: acc) l
-    | Kill _ :: l -> make i (0 :: acc) l
+    | Core.Signature.Argument.Runtime :: l -> make (i + 1) (i :: acc) l
+    | Core.Signature.Argument.Erased _ :: l -> make i (0 :: acc) l
   in
   make 1 [] s
 
@@ -392,15 +392,15 @@ let rec returns_type_sort c =
 (** A db context read off the local context, for the places that have no
     signature to read it off instead.
 
-    A [Tvar] is numbered among the {e type} binders in scope, outermost first,
+    A [Core.Type.Variable] is numbered among the {e type} binders in scope, outermost first,
     exactly as {!db_from_sign} numbers them from a signature: a value binder
     takes no number and contributes [0].  Numbering every binder alike would
     name a variable no template head has -- [B] under [m], [M], [A], [f], [l],
-    [b] would come out as [Tvar 10] where the declaration calls it [T3].
+    [b] would come out as [Core.Type.Variable 10] where the declaration calls it [T3].
 
     A fixpoint's body re-binds the very parameters the declaration quantifies:
     the context under [fix monad_fold_right A B f l b] holds a second [A] and
-    [B] shadowing the first.  MiniML has no type lambdas, so both spellings
+    [B] shadowing the first.  Core has no type lambdas, so both spellings
     are the one type variable, and a named binder therefore takes the number
     its name already has. *)
 let db_from_rel_context env =
@@ -452,14 +452,14 @@ let rec db_from_ind dbmap i =
 (** Maps the de Bruijn level of each constructor binder that a kept argument
     of the constructor's result type [(I args)] names directly (a bare [Rel])
     to the ML type var that argument instantiates.
-    @param si Signature of the inductive type ([Keep]/[Kill] list)
+    @param si Signature of the inductive type ([Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased] list)
     @param args Array of concrete arguments from a constructor head [(I args)]
     @param relmax Total number of arguments of the constructor (used to convert de Bruijn levels) *)
 let parse_ind_args si args relmax =
   let rec parse i j = function
     | [] -> Int.Map.empty
-    | Kill _ :: s -> parse (i + 1) j s
-    | Keep :: s ->
+    | Core.Signature.Argument.Erased _ :: s -> parse (i + 1) j s
+    | Core.Signature.Argument.Runtime :: s ->
     match Constr.kind args.(i - 1) with
     | Rel k -> Int.Map.add (relmax + 1 - k) j (parse (i + 1) (j + 1) s)
     | _ -> parse (i + 1) (j + 1) s
@@ -590,7 +590,7 @@ let fake_match_projection env p =
 
 (** Whether [a], an argument of an applied type variable, is itself a type
     rather than a value index (the [n] of [vec A n]).  Only a type argument can
-    be kept in a {!Miniml.Tapp}; extracting a value as a type asks {!sort_of}
+    be kept in a {!Core.Type.Variable_app}; extracting a value as a type asks {!sort_of}
     for the sort of something that has none. *)
 let arg_is_type env sg a =
   try EConstr.isSort sg (whd_all env sg (type_of env sg a))
@@ -599,7 +599,7 @@ let arg_is_type env sg a =
 (* [extract_type env db c args] is used to produce an ML type from the Rocq term
    [(c args)], which is supposed to be a Rocq type. *)
 
-(* [db] is a context for translating Rocq [Rel] into ML type [Tvar]. *)
+(* [db] is a context for translating Rocq [Rel] into ML type [Core.Type.Variable]. *)
 
 (* [j] stands for the next ML type var. [j=0] means we do not generate ML type
    var anymore (in subterms for example). *)
@@ -609,7 +609,7 @@ let arg_is_type env sg a =
 
     {!extract_type} is total only on terms that really are types: it asserts
     when it meets a bare lambda, since a lambda cannot be one.  The
-    speculative re-extractions that fill an unresolved [Tmeta] hand it a term
+    speculative re-extractions that fill an unresolved [Core.Type.Meta] hand it a term
     that may turn out not to be a type at all, so there the assertion is an
     answer -- the answer being the fallback those sites already have.  An
     interrupt, a stack overflow, or an anomaly is not an answer and still
@@ -636,10 +636,10 @@ let with_extracting mind f =
     f
 
 (** Extracts a Rocq type into an ML type. The [db] context translates [Rel]
-    to [Tvar], and [j] is the next type var.
+    to [Core.Type.Variable], and [j] is the next type var.
     @param env Rocq environment for reduction and sort checking
     @param sg Evar map for universe operations
-    @param db De Bruijn variable context mapping Rocq [Rel] indices to ML [Tvar] indices; [0] means the Rel is not a type var
+    @param db De Bruijn variable context mapping Rocq [Rel] indices to ML [Core.Type.Variable] indices; [0] means the Rel is not a type var
     @param j Next available ML type variable index; [0] means no new type vars are generated
     @param c The Rocq term to extract as a type (possibly a type-level function)
     @param args Arguments accumulated during [App] spine traversal *)
@@ -670,35 +670,35 @@ and extract_spine env sg db j c args =
       else
         let raw_erased =
           match Option.map (expand env) dom with
-          | Some (Tdummy k) -> Some k
+          | Some (Core.Type.Erased k) -> Some k
           | _ -> None
         in
         (mld, {Ml_schema.raw_erased; raw_tvar = tvar} :: spine)
     in
     let arrow dom (mld, spine) =
       match expand env mld with
-      | Tdummy d -> (Tdummy d, spine)
-      | _ -> (Tarr (Lazy.force dom, mld), spine)
+      | Core.Type.Erased d -> (Core.Type.Erased d, spine)
+      | _ -> (Core.Type.Arrow {parameter = Lazy.force dom; result = mld}, spine)
     in
     ( match flag_of_type env sg t with
     | Info, Default ->
       (* Standard case: two [extract_type] ... *)
       let dom = lazy (extract_type env sg db 0 t []) in
       let ((mlt, _) as res) = arrow dom (extract_spine env' sg (0 :: db) j d []) in
-      binder ~tvar:None (match mlt with Tarr _ -> Some (Lazy.force dom) | _ -> None) res
+      binder ~tvar:None (match mlt with Core.Type.Arrow _ -> Some (Lazy.force dom) | _ -> None) res
     | Info, TypeScheme when j > 0 ->
       (* A new type var. *)
-      let dom = Tdummy Ktype in
+      let dom = Core.Type.Erased Core.Erasure_reason.Type_argument in
       binder ~tvar:(Some j) (Some dom)
         (arrow (lazy dom) (extract_spine env' sg (j :: db) (j + 1) d []))
     | _, lvl ->
-      let reason = if lvl == TypeScheme then Ktype else Kprop in
-      let dom = Tdummy reason in
+      let reason = if lvl == TypeScheme then Core.Erasure_reason.Type_argument else Core.Erasure_reason.Proof in
+      let dom = Core.Type.Erased reason in
       binder ~tvar:None (Some dom)
         (arrow (lazy dom) (extract_spine env' sg (0 :: db) j d [])) )
-  | Sort _ -> leaf (Tdummy Ktype) (* The two logical cases. *)
+  | Sort _ -> leaf (Core.Type.Erased Core.Erasure_reason.Type_argument) (* The two logical cases. *)
   | _ when info_of_family (sort_of env sg (applistc c args)) == Logic ->
-    leaf (Tdummy Kprop)
+    leaf (Core.Type.Erased Core.Erasure_reason.Proof)
   | Rel n ->
     ( match EConstr.lookup_rel n env with
     | LocalDef (_, t, _) ->
@@ -707,22 +707,22 @@ and extract_spine env sg db j c args =
       (* Asks [db] a translation for [n]. *)
       leaf @@
       if n > List.length db then
-        Tunknown
+        Core.Type.Unknown
       else
         let n' = List.nth db (n - 1) in
         if Int.equal n' 0 then
-          Tunknown
+          Core.Type.Unknown
         else if List.is_empty args || not (List.for_all (arg_is_type env sg) args)
         then
           (* No arguments, or arguments that are values: nothing a type-level
              application can hold, so the variable stands alone as before. *)
-          Tvar (Schematic, n')
+          Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = n'}
         else
           (* A type variable of arrow kind applied to arguments — the [M A] of
              a class parameterised by a type constructor.  Keeping the
              application lets the instance's carrier stay parameterised in C++
              instead of being erased at its element type. *)
-          Tapp (n', List.map (fun a -> extract_type env sg db 0 a []) args) )
+          Core.Type.Variable_app {head = n'; arguments = List.map (fun a -> extract_type env sg db 0 a []) args} )
   | Const (kn, u) ->
     let r = GlobRef.ConstRef kn in
     let () = check_sort_poly sg r u in
@@ -788,23 +788,23 @@ and extract_spine env sg db j c args =
     (* Not an ML type, for example [(c:forall X, X->X) Type nat] *)
     match (lookup_constant kn env).const_body with
     | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ ->
-      leaf Tunknown (* Brutal approx ... *)
+      leaf Core.Type.Unknown (* Brutal approx ... *)
     | Def lbody ->
       (* We try to reduce. *)
       let newc = applistc (get_body lbody) args in
       extract_spine env sg db j newc [] )
   | Ind (((kn, i) as ind), u) ->
     let () = check_sort_poly sg (IndRef ind) u in
-    let s = (extract_ind env kn).ind_packets.(i).ip_sign in
+    let s = (extract_ind env kn).Core.Inductive.packets.(i).signature in
     leaf (extract_type_app env sg db (GlobRef.IndRef (kn, i), s) args)
   | Proj (p, r, t) ->
     (* Let's try to reduce, if it hasn't already been done. *)
     if Projection.unfolded p then
-      leaf Tunknown
+      leaf Core.Type.Unknown
     else
       extract_spine env sg db j (EConstr.mkProj (Projection.unfold p, r, t)) args
-  | Case _ | Fix _ | CoFix _ -> leaf Tunknown
-  | Evar _ | Meta _ -> leaf Taxiom (* only possible during Show Extraction *)
+  | Case _ | Fix _ | CoFix _ -> leaf Core.Type.Unknown
+  | Evar _ | Meta _ -> leaf Core.Type.Axiom (* only possible during Show Extraction *)
   | Var v ->
     (* For Show Extraction *)
     let open Context.Named.Declaration in
@@ -817,7 +817,7 @@ and extract_spine env sg db j c args =
       | Logic, _ -> assert false (* Cf. logical cases above *)
       | Info, TypeScheme ->
         leaf (extract_type_app env sg db (r, type_sign env sg ty) args)
-      | Info, Default -> leaf Tunknown ) )
+      | Info, Default -> leaf Core.Type.Unknown ) )
   | Cast _ | LetIn _ | Construct _ | Int _ | Float _ | String _ | Array _ ->
     assert false
 
@@ -859,7 +859,7 @@ and extract_type_app env sg db (r, s) args =
   let ml_ty_args =
     List.fold_right
       (fun (b, c) a ->
-        if b == Keep then
+        if b == Core.Signature.Argument.Runtime then
           let p =
             List.length (fst (whd_decompose_prod env sg (type_of env sg c)))
           in
@@ -878,8 +878,8 @@ and extract_type_app env sg db (r, s) args =
            term it would name a type as a value -- a functor's parameter type
            as a callee no callable plan exists for. *)
         match b with
-        | Keep -> MLdummy Ktype :: a
-        | Kill _ -> (
+        | Core.Signature.Argument.Runtime -> Core.Expr.Erased_value Core.Erasure_reason.Type_argument :: a
+        | Core.Signature.Argument.Erased _ -> (
           try
             let p =
               List.length (fst (whd_decompose_prod env sg (type_of env sg c)))
@@ -892,14 +892,14 @@ and extract_type_app env sg db (r, s) args =
       (List.combine s args)
       []
   in
-  Tglob (r, ml_ty_args, ml_args)
+  Core.Type.Global_app {head = r; type_arguments = ml_ty_args; index_arguments = ml_args}
 
 (* [extract_type_scheme env db c p] works on a Rocq term [c] which is an
    informative type scheme. It means that [c] is not a Rocq type, but will be
    when applied to sufficiently many arguments ([p] in fact). This function
    decomposes p lambdas, with eta-expansion if needed. *)
 
-(* [db] is a context for translating Rocq [Rel] into ML type [Tvar]. *)
+(* [db] is a context for translating Rocq [Rel] into ML type [Core.Type.Variable]. *)
 
 (** {1 Extraction of a type scheme} *)
 
@@ -1024,13 +1024,13 @@ and extract_really_ind env kn mib =
             (hkt_keep_positions env sg ar);
         let t = Array.make (Array.length mip.mind_nf_lc) [] in
         ( {
-            ip_typename = mip.mind_typename;
-            ip_consnames = mip.mind_consnames;
-            ip_logical = not info;
-            ip_sign = s;
-            ip_vars = vl;
-            ip_types = t;
-            ip_consarg_names = Array.make (Array.length mip.mind_nf_lc) [];
+            Core.Inductive.Packet.name = mip.mind_typename;
+            constructor_names = mip.mind_consnames;
+            logical = not info;
+            signature = s;
+            type_variables = vl;
+            constructor_argument_types = t;
+            constructor_argument_names = Array.make (Array.length mip.mind_nf_lc) [];
           },
           u ) )
       mib.mind_packets
@@ -1040,10 +1040,10 @@ and extract_really_ind env kn mib =
     kn
     mib
     {
-      ind_kind = Core.Inductive.Kind.Inductive;
-      ind_nparams = npar;
-      ind_packets = Array.map fst packets;
-      ind_equiv = equiv;
+      Core.Inductive.kind = Core.Inductive.Kind.Inductive;
+      parameter_count = npar;
+      packets = Array.map fst packets;
+      equivalence = equiv;
     };
   (* Helper: extract product binder names from a constructor type *)
   let rec names_prod t =
@@ -1063,7 +1063,7 @@ and extract_really_ind env kn mib =
   in
   for i = 0 to mib.mind_ntypes - 1 do
     let p, u = packets.(i) in
-    if not p.ip_logical then
+    if not p.logical then
       let types =
         Inductive.arities_of_constructors
           ((kn, i), u)
@@ -1078,7 +1078,7 @@ and extract_really_ind env kn mib =
           | App (f, args) -> args (* [Constr.kind f = Ind ip] *)
           | _ -> [||]
         in
-        let orig_dbmap = parse_ind_args p.ip_sign args (nprods + ndecls) in
+        let orig_dbmap = parse_ind_args p.signature args (nprods + ndecls) in
         (* A field whose type is a class projection -- [p : @ptr ProvenanceV
            PointerV] -- makes this inductive depend on the instances the
            projection is applied to, and on whatever they are applied to in
@@ -1107,7 +1107,7 @@ and extract_really_ind env kn mib =
           if lang () == Cpp && is_record_mib && Int.equal j 0 then (
             let nfields = List.length prods in
             let nb_existing_tvars =
-              List.length (List.filter (fun x -> x == Keep) p.ip_sign)
+              List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) p.signature)
             in
             let next_tvar = ref (nb_existing_tvars + 1) in
             (* Get field names for promoted variable names *)
@@ -1176,7 +1176,7 @@ and extract_really_ind env kn mib =
             in
             (* [prods] lists fields in reverse declaration order.  Restore
                declaration order before numbering the type variables: the
-               order of [ip_vars] is what an instance's class arguments are
+               order of [type_variables] is what an instance's class arguments are
                matched against, so a class with two associated types would
                otherwise get them swapped. *)
             let promoted_entries =
@@ -1207,7 +1207,7 @@ and extract_really_ind env kn mib =
                 List.map (fun (_, _, _, name) -> name) promoted_entries
               in
               (* Also register promoted type vars in the table and extend
-                 ip_vars *)
+                 type_variables *)
               let mp = MutInd.modpath kn in
               List.iter
                 (fun (_, _, field_idx, var_name) ->
@@ -1249,13 +1249,13 @@ and extract_really_ind env kn mib =
                           add_erased_type_const (GlobRef.ConstRef knp)
                         | _ -> () )
                 prods;
-              p.ip_vars <- p.ip_vars @ promoted_var_names;
+              p.type_variables <- p.type_variables @ promoted_var_names;
               merged )
           else
             orig_dbmap
         in
         let db = db_from_ind dbmap ndecls in
-        p.ip_types.(j) <-
+        p.constructor_argument_types.(j) <-
           extract_type_cons epar sg db dbmap (EConstr.of_constr t) (ndecls + 1);
         (* Populate constructor argument names from kernel binder names only.
            [mind_user_lc] has anonymous binders when constructors use [->]
@@ -1266,7 +1266,7 @@ and extract_really_ind env kn mib =
         let mip_i = mib.mind_packets.(i) in
         let all_names = names_prod mip_i.mind_user_lc.(j) in
         let arg_names = List.skipn mib.mind_nparams all_names in
-        p.ip_consarg_names.(j) <-
+        p.constructor_argument_names.(j) <-
           List.map
             (fun n ->
               match n.binder_name with Name id -> Some id | Anonymous -> None)
@@ -1282,9 +1282,9 @@ and extract_really_ind env kn mib =
       if mib.mind_finite == CoFinite then raise (I Core.Inductive.Kind.Coinductive);
       if not (Int.equal mib.mind_ntypes 1) then raise (I Core.Inductive.Kind.Inductive);
       let p, u = packets.(0) in
-      if p.ip_logical then raise (I Core.Inductive.Kind.Inductive);
-      if not (Int.equal (Array.length p.ip_types) 1) then raise (I Core.Inductive.Kind.Inductive);
-      let typ = p.ip_types.(0) in
+      if p.logical then raise (I Core.Inductive.Kind.Inductive);
+      if not (Int.equal (Array.length p.constructor_argument_types) 1) then raise (I Core.Inductive.Kind.Inductive);
+      let typ = p.constructor_argument_types.(0) in
       let l =
         if conservative_types () then
           []
@@ -1310,12 +1310,12 @@ and extract_really_ind env kn mib =
          incomplete as a bare [cell] field would. *)
       let rec mentions_self t =
         match t with
-        | Tglob (gr, args, _) ->
+        | Core.Type.Global_app {head = gr; type_arguments = args; _} ->
           (match gr with
            | GlobRef.IndRef (kn', _) when MutInd.CanOrd.equal kn' kn -> true
            | _ -> List.exists mentions_self args)
-        | Tarr (a, b) -> mentions_self a || mentions_self b
-        | Tmeta {contents = Some t} -> mentions_self t
+        | Core.Type.Arrow {parameter = a; result = b} -> mentions_self a || mentions_self b
+        | Core.Type.Meta {contents = Some t} -> mentions_self t
         | _ -> false
       in
       if List.exists mentions_self typ then raise (I Core.Inductive.Kind.Inductive);
@@ -1340,7 +1340,7 @@ and extract_really_ind env kn mib =
         | {binder_name = Name id} :: l, typ :: typs ->
           let knp = Constant.make2 mp (Label.of_id id) in
           (* Is it safe to use [id] for projections [foo.id] ? *)
-          if List.for_all (( == ) Keep) (type2signature env typ) then
+          if List.for_all (( == ) Core.Signature.Argument.Runtime) (type2signature env typ) then
             (* for OCaml inlining: *)
             add_projection nparams knp ip;
           (Some (GlobRef.ConstRef knp), typ) :: select_fields (i + 1) l typs
@@ -1354,9 +1354,9 @@ and extract_really_ind env kn mib =
          parameters in C++ concepts rather than struct fields.
 
          During the second extraction pass, Sort-typed fields (e.g., [m_carrier : Type])
-         are added to [ip_vars] but NOT kept in [ip_sign] (they're not concrete
-         values that can be stored in a struct). If [ip_vars] has more entries
-         than the [Keep] count in [ip_sign], some fields were promoted.
+         are added to [type_variables] but NOT kept in [signature] (they're not concrete
+         values that can be stored in a struct). If [type_variables] has more entries
+         than the [Core.Signature.Argument.Runtime] count in [signature], some fields were promoted.
 
          Example:
            Record Monoid := {
@@ -1366,7 +1366,7 @@ and extract_really_ind env kn mib =
 
          After promotion:
            - nb_sign_keeps = 0 (no regular fields kept)
-           - ip_vars = ["m_carrier"] (1 promoted field)
+           - type_variables = ["m_carrier"] (1 promoted field)
            - has_promoted = true → classify as Type_class for concept generation
 
          Without promotion, [m_carrier] would be a struct field of type "Type",
@@ -1374,10 +1374,10 @@ and extract_really_ind env kn mib =
            template <typename I>
            concept Monoid = requires { typename I::m_carrier; ... }; *)
       let nb_sign_keeps =
-        List.length (List.filter (fun x -> x == Keep) p.ip_sign)
+        List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) p.signature)
       in
       let has_promoted =
-        lang () == Cpp && List.length p.ip_vars > nb_sign_keeps
+        lang () == Cpp && List.length p.type_variables > nb_sign_keeps
       in
       (* A promoted record (with Type-valued fields) should be a Type_class
          (C++ concept) only when it also carries function-typed fields —
@@ -1386,8 +1386,8 @@ and extract_really_ind env kn mib =
          data-typed promoted fields (e.g. Container with [elem : elem_type]
          and [count : nat]) stays a plain [Record] (template struct). *)
       let rec has_arrow_type = function
-        | Tarr _ -> true
-        | Tmeta { contents = Some t } -> has_arrow_type t
+        | Core.Type.Arrow _ -> true
+        | Core.Type.Meta { contents = Some t } -> has_arrow_type t
         | _ -> false
       in
       let has_arrow_field =
@@ -1405,27 +1405,27 @@ and extract_really_ind env kn mib =
   in
   let i =
     {
-      ind_kind = ind_info;
-      ind_nparams = npar;
-      ind_packets = Array.map fst packets;
-      ind_equiv = equiv;
+      Core.Inductive.kind = ind_info;
+      parameter_count = npar;
+      packets = Array.map fst packets;
+      equivalence = equiv;
     }
   in
   add_ind kn mib i;
-  add_inductive_kind kn i.ind_kind;
+  add_inductive_kind kn i.kind;
   i
 
 (** {2 [extract_type_cons] extracts the type of an inductive
   constructor toward the corresponding list of ML types.
 
-   - [db] is a context for translating Rocq [Rel] into ML type [Tvar]
+   - [db] is a context for translating Rocq [Rel] into ML type [Core.Type.Variable]
    - [dbmap] is a translation map (produced by a call to [parse_ind_args])
    - [i] is the rank of the current product (initially [ndecls+1])} *)
 
 (** Extracts a constructor's type signature into a list of ML types.
     @param env Rocq environment, extended as each product binder is consumed
     @param sg Evar map for universe operations
-    @param db De Bruijn variable context for [Rel]→[Tvar] translation
+    @param db De Bruijn variable context for [Rel]→[Core.Type.Variable] translation
     @param dbmap Position-to-type-var map produced by {!parse_ind_args}
     @param c Constructor type (starting after inductive parameters have been stripped)
     @param i Rank of the current product: the de Bruijn level of its binder
@@ -1451,7 +1451,7 @@ and mlt_env env r =
     if Table.is_custom r then None
       (* A promoted type variable is a name, not an abbreviation.  Its Rocq
          body is the record projection -- a [match] -- which [extract_type]
-         can only answer [Tunknown] for, so delta-reducing it replaces the
+         can only answer [Core.Type.Unknown] for, so delta-reducing it replaces the
          one spelling that still says which class field this is with the
          erasure.  [frame := list ptr] then expands to [list unk] and the
          parameter is written [List<std::any>] against a return type that
@@ -1501,16 +1501,17 @@ and record_constant_type env sg kn opt_typ =
   let cb = lookup_constant kn env in
   (* The type call sites read says which arguments the declaration takes: one
      declared implicit ([Crane Extraction Implicit]) is dropped from the
-     declaration as an erased one is, so its domain is a [Tdummy] there,
-     carrying the signature's [Kimplicit] -- the binder's role,
+     declaration as an erased one is, so its domain is a [Core.Type.Erased] there,
+     carrying the signature's [Core.Erasure_reason.Configured_implicit] -- the binder's role,
      [Erased (Implicit _)], as {!Ml_type_util.binder_role} reads it. *)
   let register mlt =
     let r = GlobRef.ConstRef kn in
     let rec mark s t =
       match (s, t) with
-      | Kill k :: s, Tarr (a, b) when not (isTdummy a) -> Tarr (Tdummy k, mark s b)
-      | _ :: s, Tarr (a, b) -> Tarr (a, mark s b)
-      | _, Tmeta {contents = Some t} -> mark s t
+      | Core.Signature.Argument.Erased k :: s, Core.Type.Arrow {parameter = a; result = b} when not (isTdummy a) ->
+        Core.Type.Arrow {parameter = Core.Type.Erased k; result = mark s b}
+      | _ :: s, Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = a; result = mark s b}
+      | _, Core.Type.Meta {contents = Some t} -> mark s t
       | _ -> t
     in
     register_glob_def r (mark (sign_with_implicits r (type2signature env mlt) 0) mlt)
@@ -1647,11 +1648,12 @@ and erased_fix_types env sg ~entries i (fi, ti, ci) =
   then None
   else
     let rec erase = function
-      | Tvar _ | Tapp _ -> Tunknown
-      | Tunknown -> new_meta ()
-      | Tarr (a, b) -> Tarr (erase a, erase b)
-      | Tglob (r, l, a) -> Tglob (r, List.map erase l, a)
-      | Tmeta {contents = Some t} -> erase t
+      | Core.Type.Variable _ | Core.Type.Variable_app _ -> Core.Type.Unknown
+      | Core.Type.Unknown -> new_meta ()
+      | Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = erase a; result = erase b}
+      | Core.Type.Global_app {head = r; type_arguments = l; index_arguments = a} ->
+        Core.Type.Global_app {head = r; type_arguments = List.map erase l; index_arguments = a}
+      | Core.Type.Meta {contents = Some t} -> erase t
       | t -> t
     in
     try Some (Array.map (fun t -> erase (extract_type env sg [] 1 t [])) ti)
@@ -1682,14 +1684,17 @@ and extract_term env sg mle mlt c args =
       let id, a =
         try
           check_default env sg t;
-          (Id id.binder_name, new_meta ())
-        with NotDefault d -> (Dummy, Tdummy d)
+          (Core.Binder_name.Source id.binder_name, new_meta ())
+        with NotDefault d -> (Core.Binder_name.Anonymous, Core.Type.Erased d)
       in
       let b = new_meta () in
       (* If [mlt] cannot be unified with an arrow type, then magic! *)
-      let magic = needs_magic (mlt, Tarr (a, b)) in
+      let magic = needs_magic (mlt, Core.Type.Arrow {parameter = a; result = b}) in
       let d' = extract_term env' sg (Mlenv.push_type mle a) b d [] in
-      put_magic_if ~from:(Tarr (a, b)) ~into:mlt magic (MLlam (id, a, d')) )
+      put_magic_if ~from:(Core.Type.Arrow {parameter = a;
+                                           result = b}) ~into:mlt magic (Core.Expr.Lambda {parameter = id;
+                                                                                           parameter_type = a;
+                                                                                           body = d'}) )
   | LetIn (n, c1, t1, c2) ->
     let id = map_annot id_of_name n in
     let env' =
@@ -1703,11 +1708,11 @@ and extract_term env sg mle mlt c args =
         (* Nothing erased either: an annotation that lost a component would
            overrule what inference knows about it. *)
         let rec informative_type = function
-          | Tunknown | Taxiom | Tdummy _ -> false
-          | Tmeta {contents = Some t} -> informative_type t
-          | Tglob (_, l, _) -> List.for_all informative_type l
-          | Tarr (a, b) -> informative_type a && informative_type b
-          | Tapp (_, l) -> List.for_all informative_type l
+          | Core.Type.Unknown | Core.Type.Axiom | Core.Type.Erased _ -> false
+          | Core.Type.Meta {contents = Some t} -> informative_type t
+          | Core.Type.Global_app {type_arguments = l; _} -> List.for_all informative_type l
+          | Core.Type.Arrow {parameter = a; result = b} -> informative_type a && informative_type b
+          | Core.Type.Variable_app {arguments = l; _} -> List.for_all informative_type l
           | _ -> true
         in
         let a = new_meta () in
@@ -1754,10 +1759,13 @@ and extract_term env sg mle mlt c args =
           else
             Mlenv.push_type mle a
         in
-        MLletin
-          (Id id.binder_name, a, c1', extract_term env' sg mle' mlt c2 args', Occurrence.fresh ())
+        Core.Expr.Let {binder = Core.Binder_name.Source id.binder_name;
+                       binder_type = a;
+                       value = c1';
+                       body = extract_term env' sg mle' mlt c2 args';
+                       occurrence = Core.Occurrence.fresh ()}
       with NotDefault d ->
-        let mle' = Mlenv.push_std_type mle (Tdummy d) in
+        let mle' = Mlenv.push_std_type mle (Core.Type.Erased d) in
         ast_pop (extract_term env' sg mle' mlt c2 args') )
   | Const (kn, u) ->
     let () = check_sort_poly sg (ConstRef kn) u in
@@ -1784,7 +1792,7 @@ and extract_term env sg mle mlt c args =
     (* As soon as the expected [mlt] for the head is known, *)
     (* we unify it with an fresh copy of the stored type of [Rel n]. *)
     let extract_rel mlt =
-      put_magic ~from:(Mlenv.get mle n) ~into:mlt (fresh_rel n)
+      put_magic ~from:(Mlenv.get mle n) ~into:mlt (Core.Expr.fresh_rel n)
     in
     extract_app env sg mle mlt extract_rel args
   | Case (ci, u, pms, r, iv, c0, br) ->
@@ -1825,7 +1833,8 @@ and extract_term env sg mle mlt c args =
       let head = extract_fix ~tys env sg mle i recd false tys.(i) in
       let () =
         match head with
-        | MLfixpoint (_, _, _, occ) | MLcofixpoint (_, _, _, occ) -> Table.add_erased_fix_group occ
+        | Core.Expr.Fixpoint {occurrence = occ; _} | Core.Expr.Cofixpoint {occurrence = occ; _} ->
+          Table.add_erased_fix_group occ
         | _ -> ()
       in
       let applied = type_recomp (arg_tys, mlt) in
@@ -1834,7 +1843,7 @@ and extract_term env sg mle mlt c args =
   | CoFix (i, recd) ->
     extract_app env sg mle mlt (extract_fix env sg mle i recd true) args
   | Cast (c, _, _) -> extract_term env sg mle mlt c args
-  | Evar _ | Meta _ -> MLaxiom "evar"
+  | Evar _ | Meta _ -> Core.Expr.Axiom_value "evar"
   | Var v ->
     (* Only during Show Extraction *)
     let open Context.Named.Declaration in
@@ -1845,39 +1854,39 @@ and extract_term env sg mle mlt c args =
     in
     let vty = extract_type env sg [] 0 ty [] in
     let extract_var mlt =
-      put_magic ~from:vty ~into:mlt (MLglob (Global_use.monomorphic (GlobRef.VarRef v)))
+      put_magic ~from:vty ~into:mlt (Core.Expr.Global (Core.Global_use.monomorphic (GlobRef.VarRef v)))
     in
     extract_app env sg mle mlt extract_var args
   | Int i ->
     assert (args = []);
-    MLuint i
+    Core.Expr.UInt63 i
   | Float f ->
     assert (args = []);
-    MLfloat f
+    Core.Expr.Float64 f
   | String s ->
     assert (args = []);
-    (* Unify expected type with Tstring so let-bound string match
+    (* Unify expected type with Core.Type.String so let-bound string match
        variables get the correct C++ type instead of std::any. *)
-    Mlutil.try_mgu mlt Tstring;
-    MLstring s
+    Mlutil.try_mgu mlt Core.Type.String;
+    Core.Expr.String s
   | Array (_u, t, def, _ty) ->
     assert (args = []);
     let a = new_meta () in
     let ml_arr = Array.map (fun c -> extract_term env sg mle a c []) t in
     let def = extract_term env sg mle a def [] in
-    MLparray (ml_arr, def)
+    Core.Expr.Persistent_array {elements = ml_arr; default = def}
   | Ind _ | Prod _ | Sort _ -> assert false
 
-(** {2 [extract_maybe_term] is [extract_term] for usual terms, else [MLdummy]}
+(** {2 [extract_maybe_term] is [extract_term] for usual terms, else [Core.Expr.Erased_value]}
 *)
 
-(** Extracts a term that might be logical, returning [MLdummy] if the term is in
+(** Extracts a term that might be logical, returning [Core.Expr.Erased_value] if the term is in
     Prop/SProp. *)
 and extract_maybe_term env sg mle mlt c =
   try
     check_default env sg (type_of env sg c);
     extract_term env sg mle mlt c []
-  with NotDefault d -> put_magic ~from:(Tdummy d) ~into:mlt (MLdummy d)
+  with NotDefault d -> put_magic ~from:(Core.Type.Erased d) ~into:mlt (Core.Expr.Erased_value d)
 
 (* We first type all arguments starting with unknown meta types. This gives us
    the expected type of the head. Then we use the [mk_head] to produce the ML
@@ -1907,14 +1916,14 @@ and extract_app env sg mle mlt mk_head args =
     @param env Rocq environment for type checking
     @param sg Evar map for reduction
     @param e ML environment for bound variables
-    @param s Type signature ([Keep]/[Kill] list) driving which positions are kept
+    @param s Type signature ([Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased] list) driving which positions are kept
     @param args Rocq terms to extract (parallel to [typs] and [s])
     @param typs Expected ML types for each argument after unification *)
 and make_mlargs env sg e s args typs =
   let rec f = function
     | [], [], _ -> []
     | a :: la, t :: lt, [] -> extract_maybe_term env sg e t a :: f (la, lt, [])
-    | a :: la, t :: lt, Keep :: s ->
+    | a :: la, t :: lt, Core.Signature.Argument.Runtime :: s ->
       extract_maybe_term env sg e t a :: f (la, lt, s)
     | _ :: la, _ :: lt, _ :: s -> f (la, lt, s)
     | _ -> assert false
@@ -1945,7 +1954,7 @@ and observe_type_arg env sg db a =
     try extract_family_type env sg db a with e when CErrors.noncritical e -> None
   in
   match extracted with
-  | Some (Tdummy _) -> None
+  | Some (Core.Type.Erased _) -> None
   | Some t -> Some t
   | None -> (
     match EConstr.kind sg (whd_betaiotazeta env sg a) with
@@ -1957,18 +1966,18 @@ and observe_type_arg env sg db a =
         | None -> false
       in
       let logical =
-        try (extract_ind env kn).ind_packets.(i).ip_logical
+        try (extract_ind env kn).packets.(i).logical
         with e when CErrors.noncritical e -> false
       in
       if logical || Table.is_custom ind_ref || has_cpp_template_params then None
-      else Some (Tglob (ind_ref, [], []))
+      else Some (Core.Type.Global_app {head = ind_ref; type_arguments = []; index_arguments = []})
     | Rel n ->
       let is_type_param =
         try returns_type_sort (Context.Rel.Declaration.get_type (Environ.lookup_rel n env))
         with e when CErrors.noncritical e -> false
       in
       let n' = if is_type_param && n <= List.length db then List.nth db (n - 1) else 0 in
-      if n' > 0 then Some (Tvar (Schematic, n')) else None
+      if n' > 0 then Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = n'}) else None
     | _ -> None )
 
 (** {2 Extraction of a constant applied to arguments} *)
@@ -2041,12 +2050,17 @@ and extract_cst_app env sg mle mlt kn args =
      a coercion. *)
   let given =
     let rec informative = function
-      | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ | Thole _ -> false
-      | Tmeta {contents = None} | Topen _ -> false
-      | Tarr (a, b) -> informative a && informative b
-      | Tglob (_, l, _) -> List.for_all informative l
-      | Tmeta {contents = Some u} -> informative u
-      | Tstring -> true
+      | Core.Type.Erased _
+      | Core.Type.Unknown
+      | Core.Type.Axiom
+      | Core.Type.Variable_app _
+      | Core.Type.Variable _
+      | Core.Type.Hole _ -> false
+      | Core.Type.Meta {contents = None} | Core.Type.Open _ -> false
+      | Core.Type.Arrow {parameter = a; result = b} -> informative a && informative b
+      | Core.Type.Global_app {type_arguments = l; _} -> List.for_all informative l
+      | Core.Type.Meta {contents = Some u} -> informative u
+      | Core.Type.String -> true
     in
     Array.of_list
       (List.map
@@ -2112,13 +2126,13 @@ and extract_cst_app env sg mle mlt kn args =
       ~from:(type_recomp (metas, a))
       ~into:instantiated
       magic1
-      (MLglob (Global_use.polymorphic (GlobRef.ConstRef kn) instantiation))
+      (Core.Expr.Global (Core.Global_use.polymorphic (GlobRef.ConstRef kn) instantiation))
   in
   (* For strict languages, purely logical signatures lead to a dummy lam (except
-     when [Kill Ktype] everywhere). So a [MLdummy] is left accordingly. *)
+     when [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] everywhere). So a [Core.Expr.Erased_value] is left accordingly. *)
   let optdummy =
     match sign_kind s_full with
-    | UnsafeLogicalSig -> [MLdummy Kprop]
+    | UnsafeLogicalSig -> [Core.Expr.Erased_value Core.Erasure_reason.Proof]
     | _ -> []
   in
   (* Different situations depending of the number of arguments: *)
@@ -2133,7 +2147,7 @@ and extract_cst_app env sg mle mlt kn args =
     let ls' = ls - la in
     let s' = List.skipn la s in
     (* Recover resolved argument types from the instantiated+unified constant
-       type so that eta-expansion lambdas get proper types instead of Taxiom. *)
+       type so that eta-expansion lambdas get proper types instead of Core.Type.Axiom. *)
     let all_arg_types = List.map type_simpl (fst (type_decomp instantiated)) in
     let missing_types = List.lastn ls' all_arg_types in
     let mla = List.map (ast_lift ls') mla @ eta_args_sign ls' s' in
@@ -2160,18 +2174,21 @@ and extract_cst_app env sg mle mlt kn args =
 and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   (* First, we build the type of the constructor, stored in small pieces. *)
   let mi = extract_ind env kn in
-  let params_nb = mi.ind_nparams in
-  let oi = mi.ind_packets.(i) in
-  (* Use ip_sign to count type vars for constructor result type, not ip_vars.
-     For promoted dependent records, ip_vars includes promoted type variables
+  let params_nb = mi.parameter_count in
+  let oi = mi.packets.(i) in
+  (* Use signature to count type vars for constructor result type, not type_variables.
+     For promoted dependent records, type_variables includes promoted type variables
      (from carrier : Type fields) that are NOT parameters of the inductive type
-     itself. Using ip_sign avoids including them in the result type's type arg
+     itself. Using signature avoids including them in the result type's type arg
      list, preventing mgu mismatches. *)
-  let nb_tvars = List.length (List.filter (fun x -> x == Keep) oi.ip_sign)
-  and types = List.map (expand env) oi.ip_types.(j - 1) in
-  let list_tvar = List.map (fun i -> Tvar (Schematic, i)) (List.interval 1 nb_tvars) in
+  let nb_tvars = List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) oi.signature)
+  and types = List.map (expand env) oi.constructor_argument_types.(j - 1) in
+  let list_tvar = List.map (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                         variable = i}) (List.interval 1 nb_tvars) in
   let type_cons =
-    type_recomp (types, Tglob (GlobRef.IndRef ip, list_tvar, []))
+    type_recomp (types, Core.Type.Global_app {head = GlobRef.IndRef ip;
+                                              type_arguments = list_tvar;
+                                              index_arguments = []})
   in
   let type_cons = instantiate_prenex nb_tvars type_cons in
   (* Then, the usual variables [s], [ls], [la], ... *)
@@ -2197,24 +2214,24 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
       (* Count only the "structural" arrows in [mlt] — the arrows that the
          calling context explicitly placed. We follow the outermost meta chain
          to find the root type, but then count only arrows whose codomains are
-         DIRECTLY Tarr nodes (not metas resolving to Tarr). This prevents
+         DIRECTLY Core.Type.Arrow nodes (not metas resolving to Core.Type.Arrow). This prevents
          counting arrows inside resolved type variables. Example: map's function
-         slot is Tarr(v1, v2) where v2 is a fresh meta variable that was later
-         resolved to Tarr(list, list). We should report 1 (1 structural arrow),
+         slot is Core.Type.Arrow(v1, v2) where v2 is a fresh meta variable that was later
+         resolved to Core.Type.Arrow(list, list). We should report 1 (1 structural arrow),
          not 2, because the caller sees this as a 1-arg function returning an
          opaque type B. *)
       let rec deref_meta = function
-        | Tmeta {contents = Some t} -> deref_meta t
+        | Core.Type.Meta {contents = Some t} -> deref_meta t
         | t -> t
       in
       let rec count = function
-        | Tarr (_, b) ->
-          (* Only count deeper arrows if [b] is directly a Tarr, not a meta that
-             resolves to Tarr. A meta in codomain position indicates a type
+        | Core.Type.Arrow {result = b; _} ->
+          (* Only count deeper arrows if [b] is directly a Core.Type.Arrow, not a meta that
+             resolves to Core.Type.Arrow. A meta in codomain position indicates a type
              variable (like B in A -> B) that should be treated as opaque even
              if it was later resolved to a function type. *)
           ( match b with
-          | Tarr _ -> 1 + count b
+          | Core.Type.Arrow _ -> 1 + count b
           | _ -> 1 )
         | _ -> 0
       in
@@ -2237,43 +2254,47 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
       if params_nb > 0 && la_now >= params_nb then begin
         let db = db_from_rel_context env in
         let param_args = List.firstn params_nb args in
-        let n_sign = List.length oi.ip_sign in
-        let param_sign = List.firstn (min params_nb n_sign) oi.ip_sign in
+        let n_sign = List.length oi.signature in
+        let param_sign = List.firstn (min params_nb n_sign) oi.signature in
         let result_metas =
           match snd (type_decomp type_cons) with
-          | Tglob (_, l, []) -> Array.of_list l
+          | Core.Type.Global_app {type_arguments = l; index_arguments = []; _} -> Array.of_list l
           | _ -> [||]
         in
         let tvar_idx = ref 0 in
         List.iter2
           (fun sign_entry coq_arg ->
             ( match sign_entry with
-            | Keep ->
+            | Core.Signature.Argument.Runtime ->
               let idx = !tvar_idx in
               incr tvar_idx;
               if idx < Array.length result_metas then
                 ( match result_metas.(idx) with
-                | Tmeta r when r.contents = None ->
+                | Core.Type.Meta r when r.contents = None ->
                   ( try
                       let ty = extract_type env sg db 0 coq_arg [] in
                       ( match type_simpl ty with
                       (* A type variable is not an erased position: left open,
                          it generalises with the term that names it -- [B] in
                          [fun (B : Type) (x : B) => [x]], a binding of its own. *)
-                      | Tunknown | Tdummy _ | Tvar _ -> ()
+                      | Core.Type.Unknown | Core.Type.Erased _ | Core.Type.Variable _ -> ()
                       | concrete ->
                         let rec erase_leaves = function
-                          | Tglob (_, [], _) -> Tdummy Ktype
-                          | Tglob (g, args, ns) ->
-                            Tglob (g, List.map erase_leaves args, ns)
-                          | Tarr (a, b) -> Tarr (erase_leaves a, erase_leaves b)
-                          | _ -> Tdummy Ktype
+                          | Core.Type.Global_app {type_arguments = []; _} ->
+                            Core.Type.Erased Core.Erasure_reason.Type_argument
+                          | Core.Type.Global_app {head = g; type_arguments = args; index_arguments = ns} ->
+                            Core.Type.Global_app {head = g;
+                                                  type_arguments = List.map erase_leaves args;
+                                                  index_arguments = ns}
+                          | Core.Type.Arrow {parameter = a; result = b} ->
+                            Core.Type.Arrow {parameter = erase_leaves a; result = erase_leaves b}
+                          | _ -> Core.Type.Erased Core.Erasure_reason.Type_argument
                         in
                         pending_cpp_meta_fills :=
                           (r, erase_leaves concrete) :: !pending_cpp_meta_fills )
                     with e when best_effort_failure e -> () )
                 | _ -> () )
-            | Kill _ -> () ))
+            | Core.Signature.Argument.Erased _ -> () ))
           param_sign param_args
       end
     end
@@ -2281,22 +2302,22 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   let head mla =
     let typeargs =
       match snd (type_decomp type_cons) with
-      | Tglob (_, l, []) -> List.map type_simpl l
+      | Core.Type.Global_app {type_arguments = l; index_arguments = []; _} -> List.map type_simpl l
       | _ -> assert false
     in
     (* For promoted dependent records/type classes: extract concrete types for
        the erased Type constructor args and add them to typeargs. This gives
        instance structs access to the concrete carrier types. Example: mkMagma
-       nat Nat.add → typeargs = [Tglob(nat)] Example: Build_DirectedGraph
+       nat Nat.add → typeargs = [Core.Type.Global_app(nat)] Example: Build_DirectedGraph
        Directed A (DirectedEdge A) ... → typeargs = [Directed A, A, DirectedEdge
        A] *)
     let promoted_typeargs =
       let nb_sign_keeps =
-        List.length (List.filter (fun x -> x == Keep) oi.ip_sign)
+        List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) oi.signature)
       in
-      let has_promoted = List.length oi.ip_vars > nb_sign_keeps in
+      let has_promoted = List.length oi.type_variables > nb_sign_keeps in
       if lang () == Cpp && has_promoted then
-        (* ip_vars has more entries than ip_sign Keep count means there are
+        (* type_variables has more entries than signature Keep count means there are
            promoted type variables from erased Type fields. Extract concrete
            types from the erased constructor args. *)
         let db = db_from_rel_context env in
@@ -2305,14 +2326,14 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         let rec extract_promoted s_rem args_rem acc =
           match (s_rem, args_rem) with
           | [], _ | _, [] -> List.rev acc
-          | Kill Ktype :: s_rest, a :: a_rest ->
+          | Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument :: s_rest, a :: a_rest ->
             let ty =
               (* A promoted type field whose argument does not extract is
                  erased, which is the honest answer; a critical exception
                  (an interrupt, an anomaly) is not an erasure and must not
                  be turned into one. *)
               try extract_type env sg db 0 a []
-              with e when type_extraction_declined e -> Tdummy Ktype
+              with e when type_extraction_declined e -> Core.Type.Erased Core.Erasure_reason.Type_argument
             in
             extract_promoted s_rest a_rest (ty :: acc)
           | _ :: s_rest, _ :: a_rest -> extract_promoted s_rest a_rest acc
@@ -2321,23 +2342,26 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
       else
         []
     in
-    (* Append promoted typeargs AFTER existing typeargs so that Tvar indices
-       match: e.g., Tvar 1 = G, Tvar 2 = A (from ip_sign), Tvar 3 = edge
+    (* Append promoted typeargs AFTER existing typeargs so that Core.Type.Variable indices
+       match: e.g., Core.Type.Variable 1 = G, Core.Type.Variable 2 = A (from signature), Core.Type.Variable 3 = edge
        (promoted), and type_args = [Directed A, A, DirectedEdge A]. *)
     let all_typeargs = typeargs @ promoted_typeargs in
-    let typ = Tglob (GlobRef.IndRef ip, all_typeargs, []) in
+    let typ = Core.Type.Global_app {head = GlobRef.IndRef ip; type_arguments = all_typeargs; index_arguments = []} in
     put_magic_if
       ~from:type_cons
       ~into:(type_recomp (metas, a))
       magic1
-      (MLcons (typ, GlobRef.ConstructRef cp, mla, Occurrence.fresh ()))
+      (Core.Expr.Construct {result_type = typ;
+                            constructor = GlobRef.ConstructRef cp;
+                            arguments = mla;
+                            occurrence = Core.Occurrence.fresh ()})
   in
   (* Decompose the instantiated+unified constructor type to recover the resolved
      argument types. After [instantiate_prenex] replaced Tvars with metas, and
      [needs_magic] unified those metas with the expected types, [type_simpl]
      chases the meta chains to get concrete types. These are used by
      [anonym_or_dummy_lams_typed] so that partially applied constructors get
-     proper types in their eta-expansion lambdas instead of [Taxiom]. *)
+     proper types in their eta-expansion lambdas instead of [Core.Type.Axiom]. *)
   let resolved_arg_types = List.map type_simpl (fst (type_decomp type_cons)) in
   (* Different situations depending of the number of arguments: *)
   if la < params_nb then
@@ -2378,9 +2402,9 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         (* Split: outer lambda has [context_arity_before_unify] params, inner
            lambda has the rest. The inner lambda captures the outer params and
            applies the constructor with all args. We wrap the inner lambda in
-           [MLbarrier (_, _)] so that {!Mlutil.collect_lams} stops at the
-           outer lambda boundary: it only collects consecutive [MLlam] nodes.
-           [MLbarrier] carries no coercion, so the C++ translation renders the
+           [Core.Expr.Lambda_group_barrier (_, _)] so that {!Mlutil.collect_lams} stops at the
+           outer lambda boundary: it only collects consecutive [Core.Expr.Lambda] nodes.
+           [Core.Expr.Lambda_group_barrier] carries no coercion, so the C++ translation renders the
            inner lambda as the return value of the outer lambda. *)
         let ca = context_arity_before_unify in
         let outer_s = List.firstn ca s' in
@@ -2388,7 +2412,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         let outer_types = List.firstn ca missing_types in
         let inner_types = List.skipn ca missing_types in
         let inner = anonym_or_dummy_lams_typed (head mla) inner_types inner_s in
-        let inner_barrier = MLbarrier (inner, Occurrence.fresh ()) in
+        let inner_barrier = Core.Expr.Lambda_group_barrier {value = inner; occurrence = Core.Occurrence.fresh ()} in
         put_magic_if
           ~from:a
           ~into:mlt
@@ -2421,7 +2445,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
   if Int.equal br_size 0 then (
     add_recursors env kn;
     (* May have passed unseen if logical ... *)
-    MLexn "absurd case" )
+    Core.Expr.Runtime_error "absurd case" )
   else (* [c] has an inductive type, and is not a type scheme type. *)
     let t = type_of env sg c in
     (* The only non-informative case: [c] is of sort [Prop]/[SProp] *)
@@ -2431,28 +2455,31 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
       (* Logical singleton case: *)
       (* [match c with C i j k -> t] becomes [t'] *)
       assert (Int.equal br_size 1);
-      let s = iterate (fun l -> Kill Kprop :: l) ni.(0) [] in
-      let mlt = iterate (fun t -> Tarr (Tdummy Kprop, t)) ni.(0) mlt in
+      let s = iterate (fun l -> Core.Signature.Argument.Erased Core.Erasure_reason.Proof :: l) ni.(0) [] in
+      let mlt = iterate (fun t -> Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Proof;
+                                                   result = t}) ni.(0) mlt in
       let e = extract_maybe_term env sg mle mlt br.(0) in
       snd (case_expunge s e) )
     else
       let mi = extract_ind env kn in
-      let oi = mi.ind_packets.(i) in
-      (* Use ip_sign (not ip_vars) to count type vars for the head type. For
-         promoted dependent records, ip_vars includes promoted type variables
+      let oi = mi.packets.(i) in
+      (* Use signature (not type_variables) to count type vars for the head type. For
+         promoted dependent records, type_variables includes promoted type variables
          from carrier : Type fields, but the inductive type itself has no type
-         parameters. Using ip_sign avoids creating a Tglob with too many type
+         parameters. Using signature avoids creating a Core.Type.Global_app with too many type
          args, preventing mgu mismatches. *)
       let nb_sign_vars =
-        List.length (List.filter (fun x -> x == Keep) oi.ip_sign)
+        List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) oi.signature)
       in
       let metas = Array.init nb_sign_vars new_meta in
       (* The extraction of the head. *)
-      let type_head = Tglob (GlobRef.IndRef ip, Array.to_list metas, []) in
+      let type_head = Core.Type.Global_app {head = GlobRef.IndRef ip;
+                                            type_arguments = Array.to_list metas;
+                                            index_arguments = []} in
       let a = extract_term env sg mle type_head c [] in
       let has_unresolved_meta =
         Array.exists (fun m -> match m with
-          | Tmeta {contents = None} -> true
+          | Core.Type.Meta {contents = None} -> true
           | _ -> false) metas
       in
       ( if has_unresolved_meta then try
@@ -2462,32 +2489,32 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
             let kept_args =
               let rec filter_keep sign args =
                 match sign, args with
-                | Keep :: s, a :: aa -> a :: filter_keep s aa
+                | Core.Signature.Argument.Runtime :: s, a :: aa -> a :: filter_keep s aa
                 | _ :: s, _ :: aa -> filter_keep s aa
                 | _ -> []
               in
-              filter_keep oi.ip_sign (Array.to_list args)
+              filter_keep oi.signature (Array.to_list args)
             in
             List.iter2 (fun meta coq_arg ->
               match meta with
-              | Tmeta ({contents = None} as r) ->
+              | Core.Type.Meta ({contents = None} as r) ->
                 let ml_ty =
                   (* Leaving the meta unresolved is the fallback, so a
                      failure to extract this argument is recoverable; a
                      critical exception is not. *)
                   try extract_type env sg [] 0 coq_arg []
-                  with e when type_extraction_declined e -> Tunknown
+                  with e when type_extraction_declined e -> Core.Type.Unknown
                 in
                 let rec has_unknown = function
-                  | Tunknown -> true
-                  | Tmeta {contents = None} -> true
-                  | Tmeta {contents = Some t} -> has_unknown t
-                  | Tglob (_, args, _) -> List.exists has_unknown args
-                  | Tarr (a, b) -> has_unknown a || has_unknown b
+                  | Core.Type.Unknown -> true
+                  | Core.Type.Meta {contents = None} -> true
+                  | Core.Type.Meta {contents = Some t} -> has_unknown t
+                  | Core.Type.Global_app {type_arguments = args; _} -> List.exists has_unknown args
+                  | Core.Type.Arrow {parameter = a; result = b} -> has_unknown a || has_unknown b
                   | _ -> false
                 in
                 if not (has_unknown ml_ty) then
-                  Meta.solve r ml_ty
+                  Core.Meta.solve r ml_ty
               | _ -> ()
             ) (Array.to_list metas) kept_args
           | _ -> ()
@@ -2497,20 +2524,26 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
         let r = GlobRef.ConstructRef (ip, i + 1) in
         (* The types of the arguments of the corresponding constructor. *)
         let f t = type_subst_vect metas (expand env t) in
-        let l = List.map f oi.ip_types.(i) in
+        let l = List.map f oi.constructor_argument_types.(i) in
         (* the corresponding signature *)
-        let s = List.map (type2sign env) oi.ip_types.(i) in
-        let s = sign_with_implicits r s mi.ind_nparams in
+        let s = List.map (type2sign env) oi.constructor_argument_types.(i) in
+        let s = sign_with_implicits r s mi.parameter_count in
         (* Extraction of the branch (in functional form). *)
         let e = extract_maybe_term env sg mle (type_recomp (l, mlt)) br.(i) in
         (* We suppress dummy arguments according to signature. *)
         let ids, e = case_expunge s e in
-        {br_binders = List.rev ids; br_type = mlt; br_pattern = Pusual r; br_body = e}
+        {Core.Match.Branch.binders = List.rev ids;
+         result_type = mlt;
+         pattern = Core.Pattern.Shallow_constructor r;
+         body = e}
       in
       (* Apply standard case extraction for all inductives. *)
       let typs = List.map type_simpl (Array.to_list metas) in
-      let typ = Tglob (GlobRef.IndRef ip, typs, []) in
-      MLcase (typ, a, Array.init br_size extract_branch, Occurrence.fresh ())
+      let typ = Core.Type.Global_app {head = GlobRef.IndRef ip; type_arguments = typs; index_arguments = []} in
+      Core.Expr.Match {scrutinee_type = typ;
+                       scrutinee = a;
+                       branches = Array.init br_size extract_branch;
+                       occurrence = Core.Occurrence.fresh ()}
 
 (** {2 Extraction of a (co)-fixpoint} *)
 
@@ -2536,8 +2569,11 @@ and extract_fix ?tys env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
   let mle = Array.fold_left Mlenv.push_type mle metas in
   let ei = Array.map2 (extract_maybe_term env sg mle) metas ci in
   let ids = Array.mapi (fun i x -> (id_of_name x.binder_name, metas.(i))) fi in
-  if is_cofix then MLcofixpoint (i, ids, ei, Occurrence.fresh ())
-  else MLfixpoint (i, ids, ei, Occurrence.fresh ())
+  if is_cofix then Core.Expr.Cofixpoint {selected = i;
+                                         functions = ids;
+                                         bodies = ei;
+                                         occurrence = Core.Occurrence.fresh ()}
+  else Core.Expr.Fixpoint {selected = i; functions = ids; bodies = ei; occurrence = Core.Occurrence.fresh ()}
 
 (** {1 ML declarations} *)
 
@@ -2581,7 +2617,7 @@ let rec gentypvar_ok sg c =
     variables are not prefixed to the type as arrows (the commented-out body
     shows that alternative). *)
 let add_tvars _n t =
-  t (* if n <= 1 then t else Tarr (Tvar (n-1), add_tvars (n-1) t) *)
+  t (* if n <= 1 then t else Core.Type.Arrow (Core.Type.Variable (n-1), add_tvars (n-1) t) *)
 
 (** Removes erased type arguments from a type scheme. *)
 let type_expunge env = type_expunge (mlt_env env)
@@ -2791,7 +2827,7 @@ let detect_sigma_assertions env sg kn typ =
     @param kn The constant name (used for schema caching and implicit lookup)
     @param body The definition body as an [EConstr.t] (pre-substituted for mutual fixpoints)
     @param typ The Rocq type of the constant
-    @return A pair [(ml_ast, ml_type)] of the extracted term and its ML type *)
+    @return A pair [(Core.Expr.t, Core.Type.t)] of the extracted term and its ML type *)
 let extract_std_constant env sg kn body typ =
   reset_meta_count ();
   pending_cpp_meta_fills := [];
@@ -2831,7 +2867,7 @@ let extract_std_constant env sg kn body typ =
       decompose_lambda_n sg n body
     else
       let s, s' = List.chop m s in
-      if List.for_all (( == ) Keep) s' && sign_kind s != UnsafeLogicalSig then
+      if List.for_all (( == ) Core.Signature.Argument.Runtime) s' && sign_kind s != UnsafeLogicalSig then
         decompose_lambda_n sg m body
       else
         decomp_lams_eta_n n m env sg body typ_body
@@ -2859,7 +2895,7 @@ let extract_std_constant env sg kn body typ =
   (* The initial ML environment. *)
   let mle = List.fold_left Mlenv.push_std_type Mlenv.empty l in
   (* The lambdas names. *)
-  let ids = List.map (fun (n, _) -> Id (id_of_name n.binder_name)) rels in
+  let ids = List.map (fun (n, _) -> Core.Binder_name.Source (id_of_name n.binder_name)) rels in
   (* The according Rocq environment. *)
   let env = push_rels_assum rels env in
   (* The real extraction: *)
@@ -2869,8 +2905,8 @@ let extract_std_constant env sg kn body typ =
      inside a lambda whose return type is a dependent/erased type). *)
   if lang () == Cpp then
     List.iter
-      (fun (r, erased) ->
-        if r.contents = None then Meta.solve r erased)
+      (fun ((r : Core.Meta.t), erased) ->
+        if r.contents = None then Core.Meta.solve r erased)
       !pending_cpp_meta_fills;
   pending_cpp_meta_fills := [];
   (* Expunging term and type from dummy lambdas. *)
@@ -2880,8 +2916,8 @@ let extract_std_constant env sg kn body typ =
     if not singleton then s
     else
       let rec arrows = function
-        | Tarr (_, b) -> 1 + arrows b
-        | Tmeta {contents = Some t} -> arrows t
+        | Core.Type.Arrow {result = b; _} -> 1 + arrows b
+        | Core.Type.Meta {contents = Some t} -> arrows t
         | _ -> 0
       in
       List.firstn (min (arrows t) (List.length s)) s
@@ -2917,8 +2953,8 @@ let extract_axiom env sg kn typ =
     @param fi, ti, ci Binder names, types, and bodies of the fixpoint group *)
 let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
   let n = Array.length vkn in
-  let types = Array.make n (Tdummy Kprop)
-  and terms = Array.make n (MLdummy Kprop) in
+  let types = Array.make n (Core.Type.Erased Core.Erasure_reason.Proof)
+  and terms = Array.make n (Core.Expr.Erased_value Core.Erasure_reason.Proof) in
   let kns = Array.to_list vkn in
   current_fixpoints := kns;
   (* for replacing recursive calls [Rel ..] by the corresponding [Const]: *)
@@ -2951,10 +2987,10 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
     Array.iter (fun kn -> add_cofixpoint (GlobRef.ConstRef kn)) vkn;
   (* [vkn] names the bodies of a kernel (co)fixpoint, of which there is at
      least one. *)
-  Dfix
+  Core.Decl.Recursive_group
     (Core.Nonempty.of_list_exn
        (List.init n (fun i ->
-            {fd_ref = GlobRef.ConstRef vkn.(i); fd_body = terms.(i); fd_type = types.(i)} )))
+            {Core.Recursion.Definition.entity = GlobRef.ConstRef vkn.(i); body = terms.(i); type_ = types.(i)} )))
 
 (** Main entry point for extracting a constant declaration, dispatching on its
     {!flag} and on its body (symbol, primitive or axiom, transparent
@@ -2968,7 +3004,7 @@ let extract_constant access env kn cb =
   let mk_typ_ax () =
     let n = type_scheme_nb_args env sg typ in
     let ids = iterate (fun l -> anonymous_name :: l) n [] in
-    Dtype (r, ids, Taxiom)
+    Core.Decl.Type_alias {entity = r; parameters = ids; body = Core.Type.Axiom}
   in
   let mk_typ c =
     let s, vl = type_sign_vl env sg typ in
@@ -2978,17 +3014,19 @@ let extract_constant access env kn cb =
       try fst (flag_of_type env sg c) == Logic
       with Retyping.RetypeError _ -> false
     in
-    if is_logical then Dtype (r, vl, Tdummy Ktype)
+    if is_logical then Core.Decl.Type_alias {entity = r;
+                                             parameters = vl;
+                                             body = Core.Type.Erased Core.Erasure_reason.Type_argument}
     else begin
       (match t with
-       | Tunknown | Taxiom -> add_erased_type_const r
+       | Core.Type.Unknown | Core.Type.Axiom -> add_erased_type_const r
        | _ -> ());
       Table.add_type_scheme_arity r (List.length vl);
       (* An alias body is where a type-level [Definition] under a [Context]
          writes its dependence on that context; see
          {!Table.add_type_alias_body}. *)
       Table.add_type_alias_body r t;
-      Dtype (r, vl, t)
+      Core.Decl.Type_alias {entity = r; parameters = vl; body = t}
     end
   in
   let mk_ax () =
@@ -2996,7 +3034,7 @@ let extract_constant access env kn cb =
     (* If all arguments of this axiom are dummy (Prop/SProp), the function can
        never be called with real values — treat it as logical. *)
     let rec all_args_dummy = function
-      | Tarr (t1, t2) ->
+      | Core.Type.Arrow {parameter = t1; result = t2} ->
         if isTdummy t1 then
           all_args_dummy t2
         else
@@ -3005,13 +3043,15 @@ let extract_constant access env kn cb =
     in
     let has_args =
       match t with
-      | Tarr _ -> true
+      | Core.Type.Arrow _ -> true
       | _ -> false
     in
     if has_args && all_args_dummy t then
-      Dterm (r, MLdummy Kprop, Tdummy Kprop)
+      Core.Decl.Value {entity = r;
+                       body = Core.Expr.Erased_value Core.Erasure_reason.Proof;
+                       type_ = Core.Type.Erased Core.Erasure_reason.Proof}
     else (
-      Dterm (r, MLaxiom (Constant.to_string kn), t) )
+      Core.Decl.Value {entity = r; body = Core.Expr.Axiom_value (Constant.to_string kn); type_ = t} )
   in
   (* An instance's class arguments are where its erased names come from.
      [PIV : @PI ProvenanceV PointerV] declares no type of its own: [ptr]
@@ -3169,17 +3209,19 @@ let extract_constant access env kn cb =
         List.length (Ml_type_util.ml_value_domains short)
         < List.length (Ml_type_util.ml_value_domains t)
       then register_glob_def r t );
-    Dterm (r, e, t)
+    Core.Decl.Value {entity = r; body = e; type_ = t}
   in
   try
     match flag_of_type env sg typ with
     | Logic, TypeScheme ->
       warn_log ();
       let s, vl = type_sign_vl env sg typ in
-      Dtype (r, vl, Tdummy Ktype)
+      Core.Decl.Type_alias {entity = r; parameters = vl; body = Core.Type.Erased Core.Erasure_reason.Type_argument}
     | Logic, Default ->
       warn_log ();
-      Dterm (r, MLdummy Kprop, Tdummy Kprop)
+      Core.Decl.Value {entity = r;
+                       body = Core.Expr.Erased_value Core.Erasure_reason.Proof;
+                       type_ = Core.Type.Erased Core.Erasure_reason.Proof}
     | Info, TypeScheme ->
       ( match cb.const_body with
       | Symbol _ ->
@@ -3232,12 +3274,14 @@ let extract_constant_spec env kn cb =
     match flag_of_type env sg typ with
     | Logic, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
-      Stype (r, vl, Some (Tdummy Ktype))
-    | Logic, Default -> Sval (r, MLaxiom "SVAL extraction issue", Tdummy Kprop)
+      Core.Signature.Declaration.Type {entity = r;
+                                       parameters = vl;
+                                       body = Some (Core.Type.Erased Core.Erasure_reason.Type_argument)}
+    | Logic, Default -> Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = Core.Type.Erased Core.Erasure_reason.Proof}
     | Info, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
       (* A type scheme with more signature slots than type variables takes at
-         least one VALUE argument (e.g. [sym_semty : sym -> Type], [s=[Kill]],
+         least one VALUE argument (e.g. [sym_semty : sym -> Type], [s=[Core.Signature.Argument.Erased]],
          [vl=[]]).  Such a family applied to a runtime value is not
          representable as a C++ type; record it so that C++ type conversion
          ([convert_ml_type_to_cpp_type]) erases it to [std::any] at use sites
@@ -3249,20 +3293,20 @@ let extract_constant_spec env kn cb =
       ( match cb.const_body with
       | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ ->
         if value_dep then Table.add_value_dep_type_scheme r;
-        Stype (r, vl, None)
+        Core.Signature.Declaration.Type {entity = r; parameters = vl; body = None}
       | Def body ->
         let db = db_from_sign s in
         let body = get_body body in
         let t = extract_type_scheme env sg db body (List.length s) in
         ( match t with
-        | (Tunknown | Taxiom) when value_dep -> Table.add_value_dep_type_scheme r
+        | (Core.Type.Unknown | Core.Type.Axiom) when value_dep -> Table.add_value_dep_type_scheme r
         | _ -> () );
-        Stype (r, vl, Some t) )
+        Core.Signature.Declaration.Type {entity = r; parameters = vl; body = Some t} )
     | Info, Default ->
       let t = Ml_schema.body (record_constant_type env sg kn (Some typ)) in
       let mk_spec c =
         let e, ty = extract_std_constant env sg kn c typ in
-        Sval (r, e, ty)
+        Core.Signature.Declaration.Value {entity = r; body = e; type_ = ty}
       in
       ( match cb.const_body with
       | Def c ->
@@ -3271,7 +3315,7 @@ let extract_constant_spec env kn cb =
         | Some p ->
           let body = fake_match_projection env p in
           mk_spec (EConstr.of_constr body) )
-      | _ -> Sval (r, MLaxiom "SVAL extraction issue", type_expunge env t) )
+      | _ -> Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = type_expunge env t} )
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
 (** Extracts a module-level "with type" constraint. *)
@@ -3294,8 +3338,9 @@ let extract_constr env sg c =
   try
     let typ = type_of env sg c in
     match flag_of_type env sg typ with
-    | _, TypeScheme -> (MLdummy Ktype, Tdummy Ktype)
-    | Logic, _ -> (MLdummy Kprop, Tdummy Kprop)
+    | _, TypeScheme ->
+      (Core.Expr.Erased_value Core.Erasure_reason.Type_argument, Core.Type.Erased Core.Erasure_reason.Type_argument)
+    | Logic, _ -> (Core.Expr.Erased_value Core.Erasure_reason.Proof, Core.Type.Erased Core.Erasure_reason.Proof)
     | Info, Default ->
       let mlt = extract_type env sg [] 1 typ [] in
       (extract_term env sg Mlenv.empty mlt c [], mlt)
@@ -3319,29 +3364,31 @@ let extract_inductive env kn =
         else
           t :: l'
     in
-    filter (1 + ind.ind_nparams) l
+    filter (1 + ind.parameter_count) l
   in
   let packets =
     Array.mapi
-      (fun i p -> {p with ip_types = Array.mapi (f i) p.ip_types})
-      ind.ind_packets
+      (fun i (p : Core.Inductive.Packet.t) -> {p with Core.Inductive.Packet.constructor_argument_types = Array.mapi (f i) p.constructor_argument_types})
+      ind.packets
   in
-  {ind with ind_packets = packets}
+  {ind with Core.Inductive.packets = packets}
 
-(** {2 Is a [ml_decl] logical ?} *)
+(** {2 Is a [Core.Decl.t] logical ?} *)
 
 let logical_decl = function
-  | Dterm (_, MLdummy _, Tdummy _) -> true
-  | Dtype (_, _, Tdummy _) -> true
-  | Dfix fds ->
-    Core.Nonempty.for_all (fun fd -> isMLdummy fd.fd_body && isTdummy fd.fd_type) fds
-  | Dind (_, i) -> Array.for_all (fun ip -> ip.ip_logical) i.ind_packets
+  | Core.Decl.Value {body = Core.Expr.Erased_value _; type_ = Core.Type.Erased _; _} -> true
+  | Core.Decl.Type_alias {body = Core.Type.Erased _; _} -> true
+  | Core.Decl.Recursive_group fds ->
+    Core.Nonempty.for_all (fun (fd : Core.Recursion.Definition.t) -> isMLdummy fd.body && isTdummy fd.type_) fds
+  | Core.Decl.Inductive {definition = (i : Core.Inductive.t); _} ->
+    Array.for_all (fun (ip : Core.Inductive.Packet.t) -> ip.logical) i.packets
   | _ -> false
 
-(** {2 Is a [ml_spec] logical ?} *)
+(** {2 Is a [Core.Signature.Declaration.t] logical ?} *)
 
 let logical_spec = function
-  | Stype (_, _, Some (Tdummy _)) -> true
-  | Sval (_, _, Tdummy _) -> true
-  | Sind (_, i) -> Array.for_all (fun ip -> ip.ip_logical) i.ind_packets
+  | Core.Signature.Declaration.Type {body = Some (Core.Type.Erased _); _} -> true
+  | Core.Signature.Declaration.Value {type_ = Core.Type.Erased _; _} -> true
+  | Core.Signature.Declaration.Inductive {definition = (i : Core.Inductive.t); _} ->
+    Array.for_all (fun (ip : Core.Inductive.Packet.t) -> ip.logical) i.packets
   | _ -> false

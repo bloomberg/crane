@@ -5,7 +5,6 @@
 
 open Crane_plugin
 open Names
-open Miniml
 
 let check name cond =
   if not cond then (
@@ -14,7 +13,9 @@ let check name cond =
 
 let r s = GlobRef.VarRef (Id.of_string s)
 let mp s = ModPath.MPfile (DirPath.make [Id.of_string s])
-let term name body ty = (Label.make name, SEdecl (Dterm (r name, body, ty)))
+let term name body ty = (Label.make name, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r name;
+                                                                                                   body;
+                                                                                                   type_ = ty}))
 let frozen sel = Core_phase.freeze (Core_phase.optimize Fun.id (Core_phase.extracted [(mp "M", sel)]))
 
 let refused sel =
@@ -24,23 +25,25 @@ let refused sel =
 
 let () =
   Unix.putenv "CRANE_CHECK_IR" "1";
-  let nat = Tglob (r "nat", [], []) in
-  let lam = MLlam (Dummy, nat, fresh_rel 1) in
-  let fine = [term "f" lam (Tarr (nat, nat))] in
+  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let lam = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                              parameter_type = nat;
+                              body = Core.Expr.fresh_rel 1} in
+  let fine = [term "f" lam (Core.Type.Arrow {parameter = nat; result = nat})] in
   check "a well-formed program freezes" (not (refused fine));
   check "a local group selecting a missing member is refused"
-    (refused [term "h" (MLfixpoint (2, [|(Id.of_string "go", nat)|], [|lam|], Occurrence.fresh ())) nat]);
+    (refused [term "h" (Core.Expr.Fixpoint {selected = 2; functions = [|(Id.of_string "go", nat)|]; bodies = [|lam|]; occurrence = Core.Occurrence.fresh ()}) nat]);
   check "a declaration made twice is refused" (refused (fine @ fine));
-  let read = fresh_rel 1 in
-  let f = MLglob (Global_use.monomorphic (r "f")) in
+  let read = Core.Expr.fresh_rel 1 in
+  let f = Core.Expr.Global (Core.Global_use.monomorphic (r "f")) in
   check "two reads of their own freeze"
-    (not (refused [term "d" (MLlam (Dummy, nat, MLapp (f, [fresh_rel 1; fresh_rel 1]))) (Tarr (nat, nat))]));
+    (not (refused [term "d" (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = nat; body = Core.Expr.Apply {callee = f; arguments = [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 1]}}) (Core.Type.Arrow {parameter = nat; result = nat})]));
   check "one read at two terms is refused"
-    (refused [term "e" (MLlam (Dummy, nat, MLapp (f, [read; read]))) (Tarr (nat, nat))]);
+    (refused [term "e" (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = nat; body = Core.Expr.Apply {callee = f; arguments = [read; read]}}) (Core.Type.Arrow {parameter = nat; result = nat})]);
   check "one use in two definitions is refused" (refused [term "a" f nat; term "b" f nat]);
   let use_at scheme ty =
-    MLglob
-      (Global_use.polymorphic (r "g")
+    Core.Expr.Global
+      (Core.Global_use.polymorphic (r "g")
          (Scheme.Instantiation.make scheme (fun _ ->
               {Scheme.solution = Scheme.Type ty; source = Scheme.Not_written} ) ) )
   in
@@ -48,10 +51,10 @@ let () =
     (not (refused [term "u" (use_at (Scheme.Id.fresh (r "g") ~arity:1) nat) nat]));
   check "a use instantiated at another declaration's scheme is refused"
     (refused [term "v" (use_at (Scheme.Id.fresh (r "h") ~arity:1) nat) nat]);
-  Table.add_type (r "p") (Tarr (Tvar (Schematic, 1), Tvar (Schematic, 1)));
+  Table.add_type (r "p") (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}; result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}});
   let use_of_p scheme =
-    MLglob
-      (Global_use.polymorphic (r "p")
+    Core.Expr.Global
+      (Core.Global_use.polymorphic (r "p")
          (Scheme.Instantiation.make scheme (fun _ ->
               {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) ) )
   in
@@ -60,19 +63,21 @@ let () =
   check "a use at a look-alike of its callee's scheme is refused"
     (refused [term "y" (use_of_p (Scheme.Id.fresh (r "p") ~arity:1)) nat]);
   check "a use holding a metavariable in its instantiation is refused"
-    (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Tmeta (Meta.fresh 3))) nat]);
-  let shared = Tmeta (Meta.fresh 1) in
-  let solved = Tmeta (Meta.solved 2 nat) in
-  let open_term = term "k" (MLlam (Dummy, shared, fresh_rel 1)) (Tarr (shared, solved)) in
+    (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Core.Type.Meta (Core.Meta.fresh 3))) nat]);
+  let shared = Core.Type.Meta (Core.Meta.fresh 1) in
+  let solved = Core.Type.Meta (Core.Meta.solved 2 nat) in
+  let open_term = term "k" (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = shared; body = Core.Expr.fresh_rel 1}) (Core.Type.Arrow {parameter = shared; result = solved}) in
   let zonked = frozen [open_term] in
   check "each unsolved metavariable becomes one open annotation"
     (Core_phase.open_annotations zonked = 1);
   ( match Core_phase.structure zonked with
-  | [(_, [(_, SEdecl (Dterm (_, MLlam (_, Topen o, _), Tarr (Topen o', t))))])] ->
-    check "the annotations sharing a cell share its open annotation" (Open.equal o o');
+  | [(_, [(_, Core.Module.Structure_item.Declaration (Core.Decl.Value {body = Core.Expr.Lambda {parameter_type = Core.Type.Open o; _};
+                                                                       type_ = Core.Type.Arrow {parameter = Core.Type.Open o';
+                                                                                                result = t}; _}))])] ->
+    check "the annotations sharing a cell share its open annotation" (Core.Open.equal o o');
     check "a solved metavariable is replaced by its solution" (t = nat)
   | _ -> check "freezing leaves no metavariable in the program" false );
-  Meta.thaw ();
+  Core.Meta.thaw ();
   let two = Core_phase.extracted [(mp "A", fine); (mp "B", [])] in
   let a, b = Core_phase.partition (ModPath.equal (mp "A")) two in
   check "partition splits by top-level module"
@@ -83,8 +88,8 @@ let () =
 (* Normalizing the frozen program checks that the result is a fixed point of
    the pass, and leaves the metavariable supply where the pass left it. *)
 let () =
-  let nat = Tglob (r "nat", [], []) in
-  let fine = [term "n" (MLlam (Dummy, nat, fresh_rel 1)) (Tarr (nat, nat))] in
+  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let fine = [term "n" (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = nat; body = Core.Expr.fresh_rel 1}) (Core.Type.Arrow {parameter = nat; result = nat})] in
   let normalizes pass =
     match Core_phase.normalize pass (frozen fine) with
     | _ -> true
@@ -95,14 +100,20 @@ let () =
       structure =
         Modutil.map_struct_decls
           (function
-            | Dterm (r, b, t) -> Dterm (r, MLcoerce (t, t, b, Occurrence.fresh ()), t)
+            | Core.Decl.Value {entity = r; body = b; type_ = t} ->
+              Core.Decl.Value {entity = r;
+                               body = Core.Expr.Coerce {source_type = t;
+                                                        target_type = t;
+                                                        value = b;
+                                                        occurrence = Core.Occurrence.fresh ()};
+                               type_ = t}
             | d -> d )
           p.structure }
   in
   let decide_once (p : Core_phase.normalizing) =
     if Splices.decided p.splices (r "n") then p else {p with splices = Splices.decide (r "n") p.splices}
   in
-  let decide_anew (p : Core_phase.normalizing) = {p with splices = Splices.decide ~entered:(Occurrence.fresh ()) (r "n") p.splices} in
+  let decide_anew (p : Core_phase.normalizing) = {p with splices = Splices.decide ~entered:(Core.Occurrence.fresh ()) (r "n") p.splices} in
   check "a pass its result is a fixed point of normalizes" (normalizes Fun.id);
   check "a pass that would rewrite its own result is refused" (not (normalizes coerce));
   check "a pass that decides once what it splices normalizes" (normalizes decide_once);
@@ -113,61 +124,80 @@ let () =
   let before = Mlutil.new_meta () in
   ignore (Core_phase.normalize minting (frozen fine));
   ( match (before, Mlutil.new_meta ()) with
-  | Topen o, Topen o' -> check "checking a normal form makes no number" (Open.id o' = Open.id o + 2)
+  | Core.Type.Open o, Core.Type.Open o' -> check "checking a normal form makes no number" (Core.Open.id o' = Core.Open.id o + 2)
   | _ -> check "a frozen program makes open annotations" false );
-  Meta.thaw ()
+  Core.Meta.thaw ()
 
 (* After freezing, nothing solves a metavariable. *)
 let () =
-  let nat = Tglob (r "nat", [], []) in
-  let m = Meta.fresh 7 and m' = Meta.fresh 8 in
-  Meta.freeze ();
+  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let m = Core.Meta.fresh 7 and m' = Core.Meta.fresh 8 in
+  Core.Meta.freeze ();
   check "a solve of the frozen program is refused"
-    (match Meta.solve m nat with () -> false | exception e -> CErrors.is_anomaly e);
+    (match Core.Meta.solve m nat with () -> false | exception e -> CErrors.is_anomaly e);
   check "a refused solve writes nothing" (m.contents = None);
-  Meta.thaw ();
-  Meta.solve m' nat;
+  Core.Meta.thaw ();
+  Core.Meta.solve m' nat;
   check "a thawed program solves freely" (m'.contents = Some nat)
 
 (* A slot fills an open annotation without writing it: one met twice is
    filled once, and the fill is carried to the terms that mention it. *)
 let () =
-  let nat = Tglob (r "nat", [], []) and bool = Tglob (r "bool", [], []) in
-  let pair a b = Tglob (r "pair", [a; b], []) in
-  let o = Open.fresh 15 and other = Open.fresh 15 in
+  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} and bool = Core.Type.Global_app {head = r "bool"; type_arguments = []; index_arguments = []} in
+  let pair a b = Core.Type.Global_app {head = r "pair"; type_arguments = [a; b]; index_arguments = []} in
+  let o = Core.Open.fresh 15 and other = Core.Open.fresh 15 in
   let fills = ref [] in
   let refined =
-    Ml_type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Topen o) (Topen o))
+    Ml_type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Core.Type.Open o) (Core.Type.Open o))
       (pair nat bool)
   in
   check "a hole met twice is filled once" (refined = pair nat nat);
   check "the fill is reported" (List.length !fills = 1);
-  let body = MLlam (Dummy, Topen o, fresh_rel 1) in
+  let body = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                               parameter_type = Core.Type.Open o;
+                               body = Core.Expr.fresh_rel 1} in
   check "a term mentioning the hole is generated with it filled"
-    (Ml_type_util.fill_holes !fills body = MLlam (Dummy, nat, fresh_rel 1));
+    (Ml_type_util.fill_holes !fills body = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                                             parameter_type = nat;
+                                                             body = Core.Expr.fresh_rel 1});
   check "another hole of the same number is not filled"
-    (Ml_type_util.fill_holes !fills (MLlam (Dummy, Topen other, fresh_rel 1)) = MLlam (Dummy, Topen other, fresh_rel 1))
+    (Ml_type_util.fill_holes !fills (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                                       parameter_type = Core.Type.Open other;
+                                                       body = Core.Expr.fresh_rel 1}) = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                                                                                          parameter_type = Core.Type.Open other;
+                                                                                                          body = Core.Expr.fresh_rel 1})
 
 (* A local definition's open types are minted before freezing, rigid: each
    recursive group's from 1, a let-bound lambda's, its groups' included,
    past the variables of the declaration it is in. *)
 let () =
-  let nat = Tglob (r "nat", [], []) in
-  let list t = Tglob (r "list", [t], []) in
+  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let list t = Core.Type.Global_app {head = r "list"; type_arguments = [t]; index_arguments = []} in
   let go = Id.of_string "go" in
   let group m =
-    MLfixpoint (0, [|(go, Tarr (list (Tmeta m), nat))|], [|MLlam (Dummy, list (Tmeta m), fresh_rel 1)|], Occurrence.fresh ())
+    Core.Expr.Fixpoint {selected = 0;
+                        functions = [|(go, Core.Type.Arrow {parameter = list (Core.Type.Meta m); result = nat})|];
+                        bodies = [|Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                                     parameter_type = list (Core.Type.Meta m);
+                                                     body = Core.Expr.fresh_rel 1}|];
+                        occurrence = Core.Occurrence.fresh ()}
   in
-  let a = Meta.fresh 11 and b = Meta.fresh 12 and c = Meta.fresh 13 and d = Meta.fresh 14 in
+  let a = Core.Meta.fresh 11 and b = Core.Meta.fresh 12 and c = Core.Meta.fresh 13 and d = Core.Meta.fresh 14 in
   let body =
-    MLletin
-      ( Id go, nat, group a,
-        MLletin
-          ( Dummy, Tarr (Tmeta d, nat), MLlam (Dummy, Tmeta d, group c),
-            MLapp (group b, [fresh_rel 1]), Occurrence.fresh () ), Occurrence.fresh () )
+    Core.Expr.Let {binder = Core.Binder_name.Source go;
+                   binder_type = nat;
+                   value = group a;
+                   body = Core.Expr.Let {binder = Core.Binder_name.Anonymous;
+                                         binder_type = Core.Type.Arrow {parameter = Core.Type.Meta d; result = nat};
+                                         value = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                                                   parameter_type = Core.Type.Meta d;
+                                                                   body = group c};
+                                         body = Core.Expr.Apply {callee = group b; arguments = [Core.Expr.fresh_rel 1]};
+                                         occurrence = Core.Occurrence.fresh ()};
+                   occurrence = Core.Occurrence.fresh ()}
   in
-  Local_types.structure [(mp "M", [term "f" body (Tarr (Tvar (Schematic, 1), nat))])];
-  check "a let-bound group's open type is its first rigid variable" (a.contents = Some (Tvar (Rigid, 1)));
-  check "each group numbers its own from 1" (b.contents = Some (Tvar (Rigid, 1)));
-  check "a let-bound lambda's are numbered past the declaration's" (d.contents = Some (Tvar (Rigid, 2)));
-  check "a group inside a let-bound lambda is the lambda's" (c.contents = Some (Tvar (Rigid, 3)))
+  Local_types.structure [(mp "M", [term "f" body (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}; result = nat})])];
+  check "a let-bound group's open type is its first rigid variable" (a.contents = Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = 1}));
+  check "each group numbers its own from 1" (b.contents = Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = 1}));
+  check "a let-bound lambda's are numbered past the declaration's" (d.contents = Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = 2}));
+  check "a group inside a let-bound lambda is the lambda's" (c.contents = Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = 3}))

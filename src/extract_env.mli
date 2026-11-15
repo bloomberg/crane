@@ -14,7 +14,7 @@
 
     Top-level entry points for the [Crane Extraction] vernacular commands.
     Coordinates the full extraction pipeline:
-    {v Rocq source  -->  MiniML  -->  CppIR  -->  C++ files v}
+    {v Rocq source  -->  Core  -->  CppIR  -->  C++ files v}
 
     Also handles dependency resolution, file I/O, and extraction-test
     coordination.
@@ -24,7 +24,7 @@
     [print_structure_to_file] runs, in this order:
 
     + {b Extraction} ([mono_environment], [optimize_struct]): Rocq terms to
-      the MiniML structure, simplified.
+      the Core structure, simplified.
     + {b Planning}, as values: the unit's {!Program_facts} and its
       {!Target_plan} -- the inductive kinds, then, once the unit's preparation
       has run, the template-parameter kinds -- each installed by
@@ -48,7 +48,7 @@
     + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
       with the preamble its body demanded, then formatted.
 
-    Each MiniML declaration is generated ahead of the files
+    Each Core declaration is generated ahead of the files
     ({!Cpp_ind.generate_ahead}, {!Gen_decls}, which translate bodies through
     {!Translation}, lowering control as they go), finished
     ({!Cpp_pipeline.finish}: local closures, constants, temporaries,
@@ -115,23 +115,23 @@ val extraction_library :
 val extract_and_compile :
   opaque_access:Global.indirect_accessor -> string option -> qualid list -> unit
 
-(** Build the complete MiniML structure for a set of definitions.
+(** Build the complete Core structure for a set of definitions.
     @param opaque_access accessor for opaque constant bodies
     @param the list of global references to include
     @param the list of module paths to include in full
-    @return the extracted MiniML structure *)
+    @return the extracted Core structure *)
 val mono_environment :
   opaque_access:Global.indirect_accessor ->
   GlobRef.t list ->
   ModPath.t list ->
-  Miniml.ml_structure
+  Core.Program.t
 
 (** Pretty-print a single declaration. Used by the Relation Extraction plugin.
     @param struc the full extraction structure (used for renaming context)
     @param mp the module path under which the declaration lives
     @param decl the declaration to render
     @return a pretty-printed Pp.t document *)
-val print_one_decl : Miniml.ml_structure -> ModPath.t -> Miniml.ml_decl -> Pp.t
+val print_one_decl : Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
 
 (** [Show Extraction]: show the extraction of the current ongoing proof.
     @param pstate the current proof state *)

@@ -4,7 +4,6 @@
 (** Program facts, observed from the structure alone.  See
     [program_facts.mli]. *)
 
-open Miniml
 
 type t = {
   used_customs : Ref.User.Set.t;
@@ -62,11 +61,11 @@ let used_customs struc =
 let higher_order_projections struc =
   let found = ref Ref.User.Set.empty in
   let rec scan = function
-    | MLglob {callee = r; _} when Table.is_projection r -> found := Ref.User.Set.add r !found
+    | Core.Expr.Global {callee = r; _} when Table.is_projection r -> found := Ref.User.Set.add r !found
     | a -> Mlutil.ast_iter scan a
   in
   Modutil.struct_iter
-    (fun d -> List.iter (fun fd -> scan fd.fd_body) (Mlutil.term_defs d))
+    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> scan fd.body) (Mlutil.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;

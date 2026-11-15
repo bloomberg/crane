@@ -5,7 +5,6 @@
 
 open Crane_plugin
 open Names
-open Miniml
 
 let check name cond =
   if not cond then (
@@ -14,12 +13,24 @@ let check name cond =
 
 let r s = GlobRef.VarRef (Id.of_string s)
 let mp = ModPath.MPfile (DirPath.make [Id.of_string "M"])
-let nat = Tglob (r "nat", [], [])
-let call f = MLapp (MLglob (Global_use.monomorphic (r f)), [fresh_rel 1])
-let calling fs = MLlam (Dummy, nat, List.fold_left (fun b f -> MLletin (Dummy, nat, call f, b, Occurrence.fresh ())) (fresh_rel 1) fs)
-let fd name fs = {fd_ref = r name; fd_body = calling fs; fd_type = Tarr (nat, nat)}
-let term name fs = (Label.make name, SEdecl (Dterm (r name, calling fs, Tarr (nat, nat))))
-let fix fds = (Label.make "fix", SEdecl (Dfix (Core.Nonempty.of_list_exn fds)))
+let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []}
+let call f = Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic (r f));
+                              arguments = [Core.Expr.fresh_rel 1]}
+let calling fs = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                   parameter_type = nat;
+                                   body = List.fold_left (fun b f -> Core.Expr.Let {binder = Core.Binder_name.Anonymous;
+                                                                                    binder_type = nat;
+                                                                                    value = call f;
+                                                                                    body = b;
+                                                                                    occurrence = Core.Occurrence.fresh ()}) (Core.Expr.fresh_rel 1) fs}
+let fd name fs = {Core.Recursion.Definition.entity = r name;
+                  body = calling fs;
+                  type_ = Core.Type.Arrow {parameter = nat; result = nat}}
+let term name fs = (Label.make name, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r name;
+                                                                                              body = calling fs;
+                                                                                              type_ = Core.Type.Arrow {parameter = nat;
+                                                                                                                       result = nat}}))
+let fix fds = (Label.make "fix", Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.of_list_exn fds)))
 let names = Option.map (List.map (function GlobRef.VarRef id -> Id.to_string id | _ -> "?"))
 
 let program =

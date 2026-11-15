@@ -7,15 +7,15 @@
     {ul
     {- A {!Binder.t} is a binder of the callee's Rocq product spine, the
        place an argument of the application stands at.}
-    {- A {!Var.t} is a variable of the callee's MiniML type scheme, owned by
-       the scheme ({!Id.t}) it belongs to.}
+    {- A {!Var.t} is a variable of the callee's Core type scheme, owned by
+       the scheme ({!Core.Binder_name.Source.t}) it belongs to.}
     {- A template parameter of the C++ declaration is the third, and lives
        with the callable's ABI plan ({!Callable_abi}).}}
 
     None of them is an [int] to its clients, so an index of one cannot be
     used as an index of another; every crossing is a named function, the way
     {!Param_pos} separates a callee's parameter lists.  The module depends on
-    nothing of the IR, so that {!Miniml} can name an instantiation. *)
+    nothing of the IR, so that {!Core} can name an instantiation. *)
 
 (** The identity of one type scheme: the declaration it belongs to and how
     many variables it quantifies. *)
@@ -47,10 +47,10 @@ module Var : sig
   val owner : t -> Id.t
 
   (** The variable's place in its scheme, from [1]: the body spells it
-      [Tvar (_, ordinal v)]. *)
+      [Core.Type.Variable (_, ordinal v)]. *)
   val ordinal : t -> int
 
-  (** The scheme's variable the body spells [Tvar (_, i)]; [None] out of
+  (** The scheme's variable the body spells [Core.Type.Variable (_, i)]; [None] out of
       range.  The one crossing from the body's numbering. *)
   val of_tvar : Id.t -> int -> t option
 
@@ -63,7 +63,7 @@ module Var : sig
   (** What [l] pairs with the variable, if anything. *)
   val assoc_opt : t -> (t * 'a) list -> 'a option
 
-  (** {!assoc_opt} at the variable that [l]'s scheme spells [Tvar (_, i)]
+  (** {!assoc_opt} at the variable that [l]'s scheme spells [Core.Type.Variable (_, i)]
       ({!of_tvar}): for a reader holding a variable it met in that scheme's
       body.  [l] pairs variables of one scheme; [None] when [l] is empty. *)
   val assoc_tvar : int -> (t * 'a) list -> 'a option
@@ -84,7 +84,7 @@ module Binder : sig
   val pp : t -> Pp.t
 end
 
-(** Identities of inference holes ({!Miniml.Thole}). *)
+(** Identities of inference holes ({!Core.Type.Hole}). *)
 module Hole : sig
   (** A hole distinct from every other minted in this process. *)
   val fresh : unit -> int

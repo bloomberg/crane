@@ -112,7 +112,14 @@ let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
         in
         [(id, Function (param_types, ret_ty))]
       | Bind_variable (id, Declare (ty, _), _) -> [(id, ty)]
-      | Declare (id, ty, _) | Foreign_block {custom = _; template = _; result = id; result_type = ty; values = _; type_args = _; binder = _} -> [(id, ty)]
+      | Declare (id, ty, _) | Foreign_block {custom = _;
+                                             template = _;
+                                             result = id;
+                                             result_type = ty;
+                                             values = _;
+                                             type_args = _;
+                                             binder = _} ->
+        [(id, ty)]
       | Custom_match {branches; _} ->
         List.concat_map
           (fun (b : custom_branch) ->
@@ -170,7 +177,7 @@ let saved_local_type (env : (Id.t * ty) list) id : ty option =
     the special [_result] accumulator.
 
     @param rest The remaining statements (the continuation)
-    @return Sorted, unique list of free variable [Id.t] values *)
+    @return Sorted, unique list of free variable [Core.Binder_name.Source.t] values *)
 let compute_rest_free_vars rest =
   let rest_defined =
     List.filter_map
@@ -495,7 +502,7 @@ and drop_bindings_expr dropped e =
 let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
   | Bind_variable (_, Declare _, Lambda {fixpoint = Some {member = (o, j); encoding; _}; _}) -> (
     let (o', j') = fixpoint.member in
-    Miniml.Occurrence.equal o o' && Int.equal j j'
+    Core.Occurrence.equal o o' && Int.equal j j'
     && match encoding with Self_passing _ -> true | Knot -> knot | Lowered -> false )
   | _ -> false
 
@@ -543,7 +550,7 @@ type adopted = {
           gets the function reported as declined even though its machine is
           correct. *)
   ad_what : string;  (** The body, named concretely enough to act on *)
-  ad_fixpoint : Miniml.Occurrence.t;  (** The occurrence of the Core fixpoint the body is *)
+  ad_fixpoint : Core.Occurrence.t;  (** The occurrence of the Core fixpoint the body is *)
 }
 
 (** The synthetic name calls entering an entry called [name] are routed
@@ -594,7 +601,11 @@ let decline_reason ad =
     {!adopted.ad_entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~stmts ~planned = function
-  | Bind_variable (impl_id, Declare (Auto, _), Lambda {params; body; return_type; fixpoint = lambda_fixpoint; binders; _}) -> (
+  | Bind_variable (impl_id, Declare (Auto, _), Lambda {params;
+                                                       body;
+                                                       return_type;
+                                                       fixpoint = lambda_fixpoint;
+                                                       binders; _}) -> (
     match (lambda_fixpoint, fixpoint_self lambda_fixpoint params) with
     | None, _ | _, None -> None
     | Some ({name; _} as fixpoint), Some self_id ->
@@ -630,7 +641,7 @@ let adopt_local_fix ~stmts ~planned = function
         let reroute e =
           match e with
           | Call (({occurrence = Some o; _} as res), Local id, args)
-            when List.exists (Miniml.Occurrence.equal o) entering -> (
+            when List.exists (Core.Occurrence.equal o) entering -> (
             if not (Id.equal id self_id) then Call (res, Local entry_id, args)
             else
               match args with
@@ -688,7 +699,7 @@ let adopt_local_fix ~stmts ~planned = function
     first in the flow lowering can take is adopted. *)
 let find_adopted ~adoptable stmts =
   let planned (lf : local_fixpoint) =
-    List.exists (Miniml.Occurrence.equal (fst lf.member)) adoptable
+    List.exists (Core.Occurrence.equal (fst lf.member)) adoptable
   in
   find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned)
 
@@ -745,7 +756,7 @@ type enter_rewrite_ctx = {
   er_points_into : Core_binder.t -> bool;
       (** Whether an entry of the machine takes a value passed for the
           parameter standing for this Core binder as a pointer to it *)
-  er_entering : Miniml.Occurrence.t list option;
+  er_entering : Core.Occurrence.t list option;
       (** The calls that enter the machine at one of its entries: the
           Continues of its loop and of the loops its entries enter
           ({!Control_ir.Term.continues}); [None] where it has no ControlIR *)
@@ -769,7 +780,14 @@ let aliased_after aliased = function
   | Bind_variable (id, Declare (ty, _), e) ->
     if is_borrowed ty then with_aliased aliased (id :: free_vars_expr e) else Id.Set.remove id aliased
   | Bind_variable (id, Declare_static _, _) -> Id.Set.add id aliased
-  | Declare (id, _, _) | Declare_value_initialized (id, _) | Foreign_block {custom = _; template = _; result = id; result_type = _; values = _; type_args = _; binder = _} -> Id.Set.remove id aliased
+  | Declare (id, _, _) | Declare_value_initialized (id, _) | Foreign_block {custom = _;
+                                                                            template = _;
+                                                                            result = id;
+                                                                            result_type = _;
+                                                                            values = _;
+                                                                            type_args = _;
+                                                                            binder = _} ->
+    Id.Set.remove id aliased
   | Structured_binding (ids, e) -> with_aliased aliased (ids @ free_vars_expr e)
   | _ -> aliased
 
@@ -884,7 +902,14 @@ let rebuilt_bindings ctx ~kept reads =
 
 (** [binders] once [stmt] has run: the local it declares joins them. *)
 let declared_binders binders = function
-  | Bind_variable (id, Declare (_, b), _) | Declare (id, _, b) | Foreign_block {custom = _; template = _; result = id; result_type = _; values = _; type_args = _; binder = b} -> (id, b) :: binders
+  | Bind_variable (id, Declare (_, b), _) | Declare (id, _, b) | Foreign_block {custom = _;
+                                                                                template = _;
+                                                                                result = id;
+                                                                                result_type = _;
+                                                                                values = _;
+                                                                                type_args = _;
+                                                                                binder = b} ->
+    (id, b) :: binders
   | Bind_variable (id, Declare_static _, _) | Declare_value_initialized (id, _) -> (id, None) :: binders
   | Structured_binding (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
   | _ -> binders
@@ -958,7 +983,7 @@ let planned_resume ctx id (tgt : binding) e =
           match (point b, e) with
           | Some p, Call ({occurrence = Some o; _}, _, _) ->
             List.exists
-              (fun (c : Recursion_plan.call) -> entered_by c && Miniml.Occurrence.equal c.occurrence o)
+              (fun (c : Recursion_plan.call) -> entered_by c && Core.Occurrence.equal c.occurrence o)
               p.after
           | _ -> false )
         (Option.flatten (List.assoc_opt id ctx.er_binders))
@@ -1167,7 +1192,7 @@ and rewrite_enter_stmts ctx stmts =
           List.exists
             (fun (q : Recursion_plan.passing) ->
               Core_binder.equal q.passed b && ctx.er_points_into q.into
-              && List.exists (Miniml.Occurrence.equal q.call.occurrence) entering )
+              && List.exists (Core.Occurrence.equal q.call.occurrence) entering )
             p.passes
         in
         List.map (fun x -> Option.cata passed false (binder_of ctx x)) cont_vars
@@ -1408,7 +1433,14 @@ and rewrite_enter_stmts ctx stmts =
         in
         (id, Function (param_types, ret_ty)) :: ctx.er_env
       | Bind_variable (id, Declare (ty, _), _) -> (id, ty) :: ctx.er_env
-      | Declare (id, ty, _) | Foreign_block {custom = _; template = _; result = id; result_type = ty; values = _; type_args = _; binder = _} -> (id, ty) :: ctx.er_env
+      | Declare (id, ty, _) | Foreign_block {custom = _;
+                                             template = _;
+                                             result = id;
+                                             result_type = ty;
+                                             values = _;
+                                             type_args = _;
+                                             binder = _} ->
+        (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
     let here =
@@ -1605,7 +1637,9 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
     and on_stmt env = function
       | Expression (Call (_, callee, [Local_aggregate {struct_ = name; type_args = targs; values = args}])) -> (
         let args = List.map (saved_pointer env) args in
-        let push args = Expression (Call (call_opaque, callee, [Local_aggregate {struct_ = name; type_args = targs; values = args}])) in
+        let push args = Expression (Call (call_opaque, callee, [Local_aggregate {struct_ = name;
+                                                                                 type_args = targs;
+                                                                                 values = args}])) in
         match lookup (Id.to_string name) with
         | Some flags when List.length args = List.length flags ->
           let uptr_flags = match lookup_uptr (Id.to_string name) with
@@ -1997,7 +2031,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     | Some (ad, _) ->
       let adopted_enters (c : Recursion_plan.call) =
         match c.target with
-        | Member (o, _) | Entering o -> Miniml.Occurrence.equal o ad.ad_fixpoint
+        | Member (o, _) | Entering o -> Core.Occurrence.equal o ad.ad_fixpoint
         | Function _ -> false
       in
       Option.map (fun entered_by c -> entered_by c || adopted_enters c) entered_by
@@ -2037,7 +2071,8 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
       let dereferences = ref [] in
       let rec scan s =
         ( match s with
-        | Bind_variable (id, Declare (ty, _), Dereference _) when is_reference_type ty -> dereferences := id :: !dereferences
+        | Bind_variable (id, Declare (ty, _), Dereference _) when is_reference_type ty ->
+          dereferences := id :: !dereferences
         | _ -> () );
         map_stmt Fun.id (fun s -> ignore (scan s); s) Fun.id s
       in

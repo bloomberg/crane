@@ -2,13 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Miniml
 
 let same = GlobRef.CanOrd.equal
 
 (* Whether [e] names the global [f] anywhere. *)
 let rec mentions f = function
-  | MLglob {callee; _} when same callee f -> true
+  | Core.Expr.Global {callee; _} when same callee f -> true
   | e ->
     let found = ref false in
     Mlutil.ast_iter (fun e -> if mentions f e then found := true) e;
@@ -24,9 +23,9 @@ let eta_of f e =
   let m = List.length binders in
   let kept = List.map (fun (_, ty) -> not (Mlutil.isTdummy ty)) binders in
   let reads = List.filter_map (fun (i, k) -> if k then Some (m - i) else None) (List.mapi (fun i k -> (i, k)) kept) in
-  let reads_binder a i = match a with MLrel (i', _) -> Int.equal i i' | _ -> false in
+  let reads_binder a i = match a with Core.Expr.Bound_variable {index = i'; _} -> Int.equal i i' | _ -> false in
   match body with
-  | MLapp (MLglob {callee; _}, args)
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee; _}; arguments = args}
     when m > 0 && same callee f && List.compare_lengths args reads = 0 && List.for_all2 reads_binder args reads ->
     Some kept
   | _ -> None
@@ -40,14 +39,15 @@ let eta_of f e =
    term's body does: the call is that body, instantiated there. *)
 let tie defs f ~kept k j body =
   let exception Read in
-  let knot d = function MLrel (i, _) -> i = k - j + d | _ -> false in
+  let knot d = function Core.Expr.Bound_variable {index = i; _} -> i = k - j + d | _ -> false in
   let rec self d e =
     match e with
-    | MLapp (MLrel (i, _), args) when i = k - j + d && List.compare_lengths args kept = 0 ->
+    | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = i; _};
+                       arguments = args} when i = k - j + d && List.compare_lengths args kept = 0 ->
       let args = List.filter_map (fun (a, taken) -> if taken then Some (self d a) else None) (List.combine args kept) in
-      MLapp (MLglob (Global_use.monomorphic f), args)
-    | MLrel (i, _) when i = k - j + d -> raise_notrace Read
-    | MLapp (MLglob use, args) when List.exists (knot d) args -> (
+      Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic f); arguments = args}
+    | Core.Expr.Bound_variable {index = i; _} when i = k - j + d -> raise_notrace Read
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when List.exists (knot d) args -> (
       match (Ref.User.Map.find_opt use.callee defs, Ml_specialize.body_of defs use) with
       | Some (Ml_specialize.Term _), Some helper -> (
         match Ml_specialize.instantiate helper args with Some e -> self d e | None -> raise_notrace Read )
@@ -57,13 +57,13 @@ let tie defs f ~kept k j body =
   try Some (self 0 body) with Read -> None
 
 (* The function [fd] with the knot it ties, if it ties one, tied. *)
-let fixpoint defs (fd : ml_fix_def) =
-  let f = fd.fd_ref in
-  if (not (Table.should_loopify f)) || Table.is_custom f || Mlutil.type_maxvar fd.fd_type > 0 then None
+let fixpoint defs (fd : Core.Recursion.Definition.t) =
+  let f = fd.entity in
+  if (not (Table.should_loopify f)) || Table.is_custom f || Mlutil.type_maxvar fd.type_ > 0 then None
   else
-    let params, inner = Mlutil.collect_lams fd.fd_body in
+    let params, inner = Mlutil.collect_lams fd.body in
     match inner with
-    | MLapp (MLglob ({callee = g; _} as use), args) when not (same g f) -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global ({callee = g; _} as use); arguments = args} when not (same g f) -> (
       let indexed = List.mapi (fun i a -> (i, a)) args in
       let knots = List.filter_map (fun (i, a) -> Option.map (fun kept -> (i, kept)) (eta_of f a)) indexed in
       match (knots, Ref.User.Map.find_opt g defs) with
@@ -79,9 +79,9 @@ let fixpoint defs (fd : ml_fix_def) =
             match tie defs f ~kept k j gbody with
             | None -> None
             | Some tied ->
-              let args = List.mapi (fun i a -> if i = j then MLdummy Kprop else a) args in
+              let args = List.mapi (fun i a -> if i = j then Core.Expr.Erased_value Core.Erasure_reason.Proof else a) args in
               Option.map
-                (fun body -> {fd with fd_body = Mlutil.named_lams params (Mlutil.normalize body)})
+                (fun body -> {fd with Core.Recursion.Definition.body = Mlutil.named_lams params (Mlutil.normalize body)})
                 (Ml_specialize.instantiate (Mlutil.named_lams gparams tied) args) ) )
       | _ -> None )
     | _ -> None
@@ -92,12 +92,15 @@ let structure struc =
     List.map
       (fun (lbl, se) ->
         match se with
-        | SEdecl (Dfix {head = fd; tail = []}) -> (
+        | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group {head = fd; tail = []}) -> (
           match fixpoint defs fd with
-          | Some fd -> (lbl, SEdecl (Dfix (Core.Nonempty.singleton fd)))
+          | Some fd ->
+            (lbl, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.singleton fd)))
           | None -> (lbl, se) )
-        | SEmodule ({ml_mod_expr = MEstruct (mp, l); _} as m) ->
-          (lbl, SEmodule {m with ml_mod_expr = MEstruct (mp, elems l)})
+        | Core.Module.Structure_item.Module ({Core.Module.expr = Core.Module.Expr.Structure {path = mp;
+                                                                                             items = l}; _} as m) ->
+          (lbl, Core.Module.Structure_item.Module {m with Core.Module.expr = Core.Module.Expr.Structure {path = mp;
+                                                                                                         items = elems l}})
         | se -> (lbl, se) )
       l
   in

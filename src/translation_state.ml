@@ -1,6 +1,6 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Shared mutable state for the MiniML -> CppIR translation.
+(** Shared mutable state for the Core -> CppIR translation.
 
     Holds the per-declaration translation context ([tctx]) and its accessors,
     so that the translation core ({!Translation}) and the declaration
@@ -11,7 +11,6 @@
 module IntMap = Map.Make (Int)
 
 open Common
-open Miniml
 open Names
 open Core_query
 
@@ -22,7 +21,8 @@ open Core_query
     position it is the only record of the type, since there is no call node to
     carry one. *)
 let mk_cppglob ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
-  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = yields})
+  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r);
+                        custom_yields = yields})
 
 (** [callee_ml_type r] -- the ML type of the callable [r] as the unit's plan
     of it records it ({!Callable_abi.ml_type}): the signature call
@@ -30,7 +30,7 @@ let mk_cppglob ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_
     global has none, and is read off the table; under [CRANE_CHECK_IR] a
     planned one is held to the table, and emission finding none is a
     violation. *)
-let callee_ml_type (r : GlobRef.t) : ml_type option =
+let callee_ml_type (r : GlobRef.t) : Core.Type.t option =
   match Callable_abi.planned_ml_type r with
   | Some planned ->
     if Probe.checking () then begin
@@ -65,7 +65,7 @@ type binder_role = Lexenv.role =
 (** A binder of the lexical environment ({!Lexenv.binder}). *)
 type env_binder = Lexenv.binder = {
   eb_id : Id.t;
-  eb_type : ml_type;
+  eb_type : Core.Type.t;
   eb_role : binder_role;
 }
 
@@ -114,7 +114,7 @@ type translation_ctx = {
      as helpers lifted out of that body, around the point being generated:
      a helper's machine may adopt a fixpoint in its flow, a local
      fixpoint's lambda never does. *)
-  lifted_fixpoints : Miniml.Occurrence.t list;
+  lifted_fixpoints : Core.Occurrence.t list;
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
@@ -133,17 +133,17 @@ type translation_ctx = {
      as {!Representation_plan} plans it: by the read's occurrence.  Set
      beside {!representation}; the only answer lowering reads
      ({!Translation_types.read_is_boxed}). *)
-  planned_reads : (Occurrence.t * planned_read) list;
+  planned_reads : (Core.Occurrence.t * planned_read) list;
   (* The C++ type the position each coercion of the region fills is
      generated against, as {!Position_plan} plans it: by the coercion's
      occurrence, a region nested in another first.  Set beside
      {!planned_reads}. *)
-  planned_positions : (Occurrence.t * Cpp_ir.Lowered.Type.t option) list;
+  planned_positions : (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
   (* Maps promoted record fields to their C++ qualified types.
-     Example: "m_carrier" -> Tqualified(Tvar "_tcI0", "m_carrier")
+     Example: "m_carrier" -> Tqualified(Core.Type.Variable "_tcI0", "m_carrier")
      (prints as: typename _tcI0::m_carrier).
      Set ({!with_promoted_var_map}) when generating template functions and
      instances with typeclass parameters. Used by
@@ -432,7 +432,7 @@ let inductive_type r args es : Cpp_ir.Lowered.Type.t =
 (** [with_lifted_fixpoint occurrence f] runs [f] generating the members of
     the local fixpoint at [occurrence] as lifted helpers
     ({!translation_ctx.lifted_fixpoints}). *)
-let with_lifted_fixpoint (occurrence : Miniml.Occurrence.t) (f : unit -> 'a) : 'a =
+let with_lifted_fixpoint (occurrence : Core.Occurrence.t) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.lifted_fixpoints)
     (fun os -> tctx := { !tctx with lifted_fixpoints = os })
@@ -480,15 +480,15 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     types the way translation converts them. *)
 let plan_representation :
     (outer:Lexenv.t ->
-    ml_ast ->
-    (Core_binder.site * int * planned_repr) list * (Occurrence.t * planned_read) list)
+    Core.Expr.t ->
+    (Core_binder.site * int * planned_repr) list * (Core.Occurrence.t * planned_read) list)
     ref =
   ref (fun ~outer:_ _ -> ([], []))
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
 let plan_positions :
-    (outer:Lexenv.t -> reads:(Occurrence.t * planned_read) list -> ml_ast -> (Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
+    (outer:Lexenv.t -> reads:(Core.Occurrence.t * planned_read) list -> Core.Expr.t -> (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
     ref =
   ref (fun ~outer:_ ~reads:_ _ -> [])
 
@@ -499,7 +499,7 @@ let plan_positions :
     with the moves planned over [body] ({!Ownership_ir.region}), those
     into the frames entering the machine's entries recorded
     ({!Ownership_ir.Entry_moves}). *)
-let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (f : unit -> 'a) : 'a =
+let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
   let outer = Lexenv.type_opt (!tctx).env_types in
   let p =
     Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~n_outer:(List.length (!tctx).current_type_vars) body
@@ -629,12 +629,12 @@ let push_env_binders (binders : env_binder list) =
   tctx := { !tctx with env_types = Lexenv.push binders (!tctx).env_types }
 
 (** Prepend value bindings, innermost first. *)
-let push_env_types (ids : (Id.t * ml_type) list) =
+let push_env_types (ids : (Id.t * Core.Type.t) list) =
   push_env_binders (List.map (fun (eb_id, eb_type) -> { eb_id; eb_type; eb_role = Value }) ids)
 
 (** Prepend a declaration's parameters, innermost first: each at a class type
     is a dictionary ({!parameter_role}). *)
-let push_env_parameters (ids : (Id.t * ml_type) list) =
+let push_env_parameters (ids : (Id.t * Core.Type.t) list) =
   push_env_binders
     (List.map (fun (eb_id, eb_type) -> { eb_id; eb_type; eb_role = parameter_role eb_type }) ids)
 
@@ -659,7 +659,7 @@ let restore_env_types (saved : Lexenv.t) =
   tctx := { !tctx with env_types = saved }
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
-let get_env_type (i : int) : ml_type =
+let get_env_type (i : int) : Core.Type.t =
   (List.nth ((!tctx).env_types :> env_binder list) (pred i)).eb_type
 
 (** The binder at de Bruijn index [i] (1-based), or [None] when [i] is out of
@@ -668,11 +668,11 @@ let get_env_binder_opt (i : int) : env_binder option = Lexenv.binder (!tctx).env
 
 (** Like {!get_env_type} but returns [None] instead of raising when [i] is out
     of range (or non-positive). *)
-let get_env_type_opt (i : int) : ml_type option =
+let get_env_type_opt (i : int) : Core.Type.t option =
   Option.map (fun b -> b.eb_type) (get_env_binder_opt i)
 
 (** The ML type of the innermost binder named [id], if any. *)
-let env_type_of_id (id : Id.t) : ml_type option =
+let env_type_of_id (id : Id.t) : Core.Type.t option =
   Option.map (fun b -> b.eb_type) (List.find_opt (fun b -> Id.equal b.eb_id id) ((!tctx).env_types :> env_binder list))
 
 (** The lexical environment the traversal is generating code in. *)

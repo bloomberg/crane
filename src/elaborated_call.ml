@@ -16,14 +16,14 @@ type dictionary_order =
 
 type t = {
   callee : Names.GlobRef.t;
-  callee_type : Miniml.ml_type;
-  args : Miniml.ml_ast list;
+  callee_type : Core.Type.t;
+  args : Core.Expr.t list;
   roles : role list;
-  primary : Miniml.ml_ast list;
-  excess : Miniml.ml_ast list;
-  instances : Miniml.ml_ast list;
+  primary : Core.Expr.t list;
+  excess : Core.Expr.t list;
+  instances : Core.Expr.t list;
   erased_instances : int;
-  regular : Miniml.ml_ast list;
+  regular : Core.Expr.t list;
   tyargs : Call_tyargs.t;
 }
 
@@ -57,7 +57,7 @@ type instantiated = {
   call : t;
   reading : Call_tyargs.t;
   tys : Mlutil.Var_types.t;
-  callee_type_at_call : Miniml.ml_type;
+  callee_type_at_call : Core.Type.t;
   params : Param_pos.subst Param_pos.params;
   params_orig : Param_pos.orig Param_pos.params;
   subst_index_of_orig : Param_pos.orig Param_pos.pos -> Param_pos.subst Param_pos.pos option;
@@ -102,8 +102,8 @@ let at_call inst call =
 
 type static_projection = {
   instance : int;
-  domains : Miniml.ml_type list;
-  missing : Miniml.ml_type list;
+  domains : Core.Type.t list;
+  missing : Core.Type.t list;
 }
 
 let same_static_projection a b =

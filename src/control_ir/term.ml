@@ -5,7 +5,7 @@ type t =
   | Loop of loop
   | Let of let_
   | Match of match_
-  | Return of Miniml.ml_ast
+  | Return of Core.Expr.t
   | Continue of continue_
   | Continue_into of continue_into
   | Resume of resume
@@ -13,34 +13,34 @@ type t =
 
 and loop = {
   loop : Loop.t;
-  parameters : (Miniml.ml_ident * Miniml.ml_type) list;
+  parameters : (Core.Binder_name.t * Core.Type.t) list;
   body : t;
 }
 
 and let_ = {
-  binder : Miniml.ml_ident;
-  binder_type : Miniml.ml_type;
-  value : Miniml.ml_ast;
+  binder : Core.Binder_name.t;
+  binder_type : Core.Type.t;
+  value : Core.Expr.t;
   body : t;
 }
 
 and match_ = {
-  scrutinee_type : Miniml.ml_type;
-  scrutinee : Miniml.ml_ast;
+  scrutinee_type : Core.Type.t;
+  scrutinee : Core.Expr.t;
   branches : branch list;
 }
 
 and branch = {
-  binders : (Miniml.ml_ident * Miniml.ml_type) list;
-  result_type : Miniml.ml_type;
-  pattern : Miniml.ml_pattern;
+  binders : (Core.Binder_name.t * Core.Type.t) list;
+  result_type : Core.Type.t;
+  pattern : Core.Pattern.t;
   body : t;
 }
 
 and continue_ = {
   target : Loop.t;
-  occurrence : Miniml.Occurrence.t;
-  arguments : Miniml.ml_ast list;
+  occurrence : Core.Occurrence.t;
+  arguments : Core.Expr.t list;
 }
 
 and continue_into = {
@@ -51,19 +51,19 @@ and continue_into = {
 and cell = {
   constructor : Names.GlobRef.t;
   hole : int;
-  arguments : Miniml.ml_ast list;
+  arguments : Core.Expr.t list;
 }
 
 and resume = {
-  binder : Miniml.ml_ident;
-  binder_type : Miniml.ml_type;
+  binder : Core.Binder_name.t;
+  binder_type : Core.Type.t;
   value : t;
   body : t;
 }
 
 and entry = {
   entered : loop;
-  name : (Miniml.ml_ident * Miniml.ml_type) option;
+  name : (Core.Binder_name.t * Core.Type.t) option;
   scope : t;
 }
 
@@ -150,8 +150,9 @@ type provenance =
 (* The provenance of [e] under [env], the provenance of each binder inside
    a loop's parameters, innermost first. *)
 let rec provenance ~in_place env = function
-  | Miniml.MLrel (db, _) -> Option.flatten (List.nth_opt env (db - 1))
-  | Miniml.MLcoerce (from, into, e, _) when in_place from into -> provenance ~in_place env e
+  | Core.Expr.Bound_variable {index = db; _} -> Option.flatten (List.nth_opt env (db - 1))
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = e; _} when in_place from into ->
+    provenance ~in_place env e
   | _ -> None
 
 (* Each Continue of the loop [l], in order, with the provenance of each
@@ -161,7 +162,7 @@ let turn_provenances ~pointer_fields ~in_place (l : loop) =
   let provenance = provenance ~in_place in
   let derived env e = match provenance env e with Some (Stored i | Derived i) -> Some (Derived i) | None -> None in
   let unrelated k env = List.init k (fun _ -> None) @ env in
-  (* The binders of a branch, [Prel 1] first, of its pattern matching a
+  (* The binders of a branch, [Core.Pattern.Bound_variable 1] first, of its pattern matching a
      value derived from the parameter [whole]: one bound at a field its
      constructor stores behind the pointer is stored in what the caller
      passed, any other derived from it. *)
@@ -172,11 +173,13 @@ let turn_provenances ~pointer_fields ~in_place (l : loop) =
       if k >= 1 && k <= count then bound.(k - 1) <- Some (if List.mem j fields then Stored whole else Derived whole)
     in
     let rec bind fields j = function
-      | Miniml.Prel k -> at fields j k
-      | Miniml.Pcons (r, ps) -> List.iteri (bind (Option.default [] (pointer_fields r))) ps
-      | Miniml.Ptuple ps -> List.iteri (bind []) ps
-      | Miniml.Pusual r -> List.iteri (at (Option.default [] (pointer_fields r))) (List.init count (fun i -> count - i))
-      | Miniml.Pwild -> ()
+      | Core.Pattern.Bound_variable k -> at fields j k
+      | Core.Pattern.Constructor {constructor = r; fields = ps} ->
+        List.iteri (bind (Option.default [] (pointer_fields r))) ps
+      | Core.Pattern.Tuple ps -> List.iteri (bind []) ps
+      | Core.Pattern.Shallow_constructor r ->
+        List.iteri (at (Option.default [] (pointer_fields r))) (List.init count (fun i -> count - i))
+      | Core.Pattern.Wildcard -> ()
     in
     bind [] (-1) b.pattern;
     Array.to_list bound
@@ -257,7 +260,7 @@ let parts_passed = passed ~accepted:(fun i -> function Stored j -> Int.equal i j
 let derived_passed = passed ~accepted:(fun _ (Stored _ | Derived _) -> true)
 
 type rebuilt = {
-  turn : Miniml.Occurrence.t;
+  turn : Core.Occurrence.t;
   read_elsewhere : bool;
 }
 
@@ -267,21 +270,33 @@ let rebuilt ~pointer_fields ~in_place (l : loop) i =
      it. *)
   let reads env e =
     let rec go depth = function
-      | Miniml.MLrel (db, _) -> db > depth && of_parameter (Option.flatten (List.nth_opt env (db - depth - 1)))
-      | Miniml.MLlam (_, _, b) -> go (depth + 1) b
-      | Miniml.MLletin (_, _, a, b, _) -> go depth a || go (depth + 1) b
-      | Miniml.MLcase (_, s, branches, _) ->
+      | Core.Expr.Bound_variable {index = db; _} ->
+        db > depth && of_parameter (Option.flatten (List.nth_opt env (db - depth - 1)))
+      | Core.Expr.Lambda {body = b; _} -> go (depth + 1) b
+      | Core.Expr.Let {value = a; body = b; _} -> go depth a || go (depth + 1) b
+      | Core.Expr.Match {scrutinee = s; branches; _} ->
         go depth s
         || Array.exists
-             (fun {Miniml.br_binders = ids; br_body = b; _} -> go (depth + List.length ids) b)
+             (fun {Core.Match.Branch.binders = ids; body = b; _} -> go (depth + List.length ids) b)
              branches
-      | Miniml.(MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _)) ->
+      | Core.Expr.Fixpoint {functions = ids;
+                            bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
         Array.exists (go (depth + Array.length ids)) funs
-      | Miniml.MLapp (f, args) -> go depth f || List.exists (go depth) args
-      | Miniml.MLcons (_, _, args, _) | Miniml.MLtuple args -> List.exists (go depth) args
-      | Miniml.MLcoerce (_, _, e, _) | Miniml.MLboxed (e, _) | Miniml.MLbarrier (e, _) -> go depth e
-      | Miniml.MLparray (elements, default) -> Array.exists (go depth) elements || go depth default
-      | Miniml.MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false
+      | Core.Expr.Apply {callee = f; arguments = args} -> go depth f || List.exists (go depth) args
+      | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (go depth) args
+      | Core.Expr.Coerce {value = e; _}
+      | Core.Expr.Boxed_value {value = e; _}
+      | Core.Expr.Lambda_group_barrier {value = e; _} ->
+        go depth e
+      | Core.Expr.Persistent_array {elements; default} -> Array.exists (go depth) elements || go depth default
+      | Core.Expr.Global _
+      | Core.Expr.Runtime_error _
+      | Core.Expr.Erased_value _
+      | Core.Expr.Axiom_value _
+      | Core.Expr.UInt63 _
+      | Core.Expr.Numeral _
+      | Core.Expr.Float64 _
+      | Core.Expr.String _ -> false
     in
     go 0 e
   in
@@ -316,6 +331,6 @@ let invariant_parameters (l : loop) =
       List.for_all
         (fun (depth, arguments) ->
           match List.nth_opt arguments i with
-          | Some (Miniml.MLrel (db, _)) -> Int.equal db (n - i + depth)
+          | Some (Core.Expr.Bound_variable {index = db; _}) -> Int.equal db (n - i + depth)
           | Some _ | None -> false )
         turns )

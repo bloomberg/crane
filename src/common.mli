@@ -12,7 +12,7 @@
 
 (** Pretty-printing utilities, name resolution, and renaming for extracted code.
 
-    Shared by every stage after extraction: translation (MiniML to CppIR)
+    Shared by every stage after extraction: translation (Core to CppIR)
     and the printer both name globals, modules and locals through the tables
     here.  The unit's names are decided while it is planned ({!Plan}) and read
     back while it is emitted ({!Emit}); {!end_planning} separates the two.
@@ -21,7 +21,6 @@
     and files what is written needs. *)
 
 open Names
-open Miniml
 
 (** {2 Generic utility functions (string, list)} *)
 
@@ -112,7 +111,7 @@ val empty_env : unit -> env
     spelled with in C++. *)
 val crane_local_prefix : string
 
-(** The C++ spelling of a Rocq identifier, as an [Id.t]. *)
+(** The C++ spelling of a Rocq identifier, as an [Core.Binder_name.Source.t]. *)
 val cpp_id_of_id : Id.t -> Id.t
 
 (** [rename_vars avoid ids] renames [ids] to fresh names, first letter
@@ -128,7 +127,7 @@ val rename_tvars : Id.Set.t -> Id.t list -> Id.t list
 val push_vars : Id.t list -> env -> Id.t list * env
 
 (** Like {!push_vars} but for typed variable pairs. *)
-val push_vars' : (Id.t * ml_type) list -> env -> (Id.t * ml_type) list * env
+val push_vars' : (Id.t * Core.Type.t) list -> env -> (Id.t * Core.Type.t) list * env
 
 (** Look up a de Bruijn index in the environment. *)
 val get_db_name : int -> env -> Id.t
@@ -265,7 +264,7 @@ type decided_name =
     A functor parameter's, which is its own name, is not among them. *)
 val names_decided_while_emitting : unit -> decided_name list
 
-(** {!pp_global_name} as an [Id.t]: the short C++ name a reference is emitted
+(** {!pp_global_name} as an [Core.Binder_name.Source.t]: the short C++ name a reference is emitted
     under, for the many places that need it as an identifier rather than a
     string (a struct field, a method, a [using] alias). *)
 val id_of_global : kind -> GlobRef.t -> Id.t
@@ -281,7 +280,7 @@ val module_label_name : Label.t -> string
     has the same C++ name as an inductive type that is either its sibling or
     declared inside it, the module is renamed with a ["_Mod"] suffix.
     Must be called before any reference or module is named. *)
-val detect_sibling_module_inductive_collisions : ml_structure -> unit
+val detect_sibling_module_inductive_collisions : Core.Program.t -> unit
 
 (** The name a module's C++ struct is emitted under, including any suffix
     {!detect_sibling_module_inductive_collisions} gave it. *)
@@ -303,7 +302,7 @@ val reserve_methodified : ind:GlobRef.t -> GlobRef.t -> unit
 
 (** The C++ names a structure declares as members of its struct, as
     {!inside} takes them. *)
-val member_names_of_sel : Miniml.ml_module_structure -> Id.Set.t
+val member_names_of_sel : Core.Module.Structure.t -> Id.Set.t
 
 (** The scopes a name is spelled from, innermost first. *)
 type visibility
@@ -408,13 +407,13 @@ val is_reserved_at_global_scope : string -> bool
 
 (** Check whether an ML term is an [ascii] constructor application that can be
     decoded into a native C++ [char] literal. *)
-val is_native_char : ml_ast -> bool
+val is_native_char : Core.Expr.t -> bool
 
 (** Decode an [ascii] constructor application into a native [char] value. *)
-val get_native_char : ml_ast -> char
+val get_native_char : Core.Expr.t -> char
 
 (** Pretty-print an ascii constructor as a C++ char literal. *)
-val pp_native_char : ml_ast -> Pp.t
+val pp_native_char : Core.Expr.t -> Pp.t
 
 (** Special hack for constants of type String.string : if an
     [Extract Inductive string => string] has been declared, then the constants
@@ -423,14 +422,14 @@ val pp_native_char : ml_ast -> Pp.t
 (** Check whether an ML term is a fully statically-known [string] built from
     [EmptyString]/[String] constructors with constant [ascii] characters, that
     can be turned into a native C++ string literal. *)
-val is_native_string : ml_ast -> bool
+val is_native_string : Core.Expr.t -> bool
 
 (** Extract the underlying OCaml string from a statically-known [string]
     term (see {!is_native_string}). *)
-val get_native_string : ml_ast -> string
+val get_native_string : Core.Expr.t -> string
 
 (** Pretty-print a statically-known [string] term as a C++ string literal. *)
-val pp_native_string : ml_ast -> Pp.t
+val pp_native_string : Core.Expr.t -> Pp.t
 
 (** Registered name for the sig type (used for existential type extraction). *)
 val sig_type_name : string
@@ -438,31 +437,31 @@ val sig_type_name : string
 (** {2 Synthetic name generators}
 
     Centralized naming conventions for generated C++ identifiers. Each function
-    takes an integer index and returns a string or [Id.t]. *)
+    takes an integer index and returns a string or [Core.Binder_name.Source.t]. *)
 
 (** Name for template type parameter [i], e.g. ["T0"]. *)
 val tvar_name : int -> string
 
-(** {!tvar_name} as an [Id.t]. *)
+(** {!tvar_name} as an [Core.Binder_name.Source.t]. *)
 val tvar_id : int -> Id.t
 
 (** Name for an anonymous/unresolved type variable [i], e.g. ["_tvar0"]. *)
 val anon_tvar_name : int -> string
 
-(** {!anon_tvar_name} as an [Id.t]. *)
+(** {!anon_tvar_name} as an [Core.Binder_name.Source.t]. *)
 val anon_tvar_id : int -> Id.t
 
 (** Name for a function-typed template parameter [i], e.g. ["F0"]. *)
 val fun_tparam_name : int -> string
 
-(** {!fun_tparam_name} as an [Id.t]. *)
+(** {!fun_tparam_name} as an [Core.Binder_name.Source.t]. *)
 val fun_tparam_id : int -> Id.t
 
 (** Fallback positional name for constructor field [i] when no binder name is
     registered, e.g. ["a0"] (["d_a0"] under the BDE flavor). *)
 val field_param_name : int -> string
 
-(** {!field_param_name} as an [Id.t]. *)
+(** {!field_param_name} as an [Core.Binder_name.Source.t]. *)
 val field_param_id : int -> Id.t
 
 (** {2 Constructor Field Name Registry}
@@ -512,13 +511,13 @@ val lookup_ctor_bind_name : owner:Names.GlobRef.t -> string -> int -> Id.t
     never start with [_x]. *)
 val eta_param_name : int -> string
 
-(** {!eta_param_name} as an [Id.t]. *)
+(** {!eta_param_name} as an [Core.Binder_name.Source.t]. *)
 val eta_param_id : int -> Id.t
 
 (** Name for a synthesized type-class instance parameter [i], e.g. ["_tcI0"]. *)
 val tc_instance_name : int -> string
 
-(** {!tc_instance_name} as an [Id.t]. *)
+(** {!tc_instance_name} as an [Core.Binder_name.Source.t]. *)
 val tc_instance_id : int -> Id.t
 
 (** Whether an identifier is one {!tc_instance_id} minted -- the binder for a
@@ -532,7 +531,7 @@ val is_tc_instance_id : Names.Id.t -> bool
     ["Ctor0"]. *)
 val ctor_fallback_name : int -> string
 
-(** {!ctor_fallback_name} as an [Id.t]. *)
+(** {!ctor_fallback_name} as an [Core.Binder_name.Source.t]. *)
 val ctor_fallback_id : int -> Id.t
 
 (** The [n]th scrutinee cache temporary: [_cs], [_cs1], [_cs2], ...  A custom
@@ -544,7 +543,7 @@ val scrutinee_cache_id : int -> Id.t
     name is available, e.g. ["_db0"]. *)
 val db_fallback_name : int -> string
 
-(** {!db_fallback_name} as an [Id.t]. *)
+(** {!db_fallback_name} as an [Core.Binder_name.Source.t]. *)
 val db_fallback_id : int -> Id.t
 
 (** Rename a template type parameter for the BDE flavor (prefixes with
@@ -555,7 +554,7 @@ val tparam_name : Id.t -> Id.t
     inductive [kn]: the promoted variables its payloads name, then its own
     parameters. *)
 val ind_struct_tparams :
-  MutInd.t -> Miniml.ml_ind -> Miniml.ml_ind_packet -> Id.t list
+  MutInd.t -> Core.Inductive.t -> Core.Inductive.Packet.t -> Id.t list
 
 (** Compute the C++ enum constructor name for a single already-uppercased
     string [s]: applies the BDE [e_] prefix, or escapes a spelling
@@ -564,7 +563,7 @@ val ind_struct_tparams :
     available. *)
 val enum_ctor_name : string -> string
 
-(** Compute the C++ enum constructor name for a single constructor [Id.t].
+(** Compute the C++ enum constructor name for a single constructor [Core.Binder_name.Source.t].
     See {!enum_ctor_name}. *)
 val enum_ctor_name_of_id : Id.t -> string
 

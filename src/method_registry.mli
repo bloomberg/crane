@@ -22,14 +22,14 @@
        receiver, which a borrowed [this] cannot give up.}}
 
     This module performs the full method detection scan {i once} over the entire
-    [ml_structure] before code generation begins (from {!Program_facts} and
+    [Core.Program.t] before code generation begins (from {!Program_facts} and
     {!Cpp.prepare_structure}), storing the results in an opaque registry.
     During rendering, the backend queries the registry instead of re-scanning
     the AST.
 
     {2 Lifecycle}
 
-    + [create s] scans the full [ml_structure] to find all methods.
+    + [create s] scans the full [Core.Program.t] to find all methods.
     + [compute_returns_any] (called internally by [create]) determines which
       methods have erased return types that must be rendered as [std::any].  It
       is told what erases rather than deciding it, so that this module stays
@@ -76,21 +76,21 @@ type method_info = {
 (** A method candidate: (func_ref, body, type, this_position). Stored during
     pre-scan indexed by the eponymous inductive they belong to, so cpp.ml can
     retrieve them without re-collecting. *)
-type method_candidate = GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int
+type method_candidate = GlobRef.t * Core.Expr.t * Core.Type.t * int
 
 (** Opaque registry type. Internally a hashtable from [GlobRef.t] (the function
     reference) to [method_info], plus a reverse index from inductive [GlobRef.t]
     to its method candidates. *)
 type t
 
-(** Build the registry by scanning the full [ml_structure].
+(** Build the registry by scanning the full [Core.Program.t].
 
     This performs the complete method detection pass:
     + For each module, finds the eponymous inductive (if any) by comparing the
       module name against inductive names (case-insensitive); a module with
       several eligible inductives ({!find_all_module_inductives}) instead
       assigns each function to the inductive its type mentions most.
-    + Scans all [Dterm] and [Dfix] declarations in the same module (and wrapper
+    + Scans all [Core.Decl.Value] and [Core.Decl.Recursive_group] declarations in the same module (and wrapper
       modules) for functions whose type includes the eponymous type as an
       argument, skipping those whose type names a module type alias or an
       inductive declared after the eponymous one.
@@ -106,8 +106,8 @@ type t
     [Table.add_enum_inductive], since the method scanner needs to exclude them.
 *)
 val create :
-  ret_is_erased:(Id.t list -> Miniml.ml_type -> bool) ->
-  Miniml.ml_structure ->
+  ret_is_erased:(Id.t list -> Core.Type.t -> bool) ->
+  Core.Program.t ->
   t
 
 (** Look up full method info for a function reference. Returns [None] if the
@@ -121,7 +121,7 @@ val lookup : t -> GlobRef.t -> method_info option
     the ML type [ty] -- counted instead among the arguments that reach C++.
     An erased or [void] argument is passed nothing, and a dictionary becomes a
     template parameter, so the two numberings drift apart. *)
-val cpp_arg_pos : Miniml.ml_type -> int -> int
+val cpp_arg_pos : Core.Type.t -> int -> int
 
 (** Convenience: is the function a registered method? Returns
     [Some (epon_ref, this_pos)] if yes, [None] otherwise. Used by
@@ -168,7 +168,7 @@ val get_candidates : t -> GlobRef.t -> method_candidate list
     Under [CRANE_CHECK_IR] one that qualifies but was not registered is
     reported, as a method the scan missed. *)
 val planned_candidate :
-  t -> GlobRef.t -> GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> method_candidate option
+  t -> GlobRef.t -> GlobRef.t -> Core.Expr.t -> Core.Type.t -> method_candidate option
 
 (** {2 A method's variables} *)
 
@@ -184,22 +184,22 @@ type renumbering = {
 (** [renumbering ~num_ind_vars ~this_pos ty] -- the renumbering of the
     function of type [ty], its receiver at [this_pos], as a method of an
     inductive of [num_ind_vars] variables. *)
-val renumbering : num_ind_vars:int -> this_pos:int -> Miniml.ml_type -> renumbering
+val renumbering : num_ind_vars:int -> this_pos:int -> Core.Type.t -> renumbering
 
 (** [renumber_type r ty] is [ty] with its variables renumbered by [r]. *)
-val renumber_type : renumbering -> Miniml.ml_type -> Miniml.ml_type
+val renumber_type : renumbering -> Core.Type.t -> Core.Type.t
 
 (** [renumber_body r body] is [body] with the variables of its annotations
     renumbered by [r]: the body the method is generated from. *)
-val renumber_body : renumbering -> Miniml.ml_ast -> Miniml.ml_ast
+val renumber_body : renumbering -> Core.Expr.t -> Core.Expr.t
 
 (** {2 Body safety check} *)
 
-(** Check if a MiniML function body is safe to turn into a C++ method.
+(** Check if a Core function body is safe to turn into a C++ method.
 
     When a function becomes a method, its first argument is received as a raw
     [this] pointer instead of a [shared_ptr]. If the function body directly
-    returns that first argument (i.e. the result is a bare [MLrel] pointing to
+    returns that first argument (i.e. the result is a bare [Core.Expr.Bound_variable] pointing to
     argument 0), the generated C++ would contain [return this], but [this] is a
     raw pointer and cannot be implicitly converted to [shared_ptr], causing a
     compile error.
@@ -208,34 +208,34 @@ val renumber_body : renumbering -> Miniml.ml_ast -> Miniml.ml_ast
     the first argument).
 
     {b What counts as "direct return":}
-    - A bare [MLrel] in tail position that refers to the first argument.
-    - This check recurses through [MLcase] branches, [MLletin] bodies, coercion
-      wrappers, and [MLfixpoint] and [MLcofixpoint] bodies to find all tail positions.
+    - A bare [Core.Expr.Bound_variable] in tail position that refers to the first argument.
+    - This check recurses through [Core.Expr.Match] branches, [Core.Expr.Let] bodies, coercion
+      wrappers, and [Core.Expr.Fixpoint] and [Core.Expr.Cofixpoint] bodies to find all tail positions.
 
     {b What does NOT count as "direct return" (and is safe):}
     - Using the first argument for field access: [MLproj(arg, field)] translates
       to [this->field].
-    - Passing the first argument to another function: [MLapp(f, [arg])]
+    - Passing the first argument to another function: [Core.Expr.Apply(f, [arg])]
       translates to [f(this)].
-    - Pattern matching on the first argument: [MLcase(arg, ...)] translates to
+    - Pattern matching on the first argument: [Core.Expr.Match(arg, ...)] translates to
       an if/else-if chain over [this->v()].
-    - Wrapping the argument in a constructor: [MLcons(C, [arg])] produces a new
+    - Wrapping the argument in a constructor: [Core.Expr.Construct(C, [arg])] produces a new
       value.
 
     @param this_pos  0-based index of the argument becoming [this].
       Defaults to [0]. Must be less than the number of outer lambdas in
-      [body]; determines which [MLrel] index is checked for direct return.
+      [body]; determines which [Core.Expr.Bound_variable] index is checked for direct return.
     @param ret_has_shared_epon  When [true], relaxes the safety check to
       allow returning [this] wrapped in a constructor whose return type
       contains [shared_ptr] of the eponymous type: the generated C++ will
       use [shared_from_this()] instead of a bare [this]. Defaults to
       [false]. *)
 val body_safe_for_method :
-  ?this_pos:int -> ?ret_has_shared_epon:bool -> Miniml.ml_ast -> bool
+  ?this_pos:int -> ?ret_has_shared_epon:bool -> Core.Expr.t -> bool
 
 (** Check if the return type of an ML arrow type contains [ref].
 
-    Extracts the return type from a curried [Tarr] chain and recursively checks
+    Extracts the return type from a curried [Core.Type.Arrow] chain and recursively checks
     whether [ref] appears anywhere in it (including inside type arguments).
 
     Used at method registration call sites to determine whether
@@ -244,25 +244,25 @@ val body_safe_for_method :
     inductive, the C++ return type will contain [shared_ptr].
     @param ref the inductive [GlobRef.t] to search for in the return type
     @param ty the full curried ML type (arrow chain) of the function
-    @return [true] if the final return type (after stripping all [Tarr] layers)
+    @return [true] if the final return type (after stripping all [Core.Type.Arrow] layers)
       contains [ref] anywhere recursively; [false] otherwise *)
-val ml_return_type_has_ref : GlobRef.t -> Miniml.ml_type -> bool
+val ml_return_type_has_ref : GlobRef.t -> Core.Type.t -> bool
 
 (** {2 Module-level helpers} *)
 
-(** Collect [Dtype] refs from a declaration list that share [modpath],
-    excluding inline-custom types.  [extract_decl] extracts [ml_decl option]
-    from each list item (handles both [ml_specif] and [ml_structure_elem]).
-    @param extract_decl function that projects an [ml_decl option] from each
-      list element; allows the same logic to work over both [ml_specif] lists
-      (used during pre-scan) and [ml_structure_elem] lists (used during rendering)
-    @param modpath only [Dtype] entries whose [GlobRef.t] lives in this module
+(** Collect [Core.Decl.Type_alias] refs from a declaration list that share [modpath],
+    excluding inline-custom types.  [extract_decl] extracts [Core.Decl.t option]
+    from each list item (handles both [Core.Module.Signature_item.t] and [Core.Module.Structure_item.t]).
+    @param extract_decl function that projects an [Core.Decl.t option] from each
+      list element; allows the same logic to work over both [Core.Module.Signature_item.t] lists
+      (used during pre-scan) and [Core.Module.Structure_item.t] lists (used during rendering)
+    @param modpath only [Core.Decl.Type_alias] entries whose [GlobRef.t] lives in this module
       path are included; entries from other modules are silently skipped
     @param decls the declaration list to scan
-    @return list of [GlobRef.t] for [Dtype] entries that belong to [modpath]
+    @return list of [GlobRef.t] for [Core.Decl.Type_alias] entries that belong to [modpath]
       and are not inline-custom types *)
 val collect_module_type_aliases :
-  extract_decl:('a -> Miniml.ml_decl option) ->
+  extract_decl:('a -> Core.Decl.t option) ->
   Names.ModPath.t -> 'a list -> GlobRef.t list
 
 (** {2 Methods of a top-level inductive}
@@ -276,7 +276,7 @@ val collect_module_type_aliases :
 (** [file_calls modpath decls body]: the functions defined by the file
     [modpath] among [decls] that [body] refers to. *)
 val file_calls :
-  Names.ModPath.t -> Miniml.ml_module_structure -> Miniml.ml_ast ->
+  Names.ModPath.t -> Core.Module.Structure.t -> Core.Expr.t ->
   GlobRef.t list
 
 (** Keep a candidate only if every file function it calls ([calls]) is itself
@@ -289,7 +289,7 @@ val settle_file_calls :
   'a list -> 'a list
 
 (** Whether the function qualifies as a method of the inductive. *)
-val would_register : GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> bool
+val would_register : GlobRef.t -> Core.Expr.t -> Core.Type.t -> bool
 
 (** {2 Eponymous-type helpers}
 
@@ -300,7 +300,7 @@ val would_register : GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> bool
     module's declarations.  Returns a list of [GlobRef.t] for each eligible
     inductive packet. *)
 val find_all_module_inductives :
-  Miniml.ml_module_structure -> GlobRef.t list
+  Core.Module.Structure.t -> GlobRef.t list
 
 (** Find the eponymous inductive in a module's declaration list.
 
@@ -311,23 +311,23 @@ val find_all_module_inductives :
     Type-class inductives are excluded because they are rendered as C++ concepts
     rather than structs, so methods on them would not make sense.
 
-    Scans only [SEdecl (Dind ...)] entries in the given list; does not recurse
+    Scans only [Core.Module.Structure_item.Declaration (Core.Decl.Inductive ...)] entries in the given list; does not recurse
     into sub-modules.
 
     @param module_name the module name to match against (case-insensitive)
     @param decls the module's declaration list
     @return [Some ind_ref] for the first matching inductive, or [None] *)
 val find_eponymous_inductive :
-  string -> Miniml.ml_module_structure -> GlobRef.t option
+  string -> Core.Module.Structure.t -> GlobRef.t option
 
 (** Find the position of the first argument whose type matches an eponymous
     inductive reference.
 
     Walks the curried arrow type [T1 -> T2 -> ... -> Tn -> R] and returns the
-    0-based position of the first [Ti] that is [Tglob(epon_ref, ...)]. Also
+    0-based position of the first [Ti] that is [Core.Type.Global_app(epon_ref, ...)]. Also
     extracts the type-variable indices from that argument's type parameters.
 
     @param epon_ref the inductive to search for
-    @param ty the function's MiniML type
+    @param ty the function's Core type
     @return [Some (pos, ind_tvar_positions)] or [None] *)
-val find_epon_arg_pos : GlobRef.t -> Miniml.ml_type -> (int * int list) option
+val find_epon_arg_pos : GlobRef.t -> Core.Type.t -> (int * int list) option

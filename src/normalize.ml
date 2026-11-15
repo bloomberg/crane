@@ -2,16 +2,15 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Miniml
 
 (* The placeholder for the [i]th call taken out of a scope, replaced once the
    binder it is read through is known. *)
 let marker = "\000normalize:"
 
-let placeholder i = MLexn (marker ^ string_of_int i)
+let placeholder i = Core.Expr.Runtime_error (marker ^ string_of_int i)
 
 let placeholder_index = function
-  | MLexn s when String.starts_with ~prefix:marker s ->
+  | Core.Expr.Runtime_error s when String.starts_with ~prefix:marker s ->
     int_of_string_opt (String.sub s (String.length marker) (String.length s - String.length marker))
   | _ -> None
 
@@ -26,20 +25,20 @@ let rec replace_placeholders f e =
 (* A local fixpoint function: its declared type, and its arity, the
    lambdas its body starts with.  The type may leave its result open; the
    arity is what says a call is a full one. *)
-type local = {l_type : ml_type; l_arity : int}
+type local = {l_type : Core.Type.t; l_arity : int}
 
 (* The functions whose calls are bound: a top-level fixpoint group, by
    reference, and the local fixpoints enclosing the term, each by the depth
-   its bodies start at and its functions, the [j]th being [MLrel (j + 1)]
-   there.  [own_tvars] counts the type variables of the declaration, [Tvar 1]
-   to [Tvar own_tvars]; [fresh] names the next temporary of the declaration,
+   its bodies start at and its functions, the [j]th being [Core.Expr.Bound_variable (j + 1)]
+   there.  [own_tvars] counts the type variables of the declaration, [Core.Type.Variable 1]
+   to [Core.Type.Variable own_tvars]; [fresh] names the next temporary of the declaration,
    [effects] are the effect operations of the program it is in, and
    [splices] what splicing decided there ({!Recursion_plan.splice_partners}). *)
 type group = {
   globals : GlobRef.t list;
   own_tvars : int;
   locals : (int * local array) list;
-  fresh : unit -> ml_ident;
+  fresh : unit -> Core.Binder_name.t;
   effects : Core_effects.t;
   splices : Splices.t;
 }
@@ -50,20 +49,21 @@ let temporaries () =
   let n = ref 0 in
   fun () ->
     incr n;
-    Tmp (Mlutil.temporary_id !n)
+    Core.Binder_name.Generated (Mlutil.temporary_id !n)
 
 (* A full application yields what its function's type ends in.  A partial
    one yields a function: there is nothing to evaluate early, and naming it
    would turn a direct argument into a closure. *)
-let full_result = function Some (Tarr _) -> None | ty -> ty
+let full_result = function Some (Core.Type.Arrow _) -> None | ty -> ty
 
 (* The type a call at binder depth [depth] to one of [group]'s functions
    yields, if it is one and is applied fully. *)
 let group_call group ~depth e =
   match e with
-  | MLapp ((MLglob {callee = r; _} as f), args) when List.exists (GlobRef.UserOrd.equal r) group.globals ->
+  | Core.Expr.Apply {callee = (Core.Expr.Global {callee = r; _} as f);
+                     arguments = args} when List.exists (GlobRef.UserOrd.equal r) group.globals ->
     full_result (Translation_types.ml_app_result_type f args)
-  | MLapp (MLrel (k, _), args) -> (
+  | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; arguments = args} -> (
     match
       List.find_map
         (fun (root, fns) ->
@@ -72,7 +72,7 @@ let group_call group ~depth e =
         group.locals
     with
     | Some l when List.length args = l.l_arity ->
-      let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
+      let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
       (* What it yields, or, where the fixpoint's type does not say, an open
          annotation of the temporary's own: the program is frozen. *)
       Some
@@ -85,7 +85,7 @@ let group_call group ~depth e =
    into a type, as a field of the constructor it is an argument of, or
    passed on as it is to anything else. *)
 type reading =
-  | Coerced of ml_type
+  | Coerced of Core.Type.t
   | Stored
   | Passed
 
@@ -108,7 +108,7 @@ let held group ~reading e ty =
     Mlutil.type_maxvar ty > group.own_tvars
     &&
     match e with
-    | MLapp (MLglob {callee = r; _}, _) ->
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} ->
       Option.cata Ml_type_util.result_is_index_only_tvar false (Core_query.find_type_opt r)
     | _ -> false
   in
@@ -118,7 +118,7 @@ let held group ~reading e ty =
     | Stored -> Some (Mlutil.new_meta ())
     | Coerced into -> (
       match Mlutil.type_simpl into with
-      | Tvar _ | Tapp _ -> None
+      | Core.Type.Variable _ | Core.Type.Variable_app _ -> None
       | _ -> Some (Mlutil.new_meta ()) )
     | Passed -> None
 
@@ -130,21 +130,24 @@ let rec reaches_call group ~depth e =
   group_call group ~depth e <> None
   ||
   match e with
-  | MLapp (MLfixpoint (_, ids, bodies, _), args) ->
+  | Core.Expr.Apply {callee = Core.Expr.Fixpoint {functions = ids; bodies; _}; arguments = args} ->
     List.exists (reaches_call group ~depth) args || fix_reaches_call group ~depth ids bodies
-  | MLlam _ | MLfixpoint _ | MLcofixpoint _ -> false
-  | MLletin (_, _, rhs, body, _) ->
+  | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> false
+  | Core.Expr.Let {value = rhs; body; _} ->
     reaches_call group ~depth rhs || reaches_call group ~depth:(depth + 1) body
-  | MLcase (_, scrut, branches, _) ->
+  | Core.Expr.Match {scrutinee = scrut; branches; _} ->
     reaches_call group ~depth scrut || branch_reaches_call group ~depth branches
-  | MLapp (f, args) -> List.exists (reaches_call group ~depth) (f :: args)
-  | MLcons (_, _, args, _) | MLtuple args -> List.exists (reaches_call group ~depth) args
-  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> reaches_call group ~depth e
+  | Core.Expr.Apply {callee = f; arguments = args} -> List.exists (reaches_call group ~depth) (f :: args)
+  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (reaches_call group ~depth) args
+  | Core.Expr.Coerce {value = e; _}
+  | Core.Expr.Boxed_value {value = e; _}
+  | Core.Expr.Lambda_group_barrier {value = e; _} ->
+    reaches_call group ~depth e
   | _ -> false
 
 (* Whether a local fixpoint's bodies, below their parameters, reach [group]. *)
 and fix_reaches_call group ~depth ids bodies =
-  let rec params depth = function MLlam (_, _, b) -> params (depth + 1) b | b -> (depth, b) in
+  let rec params depth = function Core.Expr.Lambda {body = b; _} -> params (depth + 1) b | b -> (depth, b) in
   Array.exists
     (fun b ->
       let depth, b = params (depth + Array.length ids) b in
@@ -153,7 +156,7 @@ and fix_reaches_call group ~depth ids bodies =
 
 and branch_reaches_call group ~depth branches =
   Array.exists
-    (fun {br_binders = ids; br_body = b; _} -> reaches_call group ~depth:(depth + List.length ids) b)
+    (fun {Core.Match.Branch.binders = ids; body = b; _} -> reaches_call group ~depth:(depth + List.length ids) b)
     branches
 
 (* How many nodes copying what follows a bound match into its branches may
@@ -171,25 +174,35 @@ let below_first n e = Mlutil.permut_rels n 1 (Mlutil.ast_lift n e)
    binding temporaries binds temporaries of its own. *)
 let rec renamed_temporaries fresh e =
   match e with
-  | MLletin (Tmp x, ty, a, b, occ) when Mlutil.is_temporary_id x ->
-    MLletin (fresh (), ty, renamed_temporaries fresh a, renamed_temporaries fresh b, occ)
+  | Core.Expr.Let {binder = Core.Binder_name.Generated x;
+                   binder_type = ty;
+                   value = a;
+                   body = b;
+                   occurrence = occ} when Mlutil.is_temporary_id x ->
+    Core.Expr.Let {binder = fresh ();
+                   binder_type = ty;
+                   value = renamed_temporaries fresh a;
+                   body = renamed_temporaries fresh b;
+                   occurrence = occ}
   | _ -> Mlutil.ast_map (renamed_temporaries fresh) e
 
 let into_branches ~fresh ~rty (id, ty, occ) branches rest =
   if (Array.length branches - 1) * Mlutil.ast_size rest > duplication_budget then None
   else
-    let renamed = function Tmp x when Mlutil.is_temporary_id x -> fresh () | id -> id in
-    let branch i ({br_binders = ids; br_body = b; _} as br) =
+    let renamed = function Core.Binder_name.Generated x when Mlutil.is_temporary_id x -> fresh () | id -> id in
+    let branch i ({Core.Match.Branch.binders = ids; body = b; _} as br) =
       let id, rest, occ =
         if i = 0 then (id, rest, occ)
-        else (renamed id, renamed_temporaries fresh (Core_copy.copy rest), Occurrence.fresh ())
+        else (renamed id, renamed_temporaries fresh (Core_copy.copy rest), Core.Occurrence.fresh ())
       in
       let n = List.length ids in
       let rec plug m = function
-        | MLletin (x, tx, a, b, o) -> MLletin (x, tx, a, plug (m + 1) b, o)
-        | b -> MLletin (id, ty, b, below_first (n + m) rest, occ)
+        | Core.Expr.Let {binder = x; binder_type = tx; value = a; body = b; occurrence = o} ->
+          Core.Expr.Let {binder = x; binder_type = tx; value = a; body = plug (m + 1) b; occurrence = o}
+        | b ->
+          Core.Expr.Let {binder = id; binder_type = ty; value = b; body = below_first (n + m) rest; occurrence = occ}
       in
-      {br with br_type = rty; br_body = plug 0 b}
+      {br with Core.Match.Branch.result_type = rty; body = plug 0 b}
     in
     Some (Array.mapi branch branches)
 
@@ -223,101 +236,118 @@ let rec scope ~group ~depth ?expected e =
     placeholder !count
   in
   let enters_group = function
-    | MLfixpoint (_, ids, bodies, _) -> fix_reaches_call group ~depth ids bodies
+    | Core.Expr.Fixpoint {functions = ids; bodies; _} -> fix_reaches_call group ~depth ids bodies
     | _ -> false
   in
   let rec strict ?(reading = Passed) ~tail e =
     match e with
-    | MLapp ((MLglob use as f), args)
+    | Core.Expr.Apply {callee = (Core.Expr.Global use as f); arguments = args}
       when Core_effects.lookup group.effects use = Some {operation = Bind; mode = Sequential} ->
       (* Monadic sequencing: the action runs where the bind puts it, and a
          recursive call that is the whole action is a tail call there.  A
          reified bind is a call building the tree, its action evaluated
          first, like any other call's argument. *)
-      MLapp (f, List.map (inner 0) args)
-    | MLapp (f, args) -> (
-      let e' = MLapp (strict ~tail:false f, List.map (strict ~tail:false) args) in
+      Core.Expr.Apply {callee = f; arguments = List.map (inner 0) args}
+    | Core.Expr.Apply {callee = f; arguments = args} -> (
+      let e' = Core.Expr.Apply {callee = strict ~tail:false f; arguments = List.map (strict ~tail:false) args} in
       match group_call e', f with
       | Some ty, _ when not tail -> Option.cata (take e') e' (held group ~reading e' ty)
-      | None, MLfixpoint (i, ids, _, _) when (not tail) && enters_group f ->
+      | None, Core.Expr.Fixpoint {selected = i; functions = ids; _} when (not tail) && enters_group f ->
         (* A local fixpoint applied here that recurses into the group is a
            call into it. *)
-        let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
+        let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
         take e'
           (Option.default (Mlutil.new_meta ())
              (Ml_type_util.ml_codomain_after (List.length value_args) (snd ids.(i))))
       | _ -> e' )
-    | MLcons (ty, (GlobRef.ConstructRef (ind, _) as r), args, occ)
+    | Core.Expr.Construct {result_type = ty;
+                           constructor = (GlobRef.ConstructRef (ind, _) as r);
+                           arguments = args;
+                           occurrence = occ}
       when Table.is_coinductive (GlobRef.IndRef ind) ->
       (* A coinductive constructor suspends its arguments. *)
-      MLcons (ty, r, List.map (inner 0) args, occ)
-    | MLcons (ty, r, args, occ) when not (Table.is_custom r) ->
-      MLcons (ty, r, List.map (strict ~reading:Stored ~tail:false) args, occ)
-    | MLcons (ty, r, args, occ) ->
+      Core.Expr.Construct {result_type = ty; constructor = r; arguments = List.map (inner 0) args; occurrence = occ}
+    | Core.Expr.Construct {result_type = ty;
+                           constructor = r;
+                           arguments = args;
+                           occurrence = occ} when not (Table.is_custom r) ->
+      Core.Expr.Construct {result_type = ty;
+                           constructor = r;
+                           arguments = List.map (strict ~reading:Stored ~tail:false) args;
+                           occurrence = occ}
+    | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; occurrence = occ} ->
       (* A constructor mapped to custom code is what its replacement text
          makes of its arguments.  One that is just an argument ([%a0])
          stands for it, tail position included; any other ([%a0 + 1]) is an
          ordinary call. *)
       let through = Option.bind (Table.find_custom_opt r) Foreign_template.passes_through in
-      MLcons
-        ( ty,
-          r,
-          List.mapi
+      Core.Expr.Construct {result_type = ty; constructor = r; arguments = List.mapi
             (fun i a ->
               if through = Some i then strict ~reading ~tail a else strict ~reading:Stored ~tail:false a )
-            args,
-          occ )
-    | MLtuple args -> MLtuple (List.map (strict ~tail:false) args)
-    | MLcase (ty, scrut, branches, occ) ->
+            args; occurrence = occ}
+    | Core.Expr.Tuple args -> Core.Expr.Tuple (List.map (strict ~tail:false) args)
+    | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; occurrence = occ} ->
       let scrut = strict ~tail:false scrut in
       let e' =
-        MLcase
-          ( ty,
-            scrut,
-            Array.map
-              (fun ({br_binders = ids; br_type = rty; br_body = body; _} as br) ->
-                {br with br_body = inner ~expected:rty (List.length ids) body} )
-              branches,
-            occ )
+        Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches = Array.map
+              (fun ({Core.Match.Branch.binders = ids; result_type = rty; body = body; _} as br) ->
+                {br with Core.Match.Branch.body = inner ~expected:rty (List.length ids) body} )
+              branches; occurrence = occ}
       in
       (* A match whose value is not the result, with a branch that recurses,
          is itself bound: the call ends its branch, so no binding inside the
          branch can take it out of the expression around the match. *)
       if (not tail) && branch_reaches_call group ~depth branches then
-        let {br_type = rty; _} = branches.(0) in
+        let {Core.Match.Branch.result_type = rty; _} = branches.(0) in
         take e' rty
       else e'
-    | MLletin (id, ty, rhs, body, occ) ->
+    | Core.Expr.Let {binder = id; binder_type = ty; value = rhs; body; occurrence = occ} ->
       (* A right-hand side that is the call, a local fixpoint applied there
          that recurses into the group, or a match ending in one, is already
          bound. *)
       let rhs =
         match rhs with
-        | MLapp (f, args) when group_call rhs <> None || enters_group f ->
-          MLapp (strict ~tail:false f, List.map (strict ~tail:false) args)
-        | MLcase _ -> strict ~tail:true rhs
+        | Core.Expr.Apply {callee = f; arguments = args} when group_call rhs <> None || enters_group f ->
+          Core.Expr.Apply {callee = strict ~tail:false f; arguments = List.map (strict ~tail:false) args}
+        | Core.Expr.Match _ -> strict ~tail:true rhs
         | _ -> strict ~tail:false rhs
       in
       let group =
         match rhs with
-        | MLfixpoint (_, [|_|], [|fn|], o) when Splices.is_entered_copy group.splices o ->
+        | Core.Expr.Fixpoint {functions = [|_|];
+                              bodies = [|fn|];
+                              occurrence = o; _} when Splices.is_entered_copy group.splices o ->
           (* A partner's copy the machine enters stands for the partner: its
              calls are the group's. *)
           {group with locals = (depth + 1, [|{l_type = ty; l_arity = Mlutil.nb_lams fn}|]) :: group.locals}
         | _ -> group
       in
-      MLletin (id, ty, rhs, inner ~group ?expected:(if tail then expected else None) 1 body, occ)
-    | MLlam (id, ty, body) -> MLlam (id, ty, inner 1 body)
-    | MLfixpoint (i, ids, bodies, occ) ->
+      Core.Expr.Let {binder = id;
+                     binder_type = ty;
+                     value = rhs;
+                     body = inner ~group ?expected:(if tail then expected else None) 1 body;
+                     occurrence = occ}
+    | Core.Expr.Lambda {parameter = id; parameter_type = ty; body} ->
+      Core.Expr.Lambda {parameter = id; parameter_type = ty; body = inner 1 body}
+    | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
       let n = Array.length ids in
       let fns = Array.mapi (fun j (_, ty) -> {l_type = ty; l_arity = Mlutil.nb_lams bodies.(j)}) ids in
       let group = {group with locals = (depth + n, fns) :: group.locals} in
-      MLfixpoint (i, ids, Array.map (inner ~group n) bodies, occ)
-    | MLcofixpoint (i, ids, bodies, occ) ->
-      MLcofixpoint (i, ids, Array.map (inner ~group (Array.length ids)) bodies, occ)
-    | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, strict ~reading:(Coerced into) ~tail a, mocc)
-    | MLboxed (a, mocc) -> MLboxed (strict ~tail a, mocc)
-    | MLbarrier (a, mocc) -> MLbarrier (strict ~tail a, mocc)
+      Core.Expr.Fixpoint {selected = i; functions = ids; bodies = Array.map (inner ~group n) bodies; occurrence = occ}
+    | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
+      Core.Expr.Cofixpoint {selected = i;
+                            functions = ids;
+                            bodies = Array.map (inner ~group (Array.length ids)) bodies;
+                            occurrence = occ}
+    | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
+      Core.Expr.Coerce {source_type = from;
+                        target_type = into;
+                        value = strict ~reading:(Coerced into) ~tail a;
+                        occurrence = mocc}
+    | Core.Expr.Boxed_value {value = a; occurrence = mocc} ->
+      Core.Expr.Boxed_value {value = strict ~tail a; occurrence = mocc}
+    | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
+      Core.Expr.Lambda_group_barrier {value = strict ~tail a; occurrence = mocc}
     | _ -> e
   in
   let body = strict ~tail:true e in
@@ -325,34 +355,46 @@ let rec scope ~group ~depth ?expected e =
   let k = List.length calls in
   (* The [i]th let sees the [i - 1] before it; the body sees all [k]. *)
   let rec wrap i = function
-    | [] -> replace_placeholders (fun j -> fresh_rel (k - j + 1)) (Mlutil.ast_lift k body)
+    | [] -> replace_placeholders (fun j -> Core.Expr.fresh_rel (k - j + 1)) (Mlutil.ast_lift k body)
     | (call, ty) :: rest ->
-      let rhs = replace_placeholders (fun j -> fresh_rel (i - j)) (Mlutil.ast_lift (i - 1) call) in
-      MLletin (group.fresh (), ty, rhs, wrap (i + 1) rest, Occurrence.fresh ())
+      let rhs = replace_placeholders (fun j -> Core.Expr.fresh_rel (i - j)) (Mlutil.ast_lift (i - 1) call) in
+      Core.Expr.Let {binder = group.fresh ();
+                     binder_type = ty;
+                     value = rhs;
+                     body = wrap (i + 1) rest;
+                     occurrence = Core.Occurrence.fresh ()}
   in
   (* The scope from the let at depth [depth] on, what follows a match it
      binds copied into the match's branches, each branch then a scope. *)
   let rec distribute ~depth e =
     let pushed =
       match e, expected with
-      | MLletin (id, ty, MLcase (cty, scrut, branches, case_occ), rest, occ), Some rty
+      | Core.Expr.Let {binder = id;
+                       binder_type = ty;
+                       value = Core.Expr.Match {scrutinee_type = cty;
+                                                scrutinee = scrut;
+                                                branches;
+                                                occurrence = case_occ};
+                       body = rest;
+                       occurrence = occ}, Some rty
         when (not (Recursion_plan.match_bound_in_place cty branches)) && branch_reaches_call group ~depth branches ->
         into_branches ~fresh:group.fresh ~rty (id, ty, occ) branches rest
         |> Option.map (fun branches ->
-               MLcase
-                 ( cty,
-                   scrut,
-                   Array.map
-                     (fun ({br_binders = ids; br_type = rty; br_body = b; _} as br) ->
+               Core.Expr.Match {scrutinee_type = cty; scrutinee = scrut; branches = Array.map
+                     (fun ({Core.Match.Branch.binders = ids; result_type = rty; body = b; _} as br) ->
                        { br with
-                         br_body = scope ~group ~depth:(depth + List.length ids) ~expected:rty b } )
-                     branches,
-                   case_occ ) )
+                         Core.Match.Branch.body = scope ~group ~depth:(depth + List.length ids) ~expected:rty b } )
+                     branches; occurrence = case_occ} )
       | _ -> None
     in
     match pushed, e with
     | Some e', _ -> e'
-    | None, MLletin (id, ty, rhs, body, occ) -> MLletin (id, ty, rhs, distribute ~depth:(depth + 1) body, occ)
+    | None, Core.Expr.Let {binder = id; binder_type = ty; value = rhs; body; occurrence = occ} ->
+      Core.Expr.Let {binder = id;
+                     binder_type = ty;
+                     value = rhs;
+                     body = distribute ~depth:(depth + 1) body;
+                     occurrence = occ}
     | None, _ -> e
   in
   distribute ~depth (if k = 0 then body else wrap 1 calls)
@@ -369,20 +411,25 @@ let loopified ~methods r =
    top-level functions [globals] it recurses through, in a program of effect
    operations [effects] whose partners splicing decided [splices]. *)
 let body ~effects ~splices ~globals ty b =
-  scope ~group:{globals; own_tvars = Mlutil.type_maxvar ty; locals = []; fresh = temporaries (); effects; splices} ~depth:0 b
+  scope ~group:{globals;
+                own_tvars = Mlutil.type_maxvar ty;
+                locals = [];
+                fresh = temporaries ();
+                effects;
+                splices} ~depth:0 b
 
 let decl ~effects ~splices ~methods = function
-  | Dfix fds when Core.Nonempty.exists (fun fd -> loopified ~methods fd.fd_ref) fds ->
+  | Core.Decl.Recursive_group fds when Core.Nonempty.exists (fun (fd : Core.Recursion.Definition.t) -> loopified ~methods fd.entity) fds ->
     (* A group is normalized whole: loopification inlines one member's
        partners into it, whether or not they are loopified themselves. *)
-    let globals = List.map (fun fd -> fd.fd_ref) (Core.Nonempty.to_list fds) in
-    Dfix
+    let globals = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core.Nonempty.to_list fds) in
+    Core.Decl.Recursive_group
       (Core.Nonempty.map
-         (fun fd -> {fd with fd_body = body ~effects ~splices ~globals fd.fd_type fd.fd_body})
+         (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = body ~effects ~splices ~globals fd.type_ fd.body})
          fds)
-  | Dterm (r, b, ty) when loopified ~methods r ->
+  | Core.Decl.Value {entity = r; body = b; type_ = ty} when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
-    Dterm (r, body ~effects ~splices ~globals:[] ty b, ty)
+    Core.Decl.Value {entity = r; body = body ~effects ~splices ~globals:[] ty b; type_ = ty}
   | d -> d
 
 (* A definition of type [ty] as it is generated: binding a parameter at each
@@ -390,7 +437,7 @@ let decl ~effects ~splices ~methods = function
    applied to the ones it does not, at each that extraction did not erase. *)
 let eta_body ty b =
   match b with
-  | MLaxiom _ | MLexn _ -> b
+  | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> b
   | _ ->
     let ty = Mlutil.type_simpl ty in
     let params, body = Ml_type_util.collect_typed_lams ty b in
@@ -400,7 +447,7 @@ let eta_body ty b =
       let args =
         List.rev
           (List.filter_map
-             (fun (i, (_, t)) -> if Ml_type_util.erased_by_extraction t then None else Some (fresh_rel (i + 1)))
+             (fun (i, (_, t)) -> if Ml_type_util.erased_by_extraction t then None else Some (Core.Expr.fresh_rel (i + 1)))
              (List.mapi (fun i x -> (i, x)) missing) )
       in
       Mlutil.named_lams (missing @ params)
@@ -408,17 +455,20 @@ let eta_body ty b =
 
 let eta_expand =
   Modutil.map_struct_decls (function
-    | Dterm (r, b, ty) -> Dterm (r, eta_body ty b, ty)
-    | Dfix fds -> Dfix (Core.Nonempty.map (fun fd -> {fd with fd_body = eta_body fd.fd_type fd.fd_body}) fds)
+    | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
+      Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
+    | Core.Decl.Recursive_group fds ->
+      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body}) fds)
     | d -> d )
 
 let let_lambdas =
   Modutil.map_struct_decls (function
-    | Dterm (r, b, ty) -> Dterm (r, Core_elaborate.generated_definition ty b, ty)
-    | Dfix fds ->
-      Dfix
+    | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
+      Core.Decl.Value {entity = r; body = Core_elaborate.generated_definition ty b; type_ = ty}
+    | Core.Decl.Recursive_group fds ->
+      Core.Decl.Recursive_group
         (Core.Nonempty.map
-           (fun fd -> {fd with fd_body = Core_elaborate.generated_definition fd.fd_type fd.fd_body})
+           (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = Core_elaborate.generated_definition fd.type_ fd.body})
            fds)
     | d -> d )
 
@@ -435,4 +485,5 @@ let structure (program : Core_phase.normalizing) : Core_phase.normalizing =
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program
   in
-  {structure = Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of struc)) struc; splices}
+  {structure = Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of struc)) struc;
+   splices}

@@ -6,7 +6,6 @@
 
 open Crane_plugin
 open Names
-open Miniml
 open Control_ir
 
 let check name cond =
@@ -15,34 +14,34 @@ let check name cond =
     exit 1 )
 
 let r s = GlobRef.VarRef (Id.of_string s)
-let nat = Tglob (r "nat", [], [])
+let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []}
 let count = r "count"
 let target = Loop.Function count
 
 (* [count] takes two parameters. *)
 let callee ~depth:_ = function
-  | MLglob use when GlobRef.UserOrd.equal use.callee count -> Some 2
+  | Core.Expr.Global (use : Core.Global_use.t) when GlobRef.UserOrd.equal use.callee count -> Some 2
   | _ -> None
 
-let use () = Global_use.monomorphic count
-let call u args = MLapp (MLglob u, args)
-let plus a b = MLapp (MLglob (Global_use.monomorphic (r "plus")), [a; b])
+let use () = Core.Global_use.monomorphic count
+let call u args = Core.Expr.Apply {callee = Core.Expr.Global u; arguments = args}
+let plus a b = Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic (r "plus")); arguments = [a; b]}
 let lower body = Lower_control.tail_loop ~effects:Core_effects.empty ~target ~callee body
-let continues_at us t = List.equal Occurrence.equal (Term.continues t) (List.map Global_use.occurrence us)
-let id s = Id (Id.of_string s)
+let continues_at us t = List.equal Core.Occurrence.equal (Term.continues t) (List.map Core.Global_use.occurrence us)
+let id s = Core.Binder_name.Source (Id.of_string s)
 
 let () =
   (* match n with O => acc | S m => count m (acc + 1), under [n; acc]. *)
   let u = use () in
   let body =
-    MLcase
-      ( nat,
-        fresh_rel 2,
-        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
-           { br_binders = [(id "m", nat)];
-             br_type = nat;
-             br_pattern = Pwild;
-             br_body = call u [fresh_rel 1; plus (fresh_rel 2) (fresh_rel 2)] } |], Occurrence.fresh ())
+    Core.Expr.Match {scrutinee_type = nat; scrutinee = Core.Expr.fresh_rel 2; branches = [| {Core.Match.Branch.binders = [];
+                                                                                             result_type = nat;
+                                                                                             pattern = Core.Pattern.Wildcard;
+                                                                                             body = Core.Expr.fresh_rel 1};
+           { Core.Match.Branch.binders = [(id "m", nat)];
+             result_type = nat;
+             pattern = Core.Pattern.Wildcard;
+             body = call u [Core.Expr.fresh_rel 1; plus (Core.Expr.fresh_rel 2) (Core.Expr.fresh_rel 2)] } |]; occurrence = Core.Occurrence.fresh ()}
   in
   ( match lower body with
   | Term.Match {branches = [{body = Return _; _}; {body = Continue c; _}]; _} ->
@@ -53,32 +52,32 @@ let () =
 
   (* let x := plus n acc in count x x *)
   let u = use () in
-  ( match lower (MLletin (id "x", nat, plus (fresh_rel 2) (fresh_rel 1), call u [fresh_rel 1; fresh_rel 1], Occurrence.fresh ())) with
+  ( match lower (Core.Expr.Let {binder = id "x"; binder_type = nat; value = plus (Core.Expr.fresh_rel 2) (Core.Expr.fresh_rel 1); body = call u [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 1]; occurrence = Core.Occurrence.fresh ()}) with
   | Term.Let {body = Continue _; _} -> ()
   | _ -> check "a let's body continues" false );
 
   (* A call with fewer arguments than the parameters is a closure, and a
      call under a lambda runs where the lambda does: both are returned. *)
-  let partial = call (use ()) [fresh_rel 1] in
+  let partial = call (use ()) [Core.Expr.fresh_rel 1] in
   check "a partial application is returned as it is" (lower partial = Term.Return partial);
-  let under_lambda = MLlam (id "y", nat, call (use ()) [fresh_rel 1; fresh_rel 1]) in
+  let under_lambda = Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body = call (use ()) [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 1]} in
   check "a call under a lambda is returned with it" (lower under_lambda = Term.Return under_lambda);
 
   (* A coercion of a recursive call continues, and keeps coercing what
      another branch returns. *)
   let u = use () in
   let coerced =
-    MLboxed
-      ( MLcase
-          ( nat,
-            fresh_rel 2,
-            [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
-               {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = call u [fresh_rel 2; fresh_rel 1]} |],
-            Occurrence.fresh () ),
-        Occurrence.fresh () )
+    Core.Expr.Boxed_value {value = Core.Expr.Match {scrutinee_type = nat; scrutinee = Core.Expr.fresh_rel 2; branches = [| {Core.Match.Branch.binders = [];
+                                                                                                                            result_type = nat;
+                                                                                                                            pattern = Core.Pattern.Wildcard;
+                                                                                                                            body = Core.Expr.fresh_rel 1};
+               {Core.Match.Branch.binders = [];
+                result_type = nat;
+                pattern = Core.Pattern.Wildcard;
+                body = call u [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]} |]; occurrence = Core.Occurrence.fresh ()}; occurrence = Core.Occurrence.fresh ()}
   in
   match lower coerced with
-  | Term.Match {branches = [{body = Return (MLboxed _); _}; {body = Continue _; _}]; _} -> ()
+  | Term.Match {branches = [{body = Return (Core.Expr.Boxed_value _); _}; {body = Continue _; _}]; _} -> ()
   | _ -> check "a coerced body continues, its returns coerced" false
 
 (* The parameters a loop keeps: those every Continue passes on as they
@@ -89,18 +88,18 @@ let invariant body =
 let () =
   (* match n with O => acc | S m => count n m *)
   let step =
-    MLcase
-      ( nat,
-        fresh_rel 2,
-        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
-           { br_binders = [(id "m", nat)];
-             br_type = nat;
-             br_pattern = Pwild;
-             br_body = call (use ()) [fresh_rel 3; fresh_rel 1] } |], Occurrence.fresh ())
+    Core.Expr.Match {scrutinee_type = nat; scrutinee = Core.Expr.fresh_rel 2; branches = [| {Core.Match.Branch.binders = [];
+                                                                                             result_type = nat;
+                                                                                             pattern = Core.Pattern.Wildcard;
+                                                                                             body = Core.Expr.fresh_rel 1};
+           { Core.Match.Branch.binders = [(id "m", nat)];
+             result_type = nat;
+             pattern = Core.Pattern.Wildcard;
+             body = call (use ()) [Core.Expr.fresh_rel 3; Core.Expr.fresh_rel 1] } |]; occurrence = Core.Occurrence.fresh ()}
   in
   check "a parameter passed on under a binder is kept, one passed the binder is not" (invariant step = [true; false]);
-  check "parameters passed on as they are are kept" (invariant (call (use ()) [fresh_rel 2; fresh_rel 1]) = [true; true]);
-  check "parameters passed each other are not" (invariant (call (use ()) [fresh_rel 1; fresh_rel 2]) = [false; false])
+  check "parameters passed on as they are are kept" (invariant (call (use ()) [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]) = [true; true]);
+  check "parameters passed each other are not" (invariant (call (use ()) [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2]) = [false; false])
 
 (* Tail modulo cons: a recursive call held in a chain of constructors
    returned continues into the hole the chain leaves. *)
@@ -110,20 +109,32 @@ let lower_cons body = Lower_control.tail_loop ~modulo_cons:true ~effects:Core_ef
 let () =
   (* cons n (cons acc (count n acc)): two cells, the call in the second's hole. *)
   let u = use () in
-  let body = MLcons (nat, cons, [fresh_rel 2; MLcons (nat, cons, [fresh_rel 1; call u [fresh_rel 2; fresh_rel 1]], Occurrence.fresh ())], Occurrence.fresh ()) in
+  let body = Core.Expr.Construct {result_type = nat;
+                                  constructor = cons;
+                                  arguments = [Core.Expr.fresh_rel 2; Core.Expr.Construct {result_type = nat;
+                                                                                           constructor = cons;
+                                                                                           arguments = [Core.Expr.fresh_rel 1; call u [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]];
+                                                                                           occurrence = Core.Occurrence.fresh ()}];
+                                  occurrence = Core.Occurrence.fresh ()} in
   ( match lower_cons body with
   | Term.Continue_into {cells = [outer; inner]; next} ->
     check "each cell's hole is the argument holding the call" (outer.hole = 1 && inner.hole = 1);
     check "a cell keeps its other arguments" (List.length outer.arguments = 1);
-    check "the chain continues by the call" (Occurrence.equal next.occurrence (Global_use.occurrence u))
+    check "the chain continues by the call" (Core.Occurrence.equal next.occurrence (Core.Global_use.occurrence u))
   | _ -> check "a chain around a call continues into its hole" false );
   check "a chain's call is among the loop's continues" (continues_at [u] (lower_cons body));
   check "without modulo cons a chain is returned" (lower body = Term.Return body);
   (* cons (count n acc) (count n acc): two calls, no chain. *)
-  let twice = MLcons (nat, cons, [call (use ()) [fresh_rel 2; fresh_rel 1]; call (use ()) [fresh_rel 2; fresh_rel 1]], Occurrence.fresh ()) in
+  let twice = Core.Expr.Construct {result_type = nat;
+                                   constructor = cons;
+                                   arguments = [call (use ()) [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]; call (use ()) [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]];
+                                   occurrence = Core.Occurrence.fresh ()} in
   check "a constructor holding two calls is returned" (lower_cons twice = Term.Return twice);
   (* A chain's call passing the parameters on keeps them. *)
-  let kept = MLcons (nat, cons, [fresh_rel 2; call (use ()) [fresh_rel 2; fresh_rel 1]], Occurrence.fresh ()) in
+  let kept = Core.Expr.Construct {result_type = nat;
+                                  constructor = cons;
+                                  arguments = [Core.Expr.fresh_rel 2; call (use ()) [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]];
+                                  occurrence = Core.Occurrence.fresh ()} in
   check "a chain's call counts as a turn"
     (Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower_cons kept}
     = [true; true] )
@@ -135,13 +146,13 @@ let lower_frames body = Lower_control.tail_loop ~frames:true ~effects:Core_effec
 let () =
   (* let x := count n acc in plus x x *)
   let u = use () in
-  let body = MLletin (id "x", nat, call u [fresh_rel 2; fresh_rel 1], plus (fresh_rel 1) (fresh_rel 1), Occurrence.fresh ()) in
+  let body = Core.Expr.Let {binder = id "x"; binder_type = nat; value = call u [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]; body = plus (Core.Expr.fresh_rel 1) (Core.Expr.fresh_rel 1); occurrence = Core.Occurrence.fresh ()} in
   ( match lower_frames body with
   | Term.Resume {binder; value = Continue c; body = Return _; _} ->
     check "the call's result is bound to the let's binder" (binder = id "x");
-    check "the call enters the loop afresh" (Occurrence.equal c.occurrence (Global_use.occurrence u))
+    check "the call enters the loop afresh" (Core.Occurrence.equal c.occurrence (Core.Global_use.occurrence u))
   | _ -> check "a let binding a recursive call resumes" false );
-  check "the call is resumed after" (List.equal Occurrence.equal (Term.resumed (lower_frames body)) [Global_use.occurrence u]);
+  check "the call is resumed after" (List.equal Core.Occurrence.equal (Term.resumed (lower_frames body)) [Core.Global_use.occurrence u]);
   check "and continues the loop" (continues_at [u] (lower_frames body));
   check "without frames a let binding a call is returned with it" (lower body = Term.Return body);
   (* let x := (match n with O => acc | S m => count m acc) in count x acc:
@@ -150,17 +161,16 @@ let () =
      ordinary call; the tail call continues. *)
   let inner = use () and tail = use () in
   let rhs =
-    MLcase
-      ( nat,
-        fresh_rel 2,
-        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = fresh_rel 1};
-           { br_binders = [(id "m", nat)];
-             br_type = nat;
-             br_pattern = Pwild;
-             br_body = call inner [fresh_rel 1; fresh_rel 2] } |],
-        Occurrence.fresh () )
+    Core.Expr.Match {scrutinee_type = nat; scrutinee = Core.Expr.fresh_rel 2; branches = [| {Core.Match.Branch.binders = [];
+                                                                                             result_type = nat;
+                                                                                             pattern = Core.Pattern.Wildcard;
+                                                                                             body = Core.Expr.fresh_rel 1};
+           { Core.Match.Branch.binders = [(id "m", nat)];
+             result_type = nat;
+             pattern = Core.Pattern.Wildcard;
+             body = call inner [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2] } |]; occurrence = Core.Occurrence.fresh ()}
   in
-  let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
+  let body = Core.Expr.Let {binder = id "x"; binder_type = nat; value = rhs; body = call tail [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2]; occurrence = Core.Occurrence.fresh ()} in
   let t = lower_frames body in
   check "a call ending a branch of a let's match run in a lambda is no turn" (Term.resumed t = []);
   check "the tail call after it continues alone" (continues_at [tail] t);
@@ -169,22 +179,18 @@ let () =
      the branch resumes. *)
   let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "R")) in
   Table.add_inductive_kind kn (Core.Inductive.Kind.Record [(Some (r "a"), nat)]);
-  let record = Tglob (GlobRef.IndRef (kn, 0), [], []) in
+  let record = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   let inner = use () and tail = use () in
   let rhs =
-    MLcase
-      ( record,
-        fresh_rel 2,
-        [| { br_binders = [(id "a", nat)];
-             br_type = nat;
-             br_pattern = Pwild;
-             br_body = call inner [fresh_rel 1; fresh_rel 2] } |],
-        Occurrence.fresh () )
+    Core.Expr.Match {scrutinee_type = record; scrutinee = Core.Expr.fresh_rel 2; branches = [| { Core.Match.Branch.binders = [(id "a", nat)];
+             result_type = nat;
+             pattern = Core.Pattern.Wildcard;
+             body = call inner [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2] } |]; occurrence = Core.Occurrence.fresh ()}
   in
-  let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
+  let body = Core.Expr.Let {binder = id "x"; binder_type = nat; value = rhs; body = call tail [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2]; occurrence = Core.Occurrence.fresh ()} in
   let t = lower_frames body in
   check "a call ending a branch of a let's record match is resumed after"
-    (List.equal Occurrence.equal (Term.resumed t) [Global_use.occurrence inner]);
+    (List.equal Core.Occurrence.equal (Term.resumed t) [Core.Global_use.occurrence inner]);
   check "the tail call after it continues" (continues_at [inner; tail] t);
   check "a parameter passed on under the resumed binder is kept"
     (Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [false; true])
@@ -198,41 +204,40 @@ let lower_adopting adopted body =
 let () =
   (* (fix go k := match k with O => count n acc | S j => let y := go j in count n y) acc,
      under [n; acc]. *)
-  let fix = Occurrence.fresh () and go_read = Occurrence.fresh () in
+  let fix = Core.Occurrence.fresh () and go_read = Core.Occurrence.fresh () in
   let back = use () and back' = use () in
   let go_body =
-    MLcase
-      ( nat,
-        fresh_rel 1,
-        [| {br_binders = []; br_type = nat; br_pattern = Pwild; br_body = call back [fresh_rel 4; fresh_rel 3]};
-           { br_binders = [(id "j", nat)];
-             br_type = nat;
-             br_pattern = Pwild;
-             br_body =
-               MLletin
-                 (id "y", nat, MLapp (MLrel (3, go_read), [fresh_rel 1]), call back' [fresh_rel 6; fresh_rel 1], Occurrence.fresh ())
-           } |], Occurrence.fresh ())
+    Core.Expr.Match {scrutinee_type = nat; scrutinee = Core.Expr.fresh_rel 1; branches = [| {Core.Match.Branch.binders = [];
+                                                                                             result_type = nat;
+                                                                                             pattern = Core.Pattern.Wildcard;
+                                                                                             body = call back [Core.Expr.fresh_rel 4; Core.Expr.fresh_rel 3]};
+           { Core.Match.Branch.binders = [(id "j", nat)];
+             result_type = nat;
+             pattern = Core.Pattern.Wildcard;
+             body =
+               Core.Expr.Let {binder = id "y"; binder_type = nat; value = Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = 3; occurrence = go_read}; arguments = [Core.Expr.fresh_rel 1]}; body = call back' [Core.Expr.fresh_rel 6; Core.Expr.fresh_rel 1]; occurrence = Core.Occurrence.fresh ()}
+           } |]; occurrence = Core.Occurrence.fresh ()}
   in
-  let fixpoint = MLfixpoint (0, [|(Id.of_string "go", Tarr (nat, nat))|], [|MLlam (id "k", nat, go_body)|], fix) in
-  let t = lower_adopting fix (MLapp (fixpoint, [fresh_rel 1])) in
+  let fixpoint = Core.Expr.Fixpoint {selected = 0; functions = [|(Id.of_string "go", Core.Type.Arrow {parameter = nat; result = nat})|]; bodies = [|Core.Expr.Lambda {parameter = id "k"; parameter_type = nat; body = go_body}|]; occurrence = fix} in
+  let t = lower_adopting fix (Core.Expr.Apply {callee = fixpoint; arguments = [Core.Expr.fresh_rel 1]}) in
   ( match t with
   | Term.Entry {entered; name = None; scope = Continue c} ->
     check "the entry is the fixpoint's function" (Loop.equal entered.loop (Loop.Member (fix, 0)));
     check "over its parameters" (List.length entered.parameters = 1);
-    check "the fixpoint applied enters it" (Loop.equal c.target entered.loop && Occurrence.equal c.occurrence fix)
+    check "the fixpoint applied enters it" (Loop.equal c.target entered.loop && Core.Occurrence.equal c.occurrence fix)
   | _ -> check "an adopted fixpoint applied is an entry" false );
   check "an entry's body continues the function and the fixpoint"
-    (List.equal Occurrence.equal (Term.continues t)
-       [Global_use.occurrence back; go_read; Global_use.occurrence back'; fix] );
-  check "only the call a let binds is resumed after" (List.equal Occurrence.equal (Term.resumed t) [go_read]);
+    (List.equal Core.Occurrence.equal (Term.continues t)
+       [Core.Global_use.occurrence back; go_read; Core.Global_use.occurrence back'; fix] );
+  check "only the call a let binds is resumed after" (List.equal Core.Occurrence.equal (Term.resumed t) [go_read]);
   check "the function's parameters are read under the entry's binders"
     (Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [true; false]);
-  check "a fixpoint not adopted is returned" (lower_frames (MLapp (fixpoint, [fresh_rel 1])) = Term.Return (MLapp (fixpoint, [fresh_rel 1])));
+  check "a fixpoint not adopted is returned" (lower_frames (Core.Expr.Apply {callee = fixpoint; arguments = [Core.Expr.fresh_rel 1]}) = Term.Return (Core.Expr.Apply {callee = fixpoint; arguments = [Core.Expr.fresh_rel 1]}));
   (* let g := fix go k := ... in g n: the let's binder names the entry. *)
-  let g_read = Occurrence.fresh () in
-  let t = lower_adopting fix (MLletin (id "g", Tarr (nat, nat), fixpoint, MLapp (MLrel (1, g_read), [fresh_rel 3]), Occurrence.fresh ())) in
+  let g_read = Core.Occurrence.fresh () in
+  let t = lower_adopting fix (Core.Expr.Let {binder = id "g"; binder_type = Core.Type.Arrow {parameter = nat; result = nat}; value = fixpoint; body = Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = 1; occurrence = g_read}; arguments = [Core.Expr.fresh_rel 3]}; occurrence = Core.Occurrence.fresh ()}) in
   match t with
   | Term.Entry {name = Some (x, _); scope = Continue c; _} ->
     check "the let's binder is the entry's name" (x = id "g");
-    check "a call by that name enters it" (Occurrence.equal c.occurrence g_read)
+    check "a call by that name enters it" (Core.Occurrence.equal c.occurrence g_read)
   | _ -> check "a let binding an adopted fixpoint is an entry" false

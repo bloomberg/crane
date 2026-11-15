@@ -5,7 +5,6 @@
    view is keyed by the callee's own variables. *)
 
 open Crane_plugin
-open Miniml
 
 let check name cond =
   if not cond then (
@@ -13,8 +12,8 @@ let check name cond =
     exit 1 )
 
 let callee = Names.GlobRef.VarRef (Names.Id.of_string "f")
-let nat = Tglob (Names.GlobRef.VarRef (Names.Id.of_string "nat"), [], [])
-let bool = Tglob (Names.GlobRef.VarRef (Names.Id.of_string "bool"), [], [])
+let nat = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
+let bool = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "bool"); type_arguments = []; index_arguments = []}
 let binder = Scheme.Binder.of_position 0
 
 let source () =
@@ -30,9 +29,9 @@ let () =
     let scheme = Scheme.Id.fresh callee ~arity in
     let sources = List.map (fun v -> (v, source ())) (Scheme.Var.all scheme) in
     let use =
-      Global_use.polymorphic callee
+      Core.Global_use.polymorphic callee
         (Scheme.Instantiation.make scheme (fun v ->
-             { Scheme.solution = Scheme.Type (Thole (Scheme.Hole.fresh ()));
+             { Scheme.solution = Scheme.Type (Core.Type.Hole (Scheme.Hole.fresh ()));
                source = List.assoc v sources } ) )
     in
     let t = Call_tyargs.of_use use in
@@ -60,7 +59,7 @@ let () =
     let answer v =
       match Random.int 3 with
       | 0 -> None
-      | 1 -> Some (Tdummy Ktype)
+      | 1 -> Some (Core.Type.Erased Core.Erasure_reason.Type_argument)
       | _ -> Some (if Scheme.Var.ordinal v mod 2 = 0 then bool else nat)
     in
     let answers = List.map (fun v -> (v, answer v)) (Call_tyargs.vars t) in
@@ -71,7 +70,7 @@ let () =
     List.iter
       (fun (j, ty) ->
         match Mlutil.Var_types.find before j with
-        | Some (Tdummy _) | None -> ()
+        | Some (Core.Type.Erased _) | None -> ()
         | Some b -> check "a known variable keeps its type" (b = ty) )
       (Mlutil.Var_types.bindings after);
     check "no resolution is an erased placeholder"
@@ -80,7 +79,7 @@ let () =
            Call_tyargs.is_hole r v
            || (not (Call_tyargs.is_hole t v))
            || match Mlutil.Var_types.find after v with
-              | Some (Tdummy _) | None -> false
+              | Some (Core.Type.Erased _) | None -> false
               | Some _ -> true )
          (Call_tyargs.vars t) );
     check "only an asked hole with an answer is resolved"
@@ -90,7 +89,7 @@ let () =
            = ( Call_tyargs.is_hole t v
                && not
                     ( List.exists (Scheme.Var.equal v) asked
-                    && match answer v with Some (Tdummy _) | None -> false | Some _ -> true ) ) )
+                    && match answer v with Some (Core.Type.Erased _) | None -> false | Some _ -> true ) ) )
          (Call_tyargs.vars t) );
     check "a resolved variable is no longer unwritten"
       (List.for_all

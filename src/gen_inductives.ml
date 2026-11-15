@@ -14,7 +14,6 @@
     for its body on. *)
 
 open Common
-open Miniml
 open Names
 open Mlutil
 open Table
@@ -200,9 +199,9 @@ and stmt_has_shared_from_this : Cpp_ir.Lowered.Stmt.t -> bool = function
     return type, its parameters and the environment naming them, and the head
     before {!method_head} decides which of its own variables it keeps. *)
 type method_scope = {
-  ms_ty : ml_type;  (** The function's type, renumbered. *)
-  ms_ret_ty : ml_type;  (** Its ML return type, renumbered. *)
-  ms_body : ml_ast;  (** Its body, renumbered. *)
+  ms_ty : Core.Type.t;  (** The function's type, renumbered. *)
+  ms_ret_ty : Core.Type.t;  (** Its ML return type, renumbered. *)
+  ms_body : Core.Expr.t;  (** Its body, renumbered. *)
   ms_all_tvars : int list;
       (** The variables of the type before renumbering, sorted. *)
   ms_remap : int -> int;
@@ -225,9 +224,9 @@ type method_scope = {
   ms_ret_cpp : Cpp_ir.Lowered.Type.t;
       (** The C++ return type, before {!method_head} erases the variables it
           alone mentions. *)
-  ms_ids_with_types : (ml_ident * ml_type) list;
+  ms_ids_with_types : (Core.Binder_name.t * Core.Type.t) list;
       (** The declared parameters, innermost first. *)
-  ms_inner_body : ml_ast;  (** The body under those parameters. *)
+  ms_inner_body : Core.Expr.t;  (** The body under those parameters. *)
   ms_env : env;  (** The environment naming the parameters, renamed apart. *)
   ms_method_owned_flags : bool list;
       (** Whether each parameter is owned, innermost first. *)
@@ -541,7 +540,7 @@ let method_head vars s =
            t )
          inner_body );
     (* A hole names no variable; it is declined rather than converted. *)
-    let declined = Mlutil.map_ml_type (function Thole _ -> Tunknown | t -> t) in
+    let declined = Mlutil.map_ml_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
     let annotations =
       with_type_vars (vars @ extra_tvar_names) (fun () ->
           List.rev_map
@@ -756,7 +755,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      inductive's variable positions {!Cpp_names.method_type_args} filters out
      at the call site, {!Cpp_state.lookup_method_ind_tvar_positions}).
      Position i in tys
-     corresponds to Tvar (i+1) in the original ML type. After remapping, Tvar
+     corresponds to Core.Type.Variable (i+1) in the original ML type. After remapping, Core.Type.Variable
      (i+1) → remap_ml_tvar(i+1). We construct the C++ type arg from
      extended_vars at that remapped position. *)
   let extended_vars = vars @ extra_tvar_names in
@@ -1020,17 +1019,17 @@ let ml_type_has_nested_self_ref ~ind_ref ml_ty =
        | _ -> false
   in
   let rec has_self_ref = function
-    | Miniml.Tglob (r, args, _) ->
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       is_self_or_mutual r || List.exists has_self_ref args
-    | Miniml.Tmeta {contents = Some t} -> has_self_ref t
-    | Miniml.Tarr (t1, t2) ->
+    | Core.Type.Meta {contents = Some t} -> has_self_ref t
+    | Core.Type.Arrow {parameter = t1; result = t2} ->
       has_self_ref t1 || has_self_ref t2
     | _ -> false
   in
   match ml_ty with
-  | Miniml.Tglob (r, args, _) when not (is_self_or_mutual r) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} when not (is_self_or_mutual r) ->
     List.exists has_self_ref args
-  | Miniml.Tmeta {contents = Some (Miniml.Tglob (r, args, _))}
+  | Core.Type.Meta {contents = Some (Core.Type.Global_app {head = r; type_arguments = args; _})}
     when not (is_self_or_mutual r) ->
     List.exists has_self_ref args
   | _ -> false
@@ -1044,12 +1043,12 @@ let ml_type_has_nested_self_ref ~ind_ref ml_ty =
 let ml_type_recurses_through_boxed_container ~ind_ref ml_ty =
   let rec find_boxed_rec t =
     match t with
-    | Miniml.Tglob (g, args, _) ->
+    | Core.Type.Global_app {head = g; type_arguments = args; _} ->
       ( match Table.find_boxed_wrapper_opt g with
       | Some _ when ml_type_has_nested_self_ref ~ind_ref t -> true
       | _ -> List.exists find_boxed_rec args )
-    | Miniml.Tarr (a, b) -> find_boxed_rec a || find_boxed_rec b
-    | Miniml.Tmeta {contents = Some t'} -> find_boxed_rec t'
+    | Core.Type.Arrow {parameter = a; result = b} -> find_boxed_rec a || find_boxed_rec b
+    | Core.Type.Meta {contents = Some t'} -> find_boxed_rec t'
     | _ -> false
   in
   find_boxed_rec ml_ty
@@ -1141,19 +1140,21 @@ let constructor_pointer_fields ~name ~is_coinductive vars tys =
     indices, which its C++ type does not take: [succE : expr nat -> expr nat]
     holds an [expr] like any other. *)
 let rec is_ref_to ref_name ref_vars = function
-  | Miniml.Tglob (r, args, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} ->
     globref_equal r ref_name
     && List.length args >= List.length ref_vars
     && List.for_all
          (fun (j, arg) ->
            match arg with
-           | Miniml.Tvar (_, k) -> k = j + 1
-           | Miniml.Tmeta {contents = Some (Miniml.Tvar (Schematic, k))}
-           | Miniml.Tmeta {contents = Some (Miniml.Tvar (Rigid, k))} ->
+           | Core.Type.Variable {variable = k; _} -> k = j + 1
+           | Core.Type.Meta {contents = Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                                  variable = k})}
+           | Core.Type.Meta {contents = Some (Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid;
+                                                                  variable = k})} ->
              k = j + 1
            | _ -> false)
          (List.mapi (fun j a -> (j, a)) (CList.firstn (List.length ref_vars) args))
-  | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
+  | Core.Type.Meta {contents = Some t} -> is_ref_to ref_name ref_vars t
   | _ -> false
 
 (* Short names for the CppIR modules the struct is built from. *)
@@ -1283,7 +1284,7 @@ let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_i
 
     @param is_mutual       whether this type is part of a mutual block
     @param consarg_names   binder names from
-                           {!Miniml.ml_ind_packet.ip_consarg_names}, indexed by
+                           {!Core.Inductive.Packet.t.ip_consarg_names}, indexed by
                            constructor: struct fields and factory parameters
                            use them instead of positional names ([d_a0])
     @param mutual_partners the other types of the mutual block, each with its
@@ -1295,7 +1296,7 @@ let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_i
     @param tys             the argument types of each constructor
     @param method_candidates
       functions to generate as methods: [(func_ref, body, type, this_pos)]
-    @param ind_kind        whether the inductive is coinductive *)
+    @param kind        whether the inductive is coinductive *)
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
@@ -1689,9 +1690,9 @@ let gen_ind_header_v2
           let rec contains_self t =
             is_direct_self_ref t
             || match t with
-               | Miniml.Tmeta {contents = Some t'} -> contains_self t'
-               | Miniml.Tglob (_, args, _) -> List.exists contains_self args
-               | Miniml.Tarr (a, b) -> contains_self a || contains_self b
+               | Core.Type.Meta {contents = Some t'} -> contains_self t'
+               | Core.Type.Global_app {type_arguments = args; _} -> List.exists contains_self args
+               | Core.Type.Arrow {parameter = a; result = b} -> contains_self a || contains_self b
                | _ -> false
           in
           let is_mutual_ref ty =
@@ -1730,10 +1731,10 @@ let gen_ind_header_v2
                  List.filter_map
                    (fun (j, fty) ->
                      let rec holds_self = function
-                       | Miniml.Tvar (_, k) ->
+                       | Core.Type.Variable {variable = k; _} ->
                          k >= 1 && k <= nargs
                          && is_direct_self_ref (List.nth args (k - 1))
-                       | Miniml.Tmeta {contents = Some t} -> holds_self t
+                       | Core.Type.Meta {contents = Some t} -> holds_self t
                        | t -> is_direct_self_ref t
                      in
                      if holds_self fty
@@ -1765,12 +1766,12 @@ let gen_ind_header_v2
                   | Some [], Some [elem; tail] ->
                     let is_first_tvar t =
                       match Ml_type_util.resolve_tmeta t with
-                      | Miniml.Tvar (_, 1) -> true
+                      | Core.Type.Variable {variable = 1; _} -> true
                       | _ -> false
                     in
                     let is_self t =
                       match Ml_type_util.resolve_tmeta t with
-                      | Miniml.Tglob (g', _, _) -> globref_equal g' g
+                      | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
                       | _ -> false
                     in
                     is_first_tvar elem && is_self tail
@@ -1779,12 +1780,12 @@ let gen_ind_header_v2
           in
           let rec classify_ml_self_ref = function
             | ml_ty when is_direct_self_ref ml_ty -> `Direct
-            | Miniml.Tglob (g, [arg], _)
+            | Core.Type.Global_app {head = g; type_arguments = [arg]; _}
               when (is_list_global g || is_list_shaped_ind g)
                    && is_direct_self_ref arg ->
               `List g
-            | Miniml.Tmeta {contents = Some t} -> classify_ml_self_ref t
-            | Miniml.Tglob (g, args, _) as ml_ty
+            | Core.Type.Meta {contents = Some t} -> classify_ml_self_ref t
+            | Core.Type.Global_app {head = g; type_arguments = args; _} as ml_ty
               when not (globref_equal g name) ->
               (match wrapper_self_fields g args with
                | [] ->
@@ -1984,14 +1985,14 @@ let gen_ind_header_v2
              declared constructor field types. *)
           let rec subst_targs args t =
             match t with
-            | Miniml.Tmeta {contents = Some t'} -> subst_targs args t'
-            | Miniml.Tvar (_, k) ->
+            | Core.Type.Meta {contents = Some t'} -> subst_targs args t'
+            | Core.Type.Variable {variable = k; _} ->
               if k >= 1 && k <= List.length args then List.nth args (k - 1)
               else t
-            | Miniml.Tglob (g, ts, l) ->
-              Miniml.Tglob (g, List.map (subst_targs args) ts, l)
-            | Miniml.Tarr (a, b) ->
-              Miniml.Tarr (subst_targs args a, subst_targs args b)
+            | Core.Type.Global_app {head = g; type_arguments = ts; index_arguments = l} ->
+              Core.Type.Global_app {head = g; type_arguments = List.map (subst_targs args) ts; index_arguments = l}
+            | Core.Type.Arrow {parameter = a; result = b} ->
+              Core.Type.Arrow {parameter = subst_targs args a; result = subst_targs args b}
             | _ -> t
           in
           (* [(ctor index (1-based), declared field types)] for every
@@ -2013,10 +2014,10 @@ let gen_ind_header_v2
           let mentions g t =
             let rec go t =
               match t with
-              | Miniml.Tmeta {contents = Some t'} -> go t'
-              | Miniml.Tglob (g', args, _) ->
+              | Core.Type.Meta {contents = Some t'} -> go t'
+              | Core.Type.Global_app {head = g'; type_arguments = args; _} ->
                 globref_equal g' g || List.exists go args
-              | Miniml.Tarr (a, b) -> go a || go b
+              | Core.Type.Arrow {parameter = a; result = b} -> go a || go b
               | _ -> false
             in
             go t
@@ -2026,7 +2027,7 @@ let gen_ind_header_v2
           let field_is_ptr g fty =
             let root_is_g =
               match Ml_type_util.resolve_tmeta fty with
-              | Miniml.Tglob (g', _, _) -> globref_equal g' g
+              | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
               | _ -> false
             in
             (root_is_g || ml_type_has_nested_self_ref ~ind_ref:g fty)
@@ -2043,7 +2044,7 @@ let gen_ind_header_v2
             if is_direct_self_ref ty then [push_self_stmt e]
             else
               match ty with
-              | Miniml.Tglob (g, args, _) when List.exists contains_self args ->
+              | Core.Type.Global_app {head = g; type_arguments = args; _} when List.exists contains_self args ->
                 (match Table.find_custom_opt g with
                  | Some tmpl when starts_with "std::optional" tmpl ->
                    (match args with
@@ -2085,7 +2086,7 @@ let gen_ind_header_v2
               | None -> raise Harvest_bail
               | Some c -> c
             in
-            let g_ty = Miniml.Tglob (g, args, []) in
+            let g_ty = Core.Type.Global_app {head = g; type_arguments = args; index_arguments = []} in
             let g_cpp = outer_ml g_ty in
             let self_recursive =
               List.exists
@@ -2443,7 +2444,13 @@ let gen_ind_header_v2
             let next_id = Id.of_string "_next" in
             let take (ctor_id, field_id) =
               let fe = E.Access (Arrow, E.Local _alt_id, field_id) in
-              S.If_declaration {name = _alt_id; type_ = T.Pointer T.Auto; init = E.Variant_get_if (T.Named (ctor_id, []), E.Unary (Address_of, E.Local _v_id)); then_ = [ S.If {condition = E.Binary (And, fe, is_sole fe); then_ = unique_fence @ [S.Return (Some (E.Move fe))]; else_ = []} ]; else_ = []}
+              S.If_declaration {name = _alt_id;
+                                type_ = T.Pointer T.Auto;
+                                init = E.Variant_get_if (T.Named (ctor_id, []), E.Unary (Address_of, E.Local _v_id));
+                                then_ = [ S.If {condition = E.Binary (And, fe, is_sole fe);
+                                                then_ = unique_fence @ [S.Return (Some (E.Move fe))];
+                                                else_ = []} ];
+                                else_ = []}
             in
             let next_lambda =
               lambda
@@ -2528,7 +2535,9 @@ let gen_ind_header_v2
                        | Some e ->
                          Some
                            (S.If_declaration {name = _alt_id; type_ = T.Pointer T.Auto; init = E.Variant_get_if
-                                  (T.Named (ctor_id, []), E.Unary (Address_of, v_mut)); then_ = [S.If {condition = E.Unary (Not, e); then_ = [S.Return None]; else_ = []}]; else_ = []}))
+                                  (T.Named (ctor_id, []), E.Unary (Address_of, v_mut)); then_ = [S.If {condition = E.Unary (Not, e);
+                                                                                                       then_ = [S.Return None];
+                                                                                                       else_ = []}]; else_ = []}))
                    tys)
               |> List.filter_map Fun.id
             in
@@ -2902,7 +2911,7 @@ let gen_ind_header_v2
           List.find_map
             (fun ((j, storage_ty, _), ty) ->
               match ((storage_ty : Cpp_ir.Lowered.Type.t), Mlutil.ml_resolve ty) with
-              | Shared_pointer inner, Miniml.Tglob (r, _, _)
+              | Shared_pointer inner, Core.Type.Global_app {head = r; _}
                 when GlobRef.CanOrd.equal r name ->
                 Some (j, inner)
               | _ -> None )

@@ -32,10 +32,10 @@ val owned_ref : 'a -> 'a ref
 (** {2 Method registry} *)
 
 (** The unit's method registry, built once per extraction pass by scanning
-    the [ml_structure]; read through {!get_method_registry}. *)
+    the [Core.Program.t]; read through {!get_method_registry}. *)
 val method_registry : Method_registry.t option ref
 
-(** Pre-built registry from the full [ml_structure], used in separate extraction
+(** Pre-built registry from the full [Core.Program.t], used in separate extraction
     so cross-module method calls are recognised. [None] when unset; cleared by
     [reset_cpp_state]. *)
 val global_method_registry : Method_registry.t option ref
@@ -449,13 +449,13 @@ val eponymous_promote_ref : Names.GlobRef.t option ref
     0-based index of the first argument matching the eponymous type. Reset to
     [[]] by [reset_cpp_state]. *)
 val method_candidates :
-  (Names.GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int) list ref
+  (Names.GlobRef.t * Core.Expr.t * Core.Type.t * int) list ref
 
 (** The eponymous record of the module being rendered, as
     [(record_ref, field_refs, ind_packet)], whose fields are merged into the
     module struct. Reset to [None] by [reset_cpp_state]. *)
 val eponymous_record :
-  (Names.GlobRef.t * Miniml.record_field list * Miniml.ml_ind_packet)
+  (Names.GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t)
   option ref
 
 (** {2 Scoped render state} *)
@@ -588,7 +588,7 @@ val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 val planned_method_candidate :
   Names.GlobRef.t ->
   Names.GlobRef.t ->
-  Miniml.ml_ast -> Miniml.ml_type -> Method_registry.method_candidate option
+  Core.Expr.t -> Core.Type.t -> Method_registry.method_candidate option
 
 (** Look up a function in the method registry.
     @return [Some (eponymous_type, this_position)] if it is registered as a
@@ -613,7 +613,7 @@ val method_returns_any : Names.GlobRef.t -> bool
 (** Declarations of the structure currently being emitted, scanned for
     methods defined by sibling modules of the same Rocq module. *)
 val current_structure_decls :
-  (Names.Label.t * Miniml.ml_structure_elem) list ref
+  (Names.Label.t * Core.Module.Structure_item.t) list ref
 
 (** {2 Per-run reset} *)
 
@@ -631,7 +631,7 @@ val is_eponymous_record_projection : Names.GlobRef.t -> bool
     not be rendered as a standalone function. *)
 val is_suppressed_projection : Names.GlobRef.t -> bool
 
-(** Drop from a [Dfix] group the entries that are inline customs, local or
+(** Drop from a [Core.Decl.Recursive_group] group the entries that are inline customs, local or
     globally registered method candidates, eponymous-record projections, or
     suppressed projections.  What is left is a list, and may be empty. *)
-val filter_dfix : Miniml.ml_fix_def Core.Nonempty.t -> Miniml.ml_fix_def list
+val filter_dfix : Core.Recursion.Definition.t Core.Nonempty.t -> Core.Recursion.Definition.t list

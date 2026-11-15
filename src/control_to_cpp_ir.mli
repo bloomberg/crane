@@ -95,8 +95,8 @@ val method_resumes :
 val local_resumes :
   owner:Names.GlobRef.t option ->
   function_:bool ->
-  lifted:Miniml.Occurrence.t list ->
-  member:Miniml.Occurrence.t * int ->
+  lifted:Core.Occurrence.t list ->
+  member:Core.Occurrence.t * int ->
   depth:int ->
   arity:int ->
   (Ownership_ir.resumes * bool) option
@@ -130,8 +130,8 @@ val lifted_resumes :
 val local_loop :
   owner:Names.GlobRef.t option ->
   function_:bool ->
-  lifted:Miniml.Occurrence.t list ->
-  member:Miniml.Occurrence.t * int ->
+  lifted:Core.Occurrence.t list ->
+  member:Core.Occurrence.t * int ->
   tparams:Cpp_ir.Lowered.phase Cpp_ir.Template.parameters ->
   name:Names.Id.t ->
   Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t ->

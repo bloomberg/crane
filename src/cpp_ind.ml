@@ -10,12 +10,12 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Which C++ declarations a MiniML declaration becomes.
+(** Which C++ declarations a Core declaration becomes.
 
     This module contains:
     {ul
     {- {!ind_header_decls}: what an inductive block becomes;}
-    {- {!generate}: what a MiniML declaration becomes, whichever file is
+    {- {!generate}: what a Core declaration becomes, whichever file is
        being written;}
     {- generating once ({!ahead_once}): everything is generated ahead of
        both files ({!generate_ahead}), finished in the unit's program
@@ -33,7 +33,6 @@
 open Util
 open Names
 open Table
-open Miniml
 open Common
 open Gen_decls
 open Cpp_state
@@ -69,29 +68,29 @@ let module_struct_name (mp : ModPath.t) : string option =
 
 (** The kinds of the template parameters of the inductive [kn]'s packets,
     as {!ind_header_decls} gives them. *)
-let ind_template_kinds kn ind =
-  match ind.ind_kind with
+let ind_template_kinds kn (ind : Core.Inductive.t) =
+  match ind.kind with
   | Core.Inductive.Kind.Type_class _ | Core.Inductive.Kind.Record _ -> []
   | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive ->
     List.filter_map
-      (fun (i, p) ->
+      (fun (i, (p : Core.Inductive.Packet.t)) ->
         let r = GlobRef.IndRef (kn, i) in
-        if p.ip_logical || is_custom r || is_monad r then None
+        if p.logical || is_custom r || is_monad r then None
         else
           Some
             ( r,
               snd
                 (Plan_templates.template_kinds
                    (Common.ind_struct_tparams kn ind p)
-                   (List.concat (Array.to_list p.ip_types)) ) ) )
-      (List.mapi (fun i p -> (i, p)) (Array.to_list ind.ind_packets))
+                   (List.concat (Array.to_list p.constructor_argument_types)) ) ) )
+      (List.mapi (fun i p -> (i, p)) (Array.to_list ind.packets))
 
 (* The same for a type alias [generate] writes: its kinds come out of its
    rendered right-hand side, and only the alias's own generation renders it. *)
 let alias_template_kinds r l t =
   let written =
     match t with
-    | Miniml.Tdummy Miniml.Ktype -> false
+    | Core.Type.Erased Core.Erasure_reason.Type_argument -> false
     | t ->
       not
         ( is_any_inline_custom r
@@ -109,8 +108,8 @@ let template_kinds struc =
   in
   Modutil.struct_iter
     (function
-      | Dind (kn, ind) -> decide (ind_template_kinds kn ind)
-      | Dtype (r, l, t) -> decide (alias_template_kinds r l t)
+      | Core.Decl.Inductive {entity = kn; definition = ind} -> decide (ind_template_kinds kn ind)
+      | Core.Decl.Type_alias {entity = r; parameters = l; body = t} -> decide (alias_template_kinds r l t)
       | _ -> () )
     (fun _ -> ())
     (fun _ -> ())
@@ -178,8 +177,8 @@ let scope_at (ctx : render_ctx) = {in_struct = ctx.rc_in_struct; concepts_hoiste
     ("redefinition as different kind of symbol").
 
     Written in the header scope [scope]. *)
-let ind_header_decls scope kn ind =
-  let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
+let ind_header_decls scope kn (ind : Core.Inductive.t) =
+  let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.packets in
   (* Written at namespace scope: outside every struct, or moved out of the
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
@@ -188,11 +187,11 @@ let ind_header_decls scope kn ind =
   in
   let cnames =
     Array.mapi
-      (fun i p ->
-        Array.mapi (fun j _ -> GlobRef.ConstructRef ((kn, i), j + 1)) p.ip_types )
-      ind.ind_packets
+      (fun i (p : Core.Inductive.Packet.t) ->
+        Array.mapi (fun j _ -> GlobRef.ConstructRef ((kn, i), j + 1)) p.constructor_argument_types )
+      ind.packets
   in
-  match ind.ind_kind with
+  match ind.kind with
   | Core.Inductive.Kind.Type_class fields ->
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
@@ -206,13 +205,13 @@ let ind_header_decls scope kn ind =
       ( match !eponymous_record with
       | Some (epon_ref, _, _) when globref_equal ind_ref epon_ref ->
         [] (* Skip - merged into module struct *)
-      | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.ind_packets.(0))] )
+      | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.packets.(0))] )
   | _ ->
-    let is_mutual = Array.length ind.ind_packets > 1 in
+    let is_mutual = Array.length ind.packets > 1 in
     let forward_decls =
       if is_mutual then
         let rec fwd i =
-          if i >= Array.length ind.ind_packets then
+          if i >= Array.length ind.packets then
             []
           else
             let ip = (kn, i) in
@@ -220,7 +219,7 @@ let ind_header_decls scope kn ind =
                || is_monad (GlobRef.IndRef ip) then
               fwd (i + 1)
             else
-              let p = ind.ind_packets.(i) in
+              let p = ind.packets.(i) in
               (* Compute template parameters the same way as the full definition
                  (see param_vars below at the struct gen site). Parameters
                  (before the colon) become template params; indices (after the
@@ -240,7 +239,7 @@ let ind_header_decls scope kn ind =
     in
     (* Helper to find method candidates from current_structure_decls for a given
        inductive. IMPORTANT: Skip functions whose signatures reference type
-       aliases (Dtype) from the same module. This prevents issues like
+       aliases (Core.Decl.Type_alias) from the same module. This prevents issues like
        `heap_delete_max : tree -> priqueue` becoming a method on `tree`, where
        `priqueue` is a type alias not visible from inside `tree`. *)
     let find_methods_for_inductive ind_ref =
@@ -254,7 +253,7 @@ let ind_header_decls scope kn ind =
       let module_type_aliases =
         ref (Method_registry.collect_module_type_aliases
                ~extract_decl:(fun (_l, se) ->
-                 match se with SEdecl d -> Some d | _ -> None)
+                 match se with Core.Module.Structure_item.Declaration d -> Some d | _ -> None)
                ind_modpath !current_structure_decls)
       in
       (* Collect all inductives that come AFTER ind_ref in declaration order.
@@ -266,7 +265,7 @@ let ind_header_decls scope kn ind =
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl (Dind (fwd_kn, fwd_ind)) ->
+          | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = fwd_kn; definition = fwd_ind}) ->
             Array.iteri
               (fun j _p ->
                 let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
@@ -274,7 +273,7 @@ let ind_header_decls scope kn ind =
                   seen_current := true
                 else if !seen_current then
                   forward_inductives := fwd_ref :: !forward_inductives )
-              fwd_ind.ind_packets
+              fwd_ind.packets
           | _ -> () )
         !current_structure_decls;
       (* Check if a type references any of the excluded references (type aliases
@@ -282,11 +281,11 @@ let ind_header_decls scope kn ind =
       let excluded_refs = !module_type_aliases @ !forward_inductives in
       let rec refs_excluded ty =
         match ty with
-        | Miniml.Tglob (r, args, _) ->
+        | Core.Type.Global_app {head = r; type_arguments = args; _} ->
           List.exists (globref_equal r) excluded_refs
           || List.exists refs_excluded args
-        | Miniml.Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
-        | Miniml.Tmeta {contents = Some t} -> refs_excluded t
+        | Core.Type.Arrow {parameter = t1; result = t2} -> refs_excluded t1 || refs_excluded t2
+        | Core.Type.Meta {contents = Some t} -> refs_excluded t
         | _ -> false
       in
       (* Check if function comes from the same Rocq module as the inductive *)
@@ -304,9 +303,9 @@ let ind_header_decls scope kn ind =
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl d ->
+          | Core.Module.Structure_item.Declaration d ->
             List.iter
-              (fun fd -> consider fd.fd_ref fd.fd_body fd.fd_type)
+              (fun (fd : Core.Recursion.Definition.t) -> consider fd.entity fd.body fd.type_)
               (Mlutil.term_defs d)
           | _ -> () )
         !current_structure_decls;
@@ -333,16 +332,16 @@ let ind_header_decls scope kn ind =
     in
     let promoted_sft = ref None in
     let rec pp i =
-      if i >= Array.length ind.ind_packets then
+      if i >= Array.length ind.packets then
         []
       else
         let ip = (kn, i) in
-        let p = ind.ind_packets.(i) in
+        let p = ind.packets.(i) in
         if is_custom (GlobRef.IndRef ip)
            || is_monad (GlobRef.IndRef ip) then
           pp (i + 1)
         else
-          (* Get method candidates: first check if set via SEmodule processing,
+          (* Get method candidates: first check if set via Core.Module.Structure_item.Module processing,
              otherwise find from sibling declarations in
              current_structure_decls. IMPORTANT: Only use
              find_methods_for_inductive for top-level inductives. For inductives
@@ -351,18 +350,18 @@ let ind_header_decls scope kn ind =
              return priqueue (a sibling type alias not visible from inside
              tree). *)
           let ind_ref = GlobRef.IndRef ip in
-          (* Check if ind_ref appears inside any SEmodule in
+          (* Check if ind_ref appears inside any Core.Module.Structure_item.Module in
              current_structure_decls. This detects when an inductive is declared
              inside a submodule. *)
           let is_inside_submodule_decl =
             let rec find_in_module_expr = function
-              | MEstruct (_, sel') ->
+              | Core.Module.Expr.Structure {items = sel'; _} ->
                 List.exists
                   (fun (_l', se') ->
                     match se' with
-                    | SEdecl (Dind (kn', ind')) ->
+                    | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn'; definition = ind'}) ->
                       let rec check_packets i' =
-                        if i' >= Array.length ind'.ind_packets then
+                        if i' >= Array.length ind'.packets then
                           false
                         else
                           let r = GlobRef.IndRef (kn', i') in
@@ -372,14 +371,14 @@ let ind_header_decls scope kn ind =
                       check_packets 0
                     | _ -> false )
                   sel'
-              | MEfunctor (_, _, me) -> find_in_module_expr me
-              | MEapply (me, _) -> find_in_module_expr me
-              | MEident _ -> false
+              | Core.Module.Expr.Functor {body = me; _} -> find_in_module_expr me
+              | Core.Module.Expr.Apply {functor_ = me; _} -> find_in_module_expr me
+              | Core.Module.Expr.Path _ -> false
             in
             List.exists
               (fun (_l, se) ->
                 match se with
-                | SEmodule m -> find_in_module_expr m.ml_mod_expr
+                | Core.Module.Structure_item.Module m -> find_in_module_expr m.expr
                 | _ -> false )
               !current_structure_decls
           in
@@ -421,7 +420,8 @@ let ind_header_decls scope kn ind =
               List.iter
                 (fun (_l, se) ->
                   match se with
-                  | SEdecl (Dind (fwd_kn, fwd_ind)) ->
+                  | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = fwd_kn;
+                                                                                 definition = fwd_ind}) ->
                     Array.iteri
                       (fun j _p ->
                         let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
@@ -434,20 +434,20 @@ let ind_header_decls scope kn ind =
                           seen_self := true
                         else if !seen_self then
                           fwd_inds := fwd_ref :: !fwd_inds )
-                      fwd_ind.ind_packets
+                      fwd_ind.packets
                   | _ -> () )
                 decl_source;
               let fwd_refs = !fwd_inds in
               let rec candidate_refs_fwd ty =
                 match ty with
-                | Miniml.Tglob (r, args, _) ->
+                | Core.Type.Global_app {head = r; type_arguments = args; _} ->
                   List.exists
                     (globref_equal r)
                     fwd_refs
                   || List.exists candidate_refs_fwd args
-                | Miniml.Tarr (t1, t2) ->
+                | Core.Type.Arrow {parameter = t1; result = t2} ->
                   candidate_refs_fwd t1 || candidate_refs_fwd t2
-                | Miniml.Tmeta {contents = Some t} -> candidate_refs_fwd t
+                | Core.Type.Meta {contents = Some t} -> candidate_refs_fwd t
                 | _ -> false
               in
               let existing = List.map (fun (r, _, _, _) -> r) methods in
@@ -469,12 +469,12 @@ let ind_header_decls scope kn ind =
           let mutual_partners =
             if is_mutual then
               let partners = ref [] in
-              for j = Array.length ind.ind_packets - 1 downto 0 do
+              for j = Array.length ind.packets - 1 downto 0 do
                 if j <> i then begin
-                  let pj = ind.ind_packets.(j) in
+                  let pj = ind.packets.(j) in
                   partners :=
-                    (names.(j), cnames.(j), pj.ip_types,
-                     pj.ip_consarg_names) :: !partners
+                    (names.(j), cnames.(j), pj.constructor_argument_types,
+                     pj.constructor_argument_names) :: !partners
                 end
               done;
               !partners
@@ -483,14 +483,14 @@ let ind_header_decls scope kn ind =
           let decl =
             gen_ind_header_v2
               ~is_mutual
-              ~consarg_names:p.ip_consarg_names
+              ~consarg_names:p.constructor_argument_names
               ~mutual_partners
               param_vars
               names.(i)
               cnames.(i)
-              p.ip_types
+              p.constructor_argument_types
               (List.rev methods)
-              ind.ind_kind
+              ind.kind
             |> Plan_templates.deapply_plain_struct_tvars
           in
           (* Check if this inductive is being promoted into its module struct.
@@ -674,7 +674,7 @@ let instance_decls r a t =
   in
   struct_decl @ static_assert_decl
 
-(** What one MiniML declaration generates, before the file being written
+(** What one Core declaration generates, before the file being written
     picks what it writes. *)
 type generation =
   | Functions of {
@@ -684,7 +684,7 @@ type generation =
   | Header_only of (unit -> header_generation)
       (** Written in the header alone, generated ahead of the files in the
           scope the header writes it in ({!header_entity}). *)
-  | Instance of GlobRef.t * ml_ast * ml_type
+  | Instance of GlobRef.t * Core.Expr.t * Core.Type.t
       (** A type-class instance, written in the header alone and generated
           ahead of both files ({!instance_entity}). *)
   | Nothing
@@ -732,7 +732,7 @@ module Node_table = Hashtbl.Make (struct
   let hash = Hashtbl.hash
 end)
 
-(** What was generated ahead of the files, by the MiniML node it was
+(** What was generated ahead of the files, by the Core node it was
     generated from, with the module it was generated in. *)
 let generated : (ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
   Node_table.create 64
@@ -899,7 +899,7 @@ let header_claim key lifted =
       Pp.(str "Crane: a generation was taken whose helpers' placement was not planned.")
 
 (** [generated_once ~module_ ?on_reuse ?on_peek ?planned node gen] is
-    {!ahead_once} for the functions generated at the MiniML node [node] in
+    {!ahead_once} for the functions generated at the Core node [node] in
     [module_]: a file's pass hands them to [on_reuse] to replay any effect
     generating them had, and a peek hands them to [on_peek]. *)
 let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
@@ -912,7 +912,7 @@ let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned no
     gen
 
 (** Whether the type an alias abbreviates is written in C++, decided ahead
-    of the files, by the MiniML node of the alias. *)
+    of the files, by the Core node of the alias. *)
 let aliases_written : (ModPath.t * bool) list Node_table.t = Node_table.create 16
 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
@@ -926,7 +926,7 @@ let alias_written ~module_ d l t =
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
       not (Ml_type_util.has_no_cpp_spelling (Translation.cpp_ir_of_ml_type (empty_env ()) l t)) )
 
-(** [generate scope ~module_ d] is what the MiniML declaration [d], an
+(** [generate scope ~module_ d] is what the Core declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
     whichever file is being written: functions translated once, with their file
     recorded, or declarations only the header writes.  Inline customs,
@@ -949,20 +949,20 @@ let generate scope ~module_ d =
         (generated_once ~module_ d (fun () -> gen_dfuns_dual fds))
   in
   match d with
-  | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
-  | Dterm (r, _, _) when skipped r -> Nothing
-  | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls scope kn ind)
+  | (Core.Decl.Type_alias {entity = r; _} | Core.Decl.Value {entity = r; _}) when is_any_inline_custom r -> Nothing
+  | Core.Decl.Value {entity = r; _} when skipped r -> Nothing
+  | Core.Decl.Inductive {entity = kn; definition = ind} -> Header_only (fun () -> ind_header_decls scope kn ind)
   (* A singleton class is a concept, declared where concepts are. *)
-  | Dtype (r, _, _) when Table.singleton_class_method r <> None ->
+  | Core.Decl.Type_alias {entity = r; _} when Table.singleton_class_method r <> None ->
     if scope.in_struct || scope.concepts_hoisted then Nothing
     else
       Header_only
         (fun () ->
           declarations_only
             [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))] )
-  | Dtype (r, l, t) ->
+  | Core.Decl.Type_alias {entity = r; parameters = l; body = t} ->
     ( match t with
-    | Miniml.Tdummy Miniml.Ktype -> Nothing (* erased Type aliases *)
+    | Core.Type.Erased Core.Erasure_reason.Type_argument -> Nothing (* erased Type aliases *)
     | t when not (alias_written ~module_ d l t) ->
       (* An abbreviation for a type that is not written in C++ is not written
          either, asked of the type as it would be printed: [Definition bigE :=
@@ -974,10 +974,10 @@ let generate scope ~module_ d =
     | t ->
       Header_only
         (fun () -> declarations_only [(empty_env (), gen_type_alias r l (Some t))]) )
-  | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
-    group (Core.Nonempty.singleton {fd_ref = r; fd_body = a; fd_type = t})
-  | Dterm (r, a, t) when is_typeclass_instance t -> Instance (r, a, t)
-  | Dterm (r, a, t) ->
+  | Core.Decl.Value {entity = r; body = a; type_ = (Core.Type.Global_app {head = ty; _} as t)} when is_monad ty ->
+    group (Core.Nonempty.singleton {Core.Recursion.Definition.entity = r; body = a; type_ = t})
+  | Core.Decl.Value {entity = r; body = a; type_ = t} when is_typeclass_instance t -> Instance (r, a, t)
+  | Core.Decl.Value {entity = r; body = a; type_ = t} ->
     (* The helpers lifted out of the body are the element's to place: those
        no earlier element of the header places ({!plan_header_claim}). *)
     let gen () =
@@ -1009,7 +1009,7 @@ let generate scope ~module_ d =
       | None -> List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs
     in
     functions ~module_ ~lifted:(By_element helpers) funs
-  | Dfix fds -> group fds
+  | Core.Decl.Recursive_group fds -> group fds
 
 (** {2 The finished program}
 
@@ -1193,12 +1193,12 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
     of {!Unit_program}, and what the printer writes is read back from
     the recorded entity. *)
 
-(** The source entity a MiniML declaration is: an inductive block by its
+(** The source entity a Core declaration is: an inductive block by its
     first packet. *)
 let decl_entity = function
-  | Dind (kn, _) -> GlobRef.IndRef (kn, 0)
-  | Dtype (r, _, _) | Dterm (r, _, _) -> r
-  | Dfix {head; _} -> head.fd_ref
+  | Core.Decl.Inductive {entity = kn; _} -> GlobRef.IndRef (kn, 0)
+  | Core.Decl.Type_alias {entity = r; _} | Core.Decl.Value {entity = r; _} -> r
+  | Core.Decl.Recursive_group {head; _} -> head.entity
 
 (** [entity r ids helpers] is the generation of [r]: the declarations
     [ids], and the helpers among [helpers]. *)
@@ -1222,7 +1222,7 @@ let record_funs ~fallback funs =
   List.iter (fun e -> ignore (Unit_program.record e)) (funs_entities ~fallback funs)
 
 
-(** What a file writes for one MiniML declaration, and the helpers lifted
+(** What a file writes for one Core declaration, and the helpers lifted
     out of it that the element places. *)
 type element = {
   rendered : rendered;
@@ -1369,7 +1369,8 @@ let resolve_tree ~file t =
 let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file) ~resolve_head:(head_resolver_at ~file)
 
 let names_into_a_struct_as_written ~file spelling decl =
-  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); decl})) in
+  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env ();
+                                                                                           decl})) in
   at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names decl)
 
 let write_unprinted ~file spelling u =
@@ -1458,7 +1459,7 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
     taken from there by the header
     ({!ahead_once}) -- so what plans from them reads the types the header
     writes. *)
-let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
+let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
   ahead_once ~module_
     ~what:(fun () -> Pp.(str "the field types of the record " ++ GlobRef.print r))
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_field_types_generated r))

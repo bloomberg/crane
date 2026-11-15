@@ -1,20 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Core's inductive types: backend kind and equivalence to an already
-    extracted inductive.  See [inductive.mli]. *)
+(** Core inductive definitions ({!Grammar.Inductive}): their packets, how one
+    is treated by the backend ({!Kind}) and how it relates to an inductive
+    already extracted ({!Equivalence}). *)
 
-module Kind = struct
-  type 'field t =
-    | Coinductive
-    | Inductive
-    | Record of 'field list
-    | Type_class of 'field list
-end
-
-module Equivalence = struct
-  type t =
-    | Distinct
-    | Equivalent_to of Names.KerName.t
-    | Equivalent_in_renamed_module of string
-end
+include Grammar.Inductive

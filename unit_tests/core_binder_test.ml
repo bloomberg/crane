@@ -7,7 +7,6 @@
 
 open Crane_plugin
 open Names
-open Miniml
 
 let check name cond =
   if not cond then (
@@ -17,7 +16,7 @@ let check name cond =
 let () =
   let origin = GlobRef.VarRef (Id.of_string "f") in
   let at ?site () = Core_binder.make ~origin ~level:2 ?site () in
-  let let_ = Occurrence.fresh () and match_ = Occurrence.fresh () and other = Occurrence.fresh () in
+  let let_ = Core.Occurrence.fresh () and match_ = Core.Occurrence.fresh () and other = Core.Occurrence.fresh () in
   let bound = at ~site:(Binding let_) () in
   let first = at ~site:(Branch (match_, 0)) () in
   let second = at ~site:(Branch (match_, 1)) () in

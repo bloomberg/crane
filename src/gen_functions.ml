@@ -5,7 +5,7 @@
     and body, declarations, and the generated-entity record a function's
     file views come from.
 
-    Part of declaration generation (MiniML to CppIR): the declaration-level
+    Part of declaration generation (Core to CppIR): the declaration-level
     layer over the expression translation in {!Translation}, re-exported
     through {!Gen_decls}.  Every body and declaration here is CppIR.  The
     callable plan of each function ({!plan_function}) is
@@ -13,7 +13,6 @@
     back ({!planned_relaxations}, {!declare_planned}). *)
 
 open Common
-open Miniml
 open Names
 open Mlutil
 open Table
@@ -41,7 +40,7 @@ let type_alias_rhs r vars ot =
   | None -> (
     match ot with
     | None -> (None, None)
-    | Some Taxiom -> (Some Any, Some "AXIOM TO BE REALIZED")
+    | Some Core.Type.Axiom -> (Some Any, Some "AXIOM TO BE REALIZED")
     | Some t ->
       (* Name the body's type variables from the alias's own list.  Left
          anonymous they are resolved by position against the emitted
@@ -98,25 +97,25 @@ let gen_type_alias r vars ot =
     variables -- [Identity], or a hole a pass left for inference. *)
 let other_instance_self_calls n b =
   let rec ground = function
-    | Miniml.Tarr (a, c) -> ground a && ground c
-    | Miniml.Tglob (_, l, _) -> List.for_all ground l
-    | Miniml.Tmeta {contents = Some t} -> ground t
-    | Miniml.Tstring -> true
+    | Core.Type.Arrow {parameter = a; result = c} -> ground a && ground c
+    | Core.Type.Global_app {type_arguments = l; _} -> List.for_all ground l
+    | Core.Type.Meta {contents = Some t} -> ground t
+    | Core.Type.String -> true
     | _ -> false
   in
   let elsewhere use =
-    match Global_use.instantiation use with
+    match Core.Global_use.instantiation use with
     | None -> false
     | Some inst ->
       Scheme.Instantiation.exists
-        (fun _ (s : Miniml.ml_type Scheme.slot) ->
+        (fun _ (s : Core.Type.t Scheme.slot) ->
           match s.solution with Scheme.Type t -> ground t | Scheme.Identity -> false )
         inst
   in
   let found = ref [] in
   let rec walk = function
-    | MLglob use when GlobRef.UserOrd.equal (Global_use.callee use) n && elsewhere use ->
-      found := Global_use.occurrence use :: !found
+    | Core.Expr.Global use when GlobRef.UserOrd.equal (Core.Global_use.callee use) n && elsewhere use ->
+      found := Core.Global_use.occurrence use :: !found
     | e -> Mlutil.ast_iter walk e
   in
   walk b;
@@ -143,7 +142,7 @@ let rec glob_subst_expr ?(spare = []) (id : GlobRef.t) (repl : Cpp_ir.Lowered.Ex
   match e with
   | Entity (id', _, _) when GlobRef.UserOrd.equal id id' -> repl
   | Call (({occurrence = Some o; _} as cs), (Entity (id', _, _) as head), args)
-    when GlobRef.UserOrd.equal id id' && List.exists (Miniml.Occurrence.equal o) spare ->
+    when GlobRef.UserOrd.equal id id' && List.exists (Core.Occurrence.equal o) spare ->
     Call (cs, head, List.map (glob_subst_expr ~spare id repl) args)
   | _ -> Cpp_ir.Map.expr (glob_subst_map ~spare id repl) e
 
@@ -346,13 +345,13 @@ let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) =
     arguments [cpp_of] spells. *)
 let suspend_whole ~cpp_of ~cod ml_ret x : Cpp_ir.Lowered.Stmt.t =
   match ml_ret with
-  | Miniml.Tglob (r, args, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} ->
     Return
       (Some
          (Suspend
             ( Entity_application (r, List.map cpp_of args, []),
               Cpp_ir.Build.lambda [] (Some cod) [Return (Some x)] ~capture:Stored )))
-  | _ -> CErrors.anomaly (Pp.str "suspend_whole: a coinductive result is a Tglob")
+  | _ -> CErrors.anomaly (Pp.str "suspend_whole: a coinductive result is a Global_app")
 
 (** The C++ expression stating the witness held by a [sig]-typed parameter
     called [name], when it can be stated at all.  A transparently extracted
@@ -361,9 +360,9 @@ let suspend_whole ~cpp_of ~cod ml_ret x : Cpp_ir.Lowered.Stmt.t =
     Either way the predicates that reach here compare the witness numerically,
     so a witness that is not a C++ scalar has nothing to compare and the
     precondition can only be reported as a comment. *)
-let sig_witness_expr name (ml_ty : ml_type) =
+let sig_witness_expr name (ml_ty : Core.Type.t) =
   match ml_ty with
-  | Miniml.Tglob (r, (Miniml.Tglob (w, _, _) :: _), _)
+  | Core.Type.Global_app {head = r; type_arguments = (Core.Type.Global_app {head = w; _} :: _); _}
     when Table.is_custom_scalar_ref w ->
     if Table.is_custom r then Some name
     else
@@ -402,7 +401,7 @@ let with_itree_mode_for ty f =
     de Bruijn indices still line up, together with what each takes as a template
     parameter: its kind (in CppIR), its name, the class it instantiates, and
     the name the Rocq binder had. *)
-let promote_typeclass_params (params : (Id.t * ml_type) list) =
+let promote_typeclass_params (params : (Id.t * Core.Type.t) list) =
   let counter = ref 0 in
   let temps = ref [] in
   let params =
@@ -420,10 +419,10 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
              declared. *)
           let tt =
             match ty with
-            | Miniml.Tglob _ as ty -> Option.get (concept_constraint_of_class_type ty)
+            | Core.Type.Global_app _ as ty -> Option.get (concept_constraint_of_class_type ty)
             | _ ->
               (* Unreachable: [Table.is_typeclass_type] only holds of a
-                 [Tglob]. *)
+                 [Core.Type.Global_app]. *)
               CErrors.anomaly
                 (Pp.str
                    "gen_decls: type-class instance parameter whose type is not \
@@ -431,7 +430,7 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
           in
           let class_info =
             match ty with
-            | Miniml.Tglob (class_ref, type_args, _) -> Some (class_ref, type_args)
+            | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} -> Some (class_ref, type_args)
             | _ -> None
           in
           temps := (tt, instance_name, class_info, id) :: !temps;
@@ -473,21 +472,21 @@ type body_scope = {
       (** The C++ return type: [unit] made [void], promoted variables
           resolved. *)
   bs_env : env;  (** Names every parameter, for de Bruijn lookup. *)
-  bs_all_ids : (Id.t * ml_type) list;
+  bs_all_ids : (Id.t * Core.Type.t) list;
       (** Every parameter, renamed, innermost first. *)
-  bs_all_params : (ml_ident * ml_type) list;
+  bs_all_params : (Core.Binder_name.t * Core.Type.t) list;
       (** Every parameter as bound, innermost first: the eta-expansion ones,
           then the body's lambdas. *)
   bs_ids : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** The C++ value parameters, innermost first: dictionaries and erased
           binders left out, types wrapped by ownership. *)
-  bs_missing : (ml_ident * ml_type) list;
+  bs_missing : (Core.Binder_name.t * Core.Type.t) list;
       (** The parameters the body leaves to eta-expansion. *)
-  bs_b : ml_ast;  (** The body, on the signature's type-variable numbering. *)
+  bs_b : Core.Expr.t;  (** The body, on the signature's type-variable numbering. *)
   bs_typeclass_temps_basic : head_params;
       (** The instance template parameters, constraints resolved. *)
   bs_regular_temps : head_params;
-      (** The type parameters and the callable ones: what [Tvar] index
+      (** The type parameters and the callable ones: what [Core.Type.Variable] index
           resolution reads. *)
   bs_temps : head_params;
       (** The template head before the relaxations. *)
@@ -503,7 +502,7 @@ type body_scope = {
       (** Under polymorphic recursion, the parameters a self-call has to
           write although the call is not at the declaration's own
           instantiation ({!self_call_reference}); [None] where it is. *)
-  bs_gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> ml_ast -> Cpp_ir.Lowered.Stmt.t list;
+  bs_gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t -> Cpp_ir.Lowered.Stmt.t list;
       (** Generates body statements with the signature's higher-kinded
           resolutions applied. *)
   bs_no_pure : bool;
@@ -518,7 +517,7 @@ type body_scope = {
 
     When the body has fewer lambda binders than the ML type's domain (i.e. it
     is under-applied), missing parameters are eta-expanded by synthesising
-    [MLrel] arguments.  [Tdummy]-typed entries in the missing list are skipped:
+    [Core.Expr.Bound_variable] arguments.  [Core.Type.Erased]-typed entries in the missing list are skipped:
     they represent erased type parameters (e.g. [A : Type] in
     [apply : forall A, A -> A]) that have no C++ runtime representation.
     Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
@@ -551,7 +550,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      with Tvoid in the C++ codomain type.
      - Sequential mode: Unit → void directly (the monad wrapper is erased,
        so the C++ function literally returns void)
-     - Reified mode: Tglob(itree, [E; Unit]) → Tglob(itree, [E; void])
+     - Reified mode: Core.Type.Global_app(itree, [E; Unit]) → Core.Type.Global_app(itree, [E; void])
        (printed as shared_ptr<ITree<void>> via monad template) *)
   let cod : Cpp_ir.Lowered.Type.t = if ml_type_is_void_call ty then Void else cod in
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
@@ -563,9 +562,9 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   let missing = unwritten_parameters ty ids b in
   (* A body's lambda parameter types agree with the signature's by now: the
      one Core rewrite that broke that, promoting a polymorphic let-fix to a
-     top-level Dfix, unifies them where it promotes ([Modutil.decl_of_term]),
+     top-level Core.Decl.Recursive_group, unifies them where it promotes ([Modutil.decl_of_term]),
      before the program is frozen.  What a binder left open stays open
-     ({!Miniml.Topen}), and is reconciled with the signature's type. *)
+     ({!Core.Type.Open}), and is reconciled with the signature's type. *)
   let n_missing = List.length missing in
   let sig_types_for_ids =
     List.of_seq (Seq.drop n_missing (List.to_seq mldom))
@@ -581,20 +580,21 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     if not (has_tvar ty)
        && List.length ids = List.length sig_types_for_ids then
       let rec chase = function
-        | Miniml.Tmeta {contents = Some t} -> chase t
+        | Core.Type.Meta {contents = Some t} -> chase t
         | t -> t
       in
       let rec collect body_ty sig_ty acc =
         let body_ty = chase body_ty in
         let sig_ty = chase sig_ty in
         match (body_ty, sig_ty) with
-        | (Miniml.Tvar (_, i)), _
+        | (Core.Type.Variable {variable = i; _}), _
           when not (has_tvar sig_ty) ->
           if List.mem_assoc i acc then acc else (i, sig_ty) :: acc
-        | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
+        | Core.Type.Global_app {head = r1;
+                                type_arguments = ts1; _}, Core.Type.Global_app {head = r2; type_arguments = ts2; _}
           when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
           List.fold_left2 (fun acc a b -> collect a b acc) acc ts1 ts2
-        | Miniml.Tarr (a1, b1), Miniml.Tarr (a2, b2) ->
+        | Core.Type.Arrow {parameter = a1; result = b1}, Core.Type.Arrow {parameter = a2; result = b2} ->
           collect a1 a2 (collect b1 b2 acc)
         | _ -> acc
       in
@@ -608,13 +608,14 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
           let t1 = chase t1 in
           let t2 = chase t2 in
           match (t1, t2) with
-          | (Miniml.Tvar (_, i)), _
+          | (Core.Type.Variable {variable = i; _}), _
             when not (has_tvar t2) ->
             if List.mem_assoc i acc then acc else (i, t2) :: acc
-          | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
+          | Core.Type.Global_app {head = r1;
+                                  type_arguments = ts1; _}, Core.Type.Global_app {head = r2; type_arguments = ts2; _}
             when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
             List.fold_left2 (fun acc a b -> cross a b acc) acc ts1 ts2
-          | Miniml.Tarr (a1, b1), Miniml.Tarr (a2, b2) ->
+          | Core.Type.Arrow {parameter = a1; result = b1}, Core.Type.Arrow {parameter = a2; result = b2} ->
             cross a1 a2 (cross b1 b2 acc)
           | _ -> acc
         in
@@ -654,9 +655,10 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       List.fold_left
         (fun (pos, rank, acc) dom ->
           match dom with
-          | Miniml.Tdummy Miniml.Ktype ->
+          | Core.Type.Erased Core.Erasure_reason.Type_argument ->
             let acc =
-              if pos = rank then acc else (pos, Miniml.Tvar (Schematic, rank)) :: acc
+              if pos = rank then acc else (pos, Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                                    variable = rank}) :: acc
             in
             (pos + 1, rank + 1, acc)
           | _ -> (pos + 1, rank, acc) )
@@ -689,16 +691,16 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
       List.mapi (fun i dom -> (i + 1, dom))
         (Ml_type_util.ml_domains (try Table.find_type n with Not_found -> ty))
       |> List.filter_map (fun (i, dom) ->
-             match dom with Miniml.Tdummy Miniml.Ktype -> None | _ -> Some i)
+             match dom with Core.Type.Erased Core.Erasure_reason.Type_argument -> None | _ -> Some i)
     in
     let names_a_value_position =
       let rec mentions t =
         match t with
-        | Miniml.Tvar (_, i) -> List.mem i value_positions
-        | Miniml.Tapp (i, l) -> List.mem i value_positions || List.exists mentions l
-        | Miniml.Tglob (_, l, _) -> List.exists mentions l
-        | Miniml.Tarr (a, c) -> mentions a || mentions c
-        | Miniml.Tmeta {contents = Some t} -> mentions t
+        | Core.Type.Variable {variable = i; _} -> List.mem i value_positions
+        | Core.Type.Variable_app {head = i; arguments = l} -> List.mem i value_positions || List.exists mentions l
+        | Core.Type.Global_app {type_arguments = l; _} -> List.exists mentions l
+        | Core.Type.Arrow {parameter = a; result = c} -> mentions a || mentions c
+        | Core.Type.Meta {contents = Some t} -> mentions t
         | _ -> false
       in
       let found = ref false in
@@ -753,11 +755,11 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
          Fixpoint mfold (M : Monoid) (l : list (m_carrier M)) : m_carrier M
 
        Extraction intermediate form:
-         ML type has [Tglob(m_carrier, [])] ← marked as promoted type var
+         ML type has [Core.Type.Global_app(m_carrier, [])] ← marked as promoted type var
          Converts to [Tpromoted "m_carrier"] ← needs resolution
 
        This map provides the resolution:
-         "m_carrier" ↦ Tqualified(Tvar(0, Some "_tcI0"), "m_carrier")
+         "m_carrier" ↦ Tqualified(Core.Type.Variable(0, Some "_tcI0"), "m_carrier")
          Which prints as: typename _tcI0::m_carrier
 
      For nested typeclasses (e.g., PreStableCategory has a base_category : PreCategory),
@@ -813,7 +815,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   in
   (* Push params into environment for de Bruijn lookup during body generation.
      collect_typed_lams returns params in reverse order (innermost first), so
-     MLrel 1 refers to the last param in the list.
+     Core.Expr.Bound_variable 1 refers to the last param in the list.
 
      push_vars' may rename parameters to avoid collisions. For example, if Rocq
      has: fun (f : T) (f0 : F) (f : forest) => ... push_vars' renames the
@@ -1121,12 +1123,12 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     else None
   in
   (* Combine all template params for function signature. Save the non-typeclass
-     type params for Tvar index resolution below. *)
+     type params for Core.Type.Variable index resolution below. *)
   let regular_temps = temps @ List.map (fun (_, t, n, _) -> (t, n)) fun_tys in
   (* Variables standing for a higher-kinded class parameter are rendered as
      associated types of the instance, so they must not also be declared as
      template parameters: nothing would deduce them.  They stay in
-     [regular_temps] below, which only feeds Tvar index resolution. *)
+     [regular_temps] below, which only feeds Core.Type.Variable index resolution. *)
   let is_hkt_temp (_, id) =
     List.exists (fun (i, _) -> Common.tvar_id i = id) hkt_tvar_resolutions
   in
@@ -1181,7 +1183,8 @@ let planned_relaxations n ty scope =
 (** The global [r] at the type arguments [tys], with what its custom
     extraction inlines, if anything. *)
 let entity_reference r tys : Cpp_ir.Lowered.Expr.t =
-  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r); custom_yields = None})
+  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r);
+                        custom_yields = None})
 
 (** The reference a self-call of [n] in its own body is written with: every
     template parameter its plan lets a call write, at itself -- the call is
@@ -1296,9 +1299,9 @@ let gen_dfun ~minted n b cty ty temps =
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params — they are not ML type variables
-     and should not participate in Tvar index resolution.
+     and should not participate in Core.Type.Variable index resolution.
 
-     The scope is read by ML variable -- entry [i - 1] names [Tvar i] -- and
+     The scope is read by ML variable -- entry [i - 1] names [Core.Type.Variable i] -- and
      the head is not: it leaves out a variable the C++ type never spells
      ([after_family]'s [A], mentioned only by an erased family), and a
      parameter declared for scheme variable [i] ({!Callable_abi}) is then
@@ -1450,7 +1453,7 @@ let gen_dfun ~minted n b cty ty temps =
      implementation instead of the default CPPabort throw. *)
   let custom_forwarding_body =
     match b with
-    | MLaxiom _ when is_custom n && not (to_inline n) ->
+    | Core.Expr.Axiom_value _ when is_custom n && not (to_inline n) ->
       let custom_name = find_custom n in
       let param_vars = List.map (fun (id, _) : Cpp_ir.Lowered.Expr.t -> Local id) scope.bs_ids in
       Some [(Return (Some (Cpp_ir.Build.call (Foreign_text custom_name) param_vars)) : Cpp_ir.Lowered.Stmt.t)]
@@ -1498,7 +1501,7 @@ let gen_dfun ~minted n b cty ty temps =
         | Some stmts -> stmts
         | None ->
         match b with
-        | MLaxiom _ | MLexn _ ->
+        | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ ->
           List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts env cofix_wrap b)
         | _ ->
           List.map
@@ -1551,7 +1554,7 @@ let gen_dfun ~minted n b cty ty temps =
           | _ -> None
         in
         let needs_run = match resolve_tmeta (ml_codomain ty) with
-          | Tglob (r, _, _) -> is_monad_reified r
+          | Core.Type.Global_app {head = r; _} -> is_monad_reified r
           | _ -> false
         in
         match struct_name, needs_run with
@@ -1566,7 +1569,8 @@ let gen_dfun ~minted n b cty ty temps =
           let int_ty : Cpp_ir.Lowered.Type.t = External ("int", []) in
           let rec void_return_to_zero : Cpp_ir.Lowered.Stmt.t -> Cpp_ir.Lowered.Stmt.t = function
             | Return None -> Return (Some (Literal (Int 0)))
-            | If i -> If {i with then_ = List.map void_return_to_zero i.then_; else_ = List.map void_return_to_zero i.else_}
+            | If i ->
+              If {i with then_ = List.map void_return_to_zero i.then_; else_ = List.map void_return_to_zero i.else_}
             | Block ss -> Block (List.map void_return_to_zero ss)
             | Match (scrut, branches, default) ->
               Match
@@ -1604,10 +1608,10 @@ let gen_dfun ~minted n b cty ty temps =
     declaration -- an alias, for one, is a type in its own right and the body
     wants the type it stands for. *)
 let rec names_promoted_type_var = function
-  | Miniml.Tglob (r, args, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} ->
     Table.is_promoted_type_var r || List.exists names_promoted_type_var args
-  | Miniml.Tarr (a, b) -> names_promoted_type_var a || names_promoted_type_var b
-  | Miniml.Tmeta {contents = Some t} -> names_promoted_type_var t
+  | Core.Type.Arrow {parameter = a; result = b} -> names_promoted_type_var a || names_promoted_type_var b
+  | Core.Type.Meta {contents = Some t} -> names_promoted_type_var t
   | _ -> false
 
 (** Whether a recovered type says something that means the same at the hole as
@@ -1629,18 +1633,18 @@ let rec names_promoted_type_var = function
     of a function parameter.  That offer is faithful to the term and still
     unusable, so variables stay out.
 
-    [Tdummy] is out for the same reason read the other way round: an erased
+    [Core.Type.Erased] is out for the same reason read the other way round: an erased
     position says nothing anywhere, so an offer carrying one cannot beat the
     guess at the same hole -- it only respells [List<T3>] as [List<std::any>].
     Closed is the wrong word for it; the predicate wants types that are both
-    closed and informative, and [Tdummy] is the canonical uninformative one. *)
+    closed and informative, and [Core.Type.Erased] is the canonical uninformative one. *)
 let rec is_closed_type = function
-  | Miniml.Tglob (_, args, _) -> List.for_all is_closed_type args
-  | Miniml.Tarr (a, b) -> is_closed_type a && is_closed_type b
-  | Miniml.Tmeta {contents = Some t} -> is_closed_type t
-  | Miniml.Tstring -> true
-  | Miniml.Tdummy _ | Miniml.Tvar _ | Miniml.Tapp _ | Miniml.Thole _
-  | Miniml.Tmeta {contents = None} | Miniml.Topen _ | Miniml.Tunknown | Miniml.Taxiom ->
+  | Core.Type.Global_app {type_arguments = args; _} -> List.for_all is_closed_type args
+  | Core.Type.Arrow {parameter = a; result = b} -> is_closed_type a && is_closed_type b
+  | Core.Type.Meta {contents = Some t} -> is_closed_type t
+  | Core.Type.String -> true
+  | Core.Type.Erased _ | Core.Type.Variable _ | Core.Type.Variable_app _ | Core.Type.Hole _
+  | Core.Type.Meta {contents = None} | Core.Type.Open _ | Core.Type.Unknown | Core.Type.Axiom ->
     false
 
 (** Whether the second recovery pass may write a recovered type into its
@@ -1665,12 +1669,12 @@ let recover_erased_body_types ty b =
 
 (** A constant's initialiser: its body, or -- for an erased proof, a lemma of
     a module whose other members are extracted -- the empty box an erased
-    constructor argument is.  The [MLdummy] case of {!Translation.gen_expr}
+    constructor argument is.  The [Core.Expr.Erased_value] case of {!Translation.gen_expr}
     is for dead code, an abort; a constant is evaluated, at static
     initialisation. *)
 let gen_constant_value ?expected_ty b =
   match b with
-  | MLdummy _ -> Cpp_erasure.empty_box
+  | Core.Expr.Erased_value _ -> Cpp_erasure.empty_box
   | _ -> gen_expr ?expected_ty (empty_env ()) b
 
 (** The parameters a head declares for the type variables [cty] spells,
@@ -1765,7 +1769,7 @@ let gen_decl n b ty =
     recovered and type variables resolved against its ML type, its C++ type,
     its template head, and the template parameters callers must see. *)
 type function_head = {
-  fh_body : ml_ast;
+  fh_body : Core.Expr.t;
   fh_cty : Cpp_ir.Lowered.Type.t;
   fh_temps : head_params;
   fh_minted : (Id.t * Callable_abi.minted) list;
@@ -1803,7 +1807,7 @@ let with_function_head n b ty k =
   in
   let tc_param_ids =
     match ty with
-    | Tarr _ -> collect_typeclass_param_ids ty
+    | Core.Type.Arrow _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
   let minted =
@@ -1876,7 +1880,7 @@ let gen_decl_for_pp__inner n b ty =
 let gen_decl_for_pp n b ty =
   Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner n b ty)
 
-(** Generate a full C++ function definition for a [Dfix] member.  Returns
+(** Generate a full C++ function definition for a [Core.Decl.Recursive_group] member.  Returns
     [(decl, env, tvars)]. *)
 let gen_dfun_def__inner n b ty = with_function_head n b ty (gen_function n)
 
@@ -1921,13 +1925,16 @@ let gen_spec__inner n b ty =
          the missing type parameter. *)
       with_cpp_return_type (Some ty_ir) @@ fun () ->
       (* Strip a coercion wrapper and track whether a type coercion from std::any
-         is needed.  MLcoerce wraps expressions when the extraction detects a
+         is needed.  Core.Expr.Coerce wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
          is canonical ({!Core_normalize}), so no application in it has a
          coercion at its head. *)
       let has_magic, inner_body =
         match b with
-        | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> (true, inner)
+        | Core.Expr.Coerce {value = inner; _}
+        | Core.Expr.Boxed_value {value = inner; _}
+        | Core.Expr.Lambda_group_barrier {value = inner; _} ->
+          (true, inner)
         | _ -> (false, b)
       in
       (* A constant typed by a name -- an instance of a single-method class is
@@ -1949,10 +1956,10 @@ let gen_spec__inner n b ty =
       let b_expr = with_region inner_body (fun () -> gen_constant_value ~expected_ty:ty_ir inner_body) in
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
-         (a) MLcoerce — the extraction explicitly flagged a type coercion.
+         (a) Core.Expr.Coerce — the extraction explicitly flagged a type coercion.
          (b) Record field projection — the field's return type is a promoted
              type var (erased to std::any) but Coq's type system sees the
-             concrete type, so no MLcoerce is generated. *)
+             concrete type, so no Core.Expr.Coerce is generated. *)
       let is_concrete_target =
         match ty_ir with
         | Any | Variable _ | Obligation Unresolved_type | Void | Auto -> false
@@ -2035,7 +2042,9 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 let gen_dfuns_dual fds =
   let generated =
     List.map
-      (fun {fd_ref; fd_body; fd_type} -> collecting_lifted (fun () -> gen_dfun_def fd_ref fd_body fd_type))
+      (fun {Core.Recursion.Definition.entity = fd_ref;
+            body = fd_body;
+            type_ = fd_type} -> collecting_lifted (fun () -> gen_dfun_def fd_ref fd_body fd_type))
       fds
   in
   let lowered = Control_to_cpp_ir.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in
@@ -2043,7 +2052,7 @@ let gen_dfuns_dual fds =
     (fun ds ((_, env, tvars), lifted) -> {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted})
     lowered generated
 
-(** Generate a single Dterm function, translating its body once. *)
+(** Generate a single Core.Decl.Value function, translating its body once. *)
 let gen_decl_for_pp_dual__inner n b ty =
   let (gf_entity, gf_env), gf_lifted =
     collecting_lifted @@ fun () ->

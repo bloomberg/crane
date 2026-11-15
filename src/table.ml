@@ -22,7 +22,6 @@ open Globnames
 open CErrors
 open Util
 open Pp
-open Miniml
 
 module StringMap = HMap.Make (String)
 module StringSet = StringMap.Set
@@ -188,7 +187,7 @@ let lookup_with_body_check find_opt kn cb =
   | _ -> None
 
 (** Cache of expanded type definitions, keyed by constant. *)
-let typedefs = ref (Cmap_env.empty : (constant_body * ml_type) Cmap_env.t)
+let typedefs = ref (Cmap_env.empty : (constant_body * Core.Type.t) Cmap_env.t)
 
 (** Initialize the typedef cache table. *)
 let init_typedefs () = typedefs := Cmap_env.empty
@@ -235,7 +234,7 @@ let constant_schema kn = Option.map snd (Cmap_env.find_opt kn !cst_types)
 (** Extracted inductives, keyed by block, each with the kernel body it was
     extracted from as a checksum. *)
 let inductives =
-  ref (Mindmap_env.empty : (mutual_inductive_body * ml_ind) Mindmap_env.t)
+  ref (Mindmap_env.empty : (mutual_inductive_body * Core.Inductive.t) Mindmap_env.t)
 
 (* Every inductive added, a replacement included: what the printer asks of
    an inductive -- its kind, its fields, its constructors -- is read here,
@@ -266,21 +265,21 @@ let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 (* Get the number of parameters (not indices) for an inductive type. Returns
    None if the inductive is not in the table. *)
 let get_ind_nparams_opt kn =
-  try Some (unsafe_lookup_ind kn).ind_nparams with Not_found -> None
+  try Some (unsafe_lookup_ind kn).parameter_count with Not_found -> None
 
 (** [type_var_of_arg t] -- the type variable [t] is, where [t] is one: a bare
-    [Tvar i], or a higher-kinded variable, which MiniML never writes bare but
+    [Core.Type.Variable i], or a higher-kinded variable, which Core never writes bare but
     applied at placeholders ([E _]) and which is still that variable. *)
 let rec type_var_of_arg = function
-  | Miniml.Tvar (_, i) -> Some i
-  | Miniml.Tapp (i, pl) ->
+  | Core.Type.Variable {variable = i; _} -> Some i
+  | Core.Type.Variable_app {head = i; arguments = pl} ->
     let rec is_placeholder = function
-      | Miniml.Tunknown -> true
-      | Miniml.Tmeta {contents = Some t} -> is_placeholder t
+      | Core.Type.Unknown -> true
+      | Core.Type.Meta {contents = Some t} -> is_placeholder t
       | _ -> false
     in
     if List.for_all is_placeholder pl then Some i else None
-  | Miniml.Tmeta {contents = Some t} -> type_var_of_arg t
+  | Core.Type.Meta {contents = Some t} -> type_var_of_arg t
   | _ -> None
 
 (** [packet_is_non_uniform p] holds when the inductive packet [p] is nested:
@@ -289,8 +288,8 @@ let rec type_var_of_arg = function
     C++ template — instantiating it would recurse forever — so its parameters
     are erased to [std::any].  Self-reference is recognised by physical
     equality of the packet, since all packets come from the same table. *)
-let packet_is_non_uniform p =
-  let nvars = List.length p.Miniml.ip_vars in
+let packet_is_non_uniform (p : Core.Inductive.Packet.t) =
+  let nvars = List.length p.Core.Inductive.Packet.type_variables in
   let is_identity_args args =
     List.length args = nvars
     && List.for_all2
@@ -300,46 +299,46 @@ let packet_is_non_uniform p =
   in
   let is_self kn' j =
     try
-      let p' = (unsafe_lookup_ind kn').Miniml.ind_packets.(j) in
+      let p' = (unsafe_lookup_ind kn').Core.Inductive.packets.(j) in
       p' == p
-      || (Names.Id.equal p'.Miniml.ip_typename p.Miniml.ip_typename
-         && List.length p'.Miniml.ip_sign = List.length p.Miniml.ip_sign
-         && List.length p'.Miniml.ip_vars = nvars)
+      || (Names.Id.equal p'.Core.Inductive.Packet.name p.Core.Inductive.Packet.name
+         && List.length p'.Core.Inductive.Packet.signature = List.length p.Core.Inductive.Packet.signature
+         && List.length p'.Core.Inductive.Packet.type_variables = nvars)
     with _ -> false
   in
   let rec nested ty =
     match ty with
-    | Miniml.Tglob (Names.GlobRef.IndRef (kn', j), args, _) when is_self kn' j ->
+    | Core.Type.Global_app {head = Names.GlobRef.IndRef (kn', j); type_arguments = args; _} when is_self kn' j ->
       (not (is_identity_args args)) || List.exists nested args
-    | Miniml.Tglob (_, args, _) -> List.exists nested args
-    | Miniml.Tarr (a, b) -> nested a || nested b
-    | Miniml.Tmeta {contents = Some t} -> nested t
+    | Core.Type.Global_app {type_arguments = args; _} -> List.exists nested args
+    | Core.Type.Arrow {parameter = a; result = b} -> nested a || nested b
+    | Core.Type.Meta {contents = Some t} -> nested t
     | _ -> false
   in
   nvars > 0
-  && Array.exists (fun fields -> List.exists nested fields) p.Miniml.ip_types
+  && Array.exists (fun fields -> List.exists nested fields) p.Core.Inductive.Packet.constructor_argument_types
 
 (* A non-uniform packet keeps no template parameters ({!packet_is_non_uniform}). *)
-let ind_param_vars ind p =
+let ind_param_vars (ind : Core.Inductive.t) (p : Core.Inductive.Packet.t) =
   if packet_is_non_uniform p then ([], 0) else
-  let sign_len = List.length p.Miniml.ip_sign in
-  let nparams = min ind.Miniml.ind_nparams sign_len in
-  let param_sign = List.firstn nparams p.Miniml.ip_sign in
+  let sign_len = List.length p.Core.Inductive.Packet.signature in
+  let nparams = min ind.Core.Inductive.parameter_count sign_len in
+  let param_sign = List.firstn nparams p.Core.Inductive.Packet.signature in
   let num_param_vars =
-    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+    List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) param_sign)
   in
-  (List.firstn num_param_vars p.Miniml.ip_vars, num_param_vars)
+  (List.firstn num_param_vars p.Core.Inductive.Packet.type_variables, num_param_vars)
 
-(* Get the number of parameter type vars for an inductive (via ip_sign). *)
+(* Get the number of parameter type vars for an inductive (via signature). *)
 let get_ind_num_param_vars_opt kn =
   try
     let ind = unsafe_lookup_ind kn in
-    let (_, n) = ind_param_vars ind ind.ind_packets.(0) in
+    let (_, n) = ind_param_vars ind ind.packets.(0) in
     Some n
   with Not_found | Invalid_argument _ -> None
 
 (* Each extracted inductive's kind: record, class, coinductive, ... *)
-let inductive_kinds = ref (Mindmap_env.empty : record_field Core.Inductive.Kind.t Mindmap_env.t)
+let inductive_kinds = ref (Mindmap_env.empty : Core.Inductive.Kind.t Mindmap_env.t)
 
 let init_inductive_kinds () = inductive_kinds := Mindmap_env.empty
 
@@ -408,12 +407,12 @@ let singleton_class_method r =
    projection takes first. *)
 let singleton_method_class m =
   let rec first = function
-    | Tarr (Tdummy _, b) -> first b
-    | Tarr (Tglob (c, _, _), _) -> (
+    | Core.Type.Arrow {parameter = Core.Type.Erased _; result = b} -> first b
+    | Core.Type.Arrow {parameter = Core.Type.Global_app {head = c; _}; _} -> (
       match singleton_class_method c with
       | Some m' when GlobRef.CanOrd.equal m m' -> Some c
       | _ -> None )
-    | Tmeta {contents = Some t} -> first t
+    | Core.Type.Meta {contents = Some t} -> first t
     | _ -> None
   in
   match find_type m with exception Not_found -> None | ty -> first ty
@@ -456,7 +455,7 @@ let builds_instance ?(env = Global.env ()) r =
 type singleton_shape = {
   sc_vars : Id.t list;
   sc_hkt : (int * int) list;
-  sc_field : GlobRef.t * ml_type;
+  sc_field : GlobRef.t * Core.Type.t;
 }
 
 let singleton_shape r =
@@ -483,18 +482,21 @@ let singleton_shape r =
     in
     let sc_hkt = List.concat (List.mapi (fun i (_, a) -> if a > 0 then [(i, a)] else []) params) in
     let rec past_dictionary = function
-      | Tarr (Tglob (c, _, _), rest) when GlobRef.CanOrd.equal c r -> Some rest
-      | Tarr (_, rest) -> past_dictionary rest
+      | Core.Type.Arrow {parameter = Core.Type.Global_app {head = c; _};
+                         result = rest} when GlobRef.CanOrd.equal c r -> Some rest
+      | Core.Type.Arrow {result = rest; _} -> past_dictionary rest
       | _ -> None
     in
     let n = List.length sc_vars in
     let rec erase_own = function
-      | Tvar (_, i) when i > n -> Tunknown
-      | Tapp (i, _) when i > n -> Tunknown
-      | Tapp (i, ts) -> Tapp (i, List.map erase_own ts)
-      | Tarr (a, b) -> Tarr (erase_own a, erase_own b)
-      | Tglob (g, ts, es) -> Tglob (g, List.map erase_own ts, es)
-      | Tmeta {contents = Some t} -> erase_own t
+      | Core.Type.Variable {variable = i; _} when i > n -> Core.Type.Unknown
+      | Core.Type.Variable_app {head = i; _} when i > n -> Core.Type.Unknown
+      | Core.Type.Variable_app {head = i; arguments = ts} ->
+        Core.Type.Variable_app {head = i; arguments = List.map erase_own ts}
+      | Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = erase_own a; result = erase_own b}
+      | Core.Type.Global_app {head = g; type_arguments = ts; index_arguments = es} ->
+        Core.Type.Global_app {head = g; type_arguments = List.map erase_own ts; index_arguments = es}
+      | Core.Type.Meta {contents = Some t} -> erase_own t
       | t -> t
     in
     match find_type m with
@@ -650,7 +652,7 @@ let needs_itree_header () = demanded "itree_header"
     wrapper generation.  [needs_run] is true only in reified ITree mode;
     when the monad is erased (sequential mode), the wrapper calls [_main()]
     directly without [->run()]. *)
-let main_function_tree : (Id.t * Miniml.ml_type * Id.t option * bool) option ref = ref None
+let main_function_tree : (Id.t * Core.Type.t * Id.t option * bool) option ref = ref None
 
 let set_main_function name ret_type struct_name needs_run =
   main_function_tree := Some (name, ret_type, struct_name, needs_run)
@@ -664,12 +666,12 @@ let () = on_reset reset_main_function
 (** Check if an ML type is a coinductive type by inspecting its global
     reference. *)
 let is_coinductive_type = function
-  | Tglob (r, _, _) -> is_coinductive r
+  | Core.Type.Global_app {head = r; _} -> is_coinductive r
   | _ -> false
 
 (** The fields of a record or type class, each paired with its ML type, in
     declaration order.  Prefer this to zipping {!get_record_fields} against
-    {!record_field_types}: the latter is read straight off [ip_types] and still
+    {!record_field_types}: the latter is read straight off [constructor_argument_types] and still
     holds the implicit arguments field selection dropped, so the two lists can
     differ in length and the pairing is then lost. *)
 let get_record_field_bindings r =
@@ -681,18 +683,18 @@ let get_record_field_bindings r =
     | None -> [] )
 
 (** The field references of a record or type class.  Anything else has none:
-    {!record_fields_of_type} asks this of whatever a [Tglob] carries, and an
+    {!record_fields_of_type} asks this of whatever a [Core.Type.Global_app] carries, and an
     ML type may perfectly well be headed by a constant. *)
 let get_record_fields r = List.map fst (get_record_field_bindings r)
 
 (** {!get_record_field_bindings} for a record named by an ML type. *)
 let record_field_bindings_of_type = function
-  | Tglob (r, _, _) -> get_record_field_bindings r
+  | Core.Type.Global_app {head = r; _} -> get_record_field_bindings r
   | _ -> []
 
-(** Get record fields from an ML type, filtering by extracting from Tglob. *)
+(** Get record fields from an ML type, filtering by extracting from Core.Type.Global_app. *)
 let record_fields_of_type = function
-  | Tglob (r, _, _) -> get_record_fields r
+  | Core.Type.Global_app {head = r; _} -> get_record_fields r
   | _ -> []
 
 (** Get the ML types of record/typeclass fields in order, with parameter
@@ -703,17 +705,17 @@ let record_field_types r =
   | IndRef (kn, i) | ConstructRef ((kn, i), _) ->
     ( try
         let ind = unsafe_lookup_ind kn in
-        let packet = ind.ind_packets.(i) in
-        (* For records/typeclasses, there's one constructor and ip_types.(0)
+        let packet = ind.packets.(i) in
+        (* For records/typeclasses, there's one constructor and constructor_argument_types.(0)
            contains the field types as a list *)
-        if Array.length packet.ip_types > 0 then
-          packet.ip_types.(0)
+        if Array.length packet.constructor_argument_types > 0 then
+          packet.constructor_argument_types.(0)
         else
           []
       with Not_found | Invalid_argument _ -> [] )
   | _ -> (match singleton_shape r with Some {sc_field = _, ty; _} -> [ty] | None -> [])
 
-(** Get the type variable names (ip_vars) for an inductive, including promoted
+(** Get the type variable names (type_variables) for an inductive, including promoted
     carriers for dependent records. *)
 let get_ind_ip_vars r =
   let open GlobRef in
@@ -721,17 +723,17 @@ let get_ind_ip_vars r =
   | IndRef (kn, i) | ConstructRef ((kn, i), _) ->
     ( try
         let ind = unsafe_lookup_ind kn in
-        ind.ind_packets.(i).ip_vars
+        ind.packets.(i).type_variables
       with Not_found | Invalid_argument _ -> [] )
   | _ -> (match singleton_shape r with Some s -> s.sc_vars | None -> [])
 
 (** How many constructors an inductive's [i]th packet has.  [None] when the
     inductive is not in the table. *)
 let get_ind_nb_ctors_opt kn i =
-  try Some (Array.length (unsafe_lookup_ind kn).ind_packets.(i).Miniml.ip_types)
+  try Some (Array.length (unsafe_lookup_ind kn).packets.(i).Core.Inductive.Packet.constructor_argument_types)
   with Not_found | Invalid_argument _ -> None
 
-(** Count the number of kept (non-erased) fields in an inductive's ip_sign, i.e.
+(** Count the number of kept (non-erased) fields in an inductive's signature, i.e.
     real type parameters. *)
 let get_ind_nb_sign_keeps r =
   let open GlobRef in
@@ -740,7 +742,7 @@ let get_ind_nb_sign_keeps r =
     ( try
         let ind = unsafe_lookup_ind kn in
         List.length
-          (List.filter (fun x -> x == Miniml.Keep) ind.ind_packets.(i).ip_sign)
+          (List.filter (fun x -> x == Core.Signature.Argument.Runtime) ind.packets.(i).signature)
       with Not_found | Invalid_argument _ -> 0 )
   | _ -> (match singleton_shape r with Some s -> List.length s.sc_vars | None -> 0)
 
@@ -752,7 +754,7 @@ let get_ind_nb_sign_keeps r =
     [typename M].  Instead it is demoted to an ASSOCIATED TYPE of the instance
     ([typename I::M]) — the very representation promoted [Type]-valued record
     fields already use.  Extraction records the positions of these parameters
-    (0-based among the [Keep] entries of [ip_sign]) here; the concept, instance
+    (0-based among the [Core.Signature.Argument.Runtime] entries of [signature]) here; the concept, instance
     and wrapper generators in {!Gen_decls} consult them to move the parameter
     from the template-parameter list to the associated-type requirements. *)
 
@@ -764,7 +766,7 @@ let add_ind_hkt_params r positions =
 
 let () = on_reset (fun () -> hkt_params_table := Ref.User.Map.empty)
 
-(** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
+(** Positions (0-based among the [Core.Signature.Argument.Runtime] type parameters) of [r]'s parameters
     that are type constructors, each with its arity.  Empty for everything
     else. *)
 let get_ind_hkt_params_arities r =
@@ -781,7 +783,7 @@ let get_ind_hkt_params_arities r =
     | Some s -> s.sc_hkt
     | None -> ( try Ref.User.Map.find r !hkt_params_table with Not_found -> [] )
 
-(** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
+(** Positions (0-based among the [Core.Signature.Argument.Runtime] type parameters) of [r]'s parameters
     that are type constructors. Empty for everything else. *)
 let get_ind_hkt_params r = List.map fst (get_ind_hkt_params_arities r)
 
@@ -790,12 +792,12 @@ let get_ind_hkt_params r = List.map fst (get_ind_hkt_params_arities r)
 let get_ind_hkt_arity r i =
   try List.assoc i (get_ind_hkt_params_arities r) with Not_found -> 0
 
-(** True when parameter [i] (0-based among the [Keep] parameters) of [r] is a
+(** True when parameter [i] (0-based among the [Core.Signature.Argument.Runtime] parameters) of [r] is a
     type constructor, and therefore an associated type in C++. *)
 let is_hkt_param r i = List.mem i (get_ind_hkt_params r)
 
 (** Number of [r]'s type parameters that stay real C++ template parameters —
-    the [Keep] count minus the higher-kinded ones. *)
+    the [Core.Signature.Argument.Runtime] count minus the higher-kinded ones. *)
 let get_ind_nb_tparams r =
   get_ind_nb_sign_keeps r - List.length (get_ind_hkt_params r)
 
@@ -828,7 +830,7 @@ let get_ctor_ip_types_opt r =
   | ConstructRef ((kn, i), j) ->
     ( try
         let ind = unsafe_lookup_ind kn in
-        Some ind.ind_packets.(i).ip_types.(j - 1)
+        Some ind.packets.(i).constructor_argument_types.(j - 1)
       with Not_found | Invalid_argument _ -> None )
   | _ -> None
 
@@ -844,8 +846,8 @@ let is_non_uniform_inductive r =
   | IndRef (kn, i) ->
     ( try
         let ind = unsafe_lookup_ind kn in
-        let packet = ind.ind_packets.(i) in
-        let nvars = List.length packet.ip_vars in
+        let packet = ind.packets.(i) in
+        let nvars = List.length packet.type_variables in
         let is_identity_args args =
           List.length args = nvars
           && List.for_all2
@@ -855,23 +857,23 @@ let is_non_uniform_inductive r =
         in
         let rec is_nested ty =
           match ty with
-          | Miniml.Tglob (IndRef (kn', _), args, _)
+          | Core.Type.Global_app {head = IndRef (kn', _); type_arguments = args; _}
             when MutInd.CanOrd.equal kn' kn ->
             (not (is_identity_args args)) || List.exists is_nested args
-          | Miniml.Tglob (_, args, _) -> List.exists is_nested args
-          | Miniml.Tarr (a, b) -> is_nested a || is_nested b
-          | Miniml.Tmeta {contents = Some t} -> is_nested t
+          | Core.Type.Global_app {type_arguments = args; _} -> List.exists is_nested args
+          | Core.Type.Arrow {parameter = a; result = b} -> is_nested a || is_nested b
+          | Core.Type.Meta {contents = Some t} -> is_nested t
           | _ -> false
         in
         Array.exists
           (fun fields -> List.exists is_nested fields)
-          packet.ip_types
+          packet.constructor_argument_types
       with Not_found | Invalid_argument _ -> false )
   | _ -> false
 
 (** Get the number of C++ parameter type variables for the inductive
-    containing [r].  Only [Keep] entries in the PARAMETER portion of
-    [ip_sign] (first [ind_nparams] positions) are counted — type indices
+    containing [r].  Only [Core.Signature.Argument.Runtime] entries in the PARAMETER portion of
+    [signature] (first [parameter_count] positions) are counted — type indices
     are excluded.  Mirrors the [param_vars] computation in
     [gen_ind_header_v2].  Returns 0 on lookup failure. *)
 let get_ctor_num_param_vars r =
@@ -880,15 +882,15 @@ let get_ctor_num_param_vars r =
   | ConstructRef ((kn, i), _) ->
     ( try
         let ind = unsafe_lookup_ind kn in
-        let p = ind.ind_packets.(i) in
-        let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-        List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+        let p = ind.packets.(i) in
+        let param_sign = List.firstn ind.parameter_count p.signature in
+        List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) param_sign)
       with Not_found | Invalid_argument _ -> 0 )
   | _ -> 0
 
 
 let is_typeclass_type = function
-  | Tglob (r, _, _) -> is_typeclass r
+  | Core.Type.Global_app {head = r; _} -> is_typeclass r
   | _ -> false
 
 (** {2 Flat inductives table} *)
@@ -927,13 +929,13 @@ let is_phantom_type_param = Tparam_kinds.is_phantom
 let rec type_mentions_kn ?packet_idx ~descend_arr kn ty =
   let mentions = type_mentions_kn ?packet_idx ~descend_arr kn in
   match ty with
-  | Miniml.Tglob (GlobRef.IndRef (kn2, j), args, _) ->
+  | Core.Type.Global_app {head = GlobRef.IndRef (kn2, j); type_arguments = args; _} ->
     ( MutInd.CanOrd.equal kn kn2
       && (match packet_idx with None -> true | Some i -> j = i) )
     || List.exists mentions args
-  | Miniml.Tglob (_, args, _) -> List.exists mentions args
-  | Miniml.Tarr (a, b) when descend_arr -> mentions a || mentions b
-  | Miniml.Tmeta { contents = Some t } -> mentions t
+  | Core.Type.Global_app {type_arguments = args; _} -> List.exists mentions args
+  | Core.Type.Arrow {parameter = a; result = b} when descend_arr -> mentions a || mentions b
+  | Core.Type.Meta { contents = Some t } -> mentions t
   | _ -> false
 
 (** {2 Enum inductives table} *)
@@ -943,11 +945,11 @@ let (_, add_enum_inductive, is_enum_inductive_registered) =
 
 (** Check if an inductive packet qualifies as an enum: all constructors nullary,
     no kept type parameters, at least one constructor. *)
-let is_enum_inductive_packet ind i =
-  let p = ind.ind_packets.(i) in
-  let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
+let is_enum_inductive_packet (ind : Core.Inductive.t) i =
+  let p = ind.packets.(i) in
+  let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.constructor_argument_types in
   let (_, num_param_vars) = ind_param_vars ind p in
-  all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0
+  all_nullary && num_param_vars = 0 && Array.length p.constructor_argument_types > 0
 
 let is_enum_inductive r =
   if is_enum_inductive_registered r then true
@@ -955,7 +957,7 @@ let is_enum_inductive r =
   | GlobRef.IndRef (kn, i) ->
     ( try
         let ind = snd (Mindmap_env.find kn !inductives) in
-        Array.length ind.ind_packets = 1 && is_enum_inductive_packet ind i
+        Array.length ind.packets = 1 && is_enum_inductive_packet ind i
       with Not_found | Invalid_argument _ -> false )
   | _ -> false
 
@@ -970,10 +972,10 @@ let has_recursive_fields r =
   | GlobRef.IndRef (kn, i) ->
     ( try
         let ind = snd (Mindmap_env.find kn !inductives) in
-        let packet = ind.ind_packets.(i) in
+        let packet = ind.packets.(i) in
         Array.exists
           (List.exists (type_mentions_kn ~descend_arr:true kn))
-          packet.ip_types
+          packet.constructor_argument_types
       with Not_found | Invalid_argument _ -> false )
   | _ -> false
 
@@ -1002,7 +1004,7 @@ let {Goptions.get = std_lib} =
 (** The constructor names of packet [i] of the extracted inductive [kn], in
     declaration order, if it has been extracted. *)
 let ind_consnames kn i =
-  try Some (unsafe_lookup_ind kn).ind_packets.(i).ip_consnames
+  try Some (unsafe_lookup_ind kn).packets.(i).constructor_names
   with Not_found | Invalid_argument _ -> None
 
 (** {2 Sigma assertion table} *)
@@ -1166,7 +1168,7 @@ let promoted_type_var_field name =
 (** Erased type constants, spelled [std::any] in C++: non-promoted type-valued
     record fields like [Hom : Obj -> Obj -> Type] in [PreCategory], dependent
     type families extraction cannot resolve statically; and type definitions or
-    axioms whose body extracts to no type ([Tunknown], [Taxiom]).  Distinguished
+    axioms whose body extracts to no type ([Core.Type.Unknown], [Core.Type.Axiom]).  Distinguished
     from promoted type vars (simple [Type]-valued fields like [Obj]) and from
     concrete type aliases (standalone definitions like [Force := list Unit]). *)
 let (_, add_erased_type_const, is_erased_type_const) =
@@ -1219,7 +1221,7 @@ let (_, add_value_dep_type_scheme, is_value_dep_type_scheme)
    nat)], so that call sites can substitute promoted Tvars with concrete types
    during eta expansion. *)
 let instance_promoted_types =
-  ref (GlobRef.Map.empty : (Names.Id.t * ml_type) list GlobRef.Map.t)
+  ref (GlobRef.Map.empty : (Names.Id.t * Core.Type.t) list GlobRef.Map.t)
 
 let init_instance_promoted_types () =
   instance_promoted_types := GlobRef.Map.empty
@@ -1334,7 +1336,7 @@ let () = on_reset init_ind_promoted_params
    (dval * nat)] under a [Context] depends on that context variable through its
    body, and an alias has no constructors for a closure over payloads to
    reach. *)
-let type_alias_bodies = ref (Ref.Can.Map.empty : Miniml.ml_type Ref.Can.Map.t)
+let type_alias_bodies = ref (Ref.Can.Map.empty : Core.Type.t Ref.Can.Map.t)
 
 let init_type_alias_bodies () = type_alias_bodies := Ref.Can.Map.empty
 
@@ -1349,7 +1351,7 @@ let add_type_alias_body r t =
    is no alias, or its body is no applied global. *)
 let rec type_alias_head r =
   match Ref.Can.Map.find_opt r !type_alias_bodies with
-  | Some (Miniml.Tglob (r', _, _)) when not (GlobRef.CanOrd.equal r r') ->
+  | Some (Core.Type.Global_app {head = r'; _}) when not (GlobRef.CanOrd.equal r r') ->
     type_alias_head r'
   | _ -> r
 
@@ -1361,7 +1363,7 @@ let fold_type_body_types f r acc =
     | GlobRef.IndRef (kn, _) ->
       ( try
           let ind = unsafe_lookup_ind kn in
-          match ind.Miniml.ind_kind with
+          match ind.Core.Inductive.kind with
           (* A class's fields are read like any other payload, and what keeps
              it from being parameterised by its own contents is
              {!declares_promoted_var} below, which is the precise statement of
@@ -1378,9 +1380,9 @@ let fold_type_body_types f r acc =
             List.map snd (get_record_field_bindings r)
           | _ ->
             Array.fold_left
-              (fun acc p ->
-                Array.fold_left (fun acc l -> acc @ l) acc p.Miniml.ip_types )
-              [] ind.Miniml.ind_packets
+              (fun acc (p : Core.Inductive.Packet.t) ->
+                Array.fold_left (fun acc l -> acc @ l) acc p.Core.Inductive.Packet.constructor_argument_types )
+              [] ind.Core.Inductive.packets
         with Not_found | Invalid_argument _ -> [] )
     | GlobRef.ConstRef _ ->
       ( match Ref.Can.Map.find_opt r !type_alias_bodies with
@@ -1392,9 +1394,9 @@ let fold_type_body_types f r acc =
   let rec collect t =
     acc := f !acc t;
     match t with
-    | Miniml.Tglob (_, ts, _) -> List.iter collect ts
-    | Miniml.Tarr (a, b) -> collect a; collect b
-    | Miniml.Tmeta {contents = Some t} -> collect t
+    | Core.Type.Global_app {type_arguments = ts; _} -> List.iter collect ts
+    | Core.Type.Arrow {parameter = a; result = b} -> collect a; collect b
+    | Core.Type.Meta {contents = Some t} -> collect t
     | _ -> ()
   in
   List.iter collect roots;
@@ -1416,7 +1418,7 @@ let rec type_globals_reached ~seen r =
   fold_type_body_types
     (fun acc t ->
       match t with
-      | Miniml.Tglob (g, _, _)
+      | Core.Type.Global_app {head = g; _}
         when known g
              && (not (List.exists (GlobRef.CanOrd.equal g) seen))
              && not (List.exists (GlobRef.CanOrd.equal g) acc) ->
@@ -1454,7 +1456,7 @@ let own_promoted_type_params r =
   fold_type_body_types
     (fun acc t ->
       match t with
-      | Miniml.Tglob (g, _, _)
+      | Core.Type.Global_app {head = g; _}
         when is_promoted_type_var g && not (declares_promoted_var r g) ->
         ( match promoted_type_var_name g with
         | Some v when not (List.exists (Id.equal v) acc) -> acc @ [v]
@@ -1624,10 +1626,10 @@ let safe_basename_of_global r =
   | ConstRef kn -> Label.to_id (Constant.label kn)
   | IndRef (kn, 0) -> Label.to_id (MutInd.label kn)
   | IndRef (kn, i) ->
-    ( try (unsafe_lookup_ind kn).ind_packets.(i).ip_typename
+    ( try (unsafe_lookup_ind kn).packets.(i).name
       with Not_found -> last_chance r )
   | ConstructRef ((kn, i), j) ->
-    ( try (unsafe_lookup_ind kn).ind_packets.(i).ip_consnames.(j - 1)
+    ( try (unsafe_lookup_ind kn).packets.(i).constructor_names.(j - 1)
       with Not_found -> last_chance r )
   | VarRef v -> v
 
@@ -1881,14 +1883,14 @@ let argnames_of_global r =
   List.rev_map (fun x -> Context.binder_name (fst x)) rels
 
 let msg_of_implicit = function
-  | Kimplicit (r, i) ->
+  | Core.Erasure_reason.Configured_implicit {entity = r; position = i} ->
     let name =
       match List.nth (argnames_of_global r) (i - 1) with
       | Anonymous -> ""
       | Name id -> "(" ^ Id.to_string id ^ ") "
     in
     String.ordinal i ^ " argument " ^ name ^ "of " ^ string_of_global r
-  | Ktype | Kprop -> ""
+  | Core.Erasure_reason.Type_argument | Core.Erasure_reason.Proof -> ""
 
 let error_remaining_implicit k =
   let s = msg_of_implicit k in
@@ -3067,23 +3069,23 @@ let is_custom r = Ref.Can.Map.mem r !customs
     coinductive, not in a mutual block, with exactly one constructor, not an
     enum (an unparameterised nullary constructor), and no field mentioning the
     inductive itself.  The generator writes the struct by this. *)
-let is_flat_inductive_packet kn ind i =
+let is_flat_inductive_packet kn (ind : Core.Inductive.t) i =
   try
-    let p = ind.ind_packets.(i) in
-    let ordinary = match ind.ind_kind with Core.Inductive.Kind.Inductive -> true | _ -> false in
+    let p = ind.packets.(i) in
+    let ordinary = match ind.kind with Core.Inductive.Kind.Inductive -> true | _ -> false in
     let (_, num_param_vars) = ind_param_vars ind p in
     let is_enum =
-      Array.for_all (fun tys -> tys = []) p.ip_types && num_param_vars = 0
+      Array.for_all (fun tys -> tys = []) p.constructor_argument_types && num_param_vars = 0
     in
     let has_self_ref =
       Array.exists
         (List.exists (type_mentions_kn ~packet_idx:i ~descend_arr:false kn))
-        p.ip_types
+        p.constructor_argument_types
     in
     ordinary
     && (not (is_custom (GlobRef.IndRef (kn, i))))
-    && Array.length ind.ind_packets = 1
-    && Array.length p.ip_types = 1
+    && Array.length ind.packets = 1
+    && Array.length p.constructor_argument_types = 1
     && (not is_enum)
     && not has_self_ref
   with Invalid_argument _ | Failure _ -> false
@@ -3114,17 +3116,17 @@ let is_flat_inductive r =
     or inside a container's element type -- is a slot holding a value, and
     building a node shares its children's blocks.  Building a constructor
     with fields allocates, as OCaml's does. *)
-let is_shared_variant_packet kn ind i =
+let is_shared_variant_packet kn (ind : Core.Inductive.t) i =
   shared_variant ()
   &&
   try
-    let p = ind.ind_packets.(i) in
-    let fields = List.concat (Array.to_list p.ip_types) in
+    let p = ind.packets.(i) in
+    let fields = List.concat (Array.to_list p.constructor_argument_types) in
     let holds_something () =
       (not (is_flat_inductive_packet kn ind i))
-      && List.exists (function Tdummy _ -> false | _ -> true) fields
+      && List.exists (function Core.Type.Erased _ -> false | _ -> true) fields
     in
-    (match ind.ind_kind with Core.Inductive.Kind.Inductive -> true | _ -> false)
+    (match ind.kind with Core.Inductive.Kind.Inductive -> true | _ -> false)
     && (not (is_custom (GlobRef.IndRef (kn, i))))
     && (List.exists (type_mentions_kn ~descend_arr:false kn) fields || holds_something ())
   with _ -> false
@@ -3187,7 +3189,7 @@ let trivially_copyable_heads =
 (** The same declaration, keyed by the Rocq type it was written against.
 
     Both keys are needed because the question is asked from both sides: a
-    [Tglob] still knows its {!GlobRef.t}, while a type Crane has already
+    [Core.Type.Global_app] still knows its {!GlobRef.t}, while a type Crane has already
     rendered to a name has nothing left but the name. *)
 let trivially_copyable_refs = Summary.ref Ref.Can.Set.empty ~name:"CraneExtrTCRefs"
 
@@ -3361,10 +3363,10 @@ let is_boxed_recursive_ind r = Ref.User.Set.mem r !boxed_recursive_inds
     the first branch's constructor. Raises [Not_found] if not possible. *)
 let indref_of_match pv =
   if Array.is_empty pv then raise Not_found;
-  let pat = pv.(0).br_pattern in
+  let pat = pv.(0).Core.Match.Branch.pattern in
   match pat with
-  | Pusual (GlobRef.ConstructRef (ip, _)) -> GlobRef.IndRef ip
-  | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip
+  | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _)) -> GlobRef.IndRef ip
+  | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} -> GlobRef.IndRef ip
   | _ -> raise Not_found
 
 let is_custom_match pv =
@@ -3841,7 +3843,7 @@ let extract_inductive ?boxed ?drain r s l optstr imports =
       l
   | _ -> error_inductive ?loc:r.CAst.loc g
 
-let glob_def_registration : GlobRef.t * ml_type -> obj =
+let glob_def_registration : GlobRef.t * Core.Type.t -> obj =
   declare_object
   @@ superglobal_object
        "Crane Global Def Type Registration"
@@ -4253,8 +4255,8 @@ let reset_tables () = State.reset State.Extraction
 
 (** {2 Local fixpoint groups recursing at a ground instance} *)
 
-let erased_fix_groups = State.cell State.Extraction ([] : Miniml.Occurrence.t list)
+let erased_fix_groups = State.cell State.Extraction ([] : Core.Occurrence.t list)
 
 let add_erased_fix_group occ = erased_fix_groups := occ :: !erased_fix_groups
 
-let is_erased_fix_group occ = List.exists (Miniml.Occurrence.equal occ) !erased_fix_groups
+let is_erased_fix_group occ = List.exists (Core.Occurrence.equal occ) !erased_fix_groups

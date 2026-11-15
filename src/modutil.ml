@@ -10,39 +10,41 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Traversal, search, and optimization functions over MiniML module structures.
+(** Traversal, search, and optimization functions over Core module structures.
 *)
 
 open Names
 open ModPath
 open CErrors
 open Util
-open Miniml
 open Table
 open Mlutil
 
 (** {1 Functions upon ML modules} *)
 
 (* Note: a syntax like [(F M) with ...] is actually legal, see for instance bug
-   #4720. Hence the code below tries to handle [MTsig], maybe not in a perfect
+   #4720. Hence the code below tries to handle [Core.Module.Type.Signature], maybe not in a perfect
    way, but that should be enough for the use of [se_iter] below. *)
 
 (** Extract module path from a module type. *)
 let rec msid_of_mt = function
-  | MTident mp -> mp
-  | MTsig (mp, _) -> mp
-  | MTwith (mt, _) -> msid_of_mt mt
-  | MTfunsig _ -> assert false (* A functor cannot be inside a MTwith *)
+  | Core.Module.Type.Path mp -> mp
+  | Core.Module.Type.Signature {path = mp; _} -> mp
+  | Core.Module.Type.Refined {base = mt; _} -> msid_of_mt mt
+  | Core.Module.Type.Functor _ -> assert false (* A functor cannot be inside a Core.Module.Type.Refined *)
 
-(** Apply some functions upon all [ml_decl] and [ml_spec] found in a
-    [ml_structure]. *)
+(** Apply some functions upon all [Core.Decl.t] and [Core.Signature.Declaration.t] found in a
+    [Core.Program.t]. *)
 let se_iter do_decl do_spec do_mp =
   let rec mt_iter = function
-    | MTident mp -> do_mp mp
-    | MTfunsig (_, mt, mt') ->
+    | Core.Module.Type.Path mp -> do_mp mp
+    | Core.Module.Type.Functor {parameter_type = mt; result = mt'; _} ->
       mt_iter mt;
       mt_iter mt'
-    | MTwith (mt, ML_With_type (idl, l, t)) ->
+    | Core.Module.Type.Refined {base = mt;
+                                refinement = Core.Module.Refinement.Type_equation {path = idl;
+                                                                                   parameters = l;
+                                                                                   definition = t}} ->
       let mp_mt = msid_of_mt mt in
       let l', idl' = List.sep_last idl in
       let mp_w =
@@ -50,8 +52,9 @@ let se_iter do_decl do_spec do_mp =
       in
       let r = GlobRef.ConstRef (Constant.make2 mp_w (Label.of_id l')) in
       mt_iter mt;
-      do_spec (Stype (r, l, Some t))
-    | MTwith (mt, ML_With_module (idl, mp)) ->
+      do_spec (Core.Signature.Declaration.Type {entity = r; parameters = l; body = Some t})
+    | Core.Module.Type.Refined {base = mt;
+                                refinement = Core.Module.Refinement.Module_equation {path = idl; definition = mp}} ->
       let mp_mt = msid_of_mt mt in
       let mp_w =
         List.fold_left (fun mp l -> MPdot (mp, Label.of_id l)) mp_mt idl
@@ -59,27 +62,27 @@ let se_iter do_decl do_spec do_mp =
       mt_iter mt;
       do_mp mp_w;
       do_mp mp
-    | MTsig (_, sign) -> List.iter spec_iter sign
+    | Core.Module.Type.Signature {items = sign; _} -> List.iter spec_iter sign
   and spec_iter = function
-    | _, Spec s -> do_spec s
-    | _, Smodule mt -> mt_iter mt
-    | _, Smodtype mt -> mt_iter mt
+    | _, Core.Module.Signature_item.Declaration s -> do_spec s
+    | _, Core.Module.Signature_item.Module mt -> mt_iter mt
+    | _, Core.Module.Signature_item.Module_type mt -> mt_iter mt
   in
   let rec se_iter = function
-    | _, SEdecl d -> do_decl d
-    | _, SEmodule m ->
-      me_iter m.ml_mod_expr;
-      mt_iter m.ml_mod_type
-    | _, SEmodtype m -> mt_iter m
+    | _, Core.Module.Structure_item.Declaration d -> do_decl d
+    | _, Core.Module.Structure_item.Module (m : Core.Module.t) ->
+      me_iter m.expr;
+      mt_iter m.type_
+    | _, Core.Module.Structure_item.Module_type m -> mt_iter m
   and me_iter = function
-    | MEident mp -> do_mp mp
-    | MEfunctor (_, mt, me) ->
+    | Core.Module.Expr.Path mp -> do_mp mp
+    | Core.Module.Expr.Functor {parameter_type = mt; body = me; _} ->
       me_iter me;
       mt_iter mt
-    | MEapply (me, me') ->
+    | Core.Module.Expr.Apply {functor_ = me; argument = me'} ->
       me_iter me;
       me_iter me'
-    | MEstruct (msid, sel) -> List.iter se_iter sel
+    | Core.Module.Expr.Structure {path = msid; items = sel} -> List.iter se_iter sel
   in
   se_iter
 
@@ -91,10 +94,13 @@ let struct_functions struc =
     List.iter
       (fun (_, se) ->
         match se with
-        | SEdecl (Dterm (r, (MLlam _ as b), ty)) -> acc := (r, b, ty) :: !acc
-        | SEdecl (Dfix fds) ->
-          Core.Nonempty.iter (fun fd -> acc := (fd.fd_ref, fd.fd_body, fd.fd_type) :: !acc) fds
-        | SEmodule {ml_mod_expr = MEstruct (_, l); _} -> elems l
+        | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
+                                                                   body = (Core.Expr.Lambda _ as b);
+                                                                   type_ = ty}) ->
+          acc := (r, b, ty) :: !acc
+        | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) ->
+          Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> acc := (fd.entity, fd.body, fd.type_) :: !acc) fds
+        | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = l; _}; _} -> elems l
         | _ -> () )
       l
   in
@@ -122,10 +128,10 @@ let record_iter_references do_term = function
 (** Iterate over all GlobRef.t occurring in an ML type. *)
 let type_iter_references do_type t =
   let rec iter = function
-    | Tglob (r, l, _) ->
+    | Core.Type.Global_app {head = r; type_arguments = l; _} ->
       do_type r;
       List.iter iter l
-    | Tarr (a, b) ->
+    | Core.Type.Arrow {parameter = a; result = b} ->
       iter a;
       iter b
     | _ -> ()
@@ -135,12 +141,12 @@ let type_iter_references do_type t =
 (** Iterate over constructor references in a pattern. *)
 let patt_iter_references do_cons p =
   let rec iter = function
-    | Pcons (r, l) ->
+    | Core.Pattern.Constructor {constructor = r; fields = l} ->
       do_cons r;
       List.iter iter l
-    | Pusual r -> do_cons r
-    | Ptuple l -> List.iter iter l
-    | Prel _ | Pwild -> ()
+    | Core.Pattern.Shallow_constructor r -> do_cons r
+    | Core.Pattern.Tuple l -> List.iter iter l
+    | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> ()
   in
   iter p
 
@@ -160,49 +166,49 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
        [Prop] type reached this way is marked needed too, but it is dropped
        again where declarations are emitted: see the [logical_decl] guard in
        {!Extract_env}. *)
-    | MLglob ({callee = r; _} as use) ->
+    | Core.Expr.Global ({callee = r; _} as use) ->
       do_term r;
-      Global_use.iter_types (type_iter_references do_type) use
-    | MLcons (_, r, _, _) -> do_cons r
-    | MLcase (ty, _, v, _) ->
+      Core.Global_use.iter_types (type_iter_references do_type) use
+    | Core.Expr.Construct {constructor = r; _} -> do_cons r
+    | Core.Expr.Match {scrutinee_type = ty; branches = v; _} ->
       type_iter_references do_type ty;
-      Array.iter (fun {br_pattern = p; _} -> patt_iter_references do_cons p) v
-    | MLrel _
-     |MLlam _
-     |MLapp _
-     |MLletin _
-     |MLtuple _
-     |MLfixpoint _ | MLcofixpoint _
-     |MLexn _
-     |MLdummy _
-     |MLaxiom _
-     |MLcoerce _ | MLboxed _ | MLbarrier _
-     |MLuint _ | MLnumeral _
-     |MLfloat _
-     |MLstring _
-     |MLparray _ -> () )
+      Array.iter (fun {Core.Match.Branch.pattern = p; _} -> patt_iter_references do_cons p) v
+    | Core.Expr.Bound_variable _
+     |Core.Expr.Lambda _
+     |Core.Expr.Apply _
+     |Core.Expr.Let _
+     |Core.Expr.Tuple _
+     |Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _
+     |Core.Expr.Runtime_error _
+     |Core.Expr.Erased_value _
+     |Core.Expr.Axiom_value _
+     |Core.Expr.Coerce _ | Core.Expr.Boxed_value _ | Core.Expr.Lambda_group_barrier _
+     |Core.Expr.UInt63 _ | Core.Expr.Numeral _
+     |Core.Expr.Float64 _
+     |Core.Expr.String _
+     |Core.Expr.Persistent_array _ -> () )
   in
   iter a
 
 (** Iterate over all references in an inductive definition. *)
-let ind_iter_references do_term do_cons do_type kn ind =
+let ind_iter_references do_term do_cons do_type kn (ind : Core.Inductive.t) =
   let type_iter = type_iter_references do_type in
   let cons_iter cp l =
     do_cons (GlobRef.ConstructRef cp);
     List.iter type_iter l
   in
-  let packet_iter ip p =
+  let packet_iter ip (p : Core.Inductive.Packet.t) =
     do_type (GlobRef.IndRef ip);
     ( if lang () == Cpp then
         match
-          ind.ind_equiv
+          ind.equivalence
         with
         | Core.Inductive.Equivalence.Equivalent_to kne -> do_type (GlobRef.IndRef (MutInd.make1 kne, snd ip))
         | _ -> () );
-    Array.iteri (fun j -> cons_iter (ip, j + 1)) p.ip_types
+    Array.iteri (fun j -> cons_iter (ip, j + 1)) p.constructor_argument_types
   in
-  if lang () == Cpp then record_iter_references do_term ind.ind_kind;
-  Array.iteri (fun i -> packet_iter (kn, i)) ind.ind_packets
+  if lang () == Cpp then record_iter_references do_term ind.kind;
+  Array.iteri (fun i -> packet_iter (kn, i)) ind.packets
 
 (** Iterate over all references in an ML declaration.
     See {!ast_iter_references} for the meaning of [prune]. *)
@@ -210,26 +216,27 @@ let decl_iter_references ?prune do_term do_cons do_type =
   let type_iter = type_iter_references do_type
   and ast_iter = ast_iter_references ?prune do_term do_cons do_type in
   function
-    | Dind (kn, ind) -> ind_iter_references do_term do_cons do_type kn ind
-    | Dtype (r, _, t) ->
+    | Core.Decl.Inductive {entity = kn; definition = ind} -> ind_iter_references do_term do_cons do_type kn ind
+    | Core.Decl.Type_alias {entity = r; body = t; _} ->
       do_type r;
       type_iter t
-    | Dterm (r, a, t) ->
+    | Core.Decl.Value {entity = r; body = a; type_ = t} ->
       do_term r;
       ast_iter a;
       type_iter t
-    | Dfix fds ->
-      Core.Nonempty.iter (fun fd -> do_term fd.fd_ref) fds;
-      Core.Nonempty.iter (fun fd -> ast_iter fd.fd_body) fds;
-      Core.Nonempty.iter (fun fd -> type_iter fd.fd_type) fds
+    | Core.Decl.Recursive_group fds ->
+      Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> do_term fd.entity) fds;
+      Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> ast_iter fd.body) fds;
+      Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> type_iter fd.type_) fds
 
 (** Iterate over all references in an ML specification. *)
 let spec_iter_references do_term do_cons do_type = function
-  | Sind (kn, ind) -> ind_iter_references do_term do_cons do_type kn ind
-  | Stype (r, _, ot) ->
+  | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} ->
+    ind_iter_references do_term do_cons do_type kn ind
+  | Core.Signature.Declaration.Type {entity = r; body = ot; _} ->
     do_type r;
     Option.iter (type_iter_references do_type) ot
-  | Sval (r, _, t) ->
+  | Core.Signature.Declaration.Value {entity = r; type_ = t; _} ->
     do_term r;
     type_iter_references do_type t
 
@@ -243,8 +250,9 @@ let rec ast_search f a = if f a then raise Found else ast_iter (ast_search f) a
 
 (** Search for an AST node in a declaration. *)
 let decl_ast_search f = function
-  | Dterm (_, a, _) -> ast_search f a
-  | Dfix fds -> Core.Nonempty.iter (fun fd -> ast_search f fd.fd_body) fds
+  | Core.Decl.Value {body = a; _} -> ast_search f a
+  | Core.Decl.Recursive_group fds ->
+    Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> ast_search f fd.body) fds
   | _ -> ()
 
 (** Search for an AST node anywhere in a structure. *)
@@ -255,33 +263,34 @@ let struct_ast_search f s =
   with Found -> true
 
 (** Search for a type matching a predicate.  [f] is tested on the leaves:
-    every node that is neither an arrow nor a [Tglob] (whose arguments are
-    searched); a solved [Tmeta] is a leaf too. *)
+    every node that is neither an arrow nor a [Core.Type.Global_app] (whose arguments are
+    searched); a solved [Core.Type.Meta] is a leaf too. *)
 let rec type_search f = function
-  | Tarr (a, b) ->
+  | Core.Type.Arrow {parameter = a; result = b} ->
     type_search f a;
     type_search f b
-  | Tglob (r, l, _) -> List.iter (type_search f) l
+  | Core.Type.Global_app {head = r; type_arguments = l; _} -> List.iter (type_search f) l
   | u -> if f u then raise Found
 
 (** Search for a type in a declaration. *)
 let decl_type_search f = function
-  | Dind (_, {ind_packets = p}) ->
+  | Core.Decl.Inductive {definition = {Core.Inductive.packets = p}; _} ->
     Array.iter
-      (fun {ip_types = v} -> Array.iter (List.iter (type_search f)) v)
+      (fun {Core.Inductive.Packet.constructor_argument_types = v} -> Array.iter (List.iter (type_search f)) v)
       p
-  | Dterm (_, _, u) -> type_search f u
-  | Dfix fds -> Core.Nonempty.iter (fun fd -> type_search f fd.fd_type) fds
-  | Dtype (_, _, u) -> type_search f u
+  | Core.Decl.Value {type_ = u; _} -> type_search f u
+  | Core.Decl.Recursive_group fds ->
+    Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> type_search f fd.type_) fds
+  | Core.Decl.Type_alias {body = u; _} -> type_search f u
 
 (** Search for a type in a specification. *)
 let spec_type_search f = function
-  | Sind (_, {ind_packets = p}) ->
+  | Core.Signature.Declaration.Inductive {definition = {Core.Inductive.packets = p}; _} ->
     Array.iter
-      (fun {ip_types = v} -> Array.iter (List.iter (type_search f)) v)
+      (fun {Core.Inductive.Packet.constructor_argument_types = v} -> Array.iter (List.iter (type_search f)) v)
       p
-  | Stype (_, _, ot) -> Option.iter (type_search f) ot
-  | Sval (_, _, u) -> type_search f u
+  | Core.Signature.Declaration.Type {body = ot; _} -> Option.iter (type_search f) ot
+  | Core.Signature.Declaration.Value {type_ = u; _} -> type_search f u
 
 (** Search for a type anywhere in a structure. *)
 let struct_type_search f s =
@@ -295,35 +304,46 @@ let struct_type_search f s =
 (** Convert a module structure to a module signature. *)
 let rec msig_of_ms = function
   | [] -> []
-  | (l, SEdecl (Dind (kn, i))) :: ms ->
-    (l, Spec (Sind (kn, i))) :: msig_of_ms ms
-  | (l, SEdecl (Dterm (r, b, t))) :: ms ->
-    (l, Spec (Sval (r, b, t))) :: msig_of_ms ms
-  | (l, SEdecl (Dtype (r, v, t))) :: ms ->
-    (l, Spec (Stype (r, v, Some t))) :: msig_of_ms ms
-  | (l, SEdecl (Dfix fds)) :: ms ->
+  | (l, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = i})) :: ms ->
+    (l, Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Inductive {entity = kn;
+                                                                                      definition = i})) :: msig_of_ms ms
+  | (l, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = b; type_ = t})) :: ms ->
+    (l, Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Value {entity = r;
+                                                                                  body = b;
+                                                                                  type_ = t})) :: msig_of_ms ms
+  | (l, Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; parameters = v; body = t})) :: ms ->
+    (l, Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Type {entity = r;
+                                                                                 parameters = v;
+                                                                                 body = Some t})) :: msig_of_ms ms
+  | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: ms ->
     List.map
-      (fun fd -> (l, Spec (Sval (fd.fd_ref, fd.fd_body, fd.fd_type))))
+      (fun (fd : Core.Recursion.Definition.t) -> (l, Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Value {entity = fd.entity;
+                                                                                                                               body = fd.body;
+                                                                                                                               type_ = fd.type_})))
       (Core.Nonempty.to_list fds)
     @ msig_of_ms ms
-  | (l, SEmodule m) :: ms -> (l, Smodule m.ml_mod_type) :: msig_of_ms ms
-  | (l, SEmodtype m) :: ms -> (l, Smodtype m) :: msig_of_ms ms
+  | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: ms ->
+    (l, Core.Module.Signature_item.Module m.type_) :: msig_of_ms ms
+  | (l, Core.Module.Structure_item.Module_type m) :: ms ->
+    (l, Core.Module.Signature_item.Module_type m) :: msig_of_ms ms
 
 (** Convert a full structure to its type signature. *)
 let signature_of_structure s = List.map (fun (mp, ms) -> (mp, msig_of_ms ms)) s
 
 (** Convert a module expression to its module type. *)
 let rec mtyp_of_mexpr = function
-  | MEfunctor (id, ty, e) -> MTfunsig (id, ty, mtyp_of_mexpr e)
-  | MEstruct (mp, str) -> MTsig (mp, msig_of_ms str)
+  | Core.Module.Expr.Functor {parameter = id; parameter_type = ty; body = e} ->
+    Core.Module.Type.Functor {parameter = id; parameter_type = ty; result = mtyp_of_mexpr e}
+  | Core.Module.Expr.Structure {path = mp; items = str} ->
+    Core.Module.Type.Signature {path = mp; items = msig_of_ms str}
   | _ -> assert false
 
 (** {2 Searching a declaration in a structure} *)
 
 (** Test whether a structure element is modular (module or module type). *)
 let is_modular = function
-  | SEdecl _ -> false
-  | SEmodule _ | SEmodtype _ -> true
+  | Core.Module.Structure_item.Declaration _ -> false
+  | Core.Module.Structure_item.Module _ | Core.Module.Structure_item.Module_type _ -> true
 
 (** Search for a label in a structure. *)
 let rec search_structure l m = function
@@ -342,31 +362,31 @@ let get_decl_in_structure r struc =
       | [] -> assert false
       | l :: ll ->
       match search_structure l (not (List.is_empty ll)) sel with
-      | SEdecl d -> d
-      | SEmodtype m -> assert false
-      | SEmodule m ->
+      | Core.Module.Structure_item.Declaration d -> d
+      | Core.Module.Structure_item.Module_type m -> assert false
+      | Core.Module.Structure_item.Module m ->
         let rec aux = function
-          | MEstruct (_, sel) -> go ll sel
-          | MEfunctor (_, _, sel) -> aux sel
-          | MEident _ | MEapply _ -> error_not_visible r
+          | Core.Module.Expr.Structure {items = sel; _} -> go ll sel
+          | Core.Module.Expr.Functor {body = sel; _} -> aux sel
+          | Core.Module.Expr.Path _ | Core.Module.Expr.Apply _ -> error_not_visible r
         in
-        aux m.ml_mod_expr
+        aux m.expr
     in
     go ll sel
   with Not_found ->
     anomaly (Pp.str "reference not found in extracted structure.")
 
-(** {2 Optimization of a ml_structure} *)
+(** {2 Optimization of a Core.Program.t} *)
 
 (* Some transformations of ML terms. [optimize_struct] simplifies all beta
     redexes (when the argument does not occur, it is just thrown away; when it
     occurs exactly once it is substituted; otherwise a let-in redex is created
     for clarity) and iota redexes, plus some other optimizations. *)
 
-(** Convert member [i] of a Dfix group to an MLfixpoint term for inlining. *)
+(** Convert member [i] of a Core.Decl.Recursive_group group to an Core.Expr.Fixpoint term for inlining. *)
 let dfix_to_mlfix fds i =
   let fds = Core.Nonempty.to_list fds in
-  let rv = Array.of_list (List.map (fun fd -> fd.fd_ref) fds) in
+  let rv = Array.of_list (List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) fds) in
   let rec make_subst n s =
     if n < 0 then
       s
@@ -376,16 +396,16 @@ let dfix_to_mlfix fds i =
   let s = make_subst (Array.length rv - 1) Ref.User.Map.empty in
   let rec subst n t =
     match t with
-    | MLglob {callee = (GlobRef.ConstRef kn as refe); _} ->
-      (try fresh_rel (n + Ref.User.Map.find refe s) with Not_found -> t)
+    | Core.Expr.Global {callee = (GlobRef.ConstRef kn as refe); _} ->
+      (try Core.Expr.fresh_rel (n + Ref.User.Map.find refe s) with Not_found -> t)
     | _ -> ast_map_lift subst n t
   in
   let ids =
     Array.of_list
-      (List.map (fun fd -> (Label.to_id (label_of_r fd.fd_ref), fd.fd_type)) fds)
+      (List.map (fun (fd : Core.Recursion.Definition.t) -> (Label.to_id (label_of_r fd.entity), fd.type_)) fds)
   in
-  let c = Array.of_list (List.map (fun fd -> subst 0 fd.fd_body) fds) in
-  MLfixpoint (i, ids, c, Occurrence.fresh ())
+  let c = Array.of_list (List.map (fun (fd : Core.Recursion.Definition.t) -> subst 0 fd.body) fds) in
+  Core.Expr.Fixpoint {selected = i; functions = ids; bodies = c; occurrence = Core.Occurrence.fresh ()}
 
 (* A let-fix promoted to its declaration ([local_length]'s inner [go]) keeps
    the binder annotations it had inside it, where extraction may have left a
@@ -397,8 +417,8 @@ let dfix_to_mlfix fds i =
 let unify_binders_with_signature t body =
   let rec domains t =
     match t with
-    | Tarr (a, b) -> a :: domains b
-    | Tmeta {contents = Some t} -> domains t
+    | Core.Type.Arrow {parameter = a; result = b} -> a :: domains b
+    | Core.Type.Meta {contents = Some t} -> domains t
     | _ -> []
   in
   let doms = List.rev (domains t) in
@@ -412,16 +432,18 @@ let decl_of_term r a t =
   match dump_unused_vars (optimize_fix a) with
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
-  | MLfixpoint (0, _, [|c|], _) | MLcofixpoint (0, _, [|c|], _) when singleton_instance_class r = None ->
+  | Core.Expr.Fixpoint {selected = 0;
+                        bodies = [|c|]; _} | Core.Expr.Cofixpoint {selected = 0;
+                                                   bodies = [|c|]; _} when singleton_instance_class r = None ->
     (* Each call of itself is a use of its own, told apart from the others
        by its occurrence. *)
-    let c = Mlutil.ast_subst_each (fun () -> MLglob (Mlutil.self_reference r)) c in
+    let c = Mlutil.ast_subst_each (fun () -> Core.Expr.Global (Mlutil.self_reference r)) c in
     unify_binders_with_signature t c;
-    Dfix (Core.Nonempty.singleton {fd_ref = r; fd_body = c; fd_type = t})
+    Core.Decl.Recursive_group (Core.Nonempty.singleton {Core.Recursion.Definition.entity = r; body = c; type_ = t})
     (* The self-reference instantiates [r] at its own type variables
-       ({!Miniml.Global_use.identity}), so a self-call states no type
+       ({!Core.Global_use.identity}), so a self-call states no type
        arguments of its own. *)
-  | a -> Dterm (r, a, t)
+  | a -> Core.Decl.Value {entity = r; body = a; type_ = t}
 
 (** [optim_se] applies the [normalize] function everywhere and does the inlining
     of code. The inlined functions are kept for the moment in order to preserve
@@ -429,38 +451,43 @@ let decl_of_term r a t =
 *)
 let rec optim_se top to_appear s = function
   | [] -> []
-  | (l, SEdecl (Dterm (r, a, t))) :: lse ->
+  | (l, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = a; type_ = t})) :: lse ->
     let a = normalize (ast_glob_subst !s a) in
     let i = inline r a in
     if i then s := Ref.User.Map.add r a !s;
     let d = decl_of_term r a t in
-    (l, SEdecl d) :: optim_se top to_appear s lse
-  | (l, SEdecl (Dfix fds)) :: lse ->
+    (l, Core.Module.Structure_item.Declaration d) :: optim_se top to_appear s lse
+  | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: lse ->
     let fds =
       Core.Nonempty.map
-        (fun fd -> {fd with fd_body = normalize (ast_glob_subst !s fd.fd_body)})
+        (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = normalize (ast_glob_subst !s fd.body)})
         fds
     in
     (* This fake body ensures that no fixpoint will be auto-inlined. *)
-    let fake_body = MLfixpoint (0, [||], [||], Occurrence.fresh ()) in
+    let fake_body = Core.Expr.Fixpoint {selected = 0;
+                                        functions = [||];
+                                        bodies = [||];
+                                        occurrence = Core.Occurrence.fresh ()} in
     List.iteri
-      (fun i fd ->
-        if inline fd.fd_ref fake_body then
-          s := Ref.User.Map.add fd.fd_ref (dfix_to_mlfix fds i) !s )
+      (fun i (fd : Core.Recursion.Definition.t) ->
+        if inline fd.entity fake_body then
+          s := Ref.User.Map.add fd.entity (dfix_to_mlfix fds i) !s )
       (Core.Nonempty.to_list fds);
-    let fds = Core.Nonempty.map (fun fd -> {fd with fd_body = dump_unused_vars fd.fd_body}) fds in
-    (l, SEdecl (Dfix fds)) :: optim_se top to_appear s lse
-  | (l, SEmodule m) :: lse ->
-    let m = {m with ml_mod_expr = optim_me to_appear s m.ml_mod_expr} in
-    (l, SEmodule m) :: optim_se top to_appear s lse
+    let fds = Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = dump_unused_vars fd.body}) fds in
+    (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: optim_se top to_appear s lse
+  | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: lse ->
+    let m = {m with Core.Module.expr = optim_me to_appear s m.expr} in
+    (l, Core.Module.Structure_item.Module m) :: optim_se top to_appear s lse
   | se :: lse -> se :: optim_se top to_appear s lse
 
 and optim_me to_appear s = function
-  | MEstruct (msid, lse) -> MEstruct (msid, optim_se false to_appear s lse)
-  | MEident mp as me -> me
-  | MEapply (me, me') ->
-    MEapply (optim_me to_appear s me, optim_me to_appear s me')
-  | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mt, optim_me to_appear s me)
+  | Core.Module.Expr.Structure {path = msid; items = lse} ->
+    Core.Module.Expr.Structure {path = msid; items = optim_se false to_appear s lse}
+  | Core.Module.Expr.Path mp as me -> me
+  | Core.Module.Expr.Apply {functor_ = me; argument = me'} ->
+    Core.Module.Expr.Apply {functor_ = optim_me to_appear s me; argument = optim_me to_appear s me'}
+  | Core.Module.Expr.Functor {parameter = mbid; parameter_type = mt; body = me} ->
+    Core.Module.Expr.Functor {parameter = mbid; parameter_type = mt; body = optim_me to_appear s me}
 
 (* After these optimisations, some dependencies may not be needed anymore. For
    non-library extraction, we recompute a minimal set of dependencies for
@@ -491,38 +518,39 @@ let reset_needed, add_needed, add_needed_mp, found_needed, is_needed =
 
 (** List all GlobRef.t declared by a declaration. *)
 let declared_refs = function
-  | Dind (kn, _) -> [GlobRef.IndRef (kn, 0)]
-  | Dtype (r, _, _) -> [r]
-  | Dterm (r, _, _) -> [r]
-  | Dfix fds -> List.map (fun fd -> fd.fd_ref) (Core.Nonempty.to_list fds)
+  | Core.Decl.Inductive {entity = kn; _} -> [GlobRef.IndRef (kn, 0)]
+  | Core.Decl.Type_alias {entity = r; _} -> [r]
+  | Core.Decl.Value {entity = r; _} -> [r]
+  | Core.Decl.Recursive_group fds ->
+    List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core.Nonempty.to_list fds)
 
 (** Computes the dependencies of a declaration, except in case of custom
     extraction. *)
 let compute_deps_decl = function
-  | Dind (kn, ind) ->
+  | Core.Decl.Inductive {entity = kn; definition = ind} ->
     (* Todo Later : avoid dependencies when Extract Inductive *)
     ind_iter_references add_needed add_needed add_needed kn ind
-  | Dtype (r, ids, t) ->
+  | Core.Decl.Type_alias {entity = r; parameters = ids; body = t} ->
     if not (is_custom r) then type_iter_references add_needed t
-  | Dterm (r, u, t) ->
+  | Core.Decl.Value {entity = r; body = u; type_ = t} ->
     type_iter_references add_needed t;
     if not (is_custom r) then
       ast_iter_references add_needed add_needed add_needed u
-  | Dfix _ as d -> decl_iter_references add_needed add_needed add_needed d
+  | Core.Decl.Recursive_group _ as d -> decl_iter_references add_needed add_needed add_needed d
 
 (** Compute dependencies for a specification. *)
 let compute_deps_spec = function
-  | Sind (kn, ind) ->
+  | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} ->
     (* Todo Later : avoid dependencies when Extract Inductive *)
     ind_iter_references add_needed add_needed add_needed kn ind
-  | Stype (r, ids, t) ->
+  | Core.Signature.Declaration.Type {entity = r; parameters = ids; body = t} ->
     if not (is_custom r) then Option.iter (type_iter_references add_needed) t
-  | Sval (r, _, t) -> type_iter_references add_needed t
+  | Core.Signature.Declaration.Value {entity = r; type_ = t; _} -> type_iter_references add_needed t
 
 (** Dead code elimination: keep only needed declarations. *)
 let rec depcheck_se = function
   | [] -> []
-  | ((l, SEdecl d) as t) :: se ->
+  | ((l, Core.Module.Structure_item.Declaration d) as t) :: se ->
     let se' = depcheck_se se in
     let refs = declared_refs d in
     let refs' = List.filter is_needed refs in
@@ -532,11 +560,11 @@ let rec depcheck_se = function
       se' )
     else (
       List.iter found_needed refs';
-      (* Hack to avoid extracting unused part of a Dfix *)
+      (* Hack to avoid extracting unused part of a Core.Decl.Recursive_group *)
       match d with
-      | Dfix fds when List.for_all is_custom refs' ->
-        let unused fd = {fd with fd_body = MLexn "UNUSED"} in
-        (l, SEdecl (Dfix (Core.Nonempty.map unused fds))) :: se'
+      | Core.Decl.Recursive_group fds when List.for_all is_custom refs' ->
+        let unused fd = {fd with Core.Recursion.Definition.body = Core.Expr.Runtime_error "UNUSED"} in
+        (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.map unused fds))) :: se'
       | _ ->
         compute_deps_decl d;
         t :: se' )
@@ -554,12 +582,12 @@ let rec depcheck_struct = function
     if List.is_empty lse' then struc' else (mp, lse') :: struc'
 
 (** Raised when an implicit argument remains after optimization. *)
-exception RemainingImplicit of kill_reason
+exception RemainingImplicit of Core.Erasure_reason.t
 
 (** Warn if any implicit arguments remain in the structure. *)
 let check_for_remaining_implicits struc =
   let check = function
-    | MLdummy (Kimplicit _ as k) -> raise (RemainingImplicit k)
+    | Core.Expr.Erased_value (Core.Erasure_reason.Configured_implicit _ as k) -> raise (RemainingImplicit k)
     | _ -> false
   in
   try ignore (struct_ast_search check struc)
@@ -567,7 +595,7 @@ let check_for_remaining_implicits struc =
 
 (** Full optimization pipeline: normalize, inline, eliminate dead code. *)
 let optimize_struct to_appear struc =
-  let subst = ref (Ref.User.Map.empty : ml_ast Ref.User.Map.t) in
+  let subst = ref (Ref.User.Map.empty : Core.Expr.t Ref.User.Map.t) in
   let opt_struc =
     List.map
       (fun (mp, lse) -> (mp, optim_se true (fst to_appear) subst lse))
@@ -591,29 +619,40 @@ let optimize_struct to_appear struc =
     specification and [with_type] to the type a [with] refinement fixes. *)
 let map_struct ?spec ?(with_type = Fun.id) decl s =
   let rec mtype spec = function
-    | MTident _ as mt -> mt
-    | MTfunsig (mbid, mt, mt') -> MTfunsig (mbid, mtype spec mt, mtype spec mt')
-    | MTsig (mp, sign) -> MTsig (mp, List.map (fun (l, s) -> (l, specif spec s)) sign)
-    | MTwith (mt, ML_With_type (idl, l, t)) -> MTwith (mtype spec mt, ML_With_type (idl, l, with_type t))
-    | MTwith (mt, (ML_With_module _ as w)) -> MTwith (mtype spec mt, w)
+    | Core.Module.Type.Path _ as mt -> mt
+    | Core.Module.Type.Functor {parameter = mbid; parameter_type = mt; result = mt'} ->
+      Core.Module.Type.Functor {parameter = mbid; parameter_type = mtype spec mt; result = mtype spec mt'}
+    | Core.Module.Type.Signature {path = mp; items = sign} ->
+      Core.Module.Type.Signature {path = mp; items = List.map (fun (l, s) -> (l, specif spec s)) sign}
+    | Core.Module.Type.Refined {base = mt;
+                                refinement = Core.Module.Refinement.Type_equation {path = idl;
+                                                                                   parameters = l;
+                                                                                   definition = t}} ->
+      Core.Module.Type.Refined {base = mtype spec mt;
+                                refinement = Core.Module.Refinement.Type_equation {path = idl;
+                                                                                   parameters = l;
+                                                                                   definition = with_type t}}
+    | Core.Module.Type.Refined {base = mt; refinement = (Core.Module.Refinement.Module_equation _ as w)} ->
+      Core.Module.Type.Refined {base = mtype spec mt; refinement = w}
   and specif spec = function
-    | Spec s -> Spec (spec s)
-    | Smodule mt -> Smodule (mtype spec mt)
-    | Smodtype mt -> Smodtype (mtype spec mt)
+    | Core.Module.Signature_item.Declaration s -> Core.Module.Signature_item.Declaration (spec s)
+    | Core.Module.Signature_item.Module mt -> Core.Module.Signature_item.Module (mtype spec mt)
+    | Core.Module.Signature_item.Module_type mt -> Core.Module.Signature_item.Module_type (mtype spec mt)
   in
   let mtype mt = match spec with Some spec -> mtype spec mt | None -> mt in
   let rec elems sel =
     List.map
       (fun (l, se) ->
         match se with
-        | SEdecl d -> (l, SEdecl (decl d))
-        | SEmodule m ->
-          (l, SEmodule {ml_mod_expr = module_expr m.ml_mod_expr; ml_mod_type = mtype m.ml_mod_type})
-        | SEmodtype mt -> (l, SEmodtype (mtype mt)) )
+        | Core.Module.Structure_item.Declaration d -> (l, Core.Module.Structure_item.Declaration (decl d))
+        | Core.Module.Structure_item.Module m ->
+          (l, Core.Module.Structure_item.Module {Core.Module.expr = module_expr m.expr; type_ = mtype m.type_})
+        | Core.Module.Structure_item.Module_type mt -> (l, Core.Module.Structure_item.Module_type (mtype mt)) )
       sel
   and module_expr = function
-    | MEstruct (mp, sel) -> MEstruct (mp, elems sel)
-    | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mtype mt, module_expr me)
+    | Core.Module.Expr.Structure {path = mp; items = sel} -> Core.Module.Expr.Structure {path = mp; items = elems sel}
+    | Core.Module.Expr.Functor {parameter = mbid; parameter_type = mt; body = me} ->
+      Core.Module.Expr.Functor {parameter = mbid; parameter_type = mtype mt; body = module_expr me}
     | me -> me
   in
   List.map (fun (mp, sel) -> (mp, elems sel)) s

@@ -4,13 +4,12 @@
 (** Type-class instances: the struct carrying an instance's methods, its
     template head, and the static assertion against the class's concept.
 
-    Part of declaration generation, the MiniML-to-CppIR step after
+    Part of declaration generation, the Core-to-CppIR step after
     translation's expression lowering: {!Gen_decls} includes this module,
     and the backend calls it to plan an instance's callables before
     rendering ({!plan_instance_methods}) and to generate its struct. *)
 
 open Common
-open Miniml
 open Names
 open Mlutil
 open Util
@@ -35,8 +34,9 @@ let instance_layers ty body =
      args so a [requires C<_tcI0, T1>] clause can be emitted at the use site
      instead of silently degrading to an unconstrained [typename] (CWE-693 /
      CWE-345). *)
-  let constraint_of : ml_type -> Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t = function
-    | Miniml.Tglob _ as arg_ty -> Option.default Cpp_ir.Template.Parameter_kind.Typename (concept_constraint_of_class_type arg_ty)
+  let constraint_of : Core.Type.t -> Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t = function
+    | Core.Type.Global_app _ as arg_ty ->
+      Option.default Cpp_ir.Template.Parameter_kind.Typename (concept_constraint_of_class_type arg_ty)
     | _ -> Typename
   in
   (inner_ty, inner_body, List.map (fun (id, arg_ty) -> (constraint_of arg_ty, id)) dictionaries, lam_params)
@@ -48,10 +48,10 @@ let instance_layers ty body =
     or where it does not give them all. *)
 let instance_promoted_types name body ty =
   let inner_ty, inner_body, _, lam_params = instance_layers ty body in
-  match (inner_ty : ml_type) with
-  | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref -> (
+  match (inner_ty : Core.Type.t) with
+  | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Table.is_typeclass class_ref -> (
     match Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
-    | MLcons (cons_ty, _, _, _) ->
+    | Core.Expr.Construct {result_type = cons_ty; _} ->
       let type_args = Instance_methods.record_type_args cons_ty type_args in
       let promoted_vars = class_promoted_vars class_ref in
       let promoted_concrete = class_promoted_concrete class_ref type_args in
@@ -59,10 +59,10 @@ let instance_promoted_types name body ty =
         List.map2
           (fun var_name (params, ml_ty) ->
             (* Call sites want a closed type; the alias template's own
-               element parameters ([Tvar 1 ...] here) have no meaning
+               element parameters ([Core.Type.Variable 1 ...] here) have no meaning
                outside the instance, so they are erased. *)
             ( var_name,
-              Mlutil.type_subst_list (List.map (fun _ -> Miniml.Tunknown) params) ml_ty ) )
+              Mlutil.type_subst_list (List.map (fun _ -> Core.Type.Unknown) params) ml_ty ) )
           promoted_vars promoted_concrete
       else []
     | _ -> [] )
@@ -80,7 +80,7 @@ let instance_promoted_types name body ty =
     name, the template parameters each method mints for its class-typed
     arguments ({!Callable_abi.minted}).  [~bodies:false] generates the
     methods' heads alone. *)
-let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
+let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t) (ty : Core.Type.t) :
     Cpp_ir.Lowered.Decl.t option
     * GlobRef.t option
     * Cpp_ir.Lowered.Type.t list
@@ -96,7 +96,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
   let inner_ty, inner_body, tc_temps, lam_params = instance_layers ty body in
   (* Collect type variables from the inner return type's type args. For
      parameterized instances like numOption : Numeric (option A), the return
-     type is Tglob(Numeric, [option A], []) which contains Tvar for A. These
+     type is Core.Type.Global_app(Numeric, [option A], []) which contains Core.Type.Variable for A. These
      need to become template typename parameters (T1, T2, etc.). *)
   let instance_tvars = Instance_methods.instance_tvars ty inner_ty in
   let tv_temps =
@@ -105,7 +105,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
   (* The declared parameters are dense -- the first one written is [T1] -- but
      the variables they stand for need not be.  [Monad_stateT] binds [m] before
      [S] and reaches [m] through its [Monad m] dictionary, so the carrier
-     [stateT S m] writes [Tvar 2] alone and the instance declares one parameter
+     [stateT S m] writes [Core.Type.Variable 2] alone and the instance declares one parameter
      for it.  A name list read positionally would then answer [T1] for [m] and
      nothing for [S].  Names are therefore placed at the index each variable
      actually has, with the gaps filled by a placeholder: a variable the
@@ -195,20 +195,20 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
         | k -> (k, id) )
       template_params
   in
-  (* Now inner_ty should be Tglob(class_ref, type_args, _) and inner_body should
-     be MLcons(...) *)
+  (* Now inner_ty should be Core.Type.Global_app(class_ref, type_args, _) and inner_body should
+     be Core.Expr.Construct(...) *)
   match inner_ty with
-  | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref ->
+  | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Table.is_typeclass class_ref ->
     (* Get the type class fields (method names) and field types (from
        ind_packet) *)
     let fields = Table.record_field_bindings_of_type inner_ty in
     (* Promoted dependent records may have their constructor wrapped in
-       MLcoerce due to Tvar/Tglob mismatches during extraction unification. *)
+       Core.Expr.Coerce due to Core.Type.Variable/Core.Type.Global_app mismatches during extraction unification. *)
     let inner_body = Instance_methods.record_body name class_ref inner_ty lam_params inner_body in
     ( match inner_body with
-    | MLcons (cons_ty, _ctor_ref, method_bodies, _) ->
-      (* For promoted dependent records, the definition type Tglob(Magma,[],[])
-         has no type_args, but the MLcons type Tglob(Magma,[nat],[]) carries the
+    | Core.Expr.Construct {result_type = cons_ty; constructor = _ctor_ref; arguments = method_bodies; _} ->
+      (* For promoted dependent records, the definition type Core.Type.Global_app(Magma,[],[])
+         has no type_args, but the Core.Expr.Construct type Core.Type.Global_app(Magma,[nat],[]) carries the
          concrete types extracted from the erased constructor args.  The
          constructor's type arguments are preferred because extraction unified
          them against the body, which the definition's type need not mention.
@@ -252,7 +252,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       end;
       (* Build the environment with lambda parameters for de Bruijn resolution.
          For parameterized instances, method bodies reference the outer lambda
-         parameters (e.g., the typeclass dictionary) via MLrel indices. We push
+         parameters (e.g., the typeclass dictionary) via Core.Expr.Bound_variable indices. We push
          lam_params into the env so these references resolve correctly. *)
       let outer_binders, base_env = push_vars' (List.rev lam_params) (empty_env ()) in
       (* Collect type var names for cpp_ir_of_ml_type *)
@@ -274,7 +274,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
              static method returning the typeclass. *)
           let is_tc_field =
             match field_ml_ty with
-            | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
+            | Core.Type.Global_app {head = r; _} -> Table.is_typeclass r
             | _ -> false
           in
           if is_tc_field then
@@ -284,7 +284,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
             Common.id_of_global Term method_ref
           in
           let m = Instance_methods.prepare_method inst method_ref field_ml_ty field_body in
-          let {Instance_methods.field_ml_ty; subst_args; subst_ty; n_method_tvars; declared_arity; body = field_body} = m in
+          let {Instance_methods.field_ml_ty;
+               subst_args;
+               subst_ty;
+               n_method_tvars;
+               declared_arity;
+               body = field_body} = m in
           let method_args_and_ret () = Instance_methods.args_and_ret m in
           let orig_args_and_ret () = Instance_methods.declared_args_and_ret m in
           (* With the quantifier back, the method is a member template:
@@ -429,19 +434,19 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                parameters, not a class variable the instance left open. *)
             let substituted =
               match snd (orig_args_and_ret ()) with
-              | Miniml.Tvar (_, j) -> j <= List.length subst_args
+              | Core.Type.Variable {variable = j; _} -> j <= List.length subst_args
               | _ -> true
             in
             match ret with
-            | (Miniml.Tvar (_, _)) when method_tvars <> [] || substituted ->
+            | (Core.Type.Variable _) when method_tvars <> [] || substituted ->
               (* The method is a member template, or the variable is the
                  instance's, so a bare type variable in the return type is
                  already meaningful -- no need to guess it from the last
                  binder. *)
               cpp_ir_of_ml_type base_env type_var_names ret
-            | (Miniml.Tvar (_, _)) when binders <> [] ->
-              (* Unsubstituted Tvar — infer from the last lambda binder's type.
-                 For op : A -> A -> A with body MLlam(x, nat, MLlam(y, nat,
+            | (Core.Type.Variable _) when binders <> [] ->
+              (* Unsubstituted Core.Type.Variable — infer from the last lambda binder's type.
+                 For op : A -> A -> A with body Core.Expr.Lambda(x, nat, Core.Expr.Lambda(y, nat,
                  ...)), the return type is the same as the parameter type
                  (nat). *)
               let last_param_ty = (List.hd (List.rev binders)).mb_ml_ty in
@@ -449,10 +454,10 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                 base_env
                 type_var_names
                 last_param_ty
-            | Miniml.Tvar (_, _) ->
+            | Core.Type.Variable _ ->
               (* No lambda binders to infer from — try to use the field type's
                  arg types. For a non-function field like m_id : carrier, the
-                 whole type is Tvar, so look at the body's type. *)
+                 whole type is Core.Type.Variable, so look at the body's type. *)
               Any
             | _ ->
               cpp_ir_of_ml_type
@@ -516,12 +521,15 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                      section's (erased) variables, so the reference is under an
                      application of dummies rather than bare. *)
                   let rec body_ref = function
-                    | MLglob {callee = r; _} -> Some r
-                    | MLapp (f, args)
+                    | Core.Expr.Global {callee = r; _} -> Some r
+                    | Core.Expr.Apply {callee = f; arguments = args}
                       when List.for_all
-                             (function MLdummy _ -> true | _ -> false) args ->
+                             (function Core.Expr.Erased_value _ -> true | _ -> false) args ->
                       body_ref f
-                    | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> body_ref e
+                    | Core.Expr.Coerce {value = e; _}
+                    | Core.Expr.Boxed_value {value = e; _}
+                    | Core.Expr.Lambda_group_barrier {value = e; _} ->
+                      body_ref e
                     | _ -> None
                   in
                   match body_ref inner_body with
@@ -607,7 +615,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     (List.map (fun (name, _, cpp_ty) -> (name, cpp_ty)) params)
                 in
                 (* The eta path applied the class-typed arguments to
-                   [MLdummy], so nothing in the body names them; the template
+                   [Core.Expr.Erased_value], so nothing in the body names them; the template
                    parameters are still declared, because the concept probe
                    and every call site spell the same list. *)
                 (cpp_params, method_ret_ty, stmts, n_tc_args_names) )
@@ -731,50 +739,53 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       in
       (* Generate [using] declarations for promoted typeclass-typed fields
          from the constructor body.  For such fields, the constructor arg
-         is a value expression (e.g., [MLglob nat_category] or
-         [MLapp(opposite_category, [MLproj(...)])]) that must be
+         is a value expression (e.g., [Core.Expr.Global nat_category] or
+         [Core.Expr.Apply(opposite_category, [MLproj(...)])]) that must be
          translated to a C++ TYPE expression (e.g., [nat_category] or
          [opposite_category<typename _tcI0::base_category>]).
 
          This function interprets an ML expression at the type level:
-         - [MLglob r] → named type [Entity_application (r, ...)]
-         - [MLapp(MLglob r, args)] → template type with type args
-         - [MLrel i] → the named template parameter it binds
-         - [MLcoerce]/[MLboxed]/[MLbarrier] → strip the wrapper
-         - a single-branch [MLcase] projecting a field → [Member] *)
+         - [Core.Expr.Global r] → named type [Entity_application (r, ...)]
+         - [Core.Expr.Apply(Core.Expr.Global r, args)] → template type with type args
+         - [Core.Expr.Bound_variable i] → the named template parameter it binds
+         - [Core.Expr.Coerce]/[Core.Expr.Boxed_value]/[Core.Expr.Lambda_group_barrier] → strip the wrapper
+         - a single-branch [Core.Expr.Match] projecting a field → [Member] *)
       let rec ml_expr_to_cpp_type body : Cpp_ir.Lowered.Type.t =
         match body with
-        | MLglob {callee = r; _} -> Entity_application (r, [], [])
-        | MLapp (MLglob {callee = r; _}, args) ->
+        | Core.Expr.Global {callee = r; _} -> Entity_application (r, [], [])
+        | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args} ->
           let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
           Entity_application (r, type_args, [])
-        | MLapp (f, args) -> (
+        | Core.Expr.Apply {callee = f; arguments = args} -> (
           match ml_expr_to_cpp_type f with
           | Entity_application (r, existing, es) ->
             let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
             Entity_application (r, existing @ type_args, es)
           | other -> other )
-        | MLrel (i, _) -> (
+        | Core.Expr.Bound_variable {index = i; _} -> (
           try
             let name = get_db_name i base_env in
             Cpp_ir.Build.named_variable name
           with Failure _ -> Any )
-        | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> ml_expr_to_cpp_type e
-        | MLcase (_, scrutinee, branches, _)
+        | Core.Expr.Coerce {value = e; _}
+        | Core.Expr.Boxed_value {value = e; _}
+        | Core.Expr.Lambda_group_barrier {value = e; _} ->
+          ml_expr_to_cpp_type e
+        | Core.Expr.Match {scrutinee; branches; _}
           when Array.length branches = 1 ->
           (* Single-branch case = record field projection.  The branch
              destructures the record into named bindings and selects one
-             via [MLrel].  Translate into [Member (scrutinee, field)]. *)
-          let {br_binders = binds; br_body; _} = branches.(0) in
+             via [Core.Expr.Bound_variable].  Translate into [Member (scrutinee, field)]. *)
+          let {Core.Match.Branch.binders = binds; body = br_body; _} = branches.(0) in
           let base_ty = ml_expr_to_cpp_type scrutinee in
           ( match br_body with
-          | MLrel (j, _) when j >= 1 && j <= List.length binds ->
+          | Core.Expr.Bound_variable {index = j; _} when j >= 1 && j <= List.length binds ->
             (* de Bruijn: 1 = last binding, n = first binding *)
             let idx = List.length binds - j in
             let (field_id, _) = List.nth binds idx in
             ( match field_id with
-            | Id name | Tmp name -> Member (base_ty, name)
-            | Dummy -> Any )
+            | Core.Binder_name.Source name | Core.Binder_name.Generated name -> Member (base_ty, name)
+            | Core.Binder_name.Anonymous -> Any )
           | _ ->
             (* Non-trivial body — recurse with extended environment *)
             ml_expr_to_cpp_type br_body )
@@ -793,7 +804,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       in
       (* Check if an ML expression is a parameterized reference whose
          typeclass arguments have been erased — e.g.,
-         [MLapp(MLglob opposite_category, [MLdummy Ktype])].  Such
+         [Core.Expr.Apply(Core.Expr.Global opposite_category, [Core.Expr.Erased_value Core.Erasure_reason.Type_argument])].  Such
          references produce an incomplete [Entity_application (r, [], [])]
          that can't be used as a [using] declaration. *)
       let tc_promoted_usings =
@@ -801,13 +812,13 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
           List.filter_map
             (fun ((fld, fty), body) ->
               match (fld, fty) with
-              | Some field_ref, Miniml.Tglob (r, _, _)
+              | Some field_ref, Core.Type.Global_app {head = r; _}
                 when Table.is_typeclass r ->
                 let has_erased_tc_args =
                   match body with
-                  | MLapp (_, args) ->
+                  | Core.Expr.Apply {arguments = args; _} ->
                     List.exists
-                      (function MLdummy _ -> true | _ -> false)
+                      (function Core.Expr.Erased_value _ -> true | _ -> false)
                       args
                   | _ -> false
                 in
@@ -829,8 +840,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       Table.current_decl_ref := saved_decl_ref;
       clear_current_type_vars ();
       (* Compute promoted vars and generate using fields. Promoted vars are
-         ip_vars entries beyond the real type parameter count (as determined by
-         ip_sign Keep count, not tv_temps which reflects the instance's own type
+         type_variables entries beyond the real type parameter count (as determined by
+         signature Keep count, not tv_temps which reflects the instance's own type
          variables). They become `using field = ConcreteType;` in the struct. *)
       let promoted_vars = class_promoted_vars class_ref in
       (* The element parameters an alias template introduces are fresh type
@@ -854,7 +865,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
         class_promoted_concrete ~tvar_base:alias_tvar_base class_ref type_args
       in
       (* Is [cpp_ty] a self-referential promoted-var reference (e.g.,
-         [Tvar(_, Some "Obj")] where "Obj" is a promoted var)?  Such
+         [Core.Type.Variable(_, Some "Obj")] where "Obj" is a promoted var)?  Such
          types are useless: [using Obj = Obj;] would just alias the
          enclosing scope, not the template parameter's type. *)
       let is_self_referential_promoted var_name (cpp_ty : Cpp_ir.Lowered.Type.t) =
@@ -976,7 +987,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   fields
               in
               ( match field_ml_ty with
-              | Some (Miniml.Tglob (tc_ref, _, _))
+              | Some (Core.Type.Global_app {head = tc_ref; _})
                 when Table.is_typeclass tc_ref ->
                 let nested_promoted = class_promoted_vars tc_ref in
                 List.filter_map
@@ -1006,7 +1017,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
           Some class_ref,
           concept_args class_ref non_promoted_type_args,
           minted )
-    | MLglob {callee = other; _} ->
+    | Core.Expr.Global {callee = other; _} ->
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
          declared at all. *)
@@ -1042,7 +1053,7 @@ let plan_instance_methods ~finish name body ty =
 
 (** Check if a term of type [ty] is a type class instance: the result of
     [ty] is a type class. *)
-let is_typeclass_instance (ty : ml_type) : bool =
+let is_typeclass_instance (ty : Core.Type.t) : bool =
   match ml_return_type ty with
-  | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
+  | Core.Type.Global_app {head = class_ref; _} -> Table.is_typeclass class_ref
   | _ -> false

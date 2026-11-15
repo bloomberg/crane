@@ -28,9 +28,15 @@ PRINTER_FINISHING=${FINISHING/ Cpp_erasure/}
 CORE_PLANNING="core_query core_elaborate match_kind core_normalize numeral_literal elaborated_call instance_methods core/positional"
 CORE_FORBIDDEN="${TRANSLATION/ Method_registry/} $PRINTER $FINISHING Cpp_ir"
 
+CORE_FILES="core/occurrence core/open core/nonempty core/grammar core/erasure_reason core/binder_name core/type core/meta core/expr core/global_use core/match core/pattern core/record core/recursion core/inductive core/signature core/decl core/module core/program core/interface core/positional"
+
 # layer modules : forbidden dependencies
 rules=(
-  "core/inductive core/nonempty core/positional miniml foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
+  "backend foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
+  # Core is one node of the dependency graph (src/core/ is a namespace), so
+  # none of its files may reach a module that names it: it is the program
+  # extraction produces, and depends on nothing of the compiler but Scheme.
+  "$CORE_FILES : $TRANSLATION $PRINTER $FINISHING Table Common Mlutil Modutil Extraction Core_phase Cpp_ir Backend"
   "$CORE_PLANNING : $CORE_FORBIDDEN"
   "cpp_pipeline cpp_constraints loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_cpp_ir : $TRANSLATION $PRINTER"
   # CppIR is one node of the dependency graph (src/cpp_ir/ is a namespace), so

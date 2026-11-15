@@ -2,7 +2,6 @@
    callee's type at it. *)
 
 open Crane_plugin
-open Miniml
 
 let check name cond =
   if not cond then (
@@ -10,17 +9,17 @@ let check name cond =
     exit 1 )
 
 let owner = Names.GlobRef.VarRef (Names.Id.of_string "f")
-let nat = Tglob (Names.GlobRef.VarRef (Names.Id.of_string "nat"), [], [])
-let list t = Tglob (Names.GlobRef.VarRef (Names.Id.of_string "list"), [t], [])
-let meta id = function None -> Tmeta (Meta.fresh id) | Some t -> Tmeta (Meta.solved id t)
+let nat = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "nat"); type_arguments = []; index_arguments = []}
+let list t = Core.Type.Global_app {head = Names.GlobRef.VarRef (Names.Id.of_string "list"); type_arguments = [t]; index_arguments = []}
+let meta id = function None -> Core.Type.Meta (Core.Meta.fresh id) | Some t -> Core.Type.Meta (Core.Meta.solved id t)
 
 let rec gen_type depth metas =
   match Random.int (if depth = 0 then 3 else 5) with
   | 0 -> nat
   | 1 -> List.nth metas (Random.int (List.length metas))
-  | 2 -> Tvar (Schematic, 1 + Random.int 3)
+  | 2 -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1 + Random.int 3}
   | 3 -> list (gen_type (depth - 1) metas)
-  | _ -> Tarr (gen_type (depth - 1) metas, gen_type (depth - 1) metas)
+  | _ -> Core.Type.Arrow {parameter = gen_type (depth - 1) metas; result = gen_type (depth - 1) metas}
 
 let () =
   Random.init 20261013;
@@ -35,9 +34,9 @@ let () =
     check "one type per slot" (List.length frozen = arity);
     check "no metavariable survives" (not (List.exists Mlutil.type_has_meta frozen));
     let rec holes = function
-      | Thole h -> [h]
-      | Tarr (a, b) -> holes a @ holes b
-      | Tglob (_, l, _) -> List.concat_map holes l
+      | Core.Type.Hole h -> [h]
+      | Core.Type.Arrow {parameter = a; result = b} -> holes a @ holes b
+      | Core.Type.Global_app {type_arguments = l; _} -> List.concat_map holes l
       | _ -> []
     in
     check "fresh against earlier holes"
@@ -47,7 +46,7 @@ let () =
     (* One metavariable is one hole wherever it occurs. *)
     let same = Mlutil.freeze_types [List.hd open_metas; list (List.hd open_metas)] in
     ( match same with
-    | [Thole a; Tglob (_, [Thole b], _)] -> check "a shared meta is one hole" (a = b)
+    | [Core.Type.Hole a; Core.Type.Global_app {type_arguments = [Core.Type.Hole b]; _}] -> check "a shared meta is one hole" (a = b)
     | _ -> check "a lone open meta freezes to a hole" false );
     let id = Scheme.Id.fresh owner ~arity in
     let inst =
@@ -58,7 +57,9 @@ let () =
     check "slots stay owned"
       (Scheme.Instantiation.for_all
          (fun v _ -> Scheme.Id.equal (Scheme.Var.owner v) id) inst);
-    let body = Tarr (Tvar (Schematic, 1), Tvar (Schematic, arity)) in
+    let body = Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1};
+                                result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                             variable = arity}} in
     let p = Mlutil.Partial.instantiate inst body in
     let filled = Mlutil.Partial.resolve (fun _ -> Some nat) p in
     check "only a resolver closes a hole"

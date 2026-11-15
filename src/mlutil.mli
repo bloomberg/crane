@@ -11,39 +11,38 @@
 (************************************************************************)
 
 (** Utility functions over ML types and terms, type environments, and
-    optimization passes.  Shared by every stage that handles MiniML: type
+    optimization passes.  Shared by every stage that handles Core: type
     reconstruction in extraction, the {!normalize} simplifier that
     {!Modutil.optimize_struct} runs, and the backend's readers of types and
     global uses. *)
 
 open Names
-open Miniml
 
 (** {2 Generic traversals}
 
-    Each sees through a resolved meta and visits every child type, a [Tapp]'s
+    Each sees through a resolved meta and visits every child type, a [Core.Type.Variable_app]'s
     arguments included. *)
 
 (** Sets of type variable indices. *)
 module IntSet : Stdlib.Set.S with type elt = int and type t = Stdlib.Set.Make(Stdlib.Int).t
 
 (** [t] with every resolved meta at its root taken off. *)
-val ml_resolve : ml_type -> ml_type
+val ml_resolve : Core.Type.t -> Core.Type.t
 
 (** The immediate sub-types of an already resolved type. *)
-val ml_type_children : ml_type -> ml_type list
+val ml_type_children : Core.Type.t -> Core.Type.t list
 
 (** Whether some node of the type, the root included, satisfies [p]. *)
-val exists_ml_type : (ml_type -> bool) -> ml_type -> bool
+val exists_ml_type : (Core.Type.t -> bool) -> Core.Type.t -> bool
 
 (** Pre-order: [f] sees a node before its children. *)
-val fold_ml_type : ('a -> ml_type -> 'a) -> 'a -> ml_type -> 'a
+val fold_ml_type : ('a -> Core.Type.t -> 'a) -> 'a -> Core.Type.t -> 'a
 
 (** Bottom-up: [f] sees a node after its children were mapped. *)
-val map_ml_type : (ml_type -> ml_type) -> ml_type -> ml_type
+val map_ml_type : (Core.Type.t -> Core.Type.t) -> Core.Type.t -> Core.Type.t
 
 (** The indices of every type variable in [t], an applied one included. *)
-val ml_tvars : ml_type -> IntSet.t
+val ml_tvars : Core.Type.t -> IntSet.t
 
 (** {2 Utility functions over ML types with meta} *)
 
@@ -57,25 +56,25 @@ val reset_meta_count : unit -> unit
 val preserving_meta_supply : (unit -> 'a) -> 'a
 
 (** Create a fresh meta variable. *)
-val new_meta : 'a -> ml_type
+val new_meta : 'a -> Core.Type.t
 
 (** Apply a type to arguments, contracting the application when the head is
     known. A head that carries placeholders -- an eta-expanded constructor, or
     a type-level lambda whose binder extraction could not name -- has them
     filled rather than extended. *)
-val apply_ml_type : ml_type -> ml_type list -> ml_type
+val apply_ml_type : Core.Type.t -> Core.Type.t list -> Core.Type.t
 
 (** Substitute type variables using a list of types.
-    @param l replacement types for [Tvar 1], [Tvar 2], ... in order
+    @param l replacement types for [Core.Type.Variable 1], [Core.Type.Variable 2], ... in order
     @param t the ML type to substitute into *)
-val type_subst_list : ml_type list -> ml_type -> ml_type
+val type_subst_list : Core.Type.t list -> Core.Type.t -> Core.Type.t
 
-(** [type_subst_fun f t] substitutes each [Tvar j] for which [f j] answers,
+(** [type_subst_fun f t] substitutes each [Core.Type.Variable j] for which [f j] answers,
     leaving the others unchanged. *)
-val type_subst_fun : (int -> ml_type option) -> ml_type -> ml_type
+val type_subst_fun : (int -> Core.Type.t option) -> Core.Type.t -> Core.Type.t
 
 (** A one-line rendering of an ML type, for diagnostics. *)
-val debug_ml_type : ml_type -> string
+val debug_ml_type : Core.Type.t -> string
 
 (** The scheme extraction recorded for [r], with the source binders its
     variables come from; [None] for anything but an extracted constant. *)
@@ -91,15 +90,15 @@ val reference_scheme : GlobRef.t -> Scheme.Id.t option
     ({!Global_use.infer_all}) at [r]'s scheme -- the recorded one, or one
     of the arity [r]'s registered type has -- and monomorphic for a
     declaration quantifying nothing. *)
-val open_reference : GlobRef.t -> global_use
+val open_reference : GlobRef.t -> Core.Global_use.t
 
 (** A declaration's reference to itself in its own body
     ({!Global_use.identity}). *)
-val self_reference : GlobRef.t -> global_use
+val self_reference : GlobRef.t -> Core.Global_use.t
 
 (** A call to [target] written at the caller's own variables, in order: what
     a forwarder with [target]'s type writes. *)
-val forwarding_use : GlobRef.t -> global_use
+val forwarding_use : GlobRef.t -> Core.Global_use.t
 
 (** Types for a callee's scheme variables, keyed by {!Scheme.Var.t}: what a
     use wrote, a call's reading of them, or what its arguments imply.  Every
@@ -120,23 +119,23 @@ module Var_types : sig
 
   (** [through last f]: every variable of [last]'s scheme up to [last],
       variable [v] at [f v]; {!empty} for [None]. *)
-  val through : Scheme.Var.t option -> (Scheme.Var.t -> ml_type) -> t
+  val through : Scheme.Var.t option -> (Scheme.Var.t -> Core.Type.t) -> t
 
   (** Variable [v]'s type, if it is spoken for; [Invalid_argument] for a
       variable of another scheme, which is a caller confusing two schemes. *)
-  val find : t -> Scheme.Var.t -> ml_type option
+  val find : t -> Scheme.Var.t -> Core.Type.t option
 
-  (** {!find} at the variable the callee's own type spells [Tvar (_, i)]
+  (** {!find} at the variable the callee's own type spells [Core.Type.Variable (_, i)]
       ({!Scheme.Var.of_tvar}): for a reader holding a variable it met in
       that type. *)
-  val find_tvar : t -> int -> ml_type option
+  val find_tvar : t -> int -> Core.Type.t option
 
   (** Each variable spoken for, in ascending order, with its type. *)
-  val bindings : t -> (Scheme.Var.t * ml_type) list
+  val bindings : t -> (Scheme.Var.t * Core.Type.t) list
 
   (** [apply t ty] instantiates [ty], a type in the callee's scheme
       variables: each variable spoken for is replaced, any other stays. *)
-  val apply : t -> ml_type -> ml_type
+  val apply : t -> Core.Type.t -> Core.Type.t
 
   (** The same variables at equal types ({!eq_ml_type}). *)
   val equal : t -> t -> bool
@@ -147,92 +146,92 @@ val last_var : Scheme.Var.t list -> Scheme.Var.t option
 
 (** The arguments [use] wrote, for the scheme variables they are for, up to
     the last variable written. *)
-val written_type_args : global_use -> Var_types.t
+val written_type_args : Core.Global_use.t -> Var_types.t
 
 (** [subst_written_evidence use t] is [t], a type in [use]'s callee's
     scheme variables, with each variable the use wrote an argument for at
     that variable's own binder replaced by the argument.  A variable the use
     did not write is left unchanged, and an argument written at a binder with
     no variable replaces nothing. *)
-val subst_written_evidence : global_use -> ml_type -> ml_type
+val subst_written_evidence : Core.Global_use.t -> Core.Type.t -> Core.Type.t
 
 (** [instantiate_body ~reader use body] is a copy of [body], the callee's
     definition, at [use]: its types read at the arguments the use wrote
     ({!instantiate_written}), the uses inside it composed with that reading,
     and every hole they leave open renamed apart from the original's -- a
     copy is new uses, which do not share what they leave open. *)
-val instantiate_body : reader:string -> global_use -> ml_ast -> ml_ast
+val instantiate_body : reader:string -> Core.Global_use.t -> Core.Expr.t -> Core.Expr.t
 
 (** Whether [use] wrote an argument for each of its callee's variables
     [1 .. n] at that variable's own binder. *)
-val written_covers : global_use -> int -> bool
+val written_covers : Core.Global_use.t -> int -> bool
 
 (** {2 Frozen instantiations} *)
 
 (** [freeze_types tys] copies [tys] with every solved metavariable replaced
-    by its contents and every unsolved one by a {!Miniml.Thole} -- one per
+    by its contents and every unsolved one by a {!Core.Type.Hole} -- one per
     metavariable, shared by the copies, and distinct from every hole minted
     before. *)
-val freeze_types : ml_type list -> ml_type list
+val freeze_types : Core.Type.t list -> Core.Type.t list
 
 (** A hole distinct from every other. *)
-val fresh_hole : unit -> ml_type
+val fresh_hole : unit -> Core.Type.t
 
 (** Whether the type mentions a metavariable, solved or not. *)
-val type_has_meta : ml_type -> bool
+val type_has_meta : Core.Type.t -> bool
 
 (** A callee's type at a use's frozen instantiation: every variable the
     instantiation solves is replaced, so the result may hold holes.  It is
-    not an ordinary MiniML type until {!close} says it is hole-free or
+    not an ordinary Core type until {!close} says it is hole-free or
     {!resolve} has filled its holes from other evidence. *)
 module Partial : sig
   (** A type that may hold holes. *)
-  type t = private ml_type
+  type t = private Core.Type.t
 
   (** [instantiate inst ty] is [ty], in the callee's scheme variables, with
       each variable [inst] solves to a type replaced by that type, which may
       hold holes; a variable it leaves standing for itself
       ({!Scheme.Identity}) stays. *)
-  val instantiate : ml_type Scheme.Instantiation.t -> ml_type -> t
+  val instantiate : Core.Type.t Scheme.Instantiation.t -> Core.Type.t -> t
 
   (** The holes, in order of first occurrence. *)
   val holes : t -> int list
 
   (** The type, when it holds no hole. *)
-  val close : t -> ml_type option
+  val close : t -> Core.Type.t option
 
   (** Fills each hole [h] for which [f h] answers. *)
-  val resolve : (int -> ml_type option) -> t -> t
+  val resolve : (int -> Core.Type.t option) -> t -> t
 end
 
 (** {!subst_written_evidence}, the reading a substitution reader makes.
     Under [CRANE_PROBE] it is compared with the reading at the use's solved
     instantiation ([INSTW_same], [INSTW_differ], [INSTW_holes]). *)
-val instantiate_written : reader:string -> global_use -> ml_type -> ml_type
+val instantiate_written : reader:string -> Core.Global_use.t -> Core.Type.t -> Core.Type.t
 
 (** Substitute type variables using an array of types.
-    @param v replacement types for [Tvar 1], [Tvar 2], ... (zero-indexed in the array)
+    @param v replacement types for [Core.Type.Variable 1], [Core.Type.Variable 2], ... (zero-indexed in the array)
     @param t the ML type to substitute into *)
-val type_subst_vect : ml_type array -> ml_type -> ml_type
+val type_subst_vect : Core.Type.t array -> Core.Type.t -> Core.Type.t
 
 (** [instantiate_prenex n t] instantiates the prenex type [t], quantifying
-    [Tvar 1 .. Tvar n], with fresh meta variables. *)
-val instantiate_prenex : int -> ml_type -> ml_type
+    [Core.Type.Variable 1 .. Core.Type.Variable n], with fresh meta variables. *)
+val instantiate_prenex : int -> Core.Type.t -> Core.Type.t
 
-(** Replace every [Tunknown] with a fresh metavariable, so that an erased
+(** Replace every [Core.Type.Unknown] with a fresh metavariable, so that an erased
     existential can unify with a concrete type at a use site. *)
-val instantiate_unknowns : ml_type -> ml_type
+val instantiate_unknowns : Core.Type.t -> Core.Type.t
 
 (** Attempt most general unification of two types.  Mutably updates
     metavariable bindings on success; silently does nothing on failure.
     @param t1 first type
     @param t2 second type *)
-val try_mgu : ml_type -> ml_type -> unit
+val try_mgu : Core.Type.t -> Core.Type.t -> unit
 
 (** Determine if a type coercion requires magic (unsafe cast).
     @param p a pair [(expected, actual)] of ML types to compare
-    @return [true] if the types cannot be unified and [MLcoerce] is needed *)
-val needs_magic : ml_type * ml_type -> bool
+    @return [true] if the types cannot be unified and [Core.Expr.Coerce] is needed *)
+val needs_magic : Core.Type.t * Core.Type.t -> bool
 
 (** Conditionally wrap an ML term in a coercion.  The two types are passed
     explicitly because {!needs_magic}'s pair is unordered ([mgu] is
@@ -242,19 +241,19 @@ val needs_magic : ml_type * ml_type -> bool
     @param b    when [true], wraps [a]
     @param a    the ML expression to (possibly) wrap *)
 val put_magic_if :
-  from:ml_type -> into:ml_type -> bool -> ml_ast -> ml_ast
+  from:Core.Type.t -> into:Core.Type.t -> bool -> Core.Expr.t -> Core.Expr.t
 
 (** Wrap an ML term in a coercion iff its own type fails to unify with the one
     its context requires.
     @param from the type the term itself has
     @param into the type the context requires
     @param a    the ML expression to (possibly) wrap *)
-val put_magic : from:ml_type -> into:ml_type -> ml_ast -> ml_ast
+val put_magic : from:Core.Type.t -> into:Core.Type.t -> Core.Expr.t -> Core.Expr.t
 
 (** Check if an ML term can be generalized at a let.  For C++ an
     application never is; anything else is, an approximation that well-typed
     Rocq never exercises. *)
-val generalizable : ml_ast -> bool
+val generalizable : Core.Expr.t -> bool
 
 (** {2 ML type environment} *)
 
@@ -270,22 +269,22 @@ module Mlenv : sig
       @param mle the type environment
       @param n 1-based index into the environment (1 = most recently pushed)
       @return a fresh instantiation of the n-th schema *)
-  val get : t -> int -> ml_type
+  val get : t -> int -> Core.Type.t
 
   (** Add a type to the environment, after generalizing free meta variables.
       @param mle the current environment
       @param t  the ML type to generalize and push *)
-  val push_gen : t -> ml_type -> t
+  val push_gen : t -> Core.Type.t -> t
 
-  (** Add a type with no [Tvar] (no generalization needed).
+  (** Add a type with no [Core.Type.Variable] (no generalization needed).
       @param mle the current environment
       @param t  the monomorphic ML type to push *)
-  val push_type : t -> ml_type -> t
+  val push_type : t -> Core.Type.t -> t
 
-  (** Add a type with no [Tvar] nor [Tmeta] (no generalization, no free metas).
+  (** Add a type with no [Core.Type.Variable] nor [Core.Type.Meta] (no generalization, no free metas).
       @param mle the current environment
       @param t  the ground ML type to push *)
-  val push_std_type : t -> ml_type -> t
+  val push_std_type : t -> Core.Type.t -> t
 end
 
 (** {2 Utility functions over ML types without meta} *)
@@ -293,18 +292,18 @@ end
 (** Check if a mutual inductive name occurs in a type.
     @param kn the mutual inductive kernel name to search for
     @param t  the ML type to search in
-    @return [true] if [kn] appears inside a [Tglob] node of [t] *)
-val type_mem_kn : MutInd.t -> ml_type -> bool
+    @return [true] if [kn] appears inside a [Core.Type.Global_app] node of [t] *)
+val type_mem_kn : MutInd.t -> Core.Type.t -> bool
 
 (** Return the maximum type variable index in a type.
-    @return the largest [i] such that [Tvar (Schematic, i)] occurs in [t], or
-            [0] if none does.  [Rigid] nodes are not considered. *)
-val type_maxvar : ml_type -> int
+    @return the largest [i] such that [Core.Type.Variable (Schematic, i)] occurs in [t], or
+            [0] if none does.  [Core.Type.Rigidity.Rigid] nodes are not considered. *)
+val type_maxvar : Core.Type.t -> int
 
-(** Whether a type carries a [Tunknown] hole -- the spelling extraction gives a
+(** Whether a type carries a [Core.Type.Unknown] hole -- the spelling extraction gives a
     type-level lambda, whose binder is where the hole is.  See
     {!fill_placeholders}. *)
-val type_has_hole : ml_type -> bool
+val type_has_hole : Core.Type.t -> bool
 
 (** Whether the arguments of an application carry a hole past their trailing
     run of placeholders.  That run is eta-expansion, which the next argument
@@ -315,103 +314,103 @@ val type_has_hole : ml_type -> bool
     the argument's own placeholder (see {!fill_placeholders}), and so is a
     hole inside an argument at one of the [~constructors] positions, a type
     alias's parameter its definition applies ({!constructor_params}). *)
-val writes_binder : ?generated:bool -> ?constructors:int list -> ml_type list -> bool
+val writes_binder : ?generated:bool -> ?constructors:int list -> Core.Type.t list -> bool
 
 (** The 0-based positions of the parameters the type alias [r] applies in its
     definition, as far as that definition has been extracted; none for
     anything else. *)
 val constructor_params : GlobRef.t -> int list
 
-(** [fill_type_hole a t] is [t] with its [Tunknown] holes filled by [a]: the
+(** [fill_type_hole a t] is [t] with its [Core.Type.Unknown] holes filled by [a]: the
     type-level lambda {!type_has_hole} recognises, applied to [a]. *)
-val fill_type_hole : ml_type -> ml_type -> ml_type
+val fill_type_hole : Core.Type.t -> Core.Type.t -> Core.Type.t
 
 (** Decompose an ML type into a list of argument types and a result type.
     @return [(args, result)] where [args] are the curried parameter types
             and [result] is the final return type *)
-val type_decomp : ml_type -> ml_type list * ml_type
+val type_decomp : Core.Type.t -> Core.Type.t list * Core.Type.t
 
 (** Recompose an ML type from a list of argument types and a result type.
     @param args the list of argument types (left-to-right)
     @param result the final return type *)
-val type_recomp : ml_type list * ml_type -> ml_type
+val type_recomp : Core.Type.t list * Core.Type.t -> Core.Type.t
 
-(** Make every [Schematic] type variable [Rigid], so that it no longer
+(** Make every [Core.Type.Rigidity.Schematic] type variable [Core.Type.Rigidity.Rigid], so that it no longer
     unifies with the schematic variables of any other type scheme.  Applied to
     a constant's own type before its body is reconstructed. *)
-val rigidify : ml_type -> ml_type
+val rigidify : Core.Type.t -> Core.Type.t
 
 (** Abbreviation map type for looking up type aliases. *)
-type abbrev_map = GlobRef.t -> ml_type option
+type abbrev_map = GlobRef.t -> Core.Type.t option
 
 (** Expand type abbreviations using the given map.
     @param env lookup function mapping global references to their type bodies;
-               return [None] to leave a [Tglob] unexpanded
+               return [None] to leave a [Core.Type.Global_app] unexpanded
     @param t   the ML type to expand *)
-val type_expand : abbrev_map -> ml_type -> ml_type
+val type_expand : abbrev_map -> Core.Type.t -> Core.Type.t
 
 (** Simplify an ML type: {!type_expand} with no abbreviation, which only
     replaces solved metavariables by their contents (when type expansion is
     enabled). *)
-val type_simpl : ml_type -> ml_type
+val type_simpl : Core.Type.t -> Core.Type.t
 
 (** Convert an ML type to a signature element for its outermost position.
     @param env abbreviation map for expanding type aliases
     @param t   the ML type to classify
-    @return [Kill d] if the outermost type is [Tdummy d] (and not conservative),
-            [Keep] otherwise *)
-val type_to_sign : abbrev_map -> ml_type -> sign
+    @return [Core.Signature.Argument.Erased d] if the outermost type is [Core.Type.Erased d] (and not conservative),
+            [Core.Signature.Argument.Runtime] otherwise *)
+val type_to_sign : abbrev_map -> Core.Type.t -> Core.Signature.Argument.t
 
 (** Convert an ML type to a full argument signature by decomposing arrows.
     @param env abbreviation map for expanding type aliases
     @param t   the ML type to decompose
-    @return a [signature] with one entry per curried argument position *)
-val type_to_signature : abbrev_map -> ml_type -> signature
+    @return a [Core.Signature.t] with one entry per curried argument position *)
+val type_to_signature : abbrev_map -> Core.Type.t -> Core.Signature.t
 
 (** Expunge dummy arguments from an ML type using the abbreviation map.
     @param env abbreviation map for expanding type aliases
-    @param t   the ML type from which to remove [Tdummy] arrows *)
-val type_expunge : abbrev_map -> ml_type -> ml_type
+    @param t   the ML type from which to remove [Core.Type.Erased] arrows *)
+val type_expunge : abbrev_map -> Core.Type.t -> Core.Type.t
 
 (** Expunge dummy arguments from an ML type guided by a pre-computed signature.
     @param env abbreviation map for expanding type aliases
-    @param s   the signature indicating which arguments are [Kill]ed
+    @param s   the signature indicating which arguments are [Core.Signature.Argument.Erased]ed
     @param t   the ML type from which to remove the killed arrow positions *)
-val type_expunge_from_sign : abbrev_map -> signature -> ml_type -> ml_type
+val type_expunge_from_sign : abbrev_map -> Core.Signature.t -> Core.Type.t -> Core.Type.t
 
 (** Test equality of two ML types. *)
-val eq_ml_type : ml_type -> ml_type -> bool
+val eq_ml_type : Core.Type.t -> Core.Type.t -> bool
 
-(** Check if a type is Tdummy. *)
-val isTdummy : ml_type -> bool
+(** Check if a type is Core.Type.Erased. *)
+val isTdummy : Core.Type.t -> bool
 
-(** Check if an ML term is MLdummy. *)
-val isMLdummy : ml_ast -> bool
+(** Check if an ML term is Core.Expr.Erased_value. *)
+val isMLdummy : Core.Expr.t -> bool
 
-(** The term definitions a declaration makes: a [Dterm]'s one, a [Dfix]'s
+(** The term definitions a declaration makes: a [Core.Decl.Value]'s one, a [Core.Decl.Recursive_group]'s
     group, and none for anything else. *)
-val term_defs : ml_decl -> ml_fix_def list
+val term_defs : Core.Decl.t -> Core.Recursion.Definition.t list
 
 (** Check if a sign is Kill. *)
-val isKill : sign -> bool
+val isKill : Core.Signature.Argument.t -> bool
 
 (** Expunge dummy arguments from a case expression, eta-expanding as needed.
     @param types
       one type per signature element, used to type the binders introduced when
-      eta-expanding; binders past the end of the list get [Tunknown]
-    @param s the signature indicating which leading arguments are [Kill]ed
+      eta-expanding; binders past the end of the list get [Core.Type.Unknown]
+    @param s the signature indicating which leading arguments are [Core.Signature.Argument.Erased]ed
     @param e the ML expression (typically a match branch body) to process
     @return [(ids, body)] with the surviving binders and the stripped body *)
 val case_expunge :
-  ?types:ml_type list -> signature -> ml_ast -> (ml_ident * ml_type) list * ml_ast
+  ?types:Core.Type.t list -> Core.Signature.t -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
 
 (** Expunge dummy leading lambdas from a term according to a signature.
     Leaves one dummy lambda when all arguments are logical and the target
     language is strict.
-    @param s        the signature indicating which leading lambdas are [Kill]ed
+    @param s        the signature indicating which leading lambdas are [Core.Signature.Argument.Erased]ed
     @param ids_body a pair [(binders, body)] as returned by [collect_lams]
     @return the term with killed lambdas removed *)
-val term_expunge : signature -> (ml_ident * ml_type) list * ml_ast -> ml_ast
+val term_expunge : Core.Signature.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t -> Core.Expr.t
 
 (** {2 Special identifiers}
 
@@ -444,188 +443,188 @@ val temporary_id : int -> Id.t
 (** Whether [id] is a {!temporary_id}. *)
 val is_temporary_id : Id.t -> bool
 
-(** Extract the Id.t from an ml_ident.  A temporary keeps its reserved name. *)
-val id_of_mlid : ml_ident -> Id.t
+(** Extract the Id.t from an Core.Binder_name.t.  A temporary keeps its reserved name. *)
+val id_of_mlid : Core.Binder_name.t -> Id.t
 
-(** Generate a temporary identifier from an ml_ident. *)
-val tmp_id : ml_ident -> ml_ident
+(** Generate a temporary identifier from an Core.Binder_name.t. *)
+val tmp_id : Core.Binder_name.t -> Core.Binder_name.t
 
 (** Whether a term does nothing but raise -- an unrealised axiom counts.  Binders in front of the raise do
     not change that: nothing gets to be bound, because the raise comes first.
     Such a definition is spelled as a zero-argument function, so that it
     throws when called rather than at static initialisation. *)
-val only_throws : ml_ast -> bool
+val only_throws : Core.Expr.t -> bool
 
 (** {2 Lambda collection}
 
-    [collect_lams MLlam(id1,...MLlam(idn,t)...)] returns the list [idn;...;id1]
+    [collect_lams (Lambda (id1, ..., Lambda (idn, t) ...))] returns the list [idn;...;id1]
     and the term [t]. *)
 
 (** Collect all lambda abstractions from a term. *)
-val collect_lams : ml_ast -> (ml_ident * ml_type) list * ml_ast
+val collect_lams : Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
 
 (** Collect exactly n lambda abstractions from a term.
-    @param n the number of leading [MLlam] nodes to collect; asserts if fewer exist
+    @param n the number of leading [Core.Expr.Lambda] nodes to collect; asserts if fewer exist
     @param t the term to peel
     @return [(binders, body)] where [binders] has exactly [n] entries
             (innermost first, as {!collect_lams} returns them) *)
-val collect_n_lams : int -> ml_ast -> (ml_ident * ml_type) list * ml_ast
+val collect_n_lams : int -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
 
 (** Remove n lambda abstractions from a term.
-    @param n the number of leading [MLlam] nodes to drop; asserts if fewer exist *)
-val remove_n_lams : int -> ml_ast -> ml_ast
+    @param n the number of leading [Core.Expr.Lambda] nodes to drop; asserts if fewer exist *)
+val remove_n_lams : int -> Core.Expr.t -> Core.Expr.t
 
 (** Count the number of lambda abstractions at the head of a term. *)
-val nb_lams : ml_ast -> int
+val nb_lams : Core.Expr.t -> int
 
 (** Wrap a term in lambda abstractions with the given identifiers and types:
     the converse of {!collect_lams}.
     @param ids list of [(identifier, type)] pairs, innermost binder first
     @param a   the body to wrap *)
-val named_lams : (ml_ident * ml_type) list -> ml_ast -> ml_ast
+val named_lams : (Core.Binder_name.t * Core.Type.t) list -> Core.Expr.t -> Core.Expr.t
 
 (** Wrap a term in n dummy lambda abstractions.
     @param a the body to wrap
-    @param n the number of [MLlam(Dummy,...)] layers to add *)
-val dummy_lams : ml_ast -> int -> ml_ast
+    @param n the number of [Core.Expr.Lambda(Dummy,...)] layers to add *)
+val dummy_lams : Core.Expr.t -> int -> Core.Expr.t
 
 (** Wrap a term in anonymous or dummy lambda abstractions based on the
-    signature: a [Keep] entry becomes an anonymous lambda at its type among
-    [types], a [Kill k] entry a [Dummy] lambda at [Tdummy k].
+    signature: a [Core.Signature.Argument.Runtime] entry becomes an anonymous lambda at its type among
+    [types], a [Core.Signature.Argument.Erased k] entry a [Core.Binder_name.Anonymous] lambda at [Core.Type.Erased k].
     @param a     the body to wrap
     @param types one ML type per signature entry, matched positionally;
-                 falls back to [Taxiom] when the list runs out
+                 falls back to [Core.Type.Axiom] when the list runs out
     @param s     the signature driving the lambda structure *)
-val anonym_or_dummy_lams_typed : ml_ast -> ml_type list -> signature -> ml_ast
+val anonym_or_dummy_lams_typed : Core.Expr.t -> Core.Type.t list -> Core.Signature.t -> Core.Expr.t
 
 (** Generate eta-expanded argument list based on arity and signature.
     @param n the starting de Bruijn level (counts down)
-    @param s the signature; [Keep] entries emit [MLrel] arguments,
-             [Kill] entries are skipped
-    @return the list of [MLrel] arguments for the kept positions *)
-val eta_args_sign : int -> signature -> ml_ast list
+    @param s the signature; [Core.Signature.Argument.Runtime] entries emit [Core.Expr.Bound_variable] arguments,
+             [Core.Signature.Argument.Erased] entries are skipped
+    @return the list of [Core.Expr.Bound_variable] arguments for the kept positions *)
+val eta_args_sign : int -> Core.Signature.t -> Core.Expr.t list
 
 (** {2 Utility functions over ML terms} *)
 
 (** Apply an ML term to a list of arguments. Returns [f] unchanged when [a] is empty. *)
-val mlapp : ml_ast -> ml_ast list -> ml_ast
+val mlapp : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
 
 (** Map a function over all immediate subterms.
     @param f the transformation to apply to each direct child
     @param t the ML AST node whose children are to be mapped *)
-val ast_map : (ml_ast -> ml_ast) -> ml_ast -> ml_ast
+val ast_map : (Core.Expr.t -> Core.Expr.t) -> Core.Expr.t -> Core.Expr.t
 
-(** [ast_map_types f a] rewrites every [ml_type] embedded in [a] with [f],
+(** [ast_map_types f a] rewrites every [Core.Type.t] embedded in [a] with [f],
     recursing through the whole term. *)
-val ast_map_types : (ml_type -> ml_type) -> ml_ast -> ml_ast
+val ast_map_types : (Core.Type.t -> Core.Type.t) -> Core.Expr.t -> Core.Expr.t
 
 (** [e] with each of its open metavariables replaced by a fresh one, the same
     one wherever [e] shares it: a pass that fills holes in the copy, as type
     recovery does, then leaves [e] itself as it was for the next pass. *)
-val freshen_metas : ml_ast -> ml_ast
+val freshen_metas : Core.Expr.t -> Core.Expr.t
 
 (** [a] with the holes of its global uses renamed apart from every other, the
     same new hole wherever [a] shares one: a copy is new uses, which leave
     open what their originals did independently of them. *)
-val freshen_holes : ml_ast -> ml_ast
+val freshen_holes : Core.Expr.t -> Core.Expr.t
 
-(** [has_unknown t]: whether [t] mentions [Tunknown], the marker extraction
+(** [has_unknown t]: whether [t] mentions [Core.Type.Unknown], the marker extraction
     leaves where a type was erased. *)
-val has_unknown : ml_type -> bool
+val has_unknown : Core.Type.t -> bool
 
 (** [recover_erased_types expected a] fills in the annotations extraction
-    erased to [Tunknown], using the type [a] is known to have. Only erased
+    erased to [Core.Type.Unknown], using the type [a] is known to have. Only erased
     annotations are touched, and only where the context supplies something
     better. *)
 val recover_erased_types :
-  ?only:(ml_type -> bool) ->
+  ?only:(Core.Type.t -> bool) ->
   ?refine_only:bool ->
-  ml_type ->
-  ml_ast ->
-  ml_ast
+  Core.Type.t ->
+  Core.Expr.t ->
+  Core.Expr.t
 
 (** Map a function over all immediate subterms with a binding-depth counter.
     @param f   the transformation; receives the current depth and the child term
     @param n   the current binding depth (passed to [f] for each child)
     @param t   the ML AST node whose children are to be mapped *)
-val ast_map_lift : (int -> ml_ast -> ml_ast) -> int -> ml_ast -> ml_ast
+val ast_map_lift : (int -> Core.Expr.t -> Core.Expr.t) -> int -> Core.Expr.t -> Core.Expr.t
 
 (** Iterate a function over all immediate subterms.
     @param f the action to perform on each direct child
     @param t the ML AST node to iterate over *)
-val ast_iter : (ml_ast -> unit) -> ml_ast -> unit
+val ast_iter : (Core.Expr.t -> unit) -> Core.Expr.t -> unit
 
 (** Check if a de Bruijn index occurs in a term.
     @param k the de Bruijn index to look for (1-based, relative to [t])
     @param t the term to search
-    @return [true] if [MLrel k] appears free in [t] *)
-val ast_occurs : int -> ml_ast -> bool
+    @return [true] if [Core.Expr.Bound_variable k] appears free in [t] *)
+val ast_occurs : int -> Core.Expr.t -> bool
 
-(** How many times [MLrel 1] is read on the path through [a] that reads it
+(** How many times [Core.Expr.Bound_variable 1] is read on the path through [a] that reads it
     most: a match counts its most-reading branch, not their sum. *)
-val nb_occur_match : ml_ast -> int
+val nb_occur_match : Core.Expr.t -> int
 
 (** Check if any de Bruijn index in the interval [[k, k']] occurs in a term.
     @param k  lower bound of the index range (inclusive)
     @param k' upper bound of the index range (inclusive)
     @param t  the term to search
-    @return [true] if some [MLrel i] with [k <= i <= k'] appears free in [t] *)
-val ast_occurs_itvl : int -> int -> ml_ast -> bool
+    @return [true] if some [Core.Expr.Bound_variable i] with [k <= i <= k'] appears free in [t] *)
+val ast_occurs_itvl : int -> int -> Core.Expr.t -> bool
 
-(** [ast_iter_rel_applied f t] calls [f n i args] on every [MLrel i] in [t],
+(** [ast_iter_rel_applied f t] calls [f n i args] on every [Core.Expr.Bound_variable i] in [t],
     with [n] the number of bindings crossed to reach it and [args] the
     arguments it is applied to there ([[]] where it is not applied). *)
-val ast_iter_rel_applied : (int -> int -> ml_ast list -> unit) -> ml_ast -> unit
+val ast_iter_rel_applied : (int -> int -> Core.Expr.t list -> unit) -> Core.Expr.t -> unit
 
 (** Lift de Bruijn indices in a term.
     @param k the amount to add to each free de Bruijn index in [t]
     @param t the term whose free indices are to be lifted *)
-val ast_lift : int -> ml_ast -> ml_ast
+val ast_lift : int -> Core.Expr.t -> Core.Expr.t
 
 (** Pop the outermost de Bruijn level (equivalent to [ast_lift (-1)]). *)
-val ast_pop : ml_ast -> ml_ast
+val ast_pop : Core.Expr.t -> Core.Expr.t
 
 (** The number of nodes of a term, each counted once. *)
-val ast_size : ml_ast -> int
+val ast_size : Core.Expr.t -> int
 
 (** [canonical_app f args], [f] and [args] canonical: the canonical form of
-    [MLapp (f, args)], read whole: a global applied in stages is applied once
+    [Core.Expr.Apply (f, args)], read whole: a global applied in stages is applied once
     to every argument, a coercion of the head is dropped, and applying a
     one-branch match applies its branch.  No head of a canonical application
     is a global already applied, a coercion, or a match with one branch.
     See {!Core_normalize}. *)
-val canonical_app : ml_ast -> ml_ast list -> ml_ast
+val canonical_app : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
 
 (** [canonical e] is [e] with every application canonical
     ({!canonical_app}). *)
-val canonical : ml_ast -> ml_ast
+val canonical : Core.Expr.t -> Core.Expr.t
 
 (** [permut_rels k k' c] exchanges two adjacent runs of binders: [Rel 1 ...
     Rel k] become [Rel (k'+1) ... Rel (k'+k)], and [Rel (k+1) ... Rel (k+k')]
     become [Rel 1 ... Rel k']. *)
-val permut_rels : int -> int -> ml_ast -> ml_ast
+val permut_rels : int -> int -> Core.Expr.t -> Core.Expr.t
 
 (** Substitute a term for de Bruijn index 1, adjusting other indices.
     @param e the term to substitute for [Rel 1]
     @param t the term in which the substitution is performed *)
-val ast_subst : ml_ast -> ml_ast -> ml_ast
+val ast_subst : Core.Expr.t -> Core.Expr.t -> Core.Expr.t
 
 (** [ast_subst_each make t] substitutes for each read of [Rel 1] in [t] a
     term of its own, [make ()], as {!ast_subst} substitutes one: a use of a
     global made for each read is an occurrence of its own, where one term
     copied to every read would make them all the same occurrence. *)
-val ast_subst_each : (unit -> ml_ast) -> ml_ast -> ml_ast
+val ast_subst_each : (unit -> Core.Expr.t) -> Core.Expr.t -> Core.Expr.t
 
 (** Substitute global references in a term using the given map.
-    @param s a map from [GlobRef.t] to replacement [ml_ast] bodies
+    @param s a map from [GlobRef.t] to replacement [Core.Expr.t] bodies
     @param t the term in which to perform the substitution *)
-val ast_glob_subst : ml_ast Ref.User.Map.t -> ml_ast -> ml_ast
+val ast_glob_subst : Core.Expr.t Ref.User.Map.t -> Core.Expr.t -> Core.Expr.t
 
 (** Remove unused variable bindings from a term. *)
-val dump_unused_vars : ml_ast -> ml_ast
+val dump_unused_vars : Core.Expr.t -> Core.Expr.t
 
 (** Normalize an ML term by beta-reduction and simplification. *)
-val normalize : ml_ast -> ml_ast
+val normalize : Core.Expr.t -> Core.Expr.t
 
 (** [apply_eta_args f args] is [f] applied to [args], with the application
     placed where [f] produces its value rather than wrapped around [f] -- for
@@ -633,25 +632,25 @@ val normalize : ml_ast -> ml_ast
     such as eta-expansion to a declaration's arity.  The result is
     canonical ({!canonical}), as every term built after
     {!Core_normalize.structure} must be. *)
-val apply_eta_args : ml_ast -> ml_ast list -> ml_ast
+val apply_eta_args : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
 
 (** Optimize fixpoint expressions. *)
-val optimize_fix : ml_ast -> ml_ast
+val optimize_fix : Core.Expr.t -> Core.Expr.t
 
 (** Determine if a global reference should be inlined in the given term.
     @param r the global reference of the constant to test
     @param t the current extracted body of [r]
     @return [true] if [r] should be inlined at call sites *)
-val inline : GlobRef.t -> ml_ast -> bool
+val inline : GlobRef.t -> Core.Expr.t -> bool
 
 (** Check if a pattern is a basic (non-nested) pattern. *)
-val is_basic_pattern : ml_pattern -> bool
+val is_basic_pattern : Core.Pattern.t -> bool
 
 (** Check if any branch has a deep (nested) pattern. *)
-val has_deep_pattern : ml_branch array -> bool
+val has_deep_pattern : Core.Match.Branch.t array -> bool
 
 (** Check if a match is regular (all patterns are basic). *)
-val is_regular_match : ml_branch array -> bool
+val is_regular_match : Core.Match.Branch.t array -> bool
 
 (** Exception raised when an operation is impossible. *)
 exception Impossible
@@ -661,21 +660,21 @@ exception Impossible
 (** Classification of signatures based on their contents. *)
 type sign_kind =
   | EmptySig  (** the empty signature *)
-  | NonLogicalSig  (** at least a [Keep] *)
-  | SafeLogicalSig  (** only [Kill Ktype] *)
-  | UnsafeLogicalSig  (** no [Keep], not all [Kill Ktype] *)
+  | NonLogicalSig  (** at least a [Core.Signature.Argument.Runtime] *)
+  | SafeLogicalSig  (** only [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] *)
+  | UnsafeLogicalSig  (** no [Core.Signature.Argument.Runtime], not all [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument] *)
 
 (** Classify a signature into one of the sign_kind categories.
-    @return [EmptySig] for an empty list; [NonLogicalSig] if any [Keep] is
-            present; [SafeLogicalSig] if all entries are [Kill Ktype];
+    @return [EmptySig] for an empty list; [NonLogicalSig] if any [Core.Signature.Argument.Runtime] is
+            present; [SafeLogicalSig] if all entries are [Core.Signature.Argument.Erased Core.Erasure_reason.Type_argument];
             [UnsafeLogicalSig] otherwise *)
-val sign_kind : signature -> sign_kind
+val sign_kind : Core.Signature.t -> sign_kind
 
 (** Remove trailing Keep elements from a signature. *)
-val sign_no_final_keeps : signature -> signature
+val sign_no_final_keeps : Core.Signature.t -> Core.Signature.t
 
 (** Remap type variable indices in a term using the given function.
     @param f   a function from old type variable index to new index; applied to
-               every [Tvar] annotation occurring in the term
+               every [Core.Type.Variable] annotation occurring in the term
     @param t   the ML AST in which to remap type variable indices *)
-val remap_tvars : (int -> int) -> ml_ast -> ml_ast
+val remap_tvars : (int -> int) -> Core.Expr.t -> Core.Expr.t

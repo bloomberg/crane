@@ -4,12 +4,11 @@
 (** Which local fixpoints may outlive their scope.  See
     [analyze_closures.mli]. *)
 
-open Miniml
 
 type group = Lifted | In_place | Closures
 
 (* The function an application applies, under any coercion. *)
-let rec callee = function MLcoerce (_, _, f, _) | MLboxed (f, _) | MLbarrier (f, _) -> callee f | f -> f
+let rec callee = function Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _} | Core.Expr.Lambda_group_barrier {value = f; _} -> callee f | f -> f
 
 let arity f = List.length (fst (Mlutil.collect_lams f))
 
@@ -28,23 +27,24 @@ let rec group ~n_outer ?continuation ~cofix ids bodies =
    inside a closure. *)
 and escapes ~n_outer k t =
   let rec go k = function
-    | MLrel (i, _) -> i = k
-    | MLapp (f, args) when (match callee f with MLrel (i, _) -> i = k | _ -> false) ->
+    | Core.Expr.Bound_variable {index = i; _} -> i = k
+    | Core.Expr.Apply {callee = f;
+                       arguments = args} when (match callee f with Core.Expr.Bound_variable {index = i; _} -> i = k | _ -> false) ->
       List.exists (go k) args
-    | MLapp (MLfixpoint (x, ids, bodies, _), args)
+    | Core.Expr.Apply {callee = Core.Expr.Fixpoint {selected = x; functions = ids; bodies; _}; arguments = args}
       when List.length args >= arity bodies.(x) && group ~n_outer ~cofix:false ids bodies = In_place ->
       in_place k bodies || List.exists (go k) args
-    | MLapp (MLcofixpoint (x, ids, bodies, _), args)
+    | Core.Expr.Apply {callee = Core.Expr.Cofixpoint {selected = x; functions = ids; bodies; _}; arguments = args}
       when List.length args >= arity bodies.(x) && group ~n_outer ~cofix:true ids bodies = In_place ->
       in_place k bodies || List.exists (go k) args
-    | MLletin (_, _, MLfixpoint (_, ids, bodies, _), b, _)
+    | Core.Expr.Let {value = Core.Expr.Fixpoint {functions = ids; bodies; _}; body = b; _}
       when group ~n_outer ~continuation:b ~cofix:false ids bodies = In_place ->
       in_place k bodies || go (k + 1) b
-    | MLletin (_, _, MLcofixpoint (_, ids, bodies, _), b, _)
+    | Core.Expr.Let {value = Core.Expr.Cofixpoint {functions = ids; bodies; _}; body = b; _}
       when group ~n_outer ~continuation:b ~cofix:true ids bodies = In_place ->
       in_place k bodies || go (k + 1) b
     (* A bind generated as sequencing runs its continuation's body inline. *)
-    | MLapp (MLglob use, (_ :: _ :: _ as args)) when sequential_bind use -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind use -> (
       match List.rev args with
       | continuation :: rest -> (
         List.exists (go k) rest
@@ -53,20 +53,29 @@ and escapes ~n_outer k t =
         | [], _ -> go k continuation
         | ids, body -> go (k + List.length ids) body )
       | [] -> false )
-    | MLapp (f, args) -> go k f || List.exists (go k) args
-    | MLcoerce (_, _, a, _) | MLboxed (a, _) | MLbarrier (a, _) -> go k a
-    | MLlam (_, _, body) -> Mlutil.ast_occurs (k + 1) body
-    | MLfixpoint (_, ids, bodies, _) | MLcofixpoint (_, ids, bodies, _) ->
+    | Core.Expr.Apply {callee = f; arguments = args} -> go k f || List.exists (go k) args
+    | Core.Expr.Coerce {value = a; _}
+    | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} -> go k a
+    | Core.Expr.Lambda {body; _} -> Mlutil.ast_occurs (k + 1) body
+    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
       Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies
-    | MLletin (_, _, a, b, _) -> go k a || go (k + 1) b
-    | MLcase (_, scrut, branches, _) ->
+    | Core.Expr.Let {value = a; body = b; _} -> go k a || go (k + 1) b
+    | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       go k scrut
       || Array.exists
-           (fun {br_binders = ids; br_body = body; _} -> go (k + List.length ids) body)
+           (fun {Core.Match.Branch.binders = ids; body = body; _} -> go (k + List.length ids) body)
            branches
-    | MLcons (_, _, args, _) | MLtuple args -> List.exists (go k) args
-    | MLparray (elts, def) -> Array.exists (go k) elts || go k def
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false
+    | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (go k) args
+    | Core.Expr.Persistent_array {elements = elts; default = def} -> Array.exists (go k) elts || go k def
+    | Core.Expr.Global _
+    | Core.Expr.Runtime_error _
+    | Core.Expr.Erased_value _
+    | Core.Expr.Axiom_value _
+    | Core.Expr.UInt63 _
+    | Core.Expr.Numeral _
+    | Core.Expr.Float64 _
+    | Core.Expr.String _ -> false
   (* A group generated in place runs where it is called, and its bodies read
      what they close over there. *)
   and in_place k bodies =

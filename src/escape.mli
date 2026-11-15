@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Escape analysis over MiniML terms, feeding parameter ownership and cell
+(** Escape analysis over Core terms, feeding parameter ownership and cell
     reuse.  It runs before translation to CppIR; {!Ownership} settles its
     per-parameter answers for the whole program, and translation reads them.
 
@@ -13,17 +13,16 @@
     Phase 2 (reset/reuse): Reuse memory cells in pattern matches when
     use_count() == 1, or unconditionally for a shared variant's block. *)
 
-open Miniml
 
 (** [nb_occur_match k t] counts occurrences of de Bruijn index [k] in [t], using
     maximum over branches (safe conservative estimate).  An argument of an
     inline custom counts once per time its template splices it.
 
     @param k de Bruijn index to count (1 = innermost binder)
-    @param t the MiniML term to search
-    @return number of occurrences; for [MLcase] branches the maximum over all
+    @param t the Core term to search
+    @return number of occurrences; for [Core.Expr.Match] branches the maximum over all
             branches is used (conservative upper bound) *)
-val nb_occur_match : int -> ml_ast -> int
+val nb_occur_match : int -> Core.Expr.t -> int
 
 (** What an escape query is about, which decides how precisely it reads two
     positions.
@@ -48,10 +47,10 @@ type escape_query = Conservative | Of_sub_binding | Of_param
     @param query defaults to [Conservative]
     @param return_escapes whether being returned counts (default [true])
     @param k de Bruijn index to check (1 = innermost binder)
-    @param t the MiniML term to analyse
+    @param t the Core term to analyse
     @return [true] if the value bound at index [k] may outlive its scope *)
 val escapes :
-  ?query:escape_query -> ?return_escapes:bool -> int -> ml_ast -> bool
+  ?query:escape_query -> ?return_escapes:bool -> int -> Core.Expr.t -> bool
 
 (** The settled ownership of each global's parameters, innermost first --
     [None] for a global not settled.  {!Ownership} installs it; an
@@ -60,39 +59,39 @@ val escapes :
 val callee_flags : (Names.GlobRef.t -> bool list option) ref
 
 (** [partial_app_remaining head args] returns [Some remaining] when
-    [MLapp(head, args)] is a partial application with [remaining] args still
-    needed.  Returns [None] when fully applied.  Only handles [MLglob]
+    [Core.Expr.Apply(head, args)] is a partial application with [remaining] args still
+    needed.  Returns [None] when fully applied.  Only handles [Core.Expr.Global]
     heads.
 
-    @param head the function head of the application (only [MLglob] is handled;
+    @param head the function head of the application (only [Core.Expr.Global] is handled;
                 all other constructors yield [None])
-    @param args the list of arguments already supplied, including [MLdummy]
+    @param args the list of arguments already supplied, including [Core.Expr.Erased_value]
                 placeholders for type-level arguments (which are not counted)
     @return [Some n] where [n] is the number of value-level arguments still
             missing, or [None] if the global's type is unknown or the
             application is fully saturated *)
-val partial_app_remaining : ml_ast -> ml_ast list -> int option
+val partial_app_remaining : Core.Expr.t -> Core.Expr.t list -> int option
 
-(** [is_partial_app head args] returns [true] when [MLapp(head, args)] is a
+(** [is_partial_app head args] returns [true] when [Core.Expr.Apply(head, args)] is a
     partial application — i.e., fewer non-dummy arguments than the function's
-    value-level arity. Only handles [MLglob] heads.
+    value-level arity. Only handles [Core.Expr.Global] heads.
 
     @param head the function head of the application
-    @param args the arguments already supplied (including [MLdummy] placeholders)
+    @param args the arguments already supplied (including [Core.Expr.Erased_value] placeholders)
     @return [true] if at least one value-level argument is still missing *)
-val is_partial_app : ml_ast -> ml_ast list -> bool
+val is_partial_app : Core.Expr.t -> Core.Expr.t list -> bool
 
-(** [single_use_nargs k t] finds the single use of [MLrel k] in [t] and
+(** [single_use_nargs k t] finds the single use of [Core.Expr.Bound_variable k] in [t] and
     returns how many non-dummy args it is applied to (0 if bare).
 
     @precondition [k] must occur at most once in [t]. If [k] occurs
     multiple times, returns the arg count of the {i last} occurrence found.
     Verify with [nb_occur_match k t <= 1] before calling.
     @param k de Bruijn index of the variable to locate (1 = innermost binder)
-    @param t the MiniML term to search
+    @param t the Core term to search
     @return number of non-dummy arguments at the single call site, or [0] if
             the variable appears bare (not as the head of an application) *)
-val single_use_nargs : int -> ml_ast -> int
+val single_use_nargs : int -> Core.Expr.t -> int
 
 (** {2 Phase 1: owned/borrowed parameter inference} *)
 
@@ -111,7 +110,7 @@ val single_use_nargs : int -> ml_ast -> int
                 indices [1..n]
     @return list of length [n] where element [i] is [true] iff parameter
             [i+1] (de Bruijn) must be passed by value *)
-val infer_owned_params : int -> ml_ast -> bool list
+val infer_owned_params : int -> Core.Expr.t -> bool list
 
 (** [infer_sub_bindings_escape_params n body] returns a bool list of length [n]
     where element [i] is [true] when the parameter at de Bruijn index [i+1] is
@@ -119,7 +118,7 @@ val infer_owned_params : int -> ml_ast -> bool list
     constructors.  Callers should only OR this into [infer_owned_params] for
     parameters whose ML type maps to a non-trivially-copyable value type (e.g.,
     custom [prod]), NOT for shared_ptr-backed types ([list], cofix, etc.). *)
-val infer_sub_bindings_escape_params : int -> ml_ast -> bool list
+val infer_sub_bindings_escape_params : int -> Core.Expr.t -> bool list
 
 (** {2 Projections} *)
 
@@ -129,7 +128,7 @@ val infer_sub_bindings_escape_params : int -> ml_ast -> bool list
     the receiver whose body is a variable the branch binds.  The result is
     then a place inside the receiver, which a method may lend out rather
     than copy ({!Borrow_projection}). *)
-val returns_receiver_field : this_pos:int -> ml_ast -> bool
+val returns_receiver_field : this_pos:int -> Core.Expr.t -> bool
 
 (** {2 Utility functions} *)
 
@@ -141,33 +140,33 @@ module IntSet = Mlutil.IntSet
 
     @param depth the current binding depth; indices [<= depth] are considered
                  bound and are not included in the result
-    @param t the MiniML term to scan
+    @param t the Core term to scan
     @return set of free indices, each shifted so that 1 denotes the variable
             one level above [depth] *)
-val free_rels : int -> ml_ast -> IntSet.t
+val free_rels : int -> Core.Expr.t -> IntSet.t
 
 (** [is_shared_ptr_type ty] returns true if [ty] is a non-enum, non-coinductive,
     non-custom inductive.  The name predates value-type inductives: such a
     type is now usually a value type whose recursive fields are shared
     pointers. *)
-val is_shared_ptr_type : ml_type -> bool
+val is_shared_ptr_type : Core.Type.t -> bool
 
 (** {2 Phase 2: reuse candidate discovery} *)
 
-(** The [MLcons] nodes [body] returns, wherever it returns one: under its
+(** The [Core.Expr.Construct] nodes [body] returns, wherever it returns one: under its
     [let]s and coercions, and in each branch of a match it ends in.  At most
     one of them is reached on any path through [body]. *)
-val tail_constructions : ml_ast -> ml_ast list
+val tail_constructions : Core.Expr.t -> Core.Expr.t list
 
 (** [find_reuse_candidates pv] returns the match branches whose body builds
-    an [MLcons] of the same inductive type as the matched constructor, as
+    an [Core.Expr.Construct] of the same inductive type as the matched constructor, as
     [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)] tuples.
     The constructors say the type; the caller gates reuse on ownership and a
     runtime [use_count()==1] check. *)
 val find_reuse_candidates :
-  ml_branch array -> (int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
+  Core.Match.Branch.t array -> (int * Names.GlobRef.t * int * Names.GlobRef.t * Core.Expr.t list) list
 
 (** [is_reuse_scrutinee k body]: whether [body] matches on parameter [k]
     (de Bruijn, 1 = innermost) with at least one reuse candidate arm, on a
     type whose cells can be recycled. *)
-val is_reuse_scrutinee : int -> ml_ast -> bool
+val is_reuse_scrutinee : int -> Core.Expr.t -> bool

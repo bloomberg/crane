@@ -1,13 +1,12 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Type conversion for translation: MiniML types to C++ types, erasure and
+(** Type conversion for translation: Core types to C++ types, erasure and
     boxing judgements, the C++ types binders are assigned, template arguments,
     and coercions between representations.  Reaches expression generation
     only through {!type_term_arg}. *)
 
 open Common
-open Miniml
 open Names
 open Mlutil
 open Table
@@ -65,7 +64,7 @@ let pinned_by_pattern i =
 
 (** [recover_carrier_result ~fun_ty ~n_args ~want expr] converts a call whose
     declared result is a carrier applied to a type variable -- [M A], a
-    {!Miniml.Tapp} -- into the same carrier at the element the position means.
+    {!Core.Type.Variable_app} -- into the same carrier at the element the position means.
 
     A dictionary stores its methods monomorphically, so such a result comes
     back at the erased element whatever the call's own arguments were, and only
@@ -76,7 +75,7 @@ let recover_carrier_result ~fun_ty ~n_args ~(want : Cpp_ir.Lowered.Type.t option
     Cpp_ir.Lowered.Expr.t =
   let carrier_result =
     match Option.map (ml_codomain_after n_args) fun_ty with
-    | Some (Some (Miniml.Tapp _)) -> true
+    | Some (Some (Core.Type.Variable_app _)) -> true
     | _ -> false
   in
   match want with
@@ -232,7 +231,7 @@ let position_cpp_ty (expected : Cpp_ir.Lowered.Type.t option) =
     C++ has to deduce, not what it should deduce to. *)
 let name_fn_arg_for_tvar_param param_ml_ty (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match (resolve_tmeta param_ml_ty, expr) with
-  | Miniml.Tvar (_, _), Lambda _ -> Function_value expr
+  | Core.Type.Variable _, Lambda _ -> Function_value expr
   | _ -> expr
 
 (** Whether [expr] is a pair recovered from a box, i.e. one whose [any_cast]
@@ -262,7 +261,7 @@ let yields_boxed_component : Cpp_ir.Lowered.Expr.t -> bool = function
 
 (** {!instantiate_at_call} at the type arguments [use] wrote, read by the
     callee's scheme variables. *)
-let instantiate_use_at_call use value_args ty =
+let instantiate_use_at_call (use : Core.Global_use.t) value_args ty =
   Mlutil.instantiate_written ~reader:"instantiate_use_at_call" use
     (with_dict_carrier ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref use.callee
        value_args ty )
@@ -278,12 +277,12 @@ let instantiate_use_at_call use value_args ty =
     [None] where the callee has no recorded type, or fewer value arrows than
     the call has value arguments -- a partial application returns a function,
     which is not what the callers of this want. *)
-let ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
+let ml_app_result_type (f : Core.Expr.t) (args : Core.Expr.t list) : Core.Type.t option =
   let ( let* ) = Option.bind in
   match f with
-  | MLglob ({callee = id; _} as use) ->
+  | Core.Expr.Global ({callee = id; _} as use) ->
     let value_args =
-      List.filter (function MLdummy _ -> false | _ -> true) args
+      List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args
     in
     let* ty = find_type_opt id in
     Ml_type_util.ml_codomain_after (List.length value_args)
@@ -296,9 +295,12 @@ let ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
     of non-function type is no callable: the application names the binder
     itself, and that is where the value's C++ type was pinned down. *)
 let rec scrutinee_binder = function
-  | MLrel (i, _) -> Some i
-  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> scrutinee_binder e
-  | MLapp (h, _) when not (scrutinee_head_is_callable h) ->
+  | Core.Expr.Bound_variable {index = i; _} -> Some i
+  | Core.Expr.Coerce {value = e; _}
+  | Core.Expr.Boxed_value {value = e; _}
+  | Core.Expr.Lambda_group_barrier {value = e; _} ->
+    scrutinee_binder e
+  | Core.Expr.Apply {callee = h; _} when not (scrutinee_head_is_callable h) ->
     scrutinee_binder h
   | _ -> None
 
@@ -308,8 +310,8 @@ and scrutinee_head_is_callable h =
   match scrutinee_binder h with
   | Some i ->
     let rec is_arrow = function
-      | Miniml.Tmeta {contents = Some t} -> is_arrow t
-      | Miniml.Tarr _ -> true
+      | Core.Type.Meta {contents = Some t} -> is_arrow t
+      | Core.Type.Arrow _ -> true
       | _ -> false
     in
     (match get_env_type_opt i with Some t -> is_arrow t | None -> true)
@@ -336,8 +338,8 @@ let pattern_binder_type i : Cpp_ir.Lowered.Type.t option =
   | Some (t, Bpattern) -> Some t
   | _ -> None
 
-(** [convert_ml_type_to_cpp_type] only resolves [Tvar] indices within
-    [tvars]; anything out of range comes back as [Tvar (Tv_index (_, None))], which
+(** [convert_ml_type_to_cpp_type] only resolves [Core.Type.Variable] indices within
+    [tvars]; anything out of range comes back as [Core.Type.Variable (Tv_index (_, None))], which
     prints as a bogus, undeclared template parameter name (e.g. "T3").
     Normalize those to [Topaque]: the variable was quantified somewhere we
     cannot see, so [std::any] is the only spelling available, but nothing here
@@ -444,7 +446,7 @@ let relaxed_tt_return_var id =
   | None -> None
   | Some ml_ty -> (
     match resolve_tmeta (ml_codomain ml_ty) with
-    | Miniml.Tapp (h, [ _ ])
+    | Core.Type.Variable_app {head = h; arguments = [ _ ]}
       when IntSet.mem h (declared_higher_kinded_tvars ml_ty) ->
       let occurs t = IntSet.mem h (collect_tvars_set IntSet.empty t) in
       let doms = List.map resolve_tmeta (ml_domains ml_ty) in
@@ -452,7 +454,7 @@ let relaxed_tt_return_var id =
          spells its variable in the declaration's parameter list and so names
          it ([MonadIter<T1>]). *)
       let under_arrow d =
-        match d with Miniml.Tarr _ -> true | _ -> false
+        match d with Core.Type.Arrow _ -> true | _ -> false
       in
       if
         List.for_all (fun d -> under_arrow d || not (occurs d)) doms
@@ -497,7 +499,7 @@ let writable_tvar_count id =
      which the declaration does not relax ({!Plan_templates.relax_applied_return}). *)
   let applied_cod =
     match cod with
-    | Miniml.Tapp (h, _) ->
+    | Core.Type.Variable_app {head = h; _} ->
       IntSet.mem h (Ml_type_util.higher_kinded_ml_tvars [ml_ty])
     | _ -> false
   in
@@ -506,7 +508,7 @@ let writable_tvar_count id =
     && List.for_all
          (fun d ->
            match resolve_tmeta d with
-           | Miniml.Tarr _ -> true
+           | Core.Type.Arrow _ -> true
            | d -> not (occurs v d) )
          (ml_domains ml_ty)
     && List.exists (fun d -> occurs v d) (ml_domains ml_ty)
@@ -679,8 +681,8 @@ let refine_by_instance_family ((carrier : Cpp_ir.Lowered.Type.t), _, m) (t : Cpp
     variables its Rocq type mentions, the signature does not state them. *)
 let param_states_type_args x orig =
   let rec is_arrow = function
-    | Miniml.Tarr _ -> true
-    | Miniml.Tmeta {contents = Some t} -> is_arrow t
+    | Core.Type.Arrow _ -> true
+    | Core.Type.Meta {contents = Some t} -> is_arrow t
     | _ -> false
   in
   (not (Table.is_custom x)) && not (is_arrow orig)
@@ -704,9 +706,9 @@ let rec erase_type_args_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t 
     one. *)
 let singleton_dictionary env head =
   match strip_magic head with
-  | MLrel (i, _) -> (
+  | Core.Expr.Bound_variable {index = i; _} -> (
     match (Common.get_db_name_opt i env, get_env_type_opt i) with
-    | Some id, Some (Tglob (c, _, _)) when Common.is_tc_instance_id id ->
+    | Some id, Some (Core.Type.Global_app {head = c; _}) when Common.is_tc_instance_id id ->
       Option.map (fun m -> (id, c, m)) (Table.singleton_class_method c)
     | _ -> None )
   | _ -> None
@@ -813,7 +815,7 @@ let promoted_tys_of_arity n =
     because that is exactly what [crane_erase_fn]'s CTAD-non-viable fallback
     forwards. If the lambda's own bound parameter [n] is immediately
     pattern-matched via a custom (e.g. pair) match, that match must therefore
-    treat the scrutinee as erased — wrap it in [MLboxed] so
+    treat the scrutinee as erased — wrap it in [Core.Expr.Boxed_value] so
     [gen_custom_cpp_case] emits [any_cast<pair<any,any>>(...)] instead of a
     structured binding directly on the (at runtime erased) parameter. Without
     this, a domain type that is a pair with a mix of erased/concrete fields
@@ -823,11 +825,23 @@ let promoted_tys_of_arity n =
     bindings are not valid on [std::any]). *)
 let rec mark_own_param_for_pair_erasure n body =
   match body with
-  | MLcase (ty, (MLrel (i, _) as scrut), pv, occ) when i = n && is_custom_match pv ->
-    MLcase (ty, MLboxed (scrut, Occurrence.fresh ()), pv, occ)
-  | MLcoerce (from, into, a, mocc) -> MLcoerce (from, into, mark_own_param_for_pair_erasure n a, mocc)
-  | MLboxed (a, mocc) -> MLboxed (mark_own_param_for_pair_erasure n a, mocc)
-  | MLbarrier (a, mocc) -> MLbarrier (mark_own_param_for_pair_erasure n a, mocc)
+  | Core.Expr.Match {scrutinee_type = ty;
+                     scrutinee = (Core.Expr.Bound_variable {index = i; _} as scrut);
+                     branches = pv;
+                     occurrence = occ} when i = n && is_custom_match pv ->
+    Core.Expr.Match {scrutinee_type = ty;
+                     scrutinee = Core.Expr.Boxed_value {value = scrut; occurrence = Core.Occurrence.fresh ()};
+                     branches = pv;
+                     occurrence = occ}
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
+    Core.Expr.Coerce {source_type = from;
+                      target_type = into;
+                      value = mark_own_param_for_pair_erasure n a;
+                      occurrence = mocc}
+  | Core.Expr.Boxed_value {value = a; occurrence = mocc} ->
+    Core.Expr.Boxed_value {value = mark_own_param_for_pair_erasure n a; occurrence = mocc}
+  | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
+    Core.Expr.Lambda_group_barrier {value = mark_own_param_for_pair_erasure n a; occurrence = mocc}
   | other -> other
 
 (** [field_stores_erased_fn_value ~field_cpp_ty field_types i e] — true when
@@ -851,7 +865,7 @@ let field_stores_erased_fn_value ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) 
   match List.nth_opt field_types i with
   | Some ft ->
     let field_is_abstract_var =
-      match ft with Miniml.Tvar (_, _) -> true | _ -> false
+      match ft with Core.Type.Variable _ -> true | _ -> false
     in
     let slot_is_erased =
       match field_cpp_ty with Some ct -> Cpp_ir.Types.prints_as_any ct | None -> false
@@ -864,7 +878,7 @@ let field_stores_erased_fn_value ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) 
     in
     field_is_abstract_var
     && (slot_is_erased
-       || (result_is_erased && match strip_magic e with MLlam _ -> true | _ -> false))
+       || (result_is_erased && match strip_magic e with Core.Expr.Lambda _ -> true | _ -> false))
   | None -> false
 
 (** Adapt a callable produced with fewer parameters than its use site expects.
@@ -873,7 +887,7 @@ let field_stores_erased_fn_value ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) 
     arguments are supplied by eta-expansion, applying what the shorter lambda
     returns to the arguments it did not take.
 
-    [ml_arity] is how many arguments the slot's MiniML type takes: a lambda
+    [ml_arity] is how many arguments the slot's Core type takes: a lambda
     that takes fewer than its C++ slot but as many as its ML type is curried
     on purpose, not shortened, and is left alone -- as is one whose body
     [returns_a_lambda], having spelled the remaining arguments out itself. *)
@@ -905,7 +919,7 @@ let boxed_shape_of : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
     back into expression generation -- a mapped type applied to a term, as a
     fixed-size array is to its length -- so it is the edge the two are
     separated at. *)
-let type_term_arg : (env -> ml_ast -> Cpp_ir.Lowered.Expr.t) ref =
+let type_term_arg : (env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t) ref =
   ref (fun _ _ -> CErrors.anomaly (Pp.str "Translation.type_term_arg: unset"))
 
 (** [cpp_ir_of_ml_type env ~ns tvars t] is the C++ type of the ML type [t],
@@ -916,14 +930,14 @@ let rec cpp_ir_of_ml_type
     env
     ?(ns : Ref.User.Set.t = Ref.User.Set.empty)
     (tvars : Id.t list)
-    (ml_t : ml_type) : Cpp_ir.Lowered.Type.t =
+    (ml_t : Core.Type.t) : Cpp_ir.Lowered.Type.t =
   (* [ns] is the only source of recursive-storage wrapping.  Most callers
      omit it (defaulting to empty), so types like [List<tree>] stay value
      shaped in function signatures.  Struct-field storage conversion passes the
      owning inductive in [ns], so non-coinductive recursive occurrences at
      constructor storage sites become [shared_ptr]. *)
   match ml_t with
-  | Tarr (t1, t2) ->
+  | Core.Type.Arrow {parameter = t1; result = t2} ->
     (* std::function<F(A)> is already a value type and provides the heap
        indirection needed to break recursive layout cycles.  Always pass an
        empty [ns] for domain and codomain so that recursive self-references
@@ -935,8 +949,8 @@ let rec cpp_ir_of_ml_type
        shared_ptr<ITree<R>> so the tree can be passed as a value. *)
     let t1c = reify_monadic_param_type t1 t1c in
     let t2c = cpp_ir_of_ml_type env tvars t2 in
-    (* Skip erased params: isTdummy catches direct Tdummy, is_cpp_dummy_type
-       catches Tdummy wrapped in Tmeta (e.g., Tmeta{contents=Some(Tdummy Kprop)}
+    (* Skip erased params: isTdummy catches direct Core.Type.Erased, is_cpp_dummy_type
+       catches Core.Type.Erased wrapped in Core.Type.Meta (e.g., Core.Type.Meta{contents=Some(Core.Type.Erased Core.Erasure_reason.Proof)}
        which converts to dummy_prop glob). Do NOT use prints_as_any here as it
        also catches Tany (std::any), which is a valid type for universally
        quantified parameters — stripping it would incorrectly collapse (A -> IO)
@@ -947,7 +961,7 @@ let rec cpp_ir_of_ml_type
       (* Void-ify unit codomain: function types returning [unit] (directly
          or via monadic wrapper like [itree E unit]) should map to [void]
          to match void-ified function definitions. Check the ML type [t2]
-         since the C++ type may still be a monad Tglob, not bare unit. *)
+         since the C++ type may still be a monad Core.Type.Global_app, not bare unit. *)
       let voidify_cod (c : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
         if is_cpp_unit_type c then Void
         else if ml_type_is_void_call t2 then Void
@@ -963,7 +977,7 @@ let rec cpp_ir_of_ml_type
       with
       | Function (l, t) -> Function (t1c :: l, voidify_cod t)
       | _ -> Function (t1c :: [], voidify_cod t2c) )
-  | Tglob (g, _, _) when is_void g -> Void
+  | Core.Type.Global_app {head = g; _} when is_void g -> Void
   (* PROMOTED TYPE VARIABLES: Handle references to record fields that were
      "promoted" from value-level fields to type-level parameters.
 
@@ -984,7 +998,7 @@ let rec cpp_ir_of_ml_type
         populated, resolve to qualified types like [typename _tcI0::m_carrier]
      2. Module-level (constructor expressions): Use module aliases ([std::any])
      3. No context: Mark with [Tpromoted] for later resolution *)
-  | Tglob (g, ts, _) when Table.is_promoted_type_var g ->
+  | Core.Type.Global_app {head = g; type_arguments = ts; _} when Table.is_promoted_type_var g ->
     ( match Table.promoted_type_var_name g with
     | Some var_id ->
       ( match promoted_var_resolution g with
@@ -998,19 +1012,19 @@ let rec cpp_ir_of_ml_type
         if (!tctx).in_constructor_expr then Any
         else Promoted_member var_id )
     | None -> Any )
-  | Tglob (g, _, _) when Table.is_value_dep_type_scheme g ->
+  | Core.Type.Global_app {head = g; _} when Table.is_value_dep_type_scheme g ->
     (* Value-dependent type scheme (e.g. [sym_semty : sym -> Type]) applied to a
        runtime value — not representable as a C++ type, so erase to [std::any].
        This keeps erasure consistent: such values are already stored as
        [std::any], so the types that mention them are [std::any] too, and no
        [any_cast] guard is needed at use sites. *)
     Any
-  | Tglob (g, ts, args) when is_custom g ->
+  | Core.Type.Global_app {head = g; type_arguments = ts; index_arguments = args} when is_custom g ->
     Entity_application
       ( g,
         List.map (cpp_ir_of_ml_type env ~ns tvars) ts,
         List.map (fun a -> !type_term_arg env a) args )
-  | Tglob (g, ts, _) ->
+  | Core.Type.Global_app {head = g; type_arguments = ts; _} ->
     (* For inductives, only keep type args that correspond to parameters (not
        indices). Parameters become template params in C++; indices are
        erased. *)
@@ -1056,7 +1070,7 @@ let rec cpp_ir_of_ml_type
       | GlobRef.IndRef _ when Table.has_dependent_params g ->
         let rec first_ktype_idx i = function
           | [] -> max_int
-          | (Tdummy Ktype | Tmeta {contents = Some (Tdummy Ktype)}) :: _ -> i
+          | (Core.Type.Erased Core.Erasure_reason.Type_argument | Core.Type.Meta {contents = Some (Core.Type.Erased Core.Erasure_reason.Type_argument)}) :: _ -> i
           | _ :: rest -> first_ktype_idx (i + 1) rest
         in
         let cutoff = first_ktype_idx 0 filtered_ts in
@@ -1151,40 +1165,40 @@ let rec cpp_ir_of_ml_type
           (* External inductive: value type, namespace-qualified *)
           In_namespace (g, core)
     | _ -> core )
-  | Miniml.Tvar (_, i) -> Variable (Index (i, tvar_name_at tvars i))
+  | Core.Type.Variable {variable = i; _} -> Variable (Index (i, tvar_name_at tvars i))
   (* A higher-kinded variable applied to arguments.  The head stays a type
      variable here; [Gen_decls.apply_hkt_resolutions] rewrites it to the
      instance's associated type, leaving [Tapply] to render the application. *)
-  | Tapp (i, args) ->
+  | Core.Type.Variable_app {head = i; arguments = args} ->
     let head : Cpp_ir.Lowered.Type.t = Variable (Index (i, tvar_name_at tvars i)) in
     Apply (head, List.map (cpp_ir_of_ml_type env ~ns tvars) args)
-  | Tmeta {contents = Some t} -> cpp_ir_of_ml_type env ~ns tvars t
-  | Tmeta {contents = None} | Topen _ ->
+  | Core.Type.Meta {contents = Some t} -> cpp_ir_of_ml_type env ~ns tvars t
+  | Core.Type.Meta {contents = None} | Core.Type.Open _ ->
     (* Unresolved meta - use std::any for type erasure. This happens for
        existential type variables in indexed inductives. *)
     Any
-  (* Tdummy marks erased type/prop/implicit parameters in the ML AST. We convert
-     them to Tglob(VarRef "dummy_*") as intermediate markers so that downstream
+  (* Core.Type.Erased marks erased type/prop/implicit parameters in the ML AST. We convert
+     them to Core.Type.Global_app(VarRef "dummy_*") as intermediate markers so that downstream
      filtering (is_cpp_dummy_type / prints_as_any / filter_erased_type_args in
      gen_expr, eta_fun, and gen_decl_for_pp) can detect and drop them. These
      markers should never survive to the C++ output — the filtering pipeline
      removes them from template argument lists and function signatures. *)
-  | Tdummy Ktype -> Erased Type
-  | Tdummy Kprop -> Erased Proof
-  | Tdummy (Kimplicit _) -> Erased Implicit
-  | Tstring ->
+  | Core.Type.Erased Core.Erasure_reason.Type_argument -> Erased Type
+  | Core.Type.Erased Core.Erasure_reason.Proof -> Erased Proof
+  | Core.Type.Erased (Core.Erasure_reason.Configured_implicit _) -> Erased Implicit
+  | Core.Type.String ->
     External ("std::string", [])
   (* Extraction gave up naming this type.  It prints as [std::any], but we
      know nothing about how the value is actually represented. *)
-  | Tunknown -> Obligation Opaque_type
+  | Core.Type.Unknown -> Obligation Opaque_type
   (* A hole is ordinary data inside an instantiation, and a reader resolves
      it, leaves the parameter to deduction, or declines before converting:
      one reaching a C++ type is a reader that did none of these. *)
-  | Thole hole ->
+  | Core.Type.Hole hole ->
     Probe.violation "inference hole"
       Pp.(str "hole _" ++ int hole ++ str " reached a C++ type");
     Obligation Opaque_type
-  | Taxiom -> Entity_application (GlobRef.VarRef (Id.of_string "axiom"), [], [])
+  | Core.Type.Axiom -> Entity_application (GlobRef.VarRef (Id.of_string "axiom"), [], [])
 
 (** Convert ML type arguments to C++ template parameters, applying type
     simplification and handling out-of-scope type variables.
@@ -1197,7 +1211,7 @@ let rec cpp_ir_of_ml_type
     3. Detection and erasure of unbound type variables
 
     The [tvars] parameter specifies the type variables in scope (as a list of
-    typename declarations in the current C++ context). When a [Tvar] appears
+    typename declarations in the current C++ context). When a [Core.Type.Variable] appears
     with [None] for its binding and [tvars] is non-empty, this indicates the
     type variable index is out of scope — it references a typename that doesn't
     exist in the current C++ context.
@@ -1211,8 +1225,8 @@ let rec cpp_ir_of_ml_type
     - ML function with type scheme [forall A B, A -> B -> option A]
     - Partial application instantiates [A] but leaves [B] polymorphic
     - C++ code generator enters context with only [typename A]
-    - Type arg list includes [Tvar 2] for [B]
-    - [convert_ml_type_to_cpp_type] returns [Tvar(2, None)] (no binding)
+    - Type arg list includes [Core.Type.Variable 2] for [B]
+    - [convert_ml_type_to_cpp_type] returns [Core.Type.Variable(2, None)] (no binding)
     - We mark it [dummy_type] to trigger erasure
 
     @param env   Translation environment (unused in current implementation)
@@ -1333,9 +1347,9 @@ let build_template_params ~site env tvars tys =
       match t with
       | Variable (Index (_, None)) when tvars <> [] ->
         (* Type variable has no binding, but we're in a context with typename
-           params. This means the Tvar index exceeds the scope of tvars.
+           params. This means the Core.Type.Variable index exceeds the scope of tvars.
            Mark as dummy_type to trigger full erasure via filter_erased_type_args.
-           Using the unbound Tvar would generate invalid C++ references. *)
+           Using the unbound Core.Type.Variable would generate invalid C++ references. *)
         (Erased Type : Cpp_ir.Lowered.Type.t)
       | _ ->
         (* Type is either bound, or we're in an untyped context (tvars = []).
@@ -1351,7 +1365,7 @@ let build_template_params ~site env tvars tys =
     1. Filtering the ML type argument list to keep only type parameters
        (dropping index arguments that don't correspond to C++ template params)
     2. Converting ML types to C++ types via [build_template_params]
-    3. Filtering erased types (Tdummy Ktype → dummy_type) to avoid passing
+    3. Filtering erased types (Core.Type.Erased Core.Erasure_reason.Type_argument → dummy_type) to avoid passing
        empty or partial template argument lists to custom syntax
     4. Wrapping in [mk_cppglob] to apply the custom syntax template
 
@@ -1361,13 +1375,13 @@ let build_template_params ~site env tvars tys =
     an anomaly ("Custom syntax: unbound type argument").
 
     Example:
-    - ML: [MLcons(Tglob(option, [Tglob(nat)]), cons_ctor, [5])]
+    - ML: [Core.Expr.Construct(Core.Type.Global_app(option, [Core.Type.Global_app(nat)]), cons_ctor, [5])]
     - Custom syntax: [(Datatypes.option, 0) := "std::optional<%t0>"]
     - After filtering: [std::optional<unsigned int>]
     - Generated C++: [std::make_optional<unsigned int>(5u)]
 
     Note: This only handles custom constructors. Regular (non-custom) inductives
-    follow a different code path via the main [gen_expr] MLcons case.
+    follow a different code path via the main [gen_expr] Core.Expr.Construct case.
 
     @param env Translation environment (contains type context)
     @param ty  ML type of the constructor application (contains type args)
@@ -1412,7 +1426,7 @@ let ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
     the receiver disagree on how many arguments it has -- the position would
     then name the wrong one. *)
 let result_cpp_via_receiver env callee_ty args : Cpp_ir.Lowered.Type.t option =
-  let var_index t = match resolve_tmeta t with Miniml.Tvar (_, j) -> Some j | _ -> None in
+  let var_index t = match resolve_tmeta t with Core.Type.Variable {variable = j; _} -> Some j | _ -> None in
   let position_of j formals =
     let rec find i = function
       | [] -> None
@@ -1430,7 +1444,9 @@ let result_cpp_via_receiver env callee_ty args : Cpp_ir.Lowered.Type.t option =
   match (var_index (ml_codomain callee_ty), ml_value_domains callee_ty, args) with
   | Some j, dom0 :: _, arg :: _ -> (
     match (resolve_tmeta dom0, Option.map resolve_tmeta (infer_ml_body_type arg)) with
-    | Miniml.Tglob (g1, formals, _), Some (Miniml.Tglob (g2, actuals, _) as recv)
+    | Core.Type.Global_app {head = g1;
+                            type_arguments = formals; _}, Some (Core.Type.Global_app {head = g2;
+                                                                                      type_arguments = actuals; _} as recv)
       when Common.globref_equal g1 g2 -> (
       match (position_of j formals, template_args_ir (cpp_of_ml env recv)) with
       | Some i, Some cpp_args when List.length actuals = List.length cpp_args ->
@@ -1444,7 +1460,7 @@ let result_cpp_via_receiver env callee_ty args : Cpp_ir.Lowered.Type.t option =
     explicitly. *)
 let iife_void_return env typ pv : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
-    match Array.to_list pv with {br_type = rty; _} :: _ -> rty | [] -> typ
+    match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
   in
   let r = cpp_of_ml env branch_rty in
   if is_cpp_unit_type r || ml_type_is_void_call branch_rty then
@@ -1471,8 +1487,8 @@ let iife_void_return env typ pv : Cpp_ir.Lowered.Type.t option =
 let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
   let found = ref false in
   let rec is_arrow = function
-    | Miniml.Tarr _ -> true
-    | Miniml.Tmeta {contents = Some t} -> is_arrow t
+    | Core.Type.Arrow _ -> true
+    | Core.Type.Meta {contents = Some t} -> is_arrow t
     | _ -> false
   in
   let binder_is_fun id =
@@ -1498,7 +1514,7 @@ let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir
   if not !found then None
   else
     let branch_rty =
-      match Array.to_list pv with {br_type = rty; _} :: _ -> rty | [] -> typ
+      match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
     in
     match cpp_of_ml env branch_rty with Function _ as r -> Some r | _ -> None
 
@@ -1576,7 +1592,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
        indexed by a value is spelled [std::any] in the instantiation, so the
        [std::optional<std::any>] the mapping produced really does hold a
        box. *)
-    | Miniml.Tglob (g, args, _) ->
+    | Core.Type.Global_app {head = g; type_arguments = args; _} ->
       not (Table.is_custom g) || List.exists (ml_erases_to_box env) args
     | _ -> true
   in
@@ -1592,7 +1608,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     let args = extract_template_args scrut_cpp_ty in
     (* One boxed argument means the whole instantiation was erased, so every
        argument is boxed -- the same rule the type-index cutoff applies to a
-       [Tdummy Ktype] index, here for an argument erased because it mentions a
+       [Core.Type.Erased Core.Erasure_reason.Type_argument] index, here for an argument erased because it mentions a
        free (existential) type variable.  Without it a payload
        [pair<any, function<nat(any)>>] would be read back component-wise at
        two different erasures from the [pair<any, any>] its producer stored. *)
@@ -1611,13 +1627,13 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
   let num_pv = Table.get_ctor_num_param_vars cname in
   (* The scrutinee's template argument that fixes this field's type, if the
      field's definition-site type is one of the inductive's own parameters.
-     [Tapp (k, _)] counts: [sigT]'s payload field is written [P x], a
+     [Core.Type.Variable_app (k, _)] counts: [sigT]'s payload field is written [P x], a
      parameter applied to the witness, and it is [P] that the instantiation
      pins down. *)
   let rec field_template_arg = function
-    | Miniml.Tvar (_, k) | Miniml.Tapp (k, _) ->
+    | Core.Type.Variable {variable = k; _} | Core.Type.Variable_app {head = k; _} ->
       List.nth_opt scrut_template_args (k - 1)
-    | Miniml.Tmeta {contents = Some t} -> field_template_arg t
+    | Core.Type.Meta {contents = Some t} -> field_template_arg t
     | _ -> None
   in
   let field_arg field_i =
@@ -1664,22 +1680,22 @@ let populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
     it was decided to have), anything else its own structure -- and, failing
     an inductive, the one the first branch's constructor belongs to.  Reads
     no binder itself: what a variable stands for is the caller's to say. *)
-let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
+let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
   (* When the match type annotation has unresolved Tvars, try to resolve from
-     context. This handles monomorphic functions where MLcase has Tvar but the
+     context. This handles monomorphic functions where Core.Expr.Match has Core.Type.Variable but the
      concrete type is known. *)
   let rec resolvable_here = function
-    | Miniml.Tglob (g, ts, _) ->
+    | Core.Type.Global_app {head = g; type_arguments = ts; _} ->
       ( (not (Table.is_promoted_type_var g))
       || promoted_var_resolution g <> None )
       && List.for_all resolvable_here ts
-    | Miniml.Tarr (a, b) -> resolvable_here a && resolvable_here b
-    | Miniml.Tmeta {contents = Some t} -> resolvable_here t
+    | Core.Type.Arrow {parameter = a; result = b} -> resolvable_here a && resolvable_here b
+    | Core.Type.Meta {contents = Some t} -> resolvable_here t
     | _ -> true
   in
   let resolve_tvar_type typ candidate =
     match (typ, candidate) with
-    | Miniml.Tglob (r1, _, _), Miniml.Tglob (r2, _, _)
+    | Core.Type.Global_app {head = r1; _}, Core.Type.Global_app {head = r2; _}
       when globref_equal r1 r2
            && has_tvar typ
            && (not (has_tvar candidate))
@@ -1704,12 +1720,12 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
   in
   let typ =
     match t with
-    | MLrel (i, _) | MLcoerce (_, _, MLrel (i, _), _) | MLboxed (MLrel (i, _), _) | MLbarrier (MLrel (i, _), _) ->
+    | Core.Expr.Bound_variable {index = i; _} | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ->
       (* Scrutinee is a variable reference — use its concrete type, the one
-         its binder was given, a parameter's as much as a let's.  Unwrap Tmeta
-         wrappers since env_types may store types in Tmeta form. *)
+         its binder was given, a parameter's as much as a let's.  Unwrap Core.Type.Meta
+         wrappers since env_types may store types in Core.Type.Meta form. *)
       let rec unwrap_tmeta = function
-        | Miniml.Tmeta {contents = Some t} -> unwrap_tmeta t
+        | Core.Type.Meta {contents = Some t} -> unwrap_tmeta t
         | t -> t
       in
       let env_ty_opt =
@@ -1718,7 +1734,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
             unwrap_tmeta (match var_type i with Some t -> t | None -> raise Not_found)
           in
           match env_ty with
-          | Miniml.Tglob _ -> Some env_ty
+          | Core.Type.Global_app _ -> Some env_ty
           | _ -> None
         with _ -> None
       in
@@ -1733,17 +1749,14 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
          says [X] -- the match spells it erased too. *)
       let rec erase_as ml (cpp : Cpp_ir.Lowered.Type.t) =
         match (resolve_tmeta ml, Ml_type_util.unqualify_ty cpp) with
-        | Miniml.Tglob (g, mas, x), Entity_application (g', cas, _)
+        | Core.Type.Global_app {head = g; type_arguments = mas; index_arguments = x}, Entity_application (g', cas, _)
           when GlobRef.CanOrd.equal g g' && List.length mas = List.length cas ->
-          Miniml.Tglob
-            ( g,
-              List.map2
+          Core.Type.Global_app {head = g; type_arguments = List.map2
                 (fun m c ->
                   if Cpp_ir.Types.prints_as_any c && not (ml_type_contains_erased m) then
-                    Miniml.Tunknown
+                    Core.Type.Unknown
                   else erase_as m c )
-                mas cas,
-              x )
+                mas cas; index_arguments = x}
         | m, _ -> m
       in
       ( match var_cpp_type i with
@@ -1753,7 +1766,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
       (* Anything else: the scrutinee's own structure says what it produces,
          through the one reader -- a call's instantiated codomain, a
          projection's field type.  Reading it here rather than re-deriving a
-         callee's return type keeps a projection, which is an [MLcase] and not
+         callee's return type keeps a projection, which is an [Core.Expr.Match] and not
          an application at all, from being left out. *)
       ( match
           ( match ml_projection_field_type (strip_magic t) with
@@ -1763,7 +1776,7 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
       | Some cand -> resolve_tvar_type typ cand
       | None -> typ )
   in
-  (* When the type is still unresolved (Tunresolved / Tdummy / non-Tglob),
+  (* When the type is still unresolved (Tunresolved / Core.Type.Erased / non-Core.Type.Global_app),
      recover the inductive from the first branch's constructor pattern -- a
      constructor determines the inductive it belongs to, so this is sound
      wherever the scrutinee's own type failed to resolve.  It happens for a
@@ -1772,14 +1785,14 @@ let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
      erased carrier and so carries no type for the scrutinee at all. *)
   let typ =
     match typ with
-    | Miniml.Tglob _ -> typ
+    | Core.Type.Global_app _ -> typ
     | _ ->
       ( try
-          let {br_pattern = pat0; _} = pv.(0) in
+          let {Core.Match.Branch.pattern = pat0; _} = pv.(0) in
           match pat0 with
-          | Pusual (GlobRef.ConstructRef (ip, _))
-          | Pcons (GlobRef.ConstructRef (ip, _), _) ->
-            Miniml.Tglob (GlobRef.IndRef ip, [], [])
+          | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _))
+          | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} ->
+            Core.Type.Global_app {head = GlobRef.IndRef ip; type_arguments = []; index_arguments = []}
           | _ -> typ
         with _ -> typ )
   in
@@ -1927,7 +1940,7 @@ let planned_binder_type ~use ~agree i occ =
 let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
   let show = function Some t -> type_shape t | None -> "none" in
   let owner () = match (!tctx).body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
-  match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
+  match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).planned_positions with
   | Some (_, planned) ->
     if Probe.checking () then begin
       let agrees = planned = live in
@@ -1948,12 +1961,12 @@ let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
     box. *)
 let reads_erased_pair_component env t =
   match t with
-  | MLapp (MLglob _, args) -> (
-    match List.filter (function MLdummy _ -> false | _ -> true) args with
-    | [MLcoerce (from, _, _, occ)] -> (
+  | Core.Expr.Apply {callee = Core.Expr.Global _; arguments = args} -> (
+    match List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args with
+    | [Core.Expr.Coerce {source_type = from; occurrence = occ; _}] -> (
       Cpp_ir.Types.prints_as_any (cpp_of_ml env from)
       &&
-      match List.find_opt (fun (o, _) -> Occurrence.equal o occ) (!tctx).planned_positions with
+      match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).planned_positions with
       | Some (_, Some (Cpp_ir.Type.Entity_application (g, _ :: _, _))) -> is_prod_global g
       | _ -> false )
     | _ -> false )
@@ -1967,7 +1980,8 @@ let default_tvar_names (t : Cpp_ir.Lowered.Type.t) =
   Cpp_ir.Types.map
     (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
       match t with
-      | Variable (Index (i, Some n)) when String.equal (Id.to_string n) (Common.tvar_name i) -> Variable (Index (i, None))
+      | Variable (Index (i, Some n)) when String.equal (Id.to_string n) (Common.tvar_name i) ->
+        Variable (Index (i, None))
       | t -> t )
     t
 
@@ -2004,7 +2018,7 @@ let app_reads_erased_value env args =
     match infer_ml_body_type (strip_magic a) with
     | Some ty -> (
       match resolve_tmeta ty with
-      | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
+      | Core.Type.Global_app {head = r; _} -> Table.is_typeclass r
       | _ -> false )
     | None -> false
   in
@@ -2013,7 +2027,7 @@ let app_reads_erased_value env args =
       if is_dictionary a then false
       else
       match strip_magic a with
-      | MLrel (i, occ) -> (
+      | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
         let carried = Option.map (fun t -> carries (strip_cpp_ref_const t)) in
         match planned_binder_type_or_derive ~use:"erased argument" ~agree:(fun p l -> carried p = carried l) env i occ with
         | Some t -> carries (strip_cpp_ref_const t)
@@ -2032,7 +2046,7 @@ let app_reads_erased_value env args =
     declared types after pushing (a lambda decides [const auto &] for its
     erased parameters well after opening their scope) call this a second time
     to correct the assignment. *)
-let assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
+let assign_binder_types ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
   List.iteri
     (fun j (_, ml_ty) ->
       let assigned : Cpp_ir.Lowered.Type.t option =
@@ -2075,7 +2089,7 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
     a reader still falls through to whatever it does today.  Conversion
     failures are skipped for the same reason, and so that a binder Crane
     cannot currently type does not become a new way for extraction to fail. *)
-let push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
+let push_binders ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
   push_env_types ids;
   assign_binder_types ~cpp env ids
 
@@ -2093,7 +2107,7 @@ let with_binders ?cpp env ids f =
 
 (** [push_parameters env ids] is {!push_binders} for a declaration's
     parameters, whose class-typed ones are its dictionaries. *)
-let push_parameters ?(cpp = []) env (ids : (Id.t * ml_type) list) =
+let push_parameters ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
   push_env_parameters ids;
   assign_binder_types ~cpp env ids
 
@@ -2160,14 +2174,14 @@ let leading_phantom_count id =
     [list nat] -- when it is the constant one, [crane::constant_tc<c>::c]. *)
 let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
   let carrier = template_arg_of_ml_type ~site:Through_tvar env tvars c in
-  let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Miniml.Tunknown]) c in
+  let constant = Mlutil.eq_ml_type (Mlutil.apply_ml_type c [Core.Type.Unknown]) c in
   Type_constructor
     (if constant then Member (External (Crane_rt.constant_tc, [carrier]), Id.of_string "c") else carrier)
 
 (** The explicit type arguments a call needs when the callee is generic in a
     type {e constructor} and Rocq erased which one.
 
-    A higher-kinded class parameter reaches the call as [Tdummy]: the carrier
+    A higher-kinded class parameter reaches the call as [Core.Type.Erased]: the carrier
     of [TFunctor (fun T => T * box T)] is a term Rocq computed away.  C++
     deduces the parameter from the value argument instead, by matching
     [T1<T2>] against the argument's type -- which works exactly when the
@@ -2176,7 +2190,7 @@ let carrier_template env tvars c : Cpp_ir.Lowered.Type.t =
     binary template where a unary one was declared.
 
     The carrier is recovered from the type the result is expected to have.
-    The callee returns [Tapp (p, [Tvar v])] -- the carrier at position [p]
+    The callee returns [Core.Type.Variable_app (p, [Core.Type.Variable v])] -- the carrier at position [p]
     applied to the variable at position [v] -- so abstracting the expected
     result over whatever [v] was instantiated to inverts that application.
     {!abstract_cpp_type} writes the sentinel the printer mints an
@@ -2210,12 +2224,12 @@ let hkt_carrier_type_args env tvars ?result id tys =
     (* Only a leading carrier is written: an explicit argument list is
        positional, so a carrier further in would need every argument before it
        spelled as well, and a class parameter is always quantified first. *)
-    | Miniml.Tapp (1, [Miniml.Tvar (_, v)]) -> Some (1, v)
+    | Core.Type.Variable_app {head = 1; arguments = [Core.Type.Variable {variable = v; _}]} -> Some (1, v)
     | _ -> None
   in
   let* () =
     match Mlutil.Var_types.find_tvar tys p with
-    | Some (Miniml.Tdummy _) -> Some ()
+    | Some (Core.Type.Erased _) -> Some ()
     | _ -> None
   in
   let* v_ml = Mlutil.Var_types.find_tvar tys v in
@@ -2370,7 +2384,7 @@ let dict_carrier_type_args env tvars id args =
      once.
 
      Descended only where the composition is fully known.  An occurrence
-     {!apply_carrier} declined to fill is left as the [Tapp] it was, and by
+     {!apply_carrier} declined to fill is left as the [Core.Type.Variable_app] it was, and by
      then nothing tells it apart from one that was recovered; writing it out
      spells a carrier built partly from a class parameter that is in scope and
      is not the one meant.  There the leading argument is abstracted over as
@@ -2378,13 +2392,13 @@ let dict_carrier_type_args env tvars id args =
      way deduction is wrong, and absorbed wherever a converting constructor
      absorbs it.  A wrong spelling is worse than an unrecovered one.
 
-     Only occurrences among the {e arguments} count.  The head may be a [Tapp]
+     Only occurrences among the {e arguments} count.  The head may be a [Core.Type.Variable_app]
      and be right: a carrier that {e is} a class parameter is written as that
      parameter, which the enclosing declaration has in scope. *)
   let rec unrecovered t =
     match resolve_tmeta t with
-    | Miniml.Tapp _ -> true
-    | Miniml.Tglob (_, targs, _) -> List.exists unrecovered targs
+    | Core.Type.Variable_app _ -> true
+    | Core.Type.Global_app {type_arguments = targs; _} -> List.exists unrecovered targs
     | _ -> false
   in
   (* Which argument the composition is applied {e in}, which is a different
@@ -2398,16 +2412,16 @@ let dict_carrier_type_args env tvars id args =
      nothing downstream can tell from the right one. *)
   let rec mentions_traversed t =
     match resolve_tmeta t with
-    | Miniml.Tunknown | Miniml.Tvar _ -> true
-    | Miniml.Tglob (_, targs, _) | Miniml.Tapp (_, targs) ->
+    | Core.Type.Unknown | Core.Type.Variable _ -> true
+    | Core.Type.Global_app {type_arguments = targs; _} | Core.Type.Variable_app {arguments = targs; _} ->
       List.exists mentions_traversed targs
-    | Miniml.Tarr (a, b) -> mentions_traversed a || mentions_traversed b
+    | Core.Type.Arrow {parameter = a; result = b} -> mentions_traversed a || mentions_traversed b
     | _ -> false
   in
   let rec traversed t =
     match resolve_tmeta t with
-    | Miniml.Tglob (_, (t0 :: _ as targs), _)
-    | Miniml.Tapp (_, (t0 :: _ as targs)) ->
+    | Core.Type.Global_app {type_arguments = (t0 :: _ as targs); _}
+    | Core.Type.Variable_app {arguments = (t0 :: _ as targs); _} ->
       (* No argument mentioning it means there is nothing better to say than
          what the leading one says, which is what this did before. *)
       traversed (Option.default t0 (List.find_opt mentions_traversed targs))
@@ -2415,8 +2429,8 @@ let dict_carrier_type_args env tvars id args =
   in
   let* over =
     match resolve_tmeta cod with
-    | Miniml.Tglob (_, (t0 :: _ as targs), _)
-    | Miniml.Tapp (_, (t0 :: _ as targs)) ->
+    | Core.Type.Global_app {type_arguments = (t0 :: _ as targs); _}
+    | Core.Type.Variable_app {arguments = (t0 :: _ as targs); _} ->
       let whole = if List.exists unrecovered targs then t0 else traversed cod in
       Some (template_arg_of_ml_type ~site:Through_tvar env tvars whole)
     | _ -> None
@@ -2429,27 +2443,28 @@ let dict_carrier_type_args env tvars id args =
     erased ([std::any]) field, whether to route it through the [crane_erase_fn]
     runtime helper so the canonical [std::function<std::any(std::any...)>]
     representation is stored (matching the [any_cast] on the application side)
-    rather than a raw closure.  An [MLrel] already erased to [std::any]
+    rather than a raw closure.  An [Core.Expr.Bound_variable] already erased to [std::any]
     ({!read_is_boxed}) is excluded: it is not callable, so wrapping it
     would miscompile.  [var i occ] says whether the read of the variable [i]
     at [occ] holds a box, and the variable's ML type: by default as lowering
     has them in scope. *)
 let ml_expr_is_function_value ?(var = fun i occ -> (read_is_boxed i occ, get_env_type_opt i)) e =
   match strip_magic e with
-  | MLrel (i, occ) ->
+  | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
     let boxed, ty = var i occ in
     (not boxed) && ( match ty with Some t -> count_ml_value_arrows t >= 1 | None -> false )
   (* A partial application of a global whose codomain mentions a
      value-dependent erased type (e.g. [mk_action n : domty n -> bool]) is
-     wrapped in [MLcoerce] by the kernel's typing coercion even at the
+     wrapped in [Core.Expr.Coerce] by the kernel's typing coercion even at the
      application node itself, not just around the whole expression — so
      [strip_magic] above (which only strips the outer expression) does not
-     expose the [MLglob] underneath. Look through it here, locally, rather
+     expose the [Core.Expr.Global] underneath. Look through it here, locally, rather
      than in [infer_ml_body_type] itself (whose result also feeds unrelated
      callers like lambda return-type annotation), so this fix cannot change
      behavior anywhere but function-value detection. *)
-  | MLapp ((MLcoerce (_, _, f, _) | MLboxed (f, _) | MLbarrier (f, _)), args) ->
-    ( match infer_ml_body_type (MLapp (f, args)) with
+  | Core.Expr.Apply {callee = (Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _} | Core.Expr.Lambda_group_barrier {value = f; _});
+                     arguments = args} ->
+    ( match infer_ml_body_type (Core.Expr.Apply {callee = f; arguments = args}) with
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
   | other ->
@@ -2459,26 +2474,26 @@ let ml_expr_is_function_value ?(var = fun i occ -> (read_is_boxed i occ, get_env
        type-level computation ([sem (TArr a b)] for a [Fixpoint sem : ty ->
        Type]).  A syntactic lambda is a function value whatever its type, so
        fall back on the shape rather than on the failed inference. *)
-    | None -> ( match other with MLlam _ -> true | _ -> false ) )
+    | None -> ( match other with Core.Expr.Lambda _ -> true | _ -> false ) )
 
 (** Whether [t] still has a hole extraction left open. *)
 let rec has_open_meta t =
   match t with
-  | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
-  | Miniml.Tmeta {contents = Some t} -> has_open_meta t
-  | Miniml.Tarr (a, b) -> has_open_meta a || has_open_meta b
-  | Miniml.Tglob (_, ts, _) -> List.exists has_open_meta ts
+  | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
+  | Core.Type.Meta {contents = Some t} -> has_open_meta t
+  | Core.Type.Arrow {parameter = a; result = b} -> has_open_meta a || has_open_meta b
+  | Core.Type.Global_app {type_arguments = ts; _} -> List.exists has_open_meta ts
   | _ -> false
 
 (** [slot_refined_lambda env ~expected_ml_ty args body] -- the binders [args]
     (innermost first) of a lambda over [body], and [body], as lowering
     generates them in a slot of ML type [expected_ml_ty]
-    ({!Translation.gen_expr}'s [MLlam] case; [None] where the slot is a box
+    ({!Translation.gen_expr}'s [Core.Expr.Lambda] case; [None] where the slot is a box
     or states none).
 
     A binder's recorded type is whatever extraction managed to infer for it,
     and a component it never inferred stays erased even where the rest of the
-    type is spelled in full: [pair(list(pair(A, B)), Tdummy)] for a [x] the
+    type is spelled in full: [pair(list(pair(A, B)), Core.Type.Erased)] for a [x] the
     callee declares at [pair(list(pair(A, B)), list(B))].  The slot states the
     whole shape, so the binder is refined against it -- at the {e ML} type,
     before anything reads it.  The signature and the body are generated from
@@ -2500,9 +2515,11 @@ let rec has_open_meta t =
 let slot_refined_lambda env ~expected_ml_ty args body =
   let rec erase_unscoped t =
     match resolve_tmeta t with
-    | Miniml.Tvar _ as v when not (names_only_scoped_tvars (cpp_of_ml env v)) -> Miniml.Tunknown
-    | Miniml.Tarr (a, b) -> Miniml.Tarr (erase_unscoped a, erase_unscoped b)
-    | Miniml.Tglob (g, ts, l) -> Miniml.Tglob (g, List.map erase_unscoped ts, l)
+    | Core.Type.Variable _ as v when not (names_only_scoped_tvars (cpp_of_ml env v)) -> Core.Type.Unknown
+    | Core.Type.Arrow {parameter = a; result = b} ->
+      Core.Type.Arrow {parameter = erase_unscoped a; result = erase_unscoped b}
+    | Core.Type.Global_app {head = g; type_arguments = ts; index_arguments = l} ->
+      Core.Type.Global_app {head = g; type_arguments = List.map erase_unscoped ts; index_arguments = l}
     | t -> t
   in
   let fills = ref [] in
@@ -2511,7 +2528,7 @@ let slot_refined_lambda env ~expected_ml_ty args body =
     | Some fn_ty ->
       let rec domains ty =
         match resolve_tmeta ty with
-        | Miniml.Tarr (d, cod) -> d :: domains cod
+        | Core.Type.Arrow {parameter = d; result = cod} -> d :: domains cod
         | _ -> []
       in
       let doms = Array.of_list (domains fn_ty) in
@@ -2541,17 +2558,19 @@ let body_reads_members_of_binder body =
   in
   let rec reads depth e =
     match e with
-    | MLapp (MLglob {callee = g; _}, MLrel (k, _) :: _)
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _};
+                       arguments = Core.Expr.Bound_variable {index = k; _} :: _}
       when k = depth + 1 && member_access g ->
       true
-    | MLlam (_, _, b) -> reads (depth + 1) b
-    | MLletin (_, _, x, b, _) -> reads depth x || reads (depth + 1) b
-    | MLcase (_, sc, pv, _) ->
+    | Core.Expr.Lambda {body = b; _} -> reads (depth + 1) b
+    | Core.Expr.Let {value = x; body = b; _} -> reads depth x || reads (depth + 1) b
+    | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
       reads depth sc
       || Array.exists
-           (fun {br_binders = ids; br_body = br; _} -> reads (depth + List.length ids) br)
+           (fun {Core.Match.Branch.binders = ids; body = br; _} -> reads (depth + List.length ids) br)
            pv
-    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) ->
+    | Core.Expr.Fixpoint {functions = ids;
+                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
       Array.exists (reads (depth + Array.length ids)) funs
     | e ->
       let found = ref false in
@@ -2559,7 +2578,7 @@ let body_reads_members_of_binder body =
       !found
   in
   (match body with
-   | MLcase (_, MLrel (1, _), pv, _) -> is_custom_match pv
+   | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = 1; _}; branches = pv; _} -> is_custom_match pv
    | _ -> false)
   || reads 0 body
 
@@ -2571,16 +2590,18 @@ let binder_matched_at body =
   let found = ref None in
   let rec walk depth e =
     match e with
-    | MLcase ((Miniml.Tglob (_, [], _) as t), sc, _, _)
-      when (match strip_magic sc with MLrel (j, _) -> j = depth + 1 | _ -> false)
+    | Core.Expr.Match {scrutinee_type = (Core.Type.Global_app {type_arguments = []; _} as t); scrutinee = sc; _}
+      when (match strip_magic sc with Core.Expr.Bound_variable {index = j; _} -> j = depth + 1 | _ -> false)
            && !found = None ->
       found := Some t
-    | MLlam (_, _, b) -> walk (depth + 1) b
-    | MLletin (_, _, x, b, _) -> walk depth x; walk (depth + 1) b
-    | MLcase (_, sc, pv, _) ->
+    | Core.Expr.Lambda {body = b; _} -> walk (depth + 1) b
+    | Core.Expr.Let {value = x; body = b; _} -> walk depth x; walk (depth + 1) b
+    | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
       walk depth sc;
-      Array.iter (fun {br_binders = ids; br_body = br; _} -> walk (depth + List.length ids) br) pv
-    | MLfixpoint (_, ids, funs, _) | MLcofixpoint (_, ids, funs, _) -> Array.iter (walk (depth + Array.length ids)) funs
+      Array.iter (fun {Core.Match.Branch.binders = ids; body = br; _} -> walk (depth + List.length ids) br) pv
+    | Core.Expr.Fixpoint {functions = ids;
+                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+      Array.iter (walk (depth + Array.length ids)) funs
     | e -> Mlutil.ast_iter (walk depth) e
   in
   walk 0 body;
@@ -2588,14 +2609,14 @@ let binder_matched_at body =
 
 (** Whether binder [i] of a lambda's [binders] (innermost-first, over
     [body]) becomes a C++ parameter, the lambda written against a slot of C++
-    type [expected_ty] ({!Translation.gen_expr}'s [MLlam]).  A binder typed
-    [Tdummy] carries nothing, unless the body names it or the slot's
+    type [expected_ty] ({!Translation.gen_expr}'s [Core.Expr.Lambda]).  A binder typed
+    [Core.Type.Erased] carries nothing, unless the body names it or the slot's
     declaration takes a value at its position: [Cat IFun]'s [cat] binds
     objects [a b c] that [obj := Type -> Type] erases, and [Cat] is a
     function of them all the same -- and only where the slot's own domain
     there is a box: an erased binder stands for an erased value, [Id_]'s
     object, never for the [Nat] state a [stateT] takes first.  A binder with
-    no type ([Taxiom]) is one erasure took the type from -- [IFun]'s
+    no type ([Core.Type.Axiom]) is one erasure took the type from -- [IFun]'s
     [forall T] -- and unused it is erased like a dummy.  The count of binders
     the term writes and the parameter list it is written with are both read
     off this, so they cannot disagree. *)
@@ -2609,7 +2630,7 @@ let lambda_binder_emitted env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~bod
     in
     let rec value_doms t =
       match resolve_tmeta (expand_ml_fun_alias t) with
-      | Miniml.Tarr (d, c) -> not (erased_by_extraction d) :: value_doms c
+      | Core.Type.Arrow {parameter = d; result = c} -> not (erased_by_extraction d) :: value_doms c
       | _ -> []
     in
     match Option.bind expected_ty alias_ref with
@@ -2634,11 +2655,11 @@ let lambda_binder_emitted env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~bod
     | _ -> false
   in
   slot_keeps binders i
-  || (is_runtime_binder_type ty && ty <> Miniml.Taxiom)
+  || (is_runtime_binder_type ty && ty <> Core.Type.Axiom)
   || Mlutil.ast_occurs (i + 1) body
 
 (** The C++ type a lambda declares its parameter [(id, ty, owned)] at
-    ({!Translation.gen_expr}'s [MLlam]), and the substitution its body is
+    ({!Translation.gen_expr}'s [Core.Expr.Lambda]), and the substitution its body is
     rewritten with, if any.  [slot_dom] is the domain the slot the lambda
     fills declares at this parameter's position, where it declares a
     signature; [unused], that the body never reads the parameter; [body], the
@@ -2827,10 +2848,10 @@ let ctor_arg_is_passthrough r i =
     promoted types of [promoted_active]'s arity or, failing that, [return]'s
     arguments when it is the same inductive; an unresolved one written down as
     a box ({!Ml_type_util.materialise_opaque}). *)
-let ctor_draft_temps env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : ml_type) =
+let ctor_draft_temps env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) =
   let temps =
     match ty with
-    | Miniml.Tglob (cn, raw_tys, _) ->
+    | Core.Type.Global_app {head = cn; type_arguments = raw_tys; _} ->
       let tys =
         match cn with
         | GlobRef.IndRef (kn, _) -> (
@@ -2864,7 +2885,7 @@ let ctor_draft_temps env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t optio
     does not forward the argument as it is. *)
 let stores_erased_fn ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list) i e =
   match List.nth_opt field_tys i with
-  | Some (Miniml.Tvar (_, j)) -> (
+  | Some (Core.Type.Variable {variable = j; _}) -> (
     match List.nth_opt temps (j - 1) with
     | _ when ctor_arg_is_passthrough r i -> false
     | Some t when Cpp_ir.Types.prints_as_any (unfold_cpp_typedef env t) -> ml_expr_is_function_value ?var e
@@ -2881,10 +2902,12 @@ let stores_erased_fn ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list)
     family -- is erased to [std::any] so that the cast on it compiles. *)
 let erased_fn_lambda env e =
   match strip_magic e with
-  | MLlam (id, ty, body) ->
+  | Core.Expr.Lambda {parameter = id; parameter_type = ty; body} ->
     if Ml_type_util.has_tany_in_type (cpp_of_ml env ty) then
-      MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
-    else MLlam (id, Miniml.Tunknown, mark_own_param_for_pair_erasure 1 body)
+      Core.Expr.Lambda {parameter = id; parameter_type = ty; body = mark_own_param_for_pair_erasure 1 body}
+    else Core.Expr.Lambda {parameter = id;
+                           parameter_type = Core.Type.Unknown;
+                           body = mark_own_param_for_pair_erasure 1 body}
   | _ -> e
 
 (** [is_boxed_source t] -- whether a value whose C++ type is [t] is
@@ -3100,15 +3123,15 @@ let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Typ
     ({!planned_binder_type_or_derive}). *)
 let value_cpp_type ~agree env e =
   match strip_magic e with
-  | MLrel (j, occ) -> planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
-  | MLglob ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
+  | Core.Expr.Bound_variable {index = j; occurrence = occ} -> planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
+  | Core.Expr.Global ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
     Option.map (cpp_of_ml env) (callee_ml_type r)
   | _ -> None
 
 (** Whether a coercion is one the Rocq indices rule out, rather than one C++
     can perform.
 
-    Extraction records [MLcoerce (unit, nat, _, _)] for the [vnil] branch of a match
+    Extraction records [Core.Expr.Coerce (unit, nat, _, _)] for the [vnil] branch of a match
     on [vec (S n)] whose [return] clause computes [unit] there: a branch whose
     type differs from the type the match was instantiated at is one the
     scrutinee's index makes impossible.  [unit] is where this shows up
@@ -3135,7 +3158,7 @@ let absurd_coercion from (into : Cpp_ir.Lowered.Type.t) =
     slot is [Boxed]). *)
 let deep_box_list e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match strip_magic e with
-  | MLcons _ -> expr
+  | Core.Expr.Construct _ -> expr
   | e -> (
     match
       Option.bind (infer_ml_body_type e) (fun t -> Cpp_erasure.erased_list_shape (cpp_of_ml (empty_env ()) t))
@@ -3178,31 +3201,34 @@ let is_env_var_erased env tvars i =
 
 (** Check whether an ML expression's C++ type is erased ([std::any]).
     Used by the coercion handler ([Translation.gen_crossing]) to decide whether [any_cast] is needed. *)
-let rec ml_expr_is_erased env (t : ml_ast) : bool =
+let rec ml_expr_is_erased env (t : Core.Expr.t) : bool =
   let tvars = get_current_type_vars () in
   match t with
-  | MLrel (i, _) -> is_env_var_erased env tvars i
-  | MLapp (f, args) ->
+  | Core.Expr.Bound_variable {index = i; _} -> is_env_var_erased env tvars i
+  | Core.Expr.Apply {callee = f; arguments = args} ->
     let n_value_args =
       List.length (List.filter (fun a ->
-        match a with MLdummy _ -> false | _ -> true) args)
+        match a with Core.Expr.Erased_value _ -> false | _ -> true) args)
     in
     let ml_ty_opt = match f with
-      | MLglob {callee = r; _} -> find_type_opt r
-      | MLrel (i, _) -> get_env_type_opt i
+      | Core.Expr.Global {callee = r; _} -> find_type_opt r
+      | Core.Expr.Bound_variable {index = i; _} -> get_env_type_opt i
       | _ -> None
     in
     ( match ml_ty_opt with
       | Some ml_ty -> ml_codomain_erases_to_any n_value_args ml_ty
       | None -> false )
-  | MLglob {callee = r; _} ->
+  | Core.Expr.Global {callee = r; _} ->
     ( match callee_ml_type r with
       | Some ml_ty -> Cpp_ir.Types.prints_as_any (cpp_of_ml env ml_ty)
       | None -> false )
-  | MLcoerce (_, _, inner, _) | MLboxed (inner, _) | MLbarrier (inner, _) -> ml_expr_is_erased env inner
-  | MLcase (case_ty, _, _, _) ->
+  | Core.Expr.Coerce {value = inner; _}
+  | Core.Expr.Boxed_value {value = inner; _}
+  | Core.Expr.Lambda_group_barrier {value = inner; _} ->
+    ml_expr_is_erased env inner
+  | Core.Expr.Match {scrutinee_type = case_ty; _} ->
     ( match case_ty with
-      | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
+      | Core.Type.Variable _ | Core.Type.Unknown -> true
       | _ -> false )
   | _ -> false
 
@@ -3211,7 +3237,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
     the record stores it.  [None] where [typ] is not a record naming [fld]. *)
 let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
   match resolve_tmeta typ with
-  | Miniml.Tglob (r, args, _) -> (
+  | Core.Type.Global_app {head = r; type_arguments = args; _} -> (
     let declared =
       List.find_map
         (fun (f, ty) ->
@@ -3238,9 +3264,9 @@ let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
 let recover_boxed_component into (e : Cpp_ir.Lowered.Expr.t) =
   if yields_boxed_component e then coerce ~from:Any ~into e else e
 
-(** Whether an [MLcoerce (from, into, _, _)] node says its subterm is
+(** Whether an [Core.Expr.Coerce (from, into, _, _)] node says its subterm is
     physically inside a [std::any] here, and so has to be opened before it can
-    be used.  (An [MLboxed] always does; an [MLbarrier] carries no type gap at
+    be used.  (An [Core.Expr.Boxed_value] always does; an [Core.Expr.Lambda_group_barrier] carries no type gap at
     all.)
 
     A coercion is a box only when one of its two types erases at this
@@ -3269,10 +3295,10 @@ let recover_erased_scrutinee env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t) : 
     For [list<int>::Cons], this produces
     [Member (In_namespace (r, Entity_application (r, temps, \[\])), ctor_name)].
     Local inductives omit the namespace wrapper to avoid double qualification. *)
-let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : Cpp_ir.Lowered.Type.t =
+let ctor_type_of_match env (typ : Core.Type.t) (cname : GlobRef.t) : Cpp_ir.Lowered.Type.t =
   let ctor_name = ctor_struct_id_of_ref cname in
   match typ with
-  | Tglob (r, tys, _) ->
+  | Core.Type.Global_app {head = r; type_arguments = tys; _} ->
     let tys = List.map type_simpl tys in
     let tys =
       match r with
@@ -3289,7 +3315,7 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : Cpp_ir.Lowered.
           tys
           @ List.init
               (max 0 (num_param_vars - List.length tys))
-              (fun _ -> Miniml.Tunknown)
+              (fun _ -> Core.Type.Unknown)
         | None -> tys )
       | _ -> tys
     in
@@ -3349,33 +3375,37 @@ type custom_scrutinee = {
 
 (** A spine read whole, through the coercions around its head. *)
 let rec flatten_app = function
-  | MLapp (f, args) ->
+  | Core.Expr.Apply {callee = f; arguments = args} ->
     ( match flatten_app f with
-    | MLapp (f', inner_args) -> flatten_app (MLapp (f', inner_args @ args))
-    | f' -> MLapp (f', args) )
-  | MLcoerce (_, _, e, _) | MLboxed (e, _) | MLbarrier (e, _) -> flatten_app e
+    | Core.Expr.Apply {callee = f'; arguments = inner_args} ->
+      flatten_app (Core.Expr.Apply {callee = f'; arguments = inner_args @ args})
+    | f' -> Core.Expr.Apply {callee = f'; arguments = args} )
+  | Core.Expr.Coerce {value = e; _}
+  | Core.Expr.Boxed_value {value = e; _}
+  | Core.Expr.Lambda_group_barrier {value = e; _} ->
+    flatten_app e
   | other -> other
 
-let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
+let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
   (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
      [std::any]) even though the ML AST may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
      by an outer [fix_a_fired] pair match (detected via its binder). *)
   let scrut_is_mlmagic = match t with
-    | MLcoerce (from, into, _, _) -> coercion_is_boxed env ~from ~into
-    | MLboxed _ -> true
-    | MLbarrier _ -> false
+    | Core.Expr.Coerce {source_type = from; target_type = into; _} -> coercion_is_boxed env ~from ~into
+    | Core.Expr.Boxed_value _ -> true
+    | Core.Expr.Lambda_group_barrier _ -> false
     | _ -> false
   in
   let scrut_is_cpp_erased = match t with
-    | MLrel (i, occ) -> var_boxed i occ
+    | Core.Expr.Bound_variable {index = i; occurrence = occ} -> var_boxed i occ
     | _ -> false
   in
   let scrut_is_magic = match t with
-    | MLcoerce (from, into, _, _) -> coercion_is_boxed env ~from ~into
-    | MLboxed _ -> true
-    | MLbarrier _ -> false
-    | MLrel (i, occ) ->
+    | Core.Expr.Coerce {source_type = from; target_type = into; _} -> coercion_is_boxed env ~from ~into
+    | Core.Expr.Boxed_value _ -> true
+    | Core.Expr.Lambda_group_barrier _ -> false
+    | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
       var_boxed i occ
       || (match var_type i with
           (* An ML type that erases on its own may still have been written
@@ -3389,7 +3419,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
     | _ -> false
   in
   (* [scrut_callee_ret_erased]: the scrutinee is a call to a global function
-     ([MLapp (MLglob {callee = r; _}, args)], possibly coercion-wrapped) whose
+     ([Core.Expr.Apply (Core.Expr.Global {callee = r; _}, args)], possibly coercion-wrapped) whose
      DECLARED (un-instantiated) codomain resolves to [std::any] — e.g.
      [rev_tuple : forall xs, syms_semty xs -> syms_semty (rev xs)], a single
      C++ function generic over [xs], so its actual return type is the
@@ -3400,7 +3430,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
      though the callee only ever returns [std::any] at the C++ level. *)
   let scrut_callee_ret_erased =
     match flatten_app t with
-    | MLapp (MLglob ({callee = r; _} as use), args) ->
+    | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use); arguments = args} ->
       ( match callee_ml_type r with
       | Some fty ->
         let fty = Mlutil.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
@@ -3425,13 +3455,13 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
   let concrete_match_type : Cpp_ir.Lowered.Type.t =
     if spells_as_any typ || scrut_callee_ret_erased then
       try
-        let {br_pattern = pat0; _} = pv.(0) in
+        let {Core.Match.Branch.pattern = pat0; _} = pv.(0) in
         let ind_ref = match pat0 with
-          | Pusual (GlobRef.ConstructRef (ip, _))
-          | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip
+          | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _))
+          | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} -> GlobRef.IndRef ip
           | _ -> raise Not_found
         in
-        let {br_binders = ids0; _} = pv.(0) in
+        let {Core.Match.Branch.binders = ids0; _} = pv.(0) in
         let tyargs = List.rev_map (fun (_, ty) ->
           erase_unresolved_tvars (cpp_of_ml env ty)
         ) ids0 in
@@ -3444,7 +3474,7 @@ let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
     | _ -> None
   in
   let scrut_is_trivial_ml = match t with
-    | MLrel _ | MLcoerce (_, _, MLrel _, _) | MLboxed (MLrel _, _) | MLbarrier (MLrel _, _) -> true
+    | Core.Expr.Bound_variable _ | Core.Expr.Coerce {value = Core.Expr.Bound_variable _; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable _; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable _; _} -> true
     | _ -> false
   in
   let needs_pair_any_cast =
@@ -3485,13 +3515,13 @@ let custom_branch_binders env ~fix_a_fired ~scrut_ml_typ ~ml_typ r ids' =
         let cpp_ty = cpp_of_ml env ty in
         match cpp_ty with
         | Entity_application (g, (_ :: _), _) when is_prod_global g ->
-          (x, Tdummy Ktype)
+          (x, Core.Type.Erased Core.Erasure_reason.Type_argument)
         | Entity_application (g, _, _) when is_list_global g ->
           (x, ty)
         | _ when Cpp_ir.Types.prints_as_any cpp_ty ->
           (x, ty)
         | _ ->
-          (x, Tdummy Ktype))
+          (x, Core.Type.Erased Core.Erasure_reason.Type_argument))
         ids'
     else ids'
   in

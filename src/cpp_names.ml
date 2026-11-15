@@ -1046,7 +1046,7 @@ let inductive_scope ctx r = named ctx (Inductive_scope r)
 
 let unqualified_head head : Cpp_resolution.head = {outer = []; head; typename = false; templated = false}
 
-(* The head of the type [Tglob (r, _, _)] that no custom mapping inlines. *)
+(* The head of the type [Core.Type.Global_app (r, _, _)] that no custom mapping inlines. *)
 let live_glob_head ctx r : Cpp_resolution.head =
   let bare = inductive_type_name ctx r in
   let enclosing = struct_scopes_for ctx r bare @ global_scopes_for r bare in
@@ -1056,7 +1056,7 @@ let live_glob_head ctx r : Cpp_resolution.head =
   let name = if enclosing = [] then wrapper_qualified_type_name ctx r bare else bare in
   {outer = enclosing; head = name; typename = needs_typename ctx name; templated = true}
 
-(* The head of the inductive type [Tnamespace (r, Tglob (r, _, _))].
+(* The head of the inductive type [Tnamespace (r, Core.Type.Global_app (r, _, _))].
 
    DESIGN: Namespace-qualified types for inductive types. Rocq's
    inductives live in wrapper structs (e.g., type 'list' in struct 'List').

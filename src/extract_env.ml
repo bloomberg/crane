@@ -10,7 +10,6 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-open Miniml
 open Constr
 open Declarations
 open Names
@@ -69,9 +68,9 @@ module type VISIT = sig
 
   val add_kn : KerName.t -> unit
 
-  val add_decl_deps : ml_decl -> unit
+  val add_decl_deps : Core.Decl.t -> unit
 
-  val add_spec_deps : ml_spec -> unit
+  val add_spec_deps : Core.Signature.Declaration.t -> unit
 
   (* Test functions: is a particular object a needed dependency for the current
      extraction ? *)
@@ -302,39 +301,39 @@ let rec extract_structure_spec env mp reso = function
       specs
     else (
       Visit.add_spec_deps s;
-      (l, Spec s) :: specs )
+      (l, Core.Module.Signature_item.Declaration s) :: specs )
   | (l, SFBmind _) :: msig ->
     let mind = make_mind reso mp l in
-    let s = Sind (mind, extract_inductive env mind) in
+    let s = Core.Signature.Declaration.Inductive {entity = mind; definition = extract_inductive env mind} in
     let specs = extract_structure_spec env mp reso msig in
     if logical_spec s then
       specs
     else (
       Visit.add_spec_deps s;
-      (l, Spec s) :: specs )
+      (l, Core.Module.Signature_item.Declaration s) :: specs )
   | (l, SFBrules _) :: msig ->
     let specs = extract_structure_spec env mp reso msig in
     specs
   | (l, SFBmodule mb) :: msig ->
     let specs = extract_structure_spec env mp reso msig in
     let spec = extract_mbody_spec env mb.mod_mp mb in
-    (l, Smodule spec) :: specs
+    (l, Core.Module.Signature_item.Module spec) :: specs
   | (l, SFBmodtype mtb) :: msig ->
     let specs = extract_structure_spec env mp reso msig in
     let spec = extract_mbody_spec env mtb.mod_mp mtb in
-    (l, Smodtype spec) :: specs
+    (l, Core.Module.Signature_item.Module_type spec) :: specs
 
 (* From [module_expression] to specifications *)
 
 (* Invariant: the [me_alg] given to [extract_mexpr_spec] and
    [extract_mexpression_spec] should come from a [mod_type_alg] field. This way,
-   any encountered [MEident] should be a true module type. *)
+   any encountered [Core.Module.Expr.Path] should be a true module type. *)
 
 and extract_mexpr_spec env mp1 (me_struct_o, me_alg) =
   match me_alg with
   | MEident mp ->
     Visit.add_mp_all mp;
-    MTident mp
+    Core.Module.Type.Path mp
   | MEwith (me', WithDef (idl, (c, ctx))) ->
     let me_struct, delta = flatten_modtype env mp1 me' me_struct_o in
     let env' = env_for_mtb_with_def env mp1 me_struct delta idl in
@@ -345,10 +344,14 @@ and extract_mexpr_spec env mp1 (me_struct_o, me_alg) =
     | None -> mt
     | Some (vl, typ) ->
       type_iter_references Visit.add_ref typ;
-      MTwith (mt, ML_With_type (idl, vl, typ)) )
+      Core.Module.Type.Refined {base = mt;
+                                refinement = Core.Module.Refinement.Type_equation {path = idl;
+                                                                                   parameters = vl;
+                                                                                   definition = typ}} )
   | MEwith (me', WithMod (idl, mp)) ->
     Visit.add_mp_all mp;
-    MTwith (extract_mexpr_spec env mp1 (None, me'), ML_With_module (idl, mp))
+    Core.Module.Type.Refined {base = extract_mexpr_spec env mp1 (None, me');
+                              refinement = Core.Module.Refinement.Module_equation {path = idl; definition = mp}}
   | MEapply _ ->
     (* No higher-order module type in OCaml : we use the expanded version *)
     let me_struct, delta = flatten_modtype env mp1 me_alg me_struct_o in
@@ -364,23 +367,21 @@ and extract_mexpression_spec env mp1 (me_struct, me_alg) =
     in
     let mp = MPbound mbid in
     let env' = Modops.add_module_type mp mtb env in
-    MTfunsig
-      ( mbid,
-        extract_mbody_spec env mp mtb,
-        extract_mexpression_spec env' mp1 (me_struct', me_alg') )
+    Core.Module.Type.Functor {parameter = mbid;
+                              parameter_type = extract_mbody_spec env mp mtb;
+                              result = extract_mexpression_spec env' mp1 (me_struct', me_alg')}
   | MENoFunctor m -> extract_mexpr_spec env mp1 (Some me_struct, m)
 
 and extract_msignature_spec env mp1 reso = function
   | NoFunctor struc ->
     let env' = Modops.add_structure mp1 struc reso env in
-    MTsig (mp1, extract_structure_spec env' mp1 reso struc)
+    Core.Module.Type.Signature {path = mp1; items = extract_structure_spec env' mp1 reso struc}
   | MoreFunctor (mbid, mtb, me) ->
     let mp = MPbound mbid in
     let env' = Modops.add_module_type mp mtb env in
-    MTfunsig
-      ( mbid,
-        extract_mbody_spec env mp mtb,
-        extract_msignature_spec env' mp1 reso me )
+    Core.Module.Type.Functor {parameter = mbid;
+                              parameter_type = extract_mbody_spec env mp mtb;
+                              result = extract_msignature_spec env' mp1 reso me}
 
 and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
  fun env mp mb ->
@@ -416,7 +417,7 @@ let rec extract_structure access env mp reso ~all = function
             if not (Array.for_all
                       (fun c -> is_inline_custom (GlobRef.ConstRef c)) vc) then
               Visit.add_decl_deps d;
-            (l, SEdecl d) :: ms )
+            (l, Core.Module.Structure_item.Declaration d) :: ms )
         else
           ms
       with Impossible ->
@@ -432,7 +433,7 @@ let rec extract_structure access env mp reso ~all = function
                replaced by inline-custom C++ code. *)
             if not (is_inline_custom (GlobRef.ConstRef c)) then
               Visit.add_decl_deps d;
-            (l, SEdecl d) :: ms )
+            (l, Core.Module.Structure_item.Declaration d) :: ms )
         else
           ms )
   | (l, SFBmind mib) :: struc ->
@@ -440,7 +441,7 @@ let rec extract_structure access env mp reso ~all = function
     let mind = make_mind reso mp l in
     let b = Visit.needed_ind mind in
     if all || b then
-      let d = Dind (mind, extract_inductive env mind) in
+      let d = Core.Decl.Inductive {entity = mind; definition = extract_inductive env mind} in
       (* An all-[Prop] inductive has no C++ meaning: nothing that reaches it
          spells it, because every position it could occupy erases.  Drop it
          even when something asked for it -- a [Prop] type reached through a
@@ -453,7 +454,7 @@ let rec extract_structure access env mp reso ~all = function
            C++ extraction — their Rocq definitions are not emitted. *)
         if not (is_custom (GlobRef.IndRef (mind, 0))) then
           Visit.add_decl_deps d;
-        (l, SEdecl d) :: ms )
+        (l, Core.Module.Structure_item.Declaration d) :: ms )
     else
       ms
   | (l, SFBrules rrb) :: struc ->
@@ -477,7 +478,7 @@ let rec extract_structure access env mp reso ~all = function
     else
       let all' = all || Visit.needed_mp_all mp in
       if all' || Visit.needed_mp mp then
-        (l, SEmodule (extract_module access env mp ~all:all' mb)) :: ms
+        (l, Core.Module.Structure_item.Module (extract_module access env mp ~all:all' mb)) :: ms
       else
         ms
   | (l, SFBmodtype mtb) :: struc ->
@@ -487,12 +488,12 @@ let rec extract_structure access env mp reso ~all = function
     if is_skip_module mp then
       ms
     else if all || Visit.needed_mp mp then
-      (l, SEmodtype (extract_mbody_spec env mp mtb)) :: ms
+      (l, Core.Module.Structure_item.Module_type (extract_mbody_spec env mp mtb)) :: ms
     else
       ms
 
 (** Extracts a module expression (functor application, module identifier, etc.).
-    Handles MEident, MEapply, and expands module expressions as needed. *)
+    Handles Core.Module.Expr.Path, Core.Module.Expr.Apply, and expands module expressions as needed. *)
 and extract_mexpr access env mp = function
   | MEwith _ -> assert false (* no 'with' syntax for modules *)
   | me when lang () != Cpp ->
@@ -504,10 +505,10 @@ and extract_mexpr access env mp = function
   | MEident mp ->
     if is_modfile mp && not (modular ()) then error_MPfile_as_mod mp false;
     Visit.add_mp_all mp;
-    Miniml.MEident mp
+    Core.Module.Expr.Path mp
   | MEapply (me, arg) ->
-    Miniml.MEapply
-      (extract_mexpr access env mp me, extract_mexpr access env mp (MEident arg))
+    Core.Module.Expr.Apply {functor_ = extract_mexpr access env mp me;
+                            argument = extract_mexpr access env mp (MEident arg)}
 
 (** Extracts a module expression with functor support. Handles both MENoFunctor
     (simple module) and MEMoreFunctor (functor) cases. *)
@@ -521,22 +522,20 @@ and extract_mexpression access env mp mty = function
     in
     let mp1 = MPbound mbid in
     let env' = Modops.add_module_type mp1 mtb env in
-    Miniml.MEfunctor
-      ( mbid,
-        extract_mbody_spec env mp1 mtb,
-        extract_mexpression access env' mp mty me )
+    Core.Module.Expr.Functor {parameter = mbid;
+                              parameter_type = extract_mbody_spec env mp1 mtb;
+                              body = extract_mexpression access env' mp mty me}
 
 and extract_msignature access env mp reso ~all = function
   | NoFunctor struc ->
     let env' = Modops.add_structure mp struc reso env in
-    Miniml.MEstruct (mp, extract_structure access env' mp reso ~all struc)
+    Core.Module.Expr.Structure {path = mp; items = extract_structure access env' mp reso ~all struc}
   | MoreFunctor (mbid, mtb, me) ->
     let mp1 = MPbound mbid in
     let env' = Modops.add_module_type mp1 mtb env in
-    Miniml.MEfunctor
-      ( mbid,
-        extract_mbody_spec env mp1 mtb,
-        extract_msignature access env' mp reso ~all me )
+    Core.Module.Expr.Functor {parameter = mbid;
+                              parameter_type = extract_mbody_spec env mp1 mtb;
+                              body = extract_msignature access env' mp reso ~all me}
 
 (** Builds the ML module structure for a given module body. Extracts both the
     implementation and type signature. *)
@@ -574,7 +573,7 @@ and extract_module access env mp ~all mb =
         | MENoFunctor me ->
           ( match me with
           | MEapply (func, _) ->
-            (* Handle both simple (MEident) and nested (MEapply) functor
+            (* Handle both simple (Core.Module.Expr.Path) and nested (Core.Module.Expr.Apply) functor
                applications *)
             let rec get_base_functor = function
               | MEident mp -> Some mp
@@ -609,7 +608,7 @@ and extract_module access env mp ~all mb =
       | None -> extract_mbody_spec env mp mb )
     | _ -> extract_mbody_spec env mp mb
   in
-  {ml_mod_expr = impl; ml_mod_type = typ}
+  {Core.Module.expr = impl; type_ = typ}
 
 (** Extracts a monomorphic environment for the given references and module
     paths. Computes which declarations are needed and builds ML structures. *)
@@ -1399,7 +1398,7 @@ let report_body_generations fn =
     the knot of a well-founded recursion tied directly, every read of a
     local its own, and the open types of local definitions
     minted: the rewrites the program goes through before it is frozen. *)
-let core_passes to_appear : ml_structure Pipeline_trace.pass list =
+let core_passes to_appear : Core.Program.t Pipeline_trace.pass list =
   let open Pipeline_trace in
   [ pass "modutil" (Modutil.optimize_struct to_appear);
     (* Which inductives are shared variants is a property of their
@@ -1525,7 +1524,7 @@ let analyze_and_plan struc =
 
 (** What a unit decides about its structure before its layout, in order.
     [namespace] is the C++ namespace of a separately extracted file. *)
-let unit_passes ~namespace : ml_structure Pipeline_trace.pass list =
+let unit_passes ~namespace : Core.Program.t Pipeline_trace.pass list =
   let open Pipeline_trace in
   [ (* The customs the program names decide whether this unit can spawn a
        thread, which is what resolves a [Crane NonAtomicRc] or [Crane
@@ -1590,24 +1589,26 @@ let plan_representation plan struc =
 let declares struc =
   let declared = ref Ref.User.Set.empty in
   let add r = declared := Ref.User.Set.add r !declared in
-  let inductive kn ind =
-    ( match ind.ind_kind with
-    | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields -> List.iter (fun (f, _) -> Option.iter add f) fields
+  let inductive kn (ind : Core.Inductive.t) =
+    ( match ind.kind with
+    | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields ->
+      List.iter (fun (f, _) -> Option.iter add f) fields
     | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> () );
     Array.iteri
-      (fun i p ->
+      (fun i (p : Core.Inductive.Packet.t) ->
         add (GlobRef.IndRef (kn, i));
-        Array.iteri (fun j _ -> add (GlobRef.ConstructRef ((kn, i), j + 1))) p.ip_types )
-      ind.ind_packets
+        Array.iteri (fun j _ -> add (GlobRef.ConstructRef ((kn, i), j + 1))) p.constructor_argument_types )
+      ind.packets
   in
   Modutil.struct_iter
     (function
-      | Dind (kn, ind) -> inductive kn ind
-      | Dtype (r, _, _) | Dterm (r, _, _) -> add r
-      | Dfix fds -> Core.Nonempty.iter (fun fd -> add fd.fd_ref) fds )
+      | Core.Decl.Inductive {entity = kn; definition = ind} -> inductive kn ind
+      | Core.Decl.Type_alias {entity = r; _} | Core.Decl.Value {entity = r; _} -> add r
+      | Core.Decl.Recursive_group fds ->
+        Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) fds )
     (function
-      | Sind (kn, ind) -> inductive kn ind
-      | Stype (r, _, _) | Sval (r, _, _) -> add r )
+      | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> inductive kn ind
+      | Core.Signature.Declaration.Type {entity = r; _} | Core.Signature.Declaration.Value {entity = r; _} -> add r )
     ignore struc;
   fun r -> Ref.User.Set.mem r !declared
 
@@ -1626,9 +1627,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   reset_renaming_tables ();
   let unsafe_needs =
     {
-      mldummy = struct_ast_search Mlutil.isMLdummy struc;
+      Backend.mldummy = struct_ast_search Mlutil.isMLdummy struc;
       tdummy = struct_type_search Mlutil.isTdummy struc;
-      tunknown = struct_type_search (( == ) Tunknown) struc;
+      tunknown = struct_type_search (( == ) Core.Type.Unknown) struc;
       magic = false;
     }
   in
@@ -1841,7 +1842,7 @@ let reset () =
   Visit.reset ();
   reset_tables ();
   reset_renaming_tables ();
-  Miniml.Meta.thaw ()
+  Core.Meta.thaw ()
 
 (** Initializes the extraction environment, checking section scope and setting
     mode flags (modular/library/compute). *)
@@ -2064,10 +2065,10 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   (* Descend through applications/functors to the underlying struct body,
      returning its substructure (or [] for a bare module identifier). *)
   let rec module_substructs = function
-    | MEstruct (_, s) -> s
-    | MEapply (me, _) -> module_substructs me
-    | MEfunctor (_, _, me) -> module_substructs me
-    | MEident _ -> []
+    | Core.Module.Expr.Structure {items = s; _} -> s
+    | Core.Module.Expr.Apply {functor_ = me; _} -> module_substructs me
+    | Core.Module.Expr.Functor {body = me; _} -> module_substructs me
+    | Core.Module.Expr.Path _ -> []
   in
   warns ();
   (* Skip modules whose declarations are all custom-extracted (they would
@@ -2077,9 +2078,9 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
     List.exists
       (fun (_, se) ->
         match se with
-        | SEdecl d ->
+        | Core.Module.Structure_item.Declaration d ->
           List.exists (fun r -> not (is_any_custom r)) (decl_refs d)
-        | SEmodule _ | SEmodtype _ -> true )
+        | Core.Module.Structure_item.Module _ | Core.Module.Structure_item.Module_type _ -> true )
       sel
   in
   (* Check whether a namespace name collides with any top-level declaration
@@ -2091,17 +2092,17 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
     | GlobRef.VarRef v -> Id.to_string v
   in
   let decl_names = function
-    | Dtype (r, _, _) -> [ref_label r]
-    | (Dterm _ | Dfix _) as d ->
-      List.map (fun fd -> ref_label fd.fd_ref) (Mlutil.term_defs d)
-    | Dind (kn, ind) ->
-      Array.to_list (Array.map (fun ip -> Id.to_string ip.ip_typename) ind.ind_packets)
+    | Core.Decl.Type_alias {entity = r; _} -> [ref_label r]
+    | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
+      List.map (fun (fd : Core.Recursion.Definition.t) -> ref_label fd.entity) (Mlutil.term_defs d)
+    | Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
+      Array.to_list (Array.map (fun (ip : Core.Inductive.Packet.t) -> Id.to_string ip.name) ind.packets)
   in
   let ns_collides_with_decl ns sel =
     List.exists
       (fun (_, se) ->
         match se with
-        | SEdecl d -> List.exists (String.equal ns) (decl_names d)
+        | Core.Module.Structure_item.Declaration d -> List.exists (String.equal ns) (decl_names d)
         | _ -> false )
       sel
   in
@@ -2117,30 +2118,30 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   let topo_index : (ModPath.t, int) Hashtbl.t = Hashtbl.create 64 in
   List.iteri (fun i (mp, _) -> Hashtbl.replace topo_index mp i) struc;
   let rec pre_scan_unmerged sel =
-    let refs_unmerged_functor (me : ml_module_expr) =
-      let rec get_base : ml_module_expr -> bool = function
-        | MEapply (me2, _) -> get_base me2
-        | MEident mp ->
+    let refs_unmerged_functor (me : Core.Module.Expr.t) =
+      let rec get_base : Core.Module.Expr.t -> bool = function
+        | Core.Module.Expr.Apply {functor_ = me2; _} -> get_base me2
+        | Core.Module.Expr.Path mp ->
           let lbl = match mp with
             | ModPath.MPdot (_, l) -> Some (String.capitalize_ascii (Label.to_string l))
             | _ -> None
           in
           (match lbl with Some n -> Cpp_state.is_global_unmerged n | None -> false)
-        | MEfunctor (_, _, me2) -> get_base me2
-        | MEstruct _ -> false
+        | Core.Module.Expr.Functor {body = me2; _} -> get_base me2
+        | Core.Module.Expr.Structure _ -> false
       in get_base me
     in
     List.iter (fun (l, se) ->
       match se with
-      | SEmodule { ml_mod_expr = MEident _; _ } -> ()
-      | SEmodule m ->
-        let subs = module_substructs m.ml_mod_expr in
+      | Core.Module.Structure_item.Module { Core.Module.expr = Core.Module.Expr.Path _; _ } -> ()
+      | Core.Module.Structure_item.Module m ->
+        let subs = module_substructs m.expr in
         let has_funcs = List.exists (fun (_, se') ->
           match se' with
-          | SEdecl (Dterm _ | Dfix _) -> true
+          | Core.Module.Structure_item.Declaration (Core.Decl.Value _ | Core.Decl.Recursive_group _) -> true
           | _ -> false
         ) subs in
-        let is_unmerged_apply = refs_unmerged_functor m.ml_mod_expr in
+        let is_unmerged_apply = refs_unmerged_functor m.expr in
         if has_funcs || is_unmerged_apply then begin
           let name = String.capitalize_ascii (Label.to_string l) in
           Cpp_state.mark_global_unmerged name
@@ -2150,17 +2151,17 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
     ) sel
   in
   List.iter (fun (_, sel) -> pre_scan_unmerged sel) struc;
-  let modtype_table : (ModPath.t, ml_module_type) Hashtbl.t = Hashtbl.create 16 in
+  let modtype_table : (ModPath.t, Core.Module.Type.t) Hashtbl.t = Hashtbl.create 16 in
   let rec collect_modtypes mp_prefix sel =
     List.iter (fun (l, se) ->
       match se with
-      | SEmodtype mt ->
+      | Core.Module.Structure_item.Module_type mt ->
         let mt_mp = Names.ModPath.MPdot (mp_prefix, l) in
         Hashtbl.replace modtype_table mt_mp mt
-      | SEmodule m ->
+      | Core.Module.Structure_item.Module m ->
         let sub_mp = Names.ModPath.MPdot (mp_prefix, l) in
-        (match m.ml_mod_expr with
-         | MEstruct (_, subs) -> collect_modtypes sub_mp subs
+        (match m.expr with
+         | Core.Module.Expr.Structure {items = subs; _} -> collect_modtypes sub_mp subs
          | _ -> ())
       | _ -> ()
     ) sel
@@ -2169,25 +2170,25 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   let rec pre_scan_meyers_singletons ~in_template sel =
     List.iter (fun (_l, se) ->
       match se with
-      | SEdecl ((Dterm _ | Dfix _) as d) ->
+      | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
         List.iter
-          (fun {fd_ref = r; fd_type = ty; _} ->
-            let is_function = match ty with Tarr _ -> true | _ -> false in
+          (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
+            let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
             if in_template && not is_function then
               Cpp_state.register_template_static_accessor_ref r )
           (Mlutil.term_defs d)
-      | SEmodule m ->
-        let has_params = match m.ml_mod_expr with
-          | MEfunctor _ -> true
+      | Core.Module.Structure_item.Module m ->
+        let has_params = match m.expr with
+          | Core.Module.Expr.Functor _ -> true
           | _ -> false
         in
         let sub_in_template = in_template || has_params in
         let rec register_modtype_accessors modtype_table ?param_mp = function
-          | MTsig (_, sig_items) ->
+          | Core.Module.Type.Signature {items = sig_items; _} ->
             List.iter (fun (l, specif) ->
               match specif with
-              | Spec (Sval (r, _, ty)) ->
-                let is_function = match ty with Tarr _ -> true | _ -> false in
+              | Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Value {entity = r; type_ = ty; _}) ->
+                let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
                 if not is_function then begin
                   let lbl = Table.label_of_r r in
                   Cpp_state.register_template_static_accessor
@@ -2197,7 +2198,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
                       Cpp_state.register_template_static_accessor pmp lbl )
                     param_mp
                 end
-              | Smodule mt ->
+              | Core.Module.Signature_item.Module mt ->
                 let sub_param_mp = match param_mp with
                   | Some pmp -> Some (Names.ModPath.MPdot (pmp, l))
                   | None -> None
@@ -2205,22 +2206,22 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
                 register_modtype_accessors modtype_table ?param_mp:sub_param_mp mt
               | _ -> ()
             ) sig_items
-          | MTfunsig (_, _, mt') -> register_modtype_accessors modtype_table ?param_mp mt'
-          | MTwith (mt', _) -> register_modtype_accessors modtype_table ?param_mp mt'
-          | MTident mp ->
+          | Core.Module.Type.Functor {result = mt'; _} -> register_modtype_accessors modtype_table ?param_mp mt'
+          | Core.Module.Type.Refined {base = mt'; _} -> register_modtype_accessors modtype_table ?param_mp mt'
+          | Core.Module.Type.Path mp ->
             (match Hashtbl.find_opt modtype_table mp with
              | Some resolved_mt -> register_modtype_accessors modtype_table ?param_mp resolved_mt
              | None -> ())
         in
         let rec scan_functor_type_params modtype_table = function
-          | MTfunsig (mbid, param_mt, body_mt) ->
+          | Core.Module.Type.Functor {parameter = mbid; parameter_type = param_mt; result = body_mt} ->
             let param_mp = Names.ModPath.MPbound mbid in
             register_modtype_accessors modtype_table ~param_mp param_mt;
             scan_functor_type_params modtype_table body_mt
           | _ -> ()
         in
-        scan_functor_type_params modtype_table m.ml_mod_type;
-        let subs = module_substructs m.ml_mod_expr in
+        scan_functor_type_params modtype_table m.type_;
+        let subs = module_substructs m.expr in
         pre_scan_meyers_singletons ~in_template:sub_in_template subs
       | _ -> ()
     ) sel
@@ -2270,24 +2271,24 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
   let program_reads = ref Ref.Can.Set.empty in
   Modutil.struct_iter
     (fun d ->
-      let own = List.map (fun fd -> fd.fd_ref) (Mlutil.term_defs d) in
+      let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Mlutil.term_defs d) in
       Modutil.decl_iter_references
         (fun r -> if not (List.exists (Ref.Can.equal r) own) then program_reads := Ref.Can.Set.add r !program_reads)
         ignore ignore d)
     ignore ignore struc;
   Cpp_state.note_program_reads !program_reads;
-  (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
+  (* Generic traversal of Core.Program.t: walks Core.Module.Expr.Structure/Core.Module.Expr.Functor/Core.Module.Expr.Apply
      and calls [visit ~in_struct elem] on each structure element. *)
   let iter_structure visit struc =
     let rec walk_elem ~in_struct = function
-      | SEmodule m -> walk_mexpr m.ml_mod_expr
+      | Core.Module.Structure_item.Module (m : Core.Module.t) -> walk_mexpr m.expr
       | se -> visit ~in_struct se
     and walk_mexpr = function
-      | MEstruct (_, sel) ->
+      | Core.Module.Expr.Structure {items = sel; _} ->
         List.iter (fun (_, se) -> walk_elem ~in_struct:true se) sel
-      | MEfunctor (_, _, me) -> walk_mexpr me
-      | MEapply (me, _) -> walk_mexpr me
-      | MEident _ -> ()
+      | Core.Module.Expr.Functor {body = me; _} -> walk_mexpr me
+      | Core.Module.Expr.Apply {functor_ = me; _} -> walk_mexpr me
+      | Core.Module.Expr.Path _ -> ()
     in
     List.iter (fun (_, sel) ->
       List.iter (fun (_, se) -> walk_elem ~in_struct:false se) sel
@@ -2299,8 +2300,8 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
      (LLPrediction.h) agree on whether an inductive is flat or not. *)
   iter_structure (fun ~in_struct se ->
     match se with
-    | SEdecl (Dind (kn, ind)) ->
-      let is_mutual = Array.length ind.ind_packets > 1 in
+    | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+      let is_mutual = Array.length ind.packets > 1 in
       Array.iteri (fun i _p ->
         let ind_ref = GlobRef.IndRef (kn, i) in
         if not (Table.is_custom ind_ref) && not is_mutual then begin
@@ -2309,11 +2310,11 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
           if Table.is_flat_inductive_packet kn ind i then
             Table.add_flat_inductive ind_ref
         end
-      ) ind.ind_packets
-    | SEdecl ((Dterm _ | Dfix _) as d) when in_struct ->
+      ) ind.packets
+    | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) when in_struct ->
       List.iter
-        (fun {fd_ref = r; fd_type = ty; _} ->
-          if (match ty with Tarr _ -> false | _ -> true) then
+        (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
+          if (match ty with Core.Type.Arrow _ -> false | _ -> true) then
             Cpp_state.register_template_static_accessor
               (Table.modpath_of_r r) (Table.label_of_r r) )
         (Mlutil.term_defs d)
@@ -2608,11 +2609,11 @@ let show_extraction ~pstate =
     let mp = Lib.current_mp () in
     let l = Label.of_id (Declare.Proof.get_name pstate) in
     let fake_ref = GlobRef.ConstRef (Constant.make2 mp l) in
-    let decl = Dterm (fake_ref, ast, ty) in
+    let decl = Core.Decl.Value {entity = fake_ref; body = ast; type_ = ty} in
     (* Frozen and normalized unoptimised, as it is shown: that is what
        installs the facts about the whole program -- its recursion plan
        among them -- that lowering the term reads. *)
-    let frozen = freeze (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, SEdecl decl)])])) in
+    let frozen = freeze (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])])) in
     print_one_decl (Core_phase.structure frozen) mp decl
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

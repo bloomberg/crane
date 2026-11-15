@@ -22,7 +22,7 @@ val empty : t
 
 (** The groups of the functions [struc] defines, over every term definition
     in it, module and functor bodies included. *)
-val analyze : Miniml.ml_structure -> t
+val analyze : Core.Program.t -> t
 
 (** The members of the group of [r], [r] among them, if [r] is on a cycle. *)
 val group : t -> GlobRef.t -> GlobRef.t list option

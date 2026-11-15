@@ -19,8 +19,8 @@
     having planned the original, keeps its copy's. *)
 
 (** [term e]: [e], every occurrence in it fresh. *)
-val term : Miniml.ml_ast -> Miniml.ml_ast
+val term : Core.Expr.t -> Core.Expr.t
 
 (** [structure s]: [s], every occurrence in the body of each term and
     fixpoint declaration fresh. *)
-val structure : Miniml.ml_structure -> Miniml.ml_structure
+val structure : Core.Program.t -> Core.Program.t

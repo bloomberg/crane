@@ -182,7 +182,7 @@ type planned = {
   varying : bool list;
   parts : bool list;
   cursor : Reuse_cursor.t option;
-  moves : (Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list;
+  moves : (Core.Occurrence.t * Ownership_ir.Continue_move.t list) list;
 }
 
 (* [l] lowered as [lowering] from what takes C++ parameters standing, in
@@ -237,7 +237,7 @@ let planned (f : func) =
    first, as a definition stores its parameters ({!Cpp_ir.Function.shape});
    the call holds them in source order. *)
 let jump continues : Loopify_analysis.call_checker = function
-  | Call ({occurrence = Some o; _}, _, args) when List.exists (Miniml.Occurrence.equal o) continues ->
+  | Call ({occurrence = Some o; _}, _, args) when List.exists (Core.Occurrence.equal o) continues ->
     Some (Loopify_analysis.mk_call_site (List.rev args))
   | _ -> None
 
@@ -342,7 +342,8 @@ let storage_at ?entering (l : Control_ir.Term.loop) positions params ~held body 
   let lambda_params = lazy (if Option.has_some entering then fixpoint_parameters body else []) in
   let of_entering (b : Core_binder.t) = Option.cata (fun r -> GlobRef.UserOrd.equal b.origin r) false entering in
   let holdable : Frame_storage.parameter -> bool = function
-    | Own i -> List.exists2 (fun p (k, (_, ty)) -> p = Some i && held k ty) positions (List.mapi (fun k p -> (k, p)) params)
+    | Own i ->
+      List.exists2 (fun p (k, (_, ty)) -> p = Some i && held k ty) positions (List.mapi (fun k p -> (k, p)) params)
     | Entered {loop; index; level} ->
       let planned = Option.has_some entering && Frame_storage.local_holdable loop index = Some true in
       Frame_storage.check_local index ~planned ~declared:(fun () ->
@@ -656,7 +657,8 @@ let lower_method ~tparams ~self_ty (m : meth) =
     in
     let value_receiver =
       match (lowering, positions) with
-      | (Modulo_cons | Frames), Some (Some i :: _) when not (List.nth (derived_passed l) i) -> Some Loopify.value_receiver
+      | (Modulo_cons | Frames), Some (Some i :: _) when not (List.nth (derived_passed l) i) ->
+        Some Loopify.value_receiver
       | Tail, _ when List.exists (fun (r : Control_ir.Term.rebuilt) -> r.read_elsewhere) rebuilt ->
         Some Loopify.rebuilt_receiver_read
       | (Modulo_cons | Frames | Tail), _ -> None
@@ -824,7 +826,7 @@ let keeps_call taken (stmts : Ir.Stmt.t list) =
   let rec v = lazy (visit ~expr:(fun e -> expr e) ~stmt:(fun s -> stmt s))
   and expr (e : Ir.Expr.t) =
     ( match e with
-    | Call ({occurrence = Some o; _}, _, _) when List.exists (Miniml.Occurrence.equal o) taken -> raise_notrace Found
+    | Call ({occurrence = Some o; _}, _, _) when List.exists (Core.Occurrence.equal o) taken -> raise_notrace Found
     | _ -> () );
     Cpp_ir.Children.expr (Lazy.force v) e
   and stmt s = Cpp_ir.Children.stmt (Lazy.force v) s in
@@ -837,7 +839,7 @@ let makes_statement_call calls (stmts : Ir.Stmt.t list) =
   let rec bare : Ir.Expr.t -> Ir.Expr.t = function Any_cast (_, e) | Move e -> bare e | e -> e in
   let made e =
     match bare e with
-    | Call ({occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
+    | Call ({occurrence = Some o; _}, _, _) -> List.exists (Core.Occurrence.equal o) calls
     | _ -> false
   in
   let rec stmt (s : Ir.Stmt.t) =
@@ -853,7 +855,7 @@ let makes_statement_call calls (stmts : Ir.Stmt.t list) =
 
 (* The recursive calls of the function of the loop [l], by the Core use
    each is made of. *)
-let loop_calls : Control_ir.Loop.t -> Miniml.Occurrence.t list = function
+let loop_calls : Control_ir.Loop.t -> Core.Occurrence.t list = function
   | Function r -> Loopify.definition_calls r
   | Member (o, m) -> Recursion_plan.member_calls (o, m)
 
