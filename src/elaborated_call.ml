@@ -93,7 +93,7 @@ let same_instantiation a b =
   && List.equal ( = ) a.call.roles b.call.roles
   && same_reading a.call.tyargs b.call.tyargs
   && same_reading a.reading b.reading
-  && Core_util.eq_ml_type a.callee_type_at_call b.callee_type_at_call
+  && Core_util.eq_core_type a.callee_type_at_call b.callee_type_at_call
 
 let at_call inst call =
   if not (Names.GlobRef.UserOrd.equal inst.call.callee call.callee && List.equal ( = ) inst.call.roles call.roles)
@@ -108,5 +108,5 @@ type static_projection = {
 
 let same_static_projection a b =
   Int.equal a.instance b.instance
-  && List.equal Core_util.eq_ml_type a.domains b.domains
-  && List.equal Core_util.eq_ml_type a.missing b.missing
+  && List.equal Core_util.eq_core_type a.domains b.domains
+  && List.equal Core_util.eq_core_type a.missing b.missing

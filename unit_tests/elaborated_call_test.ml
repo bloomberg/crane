@@ -126,12 +126,12 @@ let () =
      translated, which a rewrite rebuilt. *)
   let a' = match a with Core.Expr.Global u -> Core.Expr.Global (Core.Global_use.map_types Fun.id u) | e -> e in
   let inst =
-    Core_elaborate.instantiation ~walk ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None ~scope:[]
+    Core_elaborate.instantiation ~walk ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
       rewritten [a']
   in
   check "a call's instantiation is the one planned, at the arguments translated"
     (Elaborated_call.same_instantiation inst
-       (Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None ~scope:[]
+       (Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
           (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty rewritten [a']) )
     && List.equal ( == ) inst.call.args [a']
     && Core_elaborate.report elaborated
@@ -157,7 +157,7 @@ let () =
   in
   let a = declare "ka" nat and b = declare "kb" nat in
   let inst =
-    Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None
+    Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None
       ~scope:[] (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty use [a; b])
   in
   check "the callee's type is instantiated at the reading"

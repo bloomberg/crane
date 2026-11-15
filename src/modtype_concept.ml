@@ -121,7 +121,7 @@ let rec arrows = function
   | ret -> ([], ret)
 
 (* An ML type as translation converts it, outside any function. *)
-let convert t = Translation_types.cpp_ir_of_ml_type (Common.empty_env ()) [] t
+let convert t = Translation_types.cpp_ir_of_core_type (Common.empty_env ()) [] t
 
 (* The requirements one specification of the signature at [Core.Signature.t]
    asks of [M]; none for an inline custom, whose mapping stands in for the

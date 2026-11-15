@@ -267,10 +267,10 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let _, ret_ty = get_args_and_ret [] ty in
   (* The function's variables renumbered so the inductive's come first and
      its own after them ({!Method_registry.renumbering}), the positions
-     cpp_ir_of_ml_type maps. *)
+     cpp_ir_of_core_type maps. *)
   let renumbering = Method_registry.renumbering ~num_ind_vars ~this_pos ty in
   let extra_tvars_orig = renumbering.extra in
-  let remap_ml_tvar = renumbering.rename in
+  let remap_core_tvar = renumbering.rename in
   let all_tvars = List.sort compare (Core_query.collect_tvars [] ty) in
   let ty = Method_registry.renumber_type renumbering ty in
   let ret_ty = Method_registry.renumber_type renumbering ret_ty in
@@ -299,7 +299,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     | _ -> ty
   in
   let strip_top_level_self_ptr ty = strip_self_ptr ty in
-  let ret_cpp = Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars ret_ty in
+  let ret_cpp = Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:method_ns vars ret_ty in
   let ret_cpp = strip_top_level_self_ptr ret_cpp in
   let ret_cpp = subst_extra_tvars ret_cpp in
 
@@ -323,7 +323,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let ids_with_types, inner_body = declared_parameters ty body in
   let ids_converted, typeclass_temps =
     promote_typeclass_params
-      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids_with_types)
+      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids_with_types)
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
   reset_env_types ();
@@ -347,10 +347,10 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
       (fun (_, ty, _) ->
         (* An instance is either promoted to a template parameter or skipped
            outright; either way it is not among the arguments a call passes,
-           and {!Type_util.ml_type_is_instance} is where both cases are
+           and {!Type_util.core_type_is_instance} is where both cases are
            recognised -- a skipped class is a [ConstRef] mapped to the empty
            string, which [is_typeclass_type] alone does not see. *)
-        Type_util.is_runtime_binder_type ty && not (Type_util.ml_type_is_instance ty) )
+        Type_util.is_runtime_binder_type ty && not (Type_util.core_type_is_instance ty) )
       param_ids_with_pos
   in
 
@@ -377,7 +377,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let params_with_idx =
     List.mapi
       (fun i (id, ty, orig_idx) ->
-        let cpp_ty = Translation_types.cpp_ir_of_ml_type env ~ns:method_ns vars ty in
+        let cpp_ty = Translation_types.cpp_ir_of_core_type env ~ns:method_ns vars ty in
         let cpp_ty = strip_top_level_self_ptr cpp_ty in
         let cpp_ty = subst_extra_tvars cpp_ty in
         let owned = get_param_owned_flag orig_idx in
@@ -448,7 +448,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     ms_ret_ty = ret_ty;
     ms_body = body;
     ms_all_tvars = all_tvars;
-    ms_remap = remap_ml_tvar;
+    ms_remap = remap_core_tvar;
     ms_extra_tvars_orig = extra_tvars_orig;
     ms_extra_tvar_names = extra_tvar_names;
     ms_subst_extra_tvars = subst_extra_tvars;
@@ -540,13 +540,13 @@ let method_head vars s =
            t )
          inner_body );
     (* A hole names no variable; it is declined rather than converted. *)
-    let declined = Core_util.map_ml_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
+    let declined = Core_util.map_core_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
     let annotations =
       with_type_vars (vars @ extra_tvar_names) (fun () ->
           List.rev_map
             (fun t ->
               subst_extra_tvars
-                (strip_top_level_self_ptr (Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:method_ns vars (declined t))) )
+                (strip_top_level_self_ptr (Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:method_ns vars (declined t))) )
             !annotations )
     in
     let constraints =
@@ -664,7 +664,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     ms_ret_ty = ret_ty;
     ms_body = body;
     ms_all_tvars = all_tvars;
-    ms_remap = remap_ml_tvar;
+    ms_remap = remap_core_tvar;
     ms_extra_tvar_names = extra_tvar_names;
     ms_method_ns = method_ns;
     ms_ret_cpp = ret_cpp;
@@ -684,7 +684,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let method_k x : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_method then
       suspend_whole
-        ~cpp_of:(Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
+        ~cpp_of:(Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
         ~cod:ret_cpp ret_ty x
     else
       Return (Some x)
@@ -756,13 +756,13 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      at the call site, {!Cpp_state.lookup_method_ind_tvar_positions}).
      Position i in tys
      corresponds to Core.Type.Variable (i+1) in the original ML type. After remapping, Core.Type.Variable
-     (i+1) → remap_ml_tvar(i+1). We construct the C++ type arg from
+     (i+1) → remap_core_tvar(i+1). We construct the C++ type arg from
      extended_vars at that remapped position. *)
   let extended_vars = vars @ extra_tvar_names in
   let all_method_type_args =
     List.filter_map
       (fun orig_tvar_idx ->
-        let remapped = remap_ml_tvar orig_tvar_idx in
+        let remapped = remap_core_tvar orig_tvar_idx in
         if remapped - 1 >= List.length extended_vars then
           None
         else
@@ -823,12 +823,12 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
     finish_fn_body
-      (if Translation_support.ml_type_is_void_call ty then Void else ret_cpp)
+      (if Translation_support.core_type_is_void_call ty then Void else ret_cpp)
       (List.map (tvar_subst_stmt extended_vars) stmts)
   in
 
 
-  let no_pure = is_monadic_ml_type ret_ty in
+  let no_pure = is_monadic_core_type ret_ty in
   (* What the body generated does name.  A callee printed verbatim from its
      custom text names its type arguments, and the signature recorded on a
      call to it, only where the text spells them: not at all, here.  A method
@@ -1001,11 +1001,11 @@ let gen_methods ?(merged = false) name vars candidates =
        (fun c -> Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c))
        candidates )
 
-(** Does the ML type [ml_ty] contain [ind_ref] (or a mutual sibling) anywhere
+(** Does the ML type [core_ty] contain [ind_ref] (or a mutual sibling) anywhere
     in its type arguments, but NOT at the top level?  Used to detect fields
     like [list(tree(A))] inside [tree]'s definition, which need field-level
     [shared_ptr] wrapping instead of type-argument wrapping. *)
-let ml_type_has_nested_self_ref ~ind_ref ml_ty =
+let core_type_has_nested_self_ref ~ind_ref core_ty =
   let ind_kn_opt =
     match ind_ref with
     | GlobRef.IndRef (kn, _) -> Some kn
@@ -1026,7 +1026,7 @@ let ml_type_has_nested_self_ref ~ind_ref ml_ty =
       has_self_ref t1 || has_self_ref t2
     | _ -> false
   in
-  match ml_ty with
+  match core_ty with
   | Core.Type.Global_app {head = r; type_arguments = args; _} when not (is_self_or_mutual r) ->
     List.exists has_self_ref args
   | Core.Type.Meta {contents = Some (Core.Type.Global_app {head = r; type_arguments = args; _})}
@@ -1034,24 +1034,24 @@ let ml_type_has_nested_self_ref ~ind_ref ml_ty =
     List.exists has_self_ref args
   | _ -> false
 
-(** Does [ml_ty] recurse into [ind_ref] specifically THROUGH a boxed-element
+(** Does [core_ty] recurse into [ind_ref] specifically THROUGH a boxed-element
     container (a container carrying a [Boxed Element] wrapper, e.g. [list <self>]
     mapped to [immer::flex_vector<immer::box<self>>])?  When it does, the element
     box already breaks the completeness cycle, so the outer field-level
     [shared_ptr]/arena-pointer indirection is redundant and the field can be
     stored by value. *)
-let ml_type_recurses_through_boxed_container ~ind_ref ml_ty =
+let core_type_recurses_through_boxed_container ~ind_ref core_ty =
   let rec find_boxed_rec t =
     match t with
     | Core.Type.Global_app {head = g; type_arguments = args; _} ->
       ( match Table.find_boxed_wrapper_opt g with
-      | Some _ when ml_type_has_nested_self_ref ~ind_ref t -> true
+      | Some _ when core_type_has_nested_self_ref ~ind_ref t -> true
       | _ -> List.exists find_boxed_rec args )
     | Core.Type.Arrow {parameter = a; result = b} -> find_boxed_rec a || find_boxed_rec b
     | Core.Type.Meta {contents = Some t'} -> find_boxed_rec t'
     | _ -> false
   in
-  find_boxed_rec ml_ty
+  find_boxed_rec core_ty
 
 (** Completeness-aware element wrapping: if a constructor field of [ind_ref]
     recurses THROUGH a boxed-element container (a container carrying a
@@ -1062,8 +1062,8 @@ let ml_type_recurses_through_boxed_container ~ind_ref ml_ty =
     definition, and a container of the incomplete type is legal only when
     each element sits behind a box.  Call this for every constructor field
     type. *)
-let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
-  if ml_type_recurses_through_boxed_container ~ind_ref ml_ty then
+let maybe_record_boxed_recursive_ind ~ind_ref core_ty =
+  if core_type_recurses_through_boxed_container ~ind_ref core_ty then
     Table.add_boxed_recursive_ind ind_ref
 
 (** The type a constructor struct of the inductive [name] stores field [ty]
@@ -1077,7 +1077,7 @@ let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
     call site, not baked into the field type. *)
 let constructor_field_storage ~name ~is_coinductive var_names ty =
   let cpp_ty =
-    Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
+    Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
   in
   (* Wrap fields that contain a nested self-reference in
      their type arguments (e.g. list(tree(A)) inside tree).
@@ -1091,13 +1091,13 @@ let constructor_field_storage ~name ~is_coinductive var_names ty =
   (* Completeness-aware element wrapping: record [name] as boxed wherever it
      is a container element ({!maybe_record_boxed_recursive_ind}). *)
   maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-  let bare_cpp_ty = Translation_types.cpp_ir_of_ml_type (empty_env ()) var_names ty in
-  if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
+  let bare_cpp_ty = Translation_types.cpp_ir_of_core_type (empty_env ()) var_names ty in
+  if core_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
     (* If the field recurses THROUGH a boxed-element container, the
        element box already breaks the completeness cycle, so the outer
        shared_ptr/arena pointer is redundant: store the container by
        value. *)
-    if ml_type_recurses_through_boxed_container ~ind_ref:name ty then bare_cpp_ty
+    if core_type_recurses_through_boxed_container ~ind_ref:name ty then bare_cpp_ty
     else Shared_pointer bare_cpp_ty
   else
     match cpp_ty with
@@ -1404,7 +1404,7 @@ let gen_ind_header_v2
         (* A field's value type, and the type the struct stores it at:
            boxed under [Crane BoxedFields] when it holds an inductive. *)
         let value_ty var_names ty =
-          erase_if_needed (Translation_types.cpp_ir_of_ml_type (empty_env ()) var_names ty)
+          erase_if_needed (Translation_types.cpp_ir_of_core_type (empty_env ()) var_names ty)
         in
         let stored_ty var_names ty =
           let t = value_ty var_names ty in
@@ -1645,7 +1645,7 @@ let gen_ind_header_v2
                     like O, Nil, Leaf), skip std::move: it has no effect and
                     triggers performance-move-const-arg. *)
                  let has_nontrivial_fields =
-                   List.exists (fun ty -> not (isTdummy ty)) tys.(i)
+                   List.exists (fun ty -> not (is_erased_type ty)) tys.(i)
                  in
                  let init_v =
                    if has_nontrivial_fields then E.Move (E.Local param_name)
@@ -1765,12 +1765,12 @@ let gen_ind_header_v2
               && (match (ctor 1, ctor 2) with
                   | Some [], Some [elem; tail] ->
                     let is_first_tvar t =
-                      match Type_util.resolve_tmeta t with
+                      match Type_util.resolve_meta t with
                       | Core.Type.Variable {variable = 1; _} -> true
                       | _ -> false
                     in
                     let is_self t =
-                      match Type_util.resolve_tmeta t with
+                      match Type_util.resolve_meta t with
                       | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
                       | _ -> false
                     in
@@ -1778,14 +1778,14 @@ let gen_ind_header_v2
                   | _ -> false)
             | _ -> false
           in
-          let rec classify_ml_self_ref = function
-            | ml_ty when is_direct_self_ref ml_ty -> `Direct
+          let rec classify_core_self_ref = function
+            | core_ty when is_direct_self_ref core_ty -> `Direct
             | Core.Type.Global_app {head = g; type_arguments = [arg]; _}
               when (is_list_global g || is_list_shaped_ind g)
                    && is_direct_self_ref arg ->
               `List g
-            | Core.Type.Meta {contents = Some t} -> classify_ml_self_ref t
-            | Core.Type.Global_app {head = g; type_arguments = args; _} as ml_ty
+            | Core.Type.Meta {contents = Some t} -> classify_core_self_ref t
+            | Core.Type.Global_app {head = g; type_arguments = args; _} as core_ty
               when not (globref_equal g name) ->
               (match wrapper_self_fields g args with
                | [] ->
@@ -1797,7 +1797,7 @@ let gen_ind_header_v2
                     [harvest_field],
                     which walks the mediator's structure and moves out every
                     [Self] it reaches.  See its comment for the traversal. *)
-                 if List.exists contains_self args then `Nested ml_ty else `None
+                 if List.exists contains_self args then `Nested core_ty else `None
                | fields -> `Wrapper fields)
             | _ -> `None
           in
@@ -1912,7 +1912,7 @@ let gen_ind_header_v2
              [cell Self], [w Self] where [w] holds a [list] -- reaches its
              nested [Self]s through an arbitrary composition of products,
              options, records and other inductives.  Giving each such shape
-             its own case in [classify_ml_self_ref] would leave every
+             its own case in [classify_core_self_ref] would leave every
              unrecognised one with no drain at all, so destroying a deep value
              would recurse once per level and overflow the stack (CWE-674).
 
@@ -1950,14 +1950,14 @@ let gen_ind_header_v2
             incr hv_seq;
             p ^ string_of_int !hv_seq
           in
-          let cpp_of_ml t =
-            Translation_types.cpp_ir_of_ml_type (empty_env ()) vars t
+          let cpp_of_core t =
+            Translation_types.cpp_ir_of_core_type (empty_env ()) vars t
           in
 
           (* Spelled as from outside the inductive's own scope, which is where
              the destructor's helper types are named. *)
           let outer_ty = q_destr in
-          let outer_ml t = outer_ty (cpp_of_ml t) in
+          let outer_core t = outer_ty (cpp_of_core t) in
           (* [e.m()] -- the harvester only ever calls nullary members
              ([use_count], [reset], [has_value], [v_mut]) on a value. *)
           let dot0 e m = E.Access_call (Dot, e, Id.of_string m, []) in
@@ -2026,12 +2026,12 @@ let gen_ind_header_v2
              [g] stored behind a smart pointer? *)
           let field_is_ptr g fty =
             let root_is_g =
-              match Type_util.resolve_tmeta fty with
+              match Type_util.resolve_meta fty with
               | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
               | _ -> false
             in
-            (root_is_g || ml_type_has_nested_self_ref ~ind_ref:g fty)
-            && not (ml_type_recurses_through_boxed_container ~ind_ref:g fty)
+            (root_is_g || core_type_has_nested_self_ref ~ind_ref:g fty)
+            && not (core_type_recurses_through_boxed_container ~ind_ref:g fty)
           in
           let exception Harvest_bail in
           let starts_with p s =
@@ -2040,7 +2040,7 @@ let gen_ind_header_v2
           in
           let rec harvest_val fuel ty e =
             if fuel <= 0 then raise Harvest_bail;
-            let ty = Type_util.resolve_tmeta ty in
+            let ty = Type_util.resolve_meta ty in
             if is_direct_self_ref ty then [push_self_stmt e]
             else
               match ty with
@@ -2087,7 +2087,7 @@ let gen_ind_header_v2
               | Some c -> c
             in
             let g_ty = Core.Type.Global_app {head = g; type_arguments = args; index_arguments = []} in
-            let g_cpp = outer_ml g_ty in
+            let g_cpp = outer_core g_ty in
             let self_recursive =
               List.exists
                 (fun (_, ftys) -> List.exists (mentions g) ftys)
@@ -2125,7 +2125,7 @@ let gen_ind_header_v2
                          let is_ptr = field_is_ptr g fty || boxes_field fty in
                          match on_spine with
                          | Some push
-                           when is_ptr && outer_ml inst = g_cpp ->
+                           when is_ptr && outer_core inst = g_cpp ->
                            push fe
                          | _ ->
                            if is_ptr then harvest_ptr (fuel - 1) inst fe
@@ -2200,7 +2200,7 @@ let gen_ind_header_v2
               and ev = Id.of_string (wl ^ "e") in
               let wl_ty =
                 T.External
-                  (Crane_rt.small_vector, [T.Shared_pointer (outer_ml g_ty)])
+                  (Crane_rt.small_vector, [T.Shared_pointer (outer_core g_ty)])
               in
               let push fe =
                 [S.Expression (E.Access_call (Dot, 
@@ -2224,10 +2224,10 @@ let gen_ind_header_v2
           in
           (* Drain statements for a nested-mediator field, or [None] if the
              shape is one the harvester does not handle. *)
-          let harvest_field field_id ml_ty =
+          let harvest_field field_id core_ty =
             try
               let fe = E.Access (Arrow, E.Local _alt_id, field_id) in
-              match harvest_ptr harvest_fuel ml_ty fe with
+              match harvest_ptr harvest_fuel core_ty fe with
               | [] -> None
               | stmts -> Some stmts
             with Harvest_bail | Not_found -> None
@@ -2344,7 +2344,7 @@ let gen_ind_header_v2
             let classified_fields =
               List.filter_map
                 (fun (j, ty) ->
-                  let cls = classify_ml_self_ref ty in
+                  let cls = classify_core_self_ref ty in
                   let is_mutual = is_mutual_ref ty in
                   if cls <> `None || is_mutual then
                     let cname_str =
@@ -2371,10 +2371,10 @@ let gen_ind_header_v2
                       None
                     | `List g -> Some (field_id, `List g)
                     | `Wrapper fs -> Some (field_id, `Wrapper fs)
-                    | `Nested ml_ty ->
+                    | `Nested core_ty ->
                       Option.map
                         (fun stmts -> (field_id, `Stmts stmts))
-                        (harvest_field field_id ml_ty)
+                        (harvest_field field_id core_ty)
                     | _ -> None
                   else None)
                 (List.mapi (fun j ty -> (j, ty)) tys_list)
@@ -2413,7 +2413,7 @@ let gen_ind_header_v2
                      let rec_fields =
                        List.filter_map
                          (fun (j, ty) ->
-                           match classify_ml_self_ref ty, is_mutual_ref ty with
+                           match classify_core_self_ref ty, is_mutual_ref ty with
                            | `None, false -> None
                            | `Direct, false ->
                              let cname_str =
@@ -2495,7 +2495,7 @@ let gen_ind_header_v2
                      let fields =
                        List.filter_map
                          (fun (j, ty) ->
-                           match classify_ml_self_ref ty, is_mutual_ref ty with
+                           match classify_core_self_ref ty, is_mutual_ref ty with
                            | `None, false -> None
                            | `Direct, false ->
                              let cname_str =
@@ -2712,7 +2712,7 @@ let gen_ind_header_v2
               (* The field as the struct declares it. *)
               let storage_ty = compute_field_cpp_ty ty in
               let api_ty =
-                Translation_types.cpp_ir_of_ml_type
+                Translation_types.cpp_ir_of_core_type
                   (empty_env ())
                   vars
                   ty
@@ -2910,7 +2910,7 @@ let gen_ind_header_v2
         let token_field =
           List.find_map
             (fun ((j, storage_ty, _), ty) ->
-              match ((storage_ty : Cpp_ir.Lowered.Type.t), Core_util.ml_resolve ty) with
+              match ((storage_ty : Cpp_ir.Lowered.Type.t), Core_util.core_resolve ty) with
               | Shared_pointer inner, Core.Type.Global_app {head = r; _}
                 when GlobRef.CanOrd.equal r name ->
                 Some (j, inner)

@@ -21,7 +21,7 @@ let eta_of f e =
   let binders, body = Core_util.collect_lams e in
   let binders = List.rev binders in
   let m = List.length binders in
-  let kept = List.map (fun (_, ty) -> not (Core_util.isTdummy ty)) binders in
+  let kept = List.map (fun (_, ty) -> not (Core_util.is_erased_type ty)) binders in
   let reads = List.filter_map (fun (i, k) -> if k then Some (m - i) else None) (List.mapi (fun i k -> (i, k)) kept) in
   let reads_binder a i = match a with Core.Expr.Bound_variable {index = i'; _} -> Int.equal i i' | _ -> false in
   match body with

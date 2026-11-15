@@ -249,13 +249,13 @@ let () = on_reset init_inductives
 
 let () = register_census "inductives" (fun () -> !inductives_added)
 
-let add_ind kn mib ml_ind =
-  inductives := Mindmap_env.add kn (mib, ml_ind) !inductives;
+let add_ind kn mib core_ind =
+  inductives := Mindmap_env.add kn (mib, core_ind) !inductives;
   incr inductives_added
 
 let lookup_ind kn mib =
   match Mindmap_env.find_opt kn !inductives with
-  | Some (mib0, ml_ind) when mib == mib0 -> Some ml_ind
+  | Some (mib0, core_ind) when mib == mib0 -> Some core_ind
   | _ -> None
 
 (** Lookup inductive extraction info without safety checks, may raise Not_found.
@@ -1192,7 +1192,7 @@ let make_refset_can_with_functor_fallback ~name () =
 (** Value-dependent type schemes: constants (typically Module Type
     [Parameter]s) whose kind takes a VALUE argument, e.g.
     [sym_semty : sym -> Type].  A type family applied to a runtime value is not
-    representable as a C++ type, so [convert_ml_type_to_cpp_type] erases it to
+    representable as a C++ type, so [convert_core_type_to_cpp_type] erases it to
     [std::any] rather than emitting [typename M::sym_semty].  Detected at
     extraction time via [type_sign_vl] (more signature slots than type vars);
     see {!make_refset_can_with_functor_fallback} for why functor-parameter

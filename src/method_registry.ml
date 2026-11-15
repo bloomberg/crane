@@ -64,7 +64,7 @@ type t = {
     reference, the C++ return type will contain [shared_ptr], and
     [replace_return_this_stmt] will convert [return this] to
     [return shared_from_this()]. *)
-let ml_return_type_has_ref ref ty =
+let core_return_type_has_ref ref ty =
   let rec get_return = function
     | Core.Type.Arrow {result = rest; _} -> get_return rest
     | t -> t
@@ -119,7 +119,7 @@ let renumbering ~num_ind_vars ~this_pos ty =
   in
   let ind_tvar_set = Core_util.IntSet.of_list (List.map fst ind_tvar_map) in
   let extra =
-    List.filter (fun i -> not (Core_util.IntSet.mem i ind_tvar_set)) (Core_util.IntSet.elements (Core_util.ml_tvars ty))
+    List.filter (fun i -> not (Core_util.IntSet.mem i ind_tvar_set)) (Core_util.IntSet.elements (Core_util.core_tvars ty))
   in
   let renamed = (not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)) || extra <> [] in
   let full = ind_tvar_map @ List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra in
@@ -430,14 +430,14 @@ let find_best_inductive ind_refs ty =
     template parameter or skipped outright -- the three the method's own
     parameter list filters out. *)
 let arg_reaches_cpp d =
-  (not (Core_util.isTdummy d))
-  && (not (Type_util.ml_type_is_void d))
-  && not (Type_util.ml_type_is_instance d)
+  (not (Core_util.is_erased_type d))
+  && (not (Type_util.core_type_is_void d))
+  && not (Type_util.core_type_is_instance d)
 
 (** Number of value parameters in a curried ML type: the arrows whose domain
     reaches C++ as a parameter. *)
-let ml_value_arity ty =
-  List.length (List.filter arg_reaches_cpp (Type_util.ml_domains ty))
+let core_value_arity ty =
+  List.length (List.filter arg_reaches_cpp (Type_util.core_domains ty))
 
 (** [pos] counted among the arguments C++ is given, rather than among all the
     arrows of the ML type.
@@ -449,7 +449,7 @@ let ml_value_arity ty =
     position 1 and at C++ position 0, and a printer told 1 reaches past the
     receiver for it. *)
 let cpp_arg_pos ty pos =
-  let doms = Type_util.ml_domains ty in
+  let doms = Type_util.core_domains ty in
   List.length
     (List.filter arg_reaches_cpp (List.filteri (fun i _ -> i < pos) doms))
 
@@ -557,7 +557,7 @@ let method_receiver ~func epon_ref body ty =
   match find_epon_arg_pos epon_ref ty with
   | Some (pos, _) as r
     when body_safe_for_method ~this_pos:pos
-           ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
+           ~ret_has_shared_epon:(core_return_type_has_ref epon_ref ty)
            body ->
     let params, inner = Core_util.collect_lams body in
     let consumed () =
@@ -710,7 +710,7 @@ let register_methods_for_epon
     (* Helper to add a candidate to both the method table and candidates
        table *)
     let add_candidate r body ty pos ind_tvar_positions =
-      register_into ~arity:(ml_value_arity ty) tbl r epon_ref
+      register_into ~arity:(core_value_arity ty) tbl r epon_ref
         (cpp_arg_pos ty pos) ~ind_tvar_positions;
       let existing =
         match Ref.User.Tbl.find_opt cands epon_ref with
@@ -819,7 +819,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     in check ty
   in
   let add_candidate ind_ref r body ty pos ind_tvar_positions =
-    register_into ~arity:(ml_value_arity ty) tbl r ind_ref
+    register_into ~arity:(core_value_arity ty) tbl r ind_ref
       (cpp_arg_pos ty pos) ~ind_tvar_positions;
     let existing = match Ref.User.Tbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
@@ -1104,8 +1104,8 @@ let compute_returns_any
         ( match Ref.User.Tbl.find_opt method_types func_ref with
         | None -> ()
         | Some ty ->
-          let ret_ml = get_return_type ty in
-          if ret_is_erased param_vars ret_ml then
+          let ret_core = get_return_type ty in
+          if ret_is_erased param_vars ret_core then
             RefTbl.replace tbl func_ref {info with returns_any = true} ) )
     tbl
 

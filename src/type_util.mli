@@ -55,11 +55,11 @@ val ctor_struct_id_of_ref :
 (** {2 Type resolution and variable maps} *)
 
 (** Resolve a Core type through any metavariable indirection. *)
-val resolve_tmeta : Core.Type.t -> Core.Type.t
+val resolve_meta : Core.Type.t -> Core.Type.t
 
 (** Unfold a type alias whose body is a function type, substituting the
     alias's own type arguments; any other type is returned unchanged. *)
-val expand_ml_fun_alias : Core.Type.t -> Core.Type.t
+val expand_core_fun_alias : Core.Type.t -> Core.Type.t
 
 (** Build the substitution mapping type variables of one C++ type to the
     corresponding sub-types of another. *)
@@ -75,21 +75,21 @@ val find_self_ref_args :
 
 (** Whether a Core type is erased at its root (not looking inside it): an
     unresolved [Core.Type.Meta], a [Core.Type.Open] hole, a [Core.Type.Erased], or a schematic [Core.Type.Variable]. *)
-val is_erased_ml_type : Core.Type.t -> bool
+val is_erased_core_type : Core.Type.t -> bool
 
 (** Whether a Core type contains an erased component anywhere within it.
     Arrows are opaque unless [~in_arrows:true]. *)
-val ml_type_contains_erased : ?in_arrows:bool -> Core.Type.t -> bool
+val core_type_contains_erased : ?in_arrows:bool -> Core.Type.t -> bool
 
 (** Whether a type variable survives anywhere in a Core type — a variable no
     substitution reached, which would be spelled as an out-of-scope template
     parameter. *)
-val ml_type_contains_tvar : Core.Type.t -> bool
+val core_type_contains_tvar : Core.Type.t -> bool
 
 (** {2 Arrow and codomain analysis} *)
 
 (** The codomain (final result type) of a Core arrow type. *)
-val ml_codomain : Core.Type.t -> Core.Type.t
+val core_codomain : Core.Type.t -> Core.Type.t
 
 (** The registered monad ({!Table.is_monad}) a computation of this type runs
     in: its codomain's head, seen through type aliases -- [stateT S (itree E)
@@ -99,13 +99,13 @@ val codomain_monad : Core.Type.t -> Names.GlobRef.t option
 (** The registered monad heading the type itself, seen through aliases --
     [CFGtop A] for [itree CFGEtop A] -- or [None] for one that is not a
     computation (a function type among them, however it is spelled).
-    {!is_monadic_ml_type} reads the spelling alone. *)
+    {!is_monadic_core_type} reads the spelling alone. *)
 val type_monad : Core.Type.t -> Names.GlobRef.t option
 
 (** The domains of a Core arrow type, in argument order -- every arrow,
     erased ones included, so a position in the result is a position in the
     type. Only the arrow spine is chased through metavariables. *)
-val ml_domains : Core.Type.t -> Core.Type.t list
+val core_domains : Core.Type.t -> Core.Type.t list
 
 (** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
     not a parameter at run time: extraction erased it, its type being a type
@@ -138,7 +138,7 @@ val erased_by_extraction : Core.Type.t -> bool
 
 (** The domains of a Core arrow type, in argument order, with the ones
     extraction erased dropped -- one entry per argument a C++ call passes. *)
-val ml_value_domains : Core.Type.t -> Core.Type.t list
+val core_value_domains : Core.Type.t -> Core.Type.t list
 
 (** A definition's parameters as its function takes them: the leading
     lambdas of [b], innermost first, as many as its type [ty] has domains.
@@ -208,26 +208,26 @@ val method_is_member_template : Names.GlobRef.t -> Names.GlobRef.t -> bool
     concept's requirement and a call agree on it by reading it here. *)
 val method_tvar_count : Names.GlobRef.t -> Core.Type.t -> int
 
-(** [ml_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
+(** [core_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
     arrows have been applied; [Core.Type.Unknown] if it has fewer than [n]. *)
-val ml_drop_arrows : int -> Core.Type.t -> Core.Type.t
+val core_drop_arrows : int -> Core.Type.t -> Core.Type.t
 
 (** Count the number of value-carrying arrows in a Core type. *)
-val count_ml_value_arrows : Core.Type.t -> int
+val count_core_value_arrows : Core.Type.t -> int
 
 (** Whether the codomain of a Core type is a type variable. *)
-val ml_codomain_is_tvar : Core.Type.t -> bool
+val core_codomain_is_tvar : Core.Type.t -> bool
 
 (** Count the total number of arrows in a Core type. *)
-val count_ml_arrows : Core.Type.t -> int
+val count_core_arrows : Core.Type.t -> int
 
 (** Whether a Core type is monadic. *)
-val is_monadic_ml_type : Core.Type.t -> bool
+val is_monadic_core_type : Core.Type.t -> bool
 
 (** {2 Unit and void classification} *)
 
 (** Whether a Core type is void. *)
-val ml_type_is_void : Core.Type.t -> bool
+val core_type_is_void : Core.Type.t -> bool
 
 (** Whether a binder of the type is a parameter at run time: its
     {!binder_role} is [Runtime]. *)
@@ -238,7 +238,7 @@ val is_runtime_binder_type : Core.Type.t -> bool
 val void_binder : Core.Type.t -> bool
 
 (** Whether a Core type is unit. *)
-val ml_type_is_unit : Core.Type.t -> bool
+val core_type_is_unit : Core.Type.t -> bool
 
 (** [own_type_variables ~n_outer tys] -- whether a local definition whose
     types are [tys], lowered under a head of [n_outer] type variables, has a
@@ -250,23 +250,23 @@ val own_type_variables : n_outer:int -> Core.Type.t list -> bool
 val is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a Core type is unit or void. *)
-val ml_type_is_unit_or_void : Core.Type.t -> bool
+val core_type_is_unit_or_void : Core.Type.t -> bool
 
 (** {2 Value-type filtering} *)
 
 (** Keep only the value-carrying types from a list of Core types. *)
 val filter_value_types : Core.Type.t list -> Core.Type.t list
 
-(** [ml_codomain_erases_to_any n ty]: whether [ty]'s codomain, past [n]
+(** [core_codomain_erases_to_any n ty]: whether [ty]'s codomain, past [n]
     value arrows, erases to [std::any] -- a type variable reached after a
     [Core.Type.Erased Core.Erasure_reason.Type_argument] domain, the mark of a higher-rank quantified function.
     [has_dummy] is the accumulator; callers omit it. *)
-val ml_codomain_erases_to_any :
+val core_codomain_erases_to_any :
   ?has_dummy:bool -> int -> Core.Type.t -> bool
 
 (** What a Core type returns once [n] value arguments have been applied,
     skipping erased domains.  [None] where it has fewer value arrows. *)
-val ml_codomain_after : int -> Core.Type.t -> Core.Type.t option
+val core_codomain_after : int -> Core.Type.t -> Core.Type.t option
 
 (** {2 Type variables in C++ types} *)
 
@@ -356,8 +356,8 @@ val extract_template_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t list
 
 (** Whether a Core type stands at an erased position, [std::any] in C++: a
     type variable, [Core.Type.Unknown], an unresolved [Core.Type.Meta] or a [Core.Type.Open] hole.
-    Unlike {!is_erased_ml_type} it counts every [Core.Type.Variable] and not [Core.Type.Erased]. *)
-val is_ml_erased_ty : Core.Type.t -> bool
+    Unlike {!is_erased_core_type} it counts every [Core.Type.Variable] and not [Core.Type.Erased]. *)
+val is_core_erased_ty : Core.Type.t -> bool
 
 (** {2 Skipped types} *)
 
@@ -369,7 +369,7 @@ val is_skipped_cpp_type : Cpp_ir.Lowered.Type.t -> bool
 val is_typeclass_type_cpp : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a Core type should be skipped during extraction. *)
-val is_skipped_ml_type : Core.Type.t -> bool
+val is_skipped_core_type : Core.Type.t -> bool
 
 (** {2 [any] and erasure detection} *)
 
@@ -402,7 +402,7 @@ val type_is_erased : Cpp_ir.Lowered.Type.t -> bool
 (** {2 Function argument and return decomposition} *)
 
 (** The final return type of a Core type. *)
-val ml_return_type : Core.Type.t -> Core.Type.t
+val core_return_type : Core.Type.t -> Core.Type.t
 
 (** Whether a global has no C++ spelling: whatever mapped it mapped it to the
     empty string. *)
@@ -427,12 +427,12 @@ val has_no_cpp_spelling : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether an ML type's result is a skipped type, such as a [ReSum]
     instance. *)
-val ml_ret_is_skipped : Core.Type.t -> bool
+val core_ret_is_skipped : Core.Type.t -> bool
 
 (** Whether a value of this ML type is a typeclass instance -- kept or
     skipped.  An instance parameterised over types is still one, so the
     question is put to the result. *)
-val ml_type_is_instance : Core.Type.t -> bool
+val core_type_is_instance : Core.Type.t -> bool
 
 (** Split a Core type into its argument types and return type, given the
     already-known leading argument types. *)
@@ -441,13 +441,13 @@ val get_args_and_ret :
   Core.Type.t -> Core.Type.t list * Core.Type.t
 
 (** Strip [n] leading arrows from a Core type, if possible. *)
-val strip_tarr_n : int -> Core.Type.t -> Core.Type.t option
+val strip_arrows_n : int -> Core.Type.t -> Core.Type.t option
 
 (** Strip reference and const qualifiers from a C++ type. *)
 val strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 
 (** Count the real (non-erased) arguments among a list of Core AST nodes. *)
-val count_real_ml_args : Core.Expr.t list -> int
+val count_real_core_args : Core.Expr.t list -> int
 
 (** {2 Value-type and copyability classification} *)
 
@@ -513,7 +513,7 @@ end
 val is_trivially_copyable_type : Cpp_ir.Lowered.Type.t -> bool
 
 (** Whether a Core type is a product type. *)
-val is_prod_ml_type : Core.Type.t -> bool
+val is_prod_core_type : Core.Type.t -> bool
 
 
 (** {2 Well-known Coq constructor tag indices} *)
@@ -739,19 +739,19 @@ val get_rendered_tvar_indices : Cpp_ir.Lowered.Type.t -> int list
 val primary_tvar_indices : Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Type.t -> IntSet.t
 
 (** The type-variable indices appearing in type INDEX positions of inductives
-    in an ML type. [convert_ml_type_to_cpp_type] strips these from the C++
+    in an ML type. [convert_core_type_to_cpp_type] strips these from the C++
     type, but function bodies may still need them for [any_cast]. *)
-val collect_ml_type_index_tvars : Core.Type.t -> IntSet.t
+val collect_core_type_index_tvars : Core.Type.t -> IntSet.t
 
 (** Every type variable index the ML type mentions, in any position -- the
     parameters a declaration has, as against the ones its C++ type spells. *)
-val collect_ml_tvars : Core.Type.t -> IntSet.t
+val collect_core_tvars : Core.Type.t -> IntSet.t
 
 (** Arity of every type variable the given types apply to arguments, keyed by
     its 1-based de Bruijn index.  Such a variable is declared
     [template <typename> class], so it is spelled -- wherever it is declared
     and wherever a call supplies it -- as a bare template name. *)
-val applied_ml_tvar_arities : Core.Type.t list -> (int, int) Hashtbl.t
+val applied_core_tvar_arities : Core.Type.t list -> (int, int) Hashtbl.t
 
 (** The type variables the given types demand be declared
     [template <typename> class] rather than plain [typename].
@@ -767,31 +767,31 @@ val applied_ml_tvar_arities : Core.Type.t list -> (int, int) Hashtbl.t
     mapping spells its own parameters, and the ones taking an event family take
     it at plain [typename], because the index it is applied at is erased.  For
     those the application can simply be taken back off. *)
-val higher_kinded_ml_tvars : Core.Type.t list -> IntSet.t
+val higher_kinded_core_tvars : Core.Type.t list -> IntSet.t
 
 (** The higher-kinded variables a declaration relaxes out of its head
-    ({!relaxed_applied_ml_tvars}): the parameter left at such a variable is
+    ({!relaxed_applied_core_tvars}): the parameter left at such a variable is
     a phantom defaulted to [void], the application it stood for deduced. *)
 val relaxed_higher_kinded_tvars : Core.Type.t -> IntSet.t
 
-(** The type variables a declaration of type [ml_ty] relaxes out of its
+(** The type variables a declaration of type [core_ty] relaxes out of its
     template head: applied somewhere in the domains, and spelled nowhere
     unapplied and nowhere in the codomain.  {!Plan_templates.relax_applied_return}
     turns each such application into its own deduced parameter and leaves the
     original a phantom, so a call must not write a template name there. *)
-val relaxed_applied_ml_tvars : Core.Type.t -> IntSet.t
+val relaxed_applied_core_tvars : Core.Type.t -> IntSet.t
 
 (** The type variables [tys] uses as the event family of a reified tree.  Such
     a family is emitted as a plain struct, so there is no template name a call
-    could ever pass for it, and {!higher_kinded_ml_tvars} refuses the higher
+    could ever pass for it, and {!higher_kinded_core_tvars} refuses the higher
     kind for one however it is applied elsewhere. *)
-val event_family_ml_tvars : Core.Type.t list -> IntSet.t
+val event_family_core_tvars : Core.Type.t list -> IntSet.t
 
-(** [hkt_arg_ml_tvar_arities tys] maps a type variable's index to the arity it
+(** [hkt_arg_core_tvar_arities tys] maps a type variable's index to the arity it
     is higher-kinded at because [tys] hands it, bare, to a position another
     constructor declares [template <typename> class].  Application is the
     usual evidence for the higher kind but not the only one. *)
-val hkt_arg_ml_tvar_arities : Core.Type.t list -> (int * int) list
+val hkt_arg_core_tvar_arities : Core.Type.t list -> (int * int) list
 
 (** Whether a function type returns a type variable its arguments carry only as
     an inductive's type index ([eval : expr A -> A]).  Such a result cannot be

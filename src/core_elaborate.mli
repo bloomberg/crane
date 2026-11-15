@@ -27,11 +27,11 @@
     the call's context states are not resolved here. *)
 val elaborate_arguments : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
-(** [instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call] -- the
+(** [instantiate ~lex ~expected_core ~stated_core ~caller ~scope call] -- the
     semantic half of planning [call] (section 3.4's [ElaboratedCall]): the
     holes of its reading that its context states resolved -- an event family
-    the ML type its position expects ([expected_ml]) or states
-    ([stated_ml]) for its result names, a type-level function a dictionary
+    the ML type its position expects ([expected_core]) or states
+    ([stated_core]) for its result names, a type-level function a dictionary
     argument's type names -- then, for a partial application in a
     declaration other than [caller], the variables the lambda it is
     eta-expanded into would misread erased, and the callee's types
@@ -46,8 +46,8 @@ val elaborate_arguments : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list 
     traversal that asks. *)
 val instantiate :
   lex:Lexenv.t ->
-  expected_ml:Core.Type.t option ->
-  stated_ml:Core.Type.t option ->
+  expected_core:Core.Type.t option ->
+  stated_core:Core.Type.t option ->
   caller:Names.GlobRef.t option ->
   scope:Names.Id.t list ->
   Elaborated_call.t ->
@@ -116,7 +116,7 @@ val roles : t -> Core.Global_use.t -> int -> Elaborated_call.role list option
     itself, which is no violation there. *)
 val elaboration : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
-(** [instantiation ~walk ~lex ~expected_ml ~stated_ml ~caller ~scope use args]
+(** [instantiation ~walk ~lex ~expected_core ~stated_core ~caller ~scope use args]
     -- the semantic half of the call [use args] while emitting: the
     instantiation the elaborations [walk] planned for the application
     naming its callee by [use], at the position the walk gave it, taken at
@@ -131,8 +131,8 @@ val elaboration : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Exp
 val instantiation :
   walk:t option ->
   lex:Lexenv.t ->
-  expected_ml:Core.Type.t option ->
-  stated_ml:Core.Type.t option ->
+  expected_core:Core.Type.t option ->
+  stated_core:Core.Type.t option ->
   caller:Names.GlobRef.t option ->
   scope:Names.Id.t list ->
   Core.Global_use.t ->

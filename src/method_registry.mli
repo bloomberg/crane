@@ -252,7 +252,7 @@ val body_safe_for_method :
     @param ty the full curried ML type (arrow chain) of the function
     @return [true] if the final return type (after stripping all [Core.Type.Arrow] layers)
       contains [ref] anywhere recursively; [false] otherwise *)
-val ml_return_type_has_ref : GlobRef.t -> Core.Type.t -> bool
+val core_return_type_has_ref : GlobRef.t -> Core.Type.t -> bool
 
 (** {2 Module-level helpers} *)
 

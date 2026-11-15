@@ -32,20 +32,20 @@ let mk_cppglob ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_
   Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r);
                         custom_yields = yields})
 
-(** [callee_ml_type r] -- the ML type of the callable [r] as the unit's plan
-    of it records it ({!Callable_abi.ml_type}): the signature call
+(** [callee_core_type r] -- the ML type of the callable [r] as the unit's plan
+    of it records it ({!Callable_abi.core_type}): the signature call
     translation rebuilds a C++ head from.  While the plans are being made a
     global has none, and is read off the table; under [CRANE_CHECK_IR] a
     planned one is held to the table, and emission finding none is a
     violation. *)
-let callee_ml_type (r : GlobRef.t) : Core.Type.t option =
-  match Callable_abi.planned_ml_type r with
+let callee_core_type (r : GlobRef.t) : Core.Type.t option =
+  match Callable_abi.planned_core_type r with
   | Some planned ->
     if Probe.checking () then begin
       let live = find_type_opt r in
       let agrees =
         match (planned, live) with
-        | Some a, Some b -> a == b || Core_util.eq_ml_type a b
+        | Some a, Some b -> a == b || Core_util.eq_core_type a b
         | None, None -> true
         | _ -> false
       in
@@ -62,8 +62,8 @@ let callee_ml_type (r : GlobRef.t) : Core.Type.t option =
       Probe.violation "callee signature" Pp.(str "emission reads the signature of " ++ GlobRef.print r ++ str ", which no plan covers");
     find_type_opt r
 
-(** {!callee_ml_type}, raising [Not_found] where there is none. *)
-let callee_ml_type_exn r = match callee_ml_type r with Some t -> t | None -> raise Not_found
+(** {!callee_core_type}, raising [Not_found] where there is none. *)
+let callee_core_type_exn r = match callee_core_type r with Some t -> t | None -> raise Not_found
 
 (** What a binder of the lexical environment stands for ({!Lexenv.role}). *)
 type binder_role = Lexenv.role =
@@ -195,7 +195,7 @@ type input = {
   itree_mode : itree_extraction_mode;
   (* When generating a method body, holds the set of self-references
      (the inductive type(s) this method belongs to). Merged into the ns
-     argument of convert_ml_type_to_cpp_type so that self-refs inside
+     argument of convert_core_type_to_cpp_type so that self-refs inside
      container types (e.g. List<tree>) get shared_ptr wrapping, matching
      the struct definition. Empty outside method bodies. *)
   method_self_ns : Ref.User.Set.t;
@@ -258,7 +258,7 @@ type lexical = {
      (prints as: typename _tcI0::m_carrier).
      Set ({!with_promoted_var_map}) when generating template functions and
      instances with typeclass parameters. Used by
-     {!Translation.cpp_ir_of_ml_type} to resolve [Tpromoted]
+     {!Translation.cpp_ir_of_core_type} to resolve [Tpromoted]
      markers.  CppIR: type conversion reads it as it is. *)
   promoted_var_map : (Id.t * Cpp_ir.Lowered.Type.t) list;
   (* When true, we are inside a constructor expression (module-level static
@@ -439,7 +439,7 @@ let current_scope_type_names () =
 
     Prefer this to a hand-written save/set/restore wherever the scope's extent
     is a lexical one.  Everything that converts a type reads the scope
-    ambiently (see {!Translation_types.cpp_of_ml}), so a restore that a path skips
+    ambiently (see {!Translation_types.cpp_of_core}), so a restore that a path skips
     does not fail: the next conversion quietly numbers its type variables
     against the wrong function. *)
 let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =

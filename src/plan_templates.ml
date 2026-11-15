@@ -63,21 +63,21 @@ let applied_tvar_arities (cty : head_type) =
 (** Re-declare as template template parameters those entries of [temps] that
     [cty] applies to arguments; see {!applied_tvar_arities}.
 
-    [ml_ty], when given, vetoes the promotion for a variable whose ML type does
-    not demand the higher kind ({!Type_util.higher_kinded_ml_tvars}: applied
+    [core_ty], when given, vetoes the promotion for a variable whose ML type does
+    not demand the higher kind ({!Type_util.higher_kinded_core_tvars}: applied
     to something erasure left behind, or written where a generated constructor
     expects a template name).  Being applied is not on its own a reason to be
     higher-kinded -- when neither holds, the application
     can be taken back off, which {!deapply_plain_tvars} then does -- and the
     C++ type read here has not been through the relaxations, so it is not the
     place to look for the occurrence that would justify the higher kind. *)
-let with_applied_tvars ?ml_ty (cty : head_type) (temps : head_params) : head_params =
+let with_applied_tvars ?core_ty (cty : head_type) (temps : head_params) : head_params =
   let arities = applied_tvar_arities cty in
   let arities =
-    match ml_ty with
+    match core_ty with
     | None -> arities
     | Some ty ->
-      let hk = Type_util.higher_kinded_ml_tvars [ty] in
+      let hk = Type_util.higher_kinded_core_tvars [ty] in
       let veto = ref [] in
       head_type_exists
         (fun t ->
@@ -96,7 +96,7 @@ let with_applied_tvars ?ml_ty (cty : head_type) (temps : head_params) : head_par
          be.  Added after the veto, which speaks only about applications. *)
       List.iter
         (fun (i, arity) -> Hashtbl.replace arities (Common.tvar_id i) arity)
-        (Type_util.hkt_arg_ml_tvar_arities [ty]);
+        (Type_util.hkt_arg_core_tvar_arities [ty]);
       arities
   in
   if Hashtbl.length arities = 0 then temps
@@ -187,7 +187,7 @@ let template_kinds ?(applied : head_type option) vars tys =
         | _ -> ()
       in
       List.iter scan tys;
-      let arities = Type_util.applied_ml_tvar_arities tys in
+      let arities = Type_util.applied_core_tvar_arities tys in
       Hashtbl.filter_map_inplace
         (fun i a -> if Hashtbl.mem demanded i then Some a else None)
         arities;
@@ -239,7 +239,7 @@ let template_kinds ?(applied : head_type option) vars tys =
   let applied_at_all =
     match applied with
     | Some a -> Type_util.rendered_tvar_arities a
-    | None -> Type_util.applied_ml_tvar_arities tys
+    | None -> Type_util.applied_core_tvar_arities tys
   in
   ( temps,
     { Tparam_kinds.template_templates =
@@ -733,7 +733,7 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!Translation_types.cpp_ir_of_ml_type}).
+    pipeline (see {!Translation_types.cpp_ir_of_core_type}).
 
     @param force_required  Set of tvar indices that must be required (plain
       [typename T]) even if they don't appear in the C++ function type.
@@ -742,10 +742,10 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
     @param also_declared  Set of tvar indices the ML type has but the C++
       type may not spell; each is declared, as a defaulted phantom unless
       it is primary.
-    @param ml_ty  The ML type of the declaration, passed to
+    @param core_ty  The ML type of the declaration, passed to
       {!with_applied_tvars} to veto higher kinds it does not demand. *)
 let phantom_aware_temps
-    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?ml_ty (cty : head_type)
+    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?core_ty (cty : head_type)
     tvars : head_params =
   (* The leading phantoms are spelled out at every call site
      ({!Type_util.explicit_tvar_prefix}), so they need no default.  A
@@ -760,7 +760,7 @@ let phantom_aware_temps
       temps
   in
   undefault (explicit_tvar_prefix ~force_required cty)
-  @@ with_applied_tvars ?ml_ty cty
+  @@ with_applied_tvars ?core_ty cty
   @@
   match cty with
   | Function (dom, cod) ->

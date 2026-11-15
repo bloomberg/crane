@@ -249,7 +249,7 @@ let static_param f k j b =
 
 (* [ty]'s arrow at position [j] dropped, and its domains, outermost first. *)
 let rec drop_domain j ty =
-  match (j, Core_util.ml_resolve ty) with
+  match (j, Core_util.core_resolve ty) with
   | 0, Core.Type.Arrow {result = c; _} -> Some c
   | j, Core.Type.Arrow {parameter = d; result = c} ->
     Option.map (fun c -> Core.Type.Arrow {parameter = d; result = c}) (drop_domain (j - 1) c)
@@ -260,7 +260,7 @@ let rec drop_domain j ty =
 let rec domains n ty =
   if n = 0 then Some []
   else
-    match Core_util.ml_resolve ty with
+    match Core_util.core_resolve ty with
     | Core.Type.Arrow {parameter = d; result = c} -> Option.map (fun ds -> d :: ds) (domains (n - 1) c)
     | _ -> None
 

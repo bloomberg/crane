@@ -42,7 +42,7 @@ let safe_firstn n lst =
 
 (** Collect all Core.Type.Variable indices from an Core.Type.t. Used to find type variables beyond
     those of the containing inductive/record. *)
-let collect_tvars_set acc ty = IntSet.union acc (Core_util.ml_tvars ty)
+let collect_tvars_set acc ty = IntSet.union acc (Core_util.core_tvars ty)
 
 (** Convert an IntSet of type variable indices back to a list, wrapping
     [collect_tvars_set]. Used to collect all Core.Type.Variable indices from an Core.Type.t. *)
@@ -88,7 +88,7 @@ let reconcile_parameter_type body_ty sig_ty =
     | _ -> false
   in
   let body_ty = merge_unknown body_ty sig_ty in
-  if count_ml_arrows body_ty > count_ml_arrows sig_ty || promoted_alias sig_ty then sig_ty
+  if count_core_arrows body_ty > count_core_arrows sig_ty || promoted_alias sig_ty then sig_ty
   else body_ty
 
 (** The type variables a type spells out in a deducible position.  A
@@ -125,20 +125,20 @@ let rec spelled_tvars_of ?(plain = fun _ -> false) acc = function
   | Core.Type.Meta {contents = Some t} -> spelled_tvars_of ~plain acc t
   | _ -> acc
 
-(** The variables [ml_ty]'s declaration takes as template names.
+(** The variables [core_ty]'s declaration takes as template names.
 
-    {!Type_util.higher_kinded_ml_tvars} less those the declaration only
+    {!Type_util.higher_kinded_core_tvars} less those the declaration only
     ever applies, in its parameters and nowhere else: each such application is
     relaxed there to a fresh deduced parameter
     ({!Plan_templates.relax_applied_param}), and the variable left a plain
     [typename] -- [fused_trigger]'s [e : F T] is declared [_P0 e], and [F]
     [typename T1 = void].  So its arguments are no more spelled than a plain
     family's, and its position takes a box like any other. *)
-let declared_higher_kinded_tvars ml_ty =
+let declared_higher_kinded_tvars core_ty =
   let relaxed j =
     let bare = ref false and applied = ref false in
     let rec scan t =
-      match resolve_tmeta t with
+      match resolve_meta t with
       | Core.Type.Variable {variable = j'; _} when j' = j -> bare := true
       | Core.Type.Variable_app {head = j'; arguments = l} ->
         if j' = j then applied := true;
@@ -149,32 +149,32 @@ let declared_higher_kinded_tvars ml_ty =
     in
     List.iter
       (fun d ->
-        match expand_ml_fun_alias d with Core.Type.Arrow _ -> () | d -> scan d )
-      (ml_domains ml_ty);
+        match expand_core_fun_alias d with Core.Type.Arrow _ -> () | d -> scan d )
+      (core_domains core_ty);
     !applied && (not !bare)
-    && not (IntSet.mem j (collect_tvars_set IntSet.empty (ml_return_type ml_ty)))
+    && not (IntSet.mem j (collect_tvars_set IntSet.empty (core_return_type core_ty)))
   in
   IntSet.filter (fun j -> not (relaxed j))
-    (Type_util.higher_kinded_ml_tvars [ml_ty])
+    (Type_util.higher_kinded_core_tvars [core_ty])
 
 (** The type variables of [id] a C++ compiler could read off the call's value
     arguments. *)
 let deducible_tvars_of_glob id =
   match find_type_opt id with
   | None -> None
-  | Some ml_ty_orig ->
-    let hk = declared_higher_kinded_tvars ml_ty_orig in
+  | Some core_ty_orig ->
+    let hk = declared_higher_kinded_tvars core_ty_orig in
     let plain j = not (IntSet.mem j hk) in
     Some
       (List.fold_left
          (fun acc d ->
            (* A definitional class is an alias for a function type -- [Id_ C
               obj] -- and an argument there is a callable just the same. *)
-           match expand_ml_fun_alias d with
+           match expand_core_fun_alias d with
            | Core.Type.Arrow _ -> acc
            | _ -> spelled_tvars_of ~plain acc d )
          IntSet.empty
-         (List.map resolve_tmeta (ml_domains ml_ty_orig)) )
+         (List.map resolve_meta (core_domains core_ty_orig)) )
 
 (** Infer the ML type of a body expression from its structure, or [None] where
     the structure does not say.
@@ -188,7 +188,7 @@ let deducible_tvars_of_glob id =
     Instantiation goes through {!Core_util.Var_types.apply}, by the callee's
     variables: a second substituter here would be a second oracle, free to
     disagree. *)
-let rec infer_ml_body_type (a : Core.Expr.t) : Core.Type.t option =
+let rec infer_core_body_type (a : Core.Expr.t) : Core.Type.t option =
   match a with
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use); arguments = args} ->
     ( match find_type_opt r with
@@ -198,26 +198,26 @@ let rec infer_ml_body_type (a : Core.Expr.t) : Core.Type.t option =
          ones its arguments imply. *)
       let ty =
         if not (Core_util.Var_types.is_empty (Core_util.written_type_args use)) then
-          Core_util.instantiate_written ~reader:"infer_ml_body_type" use ty
+          Core_util.instantiate_written ~reader:"infer_core_body_type" use ty
         else
           Core_util.Var_types.apply
             (tvar_instantiation r ty
                (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args) )
             ty
       in
-      strip_tarr_n (count_real_ml_args args) ty
+      strip_arrows_n (count_real_core_args args) ty
     | None -> None )
-  | Core.Expr.Construct {result_type = ty; _} -> Some (resolve_tmeta ty)
+  | Core.Expr.Construct {result_type = ty; _} -> Some (resolve_meta ty)
   | Core.Expr.Match {branches = pv; _} when Array.length pv > 0 ->
-    Some (resolve_tmeta pv.(0).result_type)
-  | Core.Expr.Let {body; _} -> infer_ml_body_type body
+    Some (resolve_meta pv.(0).result_type)
+  | Core.Expr.Let {body; _} -> infer_core_body_type body
   | Core.Expr.Lambda {parameter_type = ty; body; _} ->
-    Option.map (fun rty -> Core.Type.Arrow {parameter = ty; result = rty}) (infer_ml_body_type body)
+    Option.map (fun rty -> Core.Type.Arrow {parameter = ty; result = rty}) (infer_core_body_type body)
   | Core.Expr.Global {callee = r; _} -> find_type_opt r
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    infer_ml_body_type e
+    infer_core_body_type e
   | _ -> None
 
 (** [tvar_instantiation_found callee_ty args] is the callee's type-variable
@@ -242,8 +242,8 @@ and tvar_instantiation_found
   (* A binder's type is not on the [Core.Expr.Bound_variable] that names it; it was written down
      where it was bound, which is what [lex], the environment [args] are typed
      in, keeps.  Without one a variable says nothing. *)
-  let arg_ml_ty a =
-    match infer_ml_body_type a with
+  let arg_core_ty a =
+    match infer_core_body_type a with
     | Some _ as t -> t
     | None -> (
       match (a, lex) with
@@ -263,13 +263,13 @@ and tvar_instantiation_found
     | Some _ -> ()
   in
   let rec unify formal actual =
-    match (resolve_tmeta formal, resolve_tmeta actual) with
+    match (resolve_meta formal, resolve_meta actual) with
     | Core.Type.Variable {variable = i; _}, a -> bind i a
     (* A definitional class is the function type it abbreviates: [Case obj C]
        met by the eta-expanded dictionary lambda that fills it. *)
     | (Core.Type.Global_app {head = GlobRef.ConstRef _; _} as f), (Core.Type.Arrow _ as a)
-      when (match expand_ml_fun_alias f with Core.Type.Arrow _ -> true | _ -> false) ->
-      unify (expand_ml_fun_alias f) a
+      when (match expand_core_fun_alias f with Core.Type.Arrow _ -> true | _ -> false) ->
+      unify (expand_core_fun_alias f) a
     | Core.Type.Global_app {head = g1; type_arguments = a1; _}, Core.Type.Global_app {head = g2; type_arguments = a2; _}
       when GlobRef.CanOrd.equal g1 g2 && List.length a1 = List.length a2 ->
       List.iter2 unify a1 a2
@@ -290,7 +290,7 @@ and tvar_instantiation_found
     | Core.Type.Arrow {parameter = Core.Type.Erased _;
                        result = c1}, Core.Type.Arrow {parameter = Core.Type.Erased _; result = c2} ->
       let rec past_abstractions t =
-        match resolve_tmeta t with
+        match resolve_meta t with
         | Core.Type.Arrow {parameter = Core.Type.Erased _; result = c} -> past_abstractions c
         | t -> t
       in
@@ -332,10 +332,10 @@ and tvar_instantiation_found
       when constructors && List.length a1 < List.length a2
            && List.for_all
                 (fun t ->
-                  match resolve_tmeta t with
+                  match resolve_meta t with
                   | Core.Type.Global_app {type_arguments = []; _} -> true
                   | Core.Type.Global_app {type_arguments = args; _} ->
-                    Type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
+                    Type_util.is_core_erased_ty (List.nth args (List.length args - 1))
                   | _ -> false )
                 (List.filteri (fun i _ -> i < List.length a2 - List.length a1) a2) ->
       let n_fixed = List.length a2 - List.length a1 in
@@ -360,10 +360,10 @@ and tvar_instantiation_found
      application the callable still to be applied -- and [result], where the
      position states one, says what it is. *)
   let rec walk ty args =
-    match (resolve_tmeta ty, args) with
+    match (resolve_meta ty, args) with
     | Core.Type.Arrow {parameter = Core.Type.Erased _; result = cod}, _ -> walk cod args
     | Core.Type.Arrow {parameter = dom; result = cod}, a :: rest ->
-      ( match arg_ml_ty a with
+      ( match arg_core_ty a with
       | Some t -> unify dom t
       | None -> () ) ;
       walk cod rest
@@ -440,7 +440,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
     (* Only a variable the callee applies: this pass exists because Core
        erases a [Type -> Type] argument, and a plain type argument that came
        out erased is erased for a reason a value argument cannot undo. *)
-    let applied = Type_util.applied_ml_tvar_arities [callee_ty] in
+    let applied = Type_util.applied_core_tvar_arities [callee_ty] in
     (* Nor one a type alias in a domain is applied to: [ReSum_id : Id_ obj C
        -> ...] takes the category's morphism constructor [C], a type-level
        function erased for that reason alone, and the definitional class
@@ -455,7 +455,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
           when Typeclasses.is_class g ->
           List.exists
             (fun a ->
-              (match resolve_tmeta a with
+              (match resolve_meta a with
                | Core.Type.Variable {variable = j; _} -> j = v
                | _ -> false)
               || alias_arg v a )
@@ -466,7 +466,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
       in
       fun v ->
         List.exists (alias_arg v)
-          (List.map resolve_tmeta (ml_domains callee_ty))
+          (List.map resolve_meta (core_domains callee_ty))
     in
     let eligible =
       List.filter
@@ -516,7 +516,7 @@ let sole_instance ~lex ~n_outer t body =
     let outer_only ty = IntSet.for_all (fun k -> k <= n_outer) (collect_tvars_set IntSet.empty ty) in
     let agreed k =
       match List.map (List.assoc_opt k) !instances with
-      | Some ty :: rest when List.for_all (function Some ty' -> Core_util.eq_ml_type ty ty' | None -> false) rest ->
+      | Some ty :: rest when List.for_all (function Some ty' -> Core_util.eq_core_type ty ty' | None -> false) rest ->
         Some ty
       | _ -> None
     in
@@ -537,7 +537,7 @@ let sole_instance ~lex ~n_outer t body =
 
 (** [a], a lambda bound by a let at type [t], with a binder for each value
     arrow of [t] it stops short of, its body applied to them: the lambda a
-    {!Bound} let generates.  [convert_ml_type_to_cpp_type] uncurries the
+    {!Bound} let generates.  [convert_core_type_to_cpp_type] uncurries the
     binding's type fully, so [unit -> State bool unit] is a function of two
     parameters, and [fun u => state_bind ...], whose body is a unary
     function rather than a lambda, would be a lambda of one, which no slot of
@@ -551,7 +551,7 @@ let eta_bound_lambda t a =
     let n_have = List.length (List.filter (fun (_, ty) -> not (erased_by_extraction ty)) binders) in
     (* The domains of the value arrows the lambda does not abstract, outermost
        first. *)
-    let new_doms = List.filteri (fun i _ -> i >= n_have) (ml_value_domains t) in
+    let new_doms = List.filteri (fun i _ -> i >= n_have) (core_value_domains t) in
     let d = List.length new_doms in
     if d = 0 then a
     else
@@ -614,19 +614,19 @@ let let_lambda ~lex ~n_outer t a b =
 (** Check if a GlobRef returns a typeclass type (possibly through Core.Type.Arrow layers). *)
 let ref_returns_typeclass r =
   match find_type_opt r with
-  | Some ty -> Table.is_typeclass_type (ml_return_type ty)
+  | Some ty -> Table.is_typeclass_type (core_return_type ty)
   | None -> false
 
 (** Check if a function returns a skipped type (e.g., ReSum instances whose
     Class is extracted as a ConstRef, not IndRef, and thus not recognized by
     [is_typeclass]). Such arguments are infrastructure that should be erased. *)
 let ref_returns_skipped r =
-  match find_type_opt r with Some ty -> ml_ret_is_skipped ty | None -> false
+  match find_type_opt r with Some ty -> core_ret_is_skipped ty | None -> false
 
 (** Whether a global denotes a typeclass instance. *)
 let ref_is_instance r =
   match find_type_opt r with
-  | Some ty -> ml_type_is_instance ty
+  | Some ty -> core_type_is_instance ty
   | None -> false
 
 (** Strip [Core.Expr.Coerce], [Core.Expr.Boxed_value] and [Core.Expr.Lambda_group_barrier] wrappers recursively — each
@@ -652,7 +652,7 @@ let rec strip_dictionary e =
 
     [carrier] is a type constructor written as an application whose
     placeholders stand for what it is applied to, so applying it is filling
-    them -- which is what {!Core_util.apply_ml_type} does, including for the
+    them -- which is what {!Core_util.apply_core_type} does, including for the
     type-level lambda [fun T => holder T (box T)] whose binder occurs twice.
 
     An occurrence that cannot be filled is left as the [Core.Type.Variable_app] it was: a type of
@@ -661,11 +661,11 @@ let rec strip_dictionary e =
 let subst_dict_carrier ?(at = 1) carrier ty =
   let apply k xs =
     match carrier with
-    | Core.Type.Global_app _ -> Core_util.apply_ml_type carrier xs
+    | Core.Type.Global_app _ -> Core_util.apply_core_type carrier xs
     | _ -> Core.Type.Variable_app {head = k; arguments = xs}
   in
   let rec go t =
-    match resolve_tmeta t with
+    match resolve_meta t with
     | Core.Type.Variable_app {head = j; arguments = xs} when j = at -> apply j (List.map go xs)
     | Core.Type.Variable_app {head = j; arguments = xs} -> Core.Type.Variable_app {head = j; arguments = List.map go xs}
     | Core.Type.Global_app {head = c; type_arguments = a; index_arguments = l} ->
@@ -685,9 +685,9 @@ let subst_dict_carrier ?(at = 1) carrier ty =
     sources end at an ML type headed by the carrier, and are consumed as one.
     A binder is read in [lex], the environment the call stands in, and the
     constraints of [caller], the declaration it stands in. *)
-let dict_carrier_ml_type ~lex ~caller id args =
+let dict_carrier_core_type ~lex ~caller id args =
   let ( let* ) = Option.bind in
-  let* ml_ty = find_type_opt id in
+  let* core_ty = find_type_opt id in
   (* The class parameter is quantified first, and an explicit argument list is
      positional, so only a leading carrier can be written.
 
@@ -700,16 +700,16 @@ let dict_carrier_ml_type ~lex ~caller id args =
     let rec find i = function
       | [] -> None
       | d :: ds -> (
-        match resolve_tmeta d with
+        match resolve_meta d with
         | Core.Type.Global_app {head = c; type_arguments = [arg]; _}
-          when ( match resolve_tmeta arg with
+          when ( match resolve_meta arg with
                | Core.Type.Variable_app {head = 1; _} -> true
                | _ -> false ) ->
           Some (i, c)
         | Core.Type.Erased _ -> find i ds
         | _ -> find (i + 1) ds )
     in
-    find 0 (ml_domains ml_ty)
+    find 0 (core_domains core_ty)
   in
   let* dict = List.nth_opt args i in
   (* The class applied to one argument {e is} the carrier, already applied:
@@ -720,7 +720,7 @@ let dict_carrier_ml_type ~lex ~caller id args =
   let strip_class t =
     match t with
     | Core.Type.Global_app {head = c; type_arguments = [arg]; _} when Environ.QGlobRef.equal (Global.env ()) c cls ->
-      resolve_tmeta arg
+      resolve_meta arg
     | t -> t
   in
   (* Two sources, one consumer.  A dictionary that {e is} a named instance
@@ -740,15 +740,15 @@ let dict_carrier_ml_type ~lex ~caller id args =
     let rec go i acc = function
       | [] -> List.rev acc
       | d :: ds -> (
-        match resolve_tmeta d with
+        match resolve_meta d with
         | Core.Type.Erased _ -> go i acc ds
         | Core.Type.Global_app {type_arguments = [arg]; _} -> (
-          match resolve_tmeta arg with
+          match resolve_meta arg with
           | Core.Type.Variable_app {head = k; _} -> go (i + 1) ((i, k) :: acc) ds
           | _ -> go (i + 1) acc ds )
         | _ -> go (i + 1) acc ds )
     in
-    go 0 [] (ml_domains ty)
+    go 0 [] (core_domains ty)
   in
   let rec head_glob = function
     | Core.Expr.Lambda {body = b; _}
@@ -769,18 +769,18 @@ let dict_carrier_ml_type ~lex ~caller id args =
      the second reads the first one's constraint -- so the carriers of two
      sibling traversals come out crossed rather than merely missing, which is
      the shape that made this findable. *)
-  let rec dict_ml_type ?(depth = 0) = function
-    | Core.Expr.Lambda {body = b; _} -> dict_ml_type ~depth:(depth + 1) b
+  let rec dict_core_type ?(depth = 0) = function
+    | Core.Expr.Lambda {body = b; _} -> dict_core_type ~depth:(depth + 1) b
     | Core.Expr.Coerce {value = b; _}
     | Core.Expr.Boxed_value {value = b; _}
     | Core.Expr.Lambda_group_barrier {value = b; _} ->
-      dict_ml_type ~depth b
+      dict_core_type ~depth b
     | Core.Expr.Apply {callee = b; arguments = dicts} as tm ->
       (* The head's codomain still names its own class parameters; the
          dictionaries it is applied to are what say which carriers those are.
          Without this the generic instance's binder is what gets written, and
          at a site with no binder in scope it does not even name anything. *)
-      let* cod = dict_ml_type ~depth b in
+      let* cod = dict_core_type ~depth b in
       let params =
         match Option.bind (head_glob tm) find_type_opt with
         | Some ty -> class_params ty
@@ -789,18 +789,18 @@ let dict_carrier_ml_type ~lex ~caller id args =
       Some
         (List.fold_left
            (fun acc (p, k) ->
-             match Option.bind (List.nth_opt dicts p) (dict_ml_type ~depth) with
+             match Option.bind (List.nth_opt dicts p) (dict_core_type ~depth) with
              | Some carrier -> subst_dict_carrier ~at:k carrier acc
              | None -> acc )
            cod params )
     | Core.Expr.Global {callee = r; _} ->
       (* The instance's method returns [T1] applied: [TFunctor_box]'s codomain
          is [box B]. *)
-      Option.map (fun t -> resolve_tmeta (ml_codomain t)) (find_type_opt r)
+      Option.map (fun t -> resolve_meta (core_codomain t)) (find_type_opt r)
     | Core.Expr.Bound_variable {index = i; _} ->
       let i = i - depth in
       let constraint_arg t =
-        match Option.map resolve_tmeta t with
+        match Option.map resolve_meta t with
         | Some (Core.Type.Global_app {type_arguments = [_]; _} as t) -> Some (strip_class t)
         | _ -> None
       in
@@ -817,7 +817,7 @@ let dict_carrier_ml_type ~lex ~caller id args =
         let ( let* ) = Option.bind in
         let* r = caller in
         let* decl_ty = find_type_opt r in
-        let doms = ml_domains decl_ty in
+        let doms = core_domains decl_ty in
         let n = Lexenv.depth lex in
         (* [List.nth_opt] raises rather than answering [None] on a negative
            index, and [i] can exceed [n]: a dictionary reached through an
@@ -826,7 +826,7 @@ let dict_carrier_ml_type ~lex ~caller id args =
         else constraint_arg (List.nth_opt doms (n - i)) )
     | _ -> None
   in
-  Option.map strip_class (dict_ml_type dict)
+  Option.map strip_class (dict_core_type dict)
 
 (** [ty], global [id]'s declared type, as a call with type arguments [tys] and
     value arguments [value_args] instantiates it.  [tys] instantiates the
@@ -835,7 +835,7 @@ let dict_carrier_ml_type ~lex ~caller id args =
     read first, or a [bind]'s [m A] resolves to nothing: erased, where the
     type argument written for it is a dummy. *)
 let with_dict_carrier ~lex ~caller id value_args ty =
-  match dict_carrier_ml_type ~lex ~caller id value_args with
+  match dict_carrier_core_type ~lex ~caller id value_args with
   | Some carrier -> subst_dict_carrier carrier ty
   | None -> ty
 
@@ -853,7 +853,7 @@ let instantiate_at_call ~lex ~caller id tys value_args ty =
     [std::function<std::any(std::any)>]) or an [Core.Expr.Bound_variable] callback with a
     [Core.Type.Erased]-guarded [Core.Type.Variable] codomain.  When such a call is made in a context
     where the enclosing function's return type is a concrete C++ type [T], the
-    result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
+    result is wrapped with [std::any_cast<T>].  See [core_codomain_erases_to_any]. *)
 let binder_is_instance lex i =
   (* An instance parameter is not a value argument.  A declaration's
      class-typed parameter is its dictionary, as the binder records where it
@@ -867,7 +867,7 @@ let binder_is_instance lex i =
      on passing the one the declaration had dropped. *)
   match Lexenv.binder lex i with
   | Some {eb_role = Dictionary; _} -> true
-  | Some {eb_type; eb_role = Value; _} -> ml_ret_is_skipped eb_type
+  | Some {eb_type; eb_role = Value; _} -> core_ret_is_skipped eb_type
   | None -> false
 
 (* Check if an ML arg is a type class instance (a reference to a struct that
@@ -878,8 +878,8 @@ let binder_is_instance lex i =
    [Opt : Type -> Type]).  Look through it, or the instance is left in value
    position and the generated call names the instance struct as if it were a
    value. *)
-let is_typeclass_instance_arg ~lex ml_arg =
-  match strip_dictionary ml_arg with
+let is_typeclass_instance_arg ~lex core_arg =
+  match strip_dictionary core_arg with
   | Core.Expr.Global {callee = r; _} ->
     (* An instance parameterised over types alone carries its parameters in
        the [Core.Expr.Global]'s type arguments, so its ML type is still an arrow --
@@ -925,14 +925,14 @@ let is_typeclass_instance_arg ~lex ml_arg =
 
 (* Convert type class instance args to template type arguments *)
 
-let instance_arg_is_erased ~lex ml_arg =
+let instance_arg_is_erased ~lex core_arg =
   (* An instance argument is not a value argument, but only one whose class
      Crane kept is a template argument either: {!collect_typeclass_param_ids}
      mints a concept-constrained parameter per kept class and none for a
      skipped one, so an [E -< F] has no parameter of any kind to be passed at.
      Passing it anyway put the instance in the callee's template argument
      list, where it names no type. *)
-  match strip_magic ml_arg with
+  match strip_magic core_arg with
   | Core.Expr.Global {callee = r; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} ->
     (* Either the instance's class is infrastructure Crane skips -- [E -< F],
        whose [ReSum] is a [ConstRef] mapped to the empty string -- or the
@@ -942,23 +942,23 @@ let instance_arg_is_erased ~lex ml_arg =
     ref_returns_skipped r || ref_is_skipped r
   | Core.Expr.Bound_variable {index = i; _} -> (
     match Lexenv.type_opt lex i with
-    | Some ty -> ml_ret_is_skipped ty
+    | Some ty -> core_ret_is_skipped ty
     | None -> false )
   | _ -> false
 
 (* The class an instance argument is an instance of, as an ML type, a
    variable's read off its binder in [lex]. *)
-let instance_class_ty ~lex ml_arg =
+let instance_class_ty ~lex core_arg =
   let of_ref r =
     match Table.find_type r with
-    | ty -> ml_return_type ty
+    | ty -> core_return_type ty
     | exception Not_found -> Core.Type.Unknown
   in
-  match strip_dictionary ml_arg with
+  match strip_dictionary core_arg with
   | Core.Expr.Global {callee = r; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} -> of_ref r
   | Core.Expr.Bound_variable {index = i; _} -> (
     match Lexenv.type_opt lex i with
-    | Some ty -> ml_return_type ty
+    | Some ty -> core_return_type ty
     | None -> Core.Type.Unknown )
   | _ -> Core.Type.Unknown
 
@@ -1001,14 +1001,14 @@ let projection_value_domains ~lex (use : Core.Global_use.t) inst =
   | exception Not_found -> []
   | ty ->
     let ty =
-      match resolve_tmeta (instance_class_ty ~lex inst) with
+      match resolve_meta (instance_class_ty ~lex inst) with
       | Core.Type.Global_app {type_arguments = [carrier]; _} -> subst_dict_carrier carrier ty
       | _ -> ty
     in
-    ml_domains
+    core_domains
       (Core_util.instantiate_written ~reader:"projection_value_domains" use ty)
     |> List.filter (fun t ->
-           match resolve_tmeta t with
+           match resolve_meta t with
            | Core.Type.Erased _ -> false
            | t -> not (Table.is_typeclass_type t))
 
@@ -1038,7 +1038,7 @@ let static_projection ~lex (use : Core.Global_use.t) args : Elaborated_call.stat
       let missing =
         if Table.is_inline_custom x then []
         else
-          let operands = List.filter (fun a -> not (Core_util.isMLdummy a || a == inst)) args in
+          let operands = List.filter (fun a -> not (Core_util.is_erased_value a || a == inst)) args in
           List.filteri (fun i _ -> i >= List.length operands) domains
       in
       let rec position i = function

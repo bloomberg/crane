@@ -194,7 +194,7 @@ let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r
 let rec copy_of_type ty =
   match ty with
   | Core.Type.Meta {contents = Some t} -> copy_of_type t
-  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.isTdummy d -> copy_of_type rest
+  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d -> copy_of_type rest
   | Core.Type.Arrow _ -> Some Retain
   (* An instance of a class is an object of its own, a singleton class's
      too, whatever its method's type. *)
@@ -1017,7 +1017,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
     | _, (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ | Core.Expr.Lambda _) ->
       at_instance arms occurrence || closure_local ~n_outer ty a
     | _ ->
-      (not (Type_util.ml_type_is_unit ty))
+      (not (Type_util.core_type_is_unit ty))
       && worth_moving ty
       && not (Binding.projects_in_place ~owned:(owned_var owned d) ~fate:(fate_in reads) ty a)
   and branch_owned owned d case ty scrut branches k {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} =

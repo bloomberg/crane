@@ -61,7 +61,7 @@ let call ~ty use body args =
   let types, _ = solutions use in
   let ty = Core_util.type_simpl (types ty) in
   let params, body = Type_util.collect_typed_lams ty (instance use body) in
-  let domains = Type_util.ml_domains ty in
+  let domains = Type_util.core_domains ty in
   if List.length params <> List.length domains || List.length args <> List.length params then None
   else
     (* At the type {!Core_elaborate.declaration_scope} binds the parameter

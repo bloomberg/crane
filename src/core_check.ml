@@ -50,7 +50,7 @@ let check_instantiation owners r inst =
       | None -> Hashtbl.add owners h inst
       | Some inst' when inst' = inst -> ()
       | Some inst' ->
-        let show i = String.concat ", " (List.map Core_util.debug_ml_type (solution_types i)) in
+        let show i = String.concat ", " (List.map Core_util.debug_core_type (solution_types i)) in
         violation r
           (Printf.sprintf
              "shares hole _%d with a different use (%s against %s); a copied use was not freshened"

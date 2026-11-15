@@ -368,7 +368,7 @@ let equal a b =
   && List.equal
        (fun (r, bs) (r', bs') ->
          GlobRef.UserOrd.equal r r'
-         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Core_util.eq_ml_type t t') bs bs' )
+         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Core_util.eq_core_type t t') bs bs' )
        a.representation.instance_promoted_types b.representation.instance_promoted_types
   && same_callables a.callables b.callables
   && same_instance_methods a.instance_methods b.instance_methods

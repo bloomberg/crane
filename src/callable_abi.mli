@@ -363,9 +363,9 @@ val method_params : Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option
     in the callee's own variables, which a call's C++ head is rebuilt from
     at the call's instantiation.  [None] for a global with no recorded
     type. *)
-val ml_type : t -> Core.Type.t option
+val core_type : t -> Core.Type.t option
 
-(** [planned_ml_type r] -- {!Core.Type.t} of the unit's plan of [r], installed,
+(** [planned_core_type r] -- {!Core.Type.t} of the unit's plan of [r], installed,
     foreign or a projection's, without planning one; [None] where none is
     planned. *)
-val planned_ml_type : Names.GlobRef.t -> Core.Type.t option option
+val planned_core_type : Names.GlobRef.t -> Core.Type.t option option

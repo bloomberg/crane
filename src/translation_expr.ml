@@ -56,7 +56,7 @@ let check_binder_scopes env i =
     lambdas, applications, constructors, pattern matching, etc. Monadic
     non-function globals are wrapped in CPPfun_call by the Core.Expr.Global case below.
 
-    A [Boxed] slot says that [ml_e] flows into a slot that is really
+    A [Boxed] slot says that [core_e] flows into a slot that is really
     [std::any], so any constructor it builds has to use the canonical erased
     shape: every producer of the same Coq type must agree with the fixed
     [any_cast] that reads it back.  A "cons" production keeping
@@ -71,8 +71,8 @@ let check_binder_scopes env i =
     position that opens a new slot (a let-bound right-hand side, a
     non-tail statement) does not take it. *)
 let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_slot) env
-    (ml_e : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  match ml_e with
+    (core_e : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  match core_e with
   | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
     check_binder_scopes env i;
     let boxed_read = read_is_boxed i occ in
@@ -251,8 +251,8 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     Translation_lambda.gen_lambda ~expected_ty ~slot env a
   | Core.Expr.Global ({callee = x; _} as use) when is_inline_custom x ->
     let tys = Core_util.written_type_args use in
-    let ml_ty = callee_ml_type_exn x in
-    let ty = cpp_of_ml env ml_ty in
+    let core_ty = callee_core_type_exn x in
+    let ty = cpp_of_core env core_ty in
     ( match ty with
     | Function (dom, cod) ->
       eta_fun ?expected_ty env (Core.Expr.Global use) []
@@ -261,7 +261,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
         ?yields:
           (glob_yields env x (Core_util.instantiate_written ~reader:"glob_yields" use))
         x
-        (template_params_of_ml ~site:Through_tvar env
+        (template_params_of_core ~site:Through_tvar env
            (List.map snd (Core_util.Var_types.bindings tys)) ) )
   | Core.Expr.Global ({callee = x; _} as use) ->
     let tys = Core_util.written_type_args use in
@@ -270,7 +270,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     let by_var =
       List.map
         (fun (v, ty) ->
-          let t = cpp_of_ml env (type_simpl ty) in
+          let t = cpp_of_core env (type_simpl ty) in
           ( Scheme.Var.ordinal v,
             match t with
             | Variable (Index (_, None)) when tvars <> [] -> Cpp_ir.Type.Erased Type
@@ -335,7 +335,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     let cglob =
       mk_cppglob ?yields x (written_at_variables x (filter_erased_keyed by_var))
     in
-    if naming_calls ~cpp_of:(cpp_of_ml env) x then
+    if naming_calls ~cpp_of:(cpp_of_core env) x then
       (* A function of no parameters named is called, a call made of this
          use. *)
       made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob [])
@@ -343,8 +343,8 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
       ( match
           Option.map
             (fun ty ->
-              materialise_opaque (cpp_of_ml env (expand_ml_fun_alias ty)))
-            (callee_ml_type x)
+              materialise_opaque (cpp_of_core env (expand_core_fun_alias ty)))
+            (callee_core_type x)
         with
       (* A declaration whose result erased -- because its Rocq type hides
          the quantifier behind a type alias, or because a type index alone
@@ -389,7 +389,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
                      match f with Function _ -> not (is_fully_erased_fun_ty f) | _ -> false )
                    dom ->
             curry_value_to_expected env ~exact:true
-              (Option.map expand_ml_fun_alias (instantiated_type use)) cglob
+              (Option.map expand_core_fun_alias (instantiated_type use)) cglob
           | _ -> cglob
         in
         ( match into with
@@ -441,7 +441,7 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = empty_sl
     Translation_match.gen_custom_match_expr env ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ}
     when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations ()) typ pv case_occ) ->
-    Translation_match.gen_record_projection ~expected_ty ~slot env ml_e ~typ ~t ~pv ~case_occ
+    Translation_match.gen_record_projection ~expected_ty ~slot env core_e ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ} when lang () == Cpp ->
     gen_cpp_case typ t env pv case_occ
   | Core.Expr.Let {binder_type = ty; _} as a ->
@@ -504,9 +504,9 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
       (match expected_ty with
           | Some t -> Cpp_ir.Types.prints_as_any t
           | None -> true)
-      && Cpp_ir.Types.prints_as_any (cpp_of_ml env into)
-      && not (Cpp_ir.Types.prints_as_any (cpp_of_ml env from)) ->
-      Some (box_kind_of_cpp_type (cpp_of_ml env into))
+      && Cpp_ir.Types.prints_as_any (cpp_of_core env into)
+      && not (Cpp_ir.Types.prints_as_any (cpp_of_core env from)) ->
+      Some (box_kind_of_cpp_type (cpp_of_core env into))
     | Some _ | None -> None
   in
   (* A lambda is written against the slot it fills -- its binders and
@@ -537,8 +537,8 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
         let decided = function Some ty -> not (Cpp_ir.Types.prints_as_any ty) | None -> false in
         match planned_binder_type ~use:"coerced from" ~agree:(fun p l -> decided p = decided l) i occ with
         | Some ty when not (Cpp_ir.Types.prints_as_any ty) -> Some ty
-        | _ -> Some (cpp_of_ml env from) )
-      | _ -> Some (cpp_of_ml env from) )
+        | _ -> Some (cpp_of_core env from) )
+      | _ -> Some (cpp_of_core env from) )
     (* [Core.Expr.Boxed_value] is extraction's reading of the Coq typing.  A binder whose
        C++ type was decided at its binding site outranks it: a type-class
        method returning [M A] is opaque in Coq, but Crane emits the
@@ -587,7 +587,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
           | t -> t
         in
         coerce ~from:Any ~into:(erase_top_args ty) inner
-      else if ml_expr_is_erased env t then
+      else if core_expr_is_erased env t then
         (* Extraction's oracle reads a type-class method's [M A] as erased,
            but the binder it is bound to was assigned an opaque type --
            an admission that the shape could not be resolved, not a box.
@@ -610,7 +610,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
           ~from:(if binder_is_opaque t then Cpp_ir.Type.Obligation Opaque_type else Cpp_ir.Type.Any)
           ~into:ty inner
       else
-        (* [ml_expr_is_erased] only recognises a handful of shapes and says
+        (* [core_expr_is_erased] only recognises a handful of shapes and says
            [false] for the rest.  Extraction already unified the two sides
            here, so fall back on what it recorded rather than on the
            oracle's silence. *)
@@ -647,7 +647,7 @@ and gen_crossing ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coerci
             | Some (from, _) when contains_tvar ty ->
               Cpp_ir.Build.iife (Some ty)
                 [ If_constexpr
-                    { test = Convertible (ty, Reference (Lvalue, Const (cpp_of_ml env from)));
+                    { test = Convertible (ty, Reference (Lvalue, Const (cpp_of_core env from)));
                       then_ = [Return (Some (Convert (ty, inner)))];
                       else_ = [Throw dead_branch_message] } ]
             | _ -> Abort (dead_branch_message, ty) )

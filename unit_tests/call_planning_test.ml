@@ -38,7 +38,7 @@ let unwritten f ~arity =
          {Scheme.solution = Scheme.Type (Core.Type.Hole (Scheme.Hole.fresh ())); source = Scheme.Not_written} ) )
 
 let instantiate ?(lex = Lexenv.empty) ?caller ?(scope = []) use args =
-  Core_elaborate.instantiate ~lex ~expected_ml:None ~stated_ml:None ~caller ~scope
+  Core_elaborate.instantiate ~lex ~expected_core:None ~stated_core:None ~caller ~scope
     (Core_elaborate.elaborate_arguments ~lex use args)
 
 (* The type the reading gives the callee's variable [i], where it gives one. *)

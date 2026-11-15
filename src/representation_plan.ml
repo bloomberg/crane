@@ -35,7 +35,7 @@ let boxed : (Cpp_ir.Lowered.Type.t * origin) option -> bool = function
    ({!Translation_types.assign_binder_types}): none where the conversion is
    [Topaque], a dummy, or fails. *)
 let at_binding ty =
-  match cpp_of_ml (Common.empty_env ()) ty with
+  match cpp_of_core (Common.empty_env ()) ty with
   | Obligation Opaque_type -> None
   | t when not (is_cpp_dummy_type t) -> Some (t, Binding)
   | _ -> None
@@ -44,7 +44,7 @@ let at_binding ty =
 (* [scope] under the binders [ids], innermost first, each planned at the
    conversion of its ML type. *)
 let push kind ids scope =
-  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_mlid x;
+  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_binder_name x;
                                                  eb_type = ty;
                                                  eb_role = Lexenv.Value}) ids) scope.lex;
     planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
@@ -92,7 +92,7 @@ let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
             lambda_param_cpp_type (Common.empty_env ()) ~ns ~tvars ~rank2_carrier ~reified ~n_params:n ~body
               ~unused:(not (Core_util.ast_occurs (i + 1) body))
               ~slot_dom
-              (Core_util.id_of_mlid x, ty, false)
+              (Core_util.id_of_binder_name x, ty, false)
           with
           | decl, _ -> (
             match strip_param_wrappers (lambda_param_assigned ~slot_dom ty decl) with
@@ -164,20 +164,20 @@ let pattern_binders scope ~typ ~scrut cname ids =
    the scrutinee is a boxed custom list. *)
 let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
   let fix_a_fired = cs.cs_pair_any_cast in
-  let scrut_ml_typ =
+  let scrut_core_typ =
     match Option.bind (scrutinee_binder scope.lex scrut) (Lexenv.type_opt scope.lex) with
-    | Some t when not (ml_type_contains_erased t) -> t
+    | Some t when not (core_type_contains_erased t) -> t
     | _ -> ty
   in
   let bound =
-    custom_branch_binders (Common.empty_env ()) ~fix_a_fired ~scrut_ml_typ ~ml_typ:ty cname
-      (List.rev_map (fun (x, ty) -> (Core_util.id_of_mlid x, ty)) ids)
+    custom_branch_binders (Common.empty_env ()) ~fix_a_fired ~scrut_core_typ ~core_typ:ty cname
+      (List.rev_map (fun (x, ty) -> (Core_util.id_of_binder_name x, ty)) ids)
   in
   let planned = List.rev_map (fun (_, ty) -> at_binding ty) bound in
   let planned = if fix_a_fired then List.map (fun p -> pin p Any) planned else planned in
   let planned = pinned_fields scope ~typ:ty ~scrut cname planned in
   let elems_are_any =
-    (cs.cs_mlmagic || cs.cs_magic)
+    (cs.cs_wrapped || cs.cs_magic)
     && match ty with Core.Type.Global_app {head = g;
                                            type_arguments = _ :: _; _} -> Type_util.is_custom_list_global g | _ -> false
   in
@@ -209,8 +209,8 @@ let reads_boxed_component scope a =
       | Core.Expr.Bound_variable {index = i; _} -> (
         match Lexenv.type_opt scope.lex i with
         | Some t ->
-          let t = resolve_tmeta t in
-          is_erased_ml_type t || (try ml_erases_to_box (Common.empty_env ()) t with _ -> false)
+          let t = resolve_meta t in
+          is_erased_core_type t || (try core_erases_to_box (Common.empty_env ()) t with _ -> false)
         | None -> false )
       | _ -> false )
     | [] -> false )
@@ -234,7 +234,7 @@ let region ~outer body =
     let slot_ty =
       match (slot, field_ty) with
       | Some s, _ -> s
-      | None, Some t -> ( try Some (cpp_of_ml (Common.empty_env ()) t) with _ -> None )
+      | None, Some t -> ( try Some (cpp_of_core (Common.empty_env ()) t) with _ -> None )
       | None, None -> None
     in
     walk (parameters ?slot_ty ~body ids scope) body
@@ -307,7 +307,7 @@ let region ~outer body =
       let env = Common.empty_env () in
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
-        | Some ft -> List.filter (fun t -> not (Core_util.isTdummy t)) ft
+        | Some ft -> List.filter (fun t -> not (Core_util.is_erased_type t)) ft
         | None -> []
       in
       let temps = ctor_draft_temps env ~promoted_active ~return ty in
@@ -319,7 +319,7 @@ let region ~outer body =
             (* The slot's own signature where it erased only its domain
                ({!Translation_construct.gen_expr_custom_cons}'s [erased_fn_slot]). *)
             let erased_fn_slot =
-              if ctor_arg_is_passthrough r i || not (ml_expr_is_function_value e) then None
+              if ctor_arg_is_passthrough r i || not (core_expr_is_function_value e) then None
               else
                 match List.nth_opt field_tys i with
                 | Some (Core.Type.Variable {variable = j; _}) -> (
@@ -339,7 +339,7 @@ let region ~outer body =
                            arguments = args; _} when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
-        | Some ft -> List.filter (fun t -> not (Core_util.isTdummy t)) ft
+        | Some ft -> List.filter (fun t -> not (Core_util.is_erased_type t)) ft
         | None -> []
       in
       let env = Common.empty_env () in
@@ -353,7 +353,7 @@ let region ~outer body =
         match (ft, ty) with
         | Core.Type.Variable _, _ -> None
         | _, Core.Type.Global_app {type_arguments = tys; _} -> (
-          match cpp_of_ml env (Core_util.type_subst_list tys ft) with
+          match cpp_of_core env (Core_util.type_subst_list tys ft) with
           | ct -> (
             match codomain ct with
             | Some cod
@@ -373,7 +373,7 @@ let region ~outer body =
     | Core.Expr.Construct {constructor = r; arguments = args; _} when List.exists is_lambda args ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
-        | Some ft -> List.filter (fun t -> not (Core_util.isTdummy t)) ft
+        | Some ft -> List.filter (fun t -> not (Core_util.is_erased_type t)) ft
         | None -> []
       in
       List.iteri
@@ -391,11 +391,11 @@ let region ~outer body =
                        arguments = args} when List.exists is_lambda args ->
       let call = Core_elaborate.elaborate_arguments ~lex:scope.lex use args in
       let inst =
-        Core_elaborate.instantiate ~lex:scope.lex ~expected_ml:None ~stated_ml:None ~caller:(!tctx).input.body_owner
+        Core_elaborate.instantiate ~lex:scope.lex ~expected_core:None ~stated_core:None ~caller:(!tctx).input.body_owner
           ~scope:type_vars call
       in
       let leading = Elaborated_call.leading_params call in
-      let param_ml_ty i =
+      let param_core_ty i =
         let param_index = Param_pos.of_regular ~leading i in
         let subst =
           if Table.is_inline_custom use.callee then Some (Param_pos.subst_at_declared param_index)
@@ -416,19 +416,19 @@ let region ~outer body =
         (fun a ->
           match (strip_magic a, regular_index a) with
           | (Core.Expr.Lambda _ as lam), Some i ->
-            let expected_ml_ty =
-              match param_ml_ty i with Some t when not (ml_type_contains_erased t) -> Some t | _ -> None
+            let expected_core_ty =
+              match param_core_ty i with Some t when not (core_type_contains_erased t) -> Some t | _ -> None
             in
             let ids, body = Core_util.collect_lams lam in
-            let ids, body = slot_refined_lambda (Common.empty_env ()) ~expected_ml_ty ids body in
+            let ids, body = slot_refined_lambda (Common.empty_env ()) ~expected_core_ty ids body in
             (* A callable the callee deduces is written against
                [const auto &] where the slot's domain is a box
                ({!Translation_calls.deduce_erased_domains}). *)
             let deduced = Callable_abi.deduces_callable use.callee (Param_pos.of_regular ~leading i) in
             let slot_ty =
-              match param_ml_ty i with
+              match param_core_ty i with
               | Some t -> (
-                match cpp_of_ml (Common.empty_env ()) t with
+                match cpp_of_core (Common.empty_env ()) t with
                 | c when Cpp_ir.Types.prints_as_any c -> None
                 | c -> Some (if deduced then Translation_calls.deduce_erased_domains c else c)
                 | exception _ -> None )

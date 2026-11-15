@@ -1715,9 +1715,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = []) ?(earlier 
   reset_renaming_tables ();
   let unsafe_needs =
     {
-      Backend.mldummy = struct_ast_search Core_util.isMLdummy struc;
-      tdummy = struct_type_search Core_util.isTdummy struc;
-      tunknown = struct_type_search (( == ) Core.Type.Unknown) struc;
+      Backend.erased_values = struct_ast_search Core_util.is_erased_value struc;
+      erased_types = struct_type_search Core_util.is_erased_type struc;
+      unknown_types = struct_type_search (( == ) Core.Type.Unknown) struc;
       magic = false;
     }
   in

@@ -41,7 +41,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
   | Core.Expr.Let {binder = x; binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; occurrence = let_occ} ->
     Translation_local_functions.gen_let_lambda ~slot env k ~x ~t ~a ~b ~let_occ
   | Core.Expr.Let {binder = x; binder_type = t; value = a; body = b; occurrence = let_occ} ->
-    let x' = cpp_id_of_id (id_of_mlid x) in
+    let x' = cpp_id_of_id (id_of_binder_name x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd ids_renamed) in
     (* The right-hand side is not under the binder, so it keeps [env]'s de
@@ -55,7 +55,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
     if x == Core.Binder_name.Anonymous then (
       push_binders env [(x_renamed, t)];
       gen_stmts ~slot env' k b )
-    else if ml_type_is_unit t then (
+    else if core_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
          so we can't assign its result to a variable.  Execute the RHS for
          side effects, then declare the variable as Unit::e_TT (its only
@@ -76,7 +76,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       in
       let decl : Cpp_ir.Lowered.Stmt.t list =
         if stmts_reference_var x_renamed body then
-          let cpp_ty = cpp_of_ml env t in
+          let cpp_ty = cpp_of_core env t in
           [Bind_variable (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), mk_tt_expr ())]
         else []
       in
@@ -101,11 +101,11 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
            zero-copy closure generation. *)
         let is_single_use_partial_app =
           match a with
-          | Core.Expr.Apply {callee = head; arguments = ml_args}
-          | Core.Expr.Coerce {value = Core.Expr.Apply {callee = head; arguments = ml_args}; _}
-          | Core.Expr.Boxed_value {value = Core.Expr.Apply {callee = head; arguments = ml_args}; _}
-          | Core.Expr.Lambda_group_barrier {value = Core.Expr.Apply {callee = head; arguments = ml_args}; _} ->
-            (match Escape.partial_app_remaining head ml_args with
+          | Core.Expr.Apply {callee = head; arguments = core_args}
+          | Core.Expr.Coerce {value = Core.Expr.Apply {callee = head; arguments = core_args}; _}
+          | Core.Expr.Boxed_value {value = Core.Expr.Apply {callee = head; arguments = core_args}; _}
+          | Core.Expr.Lambda_group_barrier {value = Core.Expr.Apply {callee = head; arguments = core_args}; _} ->
+            (match Escape.partial_app_remaining head core_args with
              | Some remaining ->
                Escape.nb_occur_match 1 b <= 1
                && not (Escape.escapes 1 b)
@@ -129,7 +129,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
              let empty_stack : list(Core.Type.Meta) = [] in make_pair(fr, empty_stack)
            where the pair type says the second arg is list(parser_frame). *)
         let t_effective =
-          let t_has_erased = ml_type_contains_erased t in
+          let t_has_erased = core_type_contains_erased t in
           if not t_has_erased then t
           else begin
             (* Try to infer from an Core.Expr.Construct that immediately follows in the body.
@@ -138,7 +138,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
               (* db_offset: how many let-bindings above b_inner, so Core.Expr.Bound_variable (1+db_offset) = x *)
               let target_rel = 1 + db_offset in
               (* Resolve t to get the underlying inductive (through metas) *)
-              let t_ind_opt = match resolve_tmeta t with
+              let t_ind_opt = match resolve_meta t with
                 | Core.Type.Global_app {head = t_ind; _} -> Some t_ind
                 | _ -> None
               in
@@ -148,11 +148,11 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                 List.iteri (fun i (ti : Core.Expr.t) ->
                   match ti with
                   | Core.Expr.Bound_variable {index = r; _} when r = target_rel ->
-                    (match resolve_tmeta ctor_ty with
+                    (match resolve_meta ctor_ty with
                      | Core.Type.Global_app {type_arguments = ctor_tys; _} ->
                        (match List.nth_opt ctor_tys i with
                         | Some raw_candidate ->
-                          (match resolve_tmeta raw_candidate with
+                          (match resolve_meta raw_candidate with
                           | Core.Type.Global_app {head = ind; type_arguments = sub_tys; _} as candidate ->
                             (* Check that candidate's inductive matches t's inductive.
                                When t is fully erased (Core.Type.Meta{None}), accept any concrete type. *)
@@ -160,7 +160,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                               | Some t_ind -> GlobRef.CanOrd.equal ind t_ind
                               | None -> true
                             in
-                            if matches_t && not (List.exists is_erased_ml_type sub_tys) then
+                            if matches_t && not (List.exists is_erased_core_type sub_tys) then
                               result := Some candidate
                           | _ -> ())
                         | _ -> ())
@@ -213,11 +213,11 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                     in
                     (match nth_arg func_ty idx with
                     | Some arg_ty ->
-                      let resolved = resolve_tmeta arg_ty in
+                      let resolved = resolve_meta arg_ty in
                       let resolved = try_unfold_typedef resolved in
-                      (match resolve_tmeta t, resolved with
+                      (match resolve_meta t, resolved with
                       | _, Core.Type.Global_app {type_arguments = r_sub; _}
-                        when not (List.exists is_erased_ml_type r_sub) ->
+                        when not (List.exists is_erased_core_type r_sub) ->
                         Some resolved
                       | _ -> None)
                     | None -> None)))
@@ -246,13 +246,13 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
            is a tree over [arg]'s family, whatever family the function
            returns into. *)
         let rhs_result =
-          let c = cpp_of_ml env t_effective in
+          let c = cpp_of_core env t_effective in
           (* A binder erasure took the whole type from -- [nt_semty x], a
              type computed from a value -- holds a box, and its value is
              one; read at the function's result instead, it is cast to a
              type it does not have. *)
           if Cpp_ir.Types.prints_as_any c then Some c
-          else if ml_type_contains_erased t_effective then current_cpp_return_type ()
+          else if core_type_contains_erased t_effective then current_cpp_return_type ()
           else
             match spell_in_scope c with
             | Some _ as t -> t
@@ -263,7 +263,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
             ~slot:
               { slot with
                 repr = Native;
-                expected_ml_ty = Some t_effective;
+                expected_core_ty = Some t_effective;
                 eta_keep_moves = is_single_use_partial_app }
             env_rhs afun a )
       in
@@ -280,7 +280,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       let result =
         match asgn with
           | [Bind_variable (_, Existing, e)] ->
-            let cpp_ty = cpp_of_ml env t in
+            let cpp_ty = cpp_of_core env t in
             (* When the type contains Tany (from erased carrier projections) but
                the generated expression is a lambda with concrete types, derive
                the std::function type from the lambda's parameter and return
@@ -338,7 +338,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
               :: gen_stmts ~slot env' k b
             end
           | _ ->
-            let cpp_ty = cpp_of_ml env t in
+            let cpp_ty = cpp_of_core env t in
             ((Declare (x_renamed, cpp_ty, core_binder ~site:(Binding let_occ) env' 1) : Cpp_ir.Lowered.Stmt.t) :: asgn)
             @ gen_stmts ~slot env' k b
       in
@@ -405,7 +405,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
       | Core.Expr.Coerce {value = Core.Expr.Apply {callee = f; arguments = args}; _}
       | Core.Expr.Boxed_value {value = Core.Expr.Apply {callee = f; arguments = args}; _}
       | Core.Expr.Lambda_group_barrier {value = Core.Expr.Apply {callee = f; arguments = args}; _} ->
-        ml_callee_is_void f
+        core_callee_is_void f
         (* Only treat as void if fully applied — partial applications
            return a function value, not void. *)
         && ( match f with
@@ -416,7 +416,7 @@ let rec gen_stmts ?(slot = empty_slot) env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.
                  List.length (List.filter (fun a ->
                    match a with Core.Expr.Erased_value _ -> false | _ -> true) args)
                in
-               n_non_dummy_args >= count_ml_value_arrows ty
+               n_non_dummy_args >= count_core_value_arrows ty
              | None -> true )
            | _ -> true )
       | _ -> false

@@ -58,7 +58,7 @@ let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
         all_vars
     in
     let ct =
-      Translation_types.cpp_ir_of_ml_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
+      Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
         spelling t
     in
         let ct = Cpp_ir.Types.map replace_promoted ct in
@@ -133,7 +133,7 @@ let concept_constraint_of_class_type ty : Cpp_ir.Lowered.phase Cpp_ir.Template.P
   | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} ->
     let kept =
       if Table.get_ind_nb_tparams class_ref = 0 then []
-      else List.map (Translation_types.cpp_ir_of_ml_type (empty_env ()) []) (Table.drop_hkt_args class_ref type_args)
+      else List.map (Translation_types.cpp_ir_of_core_type (empty_env ()) []) (Table.drop_hkt_args class_ref type_args)
     in
     let mentioned =
       List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Table.promoted_type_params class_ref)
@@ -225,9 +225,9 @@ let gen_typeclass_cpp name fields =
   in
   (* A type translation converted, with the promoted variables it names
      respelled, in CppIR. *)
-  let converted ml_ty =
+  let converted core_ty =
     subst_promoted_in_cpp_type
-      (Translation_types.cpp_ir_of_ml_type (empty_env ()) prefixed_ip_vars ml_ty)
+      (Translation_types.cpp_ir_of_core_type (empty_env ()) prefixed_ip_vars core_ty)
   in
   let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
     Scope (Local inst_id, Id.of_string method_name, type_args)
@@ -435,7 +435,7 @@ type binder_kind = [`Value | `Instance | `Erased]
     apart. *)
 type method_binder = {
   mb_name : Id.t;
-  mb_ml_ty : Core.Type.t;
+  mb_core_ty : Core.Type.t;
   mb_cpp_ty : Cpp_ir.Lowered.Type.t;
   mb_kind : binder_kind;
 }

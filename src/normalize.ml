@@ -62,7 +62,7 @@ let group_call group ~depth e =
   match e with
   | Core.Expr.Apply {callee = (Core.Expr.Global {callee = r; _} as f);
                      arguments = args} when List.exists (GlobRef.UserOrd.equal r) group.globals ->
-    full_result (Translation_types.ml_app_result_type f args)
+    full_result (Translation_types.core_app_result_type f args)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; arguments = args} -> (
     match
       List.find_map
@@ -77,7 +77,7 @@ let group_call group ~depth e =
          annotation of the temporary's own: the program is frozen. *)
       Some
         (Option.default (Core_util.new_meta ())
-           (Type_util.ml_codomain_after (List.length value_args) l.l_type))
+           (Type_util.core_codomain_after (List.length value_args) l.l_type))
     | _ -> None )
   | _ -> None
 
@@ -261,7 +261,7 @@ let rec scope ~group ~depth ?expected e =
         let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
         take e'
           (Option.default (Core_util.new_meta ())
-             (Type_util.ml_codomain_after (List.length value_args) (Core.Recursion.Group.selected_member g).type_))
+             (Type_util.core_codomain_after (List.length value_args) (Core.Recursion.Group.selected_member g).type_))
       | _ -> e' )
     | Core.Expr.Construct {result_type = ty;
                            constructor = (GlobRef.ConstructRef (ind, _) as r);

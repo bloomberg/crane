@@ -383,7 +383,7 @@ let get_decl_in_structure r struc =
     for clarity) and iota redexes, plus some other optimizations. *)
 
 (** Convert member [i] of a Core.Decl.Recursive_group group to an Core.Expr.Fixpoint term for inlining. *)
-let dfix_to_mlfix fds i =
+let fixpoint_of_group fds i =
   let fds = Core.Nonempty.to_list fds in
   let rv = Array.of_list (List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) fds) in
   let rec make_subst n s =
@@ -471,7 +471,7 @@ let rec optim_se top to_appear s = function
     List.iteri
       (fun i (fd : Core.Recursion.Definition.t) ->
         if inline fd.entity fake_body then
-          s := Ref.User.Map.add fd.entity (dfix_to_mlfix fds i) !s )
+          s := Ref.User.Map.add fd.entity (fixpoint_of_group fds i) !s )
       (Core.Nonempty.to_list fds);
     let fds = Core.Nonempty.map (Core.Recursion.Definition.map_body dump_unused_vars) fds in
     (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: optim_se top to_appear s lse

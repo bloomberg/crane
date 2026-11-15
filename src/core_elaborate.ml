@@ -48,17 +48,17 @@ let classify ~lex id written =
     in
     let is_value (_, a) = is_value_arg a in
     let is_value_dom t =
-      match resolve_tmeta t with
+      match resolve_meta t with
       | Core.Type.Erased _ -> false
       | _ -> true
     in
-    let rec collect_tarr_dom acc = function
-      | Core.Type.Arrow {parameter = t1; result = t2} -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
+    let rec collect_arrow_domains acc = function
+      | Core.Type.Arrow {parameter = t1; result = t2} -> collect_arrow_domains (resolve_meta t1 :: acc) t2
       | _ -> List.rev acc
     in
     match find_type_opt id with
-    | Some ml_ty ->
-      let all_dom = collect_tarr_dom [] ml_ty in
+    | Some core_ty ->
+      let all_dom = collect_arrow_domains [] core_ty in
       (* Count value-domain entries by filtering out ALL [Core.Type.Erased] positions
          (both [Core.Erasure_reason.Type_argument] for erased type params and [Core.Erasure_reason.Proof] for erased proofs).
          Symmetrically, filter the arg list to exclude [Core.Expr.Erased_value] entries.
@@ -73,7 +73,7 @@ let classify ~lex id written =
          declaration receives an empty box instead. *)
       let value_args =
         (* Two conventions meet here.  The arguments the Rocq term gave
-           have the declaration's erased domains dropped ([make_mlargs]
+           have the declaration's erased domains dropped ([make_args]
            kills each [Core.Type.Erased]), so each is at a value domain, erased or
            not.  The tail an eta-expansion invents keeps them: a dummy at
            each erased domain, a variable at each value one
@@ -179,10 +179,10 @@ let elaborate_arguments ~lex (use : Core.Global_use.t) args = of_roles use args 
 
 (* The holes of [call]'s reading of its scheme variables that its context
    states: the ML type its position expects or states for its result
-   ([expected_ml], else [stated_ml]), and the heads its arguments' types give
+   ([expected_core], else [stated_core]), and the heads its arguments' types give
    a type-level function a domain names. *)
-let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t) =
-  let {Elaborated_call.callee = id; callee_type = fn_ml_ty; primary = primary_ml_args; tyargs; _} =
+let resolve_from_context ~lex ~expected_core ~stated_core (call : Elaborated_call.t) =
+  let {Elaborated_call.callee = id; callee_type = fn_core_ty; primary = primary_core_args; tyargs; _} =
     call
   in
   (* An erased event family the position's type names: [memM_interp]'s [E],
@@ -191,20 +191,20 @@ let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t)
      the phantom filler would write [void]. *)
   let tyargs =
     match
-      match expected_ml with
+      match expected_core with
       | Some _ as t -> t
-      | None -> stated_ml
+      | None -> stated_core
     with
     | Some result when Call_tyargs.interior_holes tyargs <> [] ->
-      let families = Type_util.event_family_ml_tvars [fn_ml_ty] in
+      let families = Type_util.event_family_core_tvars [fn_core_ty] in
       (* A family is a head, or one applied at the index it erases
          ([BotE _]); [box nat] met at a bare variable is a value type, not
          the family. *)
       let family_shaped b =
-        match resolve_tmeta b with
+        match resolve_meta b with
         | Core.Type.Global_app {type_arguments = []; _} -> true
         | Core.Type.Global_app {type_arguments = args; _} ->
-          Type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
+          Type_util.is_core_erased_ty (List.nth args (List.length args - 1))
         | _ -> false
       in
       (* With [~constructors]: an applied variable against an application
@@ -212,7 +212,7 @@ let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t)
          is the answer. *)
       let found =
         tvar_instantiation_found ~lex ~constructors:true ~result
-          fn_ml_ty primary_ml_args
+          fn_core_ty primary_core_args
       in
       (* Only where nothing deduces it: a family a parameter spells is the
          compiler's to read off the argument. *)
@@ -238,11 +238,11 @@ let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t)
      the parameter types the arguments are generated against and the
      explicit type arguments the call writes agree. *)
   Elaborated_call.with_tyargs call
-    (resolve_from_argument_heads ~only_alias_args:true ~lex tyargs primary_ml_args)
+    (resolve_from_argument_heads ~only_alias_args:true ~lex tyargs primary_core_args)
 
-let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
-  let call = resolve_from_context ~lex ~expected_ml ~stated_ml call in
-  let {Elaborated_call.callee = id; callee_type = fn_ml_ty; primary = primary_ml_args; tyargs; _} =
+let instantiate ~lex ~expected_core ~stated_core ~caller ~scope call =
+  let call = resolve_from_context ~lex ~expected_core ~stated_core call in
+  let {Elaborated_call.callee = id; callee_type = fn_core_ty; primary = primary_core_args; tyargs; _} =
     call
   in
   (* A partial application is eta-expanded into a lambda spelled in the
@@ -254,14 +254,14 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
   let reading =
     let n_params =
       let rec count ty =
-        match expand_ml_fun_alias ty with
+        match expand_core_fun_alias ty with
         | Core.Type.Arrow {parameter = t; result = rest} ->
-          (match resolve_tmeta t with
+          (match resolve_meta t with
            | Core.Type.Erased _ -> count rest
            | _ -> 1 + count rest)
         | _ -> 0
       in
-      count fn_ml_ty
+      count fn_core_ty
     in
     (* Only one the lambda's result spells: a variable the codomain does not
        mention -- a rank-2 handler's [forall X] -- is not the call's to
@@ -272,10 +272,10 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
       | Some r -> GlobRef.UserOrd.equal r id
       | None -> false
     in
-    if self_call || List.length primary_ml_args >= n_params then tyargs
+    if self_call || List.length primary_core_args >= n_params then tyargs
     else
-      let tyargs = resolve_from_argument_types ~lex tyargs primary_ml_args in
-      let in_cod = collect_tvars_set IntSet.empty (ml_codomain fn_ml_ty) in
+      let tyargs = resolve_from_argument_types ~lex tyargs primary_core_args in
+      let in_cod = collect_tvars_set IntSet.empty (core_codomain fn_core_ty) in
       let open_vars = Call_tyargs.beyond_extent tyargs in
       match
         List.fold_left
@@ -310,10 +310,10 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
      substituted one are not indexed alike: substitution can make a
      parameter dummy that was not one before ({!Param_pos}). *)
   Elaborated_call.instantiate call ~reading
-    ~at_call:(fun tys -> instantiate_at_call ~lex ~caller id tys primary_ml_args)
-    ~expand:expand_ml_fun_alias
+    ~at_call:(fun tys -> instantiate_at_call ~lex ~caller id tys primary_core_args)
+    ~expand:expand_core_fun_alias
     ~erased:(fun t ->
-      match resolve_tmeta t with
+      match resolve_meta t with
       | Core.Type.Erased _ -> true
       | _ -> false )
 
@@ -430,7 +430,7 @@ let member_template_projection ~lex (call : Elaborated_call.t) =
   | [inst] -> (
     kept_instance_of_projection ~lex call.callee [inst] <> None
     &&
-    match resolve_tmeta (instance_class_ty ~lex inst) with
+    match resolve_meta (instance_class_ty ~lex inst) with
     | Core.Type.Global_app {head = c; _} -> method_is_member_template c call.callee
     | _ -> false )
   | _ -> false
@@ -441,7 +441,7 @@ let member_template_projection ~lex (call : Elaborated_call.t) =
 let singleton_dictionary_head lex i =
   match Lexenv.binder lex i with
   | Some {eb_id; eb_type; eb_role} when eb_role = Lexenv.Dictionary || Common.is_tc_instance_id eb_id -> (
-    match resolve_tmeta eb_type with
+    match resolve_meta eb_type with
     | Core.Type.Global_app {head = c; _} -> Option.map (fun m -> (c, m)) (Table.singleton_class_method c)
     | _ -> None )
   | _ -> None
@@ -484,7 +484,7 @@ let record w ~position lex (use : Core.Global_use.t) args =
     let call = of_roles use args roles in
     let planned =
       match
-        instantiate ~lex ~expected_ml:position.expected ~stated_ml:position.stated ~caller:w.caller
+        instantiate ~lex ~expected_core:position.expected ~stated_core:position.stated ~caller:w.caller
           ~scope:w.scope call
       with
       | inst -> Some inst
@@ -546,7 +546,7 @@ let argument_positions ~position planned =
           let param = argument_position inst regular_index.(i) in
           let expected =
             match param with
-            | Some t when not (ml_type_contains_erased t) -> Some t
+            | Some t when not (core_type_contains_erased t) -> Some t
             | _ -> position.expected
           in
           {expected; stated = param}
@@ -560,14 +560,14 @@ let argument_positions ~position planned =
 let lambda_body_position ~n position =
   let rec strip n ty =
     if n = 0 then Some ty
-    else match resolve_tmeta ty with Core.Type.Arrow {result = cod; _} -> strip (n - 1) cod | _ -> None
+    else match resolve_meta ty with Core.Type.Arrow {result = cod; _} -> strip (n - 1) cod | _ -> None
   in
   let expected =
     match position.expected with
     | Some fn_ty -> (
       match strip n fn_ty with
       | Some cod -> (
-        match resolve_tmeta cod with
+        match resolve_meta cod with
         | Core.Type.Erased _ | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _ ->
           position.expected
         | _ -> Some cod )
@@ -576,7 +576,7 @@ let lambda_body_position ~n position =
   in
   {position with expected}
 
-let binder role (x, ty) = {Lexenv.eb_id = Core_util.id_of_mlid x; eb_type = ty; eb_role = role}
+let binder role (x, ty) = {Lexenv.eb_id = Core_util.id_of_binder_name x; eb_type = ty; eb_role = role}
 
 (* The binders [ids], innermost first, as [collect_lams] returns them. *)
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
@@ -679,7 +679,7 @@ and walk_use w lex (use : Core.Global_use.t) =
    has calls of its own, translated where the type is converted, in no
    declaration's name. *)
 and walk_type w lex ty =
-  match resolve_tmeta ty with
+  match resolve_meta ty with
   | Core.Type.Global_app {head = g; type_arguments = tys; index_arguments = args} ->
     List.iter (walk_type w lex) tys;
     if Table.is_custom g then List.iter (walk {w with caller = None; site = Type_term} lex) args
@@ -692,7 +692,7 @@ and walk_type w lex ty =
 (* The variables a declaration of type [ty] is generated under: the type
    variables of its head, which a let-bound lambda in its body is numbered
    past ({!Local_types}). *)
-let head_variables ty = Core_util.IntSet.fold max (Core_util.ml_tvars ty) 0
+let head_variables ty = Core_util.IntSet.fold max (Core_util.core_tvars ty) 0
 
 (* A declaration's own parameters are bound as its parameters, at the types
    its body is generated with ({!Core_query.reconcile_parameter_type}):
@@ -710,12 +710,12 @@ let declaration_scope ty body =
   let params, body = declared_parameters ty body in
   let parameter (x, body_ty) sig_ty =
     let body_ty =
-      match resolve_tmeta body_ty with Core.Type.Meta {contents = None} | Core.Type.Open _ -> sig_ty | t -> t
+      match resolve_meta body_ty with Core.Type.Meta {contents = None} | Core.Type.Open _ -> sig_ty | t -> t
     in
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
   in
-  (Lexenv.push (List.map2 parameter params (List.rev (Type_util.ml_domains ty))) Lexenv.empty, body)
+  (Lexenv.push (List.map2 parameter params (List.rev (Type_util.core_domains ty))) Lexenv.empty, body)
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
    every let-bound lambda as translation generates it
@@ -792,8 +792,8 @@ let declaration ?caller ?scope b ty body =
 let constant_at_alias ~caller b ty body =
   let ty = Core_util.type_simpl ty in
   let body = match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _} | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b in
-  if Type_util.ml_domains ty = [] then
-    match Type_util.eta_expand_to (Type_util.expand_ml_fun_alias ty) body with
+  if Type_util.core_domains ty = [] then
+    match Type_util.eta_expand_to (Type_util.expand_core_fun_alias ty) body with
     | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Lexenv.empty expanded
     | _ -> ()
 
@@ -1002,10 +1002,10 @@ let planned t (use : Core.Global_use.t) n =
       `Planned p
     | entries -> `Ambiguous (List.map (fun (e : entry) -> e.site) entries) )
 
-let instantiation ~walk ~lex ~expected_ml ~stated_ml ~caller ~scope (use : Core.Global_use.t) args =
+let instantiation ~walk ~lex ~expected_core ~stated_core ~caller ~scope (use : Core.Global_use.t) args =
   let call = elaboration ~walk ~lex use args in
   let t = walk_of walk in
-  let live () = instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call in
+  let live () = instantiate ~lex ~expected_core ~stated_core ~caller ~scope call in
   let describe what =
     Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
   in

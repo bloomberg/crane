@@ -27,22 +27,22 @@ open Names
 module IntSet : Stdlib.Set.S with type elt = int and type t = Stdlib.Set.Make(Stdlib.Int).t
 
 (** [t] with every resolved meta at its root taken off. *)
-val ml_resolve : Core.Type.t -> Core.Type.t
+val core_resolve : Core.Type.t -> Core.Type.t
 
 (** The immediate sub-types of an already resolved type. *)
-val ml_type_children : Core.Type.t -> Core.Type.t list
+val core_type_children : Core.Type.t -> Core.Type.t list
 
 (** Whether some node of the type, the root included, satisfies [p]. *)
-val exists_ml_type : (Core.Type.t -> bool) -> Core.Type.t -> bool
+val exists_core_type : (Core.Type.t -> bool) -> Core.Type.t -> bool
 
 (** Pre-order: [f] sees a node before its children. *)
-val fold_ml_type : ('a -> Core.Type.t -> 'a) -> 'a -> Core.Type.t -> 'a
+val fold_core_type : ('a -> Core.Type.t -> 'a) -> 'a -> Core.Type.t -> 'a
 
 (** Bottom-up: [f] sees a node after its children were mapped. *)
-val map_ml_type : (Core.Type.t -> Core.Type.t) -> Core.Type.t -> Core.Type.t
+val map_core_type : (Core.Type.t -> Core.Type.t) -> Core.Type.t -> Core.Type.t
 
 (** The indices of every type variable in [t], an applied one included. *)
-val ml_tvars : Core.Type.t -> IntSet.t
+val core_tvars : Core.Type.t -> IntSet.t
 
 (** {2 Utility functions over ML types with meta} *)
 
@@ -62,7 +62,7 @@ val new_meta : 'a -> Core.Type.t
     known. A head that carries placeholders -- an eta-expanded constructor, or
     a type-level lambda whose binder extraction could not name -- has them
     filled rather than extended. *)
-val apply_ml_type : Core.Type.t -> Core.Type.t list -> Core.Type.t
+val apply_core_type : Core.Type.t -> Core.Type.t list -> Core.Type.t
 
 (** Substitute type variables using a list of types.
     @param l replacement types for [Core.Type.Variable 1], [Core.Type.Variable 2], ... in order
@@ -74,7 +74,7 @@ val type_subst_list : Core.Type.t list -> Core.Type.t -> Core.Type.t
 val type_subst_fun : (int -> Core.Type.t option) -> Core.Type.t -> Core.Type.t
 
 (** A one-line rendering of an ML type, for diagnostics. *)
-val debug_ml_type : Core.Type.t -> string
+val debug_core_type : Core.Type.t -> string
 
 (** The scheme extraction recorded for [r], with the source binders its
     variables come from; [None] for anything but an extracted constant. *)
@@ -137,7 +137,7 @@ module Var_types : sig
       variables: each variable spoken for is replaced, any other stays. *)
   val apply : t -> Core.Type.t -> Core.Type.t
 
-  (** The same variables at equal types ({!eq_ml_type}). *)
+  (** The same variables at equal types ({!eq_core_type}). *)
   val equal : t -> t -> bool
 end
 
@@ -257,7 +257,7 @@ val generalizable : Core.Expr.t -> bool
 
 (** {2 ML type environment} *)
 
-module Mlenv : sig
+module Type_env : sig
   (** Type schemas of the binders in scope, innermost first, with the free
       metavariables they mention. *)
   type t
@@ -266,23 +266,23 @@ module Mlenv : sig
   val empty : t
 
   (** Get the n-th most recently entered schema and instantiate it.
-      @param mle the type environment
+      @param type_env the type environment
       @param n 1-based index into the environment (1 = most recently pushed)
       @return a fresh instantiation of the n-th schema *)
   val get : t -> int -> Core.Type.t
 
   (** Add a type to the environment, after generalizing free meta variables.
-      @param mle the current environment
+      @param type_env the current environment
       @param t  the ML type to generalize and push *)
   val push_gen : t -> Core.Type.t -> t
 
   (** Add a type with no [Core.Type.Variable] (no generalization needed).
-      @param mle the current environment
+      @param type_env the current environment
       @param t  the monomorphic ML type to push *)
   val push_type : t -> Core.Type.t -> t
 
   (** Add a type with no [Core.Type.Variable] nor [Core.Type.Meta] (no generalization, no free metas).
-      @param mle the current environment
+      @param type_env the current environment
       @param t  the ground ML type to push *)
   val push_std_type : t -> Core.Type.t -> t
 end
@@ -379,13 +379,13 @@ val type_expunge : abbrev_map -> Core.Type.t -> Core.Type.t
 val type_expunge_from_sign : abbrev_map -> Core.Signature.t -> Core.Type.t -> Core.Type.t
 
 (** Test equality of two ML types. *)
-val eq_ml_type : Core.Type.t -> Core.Type.t -> bool
+val eq_core_type : Core.Type.t -> Core.Type.t -> bool
 
 (** Check if a type is Core.Type.Erased. *)
-val isTdummy : Core.Type.t -> bool
+val is_erased_type : Core.Type.t -> bool
 
 (** Check if an ML term is Core.Expr.Erased_value. *)
-val isMLdummy : Core.Expr.t -> bool
+val is_erased_value : Core.Expr.t -> bool
 
 (** The term definitions a declaration makes: a [Core.Decl.Value]'s one, a [Core.Decl.Recursive_group]'s
     group, and none for anything else. *)
@@ -444,7 +444,7 @@ val temporary_id : int -> Id.t
 val is_temporary_id : Id.t -> bool
 
 (** Extract the Id.t from an Core.Binder_name.t.  A temporary keeps its reserved name. *)
-val id_of_mlid : Core.Binder_name.t -> Id.t
+val id_of_binder_name : Core.Binder_name.t -> Id.t
 
 (** Generate a temporary identifier from an Core.Binder_name.t. *)
 val tmp_id : Core.Binder_name.t -> Core.Binder_name.t
@@ -507,7 +507,7 @@ val eta_args_sign : int -> Core.Signature.t -> Core.Expr.t list
 (** {2 Utility functions over ML terms} *)
 
 (** Apply an ML term to a list of arguments. Returns [f] unchanged when [a] is empty. *)
-val mlapp : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
+val apply_args : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
 
 (** Map a function over all immediate subterms.
     @param f the transformation to apply to each direct child

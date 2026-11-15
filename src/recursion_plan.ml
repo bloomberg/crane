@@ -380,7 +380,7 @@ let rec iter_scoped f lex e =
   let bind ids lex =
     Lexenv.push
       (List.map
-         (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value})
+         (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_binder_name x; eb_type = ty; eb_role = Lexenv.Value})
          ids )
       lex
   in
@@ -424,7 +424,7 @@ let suspends_within ~self lex e =
    ({!Translation_support.suspends_whole}), or at a constructor. *)
 let definition_suspends self ty body =
   let lex, body = Core_elaborate.declaration_scope ty body in
-  Translation_support.suspends_whole self (Type_util.ml_return_type ty) body
+  Translation_support.suspends_whole self (Type_util.core_return_type ty) body
   || suspends_within ~self lex body
 
 (* The levels of the binders outside [e] that [e] reads as values, [e]
@@ -461,7 +461,7 @@ let in_place from into =
     when Names.GlobRef.UserOrd.equal r r' -> (
     match Table.get_ind_num_param_vars_opt kn with
     | Some n when List.length args >= n && List.length args' >= n ->
-      List.for_all2 Core_util.eq_ml_type (CList.firstn n args) (CList.firstn n args')
+      List.for_all2 Core_util.eq_core_type (CList.firstn n args) (CList.firstn n args')
     | Some _ | None -> false )
   | _ -> false
 
@@ -1099,16 +1099,16 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
    where it is suspended whole. *)
 let flow_of r (fd : Core.Recursion.Definition.t) =
   let _, body = Core_elaborate.declaration_scope fd.type_ fd.body in
-  if Translation_support.suspends_whole r (Type_util.ml_return_type fd.type_) body then None else Some body
+  if Translation_support.suspends_whole r (Type_util.core_return_type fd.type_) body then None else Some body
 
 (* The number of parameters the definition [fd] is generated taking: every
    one its type declares. *)
-let fd_parameters (fd : Core.Recursion.Definition.t) = List.length (Type_util.ml_domains (Core_util.type_simpl fd.type_))
+let definition_parameter_count (fd : Core.Recursion.Definition.t) = List.length (Type_util.core_domains (Core_util.type_simpl fd.type_))
 
 (* The number of parameters of [g], among the definitions [defs]. *)
 let parameters defs g =
   match Ref.User.Map.find_opt g defs with
-  | Some fd -> fd_parameters fd
+  | Some fd -> definition_parameter_count fd
   | None -> 0
 
 (* The partner of [self] spliced next into [body], its body as generated,
@@ -1213,8 +1213,8 @@ let yields_alike a b =
     | Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = unfold a; result = unfold b}
     | t -> t
   in
-  let returns ty = Core_util.rigidify (unfold (Type_util.ml_return_type (Core_util.type_simpl ty))) in
-  Core_util.eq_ml_type (returns a) (returns b)
+  let returns ty = Core_util.rigidify (unfold (Type_util.core_return_type (Core_util.type_simpl ty))) in
+  Core_util.eq_core_type (returns a) (returns b)
 
 (* The calls of [g] the partner [def] makes where its body runs in place of
    a call of it ({!inlined_calls}), and the number of its uses of [g] there
@@ -1253,7 +1253,7 @@ let calls_itself_in_flow ~defs (def : Core.Recursion.Definition.t) =
    every call of the partner its body makes. *)
 let adopt_calls (def : Core.Recursion.Definition.t) sites body =
   let partner = def.entity in
-  let arity = List.length (Type_util.ml_domains (Core_util.type_simpl def.type_)) in
+  let arity = List.length (Type_util.core_domains (Core_util.type_simpl def.type_)) in
   let left = ref sites in
   let at use = List.exists (Core.Occurrence.equal (Core.Global_use.occurrence use)) !left in
   let exception Unspliced of string in
@@ -1292,7 +1292,7 @@ let adopt_calls (def : Core.Recursion.Definition.t) sites body =
 (* Whether the function defined as [fd] calls itself once its partners are
    spliced into it: only a function that does is lowered as a loop. *)
 let recurses (fd : Core.Recursion.Definition.t) =
-  let arity = List.length (Type_util.ml_domains (Core_util.type_simpl fd.type_)) in
+  let arity = List.length (Type_util.core_domains (Core_util.type_simpl fd.type_)) in
   let callee ~depth:_ = function
     | Core.Expr.Global (use : Core.Global_use.t) when Names.GlobRef.UserOrd.equal use.callee fd.entity -> Some arity
     | _ -> None
@@ -1449,7 +1449,7 @@ let analyze groups program =
   let member_kind r (fd : Core.Recursion.Definition.t) =
     let callee ~depth:_ = function
       | Core.Expr.Global (use : Core.Global_use.t) when Names.GlobRef.UserOrd.equal use.callee r ->
-        Some (fd_parameters fd)
+        Some (definition_parameter_count fd)
       | _ -> None
     in
     classify ~effects ~callee (snd (Core_elaborate.declaration_scope fd.type_ fd.body))

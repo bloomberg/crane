@@ -49,4 +49,4 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
     because it is a question about C++ types, and the registry is deliberately
     kept below the type translation. *)
 let return_type_is_erased (param_vars : Id.t list) (ret : Core.Type.t) : bool =
-  Type_util.type_is_erased (Translation_types.cpp_ir_of_ml_type (Common.empty_env ()) param_vars ret)
+  Type_util.type_is_erased (Translation_types.cpp_ir_of_core_type (Common.empty_env ()) param_vars ret)

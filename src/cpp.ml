@@ -1217,8 +1217,8 @@ let wrapper_element ~module_ se =
   | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) -> (
     match filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds with
     | [] -> Wrapper_nothing
-    | {Core.Recursion.Definition.entity = fd_ref; _} :: _ as fds ->
-      Wrapper_functions (fd_ref, fun () -> generated_once ~module_ se (fun () -> gen_dfuns_dual fds)) )
+    | {Core.Recursion.Definition.entity; _} :: _ as fds ->
+      Wrapper_functions (entity, fun () -> generated_once ~module_ se (fun () -> gen_dfuns_dual fds)) )
   | _ -> Wrapper_nothing
 
 (** Process a wrapper module in dual-pass mode (header vs implementation).
@@ -1569,7 +1569,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
       in_header_scope {!header with in_struct = true} (fun () -> module_expr body)
     | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sel; _} as me; _} ->
       in_module_frame ~module_ (MPdot (module_, l)) sel (fun () -> module_expr me)
-    | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr ml_mod_expr
+    | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
     | Core.Module.Structure_item.Module_type m -> ignore (modtype ~module_ (MPdot (module_, l)) ~params:[] m)
   and module_expr = function
     | Core.Module.Expr.Structure {path = mp; items = sel} ->
@@ -2215,7 +2215,7 @@ let declarations s =
       (fun (_, se) ->
         match se with
         | Core.Module.Structure_item.Declaration d -> [d]
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr ml_mod_expr
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
         | Core.Module.Structure_item.Module_type _ -> [] )
       sel
   and module_expr = function
@@ -2463,7 +2463,7 @@ let plan_accessors s =
       match ty with
       | Core.Type.Global_app {head = m; _} when is_monad m -> false
       | _ -> (
-        match Translation_types.cpp_ir_of_ml_type (empty_env ()) [] ty with
+        match Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty with
         | Function _ -> false
         | _ when Translation_support.thunk_reason r = Some Throws -> false
         | cty ->
@@ -2480,7 +2480,7 @@ let plan_accessors s =
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = mp;
                                                                                             items = sel}; _} ->
           elems ~in_struct:true ~in_template:(Scope_plan.templated mp) sel
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr ml_mod_expr
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> [] )
       sel
   and module_expr = function
@@ -2511,7 +2511,7 @@ let plan_visibility s =
     List.fold_left
       (fun acc (_, se) ->
         match se with
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr outer [] ml_mod_expr acc
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr outer [] core_mod_expr acc
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> acc )
       acc sel
   and module_expr outer params me acc =
@@ -2559,7 +2559,7 @@ let declared_at s mp =
       | MPdot (parent, l) -> (
         match struct_at parent with
         | Some (_, _, sel) -> (
-          match List.assoc_opt l sel with Some (Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _}) -> body [] ml_mod_expr | _ -> None )
+          match List.assoc_opt l sel with Some (Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _}) -> body [] core_mod_expr | _ -> None )
         | None -> None )
       | MPfile _ | MPbound _ -> None )
   in
@@ -2619,7 +2619,7 @@ let plan_bodies ~start ~enter s =
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = mp;
                                                                                             items = sel'}; _} ->
           body (enter state ~frame:(Some (MPdot (body_mp, l))) mp sel') mp sel' acc
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} -> module_expr state ml_mod_expr acc
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr state core_mod_expr acc
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> acc )
       acc sel
   and module_expr state me acc =
@@ -2771,7 +2771,7 @@ let plan_nested_structs s =
         past_parameters b
       | b -> b
     in
-    match Type_util.ml_return_type ty with
+    match Type_util.core_return_type ty with
     | Core.Type.Global_app {head = cls; _} when Table.is_typeclass cls -> (
       match (Table.singleton_class_method cls, past_parameters body) with
       | Some _, _ | None, Core.Expr.Construct _ -> true
@@ -2920,9 +2920,9 @@ let plan_module_names s =
     List.concat_map
       (fun (l, se) ->
         match se with
-        | Core.Module.Structure_item.Module {Core.Module.expr = ml_mod_expr; _} ->
+        | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} ->
           let mp = MPdot (parent, l) in
-          (mp, Common.emitted_module_name mp) :: module_expr mp ml_mod_expr
+          (mp, Common.emitted_module_name mp) :: module_expr mp core_mod_expr
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> [] )
       sel
   and module_expr mp = function

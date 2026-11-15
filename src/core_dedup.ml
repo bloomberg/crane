@@ -78,7 +78,7 @@ let structure struc =
       (* A forwarder runs its target's precondition checks, so two
          definitions are one only if those are the same too. *)
       let key = (canonical r body, Table.get_sigma_assertions r) in
-      match List.find_opt (fun (key', _, ty') -> key' = key && Core_util.eq_ml_type ty' ty) seen with
+      match List.find_opt (fun (key', _, ty') -> key' = key && Core_util.eq_core_type ty' ty) seen with
       | Some (_, r', _) ->
         (l, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
                                                                      body = forwarder body r';

@@ -13,16 +13,16 @@ open Cpp_ir.Type
 
 let push ids lex =
   Lexenv.push
-    (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value}) ids)
+    (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_binder_name x; eb_type = ty; eb_role = Lexenv.Value}) ids)
     lex
 
 (* The return type a let's right-hand side is generated under
    ({!Translation_stmts.gen_stmts}' [Core.Expr.Let]): the binder's own type where it
    says one, else the one in force. *)
 let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
-  let c = cpp_of_ml env t in
+  let c = cpp_of_core env t in
   if Cpp_ir.Types.prints_as_any c then Some c
-  else if ml_type_contains_erased t then ret
+  else if core_type_contains_erased t then ret
   else match spell_in_scope c with Some _ as t -> t | None -> ret
 
 (* An environment naming the binders of [lex] as they are bound, for the
@@ -37,9 +37,9 @@ let named_env (lex : Lexenv.t) : Common.env = (List.map (fun (b : Lexenv.binder)
 let coerced_slot env ~(pos : Cpp_ir.Lowered.Type.t option) slot ~from ~into =
   if
     (match pos with Some t -> Cpp_ir.Types.prints_as_any t | None -> true)
-    && Cpp_ir.Types.prints_as_any (cpp_of_ml env into)
-    && not (Cpp_ir.Types.prints_as_any (cpp_of_ml env from))
-  then into_box (box_kind_of_cpp_type (cpp_of_ml env into)) slot
+    && Cpp_ir.Types.prints_as_any (cpp_of_core env into)
+    && not (Cpp_ir.Types.prints_as_any (cpp_of_core env from))
+  then into_box (box_kind_of_cpp_type (cpp_of_core env into)) slot
   else slot
 
 let region ~outer ~reads body =
@@ -83,8 +83,8 @@ let region ~outer ~reads body =
       | Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
       | Match_kind.Custom ->
         let rty = match Array.to_list branches with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ in
-        let r = cpp_of_ml env rty in
-        let ret = if is_cpp_unit_type r || ml_type_is_void_call rty then Some Void else ret in
+        let r = cpp_of_core env rty in
+        let ret = if is_cpp_unit_type r || core_type_is_void_call rty then Some Void else ret in
         Array.iter (branch ~ret lex) branches
       | Match_kind.Variant ->
         let is_enum =
@@ -99,7 +99,7 @@ let region ~outer ~reads body =
   and stored ~pos ~ret ~slot lex e =
     match e with
     | Core.Expr.Erased_value _ -> ()
-    | e when ml_value_is_void_call e -> expr ~pos:None ~ret ~slot lex e
+    | e when core_value_is_void_call e -> expr ~pos:None ~ret ~slot lex e
     | e -> expr ~pos ~ret ~slot lex e
   (* A constructor of Crane's own, each argument at the field it fills
      ({!Translation_constructors}). *)
@@ -149,8 +149,8 @@ let region ~outer ~reads body =
       ( match x with
       | Core.Binder_name.Anonymous -> ()
       | _ ->
-        let slot = {slot with repr = Native; expected_ml_ty = Some t} in
-        if ml_type_is_unit t then stmts ~ret ~slot lex a else stmts ~ret:(let_result env ~ret t) ~slot lex a );
+        let slot = {slot with repr = Native; expected_core_ty = Some t} in
+        if core_type_is_unit t then stmts ~ret ~slot lex a else stmts ~ret:(let_result env ~ret t) ~slot lex a );
       stmts ~ret ~slot (push [(x, t)] lex) b
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} ->
       expr ~pos:None ~ret lex scrut;
@@ -204,9 +204,9 @@ let region ~outer ~reads body =
             in
             let slot =
               { slot with
-                expected_ml_ty =
-                  (match ap.ap_param with Some t when not (ml_type_contains_erased t) -> Some t | _ -> slot.expected_ml_ty);
-                stated_ml_ty = ap.ap_param }
+                expected_core_ty =
+                  (match ap.ap_param with Some t when not (core_type_contains_erased t) -> Some t | _ -> slot.expected_core_ty);
+                stated_core_ty = ap.ap_param }
             in
             expr ~pos:ap.ap_expected ~ret:ap.ap_ret ~slot lex a
           | _ -> expr ~pos:None ~ret lex a )

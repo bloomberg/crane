@@ -95,7 +95,7 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t) )
+        || Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds r l t)] else []
 
@@ -924,7 +924,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_ml_type (empty_env ()) l t)) )
+      not (Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the Core declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
@@ -1469,7 +1469,7 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
     (fun () ->
       List.map
         (fun (f : Core.Record.Field.t) ->
-          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars f.type_)) with
+          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) with
           | t -> t
           | exception Cpp_ir.Resolve.Owed form ->
             CErrors.anomaly

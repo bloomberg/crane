@@ -272,8 +272,8 @@ let augment_with_args_renaming cref kernel_arg_names =
     For [itree ioE unit] (zero-arg monadic), returns [unit].
     The result type is always the LAST type argument of the monad
     (monads parameterize on the result type as their last type param). *)
-let ml_result_type ty =
-  let cod = ml_codomain ty in
+let core_result_type ty =
+  let cod = core_codomain ty in
   match cod with
   | Core.Type.Global_app {head = r; type_arguments = args; _} when Table.is_monad r ->
     (match List.rev args with r :: _ -> r | [] -> cod)
@@ -327,10 +327,10 @@ let is_sequential_effect op use =
   | Some {Core_effects.operation; mode = Sequential} -> operation = op
   | _ -> false
 
-(* [ref_is_skipped] and [ml_ret_is_skipped] live in {!Type_util}, which
+(* [ref_is_skipped] and [core_ret_is_skipped] live in {!Type_util}, which
    {!Method_registry} also asks. *)
 
-(* {!Type_util.ml_type_is_instance} works the answer out; a caller with a
+(* {!Type_util.core_type_is_instance} works the answer out; a caller with a
    global asks {!ref_is_instance} and one with a binder asks
    {!Core_query.binder_is_instance}. *)
 
@@ -401,7 +401,7 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
   go 0 [] ty
 
 (** Apply unit-to-void conversion on a C++ type.  [unit_void] comes from
-    {!ml_type_is_void_call}, which already declines for a reified monad, so
+    {!core_type_is_void_call}, which already declines for a reified monad, so
     there is one outcome left: the whole type is [void]. *)
 let apply_unit_void unit_void (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t = if unit_void then Void else ty
 
@@ -422,7 +422,7 @@ let mk_tt_expr () : Cpp_ir.Lowered.Expr.t =
 
 (** Whether [ty]'s codomain is a monad extracted as a reified tree. *)
 let codomain_is_reified_monad (ty : Core.Type.t) : bool =
-  match ml_codomain ty with
+  match core_codomain ty with
   | Core.Type.Global_app {head = r; _} -> Table.is_monad r && is_monad_reified r
   | _ -> false
 
@@ -437,12 +437,12 @@ let codomain_is_reified_monad (ty : Core.Type.t) : bool =
     returned, built, and bound into, and void-ifying it does not merely mistype
     the call -- it drops the tree, and with it the sequencing the program was
     expressed in. *)
-let ml_type_is_void_call (ty : Core.Type.t) : bool =
-  (match Type_util.resolve_tmeta ty with
+let core_type_is_void_call (ty : Core.Type.t) : bool =
+  (match Type_util.resolve_meta ty with
   | Core.Type.Arrow _ -> true
   | Core.Type.Global_app {head = r; _} -> Table.is_monad r
   | _ -> false)
-  && ml_type_is_unit (ml_result_type ty)
+  && core_type_is_unit (core_result_type ty)
   && not (codomain_is_reified_monad ty)
 
 (** Whether a global reference [r] has been void-ified.
@@ -455,9 +455,9 @@ let ml_type_is_void_call (ty : Core.Type.t) : bool =
 let is_void_ified_ref (r : GlobRef.t) : bool =
   match find_type_opt r with
   | Some ty ->
-    ml_type_is_void_call ty
+    core_type_is_void_call ty
     || Table.is_inline_custom r
-       && ml_type_is_unit (ml_result_type ty)
+       && core_type_is_unit (core_result_type ty)
        && codomain_is_reified_monad ty
   | None -> false
 
@@ -473,36 +473,36 @@ let wrap_void_call_as_value (call_expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     - [Core.Expr.Global(r, _)]  — named function, look up type in extraction table
     - [Core.Expr.Bound_variable(i)]       — variable (e.g. callback), look up type in env
     - [Core.Expr.Coerce]/[Core.Expr.Boxed_value]/[Core.Expr.Lambda_group_barrier] — transparent wrapper, recurse *)
-let rec ml_callee_is_void = function
+let rec core_callee_is_void = function
   (* A record field of a [unit]-returning function type is stored as a
      [std::function<void(...)>]: [globals_object.(globals_set) gs]. *)
   | Core.Expr.Global {callee = r; _} when Table.is_projection r -> (
-    try ml_type_is_void_call (Table.find_type r) with Not_found -> false )
+    try core_type_is_void_call (Table.find_type r) with Not_found -> false )
   | Core.Expr.Global {callee = r; _} -> is_void_ified_ref r
   | Core.Expr.Coerce {value = inner; _}
   | Core.Expr.Boxed_value {value = inner; _}
   | Core.Expr.Lambda_group_barrier {value = inner; _} ->
-    ml_callee_is_void inner
-  | Core.Expr.Bound_variable {index = i; _} -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
+    core_callee_is_void inner
+  | Core.Expr.Bound_variable {index = i; _} -> ( try core_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
 
 (** Whether the C++ for an ML expression is a statement rather than a value:
     a call to something void-ified, applied or not. *)
-let ml_expr_is_void_call = function
-  | Core.Expr.Apply {callee = f; _} -> ml_callee_is_void f
-  | e -> ml_callee_is_void e
+let core_expr_is_void_call = function
+  | Core.Expr.Apply {callee = f; _} -> core_callee_is_void f
+  | e -> core_callee_is_void e
 
 (** Whether an ML expression in a value position may compile to a [void] call,
     and so has to be wrapped by {!wrap_void_call_as_value}: a call to something
     void-ified, or a match whose every branch is one -- the projection
     extraction writes [r.(f) x] as, applying a field binder of a
     [unit]-returning function type, stored as [std::function<void(...)>]. *)
-let rec ml_value_is_void_call = function
-  | Core.Expr.Apply {callee = f; _} -> ml_callee_is_void f
+let rec core_value_is_void_call = function
+  | Core.Expr.Apply {callee = f; _} -> core_callee_is_void f
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    ml_value_is_void_call e
+    core_value_is_void_call e
   | Core.Expr.Match {branches = pv; _} ->
     Array.length pv > 0
     && Array.for_all
@@ -510,9 +510,9 @@ let rec ml_value_is_void_call = function
            let applies_void_binder = function
              | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; _} when k >= 1 && k <= List.length binds -> (
                match List.nth_opt binds (List.length binds - k) with
-               | Some (_, ty) -> ml_type_is_void_call ty
+               | Some (_, ty) -> core_type_is_void_call ty
                | None -> false )
-             | e -> ml_value_is_void_call e
+             | e -> core_value_is_void_call e
            in
            match body with
            | Core.Expr.Coerce {value = b; _}
@@ -533,8 +533,8 @@ let rec ml_value_is_void_call = function
 (** Extract the result type [R] from a monadic ML type [itree E R].
     Returns the second non-erased type argument, or [Core.Type.Unknown] if
     the type does not have the expected shape. *)
-let extract_itree_result_ml (ml_ty : Core.Type.t) : Core.Type.t =
-  match resolve_tmeta ml_ty with
+let extract_itree_result_core (core_ty : Core.Type.t) : Core.Type.t =
+  match resolve_meta core_ty with
   | Core.Type.Global_app {type_arguments = _ :: r :: _; _} -> r
   | _ -> Core.Type.Unknown
 
@@ -711,8 +711,8 @@ let retype_dependent_params (typ : Core.Type.t) ids =
     | _ -> false
   in
   if is_dep_ind then
-    List.map (fun (n, ml_ty) ->
-      match ml_ty with Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; _} -> (n, Core.Type.Erased Core.Erasure_reason.Type_argument) | _ -> (n, ml_ty)) ids
+    List.map (fun (n, core_ty) ->
+      match core_ty with Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; _} -> (n, Core.Type.Erased Core.Erasure_reason.Type_argument) | _ -> (n, core_ty)) ids
   else ids
 
 (** The declared ML types of constructor [ctor]'s value fields, instantiated at
@@ -738,7 +738,7 @@ let ctor_field_types_at ctor (typ : Core.Type.t) =
   in
   match Table.get_ctor_ip_types_opt ctor with
   | Some tys ->
-    let tys = List.filter (fun t -> not (Core_util.isTdummy t)) tys in
+    let tys = List.filter (fun t -> not (Core_util.is_erased_type t)) tys in
     if List.for_all within_scope tys then
       Some (List.map (Core_util.type_subst_list tyargs) tys)
     else None
@@ -780,19 +780,19 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : Core.Type.t) ids =
   | Some ftys when List.length ftys = List.length ids ->
     let n = List.length ftys in
     List.mapi
-      (fun i (x, ml_ty) ->
+      (fun i (x, core_ty) ->
         let fty = List.nth ftys (n - 1 - i) in
         (* The field at the scrutinee's instantiation is the binder's type
            wherever the pattern's own annotation says less: an open meta, or
            an erased component the scrutinee states ([md] of a pattern over
            [(nat * phi T) * list (metadata T)]). *)
-        match ml_ty with
+        match core_ty with
         | Core.Type.Meta {contents = None} | Core.Type.Open _ -> (x, fty)
         | _
-          when Type_util.is_ml_erased_ty ml_ty
-               && not (Type_util.is_ml_erased_ty fty) ->
+          when Type_util.is_core_erased_ty core_ty
+               && not (Type_util.is_core_erased_ty fty) ->
           (x, fty)
-        | _ -> (x, ml_ty))
+        | _ -> (x, core_ty))
       ids
   | _ -> ids
 
@@ -822,7 +822,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
      each one is handed to the printer as a type node ([Convert], [Allocate],
      {!Cpp_erasure.converting_ctor}), never rendered here. *)
   (* Strip a single namespace wrapper when it matches the inner application.
-     [convert_ml_type_to_cpp_type] wraps external inductives as
+     [convert_core_type_to_cpp_type] wraps external inductives as
      [In_namespace (g, Entity_application (g, ...))] for qualified rendering,
      but for pattern matching we want the bare application. *)
   let strip_ns : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
@@ -954,24 +954,24 @@ let mk_itree_ret (r_cpp : Cpp_ir.Lowered.Type.t) (args : Cpp_ir.Lowered.Expr.t l
   Cpp_ir.Build.call (Type_member (itree_ty, Id.of_string "ret")) args
 
 (** Build [ITree<R>::ret(v)], or [ITree<void>::ret()] where there is no value
-    to carry.  [r_cpp] is the C++ result type, [r_ml] the ML one, [v] the value.
+    to carry.  [r_cpp] is the C++ result type, [r_core] the ML one, [v] the value.
 
     Only a type extracted as C++ [void] is valueless.  Rocq's [unit] is not: it
     has an inhabitant, spelled [std::monostate], and a tree carrying it is a
     tree like any other.  Spelling it [ITree<void>] instead loses the
     distinction between a computation that yields nothing and one that yields
     the trivial thing, and the two then meet in one match. *)
-let mk_itree_ret_for_value (r_cpp : Cpp_ir.Lowered.Type.t) r_ml v =
-  if r_cpp = Void || ml_type_is_void r_ml then mk_itree_ret Void [] else mk_itree_ret r_cpp [v]
+let mk_itree_ret_for_value (r_cpp : Cpp_ir.Lowered.Type.t) r_core v =
+  if r_cpp = Void || core_type_is_void r_core then mk_itree_ret Void [] else mk_itree_ret r_cpp [v]
 
 (** Reify a monadic parameter type for ITree extraction.
 
     In reified mode, the C++ type for a monadic parameter [itree E R] after
     monad erasure is just [R].  This function wraps it back into
     [shared_ptr<ITree<R>>] so the tree can be passed as a first-class value.
-    Does nothing in sequential mode or when [ml_ty] is not monadic. *)
-let reify_monadic_param_type ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-  if is_monadic_ml_type ml_ty && (!tctx).input.itree_mode = Reified then begin
+    Does nothing in sequential mode or when [core_ty] is not monadic. *)
+let reify_monadic_param_type core_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  if is_monadic_core_type core_ty && (!tctx).input.itree_mode = Reified then begin
     let r_ty : Cpp_ir.Lowered.Type.t =
       match cpp_ty with
       | Entity_application (_, _ :: r :: _, _) -> r
@@ -998,21 +998,21 @@ let reify_monadic_param_type ml_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Low
     exception is a mapping whose result is a {e reified} monad: that monad's
     values are trees, so its mappings -- [itree_trigger], [itree_ret] -- are
     spelled as expressions that build one, and wrapping would double it. *)
-let rec is_reified_monadic_expr ml_expr =
+let rec is_reified_monadic_expr core_expr =
   (* The result of applying [n] arguments to something of ML type [ty].  A
      dummy domain is an erased type parameter, which the term does not pass, so
      it is stepped over without spending an argument; an alias still owed
      arguments is the arrows it names ([stateT S M T] is [S -> M (S * T)]). *)
-  let rec ml_result_after n ty =
-    match Type_util.resolve_tmeta ty with
-    | Core.Type.Arrow {parameter = dom; result = res} when (match Type_util.resolve_tmeta dom with
+  let rec core_result_after n ty =
+    match Type_util.resolve_meta ty with
+    | Core.Type.Arrow {parameter = dom; result = res} when (match Type_util.resolve_meta dom with
             | Core.Type.Erased _ -> true
             | _ -> false) ->
-      ml_result_after n res
-    | Core.Type.Arrow {result = res; _} when n > 0 -> ml_result_after (n - 1) res
+      core_result_after n res
+    | Core.Type.Arrow {result = res; _} when n > 0 -> core_result_after (n - 1) res
     | Core.Type.Global_app _ as t when n > 0 -> (
-      match Type_util.expand_ml_fun_alias t with
-      | Core.Type.Arrow _ as f -> ml_result_after n f
+      match Type_util.expand_core_fun_alias t with
+      | Core.Type.Arrow _ as f -> core_result_after n f
       | _ -> t )
     | t -> t
   in
@@ -1028,13 +1028,13 @@ let rec is_reified_monadic_expr ml_expr =
      the very carrier the result is headed by.  An instance passed for another
      class, or for another carrier, says nothing about this result. *)
   let instance_carrier_is_reified g =
-    match Option.map ml_codomain (find_type_opt g) with
+    match Option.map core_codomain (find_type_opt g) with
     | Some t -> (
-      match Type_util.resolve_tmeta t with
+      match Type_util.resolve_meta t with
       | Core.Type.Global_app {type_arguments = targs; _} ->
         List.exists
           (fun t ->
-            match Type_util.resolve_tmeta t with
+            match Type_util.resolve_meta t with
             | Core.Type.Global_app {head = m; _} -> Table.is_monad m && is_monad_reified m
             | _ -> false )
           targs
@@ -1045,7 +1045,7 @@ let rec is_reified_monadic_expr ml_expr =
     (* A carrier of arrow kind stands in its class's argument list as the
        [Core.Type.Variable_app] it would be if applied, with nothing applied to it yet. *)
     let names_carrier t =
-      match Type_util.resolve_tmeta t with
+      match Type_util.resolve_meta t with
       | Core.Type.Variable {variable = i; _} | Core.Type.Variable_app {head = i; _} -> Int.equal i head
       | _ -> false
     in
@@ -1054,7 +1054,7 @@ let rec is_reified_monadic_expr ml_expr =
       | dom :: doms', _ when erased_by_extraction dom -> go doms' args
       | dom :: doms', a :: args' ->
         let fills_this_carrier =
-          match Type_util.resolve_tmeta dom with
+          match Type_util.resolve_meta dom with
           | Core.Type.Global_app {type_arguments = targs; _} -> List.exists names_carrier targs
           | _ -> false
         in
@@ -1064,7 +1064,7 @@ let rec is_reified_monadic_expr ml_expr =
         | _ -> go doms' args' )
       | _ -> false
     in
-    go (Type_util.ml_domains ty) args
+    go (Type_util.core_domains ty) args
   in
   (* A local's type may say nothing -- a rank-2 [D ~> itree E] parameter is
      erased, so what it returns is a type variable -- and then the Rocq
@@ -1075,11 +1075,11 @@ let rec is_reified_monadic_expr ml_expr =
   let says_monadic ty =
     Option.has_some (Type_util.type_monad ty)
     ||
-    match Type_util.resolve_tmeta ty with
+    match Type_util.resolve_meta ty with
     | Core.Type.Variable _ | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
     | _ -> false
   in
-  match ml_expr with
+  match core_expr with
   (* A coercion changes the type a value is read at, not whether it is a
      tree: the question is asked of what is under it. *)
   | Core.Expr.Coerce {value = e; _}
@@ -1093,27 +1093,27 @@ let rec is_reified_monadic_expr ml_expr =
     (match get_env_type_opt i with Some ty -> says_monadic ty | None -> false)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = i; _}; arguments = args} ->
     (match get_env_type_opt i with
-     | Some ty -> says_monadic (ml_result_after (List.length args) ty)
+     | Some ty -> says_monadic (core_result_after (List.length args) ty)
      | None -> false)
   (* A global of monadic type is already a tree whether or not it is applied:
      a zero-arity constant like [get : itree E nat] is the same value that its
      applied form would be, and wrapping it in [ret] builds a tree of trees. *)
   | Core.Expr.Global {callee = r; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} ->
-    let nargs = match ml_expr with Core.Expr.Apply {arguments = args; _} -> List.length args | _ -> 0 in
+    let nargs = match core_expr with Core.Expr.Apply {arguments = args; _} -> List.length args | _ -> 0 in
     (not (is_void_ified_ref r))
     && ( match find_type_opt r with
        | Some ty ->
-         let res = ml_result_after nargs ty in
-         ( match Type_util.resolve_tmeta res with
+         let res = core_result_after nargs ty in
+         ( match Type_util.resolve_meta res with
          | Core.Type.Variable_app {head; _} ->
-           let args = match ml_expr with Core.Expr.Apply {arguments = args; _} -> args | _ -> [] in
+           let args = match core_expr with Core.Expr.Apply {arguments = args; _} -> args | _ -> [] in
            reified_via_dictionary ty args head
          | _ -> (
            match Type_util.type_monad res with
            | Some m -> (not (Table.is_inline_custom r)) || is_monad_reified m
            | None -> false ) )
        | None -> false )
-  | Core.Expr.Construct {result_type = ty; _} -> is_monadic_ml_type ty
+  | Core.Expr.Construct {result_type = ty; _} -> is_monadic_core_type ty
   | _ -> false
 
 (** [stmts], a body, whose returned lambdas hold copies ([\[=\]]) rather
@@ -1208,7 +1208,7 @@ let thunk_reason r =
   else if is_throwing_value r then Some Throws
   else
     match find_type_opt r with
-    | Some t when is_monadic_ml_type t -> Some Monadic
+    | Some t when is_monadic_core_type t -> Some Monadic
     | _ -> None
 
 (** Whether naming the global [r] calls it.  A definition that only throws is
@@ -1220,12 +1220,12 @@ let naming_calls ~cpp_of r =
   | None -> false
   | Some (Cofixpoint | Monadic) -> true
   | Some Throws -> (
-    match Option.map cpp_of (callee_ml_type r) with Some (Cpp_ir.Type.Function _) -> false | _ -> true )
+    match Option.map cpp_of (callee_core_type r) with Some (Cpp_ir.Type.Function _) -> false | _ -> true )
 
 (** Whether evaluating [e] is only building a value: no call is made, so it
     cannot fail to terminate.  A lambda is a value; so is a constructor of
     values.  A global is a value unless naming it calls it ({!thunk_reason}). *)
-let rec ml_is_value = function
+let rec core_is_value = function
   | Core.Expr.Bound_variable _
   | Core.Expr.Lambda _
   | Core.Expr.Erased_value _
@@ -1234,11 +1234,11 @@ let rec ml_is_value = function
   | Core.Expr.Float64 _
   | Core.Expr.String _ -> true
   | Core.Expr.Global {callee = r; _} -> thunk_reason r = None
-  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.for_all ml_is_value args
+  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.for_all core_is_value args
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    ml_is_value e
+    core_is_value e
   | _ -> false
 
 (** Whether [body] calls [r] somewhere a suspension does not reach: outside
@@ -1258,12 +1258,12 @@ let calls_eagerly r body =
   in
   try walk body; false with Found -> true
 
-(** Whether the definition [r], whose ML result type is [ml_ret], is suspended
+(** Whether the definition [r], whose ML result type is [core_ret], is suspended
     whole: a coinductive result, and a body [b] that calls [r] outside every
     constructor -- Rocq's guard condition holds only up to unfolding.  Any
     other coinductive body is suspended at its constructors
     ({!suspend_ctor}). *)
-let suspends_whole r ml_ret b = Table.is_coinductive_type ml_ret && calls_eagerly r b
+let suspends_whole r core_ret b = Table.is_coinductive_type core_ret && calls_eagerly r b
 
 (** Whether the arguments [ts] of a coinductive constructor may run the
     corecursion the constructor guards, so that only a suspension keeps them
@@ -1275,7 +1275,7 @@ let suspends_whole r ml_ret b = Table.is_coinductive_type ml_ret && calls_eagerl
     of the binder at de Bruijn index [i] where the constructor stands; a
     binder whose type is not known counts as corecursive. *)
 let args_may_corecurse ~self ~binder_type ts =
-  let yields_coinductive ty = Table.is_coinductive_type (ml_codomain ty) in
+  let yields_coinductive ty = Table.is_coinductive_type (core_codomain ty) in
   let rec corec depth t =
     match t with
     | Core.Expr.Global {callee = g; _} -> (
@@ -1307,7 +1307,7 @@ let args_may_corecurse ~self ~binder_type ts =
     and [binder_type] are passed to). *)
 let suspends_constructor ~self ~binder_type n ts =
   Table.is_coinductive n
-  && (not (List.for_all ml_is_value ts))
+  && (not (List.for_all core_is_value ts))
   && args_may_corecurse ~self ~binder_type ts
 
 (** [suspend_ctor ty ctor args] is the coinductive constructor [ctor] of
@@ -1389,7 +1389,7 @@ let rec declared_by_reference : Cpp_ir.Lowered.Type.t -> bool = function
     [crane::obj]. *)
 let owned_parameters ?(declared : int -> Cpp_ir.Lowered.Type.t option = fun _ -> None) n ~owned ~ty =
   let worth i =
-    match (resolve_tmeta (ty i), declared i) with
+    match (resolve_meta (ty i), declared i) with
     | (Core.Type.Erased _ | Core.Type.Unknown | Core.Type.Axiom), Some cty -> Ownership_ir.worth_moving_cpp cty
     | ty, _ -> Ownership_ir.worth_moving ty
   in
@@ -2237,7 +2237,7 @@ let ungeneralised_callable_params ~self_ref ~suspended n_params body =
 let ungeneralised_callables_of_definition r ty b =
   let params, body = declared_parameters ty b in
   ungeneralised_callable_params ~self_ref:r
-    ~suspended:(Table.is_coinductive_type (ml_return_type ty))
+    ~suspended:(Table.is_coinductive_type (core_return_type ty))
     (List.length params) body
 
 (** Whether a function takes a callable parameter of C++ type [f] as a
@@ -2260,7 +2260,7 @@ let generalises_callable ~kept_as_fn ~primary f =
     parameter would have moved.
 
     @param convert_fn  converts an [Core.Type.t] to a [cpp_type] (typically
-      [convert_ml_type_to_cpp_type env tvar_names])
+      [convert_core_type_to_cpp_type env tvar_names])
     @param base_temps  the template parameters the callable params are appended to
     @return [(cpp_params, all_temps_with_funs)] *)
 let build_lifted_cpp_params ?(non_fwd_source_indices = []) (convert_fn : _ -> Cpp_ir.Lowered.Type.t)
@@ -2525,7 +2525,7 @@ let rec names_value_inductive (cpp_ty : Cpp_ir.Lowered.Type.t) =
    [args] is a value inductive ({!names_value_inductive}): a variable of the
    abbreviation stands for the argument written for it. *)
 and abbreviates_value_inductive args body =
-  match resolve_tmeta body with
+  match resolve_meta body with
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     (not (Table.is_enum_inductive r)) && (not (Table.is_coinductive r)) && not (Table.is_custom_scalar_ref r)
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
@@ -2571,8 +2571,8 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
     promoted type, an abstract one, a type variable applied -- under the
     abstractions over types erasure removes. *)
 let rec core_lent_by_reference ty =
-  match resolve_tmeta ty with
-  | ty when is_monadic_ml_type ty && (!tctx).input.itree_mode = Reified -> Some true
+  match resolve_meta ty with
+  | ty when is_monadic_core_type ty && (!tctx).input.itree_mode = Reified -> Some true
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     Some ((not (Table.is_enum_inductive r)) && not (Table.is_custom_scalar_ref r))
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = args; _}
@@ -2581,7 +2581,7 @@ let rec core_lent_by_reference ty =
     | Some body -> (
       (* As {!names_value_inductive} reads an abbreviation: its body a value
          inductive, or a variable standing for one. *)
-      match resolve_tmeta (Core_util.type_subst_list args body) with
+      match resolve_meta (Core_util.type_subst_list args body) with
       | Core.Type.Global_app {head = (GlobRef.IndRef _ | GlobRef.ConstRef _); _} as unfolded -> (
         match core_lent_by_reference unfolded with
         | Some lent ->
@@ -2592,7 +2592,7 @@ let rec core_lent_by_reference ty =
   | Core.Type.Global_app {head = r; _} when Table.is_custom r -> Some false
   (* A type abstraction erasure removes is no closure: what it returns is
      the value. *)
-  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.isTdummy d -> core_lent_by_reference rest
+  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d -> core_lent_by_reference rest
   | Core.Type.Arrow _ | Core.Type.Variable _ -> Some true
   | _ -> None
 
@@ -2633,15 +2633,15 @@ let param_passing ~owned (t : Cpp_ir.Lowered.Type.t) =
     - Erased type constants — non-promoted type-valued record fields
       (e.g. [Hom : Obj -> Obj -> Type] in [PreCategory]) registered during
       extraction via {!Table.add_erased_type_const}. *)
-let rec ml_return_type_is_erased = function
-  | Core.Type.Arrow {result = ret; _} -> ml_return_type_is_erased ret
-  | Core.Type.Meta { contents = Some t } -> ml_return_type_is_erased t
+let rec core_return_type_is_erased = function
+  | Core.Type.Arrow {result = ret; _} -> core_return_type_is_erased ret
+  | Core.Type.Meta { contents = Some t } -> core_return_type_is_erased t
   | Core.Type.Global_app {head = g; _} when Table.is_promoted_type_var g -> true
   | Core.Type.Global_app {head = g; _} when Table.is_erased_type_const g -> true
   | Core.Type.Unknown -> true
   | _ -> false
 
-(** [ml_projection_field_type a] -- the type of the field a single-branch
+(** [core_projection_field_type a] -- the type of the field a single-branch
     record projection reads, applied to whatever the projection applies it to.
 
     A projection is an [Core.Expr.Match] over the instance whose one branch returns a
@@ -2650,7 +2650,7 @@ let rec ml_return_type_is_erased = function
     carrier is erased, so it says [Core.Type.Unknown] in the position the field names.
     This is therefore the only place a projection's result type is written
     down. *)
-let ml_projection_field_type = function
+let core_projection_field_type = function
   | Core.Expr.Match {scrutinee_type = Core.Type.Global_app {head = r; _}; branches = pv; _} when Array.length pv = 1 ->
     let {Core.Match.Branch.binders = ids; body = proj_body; _} = pv.(0) in
     let n = List.length ids in
@@ -2665,7 +2665,7 @@ let ml_projection_field_type = function
             | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
             | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ); arguments = args}
         when i >= 1 && i <= n ->
-        Some (n - i, count_real_ml_args args)
+        Some (n - i, count_real_core_args args)
       | _ -> None
     in
     ( match projected proj_body with
@@ -2674,7 +2674,7 @@ let ml_projection_field_type = function
           List.nth_opt (filter_value_types (Table.record_field_types r)) idx
         with
       | Some field_ty -> if nargs = 0 then Some field_ty
-                         else strip_tarr_n nargs field_ty
+                         else strip_arrows_n nargs field_ty
       | None -> None )
     | None -> None )
   | _ -> None
@@ -2690,7 +2690,7 @@ let ml_projection_field_type = function
     [carrier → carrier] whose return type [carrier] is a promoted var.  The
     Coq type says the result is [nat = unsigned int], but the C++ expression
     [forward_functor->object_of(7u)] actually returns [std::any]. *)
-let rec ml_body_returns_erased_field = function
+let rec core_body_returns_erased_field = function
   | Core.Expr.Apply {callee = ( Core.Expr.Global ({callee = r; _} as use)
         | Core.Expr.Coerce {value = Core.Expr.Global ({callee = r; _} as use); _}
         | Core.Expr.Boxed_value {value = Core.Expr.Global ({callee = r; _} as use); _}
@@ -2698,22 +2698,22 @@ let rec ml_body_returns_erased_field = function
     let direct =
       match find_type_opt r with
       | Some ty ->
-        let ty = Core_util.instantiate_written ~reader:"ml_body_returns_erased_field" use ty in
-        ( match strip_tarr_n (count_real_ml_args args) ty with
-        | Some ret_ty -> ml_return_type_is_erased ret_ty
+        let ty = Core_util.instantiate_written ~reader:"core_body_returns_erased_field" use ty in
+        ( match strip_arrows_n (count_real_core_args args) ty with
+        | Some ret_ty -> core_return_type_is_erased ret_ty
         | None -> false )
       | None -> false
     in
     direct ||
-    (match full with Core.Expr.Apply {callee = f; _} -> ml_body_returns_erased_field f | _ -> false)
-  | Core.Expr.Apply {callee = f; _} -> ml_body_returns_erased_field f
+    (match full with Core.Expr.Apply {callee = f; _} -> core_body_returns_erased_field f | _ -> false)
+  | Core.Expr.Apply {callee = f; _} -> core_body_returns_erased_field f
   | Core.Expr.Coerce {value = f; _}
   | Core.Expr.Boxed_value {value = f; _}
   | Core.Expr.Lambda_group_barrier {value = f; _} ->
-    ml_body_returns_erased_field f
+    core_body_returns_erased_field f
   | Core.Expr.Match _ as c ->
-    ( match ml_projection_field_type c with
-    | Some field_ty -> ml_return_type_is_erased field_ty
+    ( match core_projection_field_type c with
+    | Some field_ty -> core_return_type_is_erased field_ty
     | None -> false )
   | _ -> false
 
@@ -2736,7 +2736,7 @@ let wrap_api_expr ~(storage_ty : Cpp_ir.Lowered.Type.t) ~api_ty expr =
 (** Strip a single [Tnamespace] wrapper off a namespaced [Core.Type.Global_app], leaving any
     other type untouched. Used to see through the namespace qualifier when
     classifying list-like globals. *)
-let strip_ns_tglob : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+let strip_ns_global_app : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | In_namespace (_, (Entity_application _ as inner)) -> inner
   | t -> t
 
@@ -2848,7 +2848,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
           List.map2
             (fun (_, x) core ->
               let v : Cpp_ir.Lowered.Expr.t = Local (Option.get x) in
-              if Ownership_ir.worth_moving core && not (Type_util.ml_type_is_unit core) then (Move v : Cpp_ir.Lowered.Expr.t) else v )
+              if Ownership_ir.worth_moving core && not (Type_util.core_type_is_unit core) then (Move v : Cpp_ir.Lowered.Expr.t) else v )
             params_rev self.param_core_tys_rev
         in
         Lambda
@@ -2864,22 +2864,22 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
   and rewrite_stmt s = Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:rewrite_expr ~stmt:rewrite_stmt ~type_:Fun.id ()) s in
   (rewrite_expr, rewrite_stmt)
 
-(** [ml_ast_type_hint e] is the ML type [e] carries, when it carries one: a
+(** [core_ast_type_hint e] is the ML type [e] carries, when it carries one: a
     constructor's own annotation, or the source type of a coercion extraction
     inserted around it.  Used to recover a type argument left [Tunresolved] by
     extraction. *)
-let rec ml_ast_type_hint = function
+let rec core_ast_type_hint = function
   | Core.Expr.Construct {result_type = t; _} -> Some t
   | Core.Expr.Coerce {source_type = from; value = inner; _} ->
-    ( match Type_util.resolve_tmeta from with
-    | Core.Type.Unknown | Core.Type.Erased _ -> ml_ast_type_hint inner
+    ( match Type_util.resolve_meta from with
+    | Core.Type.Unknown | Core.Type.Erased _ -> core_ast_type_hint inner
     (* A function value's representation at a slot it is coerced into is the
        boxed one [crane_erase_fn] produces, never its own arrow type: grounding
        it would defeat the boxing and the consumer's fixed [any_cast]. *)
     | Core.Type.Arrow _ -> None
     | t -> Some t )
   | Core.Expr.Boxed_value {value = inner; _} | Core.Expr.Lambda_group_barrier {value = inner; _} ->
-    ml_ast_type_hint inner
+    core_ast_type_hint inner
   | _ -> None
 
 (** What the position a subterm occupies tells the generator about how to
@@ -2897,7 +2897,7 @@ type slot = {
           production keeping [deque<Prod<Nat, Nat>>] where the matching "nil"
           erased to [deque<Prod<any, any>>] is what [std::bad_any_cast] at the
           consumer looks like. *)
-  expected_ml_ty : Core.Type.t option;
+  expected_core_ty : Core.Type.t option;
       (** The ML type of the slot, when the caller knows it more precisely than
           the expression's own annotation does.  It lets a constructor whose
           annotation carries unresolved metas (a [nil] whose element type
@@ -2918,10 +2918,10 @@ type slot = {
           carrier -- has its carrier head that type, and so is where an
           argument extraction erased from it is read back
           ({!Translation_calls.instance_family_binding}). *)
-  stated_ml_ty : Core.Type.t option;
+  stated_core_ty : Core.Type.t option;
       (** The ML type the position states, erased parts and all -- the
           parameter an argument is passed at, [stateT nat (itree BotE) T] with
-          [BotE] applied at its erased index.  [expected_ml_ty] withholds a
+          [BotE] applied at its erased index.  [expected_core_ty] withholds a
           type with erasures in it, which is right for what it is used for;
           this is read only where an erased part is expected, to recover an
           event family nothing deduces. *)
@@ -2966,11 +2966,11 @@ type call_plan = {
 (** The slot properties of a position that constrains nothing. *)
 let empty_slot =
   { repr = Native;
-    expected_ml_ty = None;
+    expected_core_ty = None;
     in_ctor_arg = false;
     eta_keep_moves = false;
     call_result = None;
-    stated_ml_ty = None;
+    stated_core_ty = None;
     building_constant = false }
 
 (** Whether the value of [slot] is built inside a [std::any], at the

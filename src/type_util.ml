@@ -34,15 +34,15 @@ let ctor_struct_name_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : string =
     type -- which is how the concept spells it for that instance too
     ([C<ic, std::any>]). *)
 let instance_type_args (args : Core.Type.t list) : Core.Type.t list =
-  List.map (fun t -> if Core_util.isTdummy t then Core.Type.Unknown else t) args
+  List.map (fun t -> if Core_util.is_erased_type t then Core.Type.Unknown else t) args
 
 (** Like {!ctor_struct_name_of_ref} but returns an [Core.Binder_name.Source.t]. *)
 let ctor_struct_id_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : Id.t =
   Id.of_string (ctor_struct_name_of_ref ~fallback_idx c)
 
 (** Resolve a chain of [Core.Type.Meta] indirections to the underlying type. *)
-let rec resolve_tmeta = function
-  | Core.Type.Meta {contents = Some t} -> resolve_tmeta t
+let rec resolve_meta = function
+  | Core.Type.Meta {contents = Some t} -> resolve_meta t
   | t -> t
 
 (** Unfold a type alias standing for a function type.
@@ -54,16 +54,16 @@ let rec resolve_tmeta = function
 
     Note the caller may need the fully applied form, so the alias's own type
     arguments are substituted for the body's variables. *)
-let rec expand_ml_fun_alias ty =
-  match resolve_tmeta ty with
+let rec expand_core_fun_alias ty =
+  match resolve_meta ty with
   | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = args; _} as t ->
     ( match Table.lookup_typedef_unchecked kn with
     | Some body ->
       let body =
         if args = [] then body else Core_util.type_subst_list args body
       in
-      ( match resolve_tmeta body with
-      | Core.Type.Arrow _ -> expand_ml_fun_alias body
+      ( match resolve_meta body with
+      | Core.Type.Arrow _ -> expand_core_fun_alias body
       | _ -> t )
     | None -> t )
   | t -> t
@@ -107,7 +107,7 @@ let rec find_self_ref_args ~is_self_or_mutual = function
 (** Check if an ML type is directly erased (non-recursive, top-level only).
     Matches an unresolved [Core.Type.Meta], a [Core.Type.Open] hole, [Core.Type.Erased], and a
     [Core.Type.Rigidity.Schematic] [Core.Type.Variable]. *)
-let is_erased_ml_type = function
+let is_erased_core_type = function
   | Core.Type.Meta {contents = None}
   | Core.Type.Open _
   | Core.Type.Erased _
@@ -123,9 +123,9 @@ let is_erased_ml_type = function
     [~in_arrows:true] looks through them, for a caller asking whether a type is
     concrete enough to be spelled -- the closure inside
     [option (nat -> nat)] is exactly what such a caller must not miss. *)
-let rec ml_type_contains_erased ?(in_arrows = false) ty =
-  let recur = ml_type_contains_erased ~in_arrows in
-  match resolve_tmeta ty with
+let rec core_type_contains_erased ?(in_arrows = false) ty =
+  let recur = core_type_contains_erased ~in_arrows in
+  match resolve_meta ty with
   | Core.Type.Meta _
   | Core.Type.Open _
   | Core.Type.Erased _
@@ -140,23 +140,23 @@ let rec ml_type_contains_erased ?(in_arrows = false) ty =
     parameter that is not in scope where the type will be spelled, so a caller
     weighing whether an instantiated type is usable as a concrete expectation
     must reject it: converting it prints an undeclared [T1]. *)
-let rec ml_type_contains_tvar ty =
-  match resolve_tmeta ty with
+let rec core_type_contains_tvar ty =
+  match resolve_meta ty with
   | Core.Type.Variable _ -> true
   | Core.Type.Global_app {type_arguments = tys; _} | Core.Type.Variable_app {arguments = tys; _} ->
-    List.exists ml_type_contains_tvar tys
-  | Core.Type.Arrow {parameter = a; result = b} -> ml_type_contains_tvar a || ml_type_contains_tvar b
+    List.exists core_type_contains_tvar tys
+  | Core.Type.Arrow {parameter = a; result = b} -> core_type_contains_tvar a || core_type_contains_tvar b
   | _ -> false
 
 (** Return the codomain of an ML type, chasing through arrows and meta
     indirections. For [A -> B -> C] this returns [C]. *)
-let rec ml_codomain = function
-  | Core.Type.Arrow {result = t2; _} -> ml_codomain t2
-  | Core.Type.Meta {contents = Some t} -> ml_codomain t
+let rec core_codomain = function
+  | Core.Type.Arrow {result = t2; _} -> core_codomain t2
+  | Core.Type.Meta {contents = Some t} -> core_codomain t
   | t -> t
 
 (* The registered monad heading [ty] seen through aliases, after [codomain]
-   (arrows peeled, at every alias's expansion) or [resolve_tmeta] (a function
+   (arrows peeled, at every alias's expansion) or [resolve_meta] (a function
    type is no monad, however it is spelled). *)
 let rec monad_heading view ty =
   match view ty with
@@ -167,9 +167,9 @@ let rec monad_heading view ty =
     | None -> None )
   | _ -> None
 
-let codomain_monad = monad_heading ml_codomain
+let codomain_monad = monad_heading core_codomain
 
-let type_monad = monad_heading resolve_tmeta
+let type_monad = monad_heading resolve_meta
 
 (** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
     not a parameter at run time.  Extraction erases a binder whose type is a
@@ -192,7 +192,7 @@ type binder_role =
 (** The erasure extraction recorded in a binder's type, if it did: its
     [Core.Type.Erased], whose kill reason says why. *)
 let extraction_erasure (ty : Core.Type.t) : erasure option =
-  match resolve_tmeta ty with
+  match resolve_meta ty with
   | Core.Type.Erased Core.Erasure_reason.Type_argument -> Some Type_binder
   | Core.Type.Erased Core.Erasure_reason.Proof -> Some Proof
   | Core.Type.Erased (Core.Erasure_reason.Configured_implicit {entity = r; position = i}) -> Some (Implicit (r, i))
@@ -205,24 +205,24 @@ let erased_by_extraction ty = Option.has_some (extraction_erasure ty)
 (** The domains of an ML type, in argument order -- every arrow it has,
     including the erased ones, so a position in the result is a position in the
     type.  Callers that need the arguments a C++ call actually passes want
-    {!ml_value_domains}; callers indexing by type-variable position want this.
+    {!core_value_domains}; callers indexing by type-variable position want this.
 
     Only the arrow spine is chased through metavariables; each domain is
-    returned as written, since a caller that cares runs {!resolve_tmeta} on the
+    returned as written, since a caller that cares runs {!resolve_meta} on the
     one entry it looks at. *)
-let rec ml_domains t =
-  match resolve_tmeta t with
-  | Core.Type.Arrow {parameter = t1; result = t2} -> t1 :: ml_domains t2
+let rec core_domains t =
+  match resolve_meta t with
+  | Core.Type.Arrow {parameter = t1; result = t2} -> t1 :: core_domains t2
   | _ -> []
 
 (** The domains of an ML type, in argument order, skipping the erased
     ([Core.Type.Erased]) ones -- so the result lines up with the arguments a C++ call
     actually passes. *)
-let ml_value_domains t =
-  List.filter (fun d -> not (erased_by_extraction d)) (ml_domains t)
+let core_value_domains t =
+  List.filter (fun d -> not (erased_by_extraction d)) (core_domains t)
 
 let collect_typed_lams ty b =
-  let n_type_dom = List.length (ml_domains ty) in
+  let n_type_dom = List.length (core_domains ty) in
   let all_ids, inner = collect_lams b in
   let n_excess = List.length all_ids - n_type_dom in
   if n_excess > 0 then
@@ -230,7 +230,7 @@ let collect_typed_lams ty b =
   else (all_ids, inner)
 
 let eta_parameters ty params =
-  let doms = List.rev (ml_domains ty) in
+  let doms = List.rev (core_domains ty) in
   let n_missing = max 0 (List.length doms - List.length params) in
   List.mapi (fun i t -> (Core.Binder_name.Source (eta_param_id (n_missing - 1 - i)), t)) (Util.List.firstn n_missing doms)
 
@@ -260,7 +260,7 @@ let declared_parameters ty b =
     written keep their names and only the ones the body never named are
     invented. *)
 let eta_expand_to ty b =
-  let doms = ml_value_domains ty in
+  let doms = core_value_domains ty in
   let ids, inner = Core_util.collect_lams b in
   let k = List.length doms - List.length ids in
   if k <= 0 then b
@@ -288,7 +288,7 @@ let eta_expand_to ty b =
     flattened to [std::any].  Both the instance side ({!Gen_decls}) and the
     call side ({!Translation}) need the same answer, so they ask here. *)
 let rec strip_erased_method_prefix = function
-  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.isTdummy d || Table.is_typeclass_type d ->
+  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d || Table.is_typeclass_type d ->
     strip_erased_method_prefix rest
   | t -> t
 
@@ -296,7 +296,7 @@ let rec strip_erased_method_prefix = function
     dictionary: the erased arrows leading its type. *)
 let projection_class_arity proj =
   let rec count = function
-    | Core.Type.Arrow {parameter = d; result = b} when Core_util.isTdummy d -> 1 + count b
+    | Core.Type.Arrow {parameter = d; result = b} when Core_util.is_erased_type d -> 1 + count b
     | Core.Type.Meta {contents = Some t} -> count t
     | _ -> 0
   in
@@ -316,8 +316,8 @@ let method_tvar_count class_ref ty =
     fixes the pair's first component, while the eta-expanded [option _] fixes
     nothing.  What is left is what the class still applies -- as the alias
     template's parameters, or as the method's own type variables. *)
-let hkt_carrier_fixed_args arity ml_ty =
-  match ml_ty with
+let hkt_carrier_fixed_args arity core_ty =
+  match core_ty with
   | Core.Type.Global_app {head = r; type_arguments = args; _} ->
     let given = List.length args in
     let total = max arity (max given (Table.get_type_scheme_arity r)) in
@@ -363,48 +363,48 @@ let method_is_member_template class_ref field_ref =
      | exception Not_found -> false
      | projection -> method_tvar_count class_ref (strip_erased_method_prefix projection) > 0
 
-(** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
+(** [core_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Core.Type.Erased]) domains do not count, matching the value
     arrows a C++ call consumes. Fewer than [n] arrows leaves [Core.Type.Unknown], which
     no caller can mistake for a function type. *)
-let rec ml_drop_arrows n t =
+let rec core_drop_arrows n t =
   if n <= 0 then t
   else
     match t with
-    | Core.Type.Arrow {parameter = t1; result = t2} when Core_util.isTdummy t1 -> ml_drop_arrows n t2
-    | Core.Type.Arrow {result = t2; _} -> ml_drop_arrows (n - 1) t2
-    | Core.Type.Meta {contents = Some t} -> ml_drop_arrows n t
+    | Core.Type.Arrow {parameter = t1; result = t2} when Core_util.is_erased_type t1 -> core_drop_arrows n t2
+    | Core.Type.Arrow {result = t2; _} -> core_drop_arrows (n - 1) t2
+    | Core.Type.Meta {contents = Some t} -> core_drop_arrows n t
     | _ -> Core.Type.Unknown
 
 (** Count the number of non-erased (non-[Core.Type.Erased]) arrow levels in an ML type.
     For example [Core.Type.Erased -> A -> B -> C] counts as 2 (the dummy is skipped). *)
-let count_ml_value_arrows t = List.length (ml_value_domains t)
+let count_core_value_arrows t = List.length (core_value_domains t)
 
 (** Check if the codomain of an ML type (after all arrows) is a type variable.
     When true, the type variable might hide additional arrows, so the arrow
     count is not reliable for over-application detection. *)
-let rec ml_codomain_is_tvar = function
-  | Core.Type.Arrow {result = t2; _} -> ml_codomain_is_tvar t2
-  | Core.Type.Meta {contents = Some t} -> ml_codomain_is_tvar t
+let rec core_codomain_is_tvar = function
+  | Core.Type.Arrow {result = t2; _} -> core_codomain_is_tvar t2
+  | Core.Type.Meta {contents = Some t} -> core_codomain_is_tvar t
   | Core.Type.Variable _ | Core.Type.Unknown -> true
   | _ -> false
 
 (** Count the total number of arrow levels in an ML type (including erased). *)
-let rec count_ml_arrows = function
-  | Core.Type.Arrow {result = t2; _} -> 1 + count_ml_arrows t2
+let rec count_core_arrows = function
+  | Core.Type.Arrow {result = t2; _} -> 1 + count_core_arrows t2
   | _ -> 0
 
 (** Check if an ML type is a monadic type (outermost constructor is a registered
     monad). Monadic non-function definitions are generated as zero-arg thunks,
     so bare references to them must be wrapped in a function call. *)
-let is_monadic_ml_type ty =
-  match resolve_tmeta ty with
+let is_monadic_core_type ty =
+  match resolve_meta ty with
   | Core.Type.Global_app {head = r; _} -> Table.is_monad r
   | _ -> false
 
 (** Check if an ML type is void (unit type mapped to C++ void). *)
-let ml_type_is_void (ty : Core.Type.t) : bool =
-  match resolve_tmeta ty with
+let core_type_is_void (ty : Core.Type.t) : bool =
+  match resolve_meta ty with
   | Core.Type.Global_app {head = r; _} -> is_void r
   | _ -> false
 
@@ -413,7 +413,7 @@ let ml_type_is_void (ty : Core.Type.t) : bool =
 let binder_role (ty : Core.Type.t) : binder_role =
   match extraction_erasure ty with
   | Some e -> Erased e
-  | None -> if ml_type_is_void ty then Erased Void else Runtime
+  | None -> if core_type_is_void ty then Erased Void else Runtime
 
 (** Whether a binder of type [ty] is a parameter at run time
     ({!binder_role}). *)
@@ -427,13 +427,13 @@ let void_binder (ty : Core.Type.t) : bool =
   match binder_role ty with Erased Void -> true | Runtime | Erased _ -> false
 
 (** Check if an ML type is Rocq's [unit] type. *)
-let ml_type_is_unit (ty : Core.Type.t) : bool =
-  match resolve_tmeta ty with
+let core_type_is_unit (ty : Core.Type.t) : bool =
+  match resolve_meta ty with
   | Core.Type.Global_app {head = r; _} -> Table.is_unit_type r
   | _ -> false
 
 let own_type_variables ~n_outer tys =
-  List.exists (fun ty -> Core_util.IntSet.exists (fun i -> i > n_outer) (Core_util.ml_tvars ty)) tys
+  List.exists (fun ty -> Core_util.IntSet.exists (fun i -> i > n_outer) (Core_util.core_tvars ty)) tys
 
 let is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool = function
   | Entity_application ((GlobRef.IndRef _ as r), _, _) -> Table.is_unit_type r
@@ -441,10 +441,10 @@ let is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool = function
   | _ -> false
 
 (** Check if an ML type represents a void or unit type. *)
-let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
+let core_type_is_unit_or_void ty = core_type_is_void ty || core_type_is_unit ty
 
 (** Filter out erased ([Core.Type.Erased]) types from a type list. *)
-let filter_value_types = List.filter (fun t -> not (isTdummy t))
+let filter_value_types = List.filter (fun t -> not (is_erased_type t))
 
 (** Test whether the codomain of an ML function type, after skipping [n]
     value-domain arrows, erases to [std::any] in the generated C++.
@@ -463,32 +463,32 @@ let filter_value_types = List.filter (fun t -> not (isTdummy t))
     (defaults to [false]).  Note: [Core.Type.Erased Core.Erasure_reason.Proof] (erased proof) is skipped
     without setting [has_dummy] — a proof argument does not make the codomain
     [std::any]. *)
-let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
+let rec core_codomain_erases_to_any ?(has_dummy = false) n = function
   | Core.Type.Arrow {parameter = t; result = rest} ->
     ( match t with
     | Core.Type.Erased Core.Erasure_reason.Type_argument ->
-      ml_codomain_erases_to_any ~has_dummy:true n rest
-    | _ when isTdummy t ->
+      core_codomain_erases_to_any ~has_dummy:true n rest
+    | _ when is_erased_type t ->
       (* Core.Type.Erased Core.Erasure_reason.Proof / Core.Erasure_reason.Configured_implicit: erased proof/implicit, skip without
          setting has_dummy and without consuming a value-arg slot. *)
-      ml_codomain_erases_to_any ~has_dummy n rest
+      core_codomain_erases_to_any ~has_dummy n rest
     | _ ->
-      if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
+      if n > 0 then core_codomain_erases_to_any ~has_dummy (n - 1) rest
       else false )
   | Core.Type.Variable _ | Core.Type.Unknown -> n = 0 && has_dummy
-  | Core.Type.Meta {contents = Some t} -> ml_codomain_erases_to_any ~has_dummy n t
+  | Core.Type.Meta {contents = Some t} -> core_codomain_erases_to_any ~has_dummy n t
   | _ -> false
 
-(** [ml_codomain_after n ty] is what [ty] returns once [n] value arguments
+(** [core_codomain_after n ty] is what [ty] returns once [n] value arguments
     have been applied, skipping erased (proof and type) domains as
-    {!ml_codomain_erases_to_any} does.  [None] where [ty] has fewer value
+    {!core_codomain_erases_to_any} does.  [None] where [ty] has fewer value
     arrows than that. *)
-let rec ml_codomain_after n = function
+let rec core_codomain_after n = function
   | Core.Type.Arrow {parameter = t; result = rest} ->
-    if isTdummy t then ml_codomain_after n rest
-    else if n > 0 then ml_codomain_after (n - 1) rest
+    if is_erased_type t then core_codomain_after n rest
+    else if n > 0 then core_codomain_after (n - 1) rest
     else Some (Core.Type.Arrow {parameter = t; result = rest})
-  | Core.Type.Meta {contents = Some t} -> ml_codomain_after n t
+  | Core.Type.Meta {contents = Some t} -> core_codomain_after n t
   | ty -> if n = 0 then Some ty else None
 
 (** Return [true] if the C++ type contains any unresolved type variable
@@ -646,15 +646,15 @@ let rec extract_template_args : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t l
   | Shared_pointer inner -> extract_template_args inner
   | _ -> []
 
-(** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
+(** [is_core_erased_ty ty] — true if [ty] represents an erased position in the
     ML AST: a bare type variable, [Core.Type.Unknown], an empty [Core.Type.Meta] or a [Core.Type.Open]
     hole, seen through filled [Core.Type.Meta]s.  These
     arise from type-level parameters that were erased during extraction
     and correspond to [std::any] in the C++ representation. *)
-and is_ml_erased_ty = function
+and is_core_erased_ty = function
   | Core.Type.Variable _ | Core.Type.Unknown -> true
   | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
-  | Core.Type.Meta {contents = Some t} -> is_ml_erased_ty t
+  | Core.Type.Meta {contents = Some t} -> is_core_erased_ty t
   | _ -> false
 
 (** Check if a C++ type is a skipped type (inline custom with empty string).
@@ -675,7 +675,7 @@ let rec is_typeclass_type_cpp : Cpp_ir.Lowered.Type.t -> bool = function
     Same semantics as [is_skipped_cpp_type] but operates on the ML AST.
     Used to filter out parameters whose type was [Crane Extract Skip]-ped
     (e.g. [ReSum]-typed typeclass parameters from the ITree library). *)
-let is_skipped_ml_type = function
+let is_skipped_core_type = function
   | Core.Type.Global_app {head = r; _} ->
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
@@ -799,8 +799,8 @@ let rec index_erase_type (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   | _ -> Any
 
 (** Extract return type from a function type, stripping all Core.Type.Arrow layers. *)
-let rec ml_return_type = function
-  | Core.Type.Arrow {result = rest; _} -> ml_return_type rest
+let rec core_return_type = function
+  | Core.Type.Arrow {result = rest; _} -> core_return_type rest
   | t -> t
 
 (** Whether a global has no C++ spelling: whatever mapped it mapped it to the
@@ -861,8 +861,8 @@ let has_no_cpp_spelling (ty : Cpp_ir.Lowered.Type.t) =
     whose class extraction records as a [ConstRef] mapped to the empty string,
     so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
     are infrastructure and are erased. *)
-let ml_ret_is_skipped ty =
-  match ml_return_type ty with
+let core_ret_is_skipped ty =
+  match core_return_type ty with
   | Core.Type.Global_app {head = rr; _} -> ref_is_skipped rr
   | _ -> false
 
@@ -871,8 +871,8 @@ let ml_ret_is_skipped ty =
     The result is what decides it: an instance parameterised over types is
     still an instance, and its type is an arrow -- [MList : forall A, Monoid
     (list A)].  This is the one place that answer is worked out. *)
-let ml_type_is_instance ty =
-  Table.is_typeclass_type (ml_return_type ty) || ml_ret_is_skipped ty
+let core_type_is_instance ty =
+  Table.is_typeclass_type (core_return_type ty) || core_ret_is_skipped ty
 
 (** Extract argument types and return type from a function type. *)
 let rec get_args_and_ret acc = function
@@ -883,13 +883,13 @@ let rec get_args_and_ret acc = function
     indirections and automatically skipping erased (Core.Type.Erased) arrows.
     Returns the codomain after stripping, or [None] if the type has fewer
     than [n] non-dummy arrow levels. *)
-let rec strip_tarr_n n ty =
+let rec strip_arrows_n n ty =
   if n <= 0 then Some ty
-  else match resolve_tmeta ty with
-    | Core.Type.Arrow {parameter = t1; result = rest} when Core_util.isTdummy t1 ->
+  else match resolve_meta ty with
+    | Core.Type.Arrow {parameter = t1; result = rest} when Core_util.is_erased_type t1 ->
       (* Skip erased type-param arrow without consuming a real argument *)
-      strip_tarr_n n rest
-    | Core.Type.Arrow {result = rest; _} -> strip_tarr_n (n - 1) rest
+      strip_arrows_n n rest
+    | Core.Type.Arrow {result = rest; _} -> strip_arrows_n (n - 1) rest
     | _ -> None
 
 (** Strip one level of reference or const-qualification from a C++ type.
@@ -905,7 +905,7 @@ let strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = funct
     [Core.Expr.Erased_value] nodes represent erased type/proof parameters that are not
     passed to C++ functions; this returns the count of the remaining actual
     value arguments. *)
-let count_real_ml_args args =
+let count_real_core_args args =
   List.length (List.filter (fun a ->
     match a with Core.Expr.Erased_value _ -> false | _ -> true) args)
 
@@ -925,25 +925,25 @@ let rec is_trivially_copyable_type (t : Cpp_ir.Lowered.Type.t) =
 
 (** Whether copying a value of ML type [ty] is free: {!is_trivially_copyable_type}
     read off the ML type. *)
-let rec ml_is_trivially_copyable ty =
-  match resolve_tmeta ty with
+let rec core_is_trivially_copyable ty =
+  match resolve_meta ty with
   | Core.Type.Global_app {head = g; type_arguments = args; _} ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
-    || Table.is_trivially_copyable_ref g && List.for_all ml_is_trivially_copyable args
+    || Table.is_trivially_copyable_ref g && List.for_all core_is_trivially_copyable args
   | _ -> false
 
 let boxes_field ty =
   Table.boxed_fields ()
   &&
-  match resolve_tmeta ty with
+  match resolve_meta ty with
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as g); _} ->
-    (not (Table.is_coinductive g)) && not (ml_is_trivially_copyable ty)
+    (not (Table.is_coinductive g)) && not (core_is_trivially_copyable ty)
   | _ -> false
 
 let boxes_param_field ~owner ty =
   Table.boxed_fields ()
   && (not (Table.is_shared_variant owner))
-  && match resolve_tmeta ty with Core.Type.Variable _ -> true | _ -> false
+  && match resolve_meta ty with Core.Type.Variable _ -> true | _ -> false
 
 module Ctor_fields = struct
   type t = {
@@ -956,7 +956,7 @@ module Ctor_fields = struct
       match cname with GlobRef.ConstructRef (ind, _) -> GlobRef.IndRef ind | r -> r
     in
     let types =
-      List.filter (fun t -> not (isTdummy t)) (Option.default [] (Table.get_ctor_ip_types_opt cname))
+      List.filter (fun t -> not (is_erased_type t)) (Option.default [] (Table.get_ctor_ip_types_opt cname))
     in
     {inductive; types}
 
@@ -1020,8 +1020,8 @@ module Ctor_fields = struct
        || boxed f i || param_boxed f i )
 end
 
-let is_prod_ml_type ty =
-  match resolve_tmeta ty with
+let is_prod_core_type ty =
+  match resolve_meta ty with
   | Core.Type.Global_app {head = r; _} -> is_prod_global r
   | _ -> false
 
@@ -1266,7 +1266,7 @@ let refine_erased ?(fills = ref []) ~writable have want =
     | t -> t
   in
   let rec refine have want =
-    match (filled (resolve_tmeta have), resolve_tmeta want) with
+    match (filled (resolve_meta have), resolve_meta want) with
     | Core.Type.Open o, w when (not (erased w)) && writable w ->
       fills := (o, w) :: !fills;
       w
@@ -1459,14 +1459,14 @@ let primary_tvar_indices (dom : Cpp_ir.Lowered.Type.t list) cod =
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
-    {!Translation_types.cpp_ir_of_ml_type} but may be needed in function bodies
+    {!Translation_types.cpp_ir_of_core_type} but may be needed in function bodies
     for [any_cast] when matching on type-indexed inductives with
     wholesale-erased fields.
 
     Only collects tvars from inductives where [get_ind_num_param_vars_opt]
     succeeds and the number of type args exceeds the parameter count
     (indicating genuine indices, not parameters). *)
-let collect_ml_type_index_tvars ml_ty =
+let collect_core_type_index_tvars core_ty =
   let result = ref IntSet.empty in
   let rec collect_tvars = function
     | Core.Type.Variable {variable = i; _} ->
@@ -1494,7 +1494,7 @@ let collect_ml_type_index_tvars ml_ty =
     | Core.Type.Meta {contents = Some t} -> walk t
     | _ -> ()
   in
-  walk ml_ty;
+  walk core_ty;
   !result
 
 (** Every type variable index the ML type mentions, in any position.
@@ -1504,14 +1504,14 @@ let collect_ml_type_index_tvars ml_ty =
     while the body and the call sites still number their arguments by the ML
     type.  A declaration that omitted such a variable would leave the body
     naming something the head never bound. *)
-let collect_ml_tvars = Core_util.ml_tvars
+let collect_core_tvars = Core_util.core_tvars
 
 (** Arity of every type variable that [tys] applies to arguments, keyed by its
     1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type] reaches
     Core as the head of a {!Core.Type.Variable_app}, and a plain [typename] cannot be
     applied: such a parameter is declared [template <typename> class], and an
     explicit argument for it is a bare template name rather than a type. *)
-let applied_ml_tvar_arities tys =
+let applied_core_tvar_arities tys =
   let arities = Hashtbl.create 4 in
   let rec scan = function
     | Core.Type.Variable_app {head = i; arguments = args} ->
@@ -1525,7 +1525,7 @@ let applied_ml_tvar_arities tys =
   List.iter scan tys;
   arities
 
-(** The type variables a declaration of type [ml_ty] relaxes out of its template
+(** The type variables a declaration of type [core_ty] relaxes out of its template
     head.
 
     {!Plan_templates.relax_applied_return} replaces a higher-kinded parameter that is
@@ -1539,9 +1539,9 @@ let applied_ml_tvar_arities tys =
     interleaves with body generation. The two agree because the condition is a
     property of the type both are built from -- applied somewhere in the
     domains, and spelled nowhere unapplied and nowhere in the codomain. *)
-let relaxed_applied_ml_tvars ml_ty =
-  let doms = ml_domains ml_ty
-  and ret = ml_return_type ml_ty in
+let relaxed_applied_core_tvars core_ty =
+  let doms = core_domains core_ty
+  and ret = core_return_type core_ty in
   let applied = Hashtbl.create 4
   and bare = ref IntSet.empty in
   let rec scan = function
@@ -1553,7 +1553,7 @@ let relaxed_applied_ml_tvars ml_ty =
       when args = []
            || List.exists
                 (fun a ->
-                  match resolve_tmeta a with
+                  match resolve_meta a with
                   | Core.Type.Unknown -> true
                   | _ -> false )
                 args -> bare := IntSet.add i !bare
@@ -1597,19 +1597,19 @@ let relaxed_applied_ml_tvars ml_ty =
     ([trigger_cast' (e : E void) : itree E A] applies it in the domain and
     names it in the codomain).  That application is taken back off by
     {!Plan_templates.deapply_plain_tvars} once the kind is refused. *)
-let event_family_ml_tvars tys =
+let event_family_core_tvars tys =
   let fams = ref IntSet.empty in
   (* A variable handed to a family position of a generated type -- the [E] of
      [itree E A] in vanilla extraction, where [itree] is no registered monad
      -- is a family too: the type's own header decided that position is one
      ([Table.is_family_ind_param]). *)
   let rec at_family_positions t =
-    match resolve_tmeta t with
+    match resolve_meta t with
     | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       List.iteri
         (fun i a ->
           ( if Table.is_family_ind_param r i then
-              match resolve_tmeta a with
+              match resolve_meta a with
               | Core.Type.Variable {variable = v; _} | Core.Type.Variable_app {head = v; _} ->
                 fams := IntSet.add v !fams
               | _ -> () );
@@ -1624,7 +1624,7 @@ let event_family_ml_tvars tys =
      families there are combined: in [itree (D +' E) R] both [D] and [E] are,
      and so is anything a sum nested inside it names. *)
   let rec families a =
-    match resolve_tmeta a with
+    match resolve_meta a with
     | Core.Type.Variable {variable = v; _} | Core.Type.Variable_app {head = v; _} -> fams := IntSet.add v !fams
     | Core.Type.Global_app {type_arguments = args; _} -> List.iter families args
     | _ -> ()
@@ -1678,9 +1678,9 @@ let event_family_ml_tvars tys =
     the declaration and every call that supplies the parameter must already
     agree on it. *)
 
-let higher_kinded_ml_tvars tys =
+let higher_kinded_core_tvars tys =
   let hk = ref IntSet.empty in
-  let families = event_family_ml_tvars tys in
+  let families = event_family_core_tvars tys in
   let demand i = if not (IntSet.mem i families) then hk := IntSet.add i !hk in
   (* A variable that occurs only as the argument of an applied variable is an
      index -- the [T] of [E ~> F], in [E T -> F T] -- and an application at an
@@ -1690,7 +1690,7 @@ let higher_kinded_ml_tvars tys =
   let index_vars =
     let as_arg = ref IntSet.empty and elsewhere = ref IntSet.empty in
     let rec scan ~under_app t =
-      match resolve_tmeta t with
+      match resolve_meta t with
       | Core.Type.Variable {variable = j; _} ->
         if under_app then as_arg := IntSet.add j !as_arg
         else elsewhere := IntSet.add j !elsewhere
@@ -1703,7 +1703,7 @@ let higher_kinded_ml_tvars tys =
     IntSet.diff !as_arg !elsewhere
   in
   let survived_erasure a =
-    match resolve_tmeta a with
+    match resolve_meta a with
     | Core.Type.Unknown | Core.Type.Erased _ | Core.Type.Meta _ | Core.Type.Open _ -> false
     | Core.Type.Variable {variable = j; _} -> not (IntSet.mem j index_vars)
     | _ -> true
@@ -1736,15 +1736,15 @@ let higher_kinded_ml_tvars tys =
   List.iter (scan ~generated_arg:false) tys;
   !hk
 
-let relaxed_higher_kinded_tvars ml_ty =
-  IntSet.inter (relaxed_applied_ml_tvars ml_ty) (higher_kinded_ml_tvars [ml_ty])
+let relaxed_higher_kinded_tvars core_ty =
+  IntSet.inter (relaxed_applied_core_tvars core_ty) (higher_kinded_core_tvars [core_ty])
 
-(** [hkt_arg_ml_tvar_arities tys] maps a type variable to the arity it is
+(** [hkt_arg_core_tvar_arities tys] maps a type variable to the arity it is
     higher-kinded at because [tys] hands it, bare, to a position another
     constructor declares [template <typename> class].
 
     Being applied is the usual evidence for the higher kind, and
-    {!higher_kinded_ml_tvars} and [Plan_templates.applied_tvar_arities] both look
+    {!higher_kinded_core_tvars} and [Plan_templates.applied_tvar_arities] both look
     for it.  It is not the only evidence.  [raiseUB (E : Type -> Type)
     (S : Sub UBE E) (B : Type)] applies [E] nowhere -- its result is [list B],
     and in the Vellvm original the result [itree E X] loses the event
@@ -1757,14 +1757,14 @@ let relaxed_higher_kinded_tvars ml_ty =
     {!Plan_templates.hkt_templates} when the constructor's own header was emitted,
     which is the same authority a {e use} of that constructor already consults
     to decide it must pass a bare template name. *)
-let hkt_arg_ml_tvar_arities tys =
+let hkt_arg_core_tvar_arities tys =
   let arities = Hashtbl.create 4 in
   let rec scan t =
     match t with
     | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       List.iteri
         (fun i a ->
-          match (resolve_tmeta a, Table.hkt_ind_param_arity r i) with
+          match (resolve_meta a, Table.hkt_ind_param_arity r i) with
           | Core.Type.Variable {variable = v; _}, Some arity -> Hashtbl.replace arities v arity
           | Core.Type.Variable_app {head = v; arguments = args}, Some _ ->
             Hashtbl.replace arities v (List.length args)
@@ -1794,13 +1794,13 @@ let hkt_arg_ml_tvar_arities tys =
     template parameter says it exactly.  And a variable the arguments also
     carry outside an index position is deducible as usual.  The variable is
     [Some n] for [Core.Type.Variable n], [None] where the result is no such variable. *)
-let index_only_result_tvar ml_ty =
+let index_only_result_tvar core_ty =
   let rec split acc = function
     | Core.Type.Arrow {parameter = t1; result = t2} -> split (t1 :: acc) t2
     | Core.Type.Meta {contents = Some t} -> split acc t
     | res -> (acc, res)
   in
-  let doms, res = split [] ml_ty in
+  let doms, res = split [] core_ty in
   match res with
   | (Core.Type.Variable {variable = n; _}) when doms <> [] ->
     (* [as_index]: variables an argument carries only as an index of a
@@ -1835,7 +1835,7 @@ let index_only_result_tvar ml_ty =
     if IntSet.mem n !as_index && not (IntSet.mem n !elsewhere) then Some n else None
   | _ -> None
 
-let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml_ty)
+let result_is_index_only_tvar core_ty = Option.has_some (index_only_result_tvar core_ty)
 
 (** [explicit_tvar_prefix ~force_required cty] is how many of a signature's
     leading template parameters the signature does not represent, and which a

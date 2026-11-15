@@ -33,12 +33,12 @@ let gen_return_expr env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
          extraction could not read says nothing. *)
       let r_cpp =
         let value_var =
-          match List.rev (Type_util.ml_value_domains (find_type r)) with
+          match List.rev (Type_util.core_value_domains (find_type r)) with
           | Core.Type.Variable {variable = j; _} :: _ -> Some j
           | _ -> None
         in
         match Option.bind value_var (Core_util.Var_types.find_tvar ret_tys) with
-        | Some r_ml when not (Core_util.isTdummy r_ml) -> cpp_of_ml env r_ml
+        | Some r_core when not (Core_util.is_erased_type r_core) -> cpp_of_core env r_core
         | _ -> Void
       in
       mk_itree_ret r_cpp [inner]
@@ -68,10 +68,10 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
      B].  One extraction could not read ({!Extraction.observe_type_arg}: a
      type constructor such as an HKT carrier) says nothing. *)
   let action_result_ty =
-    match List.rev (Type_util.ml_value_domains (find_type r)) with
+    match List.rev (Type_util.core_value_domains (find_type r)) with
     | Core.Type.Arrow {parameter = Core.Type.Variable {variable = j; _}; _} :: _ -> (
       match Core_util.Var_types.find_tvar bind_tys j with
-      | Some t when not (Core_util.isTdummy t) -> Some t
+      | Some t when not (Core_util.is_erased_type t) -> Some t
       | _ -> None )
     | _ -> None
   in
@@ -80,12 +80,12 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     inline_iife k ((gen_expr ~slot env ast))
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
-    let a_ml, f = Common.last_two (a1 :: a2 :: l) in
-    let a = gen_expr env a_ml in
+    let a_core, f = Common.last_two (a1 :: a2 :: l) in
+    let a = gen_expr env a_core in
     let ids', f = collect_lams f in
   let ids, env =
     push_vars'
-      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids')
+      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids')
       env
   in
   push_binders env ids;
@@ -97,14 +97,14 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   | _ -> () );
   (
   match ids with
-  | (x, ml_ty) :: _ ->
-    let ty = cpp_of_ml env ml_ty in
-    if (match ty with Void | Obligation Unresolved_type -> true | _ -> false) || ml_type_is_unit ml_ty then
+  | (x, core_ty) :: _ ->
+    let ty = cpp_of_core env core_ty in
+    if (match ty with Void | Obligation Unresolved_type -> true | _ -> false) || core_type_is_unit core_ty then
       (* Unit/void bind result: execute the action for side effects,
          then declare the variable as Unit::e_TT so the continuation
          can reference it if needed. *)
       let action_is_pure_ret =
-        match a_ml with
+        match a_core with
         | Core.Expr.Apply {callee = Core.Expr.Global use; _} -> is_effect Core_effects.Return use
         | _ -> false
       in
@@ -118,12 +118,12 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
          actually referenced in the generated C++ (unit-match elimination
          and Ret-in-void optimization may drop ML-level references). *)
       let body = gen_stmts ~slot env k f in
-      let cpp_ty = cpp_of_ml env ml_ty in
+      let cpp_ty = cpp_of_core env core_ty in
       let decl : Cpp_ir.Lowered.Stmt.t list =
         if not (stmts_reference_var x body) then []
-        else if ml_type_is_unit ml_ty && not (is_cpp_unit_type cpp_ty) then
+        else if core_type_is_unit core_ty && not (is_cpp_unit_type cpp_ty) then
           []
-        else if ml_type_is_unit ml_ty then
+        else if core_type_is_unit core_ty then
           [Bind_variable (x, Declare (cpp_ty, bound_by_bind env), mk_tt_expr ())]
         else
           []
@@ -166,9 +166,9 @@ let gen_bind_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         match action_result_ty with
         | Some ty ->
           let cpp_ty =
-            cpp_of_ml env ty
+            cpp_of_core env ty
           in
-          if cpp_ty = Void || cpp_ty = Obligation Unresolved_type || ml_type_is_unit ty then
+          if cpp_ty = Void || cpp_ty = Obligation Unresolved_type || core_type_is_unit ty then
             None
           else
             Some (cpp_ty, Ownership_ir.worth_moving ty)

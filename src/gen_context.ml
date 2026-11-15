@@ -112,25 +112,25 @@ let hkt_carrier_fixed_args = Type_util.hkt_carrier_fixed_args
     emitted as [template <typename _A0> using C = List<_A0>;].  The element
     types are fresh type variables numbered from [base], so the caller must
     append {!hkt_alias_param_name} entries to the type-variable list it passes
-    to [cpp_ir_of_ml_type]. *)
-let hkt_carrier_alias base arity ml_ty =
+    to [cpp_ir_of_core_type]. *)
+let hkt_carrier_alias base arity core_ty =
   let is_lambda =
-    match ml_ty with
+    match core_ty with
     | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       Core_util.writes_binder ~constructors:(Core_util.constructor_params r) args
     | Core.Type.Variable_app {arguments = args; _} -> Core_util.writes_binder args
-    | _ -> Core_util.type_has_hole ml_ty
+    | _ -> Core_util.type_has_hole core_ty
   in
-  match ml_ty with
+  match core_ty with
   (* A carrier with a hole is a type-level lambda whose binder is the hole:
      [stateT S m] reaches here as [S -> m (S * _)], and an alias of an
      applied type, [EOUP Z := EOU (MaybePoison Z)], as [EOU (MaybePoison _)].
      The alias applies it to its parameter. *)
   | _ when arity = 1 && is_lambda ->
     ( [hkt_alias_param_name 0],
-      Core_util.fill_type_hole (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) ml_ty )
+      Core_util.fill_type_hole (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) core_ty )
   | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = es} ->
-    let kept = hkt_carrier_fixed_args arity ml_ty in
+    let kept = hkt_carrier_fixed_args arity core_ty in
     let params =
       max arity (max (List.length args) (Table.get_type_scheme_arity r))
       - List.length kept
@@ -140,7 +140,7 @@ let hkt_carrier_alias base arity ml_ty =
           @ List.init params (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                            variable = base + 1 + i}); index_arguments = es} )
   | Core.Type.Variable_app {head = j; arguments = args} ->
-    let kept = hkt_carrier_fixed_args arity ml_ty in
+    let kept = hkt_carrier_fixed_args arity core_ty in
     let params = max arity (List.length args) - List.length kept in
     ( List.init params hkt_alias_param_name,
       Core.Type.Variable_app {head = j; arguments = kept
@@ -150,7 +150,7 @@ let hkt_carrier_alias base arity ml_ty =
   | _ when arity = 1 ->
     (* An unnamed carrier is the identity constructor: [F<_A0> = _A0]. *)
     ([hkt_alias_param_name 0], Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = (base + 1)})
-  | _ -> ([], ml_ty)
+  | _ -> ([], core_ty)
 
 (** The concrete types a class's associated types take in an instance, read off
     the instance's class arguments ([Container list] gives [C = List<_A0>]).
@@ -445,7 +445,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | None -> (
       match Table.find_type r with
       | ty -> (
-        match Core_util.type_simpl (Type_util.ml_codomain ty) with
+        match Core_util.type_simpl (Type_util.core_codomain ty) with
         | Core.Type.Global_app {head = c; _} when Table.is_typeclass c -> Some c
         | _ -> None )
       | exception Not_found -> None )
@@ -467,7 +467,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | None -> []
     | Some ty ->
       let binders, _ = collect_lams b in
-      let doms = Type_util.ml_domains ty in
+      let doms = Type_util.core_domains ty in
       let tc_names = ref (Translation_support.collect_typeclass_param_ids ty) in
       let outer_first =
         List.mapi
@@ -514,7 +514,7 @@ let promoted_resolutions_of_body ?r ?ty b =
            && leading <> [] && spellable d (Core_query.strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (Translation_calls.ml_arg_to_template_type (env_at d) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type (env_at d) (Core_query.strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
@@ -540,7 +540,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
       when instance_class r <> None && closed (Core_query.strip_magic e) ->
       Option.iter (add r)
-        (Translation_calls.ml_arg_to_template_type (empty_env ()) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type (empty_env ()) (Core_query.strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -585,7 +585,7 @@ let promoted_resolutions_of_body ?r ?ty b =
                              arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
           in
           Option.iter (add_at class_ref inst)
-            (Translation_calls.ml_arg_to_template_type
+            (Translation_calls.core_arg_to_template_type
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )
