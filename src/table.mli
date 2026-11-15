@@ -18,7 +18,58 @@
     the global extraction flags, and the per-run reset hooks that clear all of
     the above between extractions.  Most other modules read and write this state
     rather than threading it explicitly.  It sits below extraction, translation
-    and the printer: all three read it, and it depends on none of them. *)
+    and the printer: all three read it, and it depends on none of them.
+
+    {2 What its cells hold}
+
+    Every cell is private to this module and is one of:
+
+    - {b Configuration}, set by vernacular commands and options and only read
+      while extracting: the [Summary]-backed mappings ([customs],
+      [custom_matchs], [boxed_wrappers], [custom_drains], [ref_imports],
+      [inline_table], [foreign_set], [callback_map], [implicits_table],
+      [blacklist_table], [loopify_table], [loopify_suffix_table],
+      [reuse_table], [no_arena_table], [lang_ref], [trivially_copyable_heads],
+      [trivially_copyable_refs], [monads], [binds], [rets], [void_ty],
+      [ghost_tm], [skip_module_set], [numeral_table], [converter_table]); the
+      plain refs a functor body's directives must survive [End] in
+      ([no_arena_suffix_table], [guard_compare_table]); the [Goptions] flags;
+      and the mode of the running command ([modular_ref], [library_ref],
+      [extrcompute], [int_flag_ref], [opt_flag_ref]).
+    - {b The extracted environment}, written by {!Extraction} as it extracts
+      each global and read by every later phase: [typedefs], [cst_types] and
+      [inductives] (memos checked against the kernel body, read unchecked
+      afterwards), [glob_tys], [inductive_kinds], [projs], [recursors],
+      [promoted_type_vars], [instance_class_shapes], [context_instance_apps],
+      [ind_class_arg_shapes], [type_alias_bodies], [hkt_params_table],
+      [type_scheme_arities], [sigma_assertions], [cofixpoints],
+      [erased_type_consts], [value_dep_type_schemes], [erased_fix_groups].
+      A phase result: its owner is the extracted program.
+    - {b Installed plan facts}, copies of a {!Program_facts} or {!Target_plan}
+      value made by [Install_legacy_plan] for readers that cannot reach the
+      plan: [named_refs], [higher_order_projection_set], [throwing_values],
+      [instance_promoted_types], [promoted_inductives] (accumulated over the
+      units of an extraction), and the plan's overrides of [inductive_kinds].
+    - {b Analysis results registered while a later phase runs}: [flat_inductives]
+      and [enum_inductives] (registered by layout and generation, with a
+      structural fallback), [shared_variants] (by a Core pass),
+      [boxed_recursive_inds] (by generation, read by finishing), and
+      [written_refs] (by the walk ahead of the files, read by the preamble).
+    - {b Caches}, pure memos safe to drop: [promoted_type_params_cache],
+      [unit_type_cache], [tt_ctor_cache].
+    - {b Diagnostics}: [info_axioms], [log_axioms], [opaques], [symbols]
+      (end-of-run warnings), [operations_checked] (a check made once a
+      session), [census_entries] (table sizes for the late-decision check).
+    - {b State a run needs}: the unit's demands ([raised_demands],
+      [standard_headers], [demands_frozen], and [written_needs] under
+      [CRANE_CHECK_IR]), the declaration being generated
+      ([current_decl_ref]), the file names given out ([modfile_ids],
+      [modfile_mps]), the targets claimed this session
+      ([claimed_output_targets]), and the units earlier libraries were
+      extracted into ([extracted_units], kept in the [.vo]).
+
+    Every cell but configuration and the session-long ones is emptied with
+    {!State}. *)
 
 open Names
 open Libnames
