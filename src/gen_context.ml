@@ -180,7 +180,7 @@ let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
     whether it stayed one. *)
 let promoted_var_is_associated_type class_ref v =
   List.for_all
-    (fun (field_opt, field_ty) ->
+    (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
       match (field_opt, field_ty) with
       | Some fr, Core.Type.Global_app {head = r; _}
         when Id.equal (Common.id_of_global Term fr) v ->
@@ -239,7 +239,7 @@ let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
   let is_direct v = List.exists (Id.equal v) direct in
   let nested =
     List.concat_map
-      (fun (field_opt, field_ty) ->
+      (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
         match (field_opt, field_ty) with
         | Some field_ref, Core.Type.Global_app {head = r; _} when Table.is_typeclass r ->
           let field_id = Common.id_of_global Term field_ref in
@@ -530,8 +530,8 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
       walk_at d sc;
       Array.iter (fun {Core.Match.Branch.binders = ids; body = br; _} -> walk_at (d + List.length ids) br) pv
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk_at (d + Array.length ids)) funs
     | e' -> Mlutil.ast_iter (walk_at d) e'
   in

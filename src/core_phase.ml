@@ -26,7 +26,11 @@ let modules p = List.map (fun ((mp, _) as m) -> (mp, { p with structure = [m] })
     type definitions. *)
 let iter_types f p =
   let visit_body b = ignore (Mlutil.ast_map_types (fun t -> f t; t) b) in
-  let visit_ind (ind : Core.Inductive.t) = Array.iter (fun (pk : Core.Inductive.Packet.t) -> Array.iter (List.iter f) pk.constructor_argument_types) ind.packets in
+  let visit_ind (ind : Core.Inductive.t) =
+    Array.iter
+      (fun (pk : Core.Inductive.Packet.t) -> Array.iter (List.iter f) pk.constructor_argument_types)
+      ind.packets
+  in
   Modutil.struct_iter
     (function
       | Core.Decl.Inductive {definition = ind; _} -> visit_ind ind
@@ -42,10 +46,10 @@ let iter_types f p =
 
 (* A metavariable is its cell: extraction numbers each declaration's afresh. *)
 module Cells = Hashtbl.Make (struct
-  type t = Core.Meta.t
+  type t = Core.Extracted.Meta.t
 
   let equal = ( == )
-  let hash (m : Core.Meta.t) = Hashtbl.hash m.id
+  let hash (m : Core.Extracted.Meta.t) = Hashtbl.hash m.id
 end)
 
 module Opens = Hashtbl.Make (Core.Open)
@@ -105,13 +109,19 @@ let zonk p =
     | Core.Type.String -> t
   and body e = Mlutil.ast_map_types ty e in
   let inductive (ind : Core.Inductive.t) =
-    Array.iter (fun (pk : Core.Inductive.Packet.t) -> Array.iteri (fun i ts -> pk.constructor_argument_types.(i) <- List.map ty ts) pk.constructor_argument_types) ind.packets
+    Array.iter
+      (fun (pk : Core.Inductive.Packet.t) ->
+        Array.iteri (fun i ts -> pk.constructor_argument_types.(i) <- List.map ty ts) pk.constructor_argument_types )
+      ind.packets
   in
   let decl = function
     | Core.Decl.Value {entity = r; body = b; type_ = t} -> Core.Decl.Value {entity = r; body = body b; type_ = ty t}
     | Core.Decl.Recursive_group fds ->
-      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = body fd.body;
-                                                                                               type_ = ty fd.type_}) fds)
+      Core.Decl.Recursive_group
+        (Core.Nonempty.map
+           (fun (fd : Core.Recursion.Definition.t) ->
+             {fd with Core.Recursion.Definition.body = body fd.body; type_ = ty fd.type_} )
+           fds )
     | Core.Decl.Type_alias {entity = r; parameters = vars; body = t} ->
       Core.Decl.Type_alias {entity = r; parameters = vars; body = ty t}
     | Core.Decl.Inductive {definition = ind; _} as d -> inductive ind; d
@@ -145,30 +155,6 @@ let check_zonked p =
   in
   iter_types walk p;
   Table.iter_types walk
-
-(** Every local recursive group is nonempty and selects a member it has (a
-    top-level group is nonempty by its type). *)
-let check_recursive_groups p =
-  let rec check_body = function
-    | Core.Expr.Fixpoint {selected = i;
-                          functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {selected = i;
-                                                                    functions = ids;
-                                                                    bodies = funs; _} as e ->
-      if Array.length ids <> Array.length funs || Array.length ids = 0 then
-        fail "has a local recursive group whose names and bodies disagree";
-      if i < 0 || i >= Array.length ids then fail "selects a recursive function its group lacks";
-      Mlutil.ast_iter check_body e
-    | e -> Mlutil.ast_iter check_body e
-  in
-  Modutil.struct_iter
-    (function
-      | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Mlutil.term_defs d)
-      | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
-    (fun _ -> ())
-    (fun _ -> ())
-    p.structure
 
 (** No reference is declared twice. *)
 let check_declared_once p =
@@ -254,8 +240,11 @@ let iter_occurrences f p =
               | Core.Expr.Let {occurrence = o; _} -> f fd.entity "let" o
               | Core.Expr.Match {occurrence = o; _} -> f fd.entity "match" o
               | Core.Expr.Construct {occurrence = o; _} -> f fd.entity "construction" o
-              | Core.Expr.Coerce {occurrence = o; _} | Core.Expr.Boxed_value {occurrence = o; _} | Core.Expr.Lambda_group_barrier {occurrence = o; _} -> f fd.entity "coercion" o
-              | Core.Expr.Fixpoint {occurrence = o; _} | Core.Expr.Cofixpoint {occurrence = o; _} -> f fd.entity "local fixpoint" o
+              | Core.Expr.Coerce {occurrence = o; _}
+              | Core.Expr.Boxed_value {occurrence = o; _}
+              | Core.Expr.Lambda_group_barrier {occurrence = o; _} -> f fd.entity "coercion" o
+              | Core.Expr.Fixpoint {occurrence = o; _}
+              | Core.Expr.Cofixpoint {occurrence = o; _} -> f fd.entity "local fixpoint" o
               | Core.Expr.Global use -> f fd.entity "use" (Core.Global_use.occurrence use)
               | _ -> () );
               Mlutil.ast_iter walk e
@@ -285,9 +274,8 @@ let check_occurrences phase p =
 
 let freeze p =
   let p = zonk p in
-  Core.Meta.freeze ();
+  Core.Extracted.Meta.freeze ();
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
-    check_recursive_groups p;
     check_declared_once p;
     check_instantiations p;
     check_zonked p;

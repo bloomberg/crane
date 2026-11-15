@@ -54,8 +54,8 @@ let reads env e =
       Array.fold_left
         (fun acc {Core.Match.Branch.binders = ids; body = b; _} -> go (depth + List.length ids) acc b)
         (go depth acc s) branches
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.fold_left (go (depth + Array.length ids)) acc funs
     | Core.Expr.Apply {callee = f; arguments = args} -> List.fold_left (go depth) acc (f :: args)
     | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.fold_left (go depth) acc args
@@ -90,7 +90,6 @@ let declared_arguments (b : Term.branch) =
   ( match b.pattern with
   | Core.Pattern.Constructor {constructor = r; fields = ps} ->
     List.iteri (fun j -> function Core.Pattern.Bound_variable k -> at r j k | _ -> ()) ps
-  | Core.Pattern.Shallow_constructor r -> List.iteri (at r) (List.init count (fun i -> count - i))
   | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> () );
   Array.to_list bound
 
@@ -174,7 +173,7 @@ let own_value ty value =
     | Core.Expr.Float64 _
     | Core.Expr.String _ -> true
   in
-  let rec head = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> head e | e -> e in
+  let head = Core.Expr.strip_crossings in
   (* A custom computes a value of its own unless its text binds the result
      itself or yields its argument, or a field of it, as an lvalue. *)
   let computes r =

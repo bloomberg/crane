@@ -47,8 +47,7 @@ val extracted : Core.Program.t -> extracted program
 (** [optimize passes p] runs the Core passes over [p]. *)
 val optimize : (Core.Program.t -> Core.Program.t) -> extracted program -> optimized program
 
-(** [freeze p] is [p], checked: every local recursive group is nonempty
-    and its selected member exists, no reference is declared twice, every
+(** [freeze p] is [p], checked: no reference is declared twice, every
     polymorphic use is instantiated at its callee's own scheme with no
     metavariable in its instantiation, and no two terms -- reads, lets,
     local fixpoints, global uses -- are one {!Core.Occurrence.t}, which

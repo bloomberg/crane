@@ -7,7 +7,7 @@ type instance = Grammar.Global_use.instance =
   | Monomorphic
   | Polymorphic of Type.t Scheme.Instantiation.t
 
-type t = Grammar.Global_use.t = {
+type t = Grammar.Global_use.t = private {
   callee : GlobRef.t;
   instance : instance;
   occurrence : Occurrence.t;
@@ -15,12 +15,12 @@ type t = Grammar.Global_use.t = {
 
 let callee g = g.callee
 let occurrence g = g.occurrence
-let refresh g = {g with occurrence = Occurrence.fresh ()}
-let monomorphic callee = {callee; instance = Monomorphic; occurrence = Occurrence.fresh ()}
+let refresh g = Grammar.Global_use.make g.callee g.instance (Occurrence.fresh ())
+let monomorphic callee = Grammar.Global_use.make callee Monomorphic (Occurrence.fresh ())
 
 let polymorphic callee inst =
   if Scheme.Id.arity (Scheme.Instantiation.scheme inst) = 0 then monomorphic callee
-  else {callee; instance = Polymorphic inst; occurrence = Occurrence.fresh ()}
+  else Grammar.Global_use.make callee (Polymorphic inst) (Occurrence.fresh ())
 
 let with_slots callee scheme slot = polymorphic callee (Scheme.Instantiation.make scheme slot)
 
@@ -61,7 +61,7 @@ let written_evidence g =
 let map_types f g =
   match g.instance with
   | Monomorphic -> g
-  | Polymorphic inst -> {g with instance = Polymorphic (Scheme.Instantiation.map f inst)}
+  | Polymorphic inst -> Grammar.Global_use.make g.callee (Polymorphic (Scheme.Instantiation.map f inst)) g.occurrence
 
 let slot_types g =
   List.rev

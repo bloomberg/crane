@@ -57,9 +57,12 @@ let globref w = function
 let erasure_reason w = function
   | Core.Erasure_reason.Type_argument -> tag w "Erasure_reason.Type_argument"
   | Core.Erasure_reason.Proof -> tag w "Erasure_reason.Proof"
-  | Core.Erasure_reason.Configured_implicit {entity = r; position = n} -> tag w "Erasure_reason.Configured_implicit"; globref w r; int w n
+  | Core.Erasure_reason.Configured_implicit {entity = r; position = n} ->
+    tag w "Erasure_reason.Configured_implicit"; globref w r; int w n
 
-let argument w = function Core.Signature.Argument.Runtime -> tag w "Signature.Argument.Runtime" | Core.Signature.Argument.Erased k -> tag w "Signature.Argument.Erased"; erasure_reason w k
+let argument w = function
+  | Core.Signature.Argument.Runtime -> tag w "Signature.Argument.Runtime"
+  | Core.Signature.Argument.Erased k -> tag w "Signature.Argument.Erased"; erasure_reason w k
 
 let binder_name w = function
   | Core.Binder_name.Anonymous -> tag w "Binder_name.Anonymous"
@@ -73,7 +76,11 @@ let rec type_ w = function
   | Core.Type.Global_app {head = r; type_arguments = tys; index_arguments = args} ->
     tag w "Type.Global_app"; globref w r; list w (type_ w) tys; list w (expr w) args
   | Core.Type.Variable {rigidity; variable = i} ->
-    tag w (match rigidity with Core.Type.Rigidity.Schematic -> "Type.Variable" | Core.Type.Rigidity.Rigid -> "Type.Variable!"); int w i
+    tag w
+      ( match rigidity with
+      | Core.Type.Rigidity.Schematic -> "Type.Variable"
+      | Core.Type.Rigidity.Rigid -> "Type.Variable!" );
+    int w i
   | Core.Type.Variable_app {head = i; arguments = tys} -> tag w "Type.Variable_app"; int w i; list w (type_ w) tys
   | Core.Type.Meta {contents = Some t; _} -> type_ w t
   | Core.Type.Meta {id = m; contents = None} -> tag w "Type.Meta"; int w (first_occurrence w.metas m)
@@ -87,43 +94,47 @@ let rec type_ w = function
 and expr w = function
   | Core.Expr.Bound_variable {index = i; _} -> tag w "Expr.Bound_variable"; int w i
   | Core.Expr.Apply {callee = f; arguments = args} -> tag w "Expr.Apply"; expr w f; list w (expr w) args
-  | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = b} -> tag w "Expr.Lambda"; binder_name w x; type_ w ty; expr w b
+  | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = b} ->
+    tag w "Expr.Lambda"; binder_name w x; type_ w ty; expr w b
   | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
     tag w "Expr.Let"; binder_name w x; type_ w ty; expr w a; expr w b
   | Core.Expr.Global u -> tag w "Expr.Global"; global_use w u
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; _} ->
     tag w "Expr.Construct"; type_ w ty; globref w r; list w (expr w) args
   | Core.Expr.Tuple args -> tag w "Expr.Tuple"; list w (expr w) args
-  | Core.Expr.Match {scrutinee_type = ty; scrutinee = a; branches = brs; _} -> tag w "Expr.Match"; type_ w ty; expr w a; array w (branch w) brs
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; _} -> tag w "Expr.Fixpoint"; fix w i ids bodies
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; _} -> tag w "Expr.Cofixpoint"; fix w i ids bodies
+  | Core.Expr.Match {scrutinee_type = ty; scrutinee = a; branches = brs; _} ->
+    tag w "Expr.Match"; type_ w ty; expr w a; array w (branch w) brs
+  | Core.Expr.Fixpoint g -> tag w "Expr.Fixpoint"; fix w g
+  | Core.Expr.Cofixpoint g -> tag w "Expr.Cofixpoint"; fix w g
   | Core.Expr.Runtime_error s -> tag w "Expr.Runtime_error"; str w s
   | Core.Expr.Erased_value k -> tag w "Expr.Erased_value"; erasure_reason w k
   | Core.Expr.Axiom_value s -> tag w "Expr.Axiom_value"; str w s
-  | Core.Expr.Coerce {source_type = from; target_type = into; value = a; _} -> tag w "Expr.Coerce"; type_ w from; type_ w into; expr w a
+  | Core.Expr.Coerce {source_type = from; target_type = into; value = a; _} ->
+    tag w "Expr.Coerce"; type_ w from; type_ w into; expr w a
   | Core.Expr.Boxed_value {value = a; _} -> tag w "Expr.Boxed_value"; expr w a
   | Core.Expr.Lambda_group_barrier {value = a; _} -> tag w "Expr.Lambda_group_barrier"; expr w a
   | Core.Expr.UInt63 n -> tag w "Expr.UInt63"; str w (Uint63.to_string n)
   | Core.Expr.Float64 f -> tag w "Expr.Float64"; str w (Float64.to_hex_string f)
   | Core.Expr.String s -> tag w "Expr.String"; str w (Pstring.to_string s)
-  | Core.Expr.Persistent_array {elements = xs; default = d} -> tag w "Expr.Persistent_array"; array w (expr w) xs; expr w d
+  | Core.Expr.Persistent_array {elements = xs; default = d} ->
+    tag w "Expr.Persistent_array"; array w (expr w) xs; expr w d
   | Core.Expr.Numeral {inductive = r; value = n} -> tag w "Expr.Numeral"; globref w r; str w (Z.to_string n)
 
-and fix w i ids bodies =
-  int w i;
-  array w (fun (x, ty) -> id w x; type_ w ty) ids;
-  array w (expr w) bodies
+and fix w (g : Core.Recursion.Group.t) =
+  int w g.selected;
+  array w (fun (m : Core.Recursion.Member.t) -> id w m.name; type_ w m.type_) g.members;
+  array w (fun (m : Core.Recursion.Member.t) -> expr w m.body) g.members
 
 and branch w {Core.Match.Branch.binders; result_type; pattern = pat; body} =
   list w (fun (x, t) -> binder_name w x; type_ w t) binders;
   type_ w result_type; pattern w pat; expr w body
 
 and pattern w = function
-  | Core.Pattern.Constructor {constructor = r; fields = ps} -> tag w "Pattern.Constructor"; globref w r; list w (pattern w) ps
+  | Core.Pattern.Constructor {constructor = r; fields = ps} ->
+    tag w "Pattern.Constructor"; globref w r; list w (pattern w) ps
   | Core.Pattern.Tuple ps -> tag w "Pattern.Tuple"; list w (pattern w) ps
   | Core.Pattern.Bound_variable i -> tag w "Pattern.Bound_variable"; int w i
   | Core.Pattern.Wildcard -> tag w "Pattern.Wildcard"
-  | Core.Pattern.Shallow_constructor r -> tag w "Pattern.Shallow_constructor"; globref w r
 
 and global_use w u =
   globref w (Core.Global_use.callee u);
@@ -146,7 +157,7 @@ and global_use w u =
           option w (type_ w) observed )
       inst ()
 
-let field w (r, ty) = option w (globref w) r; type_ w ty
+let field w {Core.Record.Field.projection = r; type_ = ty} = option w (globref w) r; type_ w ty
 
 let kind w = function
   | Core.Inductive.Kind.Coinductive -> tag w "Kind.Coinductive"
@@ -170,28 +181,35 @@ let inductive w (ind : Core.Inductive.t) =
   match ind.equivalence with
   | Core.Inductive.Equivalence.Distinct -> tag w "Equivalence.Distinct"
   | Core.Inductive.Equivalence.Equivalent_to kn -> tag w "Equivalence.Equivalent_to"; kername w kn
-  | Core.Inductive.Equivalence.Equivalent_in_renamed_module s -> tag w "Equivalence.Equivalent_in_renamed_module"; str w s
+  | Core.Inductive.Equivalence.Equivalent_in_renamed_module s ->
+    tag w "Equivalence.Equivalent_in_renamed_module"; str w s
 
 let definition w (d : Core.Recursion.Definition.t) =
   globref w d.entity; expr w d.body; type_ w d.type_
 
 let declaration w = function
   | Core.Decl.Inductive {entity = m; definition = ind} -> tag w "Decl.Inductive"; mutind w m; inductive w ind
-  | Core.Decl.Type_alias {entity = r; parameters = vars; body = ty} -> tag w "Decl.Type_alias"; globref w r; list w (id w) vars; type_ w ty
+  | Core.Decl.Type_alias {entity = r; parameters = vars; body = ty} ->
+    tag w "Decl.Type_alias"; globref w r; list w (id w) vars; type_ w ty
   | Core.Decl.Value {entity = r; body = a; type_ = ty} -> tag w "Decl.Value"; globref w r; expr w a; type_ w ty
   | Core.Decl.Recursive_group fds -> tag w "Decl.Recursive_group"; list w (definition w) (Core.Nonempty.to_list fds)
 
 let signature_declaration w = function
-  | Core.Signature.Declaration.Inductive {entity = m; definition = ind} -> tag w "Signature.Declaration.Inductive"; mutind w m; inductive w ind
+  | Core.Signature.Declaration.Inductive {entity = m; definition = ind} ->
+    tag w "Signature.Declaration.Inductive"; mutind w m; inductive w ind
   | Core.Signature.Declaration.Type {entity = r; parameters = vars; body = ty} ->
     tag w "Signature.Declaration.Type"; globref w r; list w (id w) vars; option w (type_ w) ty
-  | Core.Signature.Declaration.Value {entity = r; body = a; type_ = ty} -> tag w "Signature.Declaration.Value"; globref w r; expr w a; type_ w ty
+  | Core.Signature.Declaration.Value {entity = r; body = a; type_ = ty} ->
+    tag w "Signature.Declaration.Value"; globref w r; expr w a; type_ w ty
 
 let rec module_type w = function
   | Core.Module.Type.Path mp -> tag w "Module.Type.Path"; modpath w mp
-  | Core.Module.Type.Functor {parameter = b; parameter_type = a; result = r} -> tag w "Module.Type.Functor"; mbid w b; module_type w a; module_type w r
-  | Core.Module.Type.Signature {path = mp; items = sg} -> tag w "Module.Type.Signature"; modpath w mp; list w (signature_item w) sg
-  | Core.Module.Type.Refined {base = mt; refinement = wd} -> tag w "Module.Type.Refined"; module_type w mt; refinement w wd
+  | Core.Module.Type.Functor {parameter = b; parameter_type = a; result = r} ->
+    tag w "Module.Type.Functor"; mbid w b; module_type w a; module_type w r
+  | Core.Module.Type.Signature {path = mp; items = sg} ->
+    tag w "Module.Type.Signature"; modpath w mp; list w (signature_item w) sg
+  | Core.Module.Type.Refined {base = mt; refinement = wd} ->
+    tag w "Module.Type.Refined"; module_type w mt; refinement w wd
 
 and signature_item w (l, sp) =
   label w l;
@@ -203,19 +221,23 @@ and signature_item w (l, sp) =
 and refinement w = function
   | Core.Module.Refinement.Type_equation {path; parameters = vars; definition = ty} ->
     tag w "Module.Refinement.Type_equation"; list w (id w) path; list w (id w) vars; type_ w ty
-  | Core.Module.Refinement.Module_equation {path; definition = mp} -> tag w "Module.Refinement.Module_equation"; list w (id w) path; modpath w mp
+  | Core.Module.Refinement.Module_equation {path; definition = mp} ->
+    tag w "Module.Refinement.Module_equation"; list w (id w) path; modpath w mp
 
 let rec structure_item w (l, se) =
   label w l;
   match se with
   | Core.Module.Structure_item.Declaration d -> tag w "Module.Structure_item.Declaration"; declaration w d
-  | Core.Module.Structure_item.Module m -> tag w "Module.Structure_item.Module"; module_expr w m.expr; module_type w m.type_
+  | Core.Module.Structure_item.Module m ->
+    tag w "Module.Structure_item.Module"; module_expr w m.expr; module_type w m.type_
   | Core.Module.Structure_item.Module_type mt -> tag w "Module.Structure_item.Module_type"; module_type w mt
 
 and module_expr w = function
   | Core.Module.Expr.Path mp -> tag w "Module.Expr.Path"; modpath w mp
-  | Core.Module.Expr.Functor {parameter = b; parameter_type = mt; body = me} -> tag w "Module.Expr.Functor"; mbid w b; module_type w mt; module_expr w me
-  | Core.Module.Expr.Structure {path = mp; items = sel} -> tag w "Module.Expr.Structure"; modpath w mp; list w (structure_item w) sel
+  | Core.Module.Expr.Functor {parameter = b; parameter_type = mt; body = me} ->
+    tag w "Module.Expr.Functor"; mbid w b; module_type w mt; module_expr w me
+  | Core.Module.Expr.Structure {path = mp; items = sel} ->
+    tag w "Module.Expr.Structure"; modpath w mp; list w (structure_item w) sel
   | Core.Module.Expr.Apply {functor_ = f; argument = x} -> tag w "Module.Expr.Apply"; module_expr w f; module_expr w x
 
 let digest write x =

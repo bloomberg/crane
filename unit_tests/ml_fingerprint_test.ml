@@ -25,13 +25,13 @@ let () =
   check "type matters" (not (same d (term (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}; result = Core.Type.String}) lam)));
   check "rigidity matters" (not (same d (term (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = 1}; result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}}) lam)));
   check "name matters" (not (same d (Core.Decl.Value {entity = r "g"; body = lam; type_ = id_ty})));
-  let solved = Core.Type.Meta (Core.Meta.solved 7 (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+  let solved = Core.Type.Meta (Core.Extracted.Meta.solved 7 (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                                        variable = 1})) in
   check "a solved meta reads as its solution" (same d (term (Core.Type.Arrow {parameter = solved; result = solved}) lam));
   let hole_pair a b = term (Core.Type.Arrow {parameter = Core.Type.Hole a; result = Core.Type.Hole b}) lam in
   check "hole numbering is canonical" (same (hole_pair 3 3) (hole_pair 41 41));
   check "hole sharing matters" (not (same (hole_pair 3 3) (hole_pair 3 4)));
-  let meta i = Core.Type.Meta (Core.Meta.fresh i) in
+  let meta i = Core.Type.Meta (Core.Extracted.Meta.fresh i) in
   check "unsolved metas are numbered canonically"
     (same (term (Core.Type.Arrow {parameter = meta 1;
                                   result = meta 2}) lam) (term (Core.Type.Arrow {parameter = meta 8;
@@ -40,8 +40,8 @@ let () =
   check "fix and cofix differ"
     (not
        (same
-          (term id_ty (Core.Expr.Fixpoint {selected = 0; functions = [|(Names.Id.of_string "f", id_ty)|]; bodies = [|lam|]; occurrence = Core.Occurrence.fresh ()}))
-          (term id_ty (Core.Expr.Cofixpoint {selected = 0; functions = [|(Names.Id.of_string "f", id_ty)|]; bodies = [|lam|]; occurrence = Core.Occurrence.fresh ()}))));
+          (term id_ty (Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Names.Id.of_string "f") id_ty lam (Core.Occurrence.fresh ()))))
+          (term id_ty (Core.Expr.Cofixpoint (Core.Recursion.Group.singleton (Names.Id.of_string "f") id_ty lam (Core.Occurrence.fresh ()))))));
   check "list boundaries are encoded"
     (not
        (same

@@ -734,7 +734,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
       let methods, minted =
         List.split
           (List.filter_map
-             (fun ((fld, fty), body) -> gen_method (fld, fty) body)
+             (fun ((f : Core.Record.Field.t), body) -> gen_method (f.projection, f.type_) body)
              method_pairs )
       in
       (* Generate [using] declarations for promoted typeclass-typed fields
@@ -810,7 +810,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
       let tc_promoted_usings =
         if List.length fields = List.length method_bodies then
           List.filter_map
-            (fun ((fld, fty), body) ->
+            (fun ({Core.Record.Field.projection = fld; type_ = fty}, body) ->
               match (fld, fty) with
               | Some field_ref, Core.Type.Global_app {head = r; _}
                 when Table.is_typeclass r ->
@@ -977,7 +977,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
               (* Find this field's ML type in the typeclass definition *)
               let field_ml_ty =
                 List.find_map
-                  (fun (fld_opt, fml_ty) ->
+                  (fun {Core.Record.Field.projection = fld_opt; type_ = fml_ty} ->
                     match fld_opt with
                     | Some fld_ref ->
                       if Id.equal (Common.id_of_global Term fld_ref) using_name

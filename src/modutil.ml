@@ -122,7 +122,7 @@ type do_ref = GlobRef.t -> unit
 (** Iterate over field references in an inductive kind (Record/Type_class). *)
 let record_iter_references do_term = function
   | Core.Inductive.Kind.Record l | Core.Inductive.Kind.Type_class l ->
-    List.iter (fun (r, _) -> Option.iter do_term r) l
+    List.iter (fun (f : Core.Record.Field.t) -> Option.iter do_term f.projection) l
   | _ -> ()
 
 (** Iterate over all GlobRef.t occurring in an ML type. *)
@@ -144,7 +144,6 @@ let patt_iter_references do_cons p =
     | Core.Pattern.Constructor {constructor = r; fields = l} ->
       do_cons r;
       List.iter iter l
-    | Core.Pattern.Shallow_constructor r -> do_cons r
     | Core.Pattern.Tuple l -> List.iter iter l
     | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> ()
   in
@@ -405,7 +404,7 @@ let dfix_to_mlfix fds i =
       (List.map (fun (fd : Core.Recursion.Definition.t) -> (Label.to_id (label_of_r fd.entity), fd.type_)) fds)
   in
   let c = Array.of_list (List.map (fun (fd : Core.Recursion.Definition.t) -> subst 0 fd.body) fds) in
-  Core.Expr.Fixpoint {selected = i; functions = ids; bodies = c; occurrence = Core.Occurrence.fresh ()}
+  Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:i ids c (Core.Occurrence.fresh ()))
 
 (* A let-fix promoted to its declaration ([local_length]'s inner [go]) keeps
    the binder annotations it had inside it, where extraction may have left a
@@ -432,9 +431,8 @@ let decl_of_term r a t =
   match dump_unused_vars (optimize_fix a) with
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
-  | Core.Expr.Fixpoint {selected = 0;
-                        bodies = [|c|]; _} | Core.Expr.Cofixpoint {selected = 0;
-                                                   bodies = [|c|]; _} when singleton_instance_class r = None ->
+  | Core.Expr.Fixpoint {members = [|{body = c; _}|]; _} | Core.Expr.Cofixpoint {members = [|{body = c; _}|]; _}
+    when singleton_instance_class r = None ->
     (* Each call of itself is a use of its own, told apart from the others
        by its occurrence. *)
     let c = Mlutil.ast_subst_each (fun () -> Core.Expr.Global (Mlutil.self_reference r)) c in
@@ -460,20 +458,22 @@ let rec optim_se top to_appear s = function
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: lse ->
     let fds =
       Core.Nonempty.map
-        (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = normalize (ast_glob_subst !s fd.body)})
+        (Core.Recursion.Definition.map_body (fun b -> normalize (ast_glob_subst !s b)))
         fds
     in
-    (* This fake body ensures that no fixpoint will be auto-inlined. *)
-    let fake_body = Core.Expr.Fixpoint {selected = 0;
-                                        functions = [||];
-                                        bodies = [||];
-                                        occurrence = Core.Occurrence.fresh ()} in
+    (* This fake body ensures that no fixpoint will be auto-inlined: a
+       fixpoint never is. *)
+    let fake_body =
+      Core.Expr.Fixpoint
+        (Core.Recursion.Group.singleton (Id.of_string "fake") Core.Type.Unknown (Core.Expr.Runtime_error "")
+           (Core.Occurrence.fresh ()))
+    in
     List.iteri
       (fun i (fd : Core.Recursion.Definition.t) ->
         if inline fd.entity fake_body then
           s := Ref.User.Map.add fd.entity (dfix_to_mlfix fds i) !s )
       (Core.Nonempty.to_list fds);
-    let fds = Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = dump_unused_vars fd.body}) fds in
+    let fds = Core.Nonempty.map (Core.Recursion.Definition.map_body dump_unused_vars) fds in
     (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: optim_se top to_appear s lse
   | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: lse ->
     let m = {m with Core.Module.expr = optim_me to_appear s m.expr} in

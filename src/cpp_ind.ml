@@ -1323,7 +1323,8 @@ let concept_placement plan c =
 let planned_visibility mp =
   match Scope_plan.visibility mp with
   | Some v -> v
-  | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
+  | None ->
+    CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
 
 (* The position a declaration spelled [spelling] is written at in [file],
    a function of the plan alone: nothing installed around it reaches it. *)
@@ -1467,8 +1468,8 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
     ~same:(fun tys tys' -> compare tys tys' = 0)
     (fun () ->
       List.map
-        (fun (_, ty) ->
-          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars ty)) with
+        (fun (f : Core.Record.Field.t) ->
+          match Cpp_ir.Resolve.type_ (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_ml_type (empty_env ()) vars f.type_)) with
           | t -> t
           | exception Cpp_ir.Resolve.Owed form ->
             CErrors.anomaly

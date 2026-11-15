@@ -130,7 +130,8 @@ let closure_reads d t =
       List.fold_left (go d') acc (default :: Array.to_list elems)
     | Core.Expr.Lambda {body = b; _} -> go (d' + 1) acc b
     | Core.Expr.Let {value = a; body = b; _} -> go (d' + 1) (go d' acc a) b
-    | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
       Array.fold_left (go (d' + Array.length fs)) acc defs
     | Core.Expr.Match {scrutinee = scrut; branches; _} ->
       Array.fold_left
@@ -341,7 +342,8 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
   | Core.Expr.Persistent_array {elements = elems; default} -> frees parents d (default :: Array.to_list elems)
   | Core.Expr.Lambda {body; _} -> whole (closure_under parents d ~n:1 body)
   | Core.Expr.Let {value = a; body = b; _} -> Levels.union (free parents d a) (under parents d ~n:1 b)
-  | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
     let n = Array.length fs in
     let parents' = bind parents d ~n in
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
@@ -378,7 +380,8 @@ and whole s = Levels.map storage s
    a function template, or inlined at its uses, instead. *)
 let closure_local ~n_outer ty a =
   match a with
-  | Core.Expr.Fixpoint {functions = ids; _} | Core.Expr.Cofixpoint {functions = ids; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group in
     not (Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
   | Core.Expr.Lambda _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
   | _ -> false
@@ -441,7 +444,6 @@ let scrutinee_consumed ty scrut branches =
     Array.for_all
       (fun {Core.Match.Branch.pattern = pat; _} ->
         match pat with
-        | Core.Pattern.Shallow_constructor (Names.GlobRef.ConstructRef (ip, _))
         | Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _} ->
           Table.is_enum_inductive (Names.GlobRef.IndRef ip)
         | _ -> true )
@@ -780,8 +782,7 @@ let matched_inductive branches =
   Array.fold_left
     (fun acc {Core.Match.Branch.pattern = pat; _} ->
       match (acc, pat) with
-      | None, (Core.Pattern.Shallow_constructor (Names.GlobRef.ConstructRef (ip, _)) | Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _})
-        ->
+      | None, Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _} ->
         Some (Names.GlobRef.IndRef ip)
       | _ -> acc )
     None branches
@@ -974,7 +975,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
           let enclosing = !handles in
           List.iteri (fun i (_, ty) -> bound (d + i) ty) ids;
           ( match pat with
-          | (Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _}) when not (Table.is_custom_match branches) ->
+          | Core.Pattern.Constructor {constructor = r; _} when not (Table.is_custom_match branches) ->
             let stored = Ml_type_util.Ctor_fields.of_ctor r in
             List.iteri
               (fun i _ -> if Ml_type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
@@ -1052,7 +1053,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
         | None -> owned )
       | Variant -> (
         match (pat, ind) with
-        | (Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _}), Some ind
+        | Core.Pattern.Constructor {constructor = r; _}, Some ind
           when (not (Table.is_enum_inductive ind)) && not (Table.is_shared_variant ind) ->
           (* An owned variant is matched through references into it: it is
              not read whole by value while the branch runs, and its fields
@@ -1383,7 +1384,8 @@ let moved_captures p closure =
    functions reading each variable, by index at [fix]. *)
 let moved_captures_by_member p fix =
   match fix with
-  | Core.Expr.Fixpoint {bodies = funs; _} | Core.Expr.Cofixpoint {bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let funs = Core.Recursion.Group.bodies rec_group in
     let n = Array.length funs in
     let reads =
       Array.map
@@ -1437,7 +1439,8 @@ let captures ?(in_place = false) p closure =
 
 let captures_by_member ?(in_place = false) p fix =
   match fix with
-  | Core.Expr.Fixpoint {bodies = funs; _} | Core.Expr.Cofixpoint {bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let funs = Core.Recursion.Group.bodies rec_group in
     let n = Array.length funs in
     let moved = if in_place then List.map (fun _ -> []) (Array.to_list funs) else moved_captures_by_member p fix in
     List.map2

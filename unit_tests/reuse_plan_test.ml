@@ -30,14 +30,14 @@ let arm body =
   let root =
     Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "l"); parameter_type = lst; body = Core.Expr.Match {scrutinee_type = lst; scrutinee; branches = [| { Core.Match.Branch.binders = [];
                  result_type = lst;
-                 pattern = Core.Pattern.Shallow_constructor nil;
+                 pattern = Core.Pattern.binding_all nil 0;
                  body = Core.Expr.Construct {result_type = lst;
                                              constructor = nil;
                                              arguments = [];
                                              occurrence = Core.Occurrence.fresh ()} };
                {Core.Match.Branch.binders = [(x, nat); (t, lst)];
                 result_type = lst;
-                pattern = Core.Pattern.Shallow_constructor cons;
+                pattern = Core.Pattern.binding_all cons 2;
                 body = body}
             |]; occurrence = Core.Occurrence.fresh ()}}
   in
@@ -83,10 +83,10 @@ let () =
                                    occurrence = Core.Occurrence.fresh ()} in
   let bool = Core.Type.Global_app {head = GlobRef.VarRef (Id.of_string "bool"); type_arguments = []; index_arguments = []} in
   let tail =
-    Core.Expr.Let {binder = Core.Binder_name.Source (Id.of_string "b"); binder_type = bool; value = call "test" [Core.Expr.fresh_rel 2]; body = Core.Expr.Match {scrutinee_type = bool; scrutinee = Core.Expr.fresh_rel 1; branches = [| {Core.Match.Branch.binders = []; result_type = lst; pattern = Core.Pattern.Shallow_constructor other; body = left};
+    Core.Expr.Let {binder = Core.Binder_name.Source (Id.of_string "b"); binder_type = bool; value = call "test" [Core.Expr.fresh_rel 2]; body = Core.Expr.Match {scrutinee_type = bool; scrutinee = Core.Expr.fresh_rel 1; branches = [| {Core.Match.Branch.binders = []; result_type = lst; pattern = Core.Pattern.binding_all other 0; body = left};
                {Core.Match.Branch.binders = [];
                 result_type = lst;
-                pattern = Core.Pattern.Shallow_constructor other;
+                pattern = Core.Pattern.binding_all other 0;
                 body = right};
                {Core.Match.Branch.binders = [];
                 result_type = lst;
@@ -282,7 +282,7 @@ let () =
     let s = Core.Expr.fresh_rel 1 in
     let at = Core.Occurrence.fresh () in
     let fix =
-      Core.Expr.Fixpoint {selected = 0; functions = [|(Id.of_string "f", Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = lst; result = lst}})|]; bodies = [|Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "l"); parameter_type = lst; body}}|]; occurrence = at}
+      Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Id.of_string "f") (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = lst; result = lst}}) (Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "l"); parameter_type = lst; body}}) at)
     in
     let root = Core.Expr.Apply {callee = fix; arguments = [call "len" [Core.Expr.fresh_rel 1]; s]} in
     let read = match s with Core.Expr.Bound_variable {occurrence = o; _} -> o | _ -> assert false in
@@ -381,7 +381,7 @@ let () =
 let () =
   let modes ?in_place () =
     let fix =
-      Core.Expr.Fixpoint {selected = 0; functions = [|(Id.of_string "f", Core.Type.Arrow {parameter = nat; result = lst})|]; bodies = [|Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = call "h" [Core.Expr.fresh_rel 3]}|]; occurrence = Core.Occurrence.fresh ()}
+      Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Id.of_string "f") (Core.Type.Arrow {parameter = nat; result = lst}) (Core.Expr.Lambda {parameter = Core.Binder_name.Source (Id.of_string "n"); parameter_type = nat; body = call "h" [Core.Expr.fresh_rel 3]}) (Core.Occurrence.fresh ()))
     in
     let root = call "g" [fix] in
     Ownership_ir.captures_by_member ?in_place (Ownership_ir.region ~owned:[1] ~effects:Core_effects.empty ~n_outer:0 root) fix

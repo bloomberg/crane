@@ -178,7 +178,7 @@ let () =
      one branch: generated as statements assigning the binder, the call in
      the branch resumes. *)
   let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "R")) in
-  Table.add_inductive_kind kn (Core.Inductive.Kind.Record [(Some (r "a"), nat)]);
+  Table.add_inductive_kind kn (Core.Inductive.Kind.Record [{Core.Record.Field.projection = Some (r "a"); type_ = nat}]);
   let record = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   let inner = use () and tail = use () in
   let rhs =
@@ -218,7 +218,7 @@ let () =
                Core.Expr.Let {binder = id "y"; binder_type = nat; value = Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = 3; occurrence = go_read}; arguments = [Core.Expr.fresh_rel 1]}; body = call back' [Core.Expr.fresh_rel 6; Core.Expr.fresh_rel 1]; occurrence = Core.Occurrence.fresh ()}
            } |]; occurrence = Core.Occurrence.fresh ()}
   in
-  let fixpoint = Core.Expr.Fixpoint {selected = 0; functions = [|(Id.of_string "go", Core.Type.Arrow {parameter = nat; result = nat})|]; bodies = [|Core.Expr.Lambda {parameter = id "k"; parameter_type = nat; body = go_body}|]; occurrence = fix} in
+  let fixpoint = Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Id.of_string "go") (Core.Type.Arrow {parameter = nat; result = nat}) (Core.Expr.Lambda {parameter = id "k"; parameter_type = nat; body = go_body}) fix) in
   let t = lower_adopting fix (Core.Expr.Apply {callee = fixpoint; arguments = [Core.Expr.fresh_rel 1]}) in
   ( match t with
   | Term.Entry {entered; name = None; scope = Continue c} ->

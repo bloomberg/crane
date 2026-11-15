@@ -52,7 +52,7 @@ let let_fix_entries = ref (None : (EConstr.t * EConstr.t array list) option)
    with the recorded erased type.  So [nil] in the deque_action_mismatch test
    (meta stays None) is filled with [pair<any,any>], while sigma_types (the
    [cons] meta is resolved to [nat]) is left alone. *)
-let pending_cpp_meta_fills : (Core.Meta.t * Core.Type.t) list ref = ref []
+let pending_cpp_meta_fills : (Core.Extracted.Meta.t * Core.Type.t) list ref = ref []
 
 (* NB: [type_of] and [sort_of] might raise
    [SingletonInductiveBecomesProp]. This exception is caught in late
@@ -1336,14 +1336,14 @@ and extract_really_ind env kn mib =
           when isTdummy (expand env typ) || Int.Set.mem i implicits ->
           select_fields (i + 1) l typs
         | {binder_name = Anonymous} :: l, typ :: typs ->
-          (None, typ) :: select_fields (i + 1) l typs
+          {Core.Record.Field.projection = None; type_ = typ} :: select_fields (i + 1) l typs
         | {binder_name = Name id} :: l, typ :: typs ->
           let knp = Constant.make2 mp (Label.of_id id) in
           (* Is it safe to use [id] for projections [foo.id] ? *)
           if List.for_all (( == ) Core.Signature.Argument.Runtime) (type2signature env typ) then
             (* for OCaml inlining: *)
             add_projection nparams knp ip;
-          (Some (GlobRef.ConstRef knp), typ) :: select_fields (i + 1) l typs
+          {Core.Record.Field.projection = Some (GlobRef.ConstRef knp); type_ = typ} :: select_fields (i + 1) l typs
         | _ -> assert false
       in
       let field_glob = select_fields (1 + npar) field_names typ in
@@ -2514,7 +2514,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
                   | _ -> false
                 in
                 if not (has_unknown ml_ty) then
-                  Core.Meta.solve r ml_ty
+                  Core.Extracted.Meta.solve r ml_ty
               | _ -> ()
             ) (Array.to_list metas) kept_args
           | _ -> ()
@@ -2534,7 +2534,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
         let ids, e = case_expunge s e in
         {Core.Match.Branch.binders = List.rev ids;
          result_type = mlt;
-         pattern = Core.Pattern.Shallow_constructor r;
+         pattern = Core.Pattern.binding_all r (List.length ids);
          body = e}
       in
       (* Apply standard case extraction for all inductives. *)
@@ -2569,11 +2569,8 @@ and extract_fix ?tys env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
   let mle = Array.fold_left Mlenv.push_type mle metas in
   let ei = Array.map2 (extract_maybe_term env sg mle) metas ci in
   let ids = Array.mapi (fun i x -> (id_of_name x.binder_name, metas.(i))) fi in
-  if is_cofix then Core.Expr.Cofixpoint {selected = i;
-                                         functions = ids;
-                                         bodies = ei;
-                                         occurrence = Core.Occurrence.fresh ()}
-  else Core.Expr.Fixpoint {selected = i; functions = ids; bodies = ei; occurrence = Core.Occurrence.fresh ()}
+  let group = Core.Recursion.Group.of_arrays ~selected:i ids ei (Core.Occurrence.fresh ()) in
+  if is_cofix then Core.Expr.Cofixpoint group else Core.Expr.Fixpoint group
 
 (** {1 ML declarations} *)
 
@@ -2905,8 +2902,8 @@ let extract_std_constant env sg kn body typ =
      inside a lambda whose return type is a dependent/erased type). *)
   if lang () == Cpp then
     List.iter
-      (fun ((r : Core.Meta.t), erased) ->
-        if r.contents = None then Core.Meta.solve r erased)
+      (fun ((r : Core.Extracted.Meta.t), erased) ->
+        if r.contents = None then Core.Extracted.Meta.solve r erased)
       !pending_cpp_meta_fills;
   pending_cpp_meta_fills := [];
   (* Expunging term and type from dummy lambdas. *)
@@ -3277,7 +3274,8 @@ let extract_constant_spec env kn cb =
       Core.Signature.Declaration.Type {entity = r;
                                        parameters = vl;
                                        body = Some (Core.Type.Erased Core.Erasure_reason.Type_argument)}
-    | Logic, Default -> Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = Core.Type.Erased Core.Erasure_reason.Proof}
+    | Logic, Default ->
+      Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = Core.Type.Erased Core.Erasure_reason.Proof}
     | Info, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
       (* A type scheme with more signature slots than type variables takes at
@@ -3315,7 +3313,8 @@ let extract_constant_spec env kn cb =
         | Some p ->
           let body = fake_match_projection env p in
           mk_spec (EConstr.of_constr body) )
-      | _ -> Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = type_expunge env t} )
+      | _ ->
+        Core.Signature.Declaration.Value {entity = r; body = Core.Expr.Axiom_value "SVAL extraction issue"; type_ = type_expunge env t} )
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
 (** Extracts a module-level "with type" constraint. *)

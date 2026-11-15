@@ -536,7 +536,8 @@ let file_local_inductives (analysis : Structure_analysis.t) =
         match se with
         | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           List.init (Array.length ind.packets) (fun i -> GlobRef.IndRef (kn, i))
-        | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sub; _}; _} -> all sub
+        | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sub; _}; _} ->
+          all sub
         | _ -> [] )
       sel
   in
@@ -789,7 +790,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
             | Core.Module.Expr.Apply _ -> written (Cpp_ast.derived_functor ~template mp (Applied (application_of body)))
             | Core.Module.Expr.Path base ->
               written (Cpp_ast.derived_functor ~template mp (Module_named (Cpp_ast.module_ref base)))
-            | Core.Module.Expr.Functor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.")
+            | Core.Module.Expr.Functor _ ->
+              CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.")
           in
           { text = struct_def; concepts = concepts @ body_concepts; asserts }
       | Core.Module.Expr.Apply _ ->
@@ -997,8 +999,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                 (* [fields] already pairs each projection with its type:
                    extraction selected the two together. *)
                 let field_types = Cpp_ind.record_field_types ~module_ epon_ref ty_vars fields in
-                let field_name i (field_ref, _) =
-                  match field_ref with
+                let field_name i (f : Core.Record.Field.t) =
+                  match f.projection with
                   | Some r -> Common.pp_global_name Term r
                   (* Index anonymous fields so multiple of them don't all
                      collapse to a single duplicate "_field" member (which
@@ -2240,7 +2242,8 @@ let plan_names s =
              (Array.to_list ind.packets) )
         (* A record's fields, named as its struct spells them. *)
         @ ( match ind.kind with
-          | Core.Inductive.Kind.Record fields -> List.concat_map (fun (f, _) -> Option.cata (name Type) [] f) fields
+          | Core.Inductive.Kind.Record fields ->
+            List.concat_map (fun (f : Core.Record.Field.t) -> Option.cata (name Type) [] f.projection) fields
           | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Type_class _ -> [] )
       | Core.Decl.Type_alias {entity = r; _} -> name Type r
       | Core.Decl.Value {entity = r; _} -> name Term r
@@ -2292,7 +2295,6 @@ let plan_referenced_names s =
     | Core.Pattern.Constructor {constructor = r; fields = ps} ->
       name Cons r;
       List.iter pattern ps
-    | Core.Pattern.Shallow_constructor r -> name Cons r
     | Core.Pattern.Tuple ps -> List.iter pattern ps
     | Core.Pattern.Bound_variable _ | Core.Pattern.Wildcard -> ()
   and term a =
@@ -2316,7 +2318,8 @@ let plan_referenced_names s =
       List.iter (Option.iter (name Term)) (Table.record_fields_of_type t);
       Array.iter (fun {Core.Match.Branch.pattern = p; _} -> pattern p) brs
     | Core.Expr.Lambda {parameter_type = t; _} | Core.Expr.Let {binder_type = t; _} -> ty t
-    | Core.Expr.Fixpoint {functions = fs; _} | Core.Expr.Cofixpoint {functions = fs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let fs = Core.Recursion.Group.functions rec_group in
       Array.iter (fun (_, t) -> ty t) fs
     | Core.Expr.Coerce {source_type = a; target_type = b; _} ->
       ty a;
@@ -2336,7 +2339,7 @@ let plan_referenced_names s =
   let inductive kn (ind : Core.Inductive.t) =
     ( match ind.kind with
     | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields ->
-      List.iter (fun (f, _) -> Option.iter (name Term) f) fields
+      List.iter (fun (f : Core.Record.Field.t) -> Option.iter (name Term) f.projection) fields
     | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> () );
     Array.iteri
       (fun i (p : Core.Inductive.Packet.t) ->

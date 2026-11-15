@@ -68,15 +68,14 @@ let record_body name class_ref inner_ty lam_params inner_body =
     | b -> b
   in
   let as_method m = function
-    | Core.Expr.Fixpoint {selected = 0;
-                          functions = [|_|];
-                          bodies = [|c|]; _} | Core.Expr.Cofixpoint {selected = 0;
-                                                     functions = [|_|];
-                                                     bodies = [|c|]; _} when lam_params = [] ->
+    | Core.Expr.Fixpoint {members = [|{body = c; _}|]; _} | Core.Expr.Cofixpoint {members = [|{body = c; _}|]; _}
+      when lam_params = [] ->
       let n_class = Ml_type_util.projection_class_arity m in
+      let erased = List.init n_class (fun _ -> Core.Expr.Erased_value Core.Erasure_reason.Type_argument) in
       Mlutil.ast_subst
-        (Core.Expr.Apply {callee = Core.Expr.Global (Mlutil.open_reference m); arguments = List.init n_class (fun _ -> Core.Expr.Erased_value Core.Erasure_reason.Type_argument)
-             @ [Core.Expr.Global (Mlutil.open_reference name)]})
+        (Core.Expr.Apply
+           { callee = Core.Expr.Global (Mlutil.open_reference m);
+             arguments = erased @ [Core.Expr.Global (Mlutil.open_reference name)] })
         c
     | b -> b
   in
@@ -560,7 +559,7 @@ let methods name body ty =
         let type_args = record_type_args cons_ty type_args in
         let tvar_count = tvar_count ~instance_tvars:(instance_tvars ty inner_ty) ty type_args in
         let inst = {class_ref; type_args; tvar_count} in
-        let method_of (field, field_ty) field_body =
+        let method_of {Core.Record.Field.projection = field; type_ = field_ty} field_body =
           match (field, field_ty) with
           (* A class-typed field is promoted, not generated as a method. *)
           | Some _, Core.Type.Global_app {head = r; _} when Table.is_typeclass r -> None

@@ -1718,7 +1718,10 @@ let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
   in
   let typ =
     match t with
-    | Core.Expr.Bound_variable {index = i; _} | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ->
+    | Core.Expr.Bound_variable {index = i; _}
+    | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = i; _}; _}
+    | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = i; _}; _}
+    | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = i; _}; _} ->
       (* Scrutinee is a variable reference — use its concrete type, the one
          its binder was given, a parameter's as much as a let's.  Unwrap Core.Type.Meta
          wrappers since env_types may store types in Core.Type.Meta form. *)
@@ -1788,7 +1791,6 @@ let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
       ( try
           let {Core.Match.Branch.pattern = pat0; _} = pv.(0) in
           match pat0 with
-          | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _))
           | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} ->
             Core.Type.Global_app {head = GlobRef.IndRef ip; type_arguments = []; index_arguments = []}
           | _ -> typ
@@ -1888,7 +1890,8 @@ let rec type_shape : Cpp_ir.Lowered.Type.t -> string = function
   | Obligation Opaque_type -> "opaque"
   | Const t -> "const " ^ type_shape t
   | Reference (_, t) -> "ref " ^ type_shape t
-  | Entity_application (g, args, _) -> Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
+  | Entity_application (g, args, _) ->
+    Pp.string_of_ppcmds (GlobRef.print g) ^ "<" ^ String.concat "," (List.map type_shape args) ^ ">"
   | Variable (Index (i, Some id)) -> "T" ^ string_of_int i ^ ":" ^ Id.to_string id
   | Variable (Index (i, None)) -> "T" ^ string_of_int i
   | Variable (Named id) -> "N:" ^ Id.to_string id
@@ -2564,8 +2567,8 @@ let body_reads_members_of_binder body =
       || Array.exists
            (fun {Core.Match.Branch.binders = ids; body = br; _} -> reads (depth + List.length ids) br)
            pv
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.exists (reads (depth + Array.length ids)) funs
     | e ->
       let found = ref false in
@@ -2594,8 +2597,8 @@ let binder_matched_at body =
     | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
       walk depth sc;
       Array.iter (fun {Core.Match.Branch.binders = ids; body = br; _} -> walk (depth + List.length ids) br) pv
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk (depth + Array.length ids)) funs
     | e -> Mlutil.ast_iter (walk depth) e
   in
@@ -3118,7 +3121,8 @@ let regroup_crossing ~(from : Cpp_ir.Lowered.Type.t) ~(into : Cpp_ir.Lowered.Typ
     ({!planned_binder_type_or_derive}). *)
 let value_cpp_type ~agree env e =
   match strip_magic e with
-  | Core.Expr.Bound_variable {index = j; occurrence = occ} -> planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
+  | Core.Expr.Bound_variable {index = j; occurrence = occ} ->
+    planned_binder_type_or_derive ~use:"value's type" ~agree env j occ
   | Core.Expr.Global ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
     Option.map (cpp_of_ml env) (callee_ml_type r)
   | _ -> None
@@ -3235,7 +3239,7 @@ let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
   | Core.Type.Global_app {head = r; type_arguments = args; _} -> (
     let declared =
       List.find_map
-        (fun (f, ty) ->
+        (fun {Core.Record.Field.projection = f; type_ = ty} ->
           match f with
           | Some f when GlobRef.CanOrd.equal f fld -> Some ty
           | _ -> None )
@@ -3452,7 +3456,6 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
       try
         let {Core.Match.Branch.pattern = pat0; _} = pv.(0) in
         let ind_ref = match pat0 with
-          | Core.Pattern.Shallow_constructor (GlobRef.ConstructRef (ip, _))
           | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} -> GlobRef.IndRef ip
           | _ -> raise Not_found
         in
@@ -3469,7 +3472,10 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
     | _ -> None
   in
   let scrut_is_trivial_ml = match t with
-    | Core.Expr.Bound_variable _ | Core.Expr.Coerce {value = Core.Expr.Bound_variable _; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable _; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable _; _} -> true
+    | Core.Expr.Bound_variable _
+    | Core.Expr.Coerce {value = Core.Expr.Bound_variable _; _}
+    | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable _; _}
+    | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable _; _} -> true
     | _ -> false
   in
   let needs_pair_any_cast =

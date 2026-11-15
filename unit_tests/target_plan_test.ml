@@ -17,7 +17,9 @@ let dir s = DirPath.make [Id.of_string s]
 let mp s = ModPath.MPfile (dir s)
 let lbl = Label.make
 let kn m l = MutInd.make2 (mp m) (lbl l)
-let field = (Some (GlobRef.VarRef (Id.of_string "op")), Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1})
+let field =
+  {Core.Record.Field.projection = Some (GlobRef.VarRef (Id.of_string "op"));
+   type_ = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}}
 
 let ind kind =
   { Core.Inductive.kind = kind;

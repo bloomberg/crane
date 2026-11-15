@@ -57,7 +57,7 @@ let use_holes = function
 let () =
   let scheme = Scheme.Id.fresh (r "g") ~arity:1 in
   let self = Core.Expr.Global (Core.Global_use.identity (r "g") scheme) in
-  let fix = Core.Expr.Fixpoint {selected = 0; functions = [|(Id.of_string "go", Core.Type.Arrow {parameter = a; result = a})|]; bodies = [|Core.Expr.Lambda {parameter = x "y"; parameter_type = a; body = Core.Expr.Apply {callee = Core.Expr.fresh_rel 2; arguments = [Core.Expr.fresh_rel 1]}}|]; occurrence = Core.Occurrence.fresh ()} in
+  let fix = Core.Expr.Fixpoint (Core.Recursion.Group.singleton (Id.of_string "go") (Core.Type.Arrow {parameter = a; result = a}) (Core.Expr.Lambda {parameter = x "y"; parameter_type = a; body = Core.Expr.Apply {callee = Core.Expr.fresh_rel 2; arguments = [Core.Expr.fresh_rel 1]}}) (Core.Occurrence.fresh ())) in
   let body =
     Core.Expr.Lambda {parameter = x "n"; parameter_type = a; body = Core.Expr.Let {binder = x "m"; binder_type = a; value = Core.Expr.fresh_rel 1; body = Core.Expr.Apply {callee = fix; arguments = [Core.Expr.Apply {callee = self; arguments = [Core.Expr.fresh_rel 1]}]}; occurrence = Core.Occurrence.fresh ()}}
   in
@@ -86,9 +86,9 @@ let () =
   | _ -> check "a copy keeps the shape" false );
   (* Open annotations: likewise, in the frozen program copies are made in. *)
   let o = Core.Type.Open (Core.Open.fresh 7) in
-  Core.Meta.freeze ();
+  Core.Extracted.Meta.freeze ();
   let opened = Core_copy.copy (Core.Expr.Lambda {parameter = x "p"; parameter_type = o; body = Core.Expr.Lambda {parameter = x "q"; parameter_type = o; body = Core.Expr.fresh_rel 1}}) in
-  Core.Meta.thaw ();
+  Core.Extracted.Meta.thaw ();
   ( match opened with
   | Core.Expr.Lambda {parameter_type = Core.Type.Open p;
                       body = Core.Expr.Lambda {parameter_type = Core.Type.Open q; _}; _} ->
@@ -102,7 +102,7 @@ let () =
   ( match inst with
   | Core.Expr.Lambda {parameter_type = t;
                       body = Core.Expr.Let {binder_type = t';
-                                            body = Core.Expr.Apply {callee = (Core.Expr.Fixpoint {functions = [|(_, ft)|]; _} | Core.Expr.Cofixpoint {functions = [|(_, ft)|]; _});
+                                            body = Core.Expr.Apply {callee = (Core.Expr.Fixpoint {members = [|{type_ = ft; _}|]; _} | Core.Expr.Cofixpoint {members = [|{type_ = ft; _}|]; _});
                                                                     arguments = [Core.Expr.Apply {callee = Core.Expr.Global u; _}]}; _}; _} ->
     check "a parameter's variable is solved" (t = nat && t' = nat);
     check "a local fixpoint's signature is solved" (ft = Core.Type.Arrow {parameter = nat; result = nat});

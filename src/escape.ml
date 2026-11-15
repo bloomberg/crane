@@ -39,7 +39,8 @@ let nb_occur_match =
           0
           branches
     | Core.Expr.Let {value = rhs; body = cont; _} -> nb k rhs + nb (k + 1) cont
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
       let k' = k + Array.length ids in
       Array.fold_left (fun total body -> total + nb k' body) 0 bodies
     | Core.Expr.Lambda {body; _} -> nb (k + 1) body
@@ -86,7 +87,8 @@ let rec occurs k = function
   | Core.Expr.Let {value = rhs; body = cont; _} -> occurs k rhs || occurs (k + 1) cont
   | Core.Expr.Lambda {body; _} -> occurs (k + 1) body
   | Core.Expr.Apply {callee = head; arguments = args} -> occurs k head || List.exists (occurs k) args
-  | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
     let k' = k + Array.length ids in
     Array.exists (occurs k') bodies
   | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (occurs k) args
@@ -227,7 +229,8 @@ let escapes ?(query = Conservative) ?(callee_flags = fun _ -> None) ?(return_esc
       || List.exists (check k false (refined)) args
       || (not in_fn_arg && is_partial_app head args
          && List.exists (occurs k) args)
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
       let k' = k + Array.length ids in
       Array.exists (occurs k') bodies
     | Core.Expr.Construct {arguments = args; _} ->
@@ -336,7 +339,7 @@ let find_reuse_candidates (pv : Core.Match.Branch.t array) =
   Array.iteri
     (fun idx {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} ->
       match pat with
-      | Core.Pattern.Shallow_constructor mr | Core.Pattern.Constructor {constructor = mr; _} ->
+      | Core.Pattern.Constructor {constructor = mr; _} ->
         (* One candidate per constructor the arm may rebuild: a nullary one
            among them ([take]'s [nil]) has no cell to recycle into, so the
            caller picks among them. *)
@@ -377,7 +380,10 @@ let is_reuse_scrutinee k body =
   let rec scan d = function
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; _} ->
       ( match scrut with
-      | Core.Expr.Bound_variable {index = j; _} | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _} | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _} | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _} ->
+      | Core.Expr.Bound_variable {index = j; _}
+      | Core.Expr.Coerce {value = Core.Expr.Bound_variable {index = j; _}; _}
+      | Core.Expr.Boxed_value {value = Core.Expr.Bound_variable {index = j; _}; _}
+      | Core.Expr.Lambda_group_barrier {value = Core.Expr.Bound_variable {index = j; _}; _} ->
         if j > d && j - d = k && recyclable typ
            && find_reuse_candidates branches <> []
         then found := true
@@ -389,7 +395,8 @@ let is_reuse_scrutinee k body =
     | Core.Expr.Let {value = rhs; body = cont; _} -> scan d rhs; scan (d + 1) cont
     | Core.Expr.Lambda {body = b; _} -> scan (d + 1) b
     | Core.Expr.Apply {callee = f; arguments = args} -> scan d f; List.iter (scan d) args
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
       Array.iter (scan (d + Array.length ids)) bodies
     | Core.Expr.Construct {arguments = ts; _} | Core.Expr.Tuple ts -> List.iter (scan d) ts
     | Core.Expr.Coerce {value = a; _}
@@ -457,13 +464,13 @@ let infer_sub_bindings_escape_params n_params body =
 let returns_receiver_field ~this_pos fn =
   let params, body = Mlutil.collect_lams fn in
   let receiver = List.length params - this_pos in
-  let rec bare = function Core.Expr.Coerce {value = a; _} | Core.Expr.Boxed_value {value = a; _} | Core.Expr.Lambda_group_barrier {value = a; _} -> bare a | a -> a in
+  let bare = Core.Expr.strip_crossings in
   List.length params = 1
   &&
   match bare body with
   | Core.Expr.Match {scrutinee = scrut;
                      branches = [| {Core.Match.Branch.binders = ids;
-                                    pattern = Core.Pattern.Constructor _ | Core.Pattern.Shallow_constructor _;
+                                    pattern = Core.Pattern.Constructor _;
                                     body = result; _} |]; _} -> (
     (match bare scrut with Core.Expr.Bound_variable {index = i; _} -> i = receiver | _ -> false)
     && match bare result with Core.Expr.Bound_variable {index = j; _} -> j <= List.length ids | _ -> false )
@@ -493,7 +500,8 @@ let free_rels depth t =
     | Core.Expr.Apply {callee = head; arguments = args} ->
       collect d head;
       List.iter (collect d) args
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
       let d' = d + Array.length ids in
       Array.iter (collect d') bodies
     | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.iter (collect d) args
@@ -539,7 +547,8 @@ let single_use_nargs k t =
         (fun {Core.Match.Branch.binders = ids; body = body; _} -> search (k + List.length ids) body)
         branches
     | Core.Expr.Lambda {body; _} -> search (k + 1) body
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
       Array.iter (search (k + Array.length ids)) bodies
     | Core.Expr.Apply {callee = head; arguments = args} ->
       search k head;

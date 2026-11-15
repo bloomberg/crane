@@ -644,7 +644,8 @@ let rec walk w ?(position = no_position) lex e =
         walk_type w lex rty;
         go ~position lex body )
       branches
-  | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
     Array.iter (fun (_, ty) -> walk_type w lex ty) fs;
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs) in
@@ -753,16 +754,18 @@ let rec inline_aliases ~n_outer lex e =
     Core.Expr.Match {scrutinee_type = ty; scrutinee = go lex scrut; branches = Array.map
           (fun (br : Core.Match.Branch.t) -> {br with Core.Match.Branch.body = under (List.rev br.binders) br.body})
           branches; occurrence = occ}
-  | Core.Expr.Fixpoint {selected = i; functions = fs; bodies = defs; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i;
-                        functions = fs;
-                        bodies = Array.map (under (fix_binders fs)) defs;
-                        occurrence = occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = fs; bodies = defs; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i;
-                          functions = fs;
-                          bodies = Array.map (under (fix_binders fs)) defs;
-                          occurrence = occ}
+  | Core.Expr.Fixpoint rec_group ->
+    let i = rec_group.selected
+    and fs = Core.Recursion.Group.functions rec_group
+    and defs = Core.Recursion.Group.bodies rec_group
+    and occ = rec_group.occurrence in
+    Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:i fs (Array.map (under (fix_binders fs)) defs) occ)
+  | Core.Expr.Cofixpoint rec_group ->
+    let i = rec_group.selected
+    and fs = Core.Recursion.Group.functions rec_group
+    and defs = Core.Recursion.Group.bodies rec_group
+    and occ = rec_group.occurrence in
+    Core.Expr.Cofixpoint (Core.Recursion.Group.of_arrays ~selected:i fs (Array.map (under (fix_binders fs)) defs) occ)
   | e -> Mlutil.ast_map (go lex) e
 
 let generated_definition ty body =

@@ -130,7 +130,8 @@ let rec reaches_call group ~depth e =
   group_call group ~depth e <> None
   ||
   match e with
-  | Core.Expr.Apply {callee = Core.Expr.Fixpoint {functions = ids; bodies; _}; arguments = args} ->
+  | Core.Expr.Apply {callee = Core.Expr.Fixpoint rec_group; arguments = args} ->
+    let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
     List.exists (reaches_call group ~depth) args || fix_reaches_call group ~depth ids bodies
   | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> false
   | Core.Expr.Let {value = rhs; body; _} ->
@@ -236,7 +237,9 @@ let rec scope ~group ~depth ?expected e =
     placeholder !count
   in
   let enters_group = function
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} -> fix_reaches_call group ~depth ids bodies
+    | Core.Expr.Fixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
+      fix_reaches_call group ~depth ids bodies
     | _ -> false
   in
   let rec strict ?(reading = Passed) ~tail e =
@@ -252,13 +255,13 @@ let rec scope ~group ~depth ?expected e =
       let e' = Core.Expr.Apply {callee = strict ~tail:false f; arguments = List.map (strict ~tail:false) args} in
       match group_call e', f with
       | Some ty, _ when not tail -> Option.cata (take e') e' (held group ~reading e' ty)
-      | None, Core.Expr.Fixpoint {selected = i; functions = ids; _} when (not tail) && enters_group f ->
+      | None, Core.Expr.Fixpoint g when (not tail) && enters_group f ->
         (* A local fixpoint applied here that recurses into the group is a
            call into it. *)
         let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
         take e'
           (Option.default (Mlutil.new_meta ())
-             (Ml_type_util.ml_codomain_after (List.length value_args) (snd ids.(i))))
+             (Ml_type_util.ml_codomain_after (List.length value_args) (Core.Recursion.Group.selected_member g).type_))
       | _ -> e' )
     | Core.Expr.Construct {result_type = ty;
                            constructor = (GlobRef.ConstructRef (ind, _) as r);
@@ -314,8 +317,7 @@ let rec scope ~group ~depth ?expected e =
       in
       let group =
         match rhs with
-        | Core.Expr.Fixpoint {functions = [|_|];
-                              bodies = [|fn|];
+        | Core.Expr.Fixpoint {members = [|{body = fn; _}|];
                               occurrence = o; _} when Splices.is_entered_copy group.splices o ->
           (* A partner's copy the machine enters stands for the partner: its
              calls are the group's. *)
@@ -329,16 +331,22 @@ let rec scope ~group ~depth ?expected e =
                      occurrence = occ}
     | Core.Expr.Lambda {parameter = id; parameter_type = ty; body} ->
       Core.Expr.Lambda {parameter = id; parameter_type = ty; body = inner 1 body}
-    | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
+    | Core.Expr.Fixpoint rec_group ->
+      let i = rec_group.selected
+      and ids = Core.Recursion.Group.functions rec_group
+      and bodies = Core.Recursion.Group.bodies rec_group
+      and occ = rec_group.occurrence in
       let n = Array.length ids in
       let fns = Array.mapi (fun j (_, ty) -> {l_type = ty; l_arity = Mlutil.nb_lams bodies.(j)}) ids in
       let group = {group with locals = (depth + n, fns) :: group.locals} in
-      Core.Expr.Fixpoint {selected = i; functions = ids; bodies = Array.map (inner ~group n) bodies; occurrence = occ}
-    | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
-      Core.Expr.Cofixpoint {selected = i;
-                            functions = ids;
-                            bodies = Array.map (inner ~group (Array.length ids)) bodies;
-                            occurrence = occ}
+      Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:i ids (Array.map (inner ~group n) bodies) occ)
+    | Core.Expr.Cofixpoint rec_group ->
+      let i = rec_group.selected
+      and ids = Core.Recursion.Group.functions rec_group
+      and bodies = Core.Recursion.Group.bodies rec_group
+      and occ = rec_group.occurrence in
+      Core.Expr.Cofixpoint
+        (Core.Recursion.Group.of_arrays ~selected:i ids (Array.map (inner ~group (Array.length ids)) bodies) occ)
     | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
       Core.Expr.Coerce {source_type = from;
                         target_type = into;
@@ -419,13 +427,15 @@ let body ~effects ~splices ~globals ty b =
                 splices} ~depth:0 b
 
 let decl ~effects ~splices ~methods = function
-  | Core.Decl.Recursive_group fds when Core.Nonempty.exists (fun (fd : Core.Recursion.Definition.t) -> loopified ~methods fd.entity) fds ->
+  | Core.Decl.Recursive_group fds when Core.Nonempty.exists (fun (fd : Core.Recursion.Definition.t) ->
+    loopified ~methods fd.entity) fds ->
     (* A group is normalized whole: loopification inlines one member's
        partners into it, whether or not they are loopified themselves. *)
     let globals = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core.Nonempty.to_list fds) in
     Core.Decl.Recursive_group
       (Core.Nonempty.map
-         (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = body ~effects ~splices ~globals fd.type_ fd.body})
+         (fun (fd : Core.Recursion.Definition.t) ->
+           {fd with Core.Recursion.Definition.body = body ~effects ~splices ~globals fd.type_ fd.body} )
          fds)
   | Core.Decl.Value {entity = r; body = b; type_ = ty} when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
@@ -458,7 +468,10 @@ let eta_expand =
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
       Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
-      Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body}) fds)
+      Core.Decl.Recursive_group
+        (Core.Nonempty.map
+           (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body})
+           fds )
     | d -> d )
 
 let let_lambdas =
@@ -468,7 +481,8 @@ let let_lambdas =
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
-           (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = Core_elaborate.generated_definition fd.type_ fd.body})
+           (fun (fd : Core.Recursion.Definition.t) ->
+             {fd with Core.Recursion.Definition.body = Core_elaborate.generated_definition fd.type_ fd.body} )
            fds)
     | d -> d )
 

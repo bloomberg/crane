@@ -25,17 +25,17 @@ let rec term e =
   | Core.Expr.Boxed_value {value = a; _} -> Core.Expr.Boxed_value {value = a; occurrence = Core.Occurrence.fresh ()}
   | Core.Expr.Lambda_group_barrier {value = a; _} ->
     Core.Expr.Lambda_group_barrier {value = a; occurrence = Core.Occurrence.fresh ()}
-  | Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
-    Core.Expr.Fixpoint {selected = i; functions = ids; bodies; occurrence = fix_occurrence occ}
-  | Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = occ} ->
-    Core.Expr.Cofixpoint {selected = i; functions = ids; bodies; occurrence = fix_occurrence occ}
+  | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.with_occurrence g (fix_occurrence g.occurrence))
+  | Core.Expr.Cofixpoint g ->
+    Core.Expr.Cofixpoint (Core.Recursion.Group.with_occurrence g (fix_occurrence g.occurrence))
   | Core.Expr.Global use -> Core.Expr.Global (Core.Global_use.refresh use)
   | e -> e
 
 let decl = function
   | Core.Decl.Value {entity = r; body = b; type_ = ty} -> Core.Decl.Value {entity = r; body = term b; type_ = ty}
   | Core.Decl.Recursive_group fds ->
-    Core.Decl.Recursive_group (Core.Nonempty.map (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = term fd.body}) fds)
+    Core.Decl.Recursive_group
+      (Core.Nonempty.map (Core.Recursion.Definition.map_body term) fds)
   | d -> d
 
 let structure = Modutil.map_struct_decls decl

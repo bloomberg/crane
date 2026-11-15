@@ -379,7 +379,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          signature it will be given. *)
       let carrier =
         match rank2_carrier with
-        | Some x when List.exists (Cpp_ir.Types.exists (Cpp_ir.Type.is_variable_named x)) (List.map fst cpp_args) -> Some x
+        | Some x when List.exists (Cpp_ir.Types.exists (Cpp_ir.Type.is_variable_named x)) (List.map fst cpp_args) ->
+          Some x
         | _ -> None
       in
       (* The parameters' declared C++ types are only known here, after
@@ -515,13 +516,8 @@ let gen_lambda ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t 
          directly compatible with [std::function<R(A,B)>] contexts. *)
       let cpp_args, body_stmts =
         match a with
-        | Core.Expr.Fixpoint {selected = fix_x;
-                              functions = _fix_ids;
-                              bodies = fix_funs; _} | Core.Expr.Cofixpoint {selected = fix_x;
-                                                                            functions = _fix_ids;
-                                                                            bodies = fix_funs; _}
-          when List.length filtered_args <= 1 ->
-          let fix_lam_params, _ = Mlutil.collect_lams fix_funs.(fix_x) in
+        | Core.Expr.Fixpoint fix_group | Core.Expr.Cofixpoint fix_group when List.length filtered_args <= 1 ->
+          let fix_lam_params, _ = Mlutil.collect_lams (Core.Recursion.Group.selected_member fix_group).body in
           let fix_value_params =
             List.filter
               (fun (_, ty) -> is_runtime_binder_type ty)

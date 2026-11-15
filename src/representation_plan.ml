@@ -282,7 +282,7 @@ let region ~outer body =
           let inner = push Kpattern (List.rev ids) scope in
           let inner =
             match pat with
-            | Core.Pattern.Shallow_constructor r | Core.Pattern.Constructor {constructor = r; _} when ids <> [] ->
+            | Core.Pattern.Constructor {constructor = r; _} when ids <> [] ->
               let field_planned = fields r ids in
               List.iteri
                 (fun i p ->
@@ -481,7 +481,8 @@ let region ~outer body =
        its own ({!Translation_stmts.gen_stmts}), its parameters bound at the
        conversion of their ML types ({!Translation_local_functions.gen_fix}), not declared
        as a lambda's. *)
-    | Core.Expr.Fixpoint {functions = fs; bodies = defs; _} | Core.Expr.Cofixpoint {functions = fs; bodies = defs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
       let scope = push Kfix (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) scope in
       if
         Ml_type_util.own_type_variables ~n_outer:(List.length (!tctx).lexical.current_type_vars)

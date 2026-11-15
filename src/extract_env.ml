@@ -1596,7 +1596,7 @@ let declares struc =
   let inductive kn (ind : Core.Inductive.t) =
     ( match ind.kind with
     | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields ->
-      List.iter (fun (f, _) -> Option.iter add f) fields
+      List.iter (fun (f : Core.Record.Field.t) -> Option.iter add f.projection) fields
     | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> () );
     Array.iteri
       (fun i (p : Core.Inductive.Packet.t) ->
@@ -1850,7 +1850,7 @@ let reset () =
   Visit.reset ();
   reset_tables ();
   reset_renaming_tables ();
-  Core.Meta.thaw ()
+  Core.Extracted.Meta.thaw ()
 
 (** Initializes the extraction environment, checking section scope and setting
     mode flags (modular/library/compute). *)

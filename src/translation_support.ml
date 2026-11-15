@@ -1493,7 +1493,8 @@ let rec collect_tvars_ast acc = function
         collect_tvars_ast (collect_tvars acc ty) body )
       acc
       brs
-  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     let acc =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) acc ids
     in
@@ -1528,7 +1529,9 @@ let rec ast_may_throw = function
   | Core.Expr.Match {scrutinee = e; branches = brs; _} ->
     ast_may_throw e
     || Array.exists (fun {Core.Match.Branch.body = body; _} -> ast_may_throw body) brs
-  | Core.Expr.Fixpoint {bodies = funs; _} | Core.Expr.Cofixpoint {bodies = funs; _} -> Array.exists ast_may_throw funs
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let funs = Core.Recursion.Group.bodies rec_group in
+    Array.exists ast_may_throw funs
   | Core.Expr.Apply {callee = f; arguments = args} -> ast_may_throw f || List.exists ast_may_throw args
   | Core.Expr.Coerce {value = a; _}
   | Core.Expr.Boxed_value {value = a; _}
@@ -1589,8 +1592,8 @@ let collect_body_types_for_unify body =
   let rec from_lams = function
     | Core.Expr.Lambda {parameter_type = ty; body = inner; _} ->
       Core.Type.Arrow {parameter = ty; result = from_lams inner}
-    | Core.Expr.Fixpoint {functions = ids;
-                          bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (fun (_, ty) -> types := ty :: !types) ids;
       Array.iter (fun f -> types := from_lams f :: !types) funs;
       Core.Type.Unknown
@@ -1816,7 +1819,8 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
         branches
     | Core.Expr.Construct {arguments = args; _} -> List.iter (walk depth) args
     | Core.Expr.Tuple args -> List.iter (walk depth) args
-    | Core.Expr.Fixpoint {bodies; _} | Core.Expr.Cofixpoint {bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let bodies = Core.Recursion.Group.bodies rec_group in
       let n = Array.length bodies in
       Array.iter (walk (depth + n)) bodies
     | Core.Expr.Coerce {value = e; _}
@@ -1879,8 +1883,9 @@ let escaping_params ~suspended n_params body =
         List.iter (walk under depth) rest;
         spine depth k
       | [] -> () )
-    | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {bodies; _} | Core.Expr.Cofixpoint {bodies; _});
+    | Core.Expr.Apply {callee = (Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group);
                        arguments = args} ->
+      let bodies = Core.Recursion.Group.bodies rec_group in
       (* A local fixpoint entered where it is written, as [let fix go ... in
          go l []] is: its recursion runs here, through a lambda captured by
          reference, and nothing outlives the call. *)
@@ -1904,7 +1909,8 @@ let escaping_params ~suspended n_params body =
         (fun {Core.Match.Branch.binders = ids; body = b; _} -> walk under (depth + List.length ids) b)
         branches
     | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.iter (walk under depth) args
-    | Core.Expr.Fixpoint {bodies; _} | Core.Expr.Cofixpoint {bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let bodies = Core.Recursion.Group.bodies rec_group in
       (* A local fixpoint is a closure over its free variables. *)
       let n = Array.length bodies in
       Array.iter (walk true (depth + n)) bodies
@@ -1937,7 +1943,7 @@ let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
     ~is_self_call:(fun depth f ->
       (* A coercion around the self-reference (extraction inserts one when the
          fixpoint's type was generalised) must not hide the recursive call. *)
-      let rec strip = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e in
+      let strip = Core.Expr.strip_crossings in
       match strip f with
       | Core.Expr.Bound_variable {index = db; _} -> db = base_self_db + depth
       | _ -> false )
@@ -2052,7 +2058,7 @@ let closure_feedback_params ~callee bodies =
   let scan self body =
     let params, body = collect_lams body in
     let n = List.length params in
-    let rec strip = function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _} | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e in
+    let strip = Core.Expr.strip_crossings in
     let rec walk locals e =
       match e with
       | Core.Expr.Apply {callee = f; arguments = args} ->
@@ -2086,7 +2092,8 @@ let closure_feedback_params ~callee bodies =
         Array.iter
           (fun {Core.Match.Branch.binders = ids; body = b; _} -> walk (List.map (fun _ -> Local_other) ids @ locals) b)
           branches
-      | Core.Expr.Fixpoint {bodies; _} | Core.Expr.Cofixpoint {bodies; _} ->
+      | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+        let bodies = Core.Recursion.Group.bodies rec_group in
         let locals = List.init (Array.length bodies) (fun _ -> Local_closure) @ locals in
         Array.iter (walk locals) bodies
       | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.iter (walk locals) args
@@ -2414,7 +2421,8 @@ let rec collect_free_rels_set n_bound acc = function
         collect_free_rels_set (n_bound + List.length ids) acc body )
       acc
       brs
-  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     let n_fix = Array.length ids in
     Array.fold_left
       (fun acc f ->

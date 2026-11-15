@@ -8,7 +8,7 @@
 type group = Lifted | In_place | Closures
 
 (* The function an application applies, under any coercion. *)
-let rec callee = function Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _} | Core.Expr.Lambda_group_barrier {value = f; _} -> callee f | f -> f
+let callee = Core.Expr.strip_crossings
 
 let arity f = List.length (fst (Mlutil.collect_lams f))
 
@@ -27,23 +27,24 @@ let rec group ~effects ~n_outer ?continuation ~cofix ids bodies =
    named other than as the function an application applies, or named at all
    inside a closure. *)
 and escapes ~effects ~n_outer k t =
+  let in_place_group ?continuation ~cofix g =
+    group ~effects ~n_outer ?continuation ~cofix (Core.Recursion.Group.functions g) (Core.Recursion.Group.bodies g) = In_place
+  in
   let rec go k = function
     | Core.Expr.Bound_variable {index = i; _} -> i = k
-    | Core.Expr.Apply {callee = f;
-                       arguments = args} when (match callee f with Core.Expr.Bound_variable {index = i; _} -> i = k | _ -> false) ->
+    | Core.Expr.Apply {callee = f; arguments = args}
+      when (match callee f with Core.Expr.Bound_variable {index = i; _} -> i = k | _ -> false) ->
       List.exists (go k) args
-    | Core.Expr.Apply {callee = Core.Expr.Fixpoint {selected = x; functions = ids; bodies; _}; arguments = args}
-      when List.length args >= arity bodies.(x) && group ~effects ~n_outer ~cofix:false ids bodies = In_place ->
-      in_place k bodies || List.exists (go k) args
-    | Core.Expr.Apply {callee = Core.Expr.Cofixpoint {selected = x; functions = ids; bodies; _}; arguments = args}
-      when List.length args >= arity bodies.(x) && group ~effects ~n_outer ~cofix:true ids bodies = In_place ->
-      in_place k bodies || List.exists (go k) args
-    | Core.Expr.Let {value = Core.Expr.Fixpoint {functions = ids; bodies; _}; body = b; _}
-      when group ~effects ~n_outer ~continuation:b ~cofix:false ids bodies = In_place ->
-      in_place k bodies || go (k + 1) b
-    | Core.Expr.Let {value = Core.Expr.Cofixpoint {functions = ids; bodies; _}; body = b; _}
-      when group ~effects ~n_outer ~continuation:b ~cofix:true ids bodies = In_place ->
-      in_place k bodies || go (k + 1) b
+    | Core.Expr.Apply {callee = Core.Expr.Fixpoint g; arguments = args}
+      when List.length args >= arity (Core.Recursion.Group.selected_member g).body && in_place_group ~cofix:false g ->
+      in_place k (Core.Recursion.Group.bodies g) || List.exists (go k) args
+    | Core.Expr.Apply {callee = Core.Expr.Cofixpoint g; arguments = args}
+      when List.length args >= arity (Core.Recursion.Group.selected_member g).body && in_place_group ~cofix:true g ->
+      in_place k (Core.Recursion.Group.bodies g) || List.exists (go k) args
+    | Core.Expr.Let {value = Core.Expr.Fixpoint g; body = b; _} when in_place_group ~continuation:b ~cofix:false g ->
+      in_place k (Core.Recursion.Group.bodies g) || go (k + 1) b
+    | Core.Expr.Let {value = Core.Expr.Cofixpoint g; body = b; _} when in_place_group ~continuation:b ~cofix:true g ->
+      in_place k (Core.Recursion.Group.bodies g) || go (k + 1) b
     (* A bind generated as sequencing runs its continuation's body inline. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)} when sequential_bind effects use -> (
       match List.rev args with
@@ -59,7 +60,8 @@ and escapes ~effects ~n_outer k t =
     | Core.Expr.Boxed_value {value = a; _}
     | Core.Expr.Lambda_group_barrier {value = a; _} -> go k a
     | Core.Expr.Lambda {body; _} -> Mlutil.ast_occurs (k + 1) body
-    | Core.Expr.Fixpoint {functions = ids; bodies; _} | Core.Expr.Cofixpoint {functions = ids; bodies; _} ->
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
       Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies
     | Core.Expr.Let {value = a; body = b; _} -> go k a || go (k + 1) b
     | Core.Expr.Match {scrutinee = scrut; branches; _} ->

@@ -143,25 +143,41 @@ and Meta : sig
   (** A mutable type metavariable used while reconstructing types: [id]
       identifies it and [contents] is filled in with the resolved type once
       unification succeeds (staying [None] until then).  Read anywhere, but
-      made and solved only through {!Core.Meta}. *)
+      made and solved only through {!Core.Extracted.Meta}. *)
+  type t = private {
+    id : int;
+    mutable contents : Type.t option;
+  }
+
+  (** [make id contents] is the cell [id] holding [contents]. *)
+  val make : int -> Type.t option -> t
+
+  (** [set m t] solves [m] to [t]. *)
+  val set : t -> Type.t -> unit
+end = struct
   type t = {
     id : int;
     mutable contents : Type.t option;
   }
-end =
-  Meta
+
+  let make id contents = {id; contents}
+  let set m t = m.contents <- Some t
+end
 
 and Record : sig
   module Field : sig
-    (** One field of a record or type class: its projection ([None] when
-        the field is anonymous) paired with its type.  Extraction selects the
-        two together -- walking binder names and constructor argument types
-        in step, dropping the same positions from both -- so they are stored
+    (** One field of a record or type class: its [projection] ([None] when
+        the field is anonymous) and its type.  Extraction selects the two
+        together -- walking binder names and constructor argument types in
+        step, dropping the same positions from both -- so they are stored
         together; a consumer that zips a name list against a type list
         rebuilt from {!Inductive.Packet.constructor_argument_types} gets a
         length mismatch, because that list still holds the implicit
         arguments the selection dropped. *)
-    type t = GlobRef.t option * Type.t
+    type t = {
+      projection : GlobRef.t option;
+      type_ : Type.t;
+    }
   end
 end =
   Record
@@ -291,23 +307,9 @@ and Expr : sig
         (** [occurrence] tells this match apart from every other one in the
             program, kept by a pass rebuilding it as a let's is: the binders
             of one branch at one level in two matches are still two. *)
-    | Fixpoint of {
-        selected : int;
-        functions : (Id.t * Type.t) array;
-        bodies : t array;
-        occurrence : Occurrence.t;
-      }
-        (** A block of mutually recursive functions: the function selected,
-            the group's binders and bodies, and the occurrence telling this
-            fixpoint apart from every other one in the program: a pass
-            rebuilding it keeps it, so the plan made of the fixpoint and the
-            code made of it name one fixpoint. *)
-    | Cofixpoint of {
-        selected : int;
-        functions : (Id.t * Type.t) array;
-        bodies : t array;
-        occurrence : Occurrence.t;
-      }  (** A block of mutually corecursive functions, as [Fixpoint]. *)
+    | Fixpoint of Recursion.Group.t  (** a block of mutually recursive functions *)
+    | Cofixpoint of Recursion.Group.t
+        (** a block of mutually corecursive functions *)
     | Runtime_error of string  (** raised for an unrealisable term *)
     | Erased_value of Erasure_reason.t  (** the value of an erased slot *)
     | Axiom_value of string  (** a value left abstract by an axiom *)
@@ -376,13 +378,26 @@ and Global_use : sig
       callee's type scheme.  Built only through {!Core.Global_use}; a reader
       that needs only the callee matches [Global {callee; _}] and never sees
       the rest. *)
+  type t = private {
+    callee : GlobRef.t;
+    instance : instance;
+    occurrence : Occurrence.t;
+  }
+
+  val make : GlobRef.t -> instance -> Occurrence.t -> t
+end = struct
+  type instance =
+    | Monomorphic
+    | Polymorphic of Type.t Scheme.Instantiation.t
+
   type t = {
     callee : GlobRef.t;
     instance : instance;
     occurrence : Occurrence.t;
   }
-end =
-  Global_use
+
+  let make callee instance occurrence = {callee; instance; occurrence}
+end
 
 and Match : sig
   module Branch : sig
@@ -411,10 +426,6 @@ and Pattern : sig
         (** a branch binder by De Bruijn index: [Bound_variable 1] is the
             last of {!Match.Branch.binders} *)
     | Wildcard
-    | Shallow_constructor of GlobRef.t
-        (** shorthand for [Constructor] binding every argument in order:
-            [Constructor {constructor; fields = [Bound_variable n; ...;
-            Bound_variable 1]}] *)
 end =
   Pattern
 
@@ -465,8 +476,67 @@ and Recursion : sig
       type_ : Type.t;
     }
   end
-end =
-  Recursion
+
+  module Member : sig
+    (** One function of a local recursive group: the name it is bound to,
+        its type and its body. *)
+    type t = {
+      name : Id.t;
+      type_ : Type.t;
+      body : Expr.t;
+    }
+  end
+
+  module Group : sig
+    (** A block of local mutually (co)recursive functions, the value of an
+        {!Expr.Fixpoint} or {!Expr.Cofixpoint}: its [members], in binding
+        order -- the last is the innermost binder, so in every body the
+        member [i] of [n] is read as [Bound_variable (n - i)] -- the member
+        [selected] the block evaluates to, by its position, and the
+        occurrence telling this block apart from every other one in the
+        program: a pass rebuilding it keeps it, so the plan made of the
+        block and the code made of it name one block.  Built only through
+        {!make}, so a group has a member and selects one it has. *)
+    type t = private {
+      selected : int;
+      members : Member.t array;
+      occurrence : Occurrence.t;
+    }
+
+    (** [make ~selected members occurrence]; raises [Invalid_argument] when
+        [members] is empty or has no member [selected]. *)
+    val make : selected:int -> Member.t array -> Occurrence.t -> t
+  end
+end = struct
+  module Definition = struct
+    type t = {
+      entity : GlobRef.t;
+      body : Expr.t;
+      type_ : Type.t;
+    }
+  end
+
+  module Member = struct
+    type t = {
+      name : Id.t;
+      type_ : Type.t;
+      body : Expr.t;
+    }
+  end
+
+  module Group = struct
+    type t = {
+      selected : int;
+      members : Member.t array;
+      occurrence : Occurrence.t;
+    }
+
+    let make ~selected members occurrence =
+      if selected < 0 || selected >= Array.length members then
+        invalid_arg "Core.Recursion.Group.make: no such member";
+      {selected; members; occurrence}
+  end
+end
 
 and Decl : sig
   (** A concrete, defined top-level entity. *)

@@ -28,7 +28,8 @@ let rec iter_annotations f = function
         f ty;
         iter_annotations f body )
       brs
-  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     Array.iter (fun (_, ty) -> f ty) ids;
     Array.iter (iter_annotations f) funs
   | Core.Expr.Apply {callee = g; arguments = args} ->
@@ -56,7 +57,7 @@ let rec iter_annotations f = function
 let rec mint ~minted ~next = function
   | Core.Type.Meta ({contents = None} as m) ->
     let v = Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = !next} in
-    Core.Meta.solve m v;
+    Core.Extracted.Meta.solve m v;
     incr next;
     minted v
   | Core.Type.Meta {contents = Some t} -> mint ~minted ~next t
@@ -143,7 +144,7 @@ let recover_fix_codomains ids funs =
    no longer asking what the body builds. *)
 let fill_codomain_hole (_, ty) body =
   match snd (Mlutil.type_decomp ty) with
-  | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Meta.solve cell) (tail_result_type body)
+  | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type body)
   | _ -> ()
 
 (* Settles one group as translation reads it: codomains filled and recovered,
@@ -202,23 +203,22 @@ let check_let_lambda ~outer t a =
 (* Mints the open variables of the local definitions in [e], under a
    declaration whose own variables number up to [outer]. *)
 let rec expr ~outer = function
-  | Core.Expr.Let {value = (Core.Expr.Fixpoint {functions = ids;
-                                                bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids;
-                                                                                          bodies = funs; _});
+  | Core.Expr.Let {value = (Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group);
                    body = b; _} ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs;
     expr ~outer b
-  | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {functions = ids;
-                                                   bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids;
-                                                                                             bodies = funs; _});
+  | Core.Expr.Apply {callee = (Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group);
                      arguments = args} ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     let recovered, mint = settle ids funs in
     Array.iter (iter_annotations mint) recovered;
     List.iter (iter_annotations mint) args;
     Array.iter (expr ~outer) funs;
     List.iter (expr ~outer) args
-  | Core.Expr.Fixpoint {functions = ids; bodies = funs; _} | Core.Expr.Cofixpoint {functions = ids; bodies = funs; _} ->
+  | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+    let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs
   | Core.Expr.Let {binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; _} ->
