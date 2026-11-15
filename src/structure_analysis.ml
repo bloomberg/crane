@@ -252,8 +252,8 @@ let register_shared_variants (s : Core.Program.t) : unit =
 
 (** Every definition whose body only raises -- an axiom, an absurd case, a
     proof-only definition whose body extraction simplifies to one.  Each is a
-    throwing value: {!Program_facts} records the list and {!Install_legacy_plan}
-    installs it with [Table.add_throwing_value], so it is emitted as a
+    throwing value: {!Program_facts} records the list and lowering reads it
+    ({!Translation_state.is_throwing_value}), so it is emitted as a
     zero-argument function that throws when called rather than a constant
     that throws during static initialisation, and every reference must call
     it.  Read off the final bodies, since simplification is what can turn

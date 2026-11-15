@@ -36,7 +36,7 @@ type program = {
       (** Which functions recurse through which. *)
   partner_closure_params : (Names.GlobRef.t * int list) list;
       (** Which parameters of each function a call from its recursive group
-          passes a closure for ({!Translation.partner_closure_params}). *)
+          passes a closure for ({!Translation_support.partner_closure_params}). *)
   recursion : Recursion_plan.t;
       (** How each function recurses through itself. *)
   control : Lower_control.t;
@@ -45,6 +45,9 @@ type program = {
 
 (** [analyze_program p] analyses the normalized program [p]; it writes nothing. *)
 val analyze_program : Core_phase.normalized Core_phase.program -> program
+
+(** What lowering reads of [program] ({!Translation_state.program_facts}). *)
+val lowering : program -> Translation_state.program_facts
 
 (** Whether two analyses of a unit observed the same facts: under
     [CRANE_CHECK_IR] a unit is analysed twice and the two must agree. *)

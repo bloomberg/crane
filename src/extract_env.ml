@@ -1471,19 +1471,22 @@ let check_structure_unchanged planned struc =
             ++ prlist_with_sep pr_comma Label.print changed) )
     planned
 
-(** [freeze core]: the frozen program ({!Core_phase.freeze}), normalized
-    ({!Core_phase.normalize}), with the facts the whole of it is analysed for --
-    which definitions only throw, which parameters are owned, settled across
-    calls, how each function recurses -- installed before any unit is
-    planned ({!Program_facts.analyze_program}). *)
-let freeze core =
-  Translation_state.generating_outside_modules @@ fun () ->
-  let normalized =
-    Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core_phase.freeze core)
+(** [freeze core f]: [f] of the frozen program ({!Core_phase.freeze}),
+    normalized ({!Core_phase.normalize}), lowered with the facts the whole of
+    it is analysed for -- which definitions only throw, which parameters
+    are owned, settled across calls, how each function recurses
+    ({!Program_facts.analyze_program}). *)
+let freeze core f =
+  let normalized, program =
+    Translation_state.generating_outside_modules @@ fun () ->
+    let normalized =
+      Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core_phase.freeze core)
+    in
+    Pipeline_trace.event "core" "analyze_program";
+    (normalized, Program_facts.analyze_program normalized)
   in
-  Pipeline_trace.event "core" "analyze_program";
-  Install_legacy_plan.install_program (Program_facts.analyze_program normalized);
-  normalized
+  Install_legacy_plan.install_program program;
+  Translation_state.with_program_facts (Program_facts.lowering program) (fun () -> f normalized)
 
 (** The extracted structure [struc] through the Core passes
     ({!core_pass_names}), keeping what [to_appear] names. *)
@@ -2023,7 +2026,7 @@ let full_extr_reading opaque_access f (refs, mps) read =
         if source <> "" then
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
-      print_structure_to_file ~unit_includes filenames false (freeze core);
+      freeze core (print_structure_to_file ~unit_includes filenames false);
       read refs )
 
 let full_extr opaque_access f refs =
@@ -2303,7 +2306,7 @@ let separate_extraction ~opaque_access lr =
         user_err
           (str "Separate Extraction from inside a module is not supported.") )
     (Core_phase.modules core);
-  print_per_library ~dry:(fun _ -> false) (freeze core)
+  freeze core (print_per_library ~dry:(fun _ -> false))
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
@@ -2321,7 +2324,7 @@ let simple_extraction ~opaque_access r =
         warns ();
         if is_any_custom r then
           Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-        print_structure_to_file (mono_filename None) false (freeze core) )
+        freeze core (print_structure_to_file (mono_filename None) false) )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -2354,7 +2357,7 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
     | MPfile dir -> (not is_rec) && not (DirPath.equal dir dir_m)
     | _ -> false
   in
-  print_per_library ~dry (freeze core)
+  freeze core (print_per_library ~dry)
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable
@@ -2575,10 +2578,11 @@ let show_extraction ~pstate =
     let l = Label.of_id (Declare.Proof.get_name pstate) in
     let fake_ref = GlobRef.ConstRef (Constant.make2 mp l) in
     let decl = Core.Decl.Value {entity = fake_ref; body = ast; type_ = ty} in
-    (* Frozen and normalized unoptimised, as it is shown: that is what
-       installs the facts about the whole program -- its recursion plan
-       among them -- that lowering the term reads. *)
-    let frozen = freeze (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])])) in
-    print_one_decl (Core_phase.structure frozen) mp decl
+    (* Frozen and normalized unoptimised, as it is shown: that is what the
+       facts about the whole program -- its recursion plan among them --
+       that lowering the term reads are analysed from. *)
+    freeze
+      (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])]))
+      (fun frozen -> print_one_decl (Core_phase.structure frozen) mp decl)
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

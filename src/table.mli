@@ -47,7 +47,7 @@
       A phase result: its owner is the extracted program.
     - {b Installed plan facts}, copies of a {!Program_facts} or {!Target_plan}
       value made by [Install_legacy_plan] for readers that cannot reach the
-      plan: [named_refs], [higher_order_projection_set], [throwing_values],
+      plan: [named_refs], [higher_order_projection_set],
       [instance_promoted_types], [promoted_inductives] (accumulated over the
       units of an extraction), and the plan's overrides of [inductive_kinds].
     - {b Analysis results registered while a later phase runs}: [flat_inductives]
@@ -730,13 +730,6 @@ val add_cofixpoint : GlobRef.t -> unit
 (** Check if a definition is a cofixpoint. *)
 val is_cofixpoint : GlobRef.t -> bool
 
-(** Record that a definition's body only throws, so it is spelled as a
-    zero-argument function: it must raise when called, not while the program
-    is still loading its statics. *)
-val add_throwing_value : GlobRef.t -> unit
-
-(** Check whether a definition is one of {!add_throwing_value}'s. *)
-val is_throwing_value : GlobRef.t -> bool
 
 (** Add symbol. *)
 val add_symbol : GlobRef.t -> unit

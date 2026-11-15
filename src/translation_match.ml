@@ -34,7 +34,7 @@ let moved_out (base : Cpp_ir.Lowered.Expr.t) = match base with Move _ -> true | 
    ({!Ownership_ir.takes_record}); under [CRANE_CHECK_IR], the code reading
    it from [base] must agree. *)
 let record_taken ~is_typeclass t base =
-  let taken = (not is_typeclass) && Ownership_ir.takes_record (!tctx).lexical.move_plan t in
+  let taken = (not is_typeclass) && Ownership_ir.takes_record ~throws:is_throwing_value (!tctx).lexical.move_plan t in
   if Probe.checking () && taken <> moved_out base then
     Probe.violation "ownership plan"
       (Pp.str

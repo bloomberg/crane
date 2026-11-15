@@ -1508,15 +1508,12 @@ let log_axioms = ref Ref.Can.Set.empty
    through a module alias is called as the definition's own name is. *)
 let cofixpoints = ref Ref.Can.Set.empty
 
-let throwing_values = ref Ref.Can.Set.empty
-
 let symbols = ref Ref.User.Map.empty
 
 let init_axioms () =
   info_axioms := Ref.Can.Set.empty;
   log_axioms := Ref.Can.Set.empty;
   cofixpoints := Ref.Can.Set.empty;
-  throwing_values := Ref.Can.Set.empty;
   symbols := Ref.User.Map.empty
 
 let () = on_reset init_axioms
@@ -1530,10 +1527,6 @@ let add_log_axiom r = log_axioms := Ref.Can.Set.add r !log_axioms
 let add_cofixpoint r = cofixpoints := Ref.Can.Set.add r !cofixpoints
 
 let is_cofixpoint r = Ref.Can.Set.mem r !cofixpoints
-
-let add_throwing_value r = throwing_values := Ref.Can.Set.add r !throwing_values
-
-let is_throwing_value r = Ref.Can.Set.mem r !throwing_values
 
 let add_symbol r =
   symbols :=

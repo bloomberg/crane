@@ -36,6 +36,11 @@ let analyze_program normalized =
         ~methods:(fun r -> Option.has_some (Method_registry.is_registered_method methods r))
         recursion normalized }
 
+let lowering (program : program) : Translation_state.program_facts =
+  { throwing_values = List.fold_left (fun s r -> Ref.Can.Set.add r s) Ref.Can.Set.empty program.throwing_values;
+    partner_closure_params =
+      List.fold_left (fun m (g, is) -> Ref.User.Map.add g is m) Ref.User.Map.empty program.partner_closure_params }
+
 (* The custom-extracted references [struc] names, a used constructor
    adding its inductive. *)
 let used_customs struc =

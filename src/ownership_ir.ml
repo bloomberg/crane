@@ -1333,11 +1333,11 @@ let continue_moves (l : Control_ir.Term.loop) =
     in
     List.rev (turns 0 [] l.body)
 
-let rec takes_record p t =
+let rec takes_record ~throws p t =
   match t with
   | Core.Expr.Bound_variable {occurrence = o; _} -> moves p o
-  | Core.Expr.Global {callee = r; _} -> Table.is_cofixpoint r || Table.is_throwing_value r
-  | t -> ( match field_of t with Some r -> takes_record p r | None -> true )
+  | Core.Expr.Global {callee = r; _} -> Table.is_cofixpoint r || throws r
+  | t -> ( match field_of t with Some r -> takes_record ~throws p r | None -> true )
 
 let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p)
 

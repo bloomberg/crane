@@ -121,6 +121,21 @@ and generation_site =
   | In_module of Names.ModPath.t  (** the body of this module *)
   | Outside_modules  (** a pass over the whole unit or program *)
 
+(** What the analysis of the whole program decided that lowering reads
+    ({!Program_facts.analyze_program}), for every unit of the extraction:
+    the definitions whose body only throws, which are spelled as
+    zero-argument functions ({!Translation_support.thunk_reason}), and the
+    parameters of a member of a recursive group a partner's call passes a
+    closure for ({!Translation_support.partner_closure_params}). *)
+type program_facts = {
+  throwing_values : Ref.Can.Set.t;
+  partner_closure_params : int list Ref.User.Map.t;
+}
+
+(** The facts of a program nothing was analysed for: lowering outside an
+    extraction's units, or before its program is frozen. *)
+let no_program_facts = {throwing_values = Ref.Can.Set.empty; partner_closure_params = Ref.User.Map.empty}
+
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
     parameters, owner, effect mode and module.  A declaration emitter sets
@@ -171,6 +186,10 @@ type input = {
      may ask ({!local_inductives_in_scope}).  The plan is asked on each
      read rather than its answer kept here. *)
   generating : generation_site option;
+  (* What the analysis of the whole program decided ({!program_facts}),
+     set for the extent of the extraction's units
+     ({!with_program_facts}). *)
+  program : program_facts;
 }
 
 (** What holds for the scope being lowered: the binders in scope and their
@@ -303,7 +322,8 @@ let tctx =
           body_function = false;
           itree_mode = Sequential;
           method_self_ns = Ref.User.Set.empty;
-          generating = None };
+          generating = None;
+          program = no_program_facts };
       lexical =
         { current_type_vars = [];
           current_cpp_return_type = None;
@@ -431,6 +451,15 @@ let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
     (fun c -> c.input.method_self_ns)
     (fun ns -> set_input (fun i -> { i with method_self_ns = ns }))
     ns f
+
+(** [with_program_facts facts f] runs [f] lowering the units of a program
+    analysed for [facts] ({!input.program}). *)
+let with_program_facts (facts : program_facts) (f : unit -> 'a) : 'a =
+  with_field (fun c -> c.input.program) (fun p -> set_input (fun i -> { i with program = p })) facts f
+
+(** Whether the analysis of the program found that the body of the
+    definition [r] only throws ({!program_facts}). *)
+let is_throwing_value r = Ref.Can.Set.mem r (!tctx).input.program.throwing_values
 
 (** [generating_at site f] runs [f] with generation at [site]
     ({!input.generating}); the entries below are the only callers. *)

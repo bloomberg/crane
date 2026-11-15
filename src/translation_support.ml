@@ -1205,7 +1205,7 @@ type thunk_reason = Cofixpoint | Throws | Monadic
     decides it, which the declaration of [r] and every reference to it read. *)
 let thunk_reason r =
   if Table.is_cofixpoint r then Some Cofixpoint
-  else if Table.is_throwing_value r then Some Throws
+  else if is_throwing_value r then Some Throws
   else
     match find_type_opt r with
     | Some t when is_monadic_ml_type t -> Some Monadic
@@ -1521,7 +1521,7 @@ let rec collect_tvars_ast acc = function
     exception handlers or discard them when their result is unused. *)
 let rec ast_may_throw = function
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> true
-  | Core.Expr.Global {callee = r; _} -> Table.is_throwing_value r
+  | Core.Expr.Global {callee = r; _} -> is_throwing_value r
   | Core.Expr.Lambda {body; _} -> ast_may_throw body
   | Core.Expr.Let {value = a; body = b; _} -> ast_may_throw a || ast_may_throw b
   | Core.Expr.Construct {arguments = args; _} -> List.exists ast_may_throw args
@@ -2205,16 +2205,6 @@ let lifted_fix_ungeneralised_params funs =
       detect_non_forwarded_params_fix (List.length lam_params) n_fix i body @ partners.(i) )
     funs
 
-(** The extraction's {!partner_closure_params}. *)
-let partner_closure_params_table : int list Ref.User.Map.t ref =
-  State.cell State.Extraction Ref.User.Map.empty
-
-(** Install the extraction's {!partner_closure_params}, as computed for the
-    whole structure before any function is generated. *)
-let install_partner_closure_params l =
-  partner_closure_params_table :=
-    List.fold_left (fun m (g, is) -> Ref.User.Map.add g is m) Ref.User.Map.empty l
-
 (** The source-order indices of the callable parameters, among the first
     [n_params], that a function made from [self_ref] takes as a [crane::fn]
     rather than generalising to [F &&]: those a self-call passes something
@@ -2226,7 +2216,7 @@ let ungeneralised_callable_params ~self_ref ~suspended n_params body =
   let partners =
     List.filter
       (fun i -> i < n_params)
-      (Option.default [] (Ref.User.Map.find_opt self_ref !partner_closure_params_table))
+      (Option.default [] (Ref.User.Map.find_opt self_ref (!tctx).input.program.partner_closure_params))
   in
   Escape.IntSet.of_list
     (detect_non_forwarded_params self_ref n_params body
