@@ -116,27 +116,27 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : Core.Type.t) ids =
     whose type is written [P x] appears applied to its witness, but a binder
     of non-function type is no callable: the application names the binder
     itself, and that is where the value's C++ type was pinned down. *)
-let rec scrutinee_binder = function
+let rec scrutinee_binder cx = function
   | Core.Expr.Bound_variable {index = i; _} -> Some i
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    scrutinee_binder e
-  | Core.Expr.Apply {callee = h; _} when not (scrutinee_head_is_callable h) ->
-    scrutinee_binder h
+    scrutinee_binder cx e
+  | Core.Expr.Apply {callee = h; _} when not (scrutinee_head_is_callable cx h) ->
+    scrutinee_binder cx h
   | _ -> None
 
 (** Whether a term in head position really is a function being applied, as
     opposed to a binder that a dependent type spells applied to its index. *)
-and scrutinee_head_is_callable h =
-  match scrutinee_binder h with
+and scrutinee_head_is_callable cx h =
+  match scrutinee_binder cx h with
   | Some i ->
     let rec is_arrow = function
       | Core.Type.Meta {contents = Some t} -> is_arrow t
       | Core.Type.Arrow _ -> true
       | _ -> false
     in
-    (match get_env_type_opt i with Some t -> is_arrow t | None -> true)
+    (match get_env_type_opt cx i with Some t -> is_arrow t | None -> true)
   | None -> true
 
 (** Test whether a C++ expression is "trivial" — a simple variable or member
@@ -153,11 +153,11 @@ let rec is_trivial_scrut : Cpp_ir.Lowered.Expr.t -> bool = function
 (** [iife_void_return env typ pv] is [Some Tvoid] when the match's branches
     produce nothing: a lambda that may fall off its end has to say [-> void]
     explicitly. *)
-let iife_void_return env typ pv : Cpp_ir.Lowered.Type.t option =
+let iife_void_return cx env typ pv : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
     match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
   in
-  let r = Translation_types.cpp_of_core env branch_rty in
+  let r = Translation_types.cpp_of_core cx env branch_rty in
   if is_cpp_unit_type r || Translation_monadic.core_type_is_void_call branch_rty then
     Some Void
   else None
@@ -179,7 +179,7 @@ let iife_void_return env typ pv : Cpp_ir.Lowered.Type.t option =
     parameter is a deduced template parameter of its own -- [f] and [g] of the
     same Rocq type are still two C++ types, and two branches returning one
     each deduce nothing. *)
-let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
+let iife_closure_return cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
   let found = ref false in
   let rec is_arrow = function
     | Core.Type.Arrow _ -> true
@@ -187,7 +187,7 @@ let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir
     | _ -> false
   in
   let binder_is_fun id =
-    match env_type_of_id id with
+    match env_type_of_id cx id with
     | Some ty -> is_arrow ty
     | None -> false
   in
@@ -211,7 +211,7 @@ let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir
     let branch_rty =
       match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
     in
-    match Translation_types.cpp_of_core env branch_rty with Function _ as r -> Some r | _ -> None
+    match Translation_types.cpp_of_core cx env branch_rty with Function _ as r -> Some r | _ -> None
 
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down
@@ -229,7 +229,7 @@ let iife_closure_return env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir
     @param n_fields    number of pattern variables in the branch
     @param non_erased_def_site_field_tys  definition-site field types
            with erased (dummy) entries filtered out *)
-let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
+let pattern_field_pins cx ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys =
   let scrut_cpp_ty =
     (* An enclosing branch may already have pinned the scrutinee's C++ type
@@ -237,9 +237,9 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
        [pair<any,any>], which its Core type (a bare type variable) does not.
        Prefer that over re-deriving from the Core type. *)
     match scrut_pinned with
-    | Some t when not (Translation_types.resolves_to_any_type t) -> t
+    | Some t when not (Translation_types.resolves_to_any_type cx t) -> t
     | _ ->
-      Translation_types.cpp_of_core env typ
+      Translation_types.cpp_of_core cx env typ
   in
   (* Whether an opaque type among the scrutinee's template arguments is
      a box.  [Topaque] only admits that the argument could not be resolved --
@@ -255,7 +255,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
        [std::optional<std::any>] the mapping produced really does hold a
        box. *)
     | Core.Type.Global_app {head = g; type_arguments = args; _} ->
-      not (Table.is_custom g) || List.exists (Translation_erasure.core_erases_to_box env) args
+      not (Table.is_custom g) || List.exists (Translation_erasure.core_erases_to_box cx env) args
     | _ -> true
   in
   (* Whether one of the scrutinee's template arguments holds a boxed value.
@@ -264,7 +264,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
      [std::any] does not settle it, and it is decided above rather than
      re-decided at each site. *)
   let arg_is_a_box (t : Cpp_ir.Lowered.Type.t) =
-    match t with Obligation Opaque_type -> opaque_arg_is_a_box | t -> Translation_types.resolves_to_any_type t
+    match t with Obligation Opaque_type -> opaque_arg_is_a_box | t -> Translation_types.resolves_to_any_type cx t
   in
   let scrut_template_args =
     let args = extract_template_args scrut_cpp_ty in
@@ -308,7 +308,7 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
       match List.nth_opt non_erased_def_site_field_tys field_i with
       | Some def_ty ->
         let cpp_ty =
-          Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:Ref.User.Set.empty [] def_ty
+          Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:Ref.User.Set.empty [] def_ty
         in
         has_unnamed_tvar cpp_ty
       | None -> false
@@ -325,15 +325,15 @@ let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     argument fixing a field's type, which does not overwrite the box.
     [scrut_db] is the scrutinee's de Bruijn index within the branch, when it
     is a local binder whose C++ type an enclosing branch recorded. *)
-let populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
+let populate_erased_field_env cx ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
     ~non_erased_def_site_field_tys () =
-  let scrut_pinned = Option.bind scrut_db Translation_binders.pattern_binder_type in
+  let scrut_pinned = Option.bind scrut_db (Translation_binders.pattern_binder_type cx) in
   List.iteri
     (fun field_i (stored_as_any, arg) ->
       let db_idx = n_pat_vars - field_i in
-      if stored_as_any then Translation_binders.record_binder_type db_idx Any;
-      Option.iter (Translation_binders.record_binder_type db_idx) arg )
-    (pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields ~non_erased_def_site_field_tys)
+      if stored_as_any then Translation_binders.record_binder_type cx db_idx Any;
+      Option.iter (Translation_binders.record_binder_type cx db_idx) arg )
+    (pattern_field_pins cx ~scrut_pinned ~cname ~typ ~env ~n_fields ~non_erased_def_site_field_tys)
 
 (** [match_scrutinee_type env typ t pv ~var_type ~var_cpp_type] -- the type a
     match over [t] annotated [typ], with branches [pv], is generated at: the
@@ -342,14 +342,14 @@ let populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
     it was decided to have), anything else its own structure -- and, failing
     an inductive, the one the first branch's constructor belongs to.  Reads
     no binder itself: what a variable stands for is the caller's to say. *)
-let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
+let match_scrutinee_type cx env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
   (* When the match type annotation has unresolved Tvars, try to resolve from
      context. This handles monomorphic functions where Core.Expr.Match has Core.Type.Variable but the
      concrete type is known. *)
   let rec resolvable_here = function
     | Core.Type.Global_app {head = g; type_arguments = ts; _} ->
       ( (not (Table.is_promoted_type_var g))
-      || Translation_types.promoted_var_resolution g <> None )
+      || Translation_types.promoted_var_resolution cx g <> None )
       && List.for_all resolvable_here ts
     | Core.Type.Arrow {parameter = a; result = b} -> resolvable_here a && resolvable_here b
     | Core.Type.Meta {contents = Some t} -> resolvable_here t
@@ -376,8 +376,8 @@ let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
       Type_util.refine_erased
         ~writable:(fun t ->
           resolvable_here t
-          && Translation_types.names_only_scoped_tvars (Translation_types.cpp_of_core env t)
-          && not (Type_util.has_tany_in_type (Translation_types.cpp_of_core env t)) )
+          && Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env t)
+          && not (Type_util.has_tany_in_type (Translation_types.cpp_of_core cx env t)) )
         typ candidate
   in
   let typ =
@@ -465,7 +465,7 @@ let match_scrutinee_type env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type =
 (** The C++ type a read of record field [fld] has, out of a value of Core type
     [typ]: the field's declared type at the record's instantiation, stored as
     the record stores it.  [None] where [typ] is not a record naming [fld]. *)
-let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
+let record_field_cpp_ty cx env typ fld : Cpp_ir.Lowered.Type.t option =
   match resolve_meta typ with
   | Core.Type.Global_app {head = r; type_arguments = args; _} -> (
     let declared =
@@ -480,8 +480,8 @@ let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
     | Some core_ty -> (
       try
         Some
-          (Translation_types.cpp_ir_of_core_type env ~ns:(Ref.User.Set.singleton r)
-             (get_current_type_vars ())
+          (Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton r)
+             (get_current_type_vars cx)
              (Core_util.type_subst_list args core_ty))
       with e when CErrors.noncritical e -> None )
     | None -> None )
@@ -493,10 +493,10 @@ let record_field_cpp_ty env typ fld : Cpp_ir.Lowered.Type.t option =
     [switch] of an enum match nor the [v()] of a variant match is applicable to
     a [std::any].  When [typ] itself erases there is nothing to recover to and
     the scrutinee is returned unchanged. *)
-let recover_erased_scrutinee env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let recover_erased_scrutinee cx env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   if not is_magic then expr
   else
-    let cpp_ty = Translation_types.cpp_of_core env typ in
+    let cpp_ty = Translation_types.cpp_of_core cx env typ in
     if Cpp_ir.Types.prints_as_any cpp_ty then expr else Cpp_erasure.unbox cpp_ty expr
 
 (** Build the qualified constructor struct type for a pattern match branch.
@@ -504,7 +504,7 @@ let recover_erased_scrutinee env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t) : 
     For [list<int>::Cons], this produces
     [Member (In_namespace (r, Entity_application (r, temps, \[\])), ctor_name)].
     Local inductives omit the namespace wrapper to avoid double qualification. *)
-let ctor_type_of_match env (typ : Core.Type.t) (cname : GlobRef.t) : Cpp_ir.Lowered.Type.t =
+let ctor_type_of_match cx env (typ : Core.Type.t) (cname : GlobRef.t) : Cpp_ir.Lowered.Type.t =
   let ctor_name = ctor_struct_id_of_ref cname in
   match typ with
   | Core.Type.Global_app {head = r; type_arguments = tys; _} ->
@@ -533,10 +533,10 @@ let ctor_type_of_match env (typ : Core.Type.t) (cname : GlobRef.t) : Cpp_ir.Lowe
        argument at the flat arity a stored value has (see
        {!Translation_types.template_arg_of_core_type}). *)
     let temps =
-      Translation_types.ind_promoted_type_args r
-      @ Translation_tvars.apply_hkt_tyctors r (Translation_types.template_params_of_core ~site:Declared env tys)
+      Translation_types.ind_promoted_type_args cx r
+      @ Translation_tvars.apply_hkt_tyctors cx r (Translation_types.template_params_of_core cx ~site:Declared env tys)
     in
-    Member (inductive_type r temps [], ctor_name)
+    Member (inductive_type cx r temps [], ctor_name)
   | _ -> Named (ctor_name, [])
 
 (** What a custom match over [t], annotated [typ], with branches [pv], knows
@@ -568,14 +568,14 @@ let rec flatten_app = function
     flatten_app e
   | other -> other
 
-let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
+let custom_match_scrutinee cx env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
   (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
      [std::any]) even though the Core term may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
      by an outer [fix_a_fired] pair match (detected via its binder). *)
   let scrut_is_wrapped = match t with
     | Core.Expr.Coerce {source_type = from; target_type = into; _} ->
-      Translation_erasure.coercion_is_boxed env ~from ~into
+      Translation_erasure.coercion_is_boxed cx env ~from ~into
     | Core.Expr.Boxed_value _ -> true
     | Core.Expr.Lambda_group_barrier _ -> false
     | _ -> false
@@ -586,7 +586,7 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
   in
   let scrut_is_magic = match t with
     | Core.Expr.Coerce {source_type = from; target_type = into; _} ->
-      Translation_erasure.coercion_is_boxed env ~from ~into
+      Translation_erasure.coercion_is_boxed cx env ~from ~into
     | Core.Expr.Boxed_value _ -> true
     | Core.Expr.Lambda_group_barrier _ -> false
     | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
@@ -598,7 +598,7 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
              the value itself and there is no box to open. *)
           | Some ty ->
             is_erased_core_type ty
-            && Translation_erasure.core_erases_to_box env ty
+            && Translation_erasure.core_erases_to_box cx env ty
           | None -> false)
     | _ -> false
   in
@@ -615,7 +615,7 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
   let scrut_callee_ret_erased =
     match flatten_app t with
     | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use); arguments = args} ->
-      ( match callee_core_type r with
+      ( match callee_core_type cx r with
       | Some fty ->
         let fty = Core_util.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
         ( match strip_arrows_n (count_real_core_args args) fty with
@@ -625,19 +625,19 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
              [prints_as_any] catches the codomain a callee left as an erased
              type argument, which converts to a dummy glob rather than to
              [Tany]. *)
-          let rty_cpp = Translation_types.cpp_of_core env rty in
-          Translation_erasure.spells_as_any rty_cpp
+          let rty_cpp = Translation_types.cpp_of_core cx env rty in
+          Translation_erasure.spells_as_any cx rty_cpp
         | None -> false )
       | None -> false )
     | _ -> false
   in
-  let typ = Translation_types.cpp_of_core env typ in
+  let typ = Translation_types.cpp_of_core cx env typ in
   (* [concrete_match_type]: when [typ] is erased ([std::any]), recover the
      actual inductive type from the first branch's pattern constructor and
      its field types.  Used for non-pair matches (e.g. option, variant) where
      we need to emit [any_cast<ConcreteType>(scrut)]. *)
   let concrete_match_type : Cpp_ir.Lowered.Type.t =
-    if Translation_erasure.spells_as_any typ || scrut_callee_ret_erased then
+    if Translation_erasure.spells_as_any cx typ || scrut_callee_ret_erased then
       try
         let {Core.Match.Branch.pattern = pat0; _} = pv.(0) in
         let ind_ref = match pat0 with
@@ -646,7 +646,7 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
         in
         let {Core.Match.Branch.binders = ids0; _} = pv.(0) in
         let tyargs = List.rev_map (fun (_, ty) ->
-          Translation_types.erase_unresolved_tvars (Translation_types.cpp_of_core env ty)
+          Translation_types.erase_unresolved_tvars (Translation_types.cpp_of_core cx env ty)
         ) ids0 in
         Entity_application (ind_ref, tyargs, [])
       with _ -> typ
@@ -671,10 +671,10 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
          is boxed exactly when its binder is ([scrut_is_magic]), and one
          declared [pair<std::any, exp<std::any>>] holds that pair. *)
       || (not scrut_is_trivial_core)
-         && (is_all_erased typ || Translation_types.resolves_to_any_type typ) &&
+         && (is_all_erased typ || Translation_types.resolves_to_any_type cx typ) &&
          ( Type_util.has_tany_in_type concrete_match_type
            || (match concrete_match_type with
-               | Entity_application (_, args, _) -> List.exists Translation_types.resolves_to_any_type args
+               | Entity_application (_, args, _) -> List.exists (Translation_types.resolves_to_any_type cx) args
                | _ -> false) ) )
   in
   {
@@ -694,11 +694,11 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
     [pair<any, any>] ([fix_a_fired]), then recovered from the scrutinee's own
     type [scrut_core_typ] and retyped for the dependent parameters of [core_typ],
     the match's annotation. *)
-let custom_branch_binders env ~fix_a_fired ~scrut_core_typ ~core_typ r ids' =
+let custom_branch_binders cx env ~fix_a_fired ~scrut_core_typ ~core_typ r ids' =
   let ids' =
     if fix_a_fired then
       List.map (fun (x, ty) ->
-        let cpp_ty = Translation_types.cpp_of_core env ty in
+        let cpp_ty = Translation_types.cpp_of_core cx env ty in
         match cpp_ty with
         | Entity_application (g, (_ :: _), _) when is_prod_global g ->
           (x, Core.Type.Erased Core.Erasure_reason.Type_argument)

@@ -37,9 +37,9 @@ let owned_parameters ?(declared : int -> Cpp_ir.Lowered.Type.t option = fun _ ->
     under them owns ({!Ownership.read_off}): those {!Ownership} settled for
     the global [owner] where they cover [params], and otherwise -- a global
     nothing settled, a lambda -- what its own body reads. *)
-let infer_owned_flags ?owner body params =
-  let read_off_body () = Ownership.read_off ~settled:settled_ownership params body in
-  match Option.bind owner settled_ownership with
+let infer_owned_flags cx ?owner body params =
+  let read_off_body () = Ownership.read_off ~settled:(settled_ownership cx) params body in
+  match Option.bind owner (settled_ownership cx) with
   | Some settled when List.length settled = List.length params ->
     if Probe.checking () && settled <> read_off_body () then
       Probe.violation "ownership summary"
@@ -116,9 +116,9 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
     the Core type does not say: one nothing determined, an erased or
     promoted type, an abstract one, a type variable applied -- under the
     abstractions over types erasure removes. *)
-let rec core_lent_by_reference ty =
+let rec core_lent_by_reference cx ty =
   match resolve_meta ty with
-  | ty when is_monadic_core_type ty && (!tctx).input.itree_mode = Reified -> Some true
+  | ty when is_monadic_core_type ty && cx.ctx.input.itree_mode = Reified -> Some true
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     Some ((not (Table.is_enum_inductive r)) && not (Table.is_custom_scalar_ref r))
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = args; _}
@@ -129,7 +129,7 @@ let rec core_lent_by_reference ty =
          inductive, or a variable standing for one. *)
       match resolve_meta (Core_util.type_subst_list args body) with
       | Core.Type.Global_app {head = (GlobRef.IndRef _ | GlobRef.ConstRef _); _} as unfolded -> (
-        match core_lent_by_reference unfolded with
+        match core_lent_by_reference cx unfolded with
         | Some lent ->
           Some
             (lent && match unfolded with Core.Type.Global_app {head = r; _} -> not (Table.is_coinductive r) | _ -> true)
@@ -139,7 +139,7 @@ let rec core_lent_by_reference ty =
   | Core.Type.Global_app {head = r; _} when Table.is_custom r -> Some false
   (* A type abstraction erasure removes is no closure: what it returns is
      the value. *)
-  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d -> core_lent_by_reference rest
+  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d -> core_lent_by_reference cx rest
   | Core.Type.Arrow _ | Core.Type.Variable _ -> Some true
   | _ -> None
 
@@ -149,10 +149,10 @@ let rec core_lent_by_reference ty =
     ({!core_lent_by_reference} of its Core type [core] where that says,
     {!cpp_lent_by_reference} otherwise), and by value otherwise.  Under
     [CRANE_CHECK_IR] the two readings are checked against each other. *)
-let wrap_param_by_ownership ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   let by_cpp = cpp_lent_by_reference cpp_ty in
   let lent =
-    match Option.bind core core_lent_by_reference with
+    match Option.bind core (core_lent_by_reference cx) with
     | Some by_core ->
       if Probe.checking () && by_core <> by_cpp then
         Probe.violation "parameter convention"

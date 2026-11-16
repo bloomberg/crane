@@ -23,8 +23,8 @@ open Cpp_ir.Type
     is the requirement a [Boxed] slot expresses for a value flowing into an
     erased field or parameter, and it holds for a mapped constructor
     ([std::make_optional<std::any>]) as for one of Crane's own. *)
-let into_erased_return slot =
-  match Option.map Translation_types.slot_repr_of_cpp_type (current_cpp_return_type ()) with
+let into_erased_return cx slot =
+  match Option.map (Translation_types.slot_repr_of_cpp_type cx) (current_cpp_return_type cx ()) with
   | Some (Boxed kind) -> Translation_slot.into_box kind slot
   | Some Native | None -> slot
 
@@ -185,7 +185,7 @@ let list_propagated_args (ty : Core.Type.t) ts =
    it expands to: the position names [List<entry<T1>>] where the
    annotation has the pair behind it, and the name is what the
    declaration wrote. *)
-let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps : Cpp_ir.Lowered.Type.t list) =
+let temps_from_slot cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps : Cpp_ir.Lowered.Type.t list) =
   let erased_anywhere = Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any in
   (* With no slot of its own, a constructor is the value the enclosing
      function returns, as Step 2b below reads it -- [go (RetF x)] in
@@ -195,13 +195,13 @@ let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps
     match expected_ty with
     | Some _ -> expected_ty
     | None -> (
-      match current_cpp_return_type () with
+      match current_cpp_return_type cx () with
       | Some (Shared_pointer t) -> Some t
       | t -> t )
   in
   match
     Option.map
-      (fun t -> Translation_types.unfold_cpp_typedef env (Type_util.unqualify_ty t))
+      (fun t -> Translation_types.unfold_cpp_typedef cx env (Type_util.unqualify_ty t))
       slot_ty
   with
   | Some (Entity_application (ind', args, _))
@@ -214,7 +214,7 @@ let temps_from_slot env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (temps
            carries the namespace the declaration is read in. *)
         let rec expand t =
           let t' =
-            match Translation_types.unfold_cpp_typedef env t with
+            match Translation_types.unfold_cpp_typedef cx env t with
             | In_namespace (_, inner) -> inner
             | t' -> t'
           in
@@ -275,9 +275,9 @@ type regular = {
 (** [regular env ~expected_ty ty r ts] -- the constructor [r] of annotation
     [ty] ({!refined_by_slot}) applied to [ts], built at [expected_ty] under
     the return type in force. *)
-let regular env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) r ts =
+let regular cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) r ts =
   let ts_updated = list_propagated_args ty ts in
-  let temps_from_slot = temps_from_slot env ~expected_ty in
+  let temps_from_slot = temps_from_slot cx env ~expected_ty in
   let erase_past_type_arg = erase_past_type_arg ts_updated in
   let ty_core_tparams = match resolve_meta ty with
     | Core.Type.Global_app {type_arguments = tys_orig; _} -> tys_orig
@@ -300,17 +300,17 @@ let regular env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t)
          printed with, so a position the call erases is erased here too. *)
       let temps =
         erase_past_type_arg
-          (temps_from_slot n (Translation_types.template_params_of_core ~site:Declared env tys_filt))
+          (temps_from_slot n (Translation_types.template_params_of_core cx ~site:Declared env tys_filt))
       in
       if Table.has_dependent_params n then
         let expected_temps =
-          Translation_ctor_args.expected_type_args_from_return env ?slot:expected_ty n
+          Translation_ctor_args.expected_type_args_from_return cx env ?slot:expected_ty n
             ~arity:(List.length temps)
         in
         match expected_temps with
         | Some exp_tys ->
           List.mapi (fun i t ->
-            let exp_t = Translation_types.normalize_erased_types (List.nth exp_tys i) in
+            let exp_t = Translation_types.normalize_erased_types cx (List.nth exp_tys i) in
             let is_fully_erased_fun = match exp_t with
               | Function (ps, r) ->
                 List.for_all (fun p -> p = Any) ps && r = Any
@@ -338,7 +338,7 @@ let regular env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t)
     argument [e] of the constructor [c], built into [slot], is generated
     against, and the slot it fills.  [is_boxed i occ] says whether the read
     of the variable [i] at [occ] holds a box. *)
-let regular_field env ~is_boxed c ~slot i e =
+let regular_field cx env ~is_boxed c ~slot i e =
   let ty = c.ty and ctor_temps = c.ctor_temps and ty_core_tparams = c.ty_core_tparams in
   let field_types = c.field_types in
   let ft_opt = List.nth_opt field_types i in
@@ -357,7 +357,7 @@ let regular_field env ~is_boxed c ~slot i e =
   let instantiated_field_cpp_ty ft =
     Cpp_ir.Types.substitute
       (fun i -> if i >= 1 then List.nth_opt ctor_temps (i - 1) else None)
-      (Translation_types.cpp_of_core env ft)
+      (Translation_types.cpp_of_core cx env ft)
   in
   let expected_for_arg =
     match ft_opt with
@@ -373,7 +373,7 @@ let regular_field env ~is_boxed c ~slot i e =
       in
       ( match ft with
       | (Core.Type.Variable _)
-        when (match Translation_types.unfold_cpp_typedef env (instantiated_field_cpp_ty ft) with
+        when (match Translation_types.unfold_cpp_typedef cx env (instantiated_field_cpp_ty ft) with
               | Entity_application (_, args, _) ->
                 args <> [] && List.exists has_tany_in_type args
               | _ -> false) ->
@@ -381,7 +381,7 @@ let regular_field env ~is_boxed c ~slot i e =
            constructor has to be built at that same instantiation --
            [SigT<any, any>], not [SigT<any, Nat>] -- or the value it
            produces does not convert into the container holding it. *)
-        Some (Translation_types.unfold_cpp_typedef env (instantiated_field_cpp_ty ft))
+        Some (Translation_types.unfold_cpp_typedef cx env (instantiated_field_cpp_ty ft))
       (* A boxed variable at a type-parameter field -- [Ret x] with [x]
          the erased existential of the continuation it is in -- is
          recovered at the field's instantiation. *)
@@ -397,7 +397,7 @@ let regular_field env ~is_boxed c ~slot i e =
       | Core.Type.Variable _
         when (match strip_magic e with Core.Expr.Construct _ -> true | _ -> false)
              && (let ct = instantiated_field_cpp_ty ft in
-                 (not (has_tany_in_type ct)) && Translation_types.names_only_scoped_tvars ct) ->
+                 (not (has_tany_in_type ct)) && Translation_types.names_only_scoped_tvars cx ct) ->
         Some (instantiated_field_cpp_ty ft)
       | Core.Type.Variable _ -> None
       | Core.Type.Variable_app _ ->
@@ -408,10 +408,10 @@ let regular_field env ~is_boxed c ~slot i e =
            arguments.  The substitution is done on the Core type: only
            there does applying [option] to [nat] reduce, since the C++
            side of a custom-extracted [option] is a template string. *)
-        let ct = Translation_types.cpp_of_core env (Core_util.type_subst_list ty_core_tparams ft) in
+        let ct = Translation_types.cpp_of_core cx env (Core_util.type_subst_list ty_core_tparams ft) in
         if Cpp_ir.Types.prints_as_any ct || has_tany_in_type ct then None else Some ct
       | _ when is_erased_rel ->
-        let ct = Translation_types.cpp_of_core env ft in
+        let ct = Translation_types.cpp_of_core cx env ft in
         if Cpp_ir.Types.prints_as_any ct then None else Some ct
       | Core.Type.Global_app {head = g; _}
         when (match resolve_meta ty with
@@ -509,7 +509,7 @@ let regular_field env ~is_boxed c ~slot i e =
              spelling erases some of its arguments and keeps others,
              that spelling is the only statement of which are which,
              and the value has to be built at it. *)
-          let u = Translation_types.unfold_cpp_typedef env ct in
+          let u = Translation_types.unfold_cpp_typedef cx env ct in
           match u with
           | Entity_application (_, (_ :: _ as args), _)
             when List.exists Cpp_ir.Types.prints_as_any args
@@ -579,11 +579,11 @@ let regular_field env ~is_boxed c ~slot i e =
     a lambda assigned to one of its fields has to spell them that way too,
     and the scope forgets how to resolve them; the ones it mentions are
     parameters of the struct ({!Translation_types.ind_promoted_type_args}), spelled resolved. *)
-let record_promoted_map (ty : Core.Type.t) =
+let record_promoted_map cx (ty : Core.Type.t) =
   let mentioned =
     match ty with Core.Type.Global_app {head = n; _} -> Table.promoted_type_params n | _ -> []
   in
-  List.filter (fun (v, _) -> List.exists (Id.equal v) mentioned) (!tctx).lexical.promoted_var_map
+  List.filter (fun (v, _) -> List.exists (Id.equal v) mentioned) cx.ctx.lexical.promoted_var_map
 
 (** [record_field_types r]: the declared types of the fields of the record
     constructor [r]. A record's erased fields (a promoted [Type] field such as [dyn]'s
@@ -601,25 +601,25 @@ let record_field_types r =
    types (see [gen_ind_header_v2]), so that -- not the conversion that
    keeps the variable -- is the type an argument reaches the field
    at. *)
-let record_declared_field_cpp_ty env (ty : Core.Type.t) ft =
-  let tvars = get_current_type_vars () in
+let record_declared_field_cpp_ty cx env (ty : Core.Type.t) ft =
+  let tvars = get_current_type_vars cx in
   match ty with
   | Core.Type.Global_app {head = (GlobRef.IndRef (kn, _) as n); _} ->
     let t =
-      Translation_types.cpp_ir_of_core_type env ~ns:(Ref.User.Set.singleton n) tvars ft
+      Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton n) tvars ft
     in
     if Table.get_ind_num_param_vars_opt kn = Some 0 then
       Type_util.tvar_erase_type t
     else t
-  | _ -> Translation_types.cpp_of_core env ft
+  | _ -> Translation_types.cpp_of_core cx env ft
 
 (** [Core.Record.Field.t env ~is_boxed ty r ~slot i e]: the C++ type the [i]th
     field [e] of the record constructor [r] of annotation [ty], built into
     [slot], is generated against, and the slot it fills.  [is_boxed i occ]
     says whether the read of the variable [i] at [occ] holds a box. *)
-let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
+let record_field cx env ~is_boxed (ty : Core.Type.t) r ~slot i e =
   let field_types_rec = record_field_types r in
-  let declared_field_cpp_ty = record_declared_field_cpp_ty env ty in
+  let declared_field_cpp_ty = record_declared_field_cpp_ty cx env ty in
   (* A record field with a CONCRETE type receiving an argument that is an
      erased ([std::any]) pattern variable (e.g. a leaf destructured from a
      deeply-erased [pair<any,any>]) needs a final [any_cast<concrete>] —
@@ -643,7 +643,7 @@ let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
       ( match ft with
       | Core.Type.Variable _ -> None
       | _ when is_erased_rel ->
-        let ct = Translation_types.cpp_of_core env ft in
+        let ct = Translation_types.cpp_of_core cx env ft in
         if Cpp_ir.Types.prints_as_any ct then None else Some ct
       (* A lambda is split by the field's type, as one passed to a
          parameter is by the parameter's, where that type returns a
@@ -656,17 +656,17 @@ let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
           | Const t | Reference (_, t) -> codomain t
           | Function (_, cod) -> Some cod
           | t -> (
-            match Translation_types.unfold_cpp_typedef env t with
+            match Translation_types.unfold_cpp_typedef cx env t with
             | Function _ as f when f <> t -> codomain f
             | _ -> None )
         in
         match ty with
         | Core.Type.Global_app {type_arguments = tys; _} -> (
-          let ct = Translation_types.cpp_of_core env (Core_util.type_subst_list tys ft) in
+          let ct = Translation_types.cpp_of_core cx env (Core_util.type_subst_list tys ft) in
           match codomain ct with
           | Some cod
             when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct))
-              && Translation_types.names_only_scoped_tvars ct ->
+              && Translation_types.names_only_scoped_tvars cx ct ->
             Some ct
           | _ -> None )
         | _ -> None )
@@ -678,8 +678,8 @@ let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
       | _ when (match strip_magic e with Core.Expr.Apply _ -> true | _ -> false) -> (
         match ty with
         | Core.Type.Global_app {type_arguments = tys; _} ->
-          let ct = Translation_types.cpp_of_core env (Core_util.type_subst_list tys ft) in
-          if Cpp_ir.Types.prints_as_any ct || not (Translation_types.names_only_scoped_tvars ct) then None
+          let ct = Translation_types.cpp_of_core cx env (Core_util.type_subst_list tys ft) in
+          if Cpp_ir.Types.prints_as_any ct || not (Translation_types.names_only_scoped_tvars cx ct) then None
           else Some ct
         | _ -> None )
       | _ -> None )
@@ -701,7 +701,7 @@ let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
          stands for keeps a concrete second component. *)
       match
         Type_util.unqualify_ty
-          (Translation_types.unfold_cpp_typedef env (declared_field_cpp_ty ft))
+          (Translation_types.unfold_cpp_typedef cx env (declared_field_cpp_ty ft))
       with
       | Entity_application (_, (_ :: _ as args), _) as d
         when List.for_all
@@ -724,7 +724,7 @@ let record_field env ~is_boxed (ty : Core.Type.t) r ~slot i e =
     [expected_ty] into [slot], its type arguments recovered from the
     arguments, the slot and the position where the annotation leaves them
     unknown. *)
-let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r ts =
+let custom_refined_annotation cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r ts =
   (* Extraction leaves a type argument [Tunresolved] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
@@ -747,11 +747,11 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
               [any_cast] throw. *)
            && (not
                  ( match expected_ty with
-                 | Some t -> has_tany_in_type (Translation_types.unfold_cpp_typedef env t)
+                 | Some t -> has_tany_in_type (Translation_types.unfold_cpp_typedef cx env t)
                  | None -> false ))
            && not
-                ( match current_cpp_return_type () with
-                | Some t -> Translation_types.resolves_to_any_type t
+                ( match current_cpp_return_type cx () with
+                | Some t -> Translation_types.resolves_to_any_type cx t
                 | None -> false ) ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
@@ -793,7 +793,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
           | Core.Type.Arrow {parameter = a; result = b} -> is_writable a && is_writable b
           | Core.Type.Meta {contents = Some t} -> is_writable t
           | Core.Type.Variable _ as t ->
-            Translation_types.names_only_scoped_tvars (Translation_types.cpp_of_core env t)
+            Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env t)
           | Core.Type.Variable_app _ | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _ ->
             false
           | _ -> true
@@ -818,7 +818,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
     if
       Translation_slot.boxed slot
       || ( match expected_ty with
-         | Some t -> has_tany_in_type (Translation_types.unfold_cpp_typedef env t)
+         | Some t -> has_tany_in_type (Translation_types.unfold_cpp_typedef cx env t)
          | None -> false )
     then ty
     else
@@ -826,7 +826,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
       | None -> ty
       | Some want ->
         Type_util.refine_erased
-          ~writable:(fun t -> Translation_types.names_only_scoped_tvars (Translation_types.cpp_of_core env t))
+          ~writable:(fun t -> Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env t))
           ty want
   in
   (* A position the term leaves unknown that the expected C++ type states as
@@ -840,9 +840,10 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
     let expected =
       match expected_ty with
       | Some _ -> expected_ty
-      | None -> current_cpp_return_type ()
+      | None -> current_cpp_return_type cx ()
     in
-    match (ty, Option.map (fun t -> Type_util.unqualify_ty (Translation_types.unfold_cpp_typedef env t)) expected) with
+    match (ty, Option.map (fun t -> Type_util.unqualify_ty (Translation_types.unfold_cpp_typedef cx env t))
+      expected) with
     | Core.Type.Global_app {head = n;
                             type_arguments = tys;
                             index_arguments = sc}, Some (Entity_application (n', etys, _))
@@ -853,7 +854,7 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
               match (resolve_meta t, e) with
               | (Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _),
                 Variable (Index (i, _))
-                when Translation_types.names_only_scoped_tvars e ->
+                when Translation_types.names_only_scoped_tvars cx e ->
                 Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i}
               | _ -> t )
             tys etys; index_arguments = sc}
@@ -885,7 +886,7 @@ end
 (** [custom env ~expected_ty ~slot ty r]: the custom constructor [r] of
     annotation [ty] ({!custom_refined_annotation}), built at [expected_ty]
     into [slot] under the return type in force. *)
-let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r =
+let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Type.t) r =
   (* Generate args with expected type hints: pass the i-th type arg of the
      constructor's inductive type before generating the i-th value arg.  This
      allows gen_ctor_call to recover concrete element types for nil lists whose
@@ -959,8 +960,8 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
     | Some ft -> List.filter (fun t -> not (Core_util.is_erased_type t)) ft
     | None -> [] in
   let draft_ctor_temps_for_wrap =
-    Translation_ctor_args.ctor_draft_temps env ~promoted_active:((!tctx).lexical.promoted_var_map <> [])
-      ~return:(current_cpp_return_type ()) ty
+    Translation_ctor_args.ctor_draft_temps cx env ~promoted_active:(cx.ctx.lexical.promoted_var_map <> [])
+      ~return:(current_cpp_return_type cx ()) ty
   in
   (* The same slots, read off the destination instead of off this
      constructor's own annotation.  A locally concrete value can be built into
@@ -982,7 +983,7 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
   let ctor_temps_at_slot =
     match (expected_ty, r) with
     | Some exp, GlobRef.ConstructRef ((kn, i), _) -> (
-      match Translation_types.unfold_cpp_typedef env exp with
+      match Translation_types.unfold_cpp_typedef cx env exp with
       | Entity_application (en, eargs, _)
         when GlobRef.CanOrd.equal en (GlobRef.IndRef (kn, i))
              && List.length eargs = List.length draft_ctor_temps_for_wrap ->
@@ -1009,7 +1010,7 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
   let slot_states_unboxed j =
     match (expected_ty, r) with
     | Some exp, GlobRef.ConstructRef ((kn, i), _) -> (
-      match Translation_types.unfold_cpp_typedef env exp with
+      match Translation_types.unfold_cpp_typedef cx env exp with
       (* A statement is a spelling that boxes some positions and not others;
          one that boxes none is this value's own type, which the deep
          erasure asked for by its destination overrides. *)
@@ -1068,8 +1069,8 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
   let slot_is_deeply_erased =
     erased_arg_under_a_field
     || ((not is_list_cons_ctor)
-        && match current_cpp_return_type () with
-           | Some t -> Translation_types.resolves_to_any_type t
+        && match current_cpp_return_type cx () with
+           | Some t -> Translation_types.resolves_to_any_type cx t
            | None -> false)
   in
   { Custom.ty_args_for_expected = ty_args_for_expected; field_types = field_types_for_wrap;
@@ -1094,10 +1095,10 @@ type custom_arg = {
 (** [custom_field env c ~slot r i e]: where the [i]th argument [e] of the
     custom constructor [r], set up as [c] and built into [slot], is
     generated.  [var] reads a variable as {!Translation_erasure.core_expr_is_function_value} does. *)
-let custom_field ?var env c ~slot r i e =
+let custom_field cx ?var env c ~slot r i e =
   let ty_args_for_expected = c.Custom.ty_args_for_expected and field_types_for_wrap = c.field_types in
   let ctor_temps_at_slot = c.temps_at_slot and is_passthrough_ctor_arg = c.passthrough in
-  let saved_ret = current_cpp_return_type () in
+  let saved_ret = current_cpp_return_type cx () in
   let new_expected =
     match List.nth_opt field_types_for_wrap i with
     | Some (Core.Type.Variable {variable = j; _} as ft) -> (
@@ -1148,13 +1149,13 @@ let custom_field ?var env c ~slot r i e =
     (not is_list_cons_ctor_for_flow_pre)
     &&
     match saved_ret with
-    | Some t -> Translation_types.resolves_to_any_type t
+    | Some t -> Translation_types.resolves_to_any_type cx t
     | None -> false
   in
   let expected_cpp_ty =
     match new_expected with
     | Some core_ty ->
-      let cpp_ty = Translation_types.cpp_of_core env core_ty in
+      let cpp_ty = Translation_types.cpp_of_core cx env core_ty in
       (* A field at a type parameter is the constructor's instantiation
          there, as the destination refined it: the annotation's own
          spelling erases a class variable with no instance in scope
@@ -1177,16 +1178,16 @@ let custom_field ?var env c ~slot r i e =
   in
   let e =
     if
-      Translation_ctor_args.stores_erased_fn ?var env r ~field_tys:field_types_for_wrap ~temps:ctor_temps_at_slot i e
+      Translation_ctor_args.stores_erased_fn cx ?var env r ~field_tys:field_types_for_wrap ~temps:ctor_temps_at_slot i e
     then
-      Translation_ctor_args.erased_fn_lambda env e
+      Translation_ctor_args.erased_fn_lambda cx env e
     else e
   in
   (* The slot's own signature, when it erased only its domain: a callable
      reaching it is written against that signature (its parameters arrive
      boxed), and {!Translation_coerce.coerce} adapts it with [crane_erase_fn]. *)
   let erased_fn_slot =
-    if is_passthrough_ctor_arg i || not (Translation_erasure.core_expr_is_function_value ?var e) then
+    if is_passthrough_ctor_arg i || not (Translation_erasure.core_expr_is_function_value cx ?var e) then
       None
     else
       match List.nth_opt field_types_for_wrap i with

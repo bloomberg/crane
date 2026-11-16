@@ -231,7 +231,7 @@ let () =
                                occurrence = Core.Occurrence.fresh ()};
                    occurrence = Core.Occurrence.fresh ()}
   in
-  Local_types.structure
+  Local_types.structure (Translation_state.create ())
     [(mp "M",
         [term "f" body
           (Core.Type.Arrow

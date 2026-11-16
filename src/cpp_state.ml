@@ -76,16 +76,6 @@ let get_method_registry () =
   | Some r -> r
   | None -> CErrors.anomaly (Pp.str "method_registry not initialized.")
 
-(** Pre-computed name resolution cache, populated once per extraction pass.
-    Queries go through {!get_name_cache}. *)
-let name_cache : Name_resolution.t option ref = owned_ref None
-
-(** Get the name cache, raising an anomaly if not initialized. *)
-let get_name_cache () =
-  match !name_cache with
-  | Some c -> c
-  | None -> CErrors.anomaly (Pp.str "name_cache not initialized.")
-
 (** {2 Some utility functions.} *)
 
 (** Pretty-print a type variable as a string. *)
@@ -483,6 +473,79 @@ module Out_of_line = struct
   }
 end
 
+(** A concept a frame is holding back until after the struct it was written
+    in, identified by whatever declares it. *)
+type held_concept =
+  | Modtype of Names.ModPath.t  (** a module type's concept *)
+  | Class of Names.GlobRef.t  (** a type class's concept *)
+
+(** Where the header declares one of a module's concepts: ahead of its
+    struct, after it (when it names a member), or at file scope (when the
+    module is nested in a struct, where no concept can be declared). *)
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+(** The concepts of a module, planned ahead of the files: where each is
+    declared, and which its struct's body treats as not declared yet. *)
+type concept_plan = {
+  placements : (held_concept * concept_placement) list;
+  held_back : held_concept list;
+}
+
+(** A module's frame, as the render enters its body ({!Module_frame}). *)
+type module_frame = {
+  eponymous_type : Names.GlobRef.t option;
+  eponymous_record : (Names.GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
+  method_candidates : Method_registry.method_candidate list;
+  concept_collision : bool;
+  promoted : Names.Id.t list option;
+}
+
+(** What a file writes that places the templates it writes: a declaration,
+    or the fields of the eponymous record merged into a module's struct,
+    which no declaration holds. *)
+type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of Names.GlobRef.t
+
+(** What a file writes, in the module it is written in. *)
+module Written = Hashtbl.Make (struct
+  type t = Names.ModPath.t * written
+
+  (* [compare] rather than [=]: [compare] takes a NaN literal to be equal to
+     itself, [=] does not. *)
+  let equal (mp, w) (mp', w') =
+    Names.ModPath.equal mp mp'
+    &&
+    match (w, w') with
+    | Written_declaration d, Written_declaration d' -> compare d d' = 0
+    | Written_fields r, Written_fields r' -> Names.GlobRef.UserOrd.equal r r'
+    | (Written_declaration _ | Written_fields _), _ -> false
+
+  let hash (mp, w) =
+    Hashtbl.hash
+      ( Names.ModPath.hash mp,
+        match w with
+        | Written_declaration d -> Hashtbl.hash_param 40 160 d
+        | Written_fields r -> Names.GlobRef.UserOrd.hash r )
+end)
+
+(** The synthesised templates each file writes, planned before either is
+    rendered: each file's, in the order it first writes them, and those each
+    declaration it writes writes, with how it writes its type constructors. *)
+type ctor_alias_plan = {
+  intf : ctor_alias list;
+  impl : ctor_alias list;
+  intf_writes : (ctor_alias list * tyctor_use list) Written.t;
+  impl_writes : (ctor_alias list * tyctor_use list) Written.t;
+}
+
+type plans = {
+  analysis : Structure_analysis.t option;
+  frames : module_frame Names.MPmap.t;
+  concepts : concept_plan Names.MPmap.t;
+  ctor_aliases : ctor_alias_plan option;
+}
+
+let no_plans = {analysis = None; frames = Names.MPmap.empty; concepts = Names.MPmap.empty; ctor_aliases = None}
+
 (** What the names written at a position are read off: nothing, where
     naming anything is an anomaly; the program, where the resolver names
     each key where it stands, through the namers it hands the position
@@ -553,13 +616,16 @@ and render_ctx = {
   tyctors : tyctor_plan;
   (* The unit the file is of. *)
   unit : Unit_context.t;
+  (* What the backend's passes decided about the unit. *)
+  plans : plans;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
     struct. *)
-let file_start unit file =
+let file_start unit plans file =
   {
     unit;
+    plans;
     file;
     in_struct = false;
     concepts_hoisted = false;
@@ -607,11 +673,6 @@ let functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list 
   owned_list "functor_concept_scopes"
 
 
-(** A concept a frame is holding back until after the struct it was written
-    in, identified by whatever declares it. *)
-type held_concept =
-  | Modtype of Names.ModPath.t  (** a module type's concept *)
-  | Class of Names.GlobRef.t  (** a type class's concept *)
 
 (** Equality on {!held_concept}. *)
 let held_concept_equal a b =
@@ -624,35 +685,20 @@ let held_concept_equal a b =
 let is_held_back_in held_back c =
   List.exists (held_concept_equal c) held_back
 
-(** Where the header declares one of a module's concepts: ahead of its
-    struct, after it (when it names a member), or at file scope (when the
-    module is nested in a struct, where no concept can be declared). *)
-type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-(** The concepts of a module, planned ahead of the files: where each is
-    declared, and which its struct's body treats as not declared yet. *)
-type concept_plan = {
-  placements : (held_concept * concept_placement) list;
-  held_back : held_concept list;
-}
 
-(* The concept plan of each module of the unit, by module path. *)
-let concept_plans : concept_plan Names.MPmap.t ref = State.cell State.Unit Names.MPmap.empty
-
-let plan_module_concepts mp plan = concept_plans := Names.MPmap.add mp plan !concept_plans
-
-let concept_plan mp =
-  match Names.MPmap.find_opt mp !concept_plans with
+let concept_plan plans mp =
+  match Names.MPmap.find_opt mp plans.concepts with
   | Some plan -> plan
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned concepts.")
 
-let planned_held_back scopes ~file mp =
+let planned_held_back plans scopes ~file mp =
   match (file : Common.file) with
   | Intf -> (
     match Scope_plan.frames scopes mp with
-    | Some frames -> List.concat_map (fun m -> (concept_plan m).held_back) frames
+    | Some frames -> List.concat_map (fun m -> (concept_plan plans m).held_back) frames
     | None ->
       CErrors.anomaly
         Pp.(str "Crane: the body of the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned frames.") )
@@ -662,7 +708,7 @@ let concept_held_back ctx c =
   ctx.in_struct
   &&
   match ctx.module_ with
-  | Some mp -> is_held_back_in (planned_held_back ctx.unit.scopes ~file:ctx.file mp) c
+  | Some mp -> is_held_back_in (planned_held_back ctx.plans ctx.unit.scopes ~file:ctx.file mp) c
   | None -> false
 
 let class_concept_held_back ctx r = concept_held_back ctx (Class r)
@@ -784,9 +830,8 @@ let setting cell v f =
       cell := v;
       f () )
 
-(** Resolved standard library names, computed once per extraction pass from
-    [Table.std_lib ()] and the runtime flags ({!init_std_names}). *)
-type std_names = {
+(** Resolved standard library names ({!Unit_context.std_names}). *)
+type std_names = Unit_context.std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
@@ -805,29 +850,7 @@ type std_names = {
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
 }
 
-let default_std_names =
-  {
-    shared_ptr = "std::shared_ptr";
-    make_shared = "std::make_shared";
-    move = "std::move";
-    forward = "std::forward";
-    logic_error = "std::logic_error";
-    ns = "std";
-    string = "std::string";
-    same_as = "std::same_as";
-    declval = "std::declval";
-    convertible_to = "std::convertible_to";
-    holds_alternative = "std::holds_alternative";
-    get_if = "std::get_if";
-    get = "std::get";
-    variant = "std::variant";
-    variant_header = Table.Standard "variant";
-    enable_from_this = "std::enable_shared_from_this";
-  }
-
-(** The standard library names in effect, initialized by {!init_std_names}
-    and restored to {!default_std_names} between extractions. *)
-let std_names : std_names ref = owned_ref default_std_names
+let default_std_names = Unit_context.default_std_names
 
 let mk_std_names prefix =
   match prefix with
@@ -845,9 +868,9 @@ let mk_std_names prefix =
       enable_from_this = p ^ "enable_shared_from_this" }
   | _ -> default_std_names
 
-(** Initialize standard library names based on Table.std_lib() setting and
-    the configuration of the unit [u]. *)
-let init_std_names (u : Unit_context.t) =
+let std_namespace () = if Table.std_lib () = "BDE" then "bsl" else "std"
+
+let std_names_of (u : Unit_context.t) =
   let base =
     if Table.std_lib () = "BDE" then mk_std_names "bsl::"
     else mk_std_names "std::"
@@ -877,23 +900,22 @@ let init_std_names (u : Unit_context.t) =
         get = "crane::get" }
     else base
   in
-  std_names :=
-    (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
+  (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
        counting one.  [enable_from_this] stays as it is: [shared_from_this ()]
        hands back a [std::shared_ptr], which a [counting_ptr] adopts. *)
-    if Unit_context.count_rc u then
-      { base with
-        shared_ptr = Crane_rt.counting_ptr;
-        make_shared = Crane_rt.make_counting }
-    else if Unit_context.non_atomic_rc u then
-      { base with
-        shared_ptr = Crane_rt.rc;
-        make_shared = Crane_rt.make_rc;
-        enable_from_this = Crane_rt.enable_rc_from_this }
-    else base
+  if Unit_context.count_rc u then
+    { base with
+      shared_ptr = Crane_rt.counting_ptr;
+      make_shared = Crane_rt.make_counting }
+  else if Unit_context.non_atomic_rc u then
+    { base with
+      shared_ptr = Crane_rt.rc;
+      make_shared = Crane_rt.make_rc;
+      enable_from_this = Crane_rt.enable_rc_from_this }
+  else base
 
-(** Short accessor for current standard library names. *)
-let sn () = !std_names
+let sn (u : Unit_context.t) = u.std_names
+let with_std_names (u : Unit_context.t) = {u with std_names = std_names_of u}
 
 
 

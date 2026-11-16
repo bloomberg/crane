@@ -1003,12 +1003,18 @@ let module_filename mp =
 (** [with_context u f] is [f u] with lowering reading the unit's context
     [u] ({!Translation_state.unit_context}), a context the planning so far
     has added to. *)
-let with_context (u : Unit_context.t) f =
-  Translation_state.with_unit_facts {(Translation_state.unit_facts ()) with context = u} (fun () -> f u)
+let with_context cx (u : Unit_context.t) f =
+  Translation_state.with_unit_facts cx {(Translation_state.unit_facts cx) with context = u} (fun () -> f u)
+
+(** [with_plans p f] is [f ()] with lowering and rendering reading [p] as
+    what the backend's passes decided about the unit
+    ({!Translation_state.plans}), a value each of those passes adds to. *)
+let with_plans cx (p : Cpp_state.plans) f =
+  Translation_state.with_unit_facts cx {(Translation_state.unit_facts cx) with plans = p} f
 
 (** [with_plan u acc f] is {!with_context} of the unit's context [u]
     holding the facts [acc] holds ({!Accumulated_plan.context}). *)
-let with_plan u acc f = with_context (Accumulated_plan.context acc u) f
+let with_plan cx u acc f = with_context cx (Accumulated_plan.context acc u) f
 
 (** The steps of {!plan_layout}, in order. *)
 let prepare_layout = "prepare"
@@ -1073,11 +1079,12 @@ let layout_pass_names =
     it.  Runs in the planning phase, which is the one that names modules.
     [u] is the unit's context, which [k] is handed with the callable plans
     in it. *)
-let plan_layout u (acc : Accumulated_plan.t) struc k =
+let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" prepare_layout;
-  let modules = Cpp.prepare_structure u struc in
+  let modules, names, analysis = Cpp.prepare_structure cx u struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
-  with_plan u acc @@ fun u ->
+  with_plans cx {Cpp_state.no_plans with analysis = Some analysis} @@ fun () ->
+  with_plan cx {u with names = Some names} acc @@ fun u ->
   Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
@@ -1086,24 +1093,24 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" plan_field_names;
   let field_names = Cpp.plan_field_names struc in
   Pipeline_trace.event "layout" plan_pointer_fields;
-  let pointer_fields = Cpp.plan_pointer_fields struc in
+  let pointer_fields = Cpp.plan_pointer_fields cx struc in
   let acc = {acc with pointer_fields = Pointer_fields.add acc.pointer_fields pointer_fields} in
-  with_plan u acc @@ fun u ->
+  with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
-  let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
+  let unmerged_wrappers = Cpp.plan_unmerged_wrappers cx () in
   let acc =
     { acc with
       unmerged_wrappers =
         List.fold_left (fun m (name, mp) -> CString.Map.add name mp m) acc.unmerged_wrappers unmerged_wrappers }
   in
-  with_plan u acc @@ fun u ->
+  with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_concept_prerequisites;
-  let modules = Cpp.plan_concept_prerequisites modules struc in
+  let modules = Cpp.plan_concept_prerequisites cx modules struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
-  with_plan u acc @@ fun u ->
+  with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_scopes;
-  let scopes = Cpp.plan_scopes struc in
-  with_context {u with scopes = Scope_plan.bound_of scopes} @@ fun u ->
+  let scopes = Cpp.plan_scopes cx struc in
+  with_context cx {u with scopes = Scope_plan.bound_of scopes} @@ fun u ->
   Pipeline_trace.event "layout" plan_promoted_inductives;
   let promoted_inductives = Cpp.plan_promoted_inductives u struc in
   let acc =
@@ -1111,18 +1118,18 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
       promoted_inductives =
         List.fold_left (fun s r -> Ref.User.Set.add r s) acc.promoted_inductives promoted_inductives }
   in
-  with_plan u acc @@ fun u ->
+  with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_accessors;
-  let accessors = Cpp.plan_accessors u struc in
+  let accessors = Cpp.plan_accessors cx u struc in
   let acc = {acc with accessors = List.fold_left Cpp_state.add_accessor_ref acc.accessors accessors} in
-  with_plan u acc @@ fun u ->
+  with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_nested_structs;
-  let nested_structs = Cpp.plan_nested_structs struc in
+  let nested_structs = Cpp.plan_nested_structs cx struc in
   let acc =
     {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
-  with_plan u acc @@ fun u ->
+  with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_instance_promoted_types;
-  let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
+  let instance_promoted_types = Cpp.plan_instance_promoted_types cx struc in
   let acc =
     { acc with
       instance_promoted_types =
@@ -1130,31 +1137,34 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
           (fun m (r, bindings) -> GlobRef.Map.add r bindings m)
           acc.instance_promoted_types instance_promoted_types }
   in
-  with_plan u acc @@ fun u ->
+  with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" elaborate_calls;
   let elaborations =
-    Translation_state.generating_outside_modules @@ fun () ->
+    Translation_state.generating_outside_modules cx @@ fun () ->
     Core_elaborate.structure
-      ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods kn ind))
+      ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods
+        cx kn ind))
       struc
   in
-  Translation_state.with_unit_facts { (Translation_state.unit_facts ()) with elaborations = Some elaborations }
+  Translation_state.with_unit_facts cx { (Translation_state.unit_facts cx) with elaborations = Some elaborations }
   @@ fun () ->
   Pipeline_trace.event "layout" plan_callables;
-  let ((callables, instance_methods) as planned) = Cpp.plan_callables struc in
+  let ((callables, instance_methods) as planned), (frames, concepts) = Cpp.plan_callables cx struc in
   if
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
     &&
-    let callables', instance_methods' = Cpp.plan_callables ~reversed:true struc in
+    let (callables', instance_methods'), _ = Cpp.plan_callables cx ~reversed:true struc in
     not
       ( Target_plan.same_callables callables callables'
       && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
+  with_plans cx {(Translation_state.plans cx) with frames; concepts} @@ fun () ->
   let assumed =
-    Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
+    Translation_state.generating_outside_modules cx (fun () -> Translation_calls.assumed_callables cx struc
+      callables) in
   Pipeline_trace.event "layout" decide_callables;
   let u = {u with Unit_context.callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
-  with_context u @@ fun u ->
+  with_context cx u @@ fun u ->
   k u acc
   ( modules,
     { Target_plan.module_names;
@@ -1348,7 +1358,7 @@ let report_body_generations fn =
     the knot of a well-founded recursion tied directly, every read of a
     local its own, and the open types of local definitions
     minted: the rewrites the program goes through before it is frozen. *)
-let core_passes to_appear : Core.Program.extracted Pipeline_trace.pass list =
+let core_passes cx to_appear : Core.Program.extracted Pipeline_trace.pass list =
   let open Pipeline_trace in
   [ pass "modutil" (Modutil.optimize_struct to_appear);
     (* Which inductives are shared variants is a property of their
@@ -1360,10 +1370,12 @@ let core_passes to_appear : Core.Program.extracted Pipeline_trace.pass list =
     pass "knot" Core_knot.structure;
     pass "fix_shape" Fix_shape.structure;
     pass "fresh_occurrences" Fresh_occurrences.structure;
-    effect_ "local_types" Local_types.structure;
+    effect_ "local_types" (Local_types.structure cx);
     effect_ "ir_check" Core_check.structure ]
 
-let core_pass_names = Pipeline_trace.names (core_passes ([], []))
+let core_pass_names =
+  let cx = Translation_state.create () in
+  Pipeline_trace.names (core_passes cx ([], []))
 
 (** {!Normalize}, on the frozen program ({!Core_phase.normalize}), before it is
     analysed: every consumer of the structure (the method registry built
@@ -1375,16 +1387,18 @@ let core_pass_names = Pipeline_trace.names (core_passes ([], []))
     the body Normalize names the calls of and splices partners into: a call
     written in stages or through a coercion is one call there.  Normalize
     keeps it canonical, which [CRANE_CHECK_IR] checks. *)
-let normalize_passes : Core_phase.normalizing Pipeline_trace.pass list =
+let normalize_passes cx : Core_phase.normalizing Pipeline_trace.pass list =
   let rewriting f (p : Core_phase.normalizing) = {p with structure = f p.structure} in
   Pipeline_trace.
-    [ pass "eta_expand" (rewriting Normalize.eta_expand);
+    [ pass "eta_expand" (rewriting (Normalize.eta_expand cx));
       pass "let_lambdas" (rewriting Normalize.let_lambdas);
       pass "spines" (rewriting Core_normalize.structure);
-      pass "normalize" Normalize.structure;
+      pass "normalize" (Normalize.structure cx);
       effect_ "canonical" (fun (p : Core_phase.normalizing) -> Core_normalize.check p.structure) ]
 
-let normalize_pass_names = Pipeline_trace.names normalize_passes
+let normalize_pass_names =
+  let cx = Translation_state.create () in
+  Pipeline_trace.names (normalize_passes cx)
 
 (** Under [CRANE_TRACE_PIPELINE], report the fingerprint of [struc]; under
     it or [CRANE_CHECK_IR], keep its elements' for
@@ -1425,24 +1439,25 @@ let check_structure_unchanged planned struc =
     normalized ({!Core_phase.normalize}), lowered with the facts the whole of
     it is analysed for -- which definitions only throw, which parameters
     are owned, settled across calls, how each function recurses
-    ({!Program_facts.analyze_program}). *)
-let freeze core f =
+    ({!Program_facts.analyze_program}), and handed with what loop lowering
+    reads of that analysis ({!Loop_facts}). *)
+let freeze cx core f =
   let normalized, program =
-    Translation_state.generating_outside_modules @@ fun () ->
+    Translation_state.generating_outside_modules cx @@ fun () ->
     let normalized =
-      Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core_phase.freeze core)
+      Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" (normalize_passes cx)) (Core_phase.freeze core)
     in
     Pipeline_trace.event "core" "analyze_program";
-    (normalized, Program_facts.analyze_program normalized)
+    (normalized, Program_facts.analyze_program cx normalized)
   in
-  Translation_state.with_program_facts (Program_facts.lowering program) @@ fun () ->
-  Loop_facts.with_program ~recursion:program.recursion ~control:program.control @@ fun () -> f normalized
+  Translation_state.with_program_facts cx (Program_facts.lowering program) @@ fun () ->
+  f {Loop_facts.none with recursion = program.recursion; control = program.control} normalized
 
 (** The extracted structure [struc] through the Core passes
     ({!core_pass_names}), keeping what [to_appear] names. *)
-let optimize_struct to_appear struc =
+let optimize_struct cx to_appear struc =
   let core =
-    Core_phase.optimize (Pipeline_trace.run ~stage:"core" (core_passes to_appear)) (Core_phase.extracted struc)
+    Core_phase.optimize (Pipeline_trace.run ~stage:"core" (core_passes cx to_appear)) (Core_phase.extracted struc)
   in
   if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core_phase.structure core));
   core
@@ -1506,15 +1521,15 @@ let elaborate_pass_names = [plan_foreign_callables]
 (** The unit's context [u] with the plans of the callables of the globals
     the unit's [elaborations] name that it does not declare, and of the
     calls of class fields it may project through an instance. *)
-let elaborate_unit (u : Unit_context.t) elaborations =
-  Translation_state.generating_outside_modules @@ fun () ->
+let elaborate_unit cx (u : Unit_context.t) elaborations =
+  Translation_state.generating_outside_modules cx @@ fun () ->
   Pipeline_trace.event "elaborate" plan_foreign_callables;
   let foreign =
     Callable_abi.with_foreign u.callables
-      (fun r -> Translation_calls.callee_abi ~instances:0 r)
+      (fun r -> Translation_calls.callee_abi cx ~instances:0 r)
       (Core_elaborate.referenced elaborations)
   in
-  with_context {u with callables = foreign} @@ fun u ->
+  with_context cx {u with callables = foreign} @@ fun u ->
   (* Every global a call may project through an instance
      ({!Core_query.static_projection}). *)
   { u with
@@ -1530,13 +1545,13 @@ let elaborate_unit (u : Unit_context.t) elaborations =
     goes, which is what the readers of {!Tparam_kinds} take (see
     {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
     second time, against the first's, and the two must agree. *)
-let plan_representation plan struc =
+let plan_representation cx plan struc =
   Pipeline_trace.event "represent" template_kinds;
-  let kinds = Cpp_ind.template_kinds struc in
+  let kinds = Cpp_ind.template_kinds cx struc in
   let plan = Target_plan.with_template_kinds plan kinds in
   if
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
-    && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Cpp_ind.template_kinds struc)))
+    && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Cpp_ind.template_kinds cx struc)))
   then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.");
   plan
 
@@ -1633,9 +1648,9 @@ let declares struc =
     for the whole unit), renders each file once, checks the result against
     the plan, then writes and formats them.  Returns what the next unit of
     a separate extraction starts from ({!Accumulated_plan.for_next_unit}). *)
-let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
+let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
-    (fn, si, mo) dry (core : Core_phase.normalized Core_phase.program) =
+    (fn, si, mo) dry (loops : Loop_facts.t) (core : Core_phase.normalized Core_phase.program) =
   let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
   let struc = Core_phase.structure core in
@@ -1655,22 +1670,22 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   in
   (* The unit's context holds what the earlier units decided from the
      start; its configuration is its plan's. *)
-  with_plan Unit_context.detached earlier @@ fun u ->
+  with_plan cx (Cpp_state.with_std_names Unit_context.detached) earlier @@ fun u ->
   let facts, plan = analyze_and_plan struc in
-  let u = {u with config = plan.config} in
-  Translation_state.with_unit_facts
+  let u = Cpp_state.with_std_names {u with config = plan.config; loops = {loops with effects = facts.effects}} in
+  Translation_state.with_unit_facts cx
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
-      context = u }
+      context = u;
+      plans = Cpp_state.no_plans }
   @@ fun () ->
-  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
-  let plan = plan_representation plan struc in
+  let plan = plan_representation cx plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  plan_layout u earlier struc @@ fun u acc (modules, representation, callables, assumed, elaborations) ->
+  plan_layout cx u earlier struc @@ fun u acc (modules, representation, callables, assumed, elaborations) ->
   let plan = Target_plan.with_layout plan modules representation callables assumed in
-  with_context (elaborate_unit u elaborations) @@ fun u ->
+  with_context cx (elaborate_unit cx u elaborations) @@ fun u ->
   let planned_checkpoint = checkpoint () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
@@ -1687,26 +1702,27 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      same: rendering is a function of the frozen plan alone. *)
   let render_impl () =
     Pipeline_trace.event "emit" "render_impl";
-    d.pp_struct u struc
+    d.pp_struct cx struc
   in
   let render_intf () =
     Pipeline_trace.event "emit" "render_intf";
-    d.pp_hstruct u struc
+    d.pp_hstruct cx struc
   in
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
   (* Every function is generated before either render, reading the plans
      emission reads, and each pass is handed the position it plans for. *)
   end_planning ();
   Pipeline_trace.event "emit" "generate_ahead";
-  Cpp.generate_ahead u struc;
-  Common.plan_written_files (Cpp.files_named_ahead struc);
-  Table.plan_written_customs (Cpp.customs_written_ahead u);
+  Cpp.generate_ahead cx u struc;
+  Common.plan_written_files (Cpp.files_named_ahead cx u struc);
+  Table.plan_written_customs (Cpp.customs_written_ahead cx u);
   Table.check_written_mapping_headers ();
   Cpp.plan_function_reads ();
   Pipeline_trace.event "emit" "plan_file_layout";
-  Cpp.plan_file_layout u struc;
+  Cpp.plan_file_layout cx u struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";
-  Cpp.plan_ctor_aliases struc;
+  let ctor_aliases = Cpp.plan_ctor_aliases cx struc in
+  with_plans cx {(Translation_state.plans cx) with ctor_aliases = Some ctor_aliases} @@ fun () ->
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then
@@ -1990,14 +2006,14 @@ let exports refs =
 
 (** A full extraction, returning [read refs], which runs while the naming
     tables the unit was printed with are still live. *)
-let full_extr_reading opaque_access f (refs, mps) read =
+let full_extr_reading cx opaque_access f (refs, mps) read =
   init false false;
   Fun.protect
     ~finally:reset
     (fun () ->
       List.iter (fun mp -> if is_modfile mp then error_MPfile_as_mod mp true) mps;
       let core =
-        optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
+        optimize_struct cx (refs, mps) (mono_environment ~opaque_access refs mps)
       in
       (* A Rocq library that an earlier extraction already emitted belongs to
          that unit.  Re-emitting it here would define the same symbols a second
@@ -2039,11 +2055,11 @@ let full_extr_reading opaque_access f (refs, mps) read =
         if source <> "" then
           Doc_comments.set_table (Doc_comments.parse_file source)
       | _ -> () );
-      ignore (freeze core (print_structure_to_file ~unit_includes filenames false));
+      ignore (freeze cx core (print_structure_to_file cx ~unit_includes filenames false));
       read refs )
 
-let full_extr opaque_access f refs =
-  full_extr_reading opaque_access f refs (fun _ -> ())
+let full_extr cx opaque_access f refs =
+  full_extr_reading cx opaque_access f refs (fun _ -> ())
 
 (** Main entry point for full library extraction. Extracts the given references
     and module paths to a single output file.
@@ -2053,12 +2069,14 @@ let full_extr opaque_access f refs =
     took; trusted callers that supply an already-vetted or internal path
     (e.g. a temporary file) pass [~validate:false]. *)
 let full_extraction ?(validate = true) ~opaque_access f lr =
+  let cx = Translation_state.create () in
   if validate then Option.iter Table.claim_output_target f;
-  full_extr opaque_access f (locate_ref lr)
+  full_extr cx opaque_access f (locate_ref lr)
 
 let full_extraction_exports ?(validate = true) ~opaque_access f lr =
+  let cx = Translation_state.create () in
   if validate then Option.iter Table.claim_output_target f;
-  full_extr_reading opaque_access f (locate_ref lr) exports
+  full_extr_reading cx opaque_access f (locate_ref lr) exports
 
 (** {2 Separate extraction is similar to recursive extraction, with the output
     decomposed in many files, one per Rocq .v file} *)
@@ -2067,7 +2085,7 @@ let full_extraction_exports ?(validate = true) ~opaque_access f lr =
     each in a namespace of its own: [Separate Extraction]'s layout, and
     [Extraction Library]'s.  The file of a library [dry] says is rendered but
     not written. *)
-let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
+let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.program) =
   let struc = Core_phase.structure core in
   (* Run all per-unit cleanup in [~finally] so state is reset even when the
      body aborts. *)
@@ -2238,13 +2256,13 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
             | Some j -> j < current_idx
             | None -> true);
         Fun.protect ~finally:(fun () -> opened_filter := fun _ -> true) @@ fun () ->
-        print_structure_to_file ~namespace:(Some ns) ~earlier (module_filename mp) (dry mp) unit
+        print_structure_to_file cx ~namespace:(Some ns) ~earlier (module_filename mp) (dry mp) loops unit
       end
     | _ -> assert false
   in
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
-  Cpp_state.set_global_method_registry (Cpp.method_registry_of struc);
+  Cpp_state.set_global_method_registry (Cpp.method_registry_of cx struc);
   (* Which values another declaration names, any unit's: a function of a
      later unit may read a value of an earlier one, which then has to be
      initialised wherever its header is included
@@ -2307,11 +2325,12 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
 (** Entry point for extracting specific references to separate files. Each Rocq
     .v file gets its own C++ output file. *)
 let separate_extraction ~opaque_access lr =
+  let cx = Translation_state.create () in
   init true false;
   Fun.protect ~finally:reset @@ fun () ->
   let refs, mps = locate_ref lr in
   let core =
-    optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
+    optimize_struct cx (refs, mps) (mono_environment ~opaque_access refs mps)
   in
   List.iter
     (function
@@ -2320,25 +2339,26 @@ let separate_extraction ~opaque_access lr =
         user_err
           (str "Separate Extraction from inside a module is not supported.") )
     (Core_phase.modules core);
-  freeze core (print_per_library ~dry:(fun _ -> false))
+  freeze cx core (print_per_library cx ~dry:(fun _ -> false))
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
 
 (** Extracts a single reference or module to the Rocq toplevel output. *)
 let simple_extraction ~opaque_access r =
+  let cx = Translation_state.create () in
   match locate_ref [r] with
-  | ([], [mp]) as p -> full_extr opaque_access None p
+  | ([], [mp]) as p -> full_extr cx opaque_access None p
   | [r], [] ->
     init false false;
     Fun.protect ~finally:reset (fun () ->
         let core =
-          optimize_struct ([r], []) (mono_environment ~opaque_access [r] [])
+          optimize_struct cx ([r], []) (mono_environment ~opaque_access [r] [])
         in
         warns ();
         if is_any_custom r then
           Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-        ignore (freeze core (print_structure_to_file (mono_filename None) false)) )
+        ignore (freeze cx core (print_structure_to_file cx (mono_filename None) false)) )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -2347,6 +2367,7 @@ let simple_extraction ~opaque_access r =
 (** Extracts an entire Rocq library module to separate C++ files. When
     [is_rec] is true, recursively extracts all dependencies. *)
 let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
+  let cx = Translation_state.create () in
   init true true;
   Fun.protect ~finally:reset @@ fun () ->
   let dir_m =
@@ -2364,14 +2385,14 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
       l
   in
   let struc = List.fold_left select [] l in
-  let core = optimize_struct ([], []) struc in
+  let core = optimize_struct cx ([], []) struc in
   (* Without [Recursive], only [m]'s own file is written; the libraries it
      depends on are rendered for what [m]'s file needs to know of them. *)
   let dry = function
     | MPfile dir -> (not is_rec) && not (DirPath.equal dir dir_m)
     | _ -> false
   in
-  freeze core (print_per_library ~dry)
+  freeze cx core (print_per_library cx ~dry)
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable
@@ -2564,25 +2585,25 @@ let extract_and_compile ~opaque_access file l =
 
 (** Renders the single Core declaration [decl], of the module [mp], to C++
     output, once the unit [struc] it belongs to is planned. *)
-let print_one_decl struc mp decl =
+let print_one_decl cx loops struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
   let facts = Program_facts.analyze struc in
-  let u = Unit_context.detached in
-  Translation_state.with_unit_facts
+  let u = Cpp_state.with_std_names {Unit_context.detached with loops = {loops with effects = facts.effects}} in
+  Translation_state.with_unit_facts cx
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
-      context = u }
+      context = u;
+      plans = Cpp_state.no_plans }
   @@ fun () ->
-  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
-  plan_layout u (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
+  plan_layout cx u (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
   @@ fun u _ (_, _, _, _, elaborations) ->
-  with_context (elaborate_unit u elaborations) @@ fun u ->
+  with_context cx (elaborate_unit cx u elaborations) @@ fun u ->
   end_planning ();
   let ans =
-    Cpp.generate_decl_ahead u ~module_:mp decl;
-    d.pp_decl u ~module_:mp decl
+    Cpp.generate_decl_ahead cx u ~module_:mp decl;
+    d.pp_decl cx ~module_:mp decl
   in
   (* The one box the printers rely on: inside it every break is a newline,
      which is what turns {!Cpp_print.cut2} into the blank line between two
@@ -2591,6 +2612,7 @@ let print_one_decl struc mp decl =
 
 (* Show the extraction of the current ongoing proof *)
 let show_extraction ~pstate =
+  let cx = Translation_state.create () in
   init ~inner:true false false;
   let prf = Declare.Proof.get pstate in
   let sigma, env = Declare.Proof.get_current_context pstate in
@@ -2604,12 +2626,12 @@ let show_extraction ~pstate =
     (* Frozen and normalized unoptimised, as it is shown: that is what the
        facts about the whole program -- its recursion plan among them --
        that lowering the term reads are analysed from. *)
-    freeze
+    freeze cx
       (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])]))
-      (fun frozen ->
+      (fun loops frozen ->
         let struc = Core_phase.structure frozen in
         match struc with
-        | [(_, [(_, Core.Module.Structure_item.Declaration decl)])] -> print_one_decl struc mp decl
+        | [(_, [(_, Core.Module.Structure_item.Declaration decl)])] -> print_one_decl cx loops struc mp decl
         | _ -> assert false )
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

@@ -973,7 +973,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
   let root_decls =
     match storage with
     | Value_root t ->
-      [ Declare_value_initialized (id_root, External ((Cpp_state.sn ()).ns ^ "::optional", [t]));
+      [ Declare_value_initialized (id_root, External (Cpp_state.std_namespace () ^ "::optional", [t]));
         Bind_variable (id_write, Declare (Pointer head_ty, None), Literal Null_pointer) ]
     | Boxed_root _ | Pointer_result _ ->
       [ Declare_value_initialized (id_head, head_ty);

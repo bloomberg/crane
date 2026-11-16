@@ -422,11 +422,11 @@ let collect_free_rels n_bound body =
     Both lift paths ask this, and they ask it of the same [env]: the names are
     the enclosing scope's, so a compiled body needs no substitution and only
     the head and the call sites grow. *)
-let lifted_free_vars ~class_temps env free_indices =
+let lifted_free_vars cx ~class_temps env free_indices =
   List.filter_map
     (fun i ->
       let name = Common.get_db_name i env in
-      let ty = get_env_type i in
+      let ty = get_env_type cx i in
       if
         List.exists (fun (_, id) -> Id.equal id name) class_temps
         || not (is_runtime_binder_type ty)

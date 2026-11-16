@@ -155,9 +155,9 @@ type struct_spelling =
     the declaration is rendered among the inductives local to it; [merged]
     says whether its namespace wrapper is merged with it, as a reference
     sees it ({!merged_at}), and [promoted] whether it is promoted where it
-    is declared; [layout] the unit's. *)
+    is declared; in the unit of context given. *)
 val struct_spelling :
-  Module_plan.layout ->
+  Unit_context.t ->
   merged:(Names.GlobRef.t -> bool) ->
   promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
@@ -169,7 +169,7 @@ val enum_declaration_name : Names.GlobRef.t -> string
 
 (** {!struct_spelling} as a string. *)
 val struct_declaration_name :
-  Module_plan.layout ->
+  Unit_context.t ->
   merged:(Names.GlobRef.t -> bool) ->
   promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
@@ -238,8 +238,10 @@ val read_by_a_function : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
 
 (** {2 Name-resolution cache and cached predicates} *)
 
-(** Run a resolver against the name-resolution cache, falling back otherwise. *)
+(** Run a resolver against the name-resolution cache the unit's context
+    holds, falling back otherwise. *)
 val with_cache :
+  Unit_context.t ->
   (Name_resolution.t -> Names.GlobRef.t -> 'a) ->
   (Names.GlobRef.t -> 'a) -> Names.GlobRef.t -> 'a
 
@@ -249,14 +251,14 @@ val is_eponymous_record_cached : Module_plan.layout -> Names.GlobRef.t -> bool
 (** Whether the global is a global-scope enum, in the layout given. *)
 val is_global_scope_enum_cached : Module_plan.layout -> Names.GlobRef.t -> bool
 
-(** Cached: the C++ inductive kind of the global, if any. *)
-val get_ind_kind_cached : Names.GlobRef.t -> Cpp_ir.Inductive.Kind.t option
+(** Cached in the unit's context: the C++ inductive kind of the global, if any. *)
+val get_ind_kind_cached : Unit_context.t -> Names.GlobRef.t -> Cpp_ir.Inductive.Kind.t option
 
-(** Cached: whether the global is an enum. *)
-val is_enum_cached : Names.GlobRef.t -> bool
+(** Cached in the unit's context: whether the global is an enum. *)
+val is_enum_cached : Unit_context.t -> Names.GlobRef.t -> bool
 
-(** Cached: whether the global is a record. *)
-val is_record_cached : Names.GlobRef.t -> bool
+(** Cached in the unit's context: whether the global is a record. *)
+val is_record_cached : Unit_context.t -> Names.GlobRef.t -> bool
 
 (** {2 Method receivers} *)
 

@@ -89,7 +89,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
     closure type itself, and every closure that captures it copies it and all
     it captured; a [crane::fn] is converted once, at the call, and shared by
     every capture after that. *)
-let escaping_params ~suspended n_params body =
+let escaping_params cx ~suspended n_params body =
   let escaping = Hashtbl.create 4 in
   let rec walk under depth e =
     match e with
@@ -107,7 +107,7 @@ let escaping_params ~suspended n_params body =
       spine (List.length args) depth f;
       List.iter (walk under depth) args
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)}
-      when Translation_monadic.is_sequential_effect Core_effects.Bind use ->
+      when Translation_monadic.is_sequential_effect cx Core_effects.Bind use ->
       (* A bind outside reified mode is desugared into statements: its
          continuation runs where it is written, so the binders it opens are
          locals, not a closure's. *)
@@ -456,24 +456,24 @@ let lifted_fix_ungeneralised_params funs =
     passes a closure for (see {!partner_closure_params}), and those a closure
     holds on to (see {!escaping_params}).  A free function and a method of an
     inductive are generalised alike. *)
-let ungeneralised_callable_params ~self_ref ~suspended n_params body =
+let ungeneralised_callable_params cx ~self_ref ~suspended n_params body =
   let partners =
     List.filter
       (fun i -> i < n_params)
-      (Option.default [] (Ref.User.Map.find_opt self_ref (!tctx).input.program.partner_closure_params))
+      (Option.default [] (Ref.User.Map.find_opt self_ref cx.ctx.input.program.partner_closure_params))
   in
   Escape.IntSet.of_list
     (detect_non_forwarded_params self_ref n_params body
     @ partners
-    @ escaping_params ~suspended n_params body)
+    @ escaping_params cx ~suspended n_params body)
 
 (** {!ungeneralised_callable_params} for the definition of [r] at type [ty]
     with body [b], over the parameters {!Type_util.declared_parameters}
     finds, written or eta-expanded: the ones its function is generated
     with. *)
-let ungeneralised_callables_of_definition r ty b =
+let ungeneralised_callables_of_definition cx r ty b =
   let params, body = declared_parameters ty b in
-  ungeneralised_callable_params ~self_ref:r
+  ungeneralised_callable_params cx ~self_ref:r
     ~suspended:(Table.is_coinductive_type (core_return_type ty))
     (List.length params) body
 

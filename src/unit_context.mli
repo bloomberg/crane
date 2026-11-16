@@ -9,6 +9,32 @@
     finishing passes in their argument ({!Cpp_pipeline.finish}).  Nothing
     installs it anywhere for a reader to find. *)
 
+(** The standard library names a unit's files are written with: each the
+    [std::] or [bsl::] spelling of the field's name unless noted; [Crane
+    NonAtomicRc], [Crane FastVariant], [Crane SharedVariant] and
+    [CRANE_COUNT_RC] substitute runtime names ([Cpp_state.std_names_of]). *)
+type std_names = {
+  shared_ptr : string;  (** the smart pointer for recursive fields *)
+  make_shared : string;  (** its factory *)
+  move : string;
+  forward : string;
+  logic_error : string;
+  ns : string;  (** the bare namespace, ["std"] or ["bsl"] *)
+  string : string;  (** the string class a spliced literal is constructed as *)
+  same_as : string;  (** unqualified in the BDE flavor *)
+  declval : string;
+  convertible_to : string;  (** unqualified in the BDE flavor *)
+  holds_alternative : string;
+  get_if : string;
+  get : string;
+  variant : string;  (** the tagged union inductives store alternatives in *)
+  variant_header : Table.header;  (** the header declaring {!variant} *)
+  enable_from_this : string;  (** the base a type that hands out pointers to itself derives from *)
+}
+
+(** The plain [std::] flavor of {!std_names}. *)
+val default_std_names : std_names
+
 type t = {
   config : Table.unit_config;
       (** The unit's configuration ({!Target_plan.t.config}): whether it
@@ -48,6 +74,21 @@ type t = {
       (** How a definition written outside its struct's body names the
           struct, and the other facts of the unit's scope plan: none until
           the plan is decided ({!Cpp.plan_scopes}). *)
+  names : Name_resolution.t option;
+      (** How each inductive of the unit is classified -- enum, record,
+          eponymous record ({!Name_resolution}) --, decided where the
+          structure is analysed ([Cpp.prepare_structure]); none before
+          that, where readers fall back on the table. *)
+  loops : Loop_facts.t;
+      (** What loop lowering reads of the analysis of the program and of
+          the unit: how each function recurses, the loops it lowers to, and
+          the unit's effect operations; those of a program that defines
+          nothing until the unit is analysed. *)
+  std_names : std_names;
+      (** The standard library names the unit's files are written with, as
+          its configuration and the table's settings decide them
+          ([Cpp_state.with_std_names]); the plain [std::] flavor until the
+          unit is configured. *)
 }
 
 (** [make ~config] is the context of a unit configured as [config], with
@@ -71,3 +112,12 @@ val is_promoted_inductive : t -> Names.GlobRef.t -> bool
 (** The concrete types the instance gives its class's promoted variables
     in the unit ({!t.instance_promoted_types}); none where it gives none. *)
 val instance_promoted_types_of : t -> Names.GlobRef.t -> (Names.Id.t * Core.Type.t) list
+
+(** The program's recursion plan ({!t.loops}). *)
+val recursion : t -> Recursion_plan.t
+
+(** The program's loops ({!t.loops}). *)
+val control : t -> Lower_control.t
+
+(** The unit's effect operations, as loop lowering reads them ({!t.loops}). *)
+val loop_effects : t -> Core_effects.t

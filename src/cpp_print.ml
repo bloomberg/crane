@@ -103,7 +103,7 @@ let spell_double (x : float) : string =
 
 (** What is being written needs the header declaring the tagged union an
     inductive's alternatives are stored in, and its accessors. *)
-let writes_variant () = writes (sn ()).variant_header
+let writes_variant ctx = writes (sn ctx.unit).variant_header
 
 
 
@@ -416,8 +416,8 @@ let pp_written_head ~lead h =
 
 (** The spelling of an external type's name: the configured library's vector
     for the standard one. *)
-let external_type_name id_s =
-  if String.equal id_s "std::vector" && (sn ()).ns <> "std" then "bsl::vector" else id_s
+let external_type_name u id_s =
+  if String.equal id_s "std::vector" && (sn u).ns <> "std" then "bsl::vector" else id_s
 
 (** Pretty-print a type as C++ source text.
 
@@ -478,7 +478,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       let id_s =
         if String.equal id_s "std::vector" then begin
           writes_standard "vector";
-          external_type_name id_s
+          external_type_name ctx.unit id_s
         end else if String.equal id_s Crane_rt.constant_tc then begin
           writes_obj ();
           id_s
@@ -604,8 +604,8 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       (if dependent_member then leading_typename else mt ())
       ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
     | Variant (Inline, tys) ->
-      writes_variant ();
-      cpp_angle (sn ()).variant (pp_list (pp_rec false) tys)
+      writes_variant ctx;
+      cpp_angle (sn ctx.unit).variant (pp_list (pp_rec false) tys)
     | Variant (Shared, tys) ->
       writes (Table.Runtime Crane_rt.shared_variant_header);
       cpp_angle Crane_rt.shared_variant (pp_list (pp_rec false) tys)
@@ -617,7 +617,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       if Probe.checking () && Pointer_slot.of_pointee t = Pointer_slot.Shared then
         CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_erasure.lower_pointer_slots)");
       writes_standard "memory";
-      cpp_angle (sn ()).shared_ptr (pp_rec false t)
+      cpp_angle (sn ctx.unit).shared_ptr (pp_rec false t)
     | Void -> str "void"
     | Any ->
       writes_obj ();
@@ -685,10 +685,10 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.inductive_scope ctx r) ++ template_name t
     | Shared_pointer _ ->
       writes_standard "memory";
-      pp_library_name (sn ()).shared_ptr
+      pp_library_name (sn ctx.unit).shared_ptr
     | Variant (Inline, _) ->
-      writes_variant ();
-      pp_library_name (sn ()).variant
+      writes_variant ctx;
+      pp_library_name (sn ctx.unit).variant
     | Variant (Shared, _) ->
       writes (Table.Runtime Crane_rt.shared_variant_header);
       pp_library_name Crane_rt.shared_variant
@@ -878,9 +878,9 @@ and pp_cpp_expr ctx env args (t : expr) =
     else str "*" ++ pp_cpp_expr ctx env args e
   | Move e ->
     writes_standard "utility";
-    str (sn ()).move ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+    str (sn ctx.unit).move ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | Forward (ty, e) ->
-    str (sn ()).forward
+    str (sn ctx.unit).forward
     ++ str "<"
     ++ pp_cpp_type ctx false [] ty
     ++ str ">("
@@ -933,7 +933,7 @@ and pp_cpp_expr ctx env args (t : expr) =
       ++ str "}" )
   | Allocate (Heap, t) ->
     writes_standard "memory";
-    cpp_angle (sn ()).make_shared (pp_cpp_type ctx false [] t)
+    cpp_angle (sn ctx.unit).make_shared (pp_cpp_type ctx false [] t)
   | Allocate (Reusing, t) ->
     (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
     cpp_angle Crane_rt.make_rc_reusing (pp_cpp_type ctx false [] t)
@@ -949,7 +949,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     let inner = pp_cpp_type ctx false [] t in
     if Table.std_lib () = "BDE" then
       (* No runtime arena under BDE (arena.h is std-only): plain factory. *)
-      cpp_angle (sn ()).make_shared inner
+      cpp_angle (sn ctx.unit).make_shared inner
     else begin
       writes Table.arena_header;
       cpp_angle Crane_rt.arena_make_shared inner
@@ -1050,7 +1050,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     (* [crane::rc] returns a mutable [rc<T>] from [rc_from_this()], so no
        const_pointer_cast is needed; [std::shared_ptr] needs the cast to strip
        the const that [shared_from_this()] adds in const methods. *)
-    if String.equal (sn ()).shared_ptr Crane_rt.rc then
+    if String.equal (sn ctx.unit).shared_ptr Crane_rt.rc then
       str "this->rc_from_this()"
     else
       str "std::const_pointer_cast<"
@@ -1086,7 +1086,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     str "([]() -> "
     ++ pp_cpp_type ctx false [] ty
     ++ str " { throw "
-    ++ str (sn ()).logic_error
+    ++ str (sn ctx.unit).logic_error
     ++ str "(\""
     ++ str (escape_cpp_string msg)
     ++ str "\"); })()"
@@ -1099,23 +1099,23 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Literal Null_pointer -> str "nullptr"
   | In_place ->
     writes_standard "utility";
-    str ((sn ()).ns ^ "::in_place")
+    str ((sn ctx.unit).ns ^ "::in_place")
   | In_place_index i ->
     writes_standard "utility";
-    str ((sn ()).ns ^ "::in_place_index<" ^ string_of_int i ^ ">")
+    str ((sn ctx.unit).ns ^ "::in_place_index<" ^ string_of_int i ^ ">")
   | Braced es ->
     str "{" ++ pp_list (pp_cpp_expr ctx env args) es ++ str "}"
   | Variant_get (ty, None) ->
-    writes_variant ();
-    str ((sn ()).get ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">"
+    writes_variant ctx;
+    str ((sn ctx.unit).get ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">"
   | Variant_get (ty, Some e) ->
-    writes_variant ();
-    str ((sn ()).get ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">("
+    writes_variant ctx;
+    str ((sn ctx.unit).get ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">("
     ++ pp_cpp_expr ctx env args e
     ++ str ")"
   | Holds_alternative ty ->
-    writes_variant ();
-    str ((sn ()).holds_alternative ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">"
+    writes_variant ctx;
+    str ((sn ctx.unit).holds_alternative ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">"
   | Declval ty ->
     writes_standard "utility";
     str "std::declval<" ++ pp_cpp_type ctx false [] ty ++ str ">()"
@@ -1269,8 +1269,8 @@ and pp_cpp_expr ctx env args (t : expr) =
     ++ pp_cpp_expr ctx env args e
     ++ str ")"
   | Variant_get_if (ty, e) ->
-    writes_variant ();
-    str ((sn ()).get_if ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">("
+    writes_variant ctx;
+    str ((sn ctx.unit).get_if ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">("
     ++ pp_cpp_expr ctx env args e ++ str ")"
 
 (** [pp_object ctx env args e] prints [e] in the position a [.], [->] or member
@@ -1296,7 +1296,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
   | Return (Some (Abort (msg, _))) ->
     writes_standard "stdexcept";
     str "throw "
-    ++ str (sn ()).logic_error
+    ++ str (sn ctx.unit).logic_error
     ++ str "(\""
     ++ str (escape_cpp_string msg)
     ++ str "\");"
@@ -1325,7 +1325,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
   | Throw msg ->
     writes_standard "stdexcept";
     str "throw "
-    ++ str (sn ()).logic_error
+    ++ str (sn ctx.unit).logic_error
     ++ str "(\""
     ++ str (escape_cpp_string msg)
     ++ str "\");"
@@ -1508,7 +1508,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
       | Scrutinee {parenthesised} ->
         let printed = pp_cpp_expr ctx env [] t in
         ( match t with
-        | Literal (String _) -> string_object printed
+        | Literal (String _) -> string_object ctx printed
         (* A scrutinee carrying a prefix pointer operator binds looser than
            whatever the template appends: the option template's
            [%scrut.has_value()] applied to a recursive occurrence stored
@@ -1534,7 +1534,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     in
     List.fold_left (fun acc p -> acc ++ piece p) (mt ()) pieces
   | Match (scrut, branches, default) ->
-    writes_variant ();
+    writes_variant ctx;
     (* Print an if/else-if chain using [std::holds_alternative] for
        discrimination, then structured bindings via [std::get]:
 
@@ -1567,7 +1567,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     let n_branches = List.length branches in
     (* Helper: [std::holds_alternative<Ctor>(scrut)]. *)
     let pp_holds scrut_var_pp (br : _ I.Stmt.Match.branch) =
-      str (sn ()).holds_alternative ++ str "<"
+      str (sn ctx.unit).holds_alternative ++ str "<"
       ++ pp_cpp_type ctx false [] br.ctor_type ++ str ">("
       ++ Lazy.force scrut_var_pp ++ str ")"
     in
@@ -1595,7 +1595,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
           ++ prlist_with_sep (fun () -> str ", ")
                pp_field_binding
                br.field_bindings
-          ++ str "] = " ++ str (sn ()).get ++ str "<"
+          ++ str "] = " ++ str (sn ctx.unit).get ++ str "<"
           ++ pp_cpp_type ctx false [] br.ctor_type ++ str ">("
           ++ Lazy.force scrut_var_pp ++ str ");"
       | [] ->
@@ -1604,13 +1604,13 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
           if scrut.owned then begin
             writes_standard "utility";
             str "auto " ++ Id.print var_id
-            ++ str " = std::move(" ++ str (sn ()).get ++ str "<"
+            ++ str " = std::move(" ++ str (sn ctx.unit).get ++ str "<"
             ++ pp_cpp_type ctx false [] br.ctor_type ++ str ">("
             ++ Lazy.force scrut_var_pp ++ str "));"
           end
           else
             str "const auto& " ++ Id.print var_id
-            ++ str " = " ++ str (sn ()).get ++ str "<"
+            ++ str " = " ++ str (sn ctx.unit).get ++ str "<"
             ++ pp_cpp_type ctx false [] br.ctor_type ++ str ">("
             ++ Lazy.force scrut_var_pp ++ str ");"
         | None -> mt () )
@@ -1724,9 +1724,9 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
    the template's operations expect ([std::string("(") + p(a)]).  Spelled as a
    construction rather than with the [s] literal suffix, which would need a
    [using namespace] in every header that splices one. *)
-and string_object printed =
+and string_object ctx printed =
   writes_standard "string";
-  str (sn ()).string ++ str "(" ++ printed ++ str ")"
+  str (sn ctx.unit).string ++ str "(" ++ printed ++ str ")"
 
 (* A block's statements, each written on its own with the semicolon that
    ends it, its [%result] spelled [result]. *)
@@ -1747,7 +1747,7 @@ and pp_spliced ctx env ~followed_by_dot (arg_expr : expr) =
   let arg = pp_cpp_expr ctx env [] arg_expr in
   let arg =
     match arg_expr with
-    | Literal (String _) -> string_object arg
+    | Literal (String _) -> string_object ctx arg
     | _ -> arg
   in
   (* Parenthesize compound expressions that would bind incorrectly
@@ -2440,7 +2440,7 @@ let rec pp_initialiser ctx env (ty : ty) (e : expr) =
     str "([]() -> "
     ++ pp_type ctx ret_ty
     ++ str " { throw "
-    ++ str (sn ()).logic_error
+    ++ str (sn ctx.unit).logic_error
     ++ str "(\""
     ++ str (escape_cpp_string msg)
     ++ str "\"); })()"
@@ -2513,7 +2513,7 @@ and pp_wrapper_nspace ctx env (w : I.Decl.Namespace.wrapper) (members : decl lis
         (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env fields) in
     let inherit_clause =
       if sft then
-        str " : public " ++ str (sn ()).enable_from_this ++ str "<"
+        str " : public " ++ str (sn ctx.unit).enable_from_this ++ str "<"
         ++ struct_name
         ++ str ">"
       else
@@ -2555,7 +2555,7 @@ and pp_wrapper_nspace ctx env (w : I.Decl.Namespace.wrapper) (members : decl lis
     let inherit_clause =
       if sft then
         let type_args = pp_list (fun (_, id) -> Id.print id) temps in
-        str " : public " ++ str (sn ()).enable_from_this ++ str "<"
+        str " : public " ++ str (sn ctx.unit).enable_from_this ++ str "<"
         ++ struct_name
         ++ str "<"
         ++ type_args
@@ -2699,12 +2699,12 @@ and pp_leaf_decl ctx env (d : decl) =
           tparams
         with
         | [] ->
-          str " : public " ++ str (sn ()).enable_from_this ++ str "<"
+          str " : public " ++ str (sn ctx.unit).enable_from_this ++ str "<"
           ++ struct_name
           ++ str ">"
         | _ ->
           let type_args = pp_list (fun (_, tid) -> Id.print tid) tparams in
-          str " : public " ++ str (sn ()).enable_from_this ++ str "<"
+          str " : public " ++ str (sn ctx.unit).enable_from_this ++ str "<"
           ++ struct_name
           ++ str "<"
           ++ type_args
@@ -3029,4 +3029,4 @@ let pp_cpp_type_at ctx par vl t = pp_cpp_type ctx par vl t
 
 (* The type printer's entry for a type written outside every declaration of
    the tree, at the start of the header of the unit [u]. *)
-let pp_cpp_type ?lead u par vl t = pp_cpp_type ?lead (file_start u Common.Intf) par vl t
+let pp_cpp_type ?lead u plans par vl t = pp_cpp_type ?lead (file_start u plans Common.Intf) par vl t

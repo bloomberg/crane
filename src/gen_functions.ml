@@ -33,8 +33,8 @@ module IntSet = Escape.IntSet
     placeholder, and an absent definition -- are all expressed as
     {!Cpp_ir.Decl.Type_alias} fields rather than as a rendered string handed to the
     printer. *)
-let type_alias_rhs r vars ot =
-  with_method_ns_for_locals @@ fun () ->
+let type_alias_rhs cx r vars ot =
+  with_method_ns_for_locals cx @@ fun () ->
   match Cpp_state.find_type_custom_opt r with
   | Some (_ids, s) -> (Some (External (s, []) : Cpp_ir.Lowered.Type.t), None)
   | None -> (
@@ -50,19 +50,19 @@ let type_alias_rhs r vars ot =
          parameter, read the value slot off the FRONT and wrote [ITree<iptr>].
          Eta-expansion appends; positional resolution reads from the
          beginning. *)
-      (Some (Translation_types.cpp_ir_of_core_type (empty_env ()) vars t), None) )
+      (Some (Translation_types.cpp_ir_of_core_type cx (empty_env ()) vars t), None) )
 
 (** The kinds of the parameters [vars] of the type alias [r], whose body is
     [t], as {!gen_type_alias} declares them -- without recording them. *)
-let type_alias_kinds r vars t =
+let type_alias_kinds cx r vars t =
   let vars = rename_tvars Cpp_state.keywords vars in
-  let rhs, _ = type_alias_rhs r vars (Some t) in
+  let rhs, _ = type_alias_rhs cx r vars (Some t) in
   snd (template_kinds ?applied:rhs vars [t])
 
 (** Build the [using] declaration for a type alias; see {!type_alias_rhs}. *)
-let gen_type_alias r vars ot =
+let gen_type_alias cx r vars ot =
   let vars = rename_tvars Cpp_state.keywords vars in
-  let du_rhs, du_note = type_alias_rhs r vars ot in
+  let du_rhs, du_note = type_alias_rhs cx r vars ot in
   let du_tparams_head =
     hkt_templates ?applied:du_rhs r vars
       (match ot with Some t -> [t] | None -> [])
@@ -226,7 +226,7 @@ let tvar_subst_stmt (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Low
     So is one returned where the result is the box: a type a type-level
     function computes ([tuple (nats n)], [unit] at [0]) erases to it, and its
     [unit] branch is as reachable as any other. *)
-let dead_unit_returns_to_abort (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
+let dead_unit_returns_to_abort cx (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
   let is_unit : Cpp_ir.Lowered.Type.t -> bool = function
     | Void -> true
     | Entity_application (r, _, _) | In_namespace (r, _) -> Table.is_unit_type r
@@ -239,7 +239,7 @@ let dead_unit_returns_to_abort (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowe
   in
   let rec fix_stmts ret_ty stmts =
     match ret_ty with
-    | Some t when not (is_unit t || Translation_types.resolves_to_any_type t) ->
+    | Some t when not (is_unit t || Translation_types.resolves_to_any_type cx t) ->
       List.map (fix_stmt ret_ty) stmts
     | _ -> List.map (fix_stmt None) stmts
   and fix_stmt ret_ty (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
@@ -261,8 +261,8 @@ let dead_unit_returns_to_abort (cod : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowe
     the canonical [std::function<std::any(std::any...)>] form that the
     application site recovers with an [any_cast].  Nested lambda bodies are
     left alone: their returns answer to their own return type. *)
-let erase_returned_fn_values (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
-  if not (Translation_types.resolves_to_any_type ret_ty) then body
+let erase_returned_fn_values cx (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
+  if not (Translation_types.resolves_to_any_type cx ret_ty) then body
   else
     let rec fix_stmt (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
       match s with
@@ -276,7 +276,7 @@ let erase_returned_fn_values (ret_ty : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Low
     result is not [unit] is dead ({!dead_unit_returns_to_abort}), and a
     closure returned where the result erased is stored in the canonical form
     its caller reads ({!erase_returned_fn_values}). *)
-let finish_fn_body cod body = dead_unit_returns_to_abort cod (erase_returned_fn_values cod body)
+let finish_fn_body cx cod body = dead_unit_returns_to_abort cx cod (erase_returned_fn_values cx cod body)
 
 (** {!Translation_lambda_params.return_captures_by_value} for a function's body;
     it visits a call's arguments first to last. *)
@@ -386,9 +386,9 @@ let sig_witness_expr name (core_ty : Core.Type.t) =
     {!Translation_monadic.reify_monadic_param_type} both
     read the mode.  We detect reified by the monad template mentioning "ITree",
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
-let with_itree_mode_for ty f =
+let with_itree_mode_for cx ty f =
   match Type_util.codomain_monad ty with
-  | Some monad_ref -> with_itree_mode (Core_effects.mode_of_monad monad_ref) f
+  | Some monad_ref -> with_itree_mode cx (Core_effects.mode_of_monad monad_ref) f
   | None -> f ()
 
 (** A class-typed parameter is not a value in C++: the class is a concept, and
@@ -401,7 +401,7 @@ let with_itree_mode_for ty f =
     de Bruijn indices still line up, together with what each takes as a template
     parameter: its kind (in CppIR), its name, the class it instantiates, and
     the name the Rocq binder had. *)
-let promote_typeclass_params (params : (Id.t * Core.Type.t) list) =
+let promote_typeclass_params cx (params : (Id.t * Core.Type.t) list) =
   let counter = ref 0 in
   let temps = ref [] in
   let params =
@@ -419,7 +419,7 @@ let promote_typeclass_params (params : (Id.t * Core.Type.t) list) =
              declared. *)
           let tt =
             match ty with
-            | Core.Type.Global_app _ as ty -> Option.get (concept_constraint_of_class_type ty)
+            | Core.Type.Global_app _ as ty -> Option.get (concept_constraint_of_class_type cx ty)
             | _ ->
               (* Unreachable: [Table.is_typeclass_type] only holds of a
                  [Core.Type.Global_app]. *)
@@ -453,12 +453,12 @@ let declared_signature : Cpp_ir.Lowered.Decl.t -> _ = function
     the signature [declared]: both relaxed together
     ({!Plan_templates.relax_function_head}), the plan recording what the
     relaxations decided, which carry them through the declaration. *)
-let plan_function_head ?deduced_callables ?passing ~minted n ty (temps : head_params)
+let plan_function_head cx ?deduced_callables ?passing ~minted n ty (temps : head_params)
     (declared : Callable_abi.signature) =
   let temps, signature, relaxations = relax_function_head temps declared in
   Callable_abi.of_head ?deduced_callables ?passing ~signature ~relaxations ~minted
     ~omitted:(Translation_tvars.type_arg_omission n)
-    ~phantom_prefix:(Translation_types.leading_phantom_count n)
+    ~phantom_prefix:(Translation_types.leading_phantom_count cx n)
     ~relaxed:(fun i -> IntSet.mem i (Type_util.relaxed_higher_kinded_tvars ty))
     ~callee:n ~scheme:(Core_util.reference_scheme n) temps
 
@@ -538,15 +538,15 @@ end
                  inference)
     @param temps template type parameters, and [minted] what their builder
                  recorded of each ({!Callable_abi.minted}) *)
-let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_params) =
+let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_params) =
   let dom, cod =
     match cty with Function (d, c) -> (d, c) | t -> ([ (Void : Cpp_ir.Lowered.Type.t) ], t)
   in
   (* Suppress __attribute__((pure)) for functions whose Core return type is
      monadic — these perform side effects even though the C++ return type
      may look pure after type erasure. *)
-  let no_pure = is_monadic_core_type (core_codomain ty) || Translation_suspension.ast_may_throw b in
-  with_itree_mode_for ty @@ fun () ->
+  let no_pure = is_monadic_core_type (core_codomain ty) || Translation_suspension.ast_may_throw cx b in
+  with_itree_mode_for cx ty @@ fun () ->
   (* Void-ify unit codomain: unit as return type maps to C++ void.
      Check the Core result type (unwrapping monad if present) to determine
      if the function returns unit. Then recursively replace the unit enum
@@ -731,7 +731,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      it would be if written.  The indices are source order (param 0 = first
      Rocq parameter). *)
   let non_fwd_set =
-    Translation_callable_params.ungeneralised_callable_params ~self_ref:n
+    Translation_callable_params.ungeneralised_callable_params cx ~self_ref:n
       ~suspended:(Table.is_coinductive_type (core_return_type ty))
       (List.length all_params) b
   in
@@ -741,7 +741,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      scope The original parameter order is preserved for correct de Bruijn
      indexing. *)
   let all_params_for_env, typeclass_temps =
-    promote_typeclass_params
+    promote_typeclass_params cx
       (List.map
          (fun (core_id, ty) -> (cpp_id_of_id (id_of_binder_name core_id), ty))
          all_params )
@@ -784,7 +784,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   (* Type annotations inside the body must name the same resolved types as the
      signature does. *)
   let gen_body_stmts env cw e =
-    apply_hkt_resolutions_stmts hkt_tvar_resolutions (gen_stmts env cw e)
+    apply_hkt_resolutions_stmts hkt_tvar_resolutions (gen_stmts cx env cw e)
   in
   (* Substitute promoted type var markers [Tpromoted name] with their
      qualified resolutions throughout a C++ type tree. *)
@@ -830,10 +830,10 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      original names would read [void foo(T f, F f0, forest f) { ... f1->v()
      ... }], where the body's [f1] matches no parameter. *)
   let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
-  reset_env_types ();
-  Translation_binders.push_parameters env all_ids;
+  reset_env_types cx;
+  Translation_binders.push_parameters cx env all_ids;
   let n_params = List.length all_params in
-  let owned_flags = Translation_ownership.infer_owned_flags ~owner:n b all_ids in
+  let owned_flags = Translation_ownership.infer_owned_flags cx ~owner:n b all_ids in
   (* Zip all_ids with ownership flags. all_ids and all_params have the same
      length (push_vars' preserves length), so owned_flags aligns 1:1. *)
   let all_ids_with_owned =
@@ -870,14 +870,14 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
   let ids =
     List.map
       (fun (x, ty, owned) ->
-        let cpp_ty = Translation_types.cpp_ir_of_core_type env [] ty in
+        let cpp_ty = Translation_types.cpp_ir_of_core_type cx env [] ty in
         let cpp_ty =
           if has_type_resolutions then resolve_promoted_in_type cpp_ty
           else cpp_ty
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
-        let cpp_ty = Translation_monadic.reify_monadic_param_type ty cpp_ty in
-        let wrapped = Translation_ownership.wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
+        let cpp_ty = Translation_monadic.reify_monadic_param_type cx ty cpp_ty in
+        let wrapped = Translation_ownership.wrap_param_by_ownership cx ~is_owned:owned ~core:ty cpp_ty in
         (x, wrapped) )
       ids_with_owned
   in
@@ -1002,7 +1002,7 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
     let alias_rhs_is_fun kn =
       match Table.lookup_typedef_unchecked kn with
       | Some core_ty -> (
-        match Translation_types.cpp_ir_of_core_type env [] core_ty with
+        match Translation_types.cpp_ir_of_core_type cx env [] core_ty with
         | Function _ | Const (Function _) -> true
         | _ -> false )
       | None -> false
@@ -1172,9 +1172,9 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
 
 (** The head of the function [n] generated under [scope], planned as its
     callers see it: outside the type-variable scope its body is generated in. *)
-let plan_scope_head n ty scope =
-  with_type_vars [] (fun () ->
-      plan_function_head ~deduced_callables:scope.Body_scope.deduced_callables ~passing:scope.passing
+let plan_scope_head cx n ty scope =
+  with_type_vars cx [] (fun () ->
+      plan_function_head cx ~deduced_callables:scope.Body_scope.deduced_callables ~passing:scope.passing
         ~minted:scope.minted n ty scope.temps
         {Callable_abi.params = List.rev_map snd scope.ids; ret = scope.cod})
 
@@ -1182,9 +1182,9 @@ let plan_scope_head n ty scope =
     decided: its plan's, which was made before anything was generated.
     Under [CRANE_CHECK_IR] the head is decided again from [scope] and checked
     against the plan. *)
-let planned_relaxations n ty scope =
-  if Probe.checking () then Callable_abi.check (Translation_state.callables ()) (plan_scope_head n ty scope);
-  Callable_abi.relaxations (Callable_abi.planned (Translation_state.callables ()) n)
+let planned_relaxations cx n ty scope =
+  if Probe.checking () then Callable_abi.check (Translation_state.callables cx) (plan_scope_head cx n ty scope);
+  Callable_abi.relaxations (Callable_abi.planned (Translation_state.callables cx) n)
 
 (** The global [r] at the type arguments [tys], with what its custom
     extraction inlines, if anything. *)
@@ -1201,14 +1201,14 @@ let entity_reference r tys : Cpp_ir.Lowered.Expr.t =
     ([undeducible]) the call is at another instantiation than Core records,
     so it writes only the dictionaries and the parameters up to the last one
     nothing deduces, leaving the rest to deduction. *)
-let self_call_reference n ~undeducible =
+let self_call_reference cx n ~undeducible =
   let writable =
     List.filter_map
       (fun p ->
         match (p.Callable_abi.write, p.Callable_abi.origin) with
         | Callable_abi.Deduce_only, _ | _, Callable_abi.From_callable _ -> None
         | _ -> Some (p.Callable_abi.origin, Callable_abi.Template_param.name p.Callable_abi.id) )
-      (Callable_abi.template_head (Callable_abi.planned (Translation_state.callables ()) n))
+      (Callable_abi.template_head (Callable_abi.planned (Translation_state.callables cx) n))
   in
   let written =
     match undeducible with
@@ -1237,8 +1237,8 @@ let self_call_reference n ~undeducible =
     Under [CRANE_CHECK_IR] the generated signature is held to the plan's.  A
     top-level sequential [main] keeps its own signature: it is declared to
     return [int] for the entry point, which no call of it reads. *)
-let declare_planned n decl =
-  let abi = Callable_abi.planned (Translation_state.callables ()) n in
+let declare_planned cx n decl =
+  let abi = Callable_abi.planned (Translation_state.callables cx) n in
   let is_entry_point =
     match (n, (decl : Cpp_ir.Lowered.Decl.t)) with
     | GlobRef.ConstRef c, Function {return_type = External ("int", []); _} ->
@@ -1280,12 +1280,12 @@ let declare_planned n decl =
     @param ty    the original Core type
     @param temps template type parameters, and [minted] what their builder
                  recorded of each ({!Callable_abi.minted}) *)
-let gen_dfun ~minted n b cty ty temps =
-  let scope = dfun_body_scope ~minted n b cty ty temps in
-  let relaxations = planned_relaxations n ty scope in
-  let rec_call = self_call_reference n ~undeducible:scope.self_call_undeducible in
+let gen_dfun cx ~minted n b cty ty temps =
+  let scope = dfun_body_scope cx ~minted n b cty ty temps in
+  let relaxations = planned_relaxations cx n ty scope in
+  let rec_call = self_call_reference cx n ~undeducible:scope.self_call_undeducible in
   let inner, env =
-    with_itree_mode_for ty @@ fun () ->
+    with_itree_mode_for cx ty @@ fun () ->
   let {
     Body_scope.env = env;
     all_ids = all_ids;
@@ -1334,15 +1334,15 @@ let gen_dfun ~minted n b cty ty temps =
     | [] -> declared
     | numbers -> List.init (List.fold_left max 0 numbers) (fun k -> tvar_id (k + 1))
   in
-  set_current_type_vars type_var_ids;
+  set_current_type_vars cx type_var_ids;
   (* The head itself, at the kinds it declares: see
      {!Translation_state.current_template_head}. *)
-  let saved_template_head = get_current_template_head () in
-  set_current_template_head (typeclass_temps_basic @ regular_temps);
+  let saved_template_head = get_current_template_head cx in
+  set_current_template_head cx (typeclass_temps_basic @ regular_temps);
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
-  let saved_promoted_var_map = (!tctx).lexical.promoted_var_map in
+  let saved_promoted_var_map = cx.ctx.lexical.promoted_var_map in
   (* Extend, never replace.  This declaration's own instance parameters answer
      first -- a variable they declare is the one the body is written in -- but
      what {!with_body_resolutions} read from the body and from the declarations
@@ -1351,7 +1351,7 @@ let gen_dfun ~minted n b cty ty temps =
      natIPtr)] has none, and replacing the map dropped the answer on the way
      in, so the body spelled the file-scope erased alias in a scope that knew
      the instance perfectly well. *)
-  set_lexical (fun l -> { l with promoted_var_map = scope.promoted_var_resolutions @ saved_promoted_var_map });
+  set_lexical cx (fun l -> { l with promoted_var_map = scope.promoted_var_resolutions @ saved_promoted_var_map });
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
@@ -1364,7 +1364,7 @@ let gen_dfun ~minted n b cty ty temps =
   let is_cofix_return = Translation_suspension.suspends_whole n core_ret b in
   let cofix_wrap (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_return then
-      suspend_whole ~cpp_of:(Translation_types.cpp_ir_of_core_type env type_var_ids) ~cod core_ret x
+      suspend_whole ~cpp_of:(Translation_types.cpp_ir_of_core_type cx env type_var_ids) ~cod core_ret x
     else if cod = Void then
       (* void function: execute expression for side effects, then return.
          Some tail expressions (like writeTVar) have side effects that must
@@ -1434,10 +1434,10 @@ let gen_dfun ~minted n b cty ty temps =
             | Table.AssertComment comment -> Some (Assert (Stated comment)) )
         assertions
   in
-  begin_body ~owner:n ~function_:true ();
-  set_current_parameters (List.map snd (parameter_binders env all_ids));
+  begin_body cx ~owner:n ~function_:true ();
+  set_current_parameters cx (List.map snd (parameter_binders cx env all_ids));
   let resumes =
-    Control_to_cpp_ir.function_resumes ~unit:(Translation_state.unit_context ()) n ~depth:(List.length all_ids)
+    Control_to_cpp_ir.function_resumes ~unit:(Translation_state.unit_context cx) n ~depth:(List.length all_ids)
   in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)
@@ -1452,8 +1452,8 @@ let gen_dfun ~minted n b cty ty temps =
   in
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
-  let saved_return_type = (!tctx).lexical.current_cpp_return_type in
-  set_lexical (fun l -> { l with current_cpp_return_type = Some scope.cod });
+  let saved_return_type = cx.ctx.lexical.current_cpp_return_type in
+  set_lexical cx (fun l -> { l with current_cpp_return_type = Some scope.cod });
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default [Abort] throw. *)
@@ -1479,8 +1479,8 @@ let gen_dfun ~minted n b cty ty temps =
         return_type = scope.cod;
         no_pure;
         constexpr = Undecided;
-        shape = Definition (List.rev scope.ids, finish_fn_body scope.cod (guarded (sigma_asserts @ body)));
-        binders = parameter_binders env scope.ids;
+        shape = Definition (List.rev scope.ids, finish_fn_body cx scope.cod (guarded (sigma_asserts @ body)));
+        binders = parameter_binders cx env scope.ids;
         loop = None }
   in
   let inner =
@@ -1491,12 +1491,12 @@ let gen_dfun ~minted n b cty ty temps =
         | None ->
           let b =
             List.map (glob_subst_stmt ~spare n rec_call)
-              (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
+              (with_region cx ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
           in
           return_captures_by_value b
       in
-      clear_current_type_vars ();
-      set_current_parameters [];
+      clear_current_type_vars cx;
+      set_current_parameters cx [];
       definition b )
     else
       (* An axiom or exception body, which always throws, is the one that
@@ -1508,21 +1508,21 @@ let gen_dfun ~minted n b cty ty temps =
         | None ->
         match b with
         | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ ->
-          List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts env cofix_wrap b)
+          List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts cx env cofix_wrap b)
         | _ ->
           List.map
             (glob_subst_stmt ~spare n rec_call)
-            (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
+            (with_region cx ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
       in
       let b = return_captures_by_value b in
-      clear_current_type_vars ();
-      set_current_parameters [];
+      clear_current_type_vars cx;
+      set_current_parameters cx [];
       definition b
   in
-  set_lexical (fun l -> { l with current_cpp_return_type = saved_return_type });
+  set_lexical cx (fun l -> { l with current_cpp_return_type = saved_return_type });
   Table.current_decl_ref := saved_decl_ref;
-  set_lexical (fun l -> { l with promoted_var_map = saved_promoted_var_map });
-  set_current_template_head saved_template_head;
+  set_lexical cx (fun l -> { l with promoted_var_map = saved_promoted_var_map });
+  set_current_template_head cx saved_template_head;
   (* {b Entry point detection for monadic [main].}
 
      When a Rocq definition named [main] has a monadic return type, it is
@@ -1608,7 +1608,7 @@ let gen_dfun ~minted n b cty ty temps =
   in
     (inner, env)
   in
-  (declare_planned n (Head_relaxation.apply_all relaxations inner), env)
+  (declare_planned cx n (Head_relaxation.apply_all relaxations inner), env)
 
 (** Whether a recovered type names an associated type of the enclosing class,
     and so is worth writing back into the binder it came from.  Anything else
@@ -1680,10 +1680,10 @@ let recover_erased_body_types ty b =
     constructor argument is.  The [Core.Expr.Erased_value] case of {!Translation_expr.gen_expr}
     is for dead code, an abort; a constant is evaluated, at static
     initialisation. *)
-let gen_constant_value ?expected_ty b =
+let gen_constant_value cx ?expected_ty b =
   match b with
   | Core.Expr.Erased_value _ -> Cpp_erasure.empty_box
-  | _ -> gen_expr ?expected_ty (empty_env ()) b
+  | _ -> gen_expr cx ?expected_ty (empty_env ()) b
 
 (** The parameters a head declares for the type variables [cty] spells,
     and for the Core variables [extra] it does not, by the variable each
@@ -1727,11 +1727,11 @@ let variable n ty init : Cpp_ir.Lowered.Decl.t =
     Core definition: a constant whose body only throws (as a zero-argument
     function), or a constant initialised with its value.  Returns the
     declaration, its environment and the C++ type's variables. *)
-let gen_decl__inner n b ty =
-  with_body_resolutions n b @@ fun () ->
-  with_itree_mode_for ty @@ fun () ->
-  with_method_ns_for_locals @@ fun () ->
-  let cty_ir = Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty in
+let gen_decl__inner cx n b ty =
+  with_body_resolutions cx n b @@ fun () ->
+  with_itree_mode_for cx ty @@ fun () ->
+  with_method_ns_for_locals cx @@ fun () ->
+  let cty_ir = Translation_types.cpp_ir_of_core_type cx (empty_env ()) [] ty in
   let tvars = get_tvars cty_ir in
   let temps = Cpp_ir.Build.typenames tvars in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
@@ -1739,16 +1739,16 @@ let gen_decl__inner n b ty =
     | Function _ -> function_without_plan n
     | _ ->
     match b with
-    | _ when Translation_suspension.thunk_reason n = Some Translation_suspension.Throws ->
+    | _ when Translation_suspension.thunk_reason cx n = Some Translation_suspension.Throws ->
       (* A body that only throws becomes a zero-arg function, so the throw
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
-      let body_expr = with_region b (fun () -> gen_expr (empty_env ()) b) in
+      let body_expr = with_region cx b (fun () -> gen_expr cx (empty_env ()) b) in
       (templated (thunk n cty_ir body_expr), empty_env (), tvars)
     | _ ->
-      begin_body ~owner:n ();
+      begin_body cx ~owner:n ();
       let body_expr =
-        with_cpp_return_type (Some cty_ir) (fun () -> with_region b (fun () -> gen_constant_value b))
+        with_cpp_return_type cx (Some cty_ir) (fun () -> with_region cx b (fun () -> gen_constant_value cx b))
       in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
@@ -1763,15 +1763,15 @@ let gen_decl__inner n b ty =
         else body_expr
       in
       let body_expr =
-        match Translation_types.slot_repr_of_cpp_type cty_ir with
-        | Boxed kind -> Translation_coerce.box_for_any_slot kind b body_expr
+        match Translation_types.slot_repr_of_cpp_type cx cty_ir with
+        | Boxed kind -> Translation_coerce.box_for_any_slot cx kind b body_expr
         | Native -> body_expr
       in
       (templated (deapply_plain_tvars temps (variable n cty_ir body_expr)), empty_env (), tvars)
 
 (** {!gen_decl__inner} with [n] as the declaration being generated. *)
-let gen_decl n b ty =
-  Table.with_decl_ref n (fun () -> gen_decl__inner n b ty)
+let gen_decl cx n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl__inner cx n b ty)
 
 (** What a top-level function is generated under: its body with erased types
     recovered and type variables resolved against its Core type, its C++ type,
@@ -1791,13 +1791,13 @@ type function_head = {
 
 (** [with_function_head n b ty k] establishes the scope a top-level function
     [n] is generated in and hands [k] its {!function_head}. *)
-let with_function_head n b ty k =
-  with_body_resolutions n b @@ fun () ->
+let with_function_head cx n b ty k =
+  with_body_resolutions cx n b @@ fun () ->
   let ty = type_simpl ty in
   let b = recover_erased_body_types ty b in
   let b = Translation_tvars.resolve_body_tvars b ty in
-  with_method_ns_for_locals @@ fun () ->
-  let cty = Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty in
+  with_method_ns_for_locals cx @@ fun () ->
+  let cty = Translation_types.cpp_ir_of_core_type cx (empty_env ()) [] ty in
   let tvars = List.map snd (Type_util.get_tvars_indexed cty) in
   let index_tvar_set = collect_core_type_index_tvars ty in
   let extra_index_tvars =
@@ -1831,8 +1831,8 @@ let with_function_head n b ty k =
 (** [gen_function n ty h] generates the function [n] under [h]: its
     definition, the environment its names were allocated in, and the template
     parameters callers see -- [h]'s, then one per callable parameter. *)
-let gen_function n ty h =
-  let f, env = gen_dfun ~minted:h.minted n h.body h.cty ty h.temps in
+let gen_function cx n ty h =
+  let f, env = gen_dfun cx ~minted:h.minted n h.body h.cty ty h.temps in
   let callable_tparams =
     match h.cty with
     | Function (dom, _) ->
@@ -1851,13 +1851,13 @@ let gen_function n ty h =
     [n] -- [b] its body, [ty] its type -- as generating it would plan it,
     without generating the body.  A member of a recursive group is always
     generated as a function; a constant only where its C++ type is one. *)
-let plan_function ~fixpoint n b ty =
+let plan_function cx ~fixpoint n b ty =
   Table.with_decl_ref n @@ fun () ->
-  with_function_head n b ty @@ fun ty h ->
+  with_function_head cx n b ty @@ fun ty h ->
   let plan cty =
-    let abi = plan_scope_head n ty (dfun_body_scope ~minted:h.minted n h.body cty ty h.temps) in
+    let abi = plan_scope_head cx n ty (dfun_body_scope cx ~minted:h.minted n h.body cty ty h.temps) in
     ( if Probe.checking () then
-        match Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty with
+        match Translation_types.cpp_ir_of_core_type cx (empty_env ()) [] ty with
         | live -> Translation_calls.check_planned_arity abi live
         | exception e when CErrors.noncritical e -> () );
     Some abi
@@ -1871,41 +1871,41 @@ let plan_function ~fixpoint n b ty =
     constant whose body only throws (as a zero-argument function, so it
     throws when called and not at static initialisation), or [None] for any
     other constant. *)
-let gen_decl_for_pp__inner n b ty =
-  with_function_head n b ty @@ fun ty h ->
+let gen_decl_for_pp__inner cx n b ty =
+  with_function_head cx n b ty @@ fun ty h ->
   match h.cty with
   | Function _ ->
-    let f, env, tvars = gen_function n ty h in
+    let f, env, tvars = gen_function cx n ty h in
     (Some f, env, tvars)
-  | cty when Translation_suspension.thunk_reason n = Some Translation_suspension.Throws ->
-    let body_expr = gen_expr (empty_env ()) h.body in
+  | cty when Translation_suspension.thunk_reason cx n = Some Translation_suspension.Throws ->
+    let body_expr = gen_expr cx (empty_env ()) h.body in
     let inner = thunk n cty body_expr in
     let ds = match h.temps with [] -> inner | l -> Template (l, None, inner) in
     (Some ds, empty_env (), h.tvars)
   | _ -> (None, empty_env (), h.tvars)
 
 (** {!gen_decl_for_pp__inner} with [n] as the declaration being generated. *)
-let gen_decl_for_pp n b ty =
-  Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner n b ty)
+let gen_decl_for_pp cx n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner cx n b ty)
 
 (** Generate a full C++ function definition for a [Core.Decl.Recursive_group] member.  Returns
     [(decl, env, tvars)]. *)
-let gen_dfun_def__inner n b ty = with_function_head n b ty (gen_function n)
+let gen_dfun_def__inner cx n b ty = with_function_head cx n b ty (gen_function cx n)
 
 (** {!gen_dfun_def__inner} with [n] as the declaration being generated. *)
-let gen_dfun_def n b ty =
-  Table.with_decl_ref n (fun () -> gen_dfun_def__inner n b ty)
+let gen_dfun_def cx n b ty =
+  Table.with_decl_ref n (fun () -> gen_dfun_def__inner cx n b ty)
 
 (** Generate the C++ specification of [n], which is not a function, for a
     header: a throwing constant's zero-argument declaration, or a constant's
     initialised definition. *)
-let gen_spec__inner n b ty =
-  with_body_resolutions n b @@ fun () ->
-  with_itree_mode_for ty @@ fun () ->
+let gen_spec__inner cx n b ty =
+  with_body_resolutions cx n b @@ fun () ->
+  with_itree_mode_for cx ty @@ fun () ->
   let ty = type_simpl ty in
   let core_ty = ty in  (* preserve Core type before C++ conversion *)
-  with_method_ns_for_locals @@ fun () ->
-  let ty_ir = Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty in
+  with_method_ns_for_locals cx @@ fun () ->
+  let ty_ir = Translation_types.cpp_ir_of_core_type cx (empty_env ()) [] ty in
   let temps = Cpp_ir.Build.typenames (get_tvars ty_ir) in
   let templated inner = match temps with [] -> inner | l -> Cpp_ir.Decl.Template (l, None, inner) in
   let result =
@@ -1913,7 +1913,7 @@ let gen_spec__inner n b ty =
     | Function _ -> function_without_plan n
     | _ ->
     match b with
-    | _ when Translation_suspension.thunk_reason n = Some Translation_suspension.Throws ->
+    | _ when Translation_suspension.thunk_reason cx n = Some Translation_suspension.Throws ->
       (* Throws when called, so: a zero-arg function declaration. *)
       let inner : Cpp_ir.Lowered.Decl.t =
         Function
@@ -1931,7 +1931,7 @@ let gen_spec__inner n b ty =
          erased template type args (see try_recover_erased_return_type). Without
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
-      with_cpp_return_type (Some ty_ir) @@ fun () ->
+      with_cpp_return_type cx (Some ty_ir) @@ fun () ->
       (* Strip a coercion wrapper and track whether a type coercion from std::any
          is needed.  Core.Expr.Coerce wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
@@ -1957,11 +1957,11 @@ let gen_spec__inner n b ty =
           (Type_util.expand_core_fun_alias core_ty)
           inner_body
       in
-      begin_body ~owner:n ();
+      begin_body cx ~owner:n ();
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
-      let b_expr = with_region inner_body (fun () -> gen_constant_value ~expected_ty:ty_ir inner_body) in
+      let b_expr = with_region cx inner_body (fun () -> gen_constant_value cx ~expected_ty:ty_ir inner_body) in
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
          (a) Core.Expr.Coerce — the extraction explicitly flagged a type coercion.
@@ -1979,13 +1979,13 @@ let gen_spec__inner n b ty =
         && (has_magic || Translation_erasure.core_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then Translation_coerce.unbox_value ty_ir b_expr
+        if needs_any_cast then Translation_coerce.unbox_value cx ty_ir b_expr
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
              [std::any] whatever its Core type says, and neither (a) nor (b)
              sees that. *)
-          Translation_coerce.recover_boxed_component ty_ir b_expr
+          Translation_coerce.recover_boxed_component cx ty_ir b_expr
       in
       (* When a unit-typed constant's body may call a void-ified function,
          wrap in an IIFE that executes the body for side effects and
@@ -1999,8 +1999,8 @@ let gen_spec__inner n b ty =
         else b_expr
       in
       let b_expr =
-        match Translation_types.slot_repr_of_cpp_type ty_ir with
-        | Boxed kind -> Translation_coerce.box_for_any_slot kind inner_body b_expr
+        match Translation_types.slot_repr_of_cpp_type cx ty_ir with
+        | Boxed kind -> Translation_coerce.box_for_any_slot cx kind inner_body b_expr
         | Native -> b_expr
       in
       (* A type naming a class field this scope cannot resolve would spell
@@ -2009,7 +2009,7 @@ let gen_spec__inner n b ty =
          @int_to_ptr natIPtr (@PIV natIPtr) ...] is an [EOU<pair<Nat, bool>>],
          not an [EOU<crane::obj>].  The initialiser says it. *)
       let ty_ir : Cpp_ir.Lowered.Type.t =
-        if Translation_types.mentions_unresolved_promoted ty_ir then Auto else ty_ir in
+        if Translation_types.mentions_unresolved_promoted cx ty_ir then Auto else ty_ir in
       (* A polymorphic constant's family parameter is plain, as a
          function's is, and written applied until deapplied. *)
       (templated (deapply_plain_tvars temps (variable n (Const ty_ir) b_expr)), empty_env ())
@@ -2017,8 +2017,8 @@ let gen_spec__inner n b ty =
   result
 
 (** {!gen_spec__inner} with [n] as the declaration being generated. *)
-let gen_spec n b ty =
-  Table.with_decl_ref n (fun () -> gen_spec__inner n b ty)
+let gen_spec cx n b ty =
+  Table.with_decl_ref n (fun () -> gen_spec__inner cx n b ty)
 
 (** Where a function's definition is written: a template's in the header,
     anything else's in the implementation file. *)
@@ -2048,15 +2048,15 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 (** Generate each function of a mutually recursive group, translating each
     body once, then lower the group's control from its ControlIR where that
     is the bridge's to lower ({!Control_to_cpp_ir}). *)
-let gen_dfuns_dual fds =
+let gen_dfuns_dual cx fds =
   let generated =
     List.map
       (fun {Core.Recursion.Definition.entity; body; type_} ->
-        collecting_lifted (fun () -> gen_dfun_def entity body type_))
+        collecting_lifted cx (fun () -> gen_dfun_def cx entity body type_))
       fds
   in
   let lowered =
-    Control_to_cpp_ir.lower_group ~unit:(Translation_state.unit_context ())
+    Control_to_cpp_ir.lower_group ~unit:(Translation_state.unit_context cx)
       (List.map (fun ((ds, _, _), _) -> ds) generated)
   in
   List.map2
@@ -2064,19 +2064,19 @@ let gen_dfuns_dual fds =
     lowered generated
 
 (** Generate a single Core.Decl.Value function, translating its body once. *)
-let gen_decl_for_pp_dual__inner n b ty =
+let gen_decl_for_pp_dual__inner cx n b ty =
   let (gf_entity, gf_env), gf_lifted =
-    collecting_lifted @@ fun () ->
-    match gen_decl_for_pp n b ty with
+    collecting_lifted cx @@ fun () ->
+    match gen_decl_for_pp cx n b ty with
     | Some ds, env, tvars -> (defined ds tvars, env)
     | None, _, _ ->
       (* Not a function: a declaration, and no definition anywhere. *)
-      let spec, env = gen_spec n b ty in
+      let spec, env = gen_spec cx n b ty in
       (Declared spec, env)
   in
   {entity = gf_entity; env = gf_env; lifted = gf_lifted}
 
 (** {!gen_decl_for_pp_dual__inner} with [n] as the declaration being
     generated. *)
-let gen_decl_for_pp_dual n b ty =
-  Table.with_decl_ref n (fun () -> gen_decl_for_pp_dual__inner n b ty)
+let gen_decl_for_pp_dual cx n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl_for_pp_dual__inner cx n b ty)

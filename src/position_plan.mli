@@ -29,7 +29,7 @@
     coercion in [body], a region generated in the binders [outer] under the
     return type in force, its variable reads planned as [reads]. *)
 val region :
-  outer:Lexenv.t ->
+  Translation_state.t -> outer:Lexenv.t ->
   reads:(Core.Occurrence.t * Translation_state.Planned_read.t) list ->
   Core.Expr.t ->
   (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list

@@ -20,11 +20,11 @@ open Core_query
     named [var_id] stands for, by name.  Reached from a globref through
     {!promoted_var_resolution}, and by name alone where only the name survives
     -- see {!Table.ind_promoted_params}. *)
-let promoted_var_binding var_id =
+let promoted_var_binding cx var_id =
   let r = Option.map snd
     (List.find_opt
        (fun (n, _) -> Id.equal n var_id)
-       (!tctx).lexical.promoted_var_map ) in
+       cx.ctx.lexical.promoted_var_map ) in
   r
 
 (** [ind_promoted_type_args g] -- the leading template arguments a mention of
@@ -39,10 +39,10 @@ let promoted_var_binding var_id =
     declaration the argument is that parameter, which is what the [Tpromoted]
     fallback spells; a scope that knows no instance spells the file-scope
     alias, as it did before there was a parameter at all. *)
-let ind_promoted_type_args g : Cpp_ir.Lowered.Type.t list =
+let ind_promoted_type_args cx g : Cpp_ir.Lowered.Type.t list =
   List.map
     (fun v ->
-      match promoted_var_binding v with
+      match promoted_var_binding cx v with
       | Some t -> t
       | None -> Promoted_member v )
     (Table.promoted_type_params g)
@@ -66,14 +66,14 @@ let rec erase_unresolved_tvars : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t 
     one this scope declares.  A slot type read off a callee's signature is
     written in the callee's type variables, which name nothing here, so such a
     type cannot be used as the type a use site wants. *)
-let names_only_scoped_tvars ty =
-  let scope = current_scope_type_names () in
+let names_only_scoped_tvars cx ty =
+  let scope = current_scope_type_names cx in
   List.for_all (fun id -> List.exists (Id.equal id) scope) (get_tvars ty)
 
 (** [ty], where this scope can write it: every variable it names is in scope,
     and it is not erased. *)
-let spell_in_scope ty =
-  if names_only_scoped_tvars ty && not (Cpp_ir.Types.prints_as_any ty) then Some ty else None
+let spell_in_scope cx ty =
+  if names_only_scoped_tvars cx ty && not (Cpp_ir.Types.prints_as_any ty) then Some ty else None
 
 (** [promoted_var_resolution g] -- what the promoted type variable [g] stands
     for here, if the scope says.  A promoted variable is a class's [Type]
@@ -81,20 +81,20 @@ let spell_in_scope ty =
     instance it belongs to; the enclosing scope is what supplies that, through
     [promoted_var_map].  A variable the scope does not answer has no spelling
     here, which is a different thing from having an erased one. *)
-let promoted_var_resolution g =
+let promoted_var_resolution cx g =
   match Table.promoted_type_var_name g with
-  | Some var_id -> promoted_var_binding var_id
+  | Some var_id -> promoted_var_binding cx var_id
   | None -> None
 
 (** Whether [ty] names a class field the current scope does not resolve, so
     that it would print through the field's file-scope [std::any] alias: a
     type read off another declaration, whose own instance resolved it. *)
-let mentions_unresolved_promoted (ty : Cpp_ir.Lowered.Type.t) =
+let mentions_unresolved_promoted cx (ty : Cpp_ir.Lowered.Type.t) =
   Cpp_ir.Types.exists
     (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
-      | Promoted_member v -> promoted_var_binding v = None
-      | Entity_application (g, _, _) -> Table.is_promoted_type_var g && promoted_var_resolution g = None
+      | Promoted_member v -> promoted_var_binding cx v = None
+      | Entity_application (g, _, _) -> Table.is_promoted_type_var g && promoted_var_resolution cx g = None
       | _ -> false )
     ty
 
@@ -103,14 +103,14 @@ let mentions_unresolved_promoted (ty : Cpp_ir.Lowered.Type.t) =
     back into expression generation -- a mapped type applied to a term, as a
     fixed-size array is to its length -- so it is the edge the two are
     separated at. *)
-let type_term_arg : (env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t) ref =
-  ref (fun _ _ -> CErrors.anomaly (Pp.str "Translation.type_term_arg: unset"))
+let type_term_arg : (Translation_state.t -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t) ref =
+  ref (fun _ _ _ -> CErrors.anomaly (Pp.str "Translation.type_term_arg: unset"))
 
 (** [cpp_ir_of_core_type env ~ns tvars t] is the C++ type of the Core type [t],
     a variable named as [tvars] names it; [ns] are the inductives whose
     recursive occurrences, at a constructor's storage, are held behind a
     pointer. *)
-let rec cpp_ir_of_core_type
+let rec cpp_ir_of_core_type cx
     env
     ?(ns : Ref.User.Set.t = Ref.User.Set.empty)
     (tvars : Id.t list)
@@ -128,11 +128,11 @@ let rec cpp_ir_of_core_type
        inside function types stay as value types instead of being wrapped in
        shared_ptr.  The outer field-position wrapping (shared_ptr for direct
        self-ref fields) is handled at the call site, not here. *)
-    let t1c = cpp_ir_of_core_type env tvars t1 in
+    let t1c = cpp_ir_of_core_type cx env tvars t1 in
     (* Reify monadic domain types: itree E R in parameter position becomes
        shared_ptr<ITree<R>> so the tree can be passed as a value. *)
-    let t1c = Translation_monadic.reify_monadic_param_type t1 t1c in
-    let t2c = cpp_ir_of_core_type env tvars t2 in
+    let t1c = Translation_monadic.reify_monadic_param_type cx t1 t1c in
+    let t2c = cpp_ir_of_core_type cx env tvars t2 in
     (* Skip erased params: is_erased_type catches direct Core.Type.Erased, is_cpp_dummy_type
        catches Core.Type.Erased wrapped in Core.Type.Meta (e.g.,
        Core.Type.Meta{contents=Some(Core.Type.Erased Core.Erasure_reason.Proof)}
@@ -186,7 +186,7 @@ let rec cpp_ir_of_core_type
   | Core.Type.Global_app {head = g; type_arguments = ts; _} when Table.is_promoted_type_var g ->
     ( match Table.promoted_type_var_name g with
     | Some var_id ->
-      ( match promoted_var_resolution g with
+      ( match promoted_var_resolution cx g with
       | Some resolved -> resolved
       | None ->
         (* No resolution found.  When the constructor-expression flag is set,
@@ -194,7 +194,7 @@ let rec cpp_ir_of_core_type
            type aliases are always std::any and non-Type promoted vars (like
            [base_category]) have no alias at all.  Otherwise keep the marker
            for concept generation and signature printing. *)
-        if (!tctx).lexical.in_constructor_expr then Any
+        if cx.ctx.lexical.in_constructor_expr then Any
         else Promoted_member var_id )
     | None -> Any )
   | Core.Type.Global_app {head = g; _} when Table.is_value_dep_type_scheme g ->
@@ -207,8 +207,8 @@ let rec cpp_ir_of_core_type
   | Core.Type.Global_app {head = g; type_arguments = ts; index_arguments = args} when is_custom g ->
     Entity_application
       ( g,
-        List.map (cpp_ir_of_core_type env ~ns tvars) ts,
-        List.map (fun a -> !type_term_arg env a) args )
+        List.map (cpp_ir_of_core_type cx env ~ns tvars) ts,
+        List.map (fun a -> !type_term_arg cx env a) args )
   | Core.Type.Global_app {head = g; type_arguments = ts; _} ->
     (* For inductives, only keep type args that correspond to parameters (not
        indices). Parameters become template params in C++; indices are
@@ -228,7 +228,7 @@ let rec cpp_ir_of_core_type
         | None ->
           (* Fallback: if tvars is non-empty and this is a local reference, use
              tvars length *)
-          let is_local = Ref.User.Set.mem g ns || spells_bare g in
+          let is_local = Ref.User.Set.mem g ns || spells_bare cx g in
           if is_local && tvars <> [] then
             safe_firstn (List.length tvars) ts
           else
@@ -244,7 +244,7 @@ let rec cpp_ir_of_core_type
       if Ref.User.Set.mem g ns then ns else Ref.User.Set.empty
     in
     let converted_ts =
-      List.map (cpp_ir_of_core_type env ~ns:ns_for_args tvars) filtered_ts
+      List.map (cpp_ir_of_core_type cx env ~ns:ns_for_args tvars) filtered_ts
     in
     let converted_ts =
       match g with
@@ -268,14 +268,14 @@ let rec cpp_ir_of_core_type
           converted_ts
       | _ -> converted_ts
     in
-    let converted_ts = Translation_tvars.apply_hkt_tyctors g converted_ts in
-    let converted_ts = ind_promoted_type_args g @ converted_ts in
+    let converted_ts = Translation_tvars.apply_hkt_tyctors cx g converted_ts in
+    let converted_ts = ind_promoted_type_args cx g @ converted_ts in
     let core : Cpp_ir.Lowered.Type.t = Entity_application (g, converted_ts, []) in
     ( match g with
     | GlobRef.IndRef _ ->
       (* Enum inductives are value types - no shared_ptr wrapping *)
       if is_enum_inductive g then
-        let is_local = Ref.User.Set.mem g ns || spells_bare g in
+        let is_local = Ref.User.Set.mem g ns || spells_bare cx g in
         if is_local then
           core
         else
@@ -298,7 +298,7 @@ let rec cpp_ir_of_core_type
               | _ -> false) ns
           | _ -> false
         in
-        let is_local = is_self_ref || spells_bare g in
+        let is_local = is_self_ref || spells_bare cx g in
         let is_uniform_self_ref =
           if not is_self_ref then
             true
@@ -357,8 +357,8 @@ let rec cpp_ir_of_core_type
      instance's associated type, leaving [Tapply] to render the application. *)
   | Core.Type.Variable_app {head = i; arguments = args} ->
     let head : Cpp_ir.Lowered.Type.t = Variable (Index (i, Translation_tvars.tvar_name_at tvars i)) in
-    Apply (head, List.map (cpp_ir_of_core_type env ~ns tvars) args)
-  | Core.Type.Meta {contents = Some t} -> cpp_ir_of_core_type env ~ns tvars t
+    Apply (head, List.map (cpp_ir_of_core_type cx env ~ns tvars) args)
+  | Core.Type.Meta {contents = Some t} -> cpp_ir_of_core_type cx env ~ns tvars t
   | Core.Type.Meta {contents = None} | Core.Type.Open _ ->
     (* Unresolved meta - use std::any for type erasure. This happens for
        existential type variables in indexed inductives. *)
@@ -392,7 +392,7 @@ let rec cpp_ir_of_core_type
     aliases that expand to an erased type.  Used to decide whether a
     scrutinee's template argument makes a constructor field store its
     value as [std::any] at runtime. *)
-let rec resolves_to_any_type : Cpp_ir.Lowered.Type.t -> bool = function
+let rec resolves_to_any_type cx : Cpp_ir.Lowered.Type.t -> bool = function
   | Any | Obligation Opaque_type -> true
   | Erased _ -> false
   | Entity_application (g, [], _) when Table.is_erased_type_const g -> true
@@ -400,20 +400,20 @@ let rec resolves_to_any_type : Cpp_ir.Lowered.Type.t -> bool = function
     let via_core_ty =
       match find_type_opt g with
       | Some core_ty ->
-        let tvars = get_current_type_vars () in
-        Some (cpp_ir_of_core_type (empty_env ()) tvars core_ty)
+        let tvars = get_current_type_vars cx in
+        Some (cpp_ir_of_core_type cx (empty_env ()) tvars core_ty)
       | None ->
         (match g with
          | GlobRef.ConstRef kn ->
            (match Table.lookup_typedef_unchecked kn with
             | Some core_ty ->
-              let tvars = get_current_type_vars () in
-              Some (cpp_ir_of_core_type (empty_env ()) tvars core_ty)
+              let tvars = get_current_type_vars cx in
+              Some (cpp_ir_of_core_type cx (empty_env ()) tvars core_ty)
             | None -> None)
          | _ -> None)
     in
     (match via_core_ty with
-     | Some cvt -> resolves_to_any_type cvt
+     | Some cvt -> resolves_to_any_type cx cvt
      | None -> false)
   | t when Cpp_ir.Types.prints_as_any t -> true
   | _ -> false
@@ -428,14 +428,14 @@ let box_kind_of_cpp_type t = if names_erased_alias t then Family_box else Var_bo
     declaration whose body erased, spelled through its alias -- a
     value-indexed family -- and as a [Var_box] otherwise
     ({!box_kind_of_cpp_type}, for a slot already known to be boxed). *)
-let slot_repr_of_cpp_type t =
-  if resolves_to_any_type t then Boxed (box_kind_of_cpp_type t) else Native
+let slot_repr_of_cpp_type cx t =
+  if resolves_to_any_type cx t then Boxed (box_kind_of_cpp_type t) else Native
 
 (** [cpp_of_core env t] converts a Core type in the type-variable scope that is
     currently in effect.  Nearly every conversion inside expression generation
     wants this, and spelling out {!get_current_type_vars} at each one invites
     passing the wrong scope. *)
-let cpp_of_core env t = cpp_ir_of_core_type env (get_current_type_vars ()) t
+let cpp_of_core cx env t = cpp_ir_of_core_type cx env (get_current_type_vars cx) t
 
 (** [template_arg_of_core_type ~site env tvars ty] converts [ty] for a template
     argument position, its arrows spelled as [site] says
@@ -449,16 +449,16 @@ let cpp_of_core env t = cpp_ir_of_core_type env (get_current_type_vars ()) t
     parameter: the signature may mention it inside an arrow it writes out
     itself (as [ap : F (A -> B) -> ...] does), and there the currying is what
     makes the argument match. *)
-let template_arg_of_core_type ~site env tvars ty =
+let template_arg_of_core_type cx ~site env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
-  Cpp_ir.Types.spell_arrows site (cpp_ir_of_core_type env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
+  Cpp_ir.Types.spell_arrows site (cpp_ir_of_core_type cx env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
 
-let build_template_params ~site env tvars tys =
+let build_template_params cx ~site env tvars tys =
   List.map
     (fun ty ->
-      let t = template_arg_of_core_type ~site env tvars ty in
+      let t = template_arg_of_core_type cx ~site env tvars ty in
       (* Check for unbound type variables *)
       match t with
       | Variable (Index (_, None)) when tvars <> [] ->
@@ -507,17 +507,17 @@ let build_template_params ~site env tvars tys =
 
 (** [template_params_of_core ~site:Through_tvar env tys] is {!build_template_params} against the
     type variables the enclosing scope has in hand; see {!cpp_of_core}. *)
-let template_params_of_core ~site env tys = build_template_params ~site env (get_current_type_vars ()) tys
+let template_params_of_core cx ~site env tys = build_template_params cx ~site env (get_current_type_vars cx) tys
 
 (** [param_expected_cpp_ty env param_tys i] is the C++ type the callee declares
     for its [i]th parameter, and so the type an argument generated for that
     position should aim at.  [None] when the position says nothing useful:
     either the callee has fewer parameters, or the declared type is erased and
     naming [std::any] as the expectation would only invite a spurious box. *)
-let param_expected_cpp_ty env param_tys i =
+let param_expected_cpp_ty cx env param_tys i =
   match List.nth_opt param_tys i with
   | Some core_ty ->
-    let cpp_ty = cpp_of_core env core_ty in
+    let cpp_ty = cpp_of_core cx env core_ty in
     if Cpp_ir.Types.prints_as_any cpp_ty then None else Some cpp_ty
   | None -> None
 
@@ -525,13 +525,13 @@ let param_expected_cpp_ty env param_tys i =
     alias hides the arguments its right-hand side was written with, and those
     arguments are exactly what a value built into such a slot has to agree
     with.  Returns the type unchanged when it is not an alias. *)
-let rec unfold_cpp_typedef env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+let rec unfold_cpp_typedef cx env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
   match cpp_ty with
-  | In_namespace (_, inner) -> unfold_cpp_typedef env inner
+  | In_namespace (_, inner) -> unfold_cpp_typedef cx env inner
   | Entity_application (GlobRef.ConstRef kn, args, _) -> (
     match Table.lookup_typedef_unchecked kn with
     | Some core_ty ->
-      let body = cpp_of_core env core_ty in
+      let body = cpp_of_core cx env core_ty in
       let n_promoted =
         let n = List.length (Table.promoted_type_params (GlobRef.ConstRef kn)) in
         if List.length args >= n + Core_util.type_maxvar core_ty then n else 0
@@ -558,10 +558,10 @@ let default_tvar_names (t : Cpp_ir.Lowered.Type.t) =
     resolves to [std::any], and, structurally, a function type's arguments and
     result.  Lets an expected type argument be compared against a computed one
     on equal terms, the computed side already being erased. *)
-let rec normalize_erased_types : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-  | t when resolves_to_any_type t -> Any
+let rec normalize_erased_types cx : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
+  | t when resolves_to_any_type cx t -> Any
   | Function (ps, r) ->
-    Function (List.map normalize_erased_types ps, normalize_erased_types r)
+    Function (List.map (normalize_erased_types cx) ps, normalize_erased_types cx r)
   | t -> t
 
 (** How many of [id]'s leading template parameters no signature mentions,
@@ -570,12 +570,12 @@ let rec normalize_erased_types : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t 
     {!Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
     declaration emitter counts the same run and leaves those parameters
     undefaulted. *)
-let leading_phantom_count id =
-  match callee_core_type id with
+let leading_phantom_count cx id =
+  match callee_core_type cx id with
   | None -> 0
   | Some core_ty ->
     let cty =
-      cpp_ir_of_core_type (empty_env ()) [] (type_simpl core_ty)
+      cpp_ir_of_core_type cx (empty_env ()) [] (type_simpl core_ty)
     in
     let force_required = collect_core_type_index_tvars core_ty in
     explicit_tvar_prefix ~force_required cty

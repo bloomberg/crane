@@ -20,12 +20,13 @@ type program = {
   control : Lower_control.t;
 }
 
-let analyze_program normalized =
+let analyze_program cx normalized =
   let struc = Core_phase.structure normalized in
   let recursive_groups = Recursive_groups.analyze struc in
-  let methods = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc in
+  let methods = Method_registry.create ~ret_is_erased:(Translation.return_type_is_erased cx) struc in
   let receiver r = Option.map snd (Method_registry.is_registered_method methods r) in
-  let recursion = Recursion_plan.analyze recursive_groups normalized in
+  let recursion = Recursion_plan.analyze ~suspension:(Translation_suspension.suspension cx) recursive_groups
+    normalized in
   { throwing_values = Structure_analysis.throwing_values struc;
     parameter_ownership = Ownership.summarize ~receiver struc;
     recursive_groups;

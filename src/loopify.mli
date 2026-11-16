@@ -83,7 +83,7 @@ val frame_machine :
     C++ call made of it records: a function's own, in its recursive group's
     bodies ({!Recursion_plan.calls}), or those of the member of the local
     fixpoint a helper lifted for it lowers. *)
-val definition_calls : GlobRef.t -> Core.Occurrence.t list
+val definition_calls : unit:Unit_context.t -> GlobRef.t -> Core.Occurrence.t list
 
 (** [record_unlowered ?unlowered f body] records the outcome of the
     function [f], whose body is [body], of which no loop of its own is made

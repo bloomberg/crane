@@ -24,8 +24,8 @@ type unsafe_needs = {
     ([file_suffix], [file_naming], [preamble]) and printers ([pp_struct],
     [pp_hstruct]), the optional interface-file conventions ([sig_suffix],
     [sig_preamble]), and [pp_decl] for printing one declaration in
-    isolation.  The printers render in a context ['context], the unit's,
-    built where the unit starts. *)
+    isolation.  The printers render in a context ['context], the unit's
+    lowering context, which holds what the unit's planning decided. *)
 type 'context t = {
   keywords : Id.Set.t;
   global_scope_keywords : Id.Set.t;

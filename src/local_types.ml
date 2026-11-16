@@ -91,17 +91,17 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     ({!Translation_calls.core_app_result_type}).  A recursive call, its head a
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
-let rec tail_result_type ~find = function
+let rec tail_result_type cx ~find = function
   | Core.Expr.Lambda {body = b; _}
   | Core.Expr.Let {body = b; _}
   | Core.Expr.Coerce {value = b; _}
   | Core.Expr.Boxed_value {value = b; _}
-  | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type ~find b
+  | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type cx ~find b
   | Core.Expr.Construct {result_type = ty; _} -> Some ty
-  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_calls.core_app_result_type_with ~find f args
+  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_calls.core_app_result_type_with cx ~find f args
   | Core.Expr.Match {branches = brs; _} ->
     Array.fold_left
-      (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type ~find b)
+      (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type cx ~find b)
       None brs
   | _ -> None
 
@@ -125,41 +125,41 @@ let find_extracted r = try Some (Table.find_extracted_type r) with Not_found -> 
     alone.  So is one whose body builds nothing:
     [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
     integer literals, and its call site supplies the argument. *)
-let recover_fix_codomain ~find ((id, ty) : Names.Id.t * _ Core.Type.at) (body : _ Core.Expr.at) =
+let recover_fix_codomain cx ~find ((id, ty) : Names.Id.t * _ Core.Type.at) (body : _ Core.Expr.at) =
   let dom, cod = Core_util.type_decomp ty in
   match cod with
   | Core.Type.Variable {variable = i; _}
     when not (List.exists (fun t -> Core_util.IntSet.mem i (Core_util.core_tvars t)) dom) -> (
-    match tail_result_type ~find body with
+    match tail_result_type cx ~find body with
     | Some t ->
       let subst = Type_util.subst_tvars_type [(i, t)] in
       ((id, subst ty), Type_util.map_types_in_ast subst body)
     | None -> ((id, ty), body) )
   | _ -> ((id, ty), body)
 
-let recover_fix_codomains_with ~find ids funs =
-  let settled = Array.map2 (recover_fix_codomain ~find) ids funs in
+let recover_fix_codomains_with cx ~find ids funs =
+  let settled = Array.map2 (recover_fix_codomain cx ~find) ids funs in
   (Array.map fst settled, Array.map snd settled)
 
-let recover_fix_codomains ids funs = recover_fix_codomains_with ~find:Core_query.find_type_opt ids funs
+let recover_fix_codomains cx ids funs = recover_fix_codomains_with cx ~find:Core_query.find_type_opt ids funs
 
 (* A codomain extraction left a hole is filled from the body the same way,
    by solving the hole: the cell is shared with every annotation the body
    writes it into, so filling it is the substitution.  It is filled before
    anything is minted -- a variable already standing for the result type is
    no longer asking what the body builds. *)
-let fill_codomain_hole (_, ty) body =
+let fill_codomain_hole cx (_, ty) body =
   match snd (Core_util.type_decomp ty) with
   | Core.Type.Meta ({contents = None} as cell) ->
-    Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type ~find:find_extracted body)
+    Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type cx ~find:find_extracted body)
   | _ -> ()
 
 (* Settles one group as translation reads it: codomains filled and recovered,
    then the signatures' remaining metavariables minted from [1].  The minting
    goes on for an applied group, into its bodies and arguments. *)
-let settle ids funs =
-  Array.iter2 fill_codomain_hole ids funs;
-  let ids, funs = recover_fix_codomains_with ~find:find_extracted ids funs in
+let settle cx ids funs =
+  Array.iter2 (fill_codomain_hole cx) ids funs;
+  let ids, funs = recover_fix_codomains_with cx ~find:find_extracted ids funs in
   let mint = mint ~minted:ignore ~next:(ref 1) in
   Array.iter (fun (_, ty) -> mint ty) ids;
   (funs, mint)
@@ -209,40 +209,40 @@ let check_let_lambda ~outer t a =
 
 (* Mints the open variables of the local definitions in [e], under a
    declaration whose own variables number up to [outer]. *)
-let rec expr ~outer = function
+let rec expr cx ~outer = function
   | Core.Expr.Let {value = (Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group);
                    body = b; _} ->
     let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
-    ignore (settle ids funs);
-    Array.iter (expr ~outer) funs;
-    expr ~outer b
+    ignore (settle cx ids funs);
+    Array.iter (expr cx ~outer) funs;
+    expr cx ~outer b
   | Core.Expr.Apply {callee = (Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group);
                      arguments = args} ->
     let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
-    let recovered, mint = settle ids funs in
+    let recovered, mint = settle cx ids funs in
     Array.iter (iter_annotations mint) recovered;
     List.iter (iter_annotations mint) args;
-    Array.iter (expr ~outer) funs;
-    List.iter (expr ~outer) args
+    Array.iter (expr cx ~outer) funs;
+    List.iter (expr cx ~outer) args
   | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
     let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
-    ignore (settle ids funs);
-    Array.iter (expr ~outer) funs
+    ignore (settle cx ids funs);
+    Array.iter (expr cx ~outer) funs
   | Core.Expr.Let {binder_type = t; value = (Core.Expr.Lambda _ as a); body = b; _} ->
     let minted v = Minted.replace let_lambda_bases v outer in
     let mint = mint ~minted ~next:(ref (outer + 1)) in
     mint t;
     iter_annotations mint a;
-    expr ~outer b
-  | e -> Core_util.ast_iter (expr ~outer) e
+    expr cx ~outer b
+  | e -> Core_util.ast_iter (expr cx ~outer) e
 
-let structure (s : Core.Program.extracted) =
+let structure cx (s : Core.Program.extracted) =
   Modutil.struct_iter
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
           (fun (fd : Core.Recursion.Definition.extracted) ->
-            expr ~outer:(Core_util.IntSet.fold max (Core_util.core_tvars fd.type_) 0) fd.body)
+            expr cx ~outer:(Core_util.IntSet.fold max (Core_util.core_tvars fd.type_) 0) fd.body)
           (Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     ignore ignore s

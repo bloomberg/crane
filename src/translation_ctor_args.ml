@@ -36,9 +36,9 @@ let rec core_ast_type_hint = function
     so they can be read as the arguments of an [n]-ary type.  Erased entries
     are dropped, since a promoted variable that resolves to [std::any] says no
     more than the erased annotation it would replace. *)
-let promoted_tys_of_arity n =
+let promoted_tys_of_arity cx n =
   match List.filter_map (fun (_, t) -> if Cpp_ir.Types.prints_as_any t then None else Some t)
-          (!tctx).lexical.promoted_var_map
+          cx.ctx.lexical.promoted_var_map
   with
   | tys when List.length tys = n -> Some tys
   | _ -> None
@@ -124,7 +124,7 @@ let field_stores_erased_fn_value ~(field_cpp_ty : Cpp_ir.Lowered.Type.t option) 
     where that expectation is recorded.  Namespace and [shared_ptr] wrappers
     are seen through, as are typedefs, which may name [ind] only indirectly.
     [None] when the return type says nothing about [ind]. *)
-let expected_type_args_from_return env ?slot ind ~arity =
+let expected_type_args_from_return cx env ?slot ind ~arity =
   let rec go (cpp_ty : Cpp_ir.Lowered.Type.t) =
     match cpp_ty with
     | Entity_application (r, tys, _)
@@ -136,14 +136,14 @@ let expected_type_args_from_return env ?slot ind ~arity =
     | Entity_application (GlobRef.ConstRef kn, _, _) -> (
       match Table.lookup_typedef_unchecked kn with
       | Some core_ty ->
-        go (Translation_types.cpp_of_core env core_ty)
+        go (Translation_types.cpp_of_core cx env core_ty)
       | None -> None )
     | _ -> None
   in
   match slot with
   | Some t when go t <> None -> go t
   | _ -> (
-    match current_cpp_return_type () with
+    match current_cpp_return_type cx () with
     | Some rt -> go rt
     | None -> None )
 
@@ -166,7 +166,7 @@ let ctor_arg_is_passthrough r i =
     promoted types of [promoted_active]'s arity or, failing that, [return]'s
     arguments when it is the same inductive; an unresolved one written down as
     a box ({!Type_util.materialise_opaque}). *)
-let ctor_draft_temps env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) =
+let ctor_draft_temps cx env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) =
   let temps =
     match ty with
     | Core.Type.Global_app {head = cn; type_arguments = raw_tys; _} ->
@@ -178,9 +178,9 @@ let ctor_draft_temps env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t optio
           | None -> raw_tys )
         | _ -> raw_tys
       in
-      let temps = Translation_types.template_params_of_core ~site:Through_tvar env tys in
+      let temps = Translation_types.template_params_of_core cx ~site:Through_tvar env tys in
       if List.for_all Cpp_ir.Types.prints_as_any temps && promoted_active then
-        match promoted_tys_of_arity (List.length tys) with
+        match promoted_tys_of_arity cx (List.length tys) with
         | Some promoted_tys -> promoted_tys
         | None -> temps
       else if List.for_all Cpp_ir.Types.prints_as_any temps then
@@ -201,13 +201,13 @@ let ctor_draft_temps env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t optio
     parameter of the inductive ([field_tys], dummies dropped) whose template
     argument ([temps]) prints as [std::any], and the constructor's template
     does not forward the argument as it is. *)
-let stores_erased_fn ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list) i e =
+let stores_erased_fn cx ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list) i e =
   match List.nth_opt field_tys i with
   | Some (Core.Type.Variable {variable = j; _}) -> (
     match List.nth_opt temps (j - 1) with
     | _ when ctor_arg_is_passthrough r i -> false
-    | Some t when Cpp_ir.Types.prints_as_any (Translation_types.unfold_cpp_typedef env t) ->
-      Translation_erasure.core_expr_is_function_value ?var e
+    | Some t when Cpp_ir.Types.prints_as_any (Translation_types.unfold_cpp_typedef cx env t) ->
+      Translation_erasure.core_expr_is_function_value cx ?var e
     | _ -> false )
   | _ -> false
 
@@ -219,10 +219,10 @@ let stores_erased_fn ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t list)
     ({!mark_own_param_for_pair_erasure}); a parameter whose type converts with
     no erased position -- a literal index picking a concrete branch of a type
     family -- is erased to [std::any] so that the cast on it compiles. *)
-let erased_fn_lambda env e =
+let erased_fn_lambda cx env e =
   match strip_magic e with
   | Core.Expr.Lambda {parameter = id; parameter_type = ty; body} ->
-    if Type_util.has_tany_in_type (Translation_types.cpp_of_core env ty) then
+    if Type_util.has_tany_in_type (Translation_types.cpp_of_core cx env ty) then
       Core.Expr.Lambda {parameter = id; parameter_type = ty; body = mark_own_param_for_pair_erasure 1 body}
     else Core.Expr.Lambda {parameter = id;
                            parameter_type = Core.Type.Unknown;

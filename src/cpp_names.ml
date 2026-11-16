@@ -274,7 +274,7 @@ let promoted_at (c : render_ctx) r =
   Unit_context.is_promoted_inductive c.unit r
   &&
   match c.module_ with
-  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around c.unit.scopes mp))
+  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around c.plans c.unit.scopes mp))
   | None -> true
 
 (** Whether the inductive [r]'s namespace wrapper is merged with its struct
@@ -790,26 +790,26 @@ let live_access (u : Unit_context.t) x : Cpp_resolution.access =
 
 (** {2 Name-resolution cache and cached predicates} *)
 
-(* These query the precomputed {!Name_resolution} cache, where it is
-   installed ({!Cpp_state.name_cache}), for how an inductive is classified:
+(* These query the precomputed {!Name_resolution} cache, where the unit's
+   context holds it ({!Unit_context.t.names}), for how an inductive is classified:
    eponymous record, enum, record.  The names themselves are produced by the
    functions above ({!inductive_type_name}, {!inductive_name}), which depend
    on the position being written; the cache only answers the questions that
    decide how a name is rendered. *)
 
-(** [cached_lookup] of the name-resolution cache where
-    {!Cpp_state.name_cache} is populated; otherwise [fallback].
+(** [cached_lookup] of the name-resolution cache where the unit's context
+    [u] holds one; otherwise [fallback].
     @param cached_lookup function applied to the [Name_resolution.t] cache and
                          [r] when the cache is available
     @param fallback      function applied to [r] when no cache is present
     @param r             the global reference to classify
     @return the result of [cached_lookup] or [fallback], depending on cache
             availability *)
-let with_cache
+let with_cache (u : Unit_context.t)
     (cached_lookup : Name_resolution.t -> GlobRef.t -> 'a)
     (fallback : GlobRef.t -> 'a)
     (r : GlobRef.t) : 'a =
-  match !name_cache with
+  match u.names with
   | Some cache -> cached_lookup cache r
   | None -> fallback r
 
@@ -821,21 +821,21 @@ let is_global_scope_enum_cached layout r = Module_plan.is_global_scope_enum layo
 
 (** The C++ inductive kind of [r], as the cache classifies it; [None]
     where no cache is installed or it does not classify [r]. *)
-let get_ind_kind_cached : GlobRef.t -> Cpp_ir.Inductive.Kind.t option =
-  with_cache Name_resolution.get_ind_kind (fun _ -> None)
+let get_ind_kind_cached u : GlobRef.t -> Cpp_ir.Inductive.Kind.t option =
+  with_cache u Name_resolution.get_ind_kind (fun _ -> None)
 
 (** Whether [r] is an enum, as the cache classifies it, falling back to
     [is_enum_inductive]. *)
-let is_enum_cached (r : GlobRef.t) : bool =
-  match get_ind_kind_cached r with
+let is_enum_cached u (r : GlobRef.t) : bool =
+  match get_ind_kind_cached u r with
   | Some Enum -> true
   | Some _ -> false
   | None -> is_enum_inductive r
 
 (** Whether [r] is a record, eponymous or not, as the cache classifies it,
     falling back to {!is_record_inductive}. *)
-let is_record_cached (r : GlobRef.t) : bool =
-  match get_ind_kind_cached r with
+let is_record_cached u (r : GlobRef.t) : bool =
+  match get_ind_kind_cached u r with
   | Some (Record _ | Eponymous_record _) -> true
   | Some _ -> false
   | None -> is_record_inductive r
@@ -849,11 +849,11 @@ type struct_spelling =
 (** The spelling of [id]'s struct at its declaration, [local] where the
     declaration is rendered among the inductives local to it: a promoted
     inductive, and one a reference sees as merged, take the merged spelling. *)
-let struct_spelling layout ~merged ~promoted ~local id =
+let struct_spelling (u : Unit_context.t) ~merged ~promoted ~local id =
   match id with
-  | GlobRef.IndRef _ when is_eponymous_record_cached layout id -> Eponymous_record_name
+  | GlobRef.IndRef _ when is_eponymous_record_cached u.modules id -> Eponymous_record_name
   | GlobRef.IndRef _ when promoted id -> Capitalized
-  | GlobRef.IndRef _ when is_record_cached id -> As_declared
+  | GlobRef.IndRef _ when is_record_cached u id -> As_declared
   | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () -> Capitalized
   | GlobRef.IndRef _ when (not local) && merged id ->
     (* An inductive written straight into an enclosing struct has no
@@ -869,8 +869,8 @@ let struct_spelling layout ~merged ~promoted ~local id =
 let enum_declaration_name r = capitalize_enum_name (Common.pp_global_name Type r) r
 
 (** {!struct_spelling} as a string. *)
-let struct_declaration_name layout ~merged ~promoted ~local id =
-  match struct_spelling layout ~merged ~promoted ~local id with
+let struct_declaration_name u ~merged ~promoted ~local id =
+  match struct_spelling u ~merged ~promoted ~local id with
   | Eponymous_record_name -> Common.pp_type_name_capitalized id
   | Capitalized -> String.capitalize_ascii (Common.pp_global_name Type id)
   | As_declared -> Common.pp_global_name Type id
@@ -981,10 +981,10 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
 
 let struct_definition_name ctx id =
   let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
-  match struct_spelling ctx.unit.modules ~merged ~promoted ~local id with
+  match struct_spelling ctx.unit ~merged ~promoted ~local id with
   | As_declared -> Cpp_name.unqualified (declared_name ctx Type id)
   | Eponymous_record_name | Capitalized ->
-    Cpp_name.unqualified (struct_declaration_name ctx.unit.modules ~merged ~promoted ~local id)
+    Cpp_name.unqualified (struct_declaration_name ctx.unit ~merged ~promoted ~local id)
 
 let enum_definition_name ctx r =
   match r with GlobRef.IndRef _ -> inductive_type_name ctx r | _ -> global_name ctx Type r
@@ -1097,7 +1097,7 @@ let live_inductive_head ctx r : Cpp_resolution.head =
     if Common.get_force_cross_file_qualification () && not (local_at ctx r)
     then unqualified_head (Cpp_name.name [class_ cap_name] cap_name)
     else unqualified_head (Cpp_name.unqualified cap_name)
-  else if is_enum_cached r then
+  else if is_enum_cached ctx.unit r then
     (* Enum types at global scope need no struct qualification. Enums inside
        structs (e.g., Comparison::cmp) need it. *)
     let qualifier = if is_global_scope_enum_cached ctx.unit.modules r then [] else struct_scopes_for ctx r type_name in

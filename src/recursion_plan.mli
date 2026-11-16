@@ -42,9 +42,23 @@ type t
 (** The plan of a program that defines nothing. *)
 val empty : t
 
-(** [analyze groups p] plans every function the normalized program [p]
-    defines, in the recursive groups [groups]. *)
-val analyze : Recursive_groups.t -> Core_phase.normalized Core_phase.program -> t
+(** When a coinductive body is suspended, as lowering decides it
+    ({!Translation_suspension}): [whole r ret body], whether the definition
+    [r] returning [ret] is suspended whole; [at_constructor ~self ~binder_type n
+    args], whether a constructor of [n] applied to [args] is suspended.  The
+    plan reads them as lowering does, and is handed them so that it depends
+    on no lowering module. *)
+type suspension = {
+  whole : Names.GlobRef.t -> Core.Type.t -> Core.Expr.t -> bool;
+  at_constructor :
+    self:Names.GlobRef.t option -> binder_type:(int -> Core.Type.t option) -> Names.GlobRef.t ->
+    Core.Expr.t list -> bool;
+}
+
+(** [analyze ~suspension groups p] plans every function the normalized
+    program [p] defines, in the recursive groups [groups], a body suspended
+    as [suspension] says. *)
+val analyze : suspension:suspension -> Recursive_groups.t -> Core_phase.normalized Core_phase.program -> t
 
 (** Whether two plans decide every function and fixpoint alike. *)
 val equal : t -> t -> bool
@@ -207,8 +221,8 @@ val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
     recorded in [p]'s splices: splicing again leaves a function decided as
     it is, so normalizing the result again rewrites nothing. *)
 val splice_partners :
-  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Core_phase.normalizing ->
-    Core_phase.normalizing
+  suspension:suspension -> loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) ->
+    Core_phase.normalizing -> Core_phase.normalizing
 
 (** Whether functions of types [a] and [b] yield one type, once every
     abbreviation is unfolded and a variable of the definition's scheme is

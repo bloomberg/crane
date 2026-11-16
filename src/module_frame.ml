@@ -4,7 +4,7 @@
 open Names
 open Common
 
-type t = {
+type t = Cpp_state.module_frame = {
   eponymous_type : GlobRef.t option;
   eponymous_record : (GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
   method_candidates : Method_registry.method_candidate list;
@@ -183,12 +183,8 @@ let equal a b =
   && Bool.equal a.concept_collision b.concept_collision
   && Option.equal (List.equal Id.equal) a.promoted b.promoted
 
-let planned_frames : t MPmap.t ref = State.cell State.Unit MPmap.empty
-
-let plan mp frame = planned_frames := MPmap.add mp frame !planned_frames
-
-let planned mp =
-  match MPmap.find_opt mp !planned_frames with
+let planned (plans : Cpp_state.plans) mp =
+  match MPmap.find_opt mp plans.frames with
   | Some frame -> frame
   | None ->
     CErrors.anomaly
@@ -201,9 +197,9 @@ let frames_around scopes mp =
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned frames.")
 
-let demoted_around scopes mp =
+let demoted_around plans scopes mp =
   List.filter_map
     (fun m ->
-      let frame = planned m in
+      let frame = planned plans m in
       if Option.has_some frame.promoted then None else frame.eponymous_type )
     (frames_around scopes mp)

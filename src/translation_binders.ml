@@ -25,32 +25,32 @@ let rec strip_param_wrappers : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = 
 (** Whether the binder at de Bruijn index [i] was typed by a pattern match.
     A binding-site assignment does not overwrite such an entry: the
     instantiation the branch pinned down is the more precise of the two. *)
-let pinned_by_pattern i =
-  match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
+let pinned_by_pattern cx i =
+  match IntMap.find_opt i cx.ctx.lexical.cpp_binder_types with
   | Some (_, Binder_origin.Pattern) -> true
   | _ -> false
 
 (** The C++ type the binder at de Bruijn index [i] was decided to have: the
     instantiation a pattern match pinned down where there is one, and
     otherwise the type assigned where the binder was bound. *)
-let binder_cpp_type i : Cpp_ir.Lowered.Type.t option =
-  Option.map fst (IntMap.find_opt i (!tctx).lexical.cpp_binder_types)
+let binder_cpp_type cx i : Cpp_ir.Lowered.Type.t option =
+  Option.map fst (IntMap.find_opt i cx.ctx.lexical.cpp_binder_types)
 
 (** The C++ type a pattern match pinned down for the binder at de Bruijn index
     [i], if this branch pinned one.  A binding-site assignment is not an
     answer here: it says what the binder's Core type converts to, which for a
     field read out of an erased carrier is the type the value {e would} have
     had, not the [std::any] it is actually stored as. *)
-let pattern_binder_type i : Cpp_ir.Lowered.Type.t option =
-  match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
+let pattern_binder_type cx i : Cpp_ir.Lowered.Type.t option =
+  match IntMap.find_opt i cx.ctx.lexical.cpp_binder_types with
   | Some (t, Binder_origin.Pattern) -> Some t
   | _ -> None
 
 (** Save the current binder-type state for later restoration. *)
-let save_erased_env () : binder_env = (!tctx).lexical.cpp_binder_types
+let save_erased_env cx () : binder_env = cx.ctx.lexical.cpp_binder_types
 
 (** Restore binder-type state saved by {!save_erased_env}. *)
-let restore_erased_env saved = set_lexical (fun l -> { l with cpp_binder_types = saved })
+let restore_erased_env cx saved = set_lexical cx (fun l -> { l with cpp_binder_types = saved })
 
 (** Record the C++ type of the pattern variable at de Bruijn index [i].
 
@@ -59,28 +59,28 @@ let restore_erased_env saved = set_lexical (fun l -> { l with cpp_binder_types =
     [std::any], and the per-field pass then reports the definition-site type
     the scrutinee instantiates -- and the erased view is the one that
     describes the runtime value. *)
-let record_binder_type i (t : Cpp_ir.Lowered.Type.t) =
+let record_binder_type cx i (t : Cpp_ir.Lowered.Type.t) =
   let boxed_by_pattern =
-    match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
+    match IntMap.find_opt i cx.ctx.lexical.cpp_binder_types with
     | Some (Obligation Opaque_type, Binder_origin.Pattern) -> false
-    | Some (t', Binder_origin.Pattern) -> Translation_types.resolves_to_any_type t'
+    | Some (t', Binder_origin.Pattern) -> Translation_types.resolves_to_any_type cx t'
     | _ -> false
   in
   if not boxed_by_pattern then
-    set_lexical (fun l -> { l with cpp_binder_types = IntMap.add i (t, Binder_origin.Pattern) l.cpp_binder_types })
+    set_lexical cx (fun l -> { l with cpp_binder_types = IntMap.add i (t, Binder_origin.Pattern) l.cpp_binder_types })
 
 (** Whether the pattern variable at de Bruijn index [i] holds a box, and so
     must be recovered with an [any_cast] before it is used at a concrete
     type.  Read off the recorded type rather than tracked alongside it: a
     binder is boxed exactly when the scrutinee's instantiation erased its
     field. *)
-let binder_is_boxed i =
+let binder_is_boxed cx i =
   (* [Topaque] prints as [std::any] but admits only that the representation is
      unknown here; nothing may be unboxed on the strength of it.  The
      distinction is {!Translation_coerce.coerce}'s, and a binder's answer has to draw it too. *)
-  match binder_cpp_type i with
+  match binder_cpp_type cx i with
   | Some (Obligation Opaque_type) | None -> false
-  | Some t -> Translation_types.resolves_to_any_type t
+  | Some t -> Translation_types.resolves_to_any_type cx t
 
 (* How a binder kind is named in probe output. *)
 let binder_kind_name = function
@@ -96,17 +96,17 @@ let binder_kind_name = function
     which plans every read of every region.  A read it has no answer for is
     an anomaly.  Under [CRANE_CHECK_IR] the answer is held to
     {!binder_is_boxed}, the one read off the binder's recorded C++ type. *)
-let read_is_boxed i occ =
-  let live () = binder_is_boxed i in
+let read_is_boxed cx i occ =
+  let live () = binder_is_boxed cx i in
   let describe live planned =
     Pp.(
       str "a read"
-      ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+      ++ (match cx.ctx.input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
       ++ str ": lowering "
       ++ str (if live then "boxes" else "does not box")
       ++ str " its binder, the plan " ++ str planned)
   in
-  match List.assq_opt occ (!tctx).lexical.planned_reads with
+  match List.assq_opt occ cx.ctx.lexical.planned_reads with
   | Some {boxed = rd_boxed; kind = rd_kind} ->
     ( if Probe.checking () then
         let live = live () in
@@ -123,7 +123,7 @@ let read_is_boxed i occ =
     CErrors.anomaly
       Pp.(
         str "a read of " ++ int i
-        ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+        ++ (match cx.ctx.input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
         ++ str " is in no representation plan of the region it is lowered in")
 
 (** [planned_binder_type ~use ~agree i occ] -- the C++ type the region's
@@ -158,24 +158,24 @@ let rec type_shape : Cpp_ir.Lowered.Type.t -> string = function
   | In_namespace (_, t) -> "ns " ^ type_shape t
   | _ -> "other"
 
-let planned_binder_type ~use ~agree i occ =
+let planned_binder_type cx ~use ~agree i occ =
   let show = function Some t -> type_shape t | None -> "none" in
-  match List.assq_opt occ (!tctx).lexical.planned_reads with
+  match List.assq_opt occ cx.ctx.lexical.planned_reads with
   | Some {type_; kind; _} ->
     ( if Probe.checking () then
-        let live = binder_cpp_type i in
+        let live = binder_cpp_type cx i in
         let agrees = agree type_ live in
         Probe.hit "repr-type" (fun () ->
             use ^ (if agrees then " agree " else " disagree ") ^ binder_kind_name kind ^ " plan " ^ show type_
             ^ " live " ^ show live
             ^
-              (match (!tctx).input.body_owner with Some r -> " in "
+              (match cx.ctx.input.body_owner with Some r -> " in "
                 ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> ""));
         if not agrees then
           Probe.violation "variable read binder type"
             Pp.(
               str "a read for " ++ str use
-              ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+              ++ (match cx.ctx.input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
               ++ str ": lowering's binder is " ++ str (show live) ++ str ", the plan's "
               ++ str (show type_)) );
     type_
@@ -183,7 +183,7 @@ let planned_binder_type ~use ~agree i occ =
     CErrors.anomaly
       Pp.(
         str "a read of " ++ int i
-        ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
+        ++ (match cx.ctx.input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
         ++ str " is in no representation plan of the region it is lowered in")
 
 (** [planned_position occ ~live] -- the C++ type the position of the
@@ -191,11 +191,11 @@ let planned_binder_type ~use ~agree i occ =
     ({!Position_plan.region}) gives it, under [CRANE_CHECK_IR] held to
     [live], the type lowering threaded there.  A coercion the plan of the
     region it is lowered in does not reach is an anomaly. *)
-let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
+let planned_position cx occ ~(live : Cpp_ir.Lowered.Type.t option) =
   let show = function Some t -> type_shape t | None -> "none" in
   let owner () =
-    match (!tctx).input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
-  match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).lexical.planned_positions with
+    match cx.ctx.input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
+  match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) cx.ctx.lexical.planned_positions with
   | Some (_, planned) ->
     if Probe.checking () then begin
       let agrees = planned = live in
@@ -219,12 +219,12 @@ let planned_position occ ~(live : Cpp_ir.Lowered.Type.t option) =
     that failed.  Under [CRANE_CHECK_IR] the answer is held, through
     [agree], to the same derivation from the type lowering recorded for the
     binder ({!binder_cpp_type}). *)
-let planned_binder_type_or_derive ~use ~agree env i occ =
+let planned_binder_type_or_derive cx ~use ~agree env i occ =
   let derive = function
     | Some _ as t -> t
-    | None -> Option.map (Translation_types.cpp_of_core env) (get_env_type_opt i)
+    | None -> Option.map (Translation_types.cpp_of_core cx env) (get_env_type_opt cx i)
   in
-  derive (planned_binder_type ~use ~agree:(fun p l -> agree (derive p) (derive l)) i occ)
+  derive (planned_binder_type cx ~use ~agree:(fun p l -> agree (derive p) (derive l)) i occ)
 
 (** Record the C++ type of each of the [ids] most recently pushed binders,
     without pushing them again.  [?cpp] overrides the conversion for binders
@@ -234,19 +234,19 @@ let planned_binder_type_or_derive ~use ~agree env i occ =
     declared types after pushing (a lambda decides [const auto &] for its
     erased parameters well after opening their scope) call this a second time
     to correct the assignment. *)
-let assign_binder_types ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
+let assign_binder_types cx ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
   List.iteri
     (fun j (_, core_ty) ->
       let assigned : Cpp_ir.Lowered.Type.t option =
         match List.nth_opt cpp j with
         | Some (Some t) -> Some (strip_param_wrappers t)
-        | _ -> (try Some (Translation_types.cpp_of_core env core_ty) with _ -> None)
+        | _ -> (try Some (Translation_types.cpp_of_core cx env core_ty) with _ -> None)
       in
       match assigned with
       | Some t
         when t <> Obligation Opaque_type && not (is_cpp_dummy_type t)
-             && not (pinned_by_pattern (j + 1)) ->
-        set_lexical (fun l ->
+             && not (pinned_by_pattern cx (j + 1)) ->
+        set_lexical cx (fun l ->
             { l with cpp_binder_types = IntMap.add (j + 1) (t, Binder_origin.Binding) l.cpp_binder_types })
       | _ -> ())
     ids
@@ -275,9 +275,9 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
     a reader still falls through to whatever it does today.  Conversion
     failures are skipped for the same reason, and so that a binder Crane
     cannot currently type does not become a new way for extraction to fail. *)
-let push_binders ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
-  push_env_types ids;
-  assign_binder_types ~cpp env ids
+let push_binders cx ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
+  push_env_types cx ids;
+  assign_binder_types cx ~cpp env ids
 
 (** [with_binders env ids f] runs [f] with [ids] (innermost first) pushed by
     {!push_binders}, and closes that scope however [f] leaves.
@@ -286,13 +286,13 @@ let push_binders ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
     name environment: a body generated under the extended name environment
     reads its binders' types by de Bruijn index, so a name pushed without its
     type makes every lookup beneath it read the binder one further out. *)
-let with_binders ?cpp env ids f =
-  let saved = (!tctx).lexical.env_types in
-  push_binders ?cpp env ids;
-  Fun.protect ~finally:(fun () -> restore_env_types saved) f
+let with_binders cx ?cpp env ids f =
+  let saved = cx.ctx.lexical.env_types in
+  push_binders cx ?cpp env ids;
+  Fun.protect ~finally:(fun () -> restore_env_types cx saved) f
 
 (** [push_parameters env ids] is {!push_binders} for a declaration's
     parameters, whose class-typed ones are its dictionaries. *)
-let push_parameters ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
-  push_env_parameters ids;
-  assign_binder_types ~cpp env ids
+let push_parameters cx ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
+  push_env_parameters cx ids;
+  assign_binder_types cx ~cpp env ids

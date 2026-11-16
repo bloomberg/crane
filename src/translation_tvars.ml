@@ -292,7 +292,7 @@ let abstract_cpp_type ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Type.
     ([wrapped<List, uint64_t>]), never an instantiation, so every site that
     spells an instantiation of [g] -- its type, its factory calls, and the
     constructor structs a match qualifies -- has to agree on this. *)
-let apply_hkt_tyctors g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Type.t list =
+let apply_hkt_tyctors cx g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Type.t list =
   (* A template-template position takes a {e unary} constructor, and what
      reaches it may be an application of more than one argument: Rocq's
      [TFunctor (fun T => two T (FnBody T))] normalises to [two] applied to
@@ -369,7 +369,7 @@ let apply_hkt_tyctors g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Ty
         match t with
         | Apply ((Variable tv as head), _)
           when Table.is_phantom_type_param g i
-               || Option.cata is_current_typename_var false
+               || Option.cata (is_current_typename_var cx) false
                     (match tv with Index (_, n) -> n | Named x -> Some x) ->
           (* The application cannot be written, so the head alone stands for
              it -- which is all a phantom position reads anyway, and all an

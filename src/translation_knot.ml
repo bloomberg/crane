@@ -25,12 +25,14 @@ open Common
     {!Translation_stmts.gen_stmts} have. *)
 type lowering = {
   expr :
+    Translation_state.t ->
     ?expected_ty:Cpp_ir.Lowered.Type.t ->
     ?slot:Translation_slot.slot ->
     env ->
     Core.Expr.t ->
     Cpp_ir.Lowered.Expr.t;
   stmts :
+    Translation_state.t ->
     ?slot:Translation_slot.slot ->
     env ->
     (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
@@ -52,7 +54,7 @@ let get () =
   | None -> CErrors.anomaly (Pp.str "Crane: expression lowering ran before Translation installed it.")
 
 (** {!Translation_expr.gen_expr}. *)
-let gen_expr ?expected_ty ?slot env e = (get ()).expr ?expected_ty ?slot env e
+let gen_expr cx ?expected_ty ?slot env e = (get ()).expr cx ?expected_ty ?slot env e
 
 (** {!Translation_stmts.gen_stmts}. *)
-let gen_stmts ?slot env k e = (get ()).stmts ?slot env k e
+let gen_stmts cx ?slot env k e = (get ()).stmts cx ?slot env k e

@@ -58,11 +58,11 @@ let full_result = function Some (Core.Type.Arrow _) -> None | ty -> ty
 
 (* The type a call at binder depth [depth] to one of [group]'s functions
    yields, if it is one and is applied fully. *)
-let group_call group ~depth e =
+let group_call cx group ~depth e =
   match e with
   | Core.Expr.Apply {callee = (Core.Expr.Global {callee = r; _} as f);
                      arguments = args} when List.exists (GlobRef.UserOrd.equal r) group.globals ->
-    full_result (Translation_calls.core_app_result_type f args)
+    full_result (Translation_calls.core_app_result_type cx f args)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; arguments = args} -> (
     match
       List.find_map
@@ -126,38 +126,38 @@ let held group ~reading e ty =
    where it is evaluated with [e]: under a branch or a let body, but not
    under a lambda -- except a local fixpoint applied there and then, whose
    body runs with it. *)
-let rec reaches_call group ~depth e =
-  group_call group ~depth e <> None
+let rec reaches_call cx group ~depth e =
+  group_call cx group ~depth e <> None
   ||
   match e with
   | Core.Expr.Apply {callee = Core.Expr.Fixpoint rec_group; arguments = args} ->
     let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
-    List.exists (reaches_call group ~depth) args || fix_reaches_call group ~depth ids bodies
+    List.exists (reaches_call cx group ~depth) args || fix_reaches_call cx group ~depth ids bodies
   | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> false
   | Core.Expr.Let {value = rhs; body; _} ->
-    reaches_call group ~depth rhs || reaches_call group ~depth:(depth + 1) body
+    reaches_call cx group ~depth rhs || reaches_call cx group ~depth:(depth + 1) body
   | Core.Expr.Match {scrutinee = scrut; branches; _} ->
-    reaches_call group ~depth scrut || branch_reaches_call group ~depth branches
-  | Core.Expr.Apply {callee = f; arguments = args} -> List.exists (reaches_call group ~depth) (f :: args)
-  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (reaches_call group ~depth) args
+    reaches_call cx group ~depth scrut || branch_reaches_call cx group ~depth branches
+  | Core.Expr.Apply {callee = f; arguments = args} -> List.exists (reaches_call cx group ~depth) (f :: args)
+  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.exists (reaches_call cx group ~depth) args
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    reaches_call group ~depth e
+    reaches_call cx group ~depth e
   | _ -> false
 
 (* Whether a local fixpoint's bodies, below their parameters, reach [group]. *)
-and fix_reaches_call group ~depth ids bodies =
+and fix_reaches_call cx group ~depth ids bodies =
   let rec params depth = function Core.Expr.Lambda {body = b; _} -> params (depth + 1) b | b -> (depth, b) in
   Array.exists
     (fun b ->
       let depth, b = params (depth + Array.length ids) b in
-      reaches_call group ~depth b )
+      reaches_call cx group ~depth b )
     bodies
 
-and branch_reaches_call group ~depth branches =
+and branch_reaches_call cx group ~depth branches =
   Array.exists
-    (fun {Core.Match.Branch.binders = ids; body = b; _} -> reaches_call group ~depth:(depth + List.length ids) b)
+    (fun {Core.Match.Branch.binders = ids; body = b; _} -> reaches_call cx group ~depth:(depth + List.length ids) b)
     branches
 
 (* How many nodes copying what follows a bound match into its branches may
@@ -226,9 +226,9 @@ let into_branches ~fresh ~rty (id, ty, occ) branches rest =
    the branch's own bindings: [let t := match x with p => b in k] becomes
    [match x with p => let t := b in k], evaluated in the same order, as
    long as the copies stay within {!duplication_budget}. *)
-let rec scope ~group ~depth ?expected e =
-  let group_call = group_call group ~depth in
-  let inner ?(group = group) ?expected binders = scope ~group ~depth:(depth + binders) ?expected in
+let rec scope cx ~group ~depth ?expected e =
+  let group_call = group_call cx group ~depth in
+  let inner ?(group = group) ?expected binders = scope cx ~group ~depth:(depth + binders) ?expected in
   let taken = ref [] in
   let count = ref 0 in
   let take call ty =
@@ -239,7 +239,7 @@ let rec scope ~group ~depth ?expected e =
   let enters_group = function
     | Core.Expr.Fixpoint rec_group ->
       let ids = Core.Recursion.Group.functions rec_group and bodies = Core.Recursion.Group.bodies rec_group in
-      fix_reaches_call group ~depth ids bodies
+      fix_reaches_call cx group ~depth ids bodies
     | _ -> false
   in
   let rec strict ?(reading = Passed) ~tail e =
@@ -300,7 +300,7 @@ let rec scope ~group ~depth ?expected e =
       (* A match whose value is not the result, with a branch that recurses,
          is itself bound: the call ends its branch, so no binding inside the
          branch can take it out of the expression around the match. *)
-      if (not tail) && branch_reaches_call group ~depth branches then
+      if (not tail) && branch_reaches_call cx group ~depth branches then
         let {Core.Match.Branch.result_type = rty; _} = branches.(0) in
         take e' rty
       else e'
@@ -385,13 +385,13 @@ let rec scope ~group ~depth ?expected e =
                                                 occurrence = case_occ};
                        body = rest;
                        occurrence = occ}, Some rty
-        when (not (Recursion_plan.match_bound_in_place cty branches)) && branch_reaches_call group ~depth branches ->
+        when (not (Recursion_plan.match_bound_in_place cty branches)) && branch_reaches_call cx group ~depth branches ->
         into_branches ~fresh:group.fresh ~rty (id, ty, occ) branches rest
         |> Option.map (fun branches ->
                Core.Expr.Match {scrutinee_type = cty; scrutinee = scrut; branches = Array.map
                      (fun ({Core.Match.Branch.binders = ids; result_type = rty; body = b; _} as br) ->
                        { br with
-                         Core.Match.Branch.body = scope ~group ~depth:(depth + List.length ids) ~expected:rty b } )
+                         Core.Match.Branch.body = scope cx ~group ~depth:(depth + List.length ids) ~expected:rty b } )
                      branches; occurrence = case_occ} )
       | _ -> None
     in
@@ -418,15 +418,15 @@ let loopified ~methods r =
 (* The body [b] of a declaration of type [ty], normalized against the
    top-level functions [globals] it recurses through, in a program of effect
    operations [effects] whose partners splicing decided [splices]. *)
-let body ~effects ~splices ~globals ty b =
-  scope ~group:{globals;
+let body cx ~effects ~splices ~globals ty b =
+  scope cx ~group:{globals;
                 own_tvars = Core_util.type_maxvar ty;
                 locals = [];
                 fresh = temporaries ();
                 effects;
                 splices} ~depth:0 b
 
-let decl ~effects ~splices ~methods = function
+let decl cx ~effects ~splices ~methods = function
   | Core.Decl.Recursive_group fds when Core.Nonempty.exists (fun (fd : Core.Recursion.Definition.t) ->
     loopified ~methods fd.entity) fds ->
     (* A group is normalized whole: loopification inlines one member's
@@ -435,17 +435,17 @@ let decl ~effects ~splices ~methods = function
     Core.Decl.Recursive_group
       (Core.Nonempty.map
          (fun (fd : Core.Recursion.Definition.t) ->
-           {fd with Core.Recursion.Definition.body = body ~effects ~splices ~globals fd.type_ fd.body} )
+           {fd with Core.Recursion.Definition.body = body cx ~effects ~splices ~globals fd.type_ fd.body} )
          fds)
   | Core.Decl.Value {entity = r; body = b; type_ = ty} when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
-    Core.Decl.Value {entity = r; body = body ~effects ~splices ~globals:[] ty b; type_ = ty}
+    Core.Decl.Value {entity = r; body = body cx ~effects ~splices ~globals:[] ty b; type_ = ty}
   | d -> d
 
 (* A definition of type [ty] as it is generated: binding a parameter at each
    of its type's arrows ({!Type_util.eta_parameters}), the body it writes
    applied to the ones it does not, at each that extraction did not erase. *)
-let eta_body ty b =
+let eta_body cx ty b =
   match b with
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> b
   | _ ->
@@ -463,15 +463,15 @@ let eta_body ty b =
       Core_util.named_lams (missing @ params)
         (Core_util.apply_eta_args (Core_util.ast_lift (List.length missing) body) args)
 
-let eta_expand =
+let eta_expand cx =
   Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
-      Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
+      Core.Decl.Value {entity = r; body = eta_body cx ty b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
            (fun (fd : Core.Recursion.Definition.t) ->
-             {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body})
+             {fd with Core.Recursion.Definition.body = eta_body cx fd.type_ fd.body})
            fds )
     | d -> d )
 
@@ -488,18 +488,18 @@ let let_lambdas =
     | d -> d )
 
 (* The methods the structure's functions become. *)
-let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc
+let methods_of cx struc = Method_registry.create ~ret_is_erased:(Translation.return_type_is_erased cx) struc
 
 (* The effect operations are those of the program being normalized, read
    off it first ({!Core_effects.analyze}): a bind is sequencing only where
    the declaration it is written in erases its monad. *)
-let structure (program : Core_phase.normalizing) : Core_phase.normalizing =
-  let methods = methods_of program.structure in
+let structure cx (program : Core_phase.normalizing) : Core_phase.normalizing =
+  let methods = methods_of cx program.structure in
   let {Core_phase.structure = struc; splices} =
-    Recursion_plan.splice_partners ~loopified:(loopified ~methods)
+    Recursion_plan.splice_partners ~suspension:(Translation_suspension.suspension cx) ~loopified:(loopified ~methods)
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program
   in
   {structure = Modutil.map_struct_decls
-    (decl ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of struc)) struc;
+    (decl cx ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of cx struc)) struc;
    splices}

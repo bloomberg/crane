@@ -53,16 +53,6 @@ val clear_global_method_registry : unit -> unit
     @raise CErrors.Anomaly if the registry has not been initialized. *)
 val get_method_registry : unit -> Method_registry.t
 
-(** {2 Name resolution} *)
-
-(** The name-resolution cache, populated once per extraction pass; read
-    through {!get_name_cache}. *)
-val name_cache : Name_resolution.t option ref
-
-(** Return the contents of [name_cache].
-    @raise CErrors.Anomaly if the cache has not been initialized. *)
-val get_name_cache : unit -> Name_resolution.t
-
 (** Print a type variable by its name. *)
 val pp_tvar : Names.variable -> Pp.t
 
@@ -188,6 +178,87 @@ module Out_of_line : sig
   }
 end
 
+(** A concept a frame is holding back until after the struct it was written
+    in, identified by whatever declares it. *)
+type held_concept =
+  | Modtype of Names.ModPath.t  (** a module type's concept *)
+  | Class of Names.GlobRef.t  (** a type class's concept *)
+
+(** Where the header declares one of a module's concepts.  No concept can
+    be declared inside a struct, so a module nested in one declares its
+    concepts at file scope.  Otherwise a concept goes ahead of the module's
+    struct, whose body may constrain a functor with it, unless it names one
+    of the struct's members, when it follows the struct.
+    {ul {- [Ahead_of_struct]: ahead of the module's struct.}
+        {- [After_struct]: after the struct, because it names a member.}
+        {- [At_file_scope]: at file scope, because the module is nested in
+           a struct.}} *)
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+(** The concepts of a module's classes and module types, planned ahead of
+    the files: where each is declared, and which the struct's body treats as
+    not declared yet ({!concept_held_back}). *)
+type concept_plan = {
+  placements : (held_concept * concept_placement) list;
+      (** The class concepts, then the module-type concepts, in declaration
+          order. *)
+  held_back : held_concept list;
+      (** The concepts declared after the struct, which its body may not
+          name. *)
+}
+
+(** A module's frame, as the render enters its body ({!Module_frame}): its
+    eponymous inductive and record, the functions that become methods of
+    it, whether its concepts collide with its struct, and the variables a
+    promoted inductive's body is generated over. *)
+type module_frame = {
+  eponymous_type : Names.GlobRef.t option;
+  eponymous_record : (Names.GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
+  method_candidates : Method_registry.method_candidate list;
+  concept_collision : bool;
+  promoted : Names.Id.t list option;
+}
+
+(** What a file writes that places the templates it writes: a declaration,
+    or the fields of the eponymous record merged into a module's struct,
+    which no declaration holds. *)
+type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of Names.GlobRef.t
+
+(** What a file writes, in the module it is written in. *)
+module Written : Hashtbl.S with type key = Names.ModPath.t * written
+
+(** The synthesised templates each file writes, planned before either is
+    rendered ([Cpp.plan_ctor_aliases]): each file's, in the order it first
+    writes them, and those each declaration it writes writes, with how it
+    writes its type constructors. *)
+type ctor_alias_plan = {
+  intf : ctor_alias list;
+  impl : ctor_alias list;
+  intf_writes : (ctor_alias list * tyctor_use list) Written.t;
+  impl_writes : (ctor_alias list * tyctor_use list) Written.t;
+}
+
+(** What the C++ backend's passes decided about the unit, for the passes
+    after them and the renders: a value each pass's result is added to,
+    held beside the unit's context ({!Translation_state.unit_facts}) and
+    on each position ({!render_ctx}). *)
+type plans = {
+  analysis : Structure_analysis.t option;
+      (** What analysing the structure concluded ([Cpp.prepare_structure]). *)
+  frames : module_frame Names.MPmap.t;
+      (** Each module's frame, as the walk that plans the unit's callables
+          entered it ([Cpp.plan_callables]). *)
+  concepts : concept_plan Names.MPmap.t;
+      (** Each module's concepts, planned by the same walk. *)
+  ctor_aliases : ctor_alias_plan option;
+      (** The synthesised templates each file writes; none until planned
+          ([Cpp.plan_ctor_aliases]): a declaration rendered before then, for
+          its text, or on its own, places none. *)
+}
+
+(** The plans of a unit no pass has planned yet. *)
+val no_plans : plans
+
 (** What the names written at a position are read off. *)
 type naming =
   | No_names
@@ -279,11 +350,12 @@ and render_ctx = {
       (** How the type constructors written from here are written
           ({!tyctor_plan}). *)
   unit : Unit_context.t;  (** The unit the file is of. *)
+  plans : plans;  (** What the backend's passes decided about the unit. *)
 }
 
-(** The context at the start of the file [file] of the unit [u]: file
-    scope, outside every struct. *)
-val file_start : Unit_context.t -> Common.file -> render_ctx
+(** The context at the start of the file [file] of the unit [u], whose
+    backend's passes planned [plans]: file scope, outside every struct. *)
+val file_start : Unit_context.t -> plans -> Common.file -> render_ctx
 
 (** What a file declares at file scope: the types, by the entity each
     declaration declares, and the promoted type variables among them, by
@@ -310,11 +382,6 @@ val file_scope_types_of : Common.file -> Names.GlobRef.Set.t
 val file_scope_aliases_of : Common.file -> Names.Id.Set.t
 
 
-(** A concept a frame is holding back until after the struct it was written
-    in, identified by whatever declares it. *)
-type held_concept =
-  | Modtype of Names.ModPath.t  (** a module type's concept *)
-  | Class of Names.GlobRef.t  (** a type class's concept *)
 
 (** Equality on {!held_concept}. *)
 val held_concept_equal : held_concept -> held_concept -> bool
@@ -328,42 +395,19 @@ val functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list 
 (** Whether a concept is one the current frame is holding back. *)
 val is_held_back_in : held_concept list -> held_concept -> bool
 
-(** Where the header declares one of a module's concepts.  No concept can
-    be declared inside a struct, so a module nested in one declares its
-    concepts at file scope.  Otherwise a concept goes ahead of the module's
-    struct, whose body may constrain a functor with it, unless it names one
-    of the struct's members, when it follows the struct.
-    {ul {- [Ahead_of_struct]: ahead of the module's struct.}
-        {- [After_struct]: after the struct, because it names a member.}
-        {- [At_file_scope]: at file scope, because the module is nested in
-           a struct.}} *)
-type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-(** The concepts of a module's classes and module types, planned ahead of
-    the files: where each is declared, and which the struct's body treats as
-    not declared yet ({!concept_held_back}). *)
-type concept_plan = {
-  placements : (held_concept * concept_placement) list;
-      (** The class concepts, then the module-type concepts, in declaration
-          order. *)
-  held_back : held_concept list;
-      (** The concepts declared after the struct, which its body may not
-          name. *)
-}
 
-(** [plan_module_concepts mp plan] plans [plan] for the module [mp]. *)
-val plan_module_concepts : Names.ModPath.t -> concept_plan -> unit
+(** The concepts [plans] has for the module [mp]; an anomaly if none were
+    planned. *)
+val concept_plan : plans -> Names.ModPath.t -> concept_plan
 
-(** The concepts planned for the module [mp]; an anomaly if none were. *)
-val concept_plan : Names.ModPath.t -> concept_plan
-
-(** [planned_held_back scopes ~file mp] is what the concepts held back
+(** [planned_held_back plans scopes ~file mp] is what the concepts held back
     around the body of the module [mp] are in [file], innermost first: in
     the header, those each module frame around it ({!Scope_plan.frames} of
     [scopes]) holds back,
-    as planned ({!concept_plan}); in the implementation, which declares no
-    concept, none. *)
-val planned_held_back : Scope_plan.bound -> file:Common.file -> Names.ModPath.t -> held_concept list
+    as [plans] has them ({!concept_plan}); in the implementation, which
+    declares no concept, none. *)
+val planned_held_back : plans -> Scope_plan.bound -> file:Common.file -> Names.ModPath.t -> held_concept list
 
 (** Whether the struct the position is in holds concept [c] back: declared
     after it, so a constraint inside it cannot name [c] yet.  What is held
@@ -479,8 +523,8 @@ val setting : 'a ref -> 'a -> (unit -> 'b) -> 'b
 (** Configurable names for the [std::] symbols emitted by the extractor.
     Each is the [std::] or [bsl::] spelling of the field's name unless noted;
     [Crane NonAtomicRc], [Crane FastVariant], [Crane SharedVariant] and
-    [CRANE_COUNT_RC] substitute runtime names ({!init_std_names}). *)
-type std_names = {
+    [CRANE_COUNT_RC] substitute runtime names ({!sn}). *)
+type std_names = Unit_context.std_names = {
   shared_ptr : string;  (** the smart pointer for recursive fields *)
   make_shared : string;  (** its factory *)
   move : string;
@@ -502,25 +546,31 @@ type std_names = {
 (** The plain [std::] flavor of {!std_names}. *)
 val default_std_names : std_names
 
-(** The names in effect for the current extraction pass; initialized by
-    [init_std_names] and read through [sn]. *)
-val std_names : std_names ref
-
 (** Build a name set for a namespace prefix. ["bsl::"] yields the BDE flavor;
     any other prefix yields [default_std_names]. *)
 val mk_std_names : string -> std_names
 
-(** Set [std_names] from the current [Table] settings: the BDE flavor when
+(** The bare namespace of the standard library configured
+    ([Table.std_lib ()]): ["bsl"] for BDE, ["std"] otherwise; the [ns] of
+    every unit's {!sn}. *)
+val std_namespace : unit -> string
+
+(** The names a file of the unit [u] is written with, computed: the BDE flavor when
     [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
     [Table.fast_variant ()] or [Table.shared_variant ()], the [crane::]
     variant accessors (and, for the former, [crane::variant]); then, under
     [Table.count_rc_for], the counting pointer, or else under
     [Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
-    [crane::enable_rc_from_this], in the configuration of the unit given. *)
-val init_std_names : Unit_context.t -> unit
+    [crane::enable_rc_from_this], in [u]'s configuration. *)
+val std_names_of : Unit_context.t -> std_names
 
-(** Shorthand for [!std_names]. *)
-val sn : unit -> std_names
+(** The names the unit's context carries ({!Unit_context.t.std_names}),
+    computed where the unit is configured ({!with_std_names}): what the
+    printer reads, a fact it is handed rather than one it asks the table. *)
+val sn : Unit_context.t -> std_names
+
+(** [u] carrying the names a file of it is written with ({!std_names_of}). *)
+val with_std_names : Unit_context.t -> Unit_context.t
 
 (** {2 Wrapper and scope tables} *)
 

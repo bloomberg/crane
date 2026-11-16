@@ -556,8 +556,8 @@ let fixpoint_self (fixpoint : local_fixpoint option) params =
     its first argument, which the call site drops.  The other arguments are
     reported the last first, parallel to the parameters a local fixpoint's
     loop is lowered over. *)
-let planned_self_checker member : call_checker =
-  let calls = (Recursion_plan.member_calls (Loop_facts.recursion ())) member in
+let planned_self_checker ~unit member : call_checker =
+  let calls = (Recursion_plan.member_calls (Unit_context.recursion unit)) member in
   fun e ->
     let planned =
       match e with

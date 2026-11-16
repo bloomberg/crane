@@ -80,15 +80,15 @@ type t =
 (** [constraint_of ~params mt] is what the module type [mt] contributes
     where a concept body is expected, [params] the functor parameters
     visible in it. *)
-val constraint_of : params:ModPath.t list -> Core.Module.Type.t -> constraint_
+val constraint_of : Translation_state.t -> params:ModPath.t list -> Core.Module.Type.t -> constraint_
 
 (** [generate ~params mt] is the concept of the module type [mt], over the
     functor parameters [params] as well as [M]. *)
-val generate : params:ModPath.t list -> Core.Module.Type.t -> t
+val generate : Translation_state.t -> params:ModPath.t list -> Core.Module.Type.t -> t
 
 (** [names_member mp c] is whether printing [c] names, from outside the
     module [mp], one of [mp]'s members: a concept that does cannot be
     declared ahead of [mp]'s struct.  Asked of the global references the
     printer resolves by name, which are neither [M]'s members nor names
     resolved inside a signature they belong to. *)
-val names_member : ModPath.t -> t -> bool
+val names_member : Translation_state.t -> ModPath.t -> t -> bool

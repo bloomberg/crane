@@ -37,16 +37,16 @@ let body_generation_counts () =
     [CRANE_TRACE_PIPELINE] reports with the phase.  [function_] says the body
     is a function's, generated as one, rather than a constant's initialiser
     or a member's (see [body_function] in {!Translation_state}). *)
-let begin_body ~owner ?(function_ = false) () =
+let begin_body cx ~owner ?(function_ = false) () =
   let phase = get_phase () in
   Hashtbl.replace body_generations phase
     (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));
   if Pipeline_trace.enabled () then
     Pipeline_trace.event "body"
       (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Table.safe_pr_global owner));
-  tctx :=
-    { input = { (!tctx).input with body_owner = Some owner; body_function = function_ };
-      lexical = { (!tctx).lexical with move_plan = Ownership_ir.empty; representation = []; planned_reads = [] };
+  cx.ctx <-
+    { input = { cx.ctx.input with body_owner = Some owner; body_function = function_ };
+      lexical = { cx.ctx.lexical with move_plan = Ownership_ir.empty; representation = []; planned_reads = [] };
       threaded = { match_param_counter = 0; cs_counter = 0 } }
 
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type
@@ -66,18 +66,19 @@ let begin_body ~owner ?(function_ = false) () =
     [?cpp] gives C++ types for [params] already decided by the caller, passed
     on to {!Translation_binders.push_binders} and recorded as the head's declared
     ones ([declared_outer] in {!Translation_state}). *)
-let with_method_env_types ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(outer = []) env params f =
-  let saved_env_types = (!tctx).lexical.env_types in
-  let saved_erased = Translation_binders.save_erased_env () in
-  let saved_declared = (!tctx).lexical.declared_outer in
-  reset_env_types ();
-  Translation_binders.push_parameters env outer;
-  Translation_binders.push_binders ~cpp env params;
-  set_lexical (fun l -> { l with declared_outer = (if cpp = [] then None else Some (Lexenv.depth l.env_types, cpp)) });
+let with_method_env_types cx ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(outer = []) env params f =
+  let saved_env_types = cx.ctx.lexical.env_types in
+  let saved_erased = Translation_binders.save_erased_env cx () in
+  let saved_declared = cx.ctx.lexical.declared_outer in
+  reset_env_types cx;
+  Translation_binders.push_parameters cx env outer;
+  Translation_binders.push_binders cx ~cpp env params;
+  set_lexical cx (fun l -> { l with declared_outer = (if cpp = [] then None else Some (Lexenv.depth
+    l.env_types, cpp)) });
   Fun.protect
     ~finally:(fun () ->
-      set_lexical (fun l -> { l with env_types = saved_env_types; declared_outer = saved_declared });
-      Translation_binders.restore_erased_env saved_erased )
+      set_lexical cx (fun l -> { l with env_types = saved_env_types; declared_outer = saved_declared });
+      Translation_binders.restore_erased_env cx saved_erased )
     f
 
 (** Count the actual (non-promoted) type parameters in [signature].  Entries
@@ -400,7 +401,7 @@ let drop_ambiguous res =
     class arguments it was given (see {!instance_arg_resolutions}).  A name two
     instances answer differently is dropped rather than decided -- the term
     mentions both and nothing here says which one the type meant. *)
-let promoted_resolutions_of_body ?r ?ty b =
+let promoted_resolutions_of_body cx ?r ?ty b =
   let found = ref [] in
   (* A recorded shape is only an instance's when its head is a class: the
      record is taken at extraction, before the tables that would say so are
@@ -516,7 +517,7 @@ let promoted_resolutions_of_body ?r ?ty b =
            && leading <> [] && spellable d (Core_query.strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (Translation_calls.core_arg_to_template_type (env_at d) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type cx (env_at d) (Core_query.strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
@@ -542,7 +543,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
       when instance_class r <> None && closed (Core_query.strip_magic e) ->
       Option.iter (add r)
-        (Translation_calls.core_arg_to_template_type (empty_env ()) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type cx (empty_env ()) (Core_query.strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -587,7 +588,7 @@ let promoted_resolutions_of_body ?r ?ty b =
                              arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
           in
           Option.iter (add_at class_ref inst)
-            (Translation_calls.core_arg_to_template_type
+            (Translation_calls.core_arg_to_template_type cx
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )
@@ -618,10 +619,10 @@ let type_resolutions_of_referenced_globals b =
     does, see {!ind_type_resolutions}.  An enclosing instance struct answers
     first: a variable it declares is the one this method is written in,
     whatever else the body mentions. *)
-let with_body_resolutions r b f =
-  with_promoted_var_map
-    ( (!tctx).lexical.promoted_var_map
-    @ promoted_resolutions_of_body ~r ?ty:(try Some (Table.find_type r) with Not_found -> None) b
+let with_body_resolutions cx r b f =
+  with_promoted_var_map cx
+    ( cx.ctx.lexical.promoted_var_map
+    @ promoted_resolutions_of_body cx ~r ?ty:(try Some (Table.find_type r) with Not_found -> None) b
     @ ind_type_resolutions r
     @ type_resolutions_of_referenced_globals b )
     f
@@ -710,7 +711,7 @@ let deapply_families name vars =
     No constraint excludes [_U = T].  A conversion function to its own class
     type is never selected, so declaring it is harmless and saying so costs a
     [requires] clause on every generated struct. *)
-let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
+let conversion_to_other_instantiation cx ~leading ~name ~templates ~vars ~fields =
   if vars = [] || fields = [] then []
   else
     let n_vars = List.length vars in
@@ -728,7 +729,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
             ~skip:(fun g ->
               GlobRef.CanOrd.equal g name
               || Table.same_mutual_block g name
-              || spells_bare g )
+              || spells_bare cx g )
             ~src_ty:(deapply_families name vars (at vars))
             ~dst_ty:(deapply_families name u_var_names (at u_var_names))
             (Local field_id) )

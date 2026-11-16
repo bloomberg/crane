@@ -22,9 +22,9 @@ type thunk_reason = Cofixpoint | Throws | Monadic
 
 (** The {!thunk_reason} of the global [r], if it has one: the one place that
     decides it, which the declaration of [r] and every reference to it read. *)
-let thunk_reason r =
+let thunk_reason cx r =
   if Table.is_cofixpoint r then Some Cofixpoint
-  else if is_throwing_value r then Some Throws
+  else if is_throwing_value cx r then Some Throws
   else
     match find_type_opt r with
     | Some t when is_monadic_core_type t -> Some Monadic
@@ -34,17 +34,17 @@ let thunk_reason r =
     emitted as a zero-parameter function unless it has C++ parameters of its
     own -- [cpp_of] spells its type -- in which case naming it names the
     function. *)
-let naming_calls ~cpp_of r =
-  match thunk_reason r with
+let naming_calls cx ~cpp_of r =
+  match thunk_reason cx r with
   | None -> false
   | Some (Cofixpoint | Monadic) -> true
   | Some Throws -> (
-    match Option.map cpp_of (callee_core_type r) with Some (Cpp_ir.Type.Function _) -> false | _ -> true )
+    match Option.map cpp_of (callee_core_type cx r) with Some (Cpp_ir.Type.Function _) -> false | _ -> true )
 
 (** Whether evaluating [e] is only building a value: no call is made, so it
     cannot fail to terminate.  A lambda is a value; so is a constructor of
     values.  A global is a value unless naming it calls it ({!thunk_reason}). *)
-let rec core_is_value = function
+let rec core_is_value cx = function
   | Core.Expr.Bound_variable _
   | Core.Expr.Lambda _
   | Core.Expr.Erased_value _
@@ -52,12 +52,12 @@ let rec core_is_value = function
   | Core.Expr.Numeral _
   | Core.Expr.Float64 _
   | Core.Expr.String _ -> true
-  | Core.Expr.Global {callee = r; _} -> thunk_reason r = None
-  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.for_all core_is_value args
+  | Core.Expr.Global {callee = r; _} -> thunk_reason cx r = None
+  | Core.Expr.Construct {arguments = args; _} | Core.Expr.Tuple args -> List.for_all (core_is_value cx) args
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    core_is_value e
+    core_is_value cx e
   | _ -> false
 
 (** Whether [body] calls [r] somewhere a suspension does not reach: outside
@@ -124,10 +124,14 @@ let args_may_corecurse ~self ~binder_type ts =
     ({!suspend_ctor}): [n] is coinductive, and its arguments are not all
     values and may run the corecursion ({!args_may_corecurse}, which [self]
     and [binder_type] are passed to). *)
-let suspends_constructor ~self ~binder_type n ts =
+let suspends_constructor cx ~self ~binder_type n ts =
   Table.is_coinductive n
-  && (not (List.for_all core_is_value ts))
+  && (not (List.for_all (core_is_value cx) ts))
   && args_may_corecurse ~self ~binder_type ts
+
+(** When a coinductive body is suspended, as {!Recursion_plan} reads it:
+    {!suspends_whole} and {!suspends_constructor}. *)
+let suspension cx : Recursion_plan.suspension = {whole = suspends_whole; at_constructor = suspends_constructor cx}
 
 (** [suspend_ctor ty ctor args] is the coinductive constructor [ctor] of
     type [ty] applied to [args], suspended:
@@ -157,25 +161,26 @@ let suspend_ctor ~moved (ty : Cpp_ir.Lowered.Type.t) ctor (args : Cpp_ir.Lowered
     exception. Functions whose bodies can throw must not be marked
     [__attribute__((pure))]: Clang may otherwise move calls across local
     exception handlers or discard them when their result is unused. *)
-let rec ast_may_throw = function
+let rec ast_may_throw cx = function
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> true
-  | Core.Expr.Global {callee = r; _} -> is_throwing_value r
-  | Core.Expr.Lambda {body; _} -> ast_may_throw body
-  | Core.Expr.Let {value = a; body = b; _} -> ast_may_throw a || ast_may_throw b
-  | Core.Expr.Construct {arguments = args; _} -> List.exists ast_may_throw args
+  | Core.Expr.Global {callee = r; _} -> is_throwing_value cx r
+  | Core.Expr.Lambda {body; _} -> ast_may_throw cx body
+  | Core.Expr.Let {value = a; body = b; _} -> ast_may_throw cx a || ast_may_throw cx b
+  | Core.Expr.Construct {arguments = args; _} -> List.exists (ast_may_throw cx) args
   | Core.Expr.Match {scrutinee = e; branches = brs; _} ->
-    ast_may_throw e
-    || Array.exists (fun {Core.Match.Branch.body = body; _} -> ast_may_throw body) brs
+    ast_may_throw cx e
+    || Array.exists (fun {Core.Match.Branch.body = body; _} -> ast_may_throw cx body) brs
   | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
     let funs = Core.Recursion.Group.bodies rec_group in
-    Array.exists ast_may_throw funs
-  | Core.Expr.Apply {callee = f; arguments = args} -> ast_may_throw f || List.exists ast_may_throw args
+    Array.exists (ast_may_throw cx) funs
+  | Core.Expr.Apply {callee = f; arguments = args} -> ast_may_throw cx f || List.exists (ast_may_throw cx) args
   | Core.Expr.Coerce {value = a; _}
   | Core.Expr.Boxed_value {value = a; _}
   | Core.Expr.Lambda_group_barrier {value = a; _} ->
-    ast_may_throw a
-  | Core.Expr.Persistent_array {elements = arr; default = def} -> Array.exists ast_may_throw arr || ast_may_throw def
-  | Core.Expr.Tuple args -> List.exists ast_may_throw args
+    ast_may_throw cx a
+  | Core.Expr.Persistent_array {elements = arr; default = def} -> Array.exists (ast_may_throw cx) arr ||
+    ast_may_throw cx def
+  | Core.Expr.Tuple args -> List.exists (ast_may_throw cx) args
   | Core.Expr.Bound_variable _
   | Core.Expr.Erased_value _
   | Core.Expr.UInt63 _

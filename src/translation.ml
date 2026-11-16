@@ -11,11 +11,11 @@
 
 open Names
 
-let gen_expr = Translation_expr.gen_expr
-let gen_stmts = Translation_stmts.gen_stmts
+let gen_expr cx = Translation_expr.gen_expr cx
+let gen_stmts cx = Translation_stmts.gen_stmts cx
 
 let () = Translation_knot.install {expr = Translation_expr.gen_expr; stmts = Translation_stmts.gen_stmts}
-let () = Translation_types.type_term_arg := fun env a -> gen_expr env a
+let () = Translation_types.type_term_arg := fun cx env a -> gen_expr cx env a
 let () = Translation_state.plan_representation := Representation_plan.region
 let () = Translation_state.plan_positions := Position_plan.region
 
@@ -29,17 +29,17 @@ let () = Translation_state.plan_positions := Position_plan.region
 
     @param base  The namespace to extend, when the caller has one of its own in
       hand.  Defaults to the ambient {!Translation_state.method_self_ns}. *)
-let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
+let with_method_ns_for_locals cx ?base (f : unit -> 'a) : 'a =
   let full_ns =
     List.fold_left
       (fun acc g ->
         if Table.has_recursive_fields g && not (Table.is_enum_inductive g)
         then Ref.User.Set.add g acc
         else acc)
-      (Option.default (!Translation_state.tctx).input.method_self_ns base)
-      (Translation_state.local_inductives_in_scope ())
+      (Option.default cx.Translation_state.ctx.input.method_self_ns base)
+      (Translation_state.local_inductives_in_scope cx)
   in
-  Translation_state.with_method_self_ns full_ns f
+  Translation_state.with_method_self_ns cx full_ns f
 
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
     on an inductive whose kept parameters are [param_vars], has no C++ spelling
@@ -48,5 +48,5 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
     This is the judgement {!Method_registry.create} asks for.  It lives here
     because it is a question about C++ types, and the registry is deliberately
     kept below the type translation. *)
-let return_type_is_erased (param_vars : Id.t list) (ret : Core.Type.t) : bool =
-  Type_util.type_is_erased (Translation_types.cpp_ir_of_core_type (Common.empty_env ()) param_vars ret)
+let return_type_is_erased cx (param_vars : Id.t list) (ret : Core.Type.t) : bool =
+  Type_util.type_is_erased (Translation_types.cpp_ir_of_core_type cx (Common.empty_env ()) param_vars ret)

@@ -201,7 +201,7 @@ let boxed_shape_of : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
     [syms_semty xs], or a type variable this scope leaves unresolved, is only
     revealed as a box once converted, and a [Type]-valued definition hides one
     behind a [using] alias that {!Translation_types.resolves_to_any_type} follows. *)
-let core_erases_to_box env t = Translation_types.resolves_to_any_type (Translation_types.cpp_of_core env t)
+let core_erases_to_box cx env t = Translation_types.resolves_to_any_type cx (Translation_types.cpp_of_core cx env t)
 
 (** [glob_declared_cod_erases r] -- whether the declaration of [r] returns a
     box.  A declaration is converted from the global's own Core type with no
@@ -209,10 +209,10 @@ let core_erases_to_box env t = Translation_types.resolves_to_any_type (Translati
     pins down -- a type index, say -- however concrete the type is at a given
     call site.  So the question can only be asked of the whole type: the
     codomain alone converts to the type variable and reveals nothing. *)
-let glob_declared_cod_erases r =
-  match callee_core_type r with
+let glob_declared_cod_erases cx r =
+  match callee_core_type cx r with
   | Some ty -> (
-    match Translation_types.cpp_ir_of_core_type (empty_env ()) [] (type_simpl ty) with
+    match Translation_types.cpp_ir_of_core_type cx (empty_env ()) [] (type_simpl ty) with
     | Function (_, cod) -> Cpp_ir.Types.prints_as_any cod
     | _ -> false )
   | None -> false
@@ -223,14 +223,14 @@ let glob_declared_cod_erases r =
     at a product position, which lowering recovers at the erased shape
     [pair<any, any>] ({!boxed_shape_of}).  Such a component is itself a
     box. *)
-let reads_erased_pair_component env t =
+let reads_erased_pair_component cx env t =
   match t with
   | Core.Expr.Apply {callee = Core.Expr.Global _; arguments = args} -> (
     match List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args with
     | [Core.Expr.Coerce {source_type = from; occurrence = occ; _}] -> (
-      Cpp_ir.Types.prints_as_any (Translation_types.cpp_of_core env from)
+      Cpp_ir.Types.prints_as_any (Translation_types.cpp_of_core cx env from)
       &&
-      match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) (!tctx).lexical.planned_positions with
+      match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) cx.ctx.lexical.planned_positions with
       | Some (_, Some (Cpp_ir.Type.Entity_application (g, _ :: _, _))) -> is_prod_global g
       | _ -> false )
     | _ -> false )
@@ -246,9 +246,9 @@ let reads_erased_pair_component env t =
     list.  So the arguments are the evidence, and each is asked at whichever
     is the better authority on its C++ type: the type a variable's binder is
     planned at, or the term's own Core type. *)
-let app_reads_erased_value env args =
+let app_reads_erased_value cx env args =
   let carries t =
-    Type_util.has_erased_type_in_type (Translation_types.unfold_cpp_typedef env t)
+    Type_util.has_erased_type_in_type (Translation_types.unfold_cpp_typedef cx env t)
   in
   (* A typeclass dictionary is not one of the values the result is read out
      of: it is how the call states its type arguments, and C++ resolves the
@@ -268,13 +268,13 @@ let app_reads_erased_value env args =
       match strip_magic a with
       | Core.Expr.Bound_variable {index = i; occurrence = occ} -> (
         let carried = Option.map (fun t -> carries (strip_cpp_ref_const t)) in
-        match Translation_binders.planned_binder_type_or_derive ~use:"erased argument"
+        match Translation_binders.planned_binder_type_or_derive cx ~use:"erased argument"
           ~agree:(fun p l -> carried p = carried l) env i occ with
         | Some t -> carries (strip_cpp_ref_const t)
         | None -> false )
       | a -> (
         match infer_core_body_type a with
-        | Some ty -> carries (Translation_types.cpp_of_core env ty)
+        | Some ty -> carries (Translation_types.cpp_of_core cx env ty)
         | None -> false ) )
     args
 
@@ -288,7 +288,8 @@ let app_reads_erased_value env args =
     would miscompile.  [var i occ] says whether the read of the variable [i]
     at [occ] holds a box, and the variable's Core type: by default as lowering
     has them in scope. *)
-let core_expr_is_function_value ?(var = fun i occ -> (Translation_binders.read_is_boxed i occ, get_env_type_opt i)) e =
+let core_expr_is_function_value cx ?(var = fun i occ -> (Translation_binders.read_is_boxed cx i occ,
+  get_env_type_opt cx i)) e =
   match strip_magic e with
   | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
     let boxed, ty = var i occ in
@@ -329,12 +330,12 @@ let core_expr_is_function_value ?(var = fun i occ -> (Translation_binders.read_i
     parameter of type [sel] is a box.  An opaque type is deliberately
     excluded -- it prints as [std::any] without promising one, so nothing may
     be cast out of it. *)
-let is_boxed_source (t : Cpp_ir.Lowered.Type.t) =
+let is_boxed_source cx (t : Cpp_ir.Lowered.Type.t) =
   is_boxed_type t
   ||
   match t with
   | Obligation Opaque_type -> false
-  | Entity_application _ -> Translation_types.resolves_to_any_type t
+  | Entity_application _ -> Translation_types.resolves_to_any_type cx t
   | _ -> false
 
 (** [classify_erasure ty] -- the erasure status of one side of a value
@@ -359,16 +360,16 @@ let is_boxed_source (t : Cpp_ir.Lowered.Type.t) =
     {!Type_util.is_boxed_type} and {!Translation_types.resolves_to_any_type} at each site:
     those sit at different layers (see [type_util.mli]) and a site that
     picks the wrong one silently gets [false]. *)
-let classify_erasure : Cpp_ir.Lowered.Type.t option -> _ = function
+let classify_erasure cx : Cpp_ir.Lowered.Type.t option -> _ = function
   | None -> `Unknown
-  | Some f when is_boxed_source f -> `Boxed
+  | Some f when is_boxed_source cx f -> `Boxed
   | Some f when Cpp_ir.Types.prints_as_any f -> `Opaque
   | Some f -> `Concrete f
 
 (** [spells_as_any t] -- whether [t] is written [std::any] in the
     generated code, following the alias chains that
     {!Cpp_ir.Types.prints_as_any}, being structural, cannot see through. *)
-let spells_as_any t = Cpp_ir.Types.prints_as_any t || Translation_types.resolves_to_any_type t
+let spells_as_any cx t = Cpp_ir.Types.prints_as_any t || Translation_types.resolves_to_any_type cx t
 
 (** True when environment variable at de Bruijn index [i] has an erased C++
     type (i.e. [std::any] or a dummy type, arising from dependent-parameter
@@ -383,18 +384,18 @@ let spells_as_any t = Cpp_ir.Types.prints_as_any t || Translation_types.resolves
     unboxed.  Reading the assignment here would collapse the contrast and
     drop the [any_cast] (measured: [existential_erased_apply_bad_cpp] and
     [list_cons_erasure_bleed] stop casting). *)
-let is_env_var_erased env tvars i =
-  match get_env_type_opt i with
+let is_env_var_erased cx env tvars i =
+  match get_env_type_opt cx i with
   | Some core_ty ->
-    Cpp_ir.Types.prints_as_any (Translation_types.cpp_ir_of_core_type env tvars core_ty)
+    Cpp_ir.Types.prints_as_any (Translation_types.cpp_ir_of_core_type cx env tvars core_ty)
   | None -> false
 
 (** Check whether a Core expression's C++ type is erased ([std::any]).
     Used by the coercion handler ([Translation_expr.gen_crossing]) to decide whether [any_cast] is needed. *)
-let rec core_expr_is_erased env (t : Core.Expr.t) : bool =
-  let tvars = get_current_type_vars () in
+let rec core_expr_is_erased cx env (t : Core.Expr.t) : bool =
+  let tvars = get_current_type_vars cx in
   match t with
-  | Core.Expr.Bound_variable {index = i; _} -> is_env_var_erased env tvars i
+  | Core.Expr.Bound_variable {index = i; _} -> is_env_var_erased cx env tvars i
   | Core.Expr.Apply {callee = f; arguments = args} ->
     let n_value_args =
       List.length (List.filter (fun a ->
@@ -402,20 +403,20 @@ let rec core_expr_is_erased env (t : Core.Expr.t) : bool =
     in
     let core_ty_opt = match f with
       | Core.Expr.Global {callee = r; _} -> find_type_opt r
-      | Core.Expr.Bound_variable {index = i; _} -> get_env_type_opt i
+      | Core.Expr.Bound_variable {index = i; _} -> get_env_type_opt cx i
       | _ -> None
     in
     ( match core_ty_opt with
       | Some core_ty -> core_codomain_erases_to_any n_value_args core_ty
       | None -> false )
   | Core.Expr.Global {callee = r; _} ->
-    ( match callee_core_type r with
-      | Some core_ty -> Cpp_ir.Types.prints_as_any (Translation_types.cpp_of_core env core_ty)
+    ( match callee_core_type cx r with
+      | Some core_ty -> Cpp_ir.Types.prints_as_any (Translation_types.cpp_of_core cx env core_ty)
       | None -> false )
   | Core.Expr.Coerce {value = inner; _}
   | Core.Expr.Boxed_value {value = inner; _}
   | Core.Expr.Lambda_group_barrier {value = inner; _} ->
-    core_expr_is_erased env inner
+    core_expr_is_erased cx env inner
   | Core.Expr.Match {scrutinee_type = case_ty; _} ->
     ( match case_ty with
       | Core.Type.Variable _ | Core.Type.Unknown -> true
@@ -432,6 +433,6 @@ let rec core_expr_is_erased env (t : Core.Expr.t) : bool =
     concretely -- a typeclass carrier resolved by the instance being
     generated, say -- is a static mismatch the C++ types already agree on, and
     casting on account of it would read a box that was never built. *)
-let coercion_is_boxed env ~from ~into =
-  let erases ty = core_erases_to_box env ty in
+let coercion_is_boxed cx env ~from ~into =
+  let erases ty = core_erases_to_box cx env ty in
   erases from || erases into

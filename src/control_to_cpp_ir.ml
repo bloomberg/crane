@@ -33,10 +33,10 @@ let lowering_of (strategy : Recursion_plan.strategy option) =
    and one tail modulo cons builds in some turn; a machine's ControlIR may
    be either, for a function whose chains its constructors' fields do not
    allow is a machine too, and a machine alone has entries. *)
-let shaped_loop ~lowerings r planned target =
+let shaped_loop ~unit ~lowerings r planned target =
   match planned with
   | Some lowering when List.mem lowering lowerings -> (
-    match (Lower_control.loop (Loop_facts.control ())) target with
+    match (Lower_control.loop (Unit_context.control unit)) target with
     | Some (Loop l) when Control_ir.Term.continues l.body <> []
       && (Control_ir.Term.entries l.body = [] || lowering = Frames) ->
       let builds = Control_ir.Term.continues_into l.body <> [] in
@@ -58,9 +58,9 @@ let shaped_loop ~lowerings r planned target =
 let loop_of ~unit ~lowerings r =
   if Option.has_some (Lifted.of_ref r) then None
   else
-    shaped_loop ~lowerings r
+    shaped_loop ~unit ~lowerings r
       (lowering_of
-        ((Recursion_plan.strategy (Loop_facts.recursion ()))
+        ((Recursion_plan.strategy (Unit_context.recursion unit))
           ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r))
       (Control_ir.Loop.Function r)
 
@@ -101,7 +101,7 @@ let derived_passed ~unit l =
    to a call entering the machine those it may keep as pointers: Loopify
    keeps one so where the entry takes the parameter by pointer, which
    {!Frame_storage} decides from the C++ parameters, after the plan. *)
-let resumes_of ?entry_captures ~origin ~depth ~available ~parameters:(first, (l : Control_ir.Term.loop)) () :
+let resumes_of ~unit ?entry_captures ~origin ~depth ~available ~parameters:(first, (l : Control_ir.Term.loop)) () :
     Ownership_ir.resumes =
   let rebuilt (p : Recursion_plan.resume) =
     List.fold_left
@@ -118,7 +118,7 @@ let resumes_of ?entry_captures ~origin ~depth ~available ~parameters:(first, (l 
       (fun level -> if level < first then None else Option.map snd (List.nth_opt l.parameters (level - first)));
     resume_at =
       (fun b ->
-        match (Recursion_plan.resumes_binding (Loop_facts.recursion ())) b with
+        match (Recursion_plan.resumes_binding (Unit_context.recursion unit)) b with
         | [p] ->
           let kept = List.filter (fun b -> not (available b)) p.live in
           let rebuilt = rebuilt p in
@@ -148,17 +148,17 @@ let function_machine ~unit r =
   let frames =
     Table.should_loopify r
     && Option.is_empty (Lifted.of_ref r)
-    && Recursion_plan.strategy (Loop_facts.recursion ())
+    && Recursion_plan.strategy (Unit_context.recursion unit)
          ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r
        = Some Recursion_plan.Frame_stack
   in
-  match if frames then (Lower_control.loop (Loop_facts.control ())) (Control_ir.Loop.Function r) else None with
+  match if frames then (Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Function r) else None with
   | Some (Control_ir.Term.Loop l) when List.compare_length_with (Control_ir.Term.entries l.body) 1 <= 0 -> Some l
   | Some _ | None -> None
 
 let function_resumes ~unit r ~depth =
   Option.map
-    (fun l -> resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) ())
+    (fun l -> resumes_of ~unit ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) ())
     (function_machine ~unit r)
 
 let method_resumes ~unit r ~inductive ~receiver ~depth =
@@ -171,7 +171,7 @@ let method_resumes ~unit r ~inductive ~receiver ~depth =
   | Some (l, Frames)
     when Table.loopifies_method r && either && Control_ir.Term.entries l.body = []
          && Option.default false (List.nth_opt (derived_passed ~unit l) receiver) ->
-    Some (resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) (), both)
+    Some (resumes_of ~unit ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) (), both)
   | Some _ | None -> None
 
 (* A loop as it is lowered, and for each C++ parameter of what it is
@@ -213,7 +213,7 @@ let planned_at ~unit (l : Control_ir.Term.loop) lowering positions =
         List.map
           (fun (o, moves) ->
             (o, List.map (function Some i -> List.nth moves i | None -> Ownership_ir.Continue_move.Keep) positions))
-          (Ownership_ir.continue_moves ~effects:(Loop_facts.effects ()) l)
+          (Ownership_ir.continue_moves ~effects:(Unit_context.loop_effects unit) l)
       | Modulo_cons | Frames -> [] ) }
 
 (* The position among the parameters of the loop [l] of the parameter of
@@ -498,7 +498,7 @@ let loopified r =
 let machine ~unit r =
   loopified r
   &&
-  match (Recursion_plan.strategy (Loop_facts.recursion ()))
+  match (Recursion_plan.strategy (Unit_context.recursion unit))
     ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r with
   | Some (Modulo_cons _ | Frame_stack) -> true
   | Some (No_loop | Tail_loop | Suspended _) | None -> false
@@ -515,14 +515,14 @@ let lowers_local_machines ~function_ r = function_ && Table.should_loopify r && 
    function a fixpoint is in the flow of adopts it only where it is a
    machine itself, which a local tail loop is never lowered inside. *)
 let local_lowering ~unit ~owner ~function_ ~lifted ~member:((occurrence, _) as member) =
-  match (Recursion_plan.strategy_at (Loop_facts.recursion ()))
+  match (Recursion_plan.strategy_at (Unit_context.recursion unit))
     ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member with
   | Some Tail_loop ->
-    if (Recursion_plan.adoptable_by_fixpoint (Loop_facts.recursion ())) ~lifted occurrence
+    if (Recursion_plan.adoptable_by_fixpoint (Unit_context.recursion unit)) ~lifted occurrence
       || Option.cata (machine ~unit) false owner then None
     else Some Tail
   | Some (Modulo_cons _ | Frame_stack)
-    when (not ((Recursion_plan.adoptable_somewhere (Loop_facts.recursion ())) ~lifted occurrence))
+    when (not ((Recursion_plan.adoptable_somewhere (Unit_context.recursion unit)) ~lifted occurrence))
          && Option.cata (lowers_local_machines ~function_) false owner ->
     Some Frames
   | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
@@ -547,7 +547,7 @@ let local_resumes ~unit ~owner ~function_ ~lifted ~member ~depth ~arity =
     | Some Frames -> Some true
     | Some (Tail | Modulo_cons) -> None
     | None -> (
-      match (Recursion_plan.strategy_at (Loop_facts.recursion ()))
+      match (Recursion_plan.strategy_at (Unit_context.recursion unit))
         ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member with
       | Some (Modulo_cons _ | Frame_stack) -> Some false
       | Some (No_loop | Tail_loop | Suspended _) | None -> None )
@@ -555,18 +555,18 @@ let local_resumes ~unit ~owner ~function_ ~lifted ~member ~depth ~arity =
   match (owner, adopted, own) with
   | Some origin, Some entered, _ ->
     Some
-      ( resumes_of ~entry_captures:(arity + 1) ~origin ~depth ~available:(fun _ -> false)
+      ( resumes_of ~unit ~entry_captures:(arity + 1) ~origin ~depth ~available:(fun _ -> false)
           ~parameters:(depth - arity, entered) (),
         true )
   | Some origin, None, Some certain -> (
-    match (Lower_control.loop (Loop_facts.control ())) (Control_ir.Loop.Member (fst member, snd member)) with
+    match (Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Member (fst member, snd member)) with
     | Some (Loop l) when Control_ir.Term.continues l.body <> [] ->
       (* What the body reads from outside the fixpoint is bound before the
          loop and in scope for all of it, as an invariant parameter is. *)
       let first = depth - arity in
       let invariant = invariant_at l ~first in
       Some
-        (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b)
+        (resumes_of ~unit ~origin ~depth ~available:(fun b -> b.level < first || invariant b)
           ~parameters:(first, l) (), certain)
     | Some _ | None -> None )
   | _ -> None
@@ -584,7 +584,7 @@ let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lam
     Loopify_analysis.record_outcome (Id.to_string name) (Declined Loopify_analysis.survived_generically);
     unlowered Loopify_analysis.survived_generically
   in
-  match ((Lower_control.loop (Loop_facts.control ())) member_loop, lowering) with
+  match ((Lower_control.loop (Unit_context.control unit)) member_loop, lowering) with
   | Some (Loop l), Some lowering when Control_ir.Term.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (List.rev lam.params) in
     match Loopify.member_plan ~unit ~frames:(lowering = Frames) member params with
@@ -612,8 +612,8 @@ let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lam
         (* A call of the fixpoint the loop does not take -- one in a closure
            it builds -- or the fixpoint named as a value calls a lambda that
            is no longer there: it stays the Y-combinator Loopify declines. *)
-        let left = Loopify_analysis.calls_checker ((Recursion_plan.member_calls (Loop_facts.recursion ())) member) in
-        if (Recursion_plan.named_as_value (Loop_facts.recursion ())) member
+        let left = Loopify_analysis.calls_checker (Recursion_plan.member_calls (Unit_context.recursion unit) member) in
+        if (Recursion_plan.named_as_value (Unit_context.recursion unit)) member
           || Loopify_analysis.body_exists (fun e -> Option.has_some (left e)) body
         then declined ()
         else begin
@@ -774,9 +774,9 @@ let lowered_or_left lower planned = Option.cata lower (Error (Loopify.Left None)
 let lifted_loop ~unit r =
   match Option.bind (Lifted.of_ref r) Lifted.fixpoint with
   | Some member when Table.should_loopify r ->
-    shaped_loop ~lowerings:[Tail; Modulo_cons; Frames] r
+    shaped_loop ~unit ~lowerings:[Tail; Modulo_cons; Frames] r
       (lowering_of
-        ((Recursion_plan.strategy_at (Loop_facts.recursion ()))
+        ((Recursion_plan.strategy_at (Unit_context.recursion unit))
           ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member))
       (Control_ir.Loop.Member (fst member, snd member))
   | Some _ | None -> None
@@ -788,7 +788,8 @@ let lifted_resumes ~unit r ~owner ~depth ~arity =
        unchanged by every call, as an invariant parameter is. *)
     let first = depth - arity in
     let invariant = invariant_at l ~first in
-    Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) ~parameters:(first, l) ())
+    Some
+      (resumes_of ~unit ~origin ~depth ~available:(fun b -> b.level < first || invariant b) ~parameters:(first, l) ())
   | _ -> None
 
 let lower_lifted ~unit d =
@@ -887,9 +888,9 @@ let makes_statement_call calls (stmts : Ir.Stmt.t list) =
 
 (* The recursive calls of the function of the loop [l], by the Core use
    each is made of. *)
-let loop_calls : Control_ir.Loop.t -> Core.Occurrence.t list = function
-  | Function r -> Loopify.definition_calls r
-  | Member (o, m) -> (Recursion_plan.member_calls (Loop_facts.recursion ())) (o, m)
+let loop_calls ~unit : Control_ir.Loop.t -> Core.Occurrence.t list = function
+  | Function r -> Loopify.definition_calls ~unit r
+  | Member (o, m) -> (Recursion_plan.member_calls (Unit_context.recursion unit)) (o, m)
 
 (* The pointer fields of each constructor struct of [s], checked against
    those planned before rendering ({!Loopify_analysis.agree_ptr_fields}). *)
@@ -931,9 +932,9 @@ let check_lowered ~unit (decl : Ir.Decl.t) =
      ControlIR would have missed. *)
   let emitted l ~recorded body =
     if not (recorded (Loop_verdicts.find l)) then violation l "a loop was emitted that control lowering did not lower";
-    if makes_statement_call (loop_calls l) body then
+    if makes_statement_call (loop_calls ~unit l) body then
       violation l "a lowered loop still makes a call of its own where it would be a turn";
-    match (Lower_control.loop (Loop_facts.control ())) l with
+    match (Lower_control.loop (Unit_context.control unit)) l with
     | Some t ->
       if keeps_call (Lower_control.taken_continues t) body then violation l "a lowered loop still makes a call it takes"
     | None -> violation l "a lowered loop has no ControlIR"
@@ -974,7 +975,7 @@ let check_lowered ~unit (decl : Ir.Decl.t) =
         | Some (Declined _ | Unlowered _) | None -> false )
     | Some {member = (o, m) as member; encoding = Self_passing [_]; _} ->
       let committed =
-        match (Recursion_plan.strategy_at (Loop_facts.recursion ()))
+        match (Recursion_plan.strategy_at (Unit_context.recursion unit))
           ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member with
         | Some (Tail_loop | Modulo_cons _ | Frame_stack) -> true
         | Some (No_loop | Suspended _) | None -> false

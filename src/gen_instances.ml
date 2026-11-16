@@ -25,7 +25,7 @@ module IntSet = Escape.IntSet
     binders and class dictionaries, an eta-reduced instance's included
     ({!Instance_methods.layers}) -- with the template parameters the
     dictionaries become and the binders stripped. *)
-let instance_layers ty body =
+let instance_layers cx ty body =
   let {Instance_methods.inner_ty; inner_body; dictionaries; lam_params} = Instance_methods.layers ty body in
   (* A dictionary becomes a concept-constrained template parameter -- [PreCategory
      _tcI0] instead of [typename _tcI0] -- so the compiler enforces concept
@@ -36,7 +36,7 @@ let instance_layers ty body =
      CWE-345). *)
   let constraint_of : Core.Type.t -> Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t = function
     | Core.Type.Global_app _ as arg_ty ->
-      Option.default Cpp_ir.Template.Parameter_kind.Typename (concept_constraint_of_class_type arg_ty)
+      Option.default Cpp_ir.Template.Parameter_kind.Typename (concept_constraint_of_class_type cx arg_ty)
     | _ -> Typename
   in
   (inner_ty, inner_body, List.map (fun (id, arg_ty) -> (constraint_of arg_ty, id)) dictionaries, lam_params)
@@ -46,8 +46,8 @@ let instance_layers ty body =
     its class's promoted variables, which a call through the instance
     substitutes for them: none where its body builds no record of its class,
     or where it does not give them all. *)
-let instance_promoted_types name body ty =
-  let inner_ty, inner_body, _, lam_params = instance_layers ty body in
+let instance_promoted_types cx name body ty =
+  let inner_ty, inner_body, _, lam_params = instance_layers cx ty body in
   match (inner_ty : Core.Type.t) with
   | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Table.is_typeclass class_ref -> (
     match Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
@@ -80,7 +80,7 @@ let instance_promoted_types name body ty =
     name, the template parameters each method mints for its class-typed
     arguments ({!Callable_abi.minted}).  [~bodies:false] generates the
     methods' heads alone. *)
-let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t) (ty : Core.Type.t) :
+let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t) (ty : Core.Type.t) :
     Cpp_ir.Lowered.Decl.t option
     * GlobRef.t option
     * Cpp_ir.Lowered.Type.t list
@@ -90,10 +90,10 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
      ({!plan_instance_methods}), decided by the very code that generates
      them. *)
   let gen_body env e =
-    if bodies then gen_stmts env (fun x -> Return (Some x)) e
+    if bodies then gen_stmts cx env (fun x -> Return (Some x)) e
     else []
   in
-  let inner_ty, inner_body, tc_temps, lam_params = instance_layers ty body in
+  let inner_ty, inner_body, tc_temps, lam_params = instance_layers cx ty body in
   (* Collect type variables from the inner return type's type args. For
      parameterized instances like numOption : Numeric (option A), the return
      type is Core.Type.Global_app(Numeric, [option A], []) which contains Core.Type.Variable for A. These
@@ -168,20 +168,20 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
   let resolve_mentioned (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Promoted_member v -> (
-      match List.find_opt (fun (v', _) -> Id.equal v v') (!tctx).lexical.promoted_var_map with
+      match List.find_opt (fun (v', _) -> Id.equal v v') cx.ctx.lexical.promoted_var_map with
       | Some (_, r) -> r
       | None -> t )
     | t -> t
   in
   let concept_args class_ref args =
-    List.map (Translation_types.cpp_ir_of_core_type (empty_env ()) []) args
+    List.map (Translation_types.cpp_ir_of_core_type cx (empty_env ()) []) args
     @ List.map
         (fun v -> resolve_mentioned (Promoted_member v))
         (Table.promoted_type_params class_ref)
   in
-  with_promoted_var_map
+  with_promoted_var_map cx
     ( promoted_var_resolutions @ specialised_arg_resolutions
-    @ (!tctx).lexical.promoted_var_map )
+    @ cx.ctx.lexical.promoted_var_map )
   @@ fun () ->
   (* The instance's own head spells the same mentioned variables in its
      parameters' constraints -- [requires PI<_tcI2, ptr>] -- and they resolve
@@ -239,8 +239,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
          call sites substitute, were planned before rendering
          ({!instance_promoted_types}). *)
       if Probe.checking () then begin
-        let planned = Unit_context.instance_promoted_types_of (Translation_state.unit_context ()) name in
-        let generated = instance_promoted_types name body ty in
+        let planned = Unit_context.instance_promoted_types_of (Translation_state.unit_context cx) name in
+        let generated = instance_promoted_types cx name body ty in
         if
           not
             (List.equal
@@ -263,7 +263,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
          template parameters. *)
       let saved_decl_ref = !Table.current_decl_ref in
       Table.current_decl_ref := Some name;
-      set_current_type_vars type_var_names;
+      set_current_type_vars cx type_var_names;
       (* Generate static methods for each field *)
       let gen_method (field_ref, field_core_ty) field_body =
         match field_ref with
@@ -311,7 +311,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
               in
               (names, type_var_names @ pad @ names)
           in
-          set_current_type_vars type_var_names;
+          set_current_type_vars cx type_var_names;
           let subst_promoted_tvars = Instance_methods.subst_promoted_tvars inst in
           (* The instance's own binders were extracted at the class's erased
              field types.  For a higher-kinded class the declared signature
@@ -376,7 +376,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                            not (List.exists (Id.equal name) type_var_names)
                          | Variable (Index (_, None)) | Auto -> true
                          | _ -> false )
-                       (Translation_types.cpp_ir_of_core_type base_env type_var_names t) ) )
+                       (Translation_types.cpp_ir_of_core_type cx base_env type_var_names t) ) )
                 have want
           in
           let declared_arg_arities =
@@ -389,7 +389,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
              at ([Declared_at]): the arrows substitution moved into the
              callable's parameter list go back where the signature had them. *)
           let param_cpp_ty n core_ty =
-            let ty = Translation_types.cpp_ir_of_core_type base_env type_var_names core_ty in
+            let ty = Translation_types.cpp_ir_of_core_type cx base_env type_var_names core_ty in
             match
               (if n < Array.length declared_arg_arities then
                  declared_arg_arities.(n)
@@ -444,14 +444,14 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  instance's, so a bare type variable in the return type is
                  already meaningful -- no need to guess it from the last
                  binder. *)
-              Translation_types.cpp_ir_of_core_type base_env type_var_names ret
+              Translation_types.cpp_ir_of_core_type cx base_env type_var_names ret
             | (Core.Type.Variable _) when binders <> [] ->
               (* Unsubstituted Core.Type.Variable — infer from the last lambda binder's type.
                  For op : A -> A -> A with body Core.Expr.Lambda(x, nat, Core.Expr.Lambda(y, nat,
                  ...)), the return type is the same as the parameter type
                  (nat). *)
               let last_param_ty = (List.hd (List.rev binders)).core_ty in
-              Translation_types.cpp_ir_of_core_type
+              Translation_types.cpp_ir_of_core_type cx
                 base_env
                 type_var_names
                 last_param_ty
@@ -461,7 +461,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  whole type is Core.Type.Variable, so look at the body's type. *)
               Any
             | _ ->
-              Translation_types.cpp_ir_of_core_type
+              Translation_types.cpp_ir_of_core_type cx
                 base_env
                 type_var_names
                 ret
@@ -481,8 +481,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
-            with_cpp_return_type (Some method_ret_ty) @@ fun () ->
-            if bodies then begin_body ~owner:name ();
+            with_cpp_return_type cx (Some method_ret_ty) @@ fun () ->
+            if bodies then begin_body cx ~owner:name ();
             if List.for_all (fun b -> b.kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
                  a function reference that needs eta-expansion, or a
@@ -493,8 +493,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                 (* Non-function field (like m_id : carrier) — generate as a
                    static value with a nullary accessor method. *)
                 let stmts =
-                  with_method_env_types ~outer:outer_binders base_env [] (fun () ->
-                      with_region inner_body (fun () ->
+                  with_method_env_types cx ~outer:outer_binders base_env [] (fun () ->
+                      with_region cx inner_body (fun () ->
                           gen_body base_env inner_body ) )
                 in
                 ([], method_ret_ty, stmts, [])
@@ -507,7 +507,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                          slot down as [std::any] is what makes the value
                          boxed, so a [Topaque] here becomes known-boxed. *)
                       let cpp_ty =
-                        materialise_opaque (Translation_types.cpp_ir_of_core_type base_env type_var_names arg_ty)
+                        materialise_opaque (Translation_types.cpp_ir_of_core_type cx base_env type_var_names arg_ty)
                       in
                       (name, arg_ty, cpp_ty) )
                     eta_params
@@ -552,7 +552,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                     match body_arg_types with
                     | Some bargs ->
                       let body_ty = List.nth bargs i in
-                      let body_cpp = Translation_types.cpp_ir_of_core_type base_env type_var_names body_ty in
+                      let body_cpp = Translation_types.cpp_ir_of_core_type cx base_env type_var_names body_ty in
                       let is_boxed : Cpp_ir.Lowered.Type.t -> bool = function
                         | Any | Erased _ -> true
                         | _ -> false
@@ -584,8 +584,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                     ~ty:(fun i -> snd (List.nth core_vars i))
                 in
                 let stmts =
-                  with_method_env_types ~outer:outer_binders env renamed_eta (fun () ->
-                    with_region ~owned call_expr (fun () ->
+                  with_method_env_types cx ~outer:outer_binders env renamed_eta (fun () ->
+                    with_region cx ~owned call_expr (fun () ->
                         gen_body env call_expr ) )
                 in
                 let stmts =
@@ -658,12 +658,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  are what call sites inside the body tell a concrete parameter
                  (e.g. [Sz (nat -> nat)]'s [f]) from an erased one by. *)
               let stmts =
-                with_parameters (List.map snd (parameter_binders env renamed_core)) @@ fun () ->
+                with_parameters cx (List.map snd (parameter_binders cx env renamed_core)) @@ fun () ->
                 (* The declared parameter types, so the body reads the
                    arities the signature was written at rather than
                    re-deriving them from Core types substitution has since
                    given extra arrows.  Same order as [renamed_core]. *)
-                with_method_env_types ~outer:outer_binders
+                with_method_env_types cx ~outer:outer_binders
                   ~cpp:(List.rev_map (fun b -> Some b.cpp_ty) binders)
                   env renamed_core
                   (fun () ->
@@ -676,7 +676,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                         ~declared:(fun i -> Some binders_db.(i).cpp_ty)
                         ~ty:(fun i -> binders_db.(i).core_ty)
                     in
-                    with_region ~owned inner_body (fun () ->
+                    with_region cx ~owned inner_body (fun () ->
                         gen_body env inner_body ) )
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
@@ -840,7 +840,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
       in
       (* Restore type variable context *)
       Table.current_decl_ref := saved_decl_ref;
-      clear_current_type_vars ();
+      clear_current_type_vars cx;
       (* Compute promoted vars and generate using fields. Promoted vars are
          type_variables entries beyond the real type parameter count (as determined by
          signature Keep count, not tv_temps which reflects the instance's own type
@@ -931,7 +931,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
               List.nth promoted_concrete_types i
             in
             let concrete_cpp_ty =
-              Translation_types.cpp_ir_of_core_type base_env (alias_tvar_names @ alias_params) concrete_core_ty
+              Translation_types.cpp_ir_of_core_type cx base_env (alias_tvar_names @ alias_params) concrete_core_ty
             in
             (var_name, alias_params, concrete_cpp_ty) )
         |> List.filter_map (fun (var_name, alias_params, concrete_cpp_ty) ->
@@ -1035,7 +1035,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
     without generating a body: the struct's head is planned with the other
     callables, before anything is rendered.  [finish] is what becomes of the
     struct before it is written ([finish_instance_struct] in {!Cpp_ind}). *)
-let plan_instance_methods ~finish name body ty =
+let plan_instance_methods cx ~finish name body ty =
   let rec methods : Cpp_ir.Lowered.Decl.t -> _ = function
     | Struct s ->
       List.filter_map
@@ -1044,7 +1044,7 @@ let plan_instance_methods ~finish name body ty =
     | Template (_, _, d) -> methods d
     | _ -> []
   in
-  match gen_instance_struct ~bodies:false name body ty with
+  match gen_instance_struct cx ~bodies:false name body ty with
   | Some decl, _, _, minted ->
     List.map
       (fun (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) ->

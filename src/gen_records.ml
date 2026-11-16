@@ -27,7 +27,7 @@ module IntSet = Escape.IntSet
     lead the template parameter list, see {!Table.promoted_type_params}.
     The struct also carries a conversion to every other instantiation of
     its parameters, from {!Gen_context.conversion_to_other_instantiation}. *)
-let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
+let gen_record_cpp cx name fields (ind : Core.Inductive.Packet.t) =
   let nb_keep = count_keep_params ind.signature in
   let param_ip_vars = List.filteri (fun i _ -> i < nb_keep) ind.type_variables in
   let vars = List.map Common.tparam_name param_ip_vars in
@@ -58,7 +58,7 @@ let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
         all_vars
     in
     let ct =
-      Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:(Ref.User.Set.singleton name)
+      Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Ref.User.Set.singleton name)
         spelling t
     in
         let ct = Cpp_ir.Types.map replace_promoted ct in
@@ -92,7 +92,7 @@ let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
      kinds. *)
   let ty_vars = Cpp_ir.Build.typenames (Table.promoted_type_params name @ vars) in
   let conversion_field =
-    conversion_to_other_instantiation ~leading:(mentioned_promoted_args name)
+    conversion_to_other_instantiation cx ~leading:(mentioned_promoted_args name)
       ~name ~templates:(Cpp_ir.Build.typenames vars) ~vars
       ~fields:
         (List.mapi
@@ -128,12 +128,13 @@ let gen_record_cpp name fields (ind : Core.Inductive.Packet.t) =
       written as the bare names the class spells, so the pass that resolves a
       bare promoted name against the instance owning it reaches them the way it
       reaches every other position in the signature.}} *)
-let concept_constraint_of_class_type ty : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t option =
+let concept_constraint_of_class_type cx ty : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t option =
   match ty with
   | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} ->
     let kept =
       if Table.get_ind_nb_tparams class_ref = 0 then []
-      else List.map (Translation_types.cpp_ir_of_core_type (empty_env ()) []) (Table.drop_hkt_args class_ref type_args)
+      else List.map (Translation_types.cpp_ir_of_core_type cx (empty_env ()) []) (Table.drop_hkt_args class_ref
+        type_args)
     in
     let mentioned =
       List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Table.promoted_type_params class_ref)
@@ -156,7 +157,7 @@ let concept_constraint_of_class_type ty : Cpp_ir.Lowered.phase Cpp_ir.Template.P
    requirements; every other field becomes a call requirement whose result
    is checked with a CppIR [Convertible_to], which the printer renders.
 *)
-let gen_typeclass_cpp name fields =
+let gen_typeclass_cpp cx name fields =
   let ip_vars = Table.get_ind_ip_vars name in
   let nb_keep = Table.get_ind_nb_sign_keeps name in
   let inst_id =
@@ -227,7 +228,7 @@ let gen_typeclass_cpp name fields =
      respelled, in CppIR. *)
   let converted core_ty =
     subst_promoted_in_cpp_type
-      (Translation_types.cpp_ir_of_core_type (empty_env ()) prefixed_ip_vars core_ty)
+      (Translation_types.cpp_ir_of_core_type cx (empty_env ()) prefixed_ip_vars core_ty)
   in
   let inst_scope method_name type_args : Cpp_ir.Lowered.Expr.t =
     Scope (Local inst_id, Id.of_string method_name, type_args)

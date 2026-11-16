@@ -8,7 +8,7 @@ let of_external name =
   if String.equal name Crane_rt.small_vector then Some Table.small_vector_header
   else if String.equal name Crane_rt.itree then Some Table.itree_header
   else if String.equal name Crane_rt.field then Some (Table.Runtime Crane_rt.field_header)
-  else if String.equal name ((Cpp_state.sn ()).ns ^ "::optional") then Some (Table.Standard "optional")
+  else if String.equal name (Cpp_state.std_namespace () ^ "::optional") then Some (Table.Standard "optional")
   else if String.equal name "std::vector" then Some (Table.Standard "vector")
   else if String.equal name Crane_rt.constant_tc then Some (Table.Runtime Crane_rt.obj_header)
   else if String.equal name Crane_rt.shared_box || String.equal name Crane_rt.shared_or then
@@ -56,7 +56,7 @@ module Ir = struct
     let std h = need (Table.Standard h) in
     let rt h = need (Table.Runtime h) in
     let obj () = rt Crane_rt.obj_header in
-    let variant () = need (Cpp_state.sn ()).variant_header in
+    let variant () = need (Cpp_state.std_names_of unit).variant_header in
     let erase_fn () = need Table.erase_fn_header in
     let string_literal : expr -> unit = function Literal (String _) -> std "string" | _ -> () in
     let rec ty (t : ty) =
@@ -288,7 +288,7 @@ let promoted_of_decl d = ir_promoted (fun ~decl ~ty:_ -> decl d)
 
 let promoted_of_type t = ir_promoted (fun ~decl:_ ~ty -> ty t)
 
-let of_modtype_concept unit (c : Modtype_concept.t) =
+let of_modtype_concept cx unit (c : Modtype_concept.t) =
   let found = ref [] in
   let need hs = List.iter (fun h -> if not (List.mem h !found) then found := h :: !found) hs in
   let concepts () = need [Table.Standard "concepts"] in

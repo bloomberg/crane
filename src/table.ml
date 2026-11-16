@@ -2389,7 +2389,7 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
 (* This option swaps the recursive-field smart pointer from [std::shared_ptr]
    (atomic refcount) to [crane::rc] (non-atomic, single-allocation).  Sound only
    for single-threaded extracted code, which is Crane's clone-at-boundary model.
-   Global string swap via [Cpp_state.init_std_names]; opt-in, default off.
+   Global string swap via [Cpp_state.sn]; opt-in, default off.
 
    This is what the user *asked for*; what the unit actually gets is
    [non_atomic_rc] below, which withholds the swap from a unit that runs on
