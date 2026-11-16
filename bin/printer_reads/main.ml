@@ -12,12 +12,12 @@
     The graph is read off the typed trees dune writes ([DIR/*.cmt]): a node is
     a module's top-level value, an edge a reference to one in its body.  It is
     insensitive to control flow -- a reference in a branch never taken still
-    counts -- except that the branch [if Probe.checking () then ..] is
+    counts -- except that the branch [if Base.Probe.checking () then ..] is
     skipped: an oracle run under CRANE_CHECK_IR may read what it likes.  A
     module with no typed tree in [DIR] (Rocq's, the standard library) is a
     leaf.  Used by scripts/check-module-deps.sh for the printer's indirect
-    reads of Table and of the plan modules ([Cpp_state], [Module_plan],
-    [Scope_plan]) whose reads it allows by name. *)
+    reads of Table and of the plan modules ([Unit_plan.Cpp_state], [Core_plan.Module_plan],
+    [Core_plan.Scope_plan]) whose reads it allows by name. *)
 
 (** The prefix dune gives every module of the plugin library. *)
 let library_prefix = "Crane_plugin__"
@@ -105,7 +105,7 @@ let analyse cmt_file =
           expr =
             (fun self e ->
               ( match e.exp_desc with
-              | Texp_ident (p, _, _) when resolve_value p = Some ("Probe", "checking") -> found := true
+              | Texp_ident (p, _, _) when resolve_value p = Some ("Base__Probe", "checking") -> found := true
               | _ -> () );
               Tast_iterator.default_iterator.expr self e ) }
       in
