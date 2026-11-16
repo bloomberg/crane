@@ -91,7 +91,7 @@ val full_extraction :
 
 (** How C++ spells an extracted constant, and Rocq's [tt], from where the
     constant is declared -- read while the unit's naming tables were live. *)
-type export = {ex_ref : Names.GlobRef.t; ex_name : string; ex_unit : string}
+type export = {ref : Names.GlobRef.t; name : string; unit : string}
 
 (** {!full_extraction}, returning an {!export} for each requested
     constant. *)

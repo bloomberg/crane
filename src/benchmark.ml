@@ -29,24 +29,26 @@ type configuration = {
 }
 
 (** A subject after name resolution, type validation, and label assignment. *)
-type validated_subject = {
-  benchmark_term : qualid;  (** Original name used to request extraction. *)
-  benchmark_ref : GlobRef.t;  (** Resolved transparent constant reference. *)
-  benchmark_label : string;  (** Non-empty, unique display label. *)
-}
+module Validated_subject = struct
+  type t = {
+    term : qualid;  (** Original name used to request extraction. *)
+    ref : GlobRef.t;  (** Resolved transparent constant reference. *)
+    label : string;  (** Non-empty, unique display label. *)
+  }
+end
 
 (** Source artifact and backend expressions needed to construct its driver. *)
 type artifact = {
-  artifact_source : string;  (** Extracted or user-supplied source path. *)
-  artifact_callable : string;  (** Qualified benchmark function expression. *)
-  artifact_unit : string;  (** Backend expression representing Rocq [tt]. *)
+  source : string;  (** Extracted or user-supplied source path. *)
+  callable : string;  (** Qualified benchmark function expression. *)
+  unit : string;  (** Backend expression representing Rocq [tt]. *)
 }
 
 (** One successfully compiled cell in the benchmark matrix. *)
 type compiled_benchmark = {
-  compiled_index : int;  (** Stable, one-based matrix position. *)
-  compiled_description : string;  (** Human-readable subject/configuration. *)
-  compiled_executable : string;  (** Temporary native executable path. *)
+  index : int;  (** Stable, one-based matrix position. *)
+  description : string;  (** Human-readable subject/configuration. *)
+  executable : string;  (** Temporary native executable path. *)
 }
 
 (** Return the user-facing name of a backend. *)
@@ -126,20 +128,20 @@ let validate_subject {term; label = requested_label} =
     | Some label -> label
     | None -> string_of_qualid term
   in
-  {benchmark_term = term; benchmark_ref = reference; benchmark_label}
+  {Validated_subject.term = term; ref = reference; label = benchmark_label}
 
 (** Ensure every validated subject has a distinct display label. *)
 let validate_unique_labels subjects =
   let rec loop seen = function
     | [] -> ()
-    | subject :: rest ->
-      if List.mem subject.benchmark_label seen then
+    | (subject : Validated_subject.t) :: rest ->
+      if List.mem subject.label seen then
         benchmark_error
           ( "Duplicate Crane Benchmark label: \""
-          ^ subject.benchmark_label
+          ^ subject.label
           ^ "\"." )
       else
-        loop (subject.benchmark_label :: seen) rest
+        loop (subject.label :: seen) rest
   in
   loop [] subjects
 
@@ -230,7 +232,7 @@ let extract_managed_artifact
     ~opaque_access
     ~temp_dir
     subject_index
-    subject
+    (subject : Validated_subject.t)
     backend =
   let stem = artifact_stem subject_index backend in
   match backend with
@@ -242,19 +244,19 @@ let extract_managed_artifact
         ~validate:false
         ~opaque_access
         (Some source)
-        [subject.benchmark_term]
+        [subject.term]
     in
     ( match
         List.find_opt
           (fun (e : Extract_env.export) ->
-            GlobRef.UserOrd.equal e.ex_ref subject.benchmark_ref )
+            GlobRef.UserOrd.equal e.ref subject.ref )
           exports
       with
     | Some e ->
       {
-        artifact_source = source;
-        artifact_callable = e.ex_name;
-        artifact_unit = e.ex_unit;
+        source = source;
+        callable = e.name;
+        unit = e.unit;
       }
     | None ->
       benchmark_error "Crane Benchmark subject is not an extracted constant." )
@@ -263,11 +265,11 @@ let extract_managed_artifact
     Extraction_plugin.Extract_env.full_extraction
       ~opaque_access
       (Some source)
-      [subject.benchmark_term];
+      [subject.term];
     {
-      artifact_source = source;
-      artifact_callable = ocaml_callable subject.benchmark_ref;
-      artifact_unit = "()";
+      source = source;
+      callable = ocaml_callable subject.ref;
+      unit = "()";
     }
 
 (** Materialize every unique subject/backend artifact required by a managed
@@ -290,8 +292,8 @@ let materialize_managed ~opaque_access ~temp_dir subjects configurations =
   |> List.flatten
 
 (** Build the display name used in compiler errors and Hyperfine output. *)
-let description subject configuration =
-  subject.benchmark_label
+let description (subject : Validated_subject.t) configuration =
+  subject.label
   ^ " ["
   ^ backend_name configuration.backend
   ^ if String.equal configuration.flags "" then
@@ -306,12 +308,12 @@ let description subject configuration =
 let driver_suffix artifact = function
   | Cpp ->
     "\n#include <iostream>\nint main() {\n  std::cout << ("
-    ^ artifact.artifact_callable
+    ^ artifact.callable
     ^ "("
-    ^ artifact.artifact_unit
+    ^ artifact.unit
     ^ ")) << std::endl;\n  return 0;\n}\n"
   | OCaml ->
-    let call = artifact.artifact_callable ^ " " ^ artifact.artifact_unit in
+    let call = artifact.callable ^ " " ^ artifact.unit in
     "\nlet () = Stdlib.print_endline (" ^ ocaml_output call ^ ")\n"
 
 (** Parse a compiler-flags string and translate parser failures into Rocq user
@@ -364,7 +366,7 @@ let compile_artifact
     Filename.concat temp_dir ("driver_" ^ string_of_int index ^ extension)
   in
   copy_with_suffix
-    artifact.artifact_source
+    artifact.source
     driver
     (driver_suffix artifact configuration.backend);
   let executable =
@@ -378,7 +380,7 @@ let compile_artifact
         Toolchain.compile_cpp
           ~shouldlink:true
           ~includes:
-            ( Filename.dirname artifact.artifact_source
+            ( Filename.dirname artifact.source
             ::
             ( match crane_runtime_include () with
             | Some dir -> [dir]
@@ -401,7 +403,7 @@ let compile_artifact
     ( try
         Toolchain.compile_ocaml
           ~shouldlink:true
-          ~includes:[Filename.dirname artifact.artifact_source]
+          ~includes:[Filename.dirname artifact.source]
           ~flags:compiler_flags
           ~outfile:executable
           driver
@@ -417,9 +419,9 @@ let compile_artifact
         ^ "):\n"
         ^ errors ) ) );
   {
-    compiled_index = index;
-    compiled_description = description;
-    compiled_executable = executable;
+    index = index;
+    description = description;
+    executable = executable;
   }
 
 (** Compile the Cartesian product of [subjects] and [configurations] in
@@ -459,15 +461,15 @@ let output_excerpt output =
     This preflight execution is intentionally separate from Hyperfine so failed
     programs and unequal results never produce misleading timing comparisons. *)
 let execute benchmark =
-  let output = Subprocess.capture benchmark.compiled_executable [] in
+  let output = Subprocess.capture benchmark.executable [] in
   ( match output.status with
   | Unix.WEXITED 0 -> ()
   | status ->
     benchmark_error
       ( "Benchmark "
-      ^ string_of_int benchmark.compiled_index
+      ^ string_of_int benchmark.index
       ^ " ("
-      ^ benchmark.compiled_description
+      ^ benchmark.description
       ^ ") exited with status "
       ^ string_of_int (Subprocess.exit_code status)
       ^ ":\n"
@@ -486,11 +488,11 @@ let verify_outputs benchmarks =
           benchmark_error
             ( "Benchmark outputs differ; Hyperfine was not run.\n"
             ^ "Expected from "
-            ^ baseline.compiled_description
+            ^ baseline.description
             ^ ":\n"
             ^ output_excerpt expected
             ^ "\nActual from "
-            ^ candidate.compiled_description
+            ^ candidate.description
             ^ ":\n"
             ^ output_excerpt actual ) )
       candidates
@@ -500,14 +502,14 @@ let verify_outputs benchmarks =
 let replace_paths_with_names benchmarks output =
   List.fold_right
     (fun benchmark output ->
-      let name = "Benchmark " ^ string_of_int benchmark.compiled_index in
+      let name = "Benchmark " ^ string_of_int benchmark.index in
       let first = ref true in
       Str.global_substitute
-        (Str.regexp (Str.quote benchmark.compiled_executable))
+        (Str.regexp (Str.quote benchmark.executable))
         (fun _ ->
           if !first then (
             first := false;
-            name ^ " (" ^ benchmark.compiled_description ^ ")" )
+            name ^ " (" ^ benchmark.description ^ ")" )
           else
             name )
         output )
@@ -528,7 +530,7 @@ let run_hyperfine benchmarks =
       "hyperfine"
       ( "--style=basic"
       :: List.map
-           (fun benchmark -> benchmark.compiled_executable)
+           (fun benchmark -> benchmark.executable)
            benchmarks )
   in
   match output.status with

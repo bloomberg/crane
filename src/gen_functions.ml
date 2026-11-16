@@ -1563,7 +1563,7 @@ let gen_dfun ~minted n b cty ty temps =
         | Some _, _ ->
           (* Case 1: inside a struct — keep name, register for wrapper *)
           Unit_program.record_entry_point
-            {entry_name = Id.of_string "main"; entry_struct = struct_name; entry_runs_tree = needs_run};
+            {name = Id.of_string "main"; struct_ = struct_name; runs_tree = needs_run};
           inner
         | None, false ->
           (* Case 2: top-level sequential — emit [int main()] directly.
@@ -1594,7 +1594,7 @@ let gen_dfun ~minted n b cty ty temps =
           let new_label = Label.of_id (Id.of_string "_main") in
           let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
           Unit_program.record_entry_point
-            {entry_name = Id.of_string "_main"; entry_struct = None; entry_runs_tree = needs_run};
+            {name = Id.of_string "_main"; struct_ = None; runs_tree = needs_run};
           ( match inner with
           | Function f -> Function {f with path = {outer = (new_n, []); inner = []}}
           | d -> d )

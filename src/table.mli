@@ -1378,15 +1378,15 @@ val extract_skip_or_module : qualid -> unit
 
 (** Numeral information for numeric inductives. *)
 type numeral_info = {
-  num_zero_ctor : int;  (** Index of zero constructor *)
-  num_succ_ctor : int;  (** Index of successor constructor *)
-  num_fmt : string;  (** Format string for the literal, with one [%n] placeholder *)
-  num_converters : GlobRef.t list;
+  zero_ctor : int;  (** Index of zero constructor *)
+  succ_ctor : int;  (** Index of successor constructor *)
+  fmt : string;  (** Format string for the literal, with one [%n] placeholder *)
+  converters : GlobRef.t list;
     (** Converter functions (e.g. [Nat.of_num_uint]) that parse digit chains
         into this numeral type.  Resolved by name when [Crane Extract
         Numeral] is processed: in the module named after the type ([Nat] for
         [nat]), or else in the inductive's own directory. *)
-  num_ind : GlobRef.t;
+  ind : GlobRef.t;
     (** The numeral inductive itself, so a rendering site holding only the
         info can still ask what C++ type the literal has to fit in. *)
 }

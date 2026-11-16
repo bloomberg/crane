@@ -106,9 +106,9 @@ type t = {
 }
 
 and entry_point = {
-  entry_name : Names.Id.t;
-  entry_struct : Names.Id.t option;
-  entry_runs_tree : bool;
+  name : Names.Id.t;
+  struct_ : Names.Id.t option;
+  runs_tree : bool;
 }
 
 let empty =

@@ -677,7 +677,7 @@ and extract_spine env sg db j c args =
           | Some (Core.Type.Erased k) -> Some k
           | _ -> None
         in
-        (spine_ty, {Core.Schema.raw_erased; raw_tvar = tvar} :: spine)
+        (spine_ty, {Core.Schema.erased = raw_erased; tvar = tvar} :: spine)
     in
     let arrow dom (spine_ty, spine) =
       match expand env spine_ty with

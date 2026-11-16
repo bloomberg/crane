@@ -25,7 +25,7 @@ let rec replace_placeholders f e =
 (* A local fixpoint function: its declared type, and its arity, the
    lambdas its body starts with.  The type may leave its result open; the
    arity is what says a call is a full one. *)
-type local = {l_type : Core.Type.t; l_arity : int}
+type local = {type_ : Core.Type.t; arity : int}
 
 (* The functions whose calls are bound: a top-level fixpoint group, by
    reference, and the local fixpoints enclosing the term, each by the depth
@@ -71,13 +71,13 @@ let group_call group ~depth e =
           if j >= 0 && j < Array.length fns then Some fns.(j) else None )
         group.locals
     with
-    | Some l when List.length args = l.l_arity ->
+    | Some l when List.length args = l.arity ->
       let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
       (* What it yields, or, where the fixpoint's type does not say, an open
          annotation of the temporary's own: the program is frozen. *)
       Some
         (Option.default (Core_util.new_meta ())
-           (Type_util.core_codomain_after (List.length value_args) l.l_type))
+           (Type_util.core_codomain_after (List.length value_args) l.type_))
     | _ -> None )
   | _ -> None
 
@@ -321,7 +321,7 @@ let rec scope ~group ~depth ?expected e =
                               occurrence = o; _} when Splices.is_entered_copy group.splices o ->
           (* A partner's copy the machine enters stands for the partner: its
              calls are the group's. *)
-          {group with locals = (depth + 1, [|{l_type = ty; l_arity = Core_util.nb_lams fn}|]) :: group.locals}
+          {group with locals = (depth + 1, [|{type_ = ty; arity = Core_util.nb_lams fn}|]) :: group.locals}
         | _ -> group
       in
       Core.Expr.Let {binder = id;
@@ -337,7 +337,7 @@ let rec scope ~group ~depth ?expected e =
       and bodies = Core.Recursion.Group.bodies rec_group
       and occ = rec_group.occurrence in
       let n = Array.length ids in
-      let fns = Array.mapi (fun j (_, ty) -> {l_type = ty; l_arity = Core_util.nb_lams bodies.(j)}) ids in
+      let fns = Array.mapi (fun j (_, ty) -> {type_ = ty; arity = Core_util.nb_lams bodies.(j)}) ids in
       let group = {group with locals = (depth + n, fns) :: group.locals} in
       Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:i ids (Array.map (inner ~group n) bodies) occ)
     | Core.Expr.Cofixpoint rec_group ->
