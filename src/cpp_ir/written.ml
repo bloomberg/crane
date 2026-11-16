@@ -42,7 +42,7 @@ let inline_spells_arg (t : Foreign.template) =
   | Bare_callee -> fun _ -> true
   | Templated | Block ->
     let tokens = Foreign_template.term_template t.text in
-    fun i -> List.mem (Foreign_template.CCarg i) tokens
+    fun i -> List.mem (Foreign_template.Arg i) tokens
 
 (** [vars] without the variables in [bound]. *)
 let without bound vars = List.filter (fun v -> not (List.exists (Id.equal v) bound)) vars
@@ -102,11 +102,11 @@ and stmt : type p. p Stmt.t -> Id.t list =
   | Custom_match m ->
     let tokens = Foreign_template.match_template (custom_match_text m) in
     let spells token = List.mem token tokens in
-    (if spells Foreign_template.CCscrut then expr m.scrutinee else [])
+    (if spells Foreign_template.Scrut then expr m.scrutinee else [])
     @ List.concat
         (List.mapi
            (fun i (b : p Custom_match.branch) ->
-             if spells (Foreign_template.CCbody i) then
+             if spells (Foreign_template.Body i) then
                without (List.map (fun (p : p Custom_match.param) -> p.name) b.params) (body b.body)
              else [] )
            m.branches )

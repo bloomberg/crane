@@ -1055,7 +1055,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
   let cmatch = find_custom_match pv in
   let scrut_uses =
     List.length
-      (List.filter (( = ) Foreign_template.CCscrut) (Foreign_template.match_template cmatch))
+      (List.filter (( = ) Foreign_template.Scrut) (Foreign_template.match_template cmatch))
   in
   (* Whether the match binds the pair's components by value, moving them out:
      asked while [t] is still the Core scrutinee. *)

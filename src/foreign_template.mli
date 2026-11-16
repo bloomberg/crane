@@ -9,17 +9,17 @@
 
 (** One token of a parsed mapping. *)
 type custom_case =
-  | CCscrut  (** [%scrut]: the scrutinee of a match template *)
-  | CCty  (** [%ty]: the matched type *)
-  | CCbody of int  (** [%br{i}]: branch [i]'s statements *)
-  | CCty_arg of int  (** [%t{i}]: type argument [i] *)
-  | CCelem of int  (** [%elem{i}]: type argument [i], boxed where it recurses *)
-  | CCbr_var of int * int  (** [%b{i}a{j}]: branch [i]'s binder [j] *)
-  | CCbr_var_ty of int * int  (** [%b{i}t{j}]: the type of that binder *)
-  | CCstring of string  (** literal text *)
-  | CCarg of int  (** [%a{i}]: value argument [i] *)
-  | CCret  (** [%ret]: the type the call yields *)
-  | CCresult  (** [%result]: the variable a block template assigns *)
+  | Scrut  (** [%scrut]: the scrutinee of a match template *)
+  | Ty  (** [%ty]: the matched type *)
+  | Body of int  (** [%br{i}]: branch [i]'s statements *)
+  | Ty_arg of int  (** [%t{i}]: type argument [i] *)
+  | Elem of int  (** [%elem{i}]: type argument [i], boxed where it recurses *)
+  | Br_var of int * int  (** [%b{i}a{j}]: branch [i]'s binder [j] *)
+  | Br_var_ty of int * int  (** [%b{i}t{j}]: the type of that binder *)
+  | Text of string  (** literal text *)
+  | Arg of int  (** [%a{i}]: value argument [i] *)
+  | Ret  (** [%ret]: the type the call yields *)
+  | Result  (** [%result]: the variable a block template assigns *)
 
 (** The tokens of a type template: [%t{i}] and [%elem{i}] holes. *)
 val type_template : string -> custom_case list

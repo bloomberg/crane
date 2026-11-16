@@ -9,19 +9,19 @@
     is spelled.  Literal C++ between placeholders stays opaque. *)
 
 (** One token of a parsed mapping: a placeholder, or literal text
-    ([CCstring]).  Each constructor is documented in [foreign_template.mli]. *)
+    ([Text]).  Each constructor is documented in [foreign_template.mli]. *)
 type custom_case =
-  | CCscrut
-  | CCty
-  | CCbody of int
-  | CCty_arg of int
-  | CCelem of int
-  | CCbr_var of int * int
-  | CCbr_var_ty of int * int
-  | CCstring of string
-  | CCarg of int
-  | CCret
-  | CCresult
+  | Scrut
+  | Ty
+  | Body of int
+  | Ty_arg of int
+  | Elem of int
+  | Br_var of int * int
+  | Br_var_ty of int * int
+  | Text of string
+  | Arg of int
+  | Ret
+  | Result
 
 (** Test whether a character is an ASCII digit. *)
 let is_digit c = c >= '0' && c <= '9'
@@ -59,7 +59,7 @@ let parse_custom_fixed esc cc s =
   let rec aux i start chunks_rev =
     if i >= n then
       let last_chunk = String.sub s start (n - start) in
-      List.rev (CCstring last_chunk :: chunks_rev)
+      List.rev (Text last_chunk :: chunks_rev)
     else
       match
         (s.[i], i + esc_len + 1 <= n)
@@ -70,7 +70,7 @@ let parse_custom_fixed esc cc s =
           aux
             (i + esc_len + 1)
             (i + esc_len + 1)
-            (cc :: CCstring chunk :: chunks_rev)
+            (cc :: Text chunk :: chunks_rev)
         else
           aux (i + 1) start chunks_rev
       | _ -> aux (i + 1) start chunks_rev
@@ -89,7 +89,7 @@ let parse_numbered_args esc f s =
     if i >= n then
       List.rev
         ( if start < n then
-            CCstring (String.sub s start (n - start)) :: acc
+            Text (String.sub s start (n - start)) :: acc
           else
             acc )
     else if s.[i] = '%' && i + esc_len < n && String.sub s (i + 1) esc_len = esc
@@ -99,7 +99,7 @@ let parse_numbered_args esc f s =
       with
       | Some (idx, j) ->
         let chunk = String.sub s start (i - start) in
-        aux j j (f idx :: CCstring chunk :: acc)
+        aux j j (f idx :: Text chunk :: acc)
       | None -> aux (i + 1) start acc
     else
       aux (i + 1) start acc
@@ -120,7 +120,7 @@ let parse_custom_numbered_binders esc1 esc2 f s =
     if i >= n then
       List.rev
         ( if start < n then
-            CCstring (String.sub s start (n - start)) :: acc
+            Text (String.sub s start (n - start)) :: acc
           else
             acc )
     else if s.[i] = '%' && i + len1 < n && String.sub s (i + 1) len1 = esc1 then
@@ -131,7 +131,7 @@ let parse_custom_numbered_binders esc1 esc2 f s =
         ( match parse_number s (j + len2) n with
         | Some (idx2, k) ->
           let chunk = String.sub s start (i - start) in
-          aux k k (f idx1 idx2 :: CCstring chunk :: acc)
+          aux k k (f idx1 idx2 :: Text chunk :: acc)
         | None -> aux (i + 1) start acc )
       | _ -> aux (i + 1) start acc
     else
@@ -140,7 +140,7 @@ let parse_custom_numbered_binders esc1 esc2 f s =
   aux 0 0 []
 
 (** Expand placeholders in a command list using a parser function.
-    For each [CCstring] chunk, apply [parser] to produce new chunks.
+    For each [Text] chunk, apply [parser] to produce new chunks.
     Non-string chunks are passed through unchanged.
 
     @param parser  function that splits a raw string into {!custom_case} chunks
@@ -149,7 +149,7 @@ let expand_custom_chunks parser cmds =
   List.fold_left
     (fun prev curr ->
       match curr with
-      | CCstring s -> prev @ parser s
+      | Text s -> prev @ parser s
       | _ -> prev @ [curr] )
     []
     cmds
@@ -169,15 +169,15 @@ let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc
     type is written inside the container's [Boxed Element] wrapper where it
     recurses through the container.  Bare [%elem] means index 0. *)
 let expand_elem_args cmds =
-  let cmds = expand_numbered_args "elem" (fun i -> CCelem i) cmds in
-  expand_custom_fixed "elem" (CCelem 0) cmds
+  let cmds = expand_numbered_args "elem" (fun i -> Elem i) cmds in
+  expand_custom_fixed "elem" (Elem 0) cmds
 
 (** Parse a custom {e type} template: the [%t{i}] and [%elem{i}] holes of a
     mapping such as ["std::pair<%t0,%t1>"].  The parsers of this module are
     the only places that know the syntax; consumers fold over the tokens
     rather than scanning the text again. *)
 let parse_type_template s =
-  expand_elem_args (parse_numbered_args "t" (fun i -> CCty_arg i) s)
+  expand_elem_args (parse_numbered_args "t" (fun i -> Ty_arg i) s)
 
 (** A custom mapping that names a template without saying where its arguments
     go still takes them: ["Sum1"] applied to [E], [F] means ["Sum1<E, F>"],
@@ -194,16 +194,16 @@ let custom_template_with_args s nargs =
     ^ ">"
 
 let type_arity tokens =
-  List.fold_left (fun n -> function CCty_arg i | CCelem i -> max n (i + 1) | _ -> n) 0 tokens
+  List.fold_left (fun n -> function Ty_arg i | Elem i -> max n (i + 1) | _ -> n) 0 tokens
 
 (** Parse a custom {e term} template: {!parse_type_template} plus the [%a{i}]
     holes that splice value arguments and the [%ret] hole that spells the
     type the call yields. *)
 let parse_term_template s =
-  expand_custom_fixed "ret" CCret
+  expand_custom_fixed "ret" Ret
     (expand_elem_args
-       (expand_numbered_args "t" (fun i -> CCty_arg i)
-          (parse_numbered_args "a" (fun i -> CCarg i) s)))
+       (expand_numbered_args "t" (fun i -> Ty_arg i)
+          (parse_numbered_args "a" (fun i -> Arg i) s)))
 
 (** A memoized parser: a mapping's text parses to the same tokens every time. *)
 let memoized parse =
@@ -223,12 +223,12 @@ let term_template = memoized parse_term_template
    holes [%b{i}a{j}] and [%b{i}t{j}]. *)
 let match_template =
   memoized (fun s ->
-      parse_custom_fixed "scrut" CCscrut s
-      |> expand_custom_fixed "ty" CCty
-      |> expand_numbered_args "t" (fun i -> CCty_arg i)
-      |> expand_numbered_args "br" (fun i -> CCbody i)
-      |> expand_custom_binders "b" "a" (fun i j -> CCbr_var (i, j))
-      |> expand_custom_binders "b" "t" (fun i j -> CCbr_var_ty (i, j)) )
+      parse_custom_fixed "scrut" Scrut s
+      |> expand_custom_fixed "ty" Ty
+      |> expand_numbered_args "t" (fun i -> Ty_arg i)
+      |> expand_numbered_args "br" (fun i -> Body i)
+      |> expand_custom_binders "b" "a" (fun i j -> Br_var (i, j))
+      |> expand_custom_binders "b" "t" (fun i j -> Br_var_ty (i, j)) )
 
 (* Split [tokens] into statements at the top-level semicolons of their
    literal text, tracking quotes and parentheses; see
@@ -241,7 +241,7 @@ let statements tokens =
   let text = Buffer.create 64 in
   let flush_text () =
     if Buffer.length text > 0 then begin
-      current := CCstring (Buffer.contents text) :: !current;
+      current := Text (Buffer.contents text) :: !current;
       Buffer.clear text
     end
   in
@@ -276,7 +276,7 @@ let statements tokens =
   in
   List.iter
     (function
-      | CCstring s -> literal s
+      | Text s -> literal s
       | hole ->
         flush_text ();
         current := hole :: !current)
@@ -296,11 +296,11 @@ let statements tokens =
     String.sub s 0 !n
   in
   let trim stmt =
-    let stmt = match stmt with CCstring s :: rest -> CCstring (ltrim s) :: rest | _ -> stmt in
+    let stmt = match stmt with Text s :: rest -> Text (ltrim s) :: rest | _ -> stmt in
     let stmt =
-      match List.rev stmt with CCstring s :: rest -> List.rev (CCstring (rtrim s) :: rest) | _ -> stmt
+      match List.rev stmt with Text s :: rest -> List.rev (Text (rtrim s) :: rest) | _ -> stmt
     in
-    List.filter (function CCstring "" -> false | _ -> true) stmt
+    List.filter (function Text "" -> false | _ -> true) stmt
   in
   List.filter (fun stmt -> stmt <> []) (List.map trim (List.rev !stmts))
 
@@ -309,10 +309,10 @@ let statements tokens =
 let block_statements =
   memoized (fun s ->
       statements
-        (expand_custom_fixed "ret" CCret
+        (expand_custom_fixed "ret" Ret
            (expand_elem_args
-              (expand_numbered_args "t" (fun i -> CCty_arg i)
-                 (expand_numbered_args "a" (fun i -> CCarg i) (parse_custom_fixed "result" CCresult s))))))
+              (expand_numbered_args "t" (fun i -> Ty_arg i)
+                 (expand_numbered_args "a" (fun i -> Arg i) (parse_custom_fixed "result" Result s))))))
 
 type drain_token = Drain_text of string | Drain_yield of string
 
@@ -352,15 +352,15 @@ let drain_template s =
 
 let passes_through s =
   match
-    List.filter (function CCstring t -> String.trim t <> "" | _ -> true) (term_template s)
+    List.filter (function Text t -> String.trim t <> "" | _ -> true) (term_template s)
   with
-  | [CCarg i] -> Some i
+  | [Arg i] -> Some i
   | _ -> None
 
 let pair_projection_field s =
   match term_template s with
-  | [CCstring ""; CCarg 0; CCstring ((".first" | ".second") as f)]
-  | [CCarg 0; CCstring ((".first" | ".second") as f)] ->
+  | [Text ""; Arg 0; Text ((".first" | ".second") as f)]
+  | [Arg 0; Text ((".first" | ".second") as f)] ->
     Some (String.sub f 1 (String.length f - 1))
   | _ -> None
 
@@ -368,7 +368,7 @@ let is_pair_projection s = Option.has_some (pair_projection_field s)
 
 let arg_mentions s =
   let tokens = term_template s in
-  let holes = List.filter_map (function CCarg j -> Some j | _ -> None) tokens in
+  let holes = List.filter_map (function Arg j -> Some j | _ -> None) tokens in
   let last = List.fold_left max (-1) holes in
   fun i ->
     if i > last then 1
@@ -377,7 +377,7 @@ let arg_mentions s =
 let mentions_each_arg_once s =
   let rec go seen = function
     | [] -> true
-    | CCarg i :: rest -> (not (List.mem i seen)) && go (i :: seen) rest
+    | Arg i :: rest -> (not (List.mem i seen)) && go (i :: seen) rest
     | _ :: rest -> go seen rest
   in
   go [] (term_template s)
@@ -391,19 +391,19 @@ let structured_binding s =
   let squeeze t = String.of_seq (Seq.filter (fun c -> not (List.mem c [' '; '\t'; '\n'; '\r'])) (String.to_seq t)) in
   let tokens =
     List.filter_map
-      (function CCstring t -> if squeeze t = "" then None else Some (CCstring (squeeze t)) | t -> Some t)
+      (function Text t -> if squeeze t = "" then None else Some (Text (squeeze t)) | t -> Some t)
       (match_template s)
   in
   let rec binders j = function
-    | CCbr_var (0, j') :: rest when j' = j -> (
-      match rest with CCstring "," :: rest -> binders (j + 1) rest | _ -> Some rest )
+    | Br_var (0, j') :: rest when j' = j -> (
+      match rest with Text "," :: rest -> binders (j + 1) rest | _ -> Some rest )
     | _ -> None
   in
   let mode = function "constauto&[" -> Some By_reference | "auto[" -> Some By_value | _ -> None in
   match tokens with
-  | CCstring declarator :: rest -> (
+  | Text declarator :: rest -> (
     match (mode declarator, binders 0 rest) with
-    | Some m, Some [CCstring "]="; CCscrut; CCstring ";"; CCbody 0] -> Some m
+    | Some m, Some [Text "]="; Scrut; Text ";"; Body 0] -> Some m
     | _ -> None )
   | _ -> None
 
@@ -434,7 +434,7 @@ let declared_type_names s =
   in
   List.filter
     (fun w -> not (List.mem w builtin_type_words))
-    (List.concat_map (function CCstring lit -> names lit | _ -> []) (type_template s))
+    (List.concat_map (function Text lit -> names lit | _ -> []) (type_template s))
 
 (* The header declaring a standard-library name, by what follows [std::] in
    it -- a nested namespace ([chrono], [filesystem]) stands for every name
@@ -506,7 +506,7 @@ let standard_names_written tokens =
   List.sort_uniq compare
     (List.concat_map
        (function
-         | CCstring lit ->
+         | Text lit ->
            List.filter_map (fun name -> Option.map (fun h -> ("std::" ^ name, h)) (standard_header_of name)) (names lit)
          | _ -> [])
        tokens)

@@ -14,13 +14,13 @@ let () =
   check "a call is not" (not (is_pair_projection "f(%a0.first)"));
   check "another argument is not" (not (is_pair_projection "%a1.first"));
   check "term holes"
-    (List.filter (( <> ) (CCstring "")) (term_template "std::make_pair<%t0>(%a0, %a1)")
-     = [CCstring "std::make_pair<"; CCty_arg 0; CCstring ">("; CCarg 0;
-        CCstring ", "; CCarg 1; CCstring ")"]);
+    (List.filter (( <> ) (Text "")) (term_template "std::make_pair<%t0>(%a0, %a1)")
+     = [Text "std::make_pair<"; Ty_arg 0; Text ">("; Arg 0;
+        Text ", "; Arg 1; Text ")"]);
   check "match holes"
-    (List.mem CCscrut (match_template "if (%scrut) { %br0 } else { %br1 }")
-     && List.mem (CCbody 1) (match_template "if (%scrut) { %br0 } else { %br1 }"));
-  check "result" (block_statements "%result = %a0;" = [[CCresult; CCstring " = "; CCarg 0]]);
+    (List.mem Scrut (match_template "if (%scrut) { %br0 } else { %br1 }")
+     && List.mem (Body 1) (match_template "if (%scrut) { %br0 } else { %br1 }"));
+  check "result" (block_statements "%result = %a0;" = [[Result; Text " = "; Arg 0]]);
   check "drain"
     (drain_template "while (!%scrut.empty()) { %yield(f(x)); }"
      = [Drain_text "while (!%scrut.empty()) { "; Drain_yield "f(x)"; Drain_text "; }"]);
@@ -50,14 +50,14 @@ let () =
   check "standard: an unknown name" (standard "std::frobnicate(%a0)" = []);
   check "standard: holes are not text" (standard "%a0.size()" = []);
   let stmts s =
-    List.map (List.filter (( <> ) (CCstring ""))) (block_statements s)
+    List.map (List.filter (( <> ) (Text ""))) (block_statements s)
   in
   check "statements: one per semicolon, trimmed"
-    (stmts " _r = %a0;  f(_r) ;" = [[CCstring "_r = "; CCarg 0]; [CCstring "f(_r)"]]);
-  check "statements: a last one without its semicolon" (stmts "std::cin >> _r" = [[CCstring "std::cin >> _r"]]);
+    (stmts " _r = %a0;  f(_r) ;" = [[Text "_r = "; Arg 0]; [Text "f(_r)"]]);
+  check "statements: a last one without its semicolon" (stmts "std::cin >> _r" = [[Text "std::cin >> _r"]]);
   check "statements: a for header is one statement"
     (stmts "for (int i = 0;; ++i) { if (i >= %a0) break; }"
-     = [[CCstring "for (int i = 0;; ++i) { if (i >= "; CCarg 0; CCstring ") break"]; [CCstring "}"]]);
-  check "statements: not inside a literal" (stmts "f(\";\"); g(';')" = [[CCstring "f(\";\")"]; [CCstring "g(';')"]]);
-  check "statements: blank ones dropped" (stmts "a;; ;b" = [[CCstring "a"]; [CCstring "b"]]);
-  check "statements: a hole alone" (stmts "%a0; %a1" = [[CCarg 0]; [CCarg 1]])
+     = [[Text "for (int i = 0;; ++i) { if (i >= "; Arg 0; Text ") break"]; [Text "}"]]);
+  check "statements: not inside a literal" (stmts "f(\";\"); g(';')" = [[Text "f(\";\")"]; [Text "g(';')"]]);
+  check "statements: blank ones dropped" (stmts "a;; ;b" = [[Text "a"]; [Text "b"]]);
+  check "statements: a hole alone" (stmts "%a0; %a1" = [[Arg 0]; [Arg 1]])
