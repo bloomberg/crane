@@ -36,7 +36,7 @@
       ([no_arena_suffix_table], [guard_compare_table]); the [Goptions] flags;
       and the mode of the running command ([modular_ref], [library_ref],
       [extrcompute], [int_flag_ref], [opt_flag_ref]).
-    - {b The extracted environment}, written by {!Extraction} as it extracts
+    - {b The extracted environment}, written by {!Rocq_to_core.Extraction} as it extracts
       each global and read by every later phase: [typedefs], [cst_types] and
       [inductives] (memos checked against the kernel body, read unchecked
       afterwards), [glob_tys], [inductive_kinds], [projs], [recursors],
@@ -1428,7 +1428,7 @@ val print_extraction_blacklist : unit -> Pp.t
 
 (** Record the local fixpoint group [occ] as one whose members' type binders
     extraction erased because a call recurses at a ground instance
-    ([Extraction.erased_fix_types]): its calls are written at their own
+    ([Rocq_to_core.Extraction.erased_fix_types]): its calls are written at their own
     instance, and translation adapts their arguments to the erased
     parameters. *)
 val add_erased_fix_group : Core.Occurrence.t -> unit

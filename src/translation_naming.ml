@@ -59,7 +59,7 @@ let factory_name_of_ctor ?fallback_idx cref =
     [d_a2].
 
     The pipeline:
-    + Extraction ({!Extraction.extract_really_ind}) populates
+    + Extraction ({!Rocq_to_core.Extraction.extract_really_ind}) populates
       [Core.Inductive.Packet.t.constructor_argument_names] from the kernel binder names.
     + {!compute_and_register_field_names} transforms each binder into a
       C++-safe identifier and registers the mapping in

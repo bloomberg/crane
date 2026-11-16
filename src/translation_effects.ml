@@ -65,7 +65,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   let bind_tys = Base.Core_util.written_type_args use in
   (* The action's result type: the argument written for the variable the
      continuation takes, [A] in [bind : forall A B, M A -> (A -> M B) -> M
-     B].  One extraction could not read ({!Extraction.observe_type_arg}: a
+     B].  One extraction could not read ({!Rocq_to_core.Extraction.observe_type_arg}: a
      type constructor such as an HKT carrier) says nothing. *)
   let action_result_ty =
     match List.rev (Base.Type_util.core_value_domains (find_type r)) with

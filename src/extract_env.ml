@@ -20,7 +20,7 @@ open Pp
 open CErrors
 open Util
 open Base.Table
-open Extraction
+open Rocq_to_core.Extraction
 open Core_passes.Modutil
 open Base.Common
 

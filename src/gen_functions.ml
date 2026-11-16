@@ -93,7 +93,7 @@ let gen_type_alias cx r vars ot =
 (** The occurrences of the uses of [n] in [b] written at another instance
     than [n]'s own: a use that solves one of [n]'s variables to a ground
     type, as a self-call written [f bool] inside [f] does
-    ({!Extraction.extract_cst_app}).  Every other self-call is at [n]'s own
+    ({!Rocq_to_core.Extraction.extract_cst_app}).  Every other self-call is at [n]'s own
     variables -- [Identity], or a hole a pass left for inference. *)
 let other_instance_self_calls n b =
   let rec ground = function

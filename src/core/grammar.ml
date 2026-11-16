@@ -107,7 +107,7 @@ and Type : sig
             {!Base.Core_util.type_subst_list} substitutes both flavours -- rigidity
             constrains unification, not substitution.
 
-            Almost every reader outside {!Base.Core_util} and {!Extraction} ignores
+            Almost every reader outside {!Base.Core_util} and {!Rocq_to_core.Extraction} ignores
             [rigidity]: the back end does not care which flavour it has. *)
     | Variable_app of {
         head : int;

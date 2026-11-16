@@ -21,7 +21,7 @@
     it names calls by variables, and a partner it splices in stands for its
     parameters by variables or lets ({!check}) -- extraction makes the terms
     a type carries canonical where it builds them
-    ([Extraction.extract_type_app]), and every application built later is
+    ([Rocq_to_core.Extraction.extract_type_app]), and every application built later is
     built with {!apply} or {!Base.Core_util.apply_eta_args}.  So translation
     reads each call as it is written, and an analysis of the structure --
     which parameters a call owns ({!Escape}) -- reads the same call the
