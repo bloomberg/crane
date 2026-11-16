@@ -153,14 +153,16 @@ val instantiate_foreign : settled -> settled
     qualifier into its instantiated text first. *)
 val lower_qualifiers : settled -> settled
 
-(** [lower_pointer_slots decl] writes each pointer in the slot its pointee
-    is held in ({!Pointer_slot}): to a shared value, [crane::shared_box<T>]
-    (and its allocation, [shared_box<T>::make]); to an inductive only a
+(** [lower_pointer_slots u decl] writes each pointer of [decl], a
+    declaration of the unit [u], in the slot its pointee is held in
+    ({!Pointer_slot}): to a shared value, [crane::shared_box<T>] (and its
+    allocation, [shared_box<T>::make]); to an inductive only a
     functor's instantiation knows the representation of,
     [crane::shared_or_t<T, P>] with [P] the ordinary pointer.  Afterwards a
     shared pointer is an ordinary pointer, and the printer reads no
-    representation fact to spell one. *)
-val lower_pointer_slots : settled -> settled
+    representation fact to spell one.  An arena allocation in a unit of
+    non-atomic pointers becomes its pointer's own factory. *)
+val lower_pointer_slots : Unit_context.t -> settled -> settled
 
 (** [name_scrutinees decl] declares the local each match holds a computed
     scrutinee in, in front of the match, and has the match read that local:
@@ -189,11 +191,11 @@ val decide_captures : settled -> settled
     not of where it is written. *)
 val invoke_capturing_initialisers : settled -> settled
 
-(** [instantiate_type ty] instantiates the mappings [ty] applies, as
+(** [instantiate_type u ty] instantiates the mappings [ty] applies, as
     {!instantiate_foreign} does a declaration's: for a type written outside
     every declaration, a record's field -- and writes each pointer in its
-    slot, as {!lower_pointer_slots} does. *)
-val instantiate_type : ty -> ty
+    slot, as {!lower_pointer_slots} does in the unit [u]. *)
+val instantiate_type : Unit_context.t -> ty -> ty
 
 (** [type_pieces r text tys] is the type mapping [r]'s [text] applied at
     [tys] in pieces, each [%elem] hole boxed or not as {!instantiate_type}
@@ -201,13 +203,14 @@ val instantiate_type : ty -> ty
     concept. *)
 val type_pieces : Names.GlobRef.t -> string -> ty list -> Cpp_ir.Foreign.piece list
 
-(** [lower_method_calls decl] writes each call of a function the method
+(** [lower_method_calls u decl] writes each call of a function the method
     registry made a member of its receiver's struct as the method call it
     is: the receiver taken out of the argument list, reached with [.] or
     [->], and the template arguments the struct carries left off.  Every
     other reference to such a function names it as a value, and becomes the
-    lambda calling it on its receiver. *)
-val lower_method_calls : settled -> settled
+    lambda calling it on its receiver.  The methods' plans are the unit
+    [u]'s. *)
+val lower_method_calls : Unit_context.t -> settled -> settled
 
 (** [lower_projections decl] writes each record projection the same way:
     applied to its record, as the projection reading its field; named as a

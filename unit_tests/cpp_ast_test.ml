@@ -433,7 +433,7 @@ let () =
 (* Entering a scope is a function from one position to the next, which
    enter_from hands on. *)
 let () =
-  let start = Cpp_state.file_start Common.Intf in
+  let start = Cpp_state.file_start Unit_context.detached Common.Intf in
   let s = Cpp_names.next Cpp_resolution.In_struct start in
   check "entering a struct's body is in a struct, at a frame one deeper"
     (s.in_struct && (not s.in_template) && s.frame = [Cpp_resolution.In_struct]);

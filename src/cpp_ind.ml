@@ -60,7 +60,7 @@ let pp_decls ctx (ds : rendered) =
     members are spelled.  Both kinds are emitted after every datatype, so a
     datatype's member naming either one is naming something still to come. *)
 let module_struct_name (mp : ModPath.t) : string option =
-  match Module_plan.wrapper_struct mp with
+  match Module_plan.wrapper_struct (Translation_state.unit_context ()).modules mp with
   | Some name -> Some name
   | None -> (
     match mp with
@@ -184,7 +184,8 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
-    (not scope.in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
+    (not scope.in_struct)
+    || Array.for_all (Module_plan.is_namespace_scope_ref (Translation_state.unit_context ()).modules) names
   in
   let cnames =
     Array.mapi
@@ -534,7 +535,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
                      planned into the wrapper. *)
                   let merges =
                     (match decl with Struct _ -> true | _ -> false)
-                    && not (Cpp_state.in_unmerged_wrapper names.(i))
+                    && not (Cpp_state.in_unmerged_wrapper (Translation_state.unit_context ()) names.(i))
                   in
                   Namespace (Some {ref_ = names.(i); merges}, [decl])
                 else decl
@@ -613,9 +614,9 @@ let plan_instance_methods r a t =
 let planned_methods ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
   let planned (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
     if Probe.checking () then
-      Callable_abi.check_instance_method ~instance:r m.name
+      Callable_abi.check_instance_method (Translation_state.callables ()) ~instance:r m.name
         (Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:r m);
-    let abi = Callable_abi.planned_instance_method ~instance:r m.name in
+    let abi = Callable_abi.planned_instance_method (Translation_state.callables ()) ~instance:r m.name in
     match Callable_abi.receiver abi with
     | Some {params; ret; _} when List.length params = List.length m.params ->
       { m with
@@ -701,7 +702,7 @@ and lifted_placement =
     in a class template ({!Scope_plan.templated}).  Asked of the
     plan, not of the render context: the implementation writes no template,
     and generates what the header does all the same. *)
-let in_template ~module_ = Scope_plan.templated module_
+let in_template ~module_ = Scope_plan.templated (Translation_state.unit_context ()).scopes module_
 
 (** [functions ~module_ ~lifted funs], generated in [module_], with every
     definition filed in the header inside a template struct, which has no
@@ -1054,7 +1055,10 @@ let finished_of ~what id d =
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
     let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
-    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Unit_program.finishes_as d f.finished)
+    if
+      (not ahead)
+      && Sys.getenv_opt "CRANE_CHECK_IR" <> None
+      && not (Unit_program.finishes_as (Translation_state.unit_context ()) d f.finished)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1285,12 +1289,12 @@ let planned_header_scope mp =
 
 (* The position at file scope of the header from which an element of the
    module [mp] is written, as planned. *)
-let header_element_position mp =
+let header_element_position u mp =
   let {in_struct; concepts_hoisted} = planned_header_scope mp in
-  { (file_start Intf) with
+  { (file_start u Intf) with
     in_struct = in_struct;
     concepts_hoisted = concepts_hoisted;
-    in_template = Scope_plan.templated mp }
+    in_template = Scope_plan.templated u.Unit_context.scopes mp }
 
 type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
@@ -1322,8 +1326,8 @@ let concept_placement plan c =
   | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
 
 (* The visibility planned for the body of [mp]; an anomaly if none was. *)
-let planned_visibility mp =
-  match Scope_plan.visibility mp with
+let planned_visibility (u : Unit_context.t) mp =
+  match Scope_plan.visibility u.scopes mp with
   | Some v -> v
   | None ->
     CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
@@ -1331,21 +1335,23 @@ let planned_visibility mp =
 (* The position a declaration spelled [spelling] is written at in [file],
    a function of the plan alone: nothing installed around it reaches it. *)
 let spelling_position ~file spelling =
-  let element mp c = {c with module_ = Some mp; visibility = Some (planned_visibility mp)} in
+  let u = Translation_state.unit_context () in
+  let element mp c = {c with module_ = Some mp; visibility = Some (planned_visibility u mp)} in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> element mp (header_element_position mp)
-  | Intf, Member_of mp -> element mp {(header_element_position mp) with in_struct = true}
+  | Intf, Element_of mp -> element mp (header_element_position u mp)
+  | Intf, Member_of mp -> element mp {(header_element_position u mp) with in_struct = true}
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> element mp (file_start Impl)
+  | Impl, Element_of mp -> element mp (file_start u Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
-  | _, Template_in declared -> Cpp_leaf_plan.ctor_alias_render_ctx (file_start file) declared
+  | _, Template_in declared ->
+    Cpp_leaf_plan.ctor_alias_render_ctx (file_start u file) declared
 
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)
@@ -1363,7 +1369,8 @@ let resolver_at ~file spelling frame key =
 
 (* The names a declaration asks resolution for: those its leaves print and
    those its concepts name. *)
-let requested d = Cpp_leaf_plan.unprinted_names d @ Cpp_concepts.names_requested d
+let requested d =
+  Cpp_leaf_plan.unprinted_names (Translation_state.unit_context ()) d @ Cpp_concepts.names_requested d
 
 let resolve_tree ~file t =
   Common.without_noting_written_files (fun () ->
@@ -1474,7 +1481,8 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
       List.map
         (fun (f : Core.Record.Field.t) ->
           Cpp_pipeline.resolve_type ~what:"a record field type"
-            (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) )
+            (Cpp_erasure.instantiate_type (Translation_state.unit_context ())
+               (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)

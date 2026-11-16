@@ -18,27 +18,19 @@ module Kind = Cpp_ir.Inductive.Kind
     indexed by GlobRef. *)
 type t = {ind_kinds : Kind.t Ref.User.Tbl.t}
 
-(** Checks if a reference is an eponymous record type. Eponymous records flatten
-    their single constructor into the parent namespace. *)
-let is_eponymous _ r = Module_plan.is_eponymous_record r
-
-(** Checks if a reference is a globally-scoped enum. Global-scope enums have
-    their variants hoisted to the parent namespace. *)
-let is_global_scope_enum _ r = Module_plan.is_global_scope_enum r
-
 (** Retrieves the inductive kind classification for a type reference. Returns
     None if the reference is not an inductive type. *)
 let get_ind_kind t r = Ref.User.Tbl.find_opt t.ind_kinds r
 
 (** Classifies packet [i] of an inductive using side-effect-free queries. *)
-let classify_inductive (kn : MutInd.t) (i : int) (ind : Core.Inductive.t) : Kind.t =
+let classify_inductive layout (kn : MutInd.t) (i : int) (ind : Core.Inductive.t) : Kind.t =
   let ind_ref = GlobRef.IndRef (kn, i) in
   match ind.Core.Inductive.kind with
   | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive ->
     if is_enum_inductive ind_ref then Enum else Sum
   | Core.Inductive.Kind.Record fields ->
     let projections = List.map (fun (f : Core.Record.Field.t) -> f.projection) fields in
-    if Module_plan.is_eponymous_record ind_ref then Eponymous_record projections
+    if Module_plan.is_eponymous_record layout ind_ref then Eponymous_record projections
     else Record projections
   | Core.Inductive.Kind.Type_class fields ->
     Type_class (List.map (fun (f : Core.Record.Field.t) -> f.projection) fields)
@@ -46,7 +38,7 @@ let classify_inductive (kn : MutInd.t) (i : int) (ind : Core.Inductive.t) : Kind
 (** Creates a name resolution cache from a Core structure. Pre-computes type
     classifications for every inductive at top level or in a module structure,
     without side effects. *)
-let create s =
+let create layout s =
   let ind_kinds = Ref.User.Tbl.create 64 in
   (* Pre-classify all inductive types using side-effect-free queries only. We do
      NOT call pp_global_name or pp_global here: those have side effects on
@@ -58,7 +50,7 @@ let create s =
         | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           Array.iteri
             (fun i _p ->
-              Ref.User.Tbl.replace ind_kinds (GlobRef.IndRef (kn, i)) (classify_inductive kn i ind) )
+              Ref.User.Tbl.replace ind_kinds (GlobRef.IndRef (kn, i)) (classify_inductive layout kn i ind) )
             ind.Core.Inductive.packets
         | Core.Module.Structure_item.Module m ->
           ( match m.Core.Module.expr with

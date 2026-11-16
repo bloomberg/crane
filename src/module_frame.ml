@@ -111,9 +111,9 @@ let method_candidates epon_ref sel ~enclosing =
 
 (* The names compared are the ones planned, not the ones a reference
    spells: those depend on where the reference is written from. *)
-let concept_collision mp sel =
+let concept_collision layout mp sel =
   let concept_name r =
-    match Module_plan.concept_name r with Some name -> Some name | None -> Common.decided_global_name r
+    match Module_plan.concept_name layout r with Some name -> Some name | None -> Common.decided_global_name r
   in
   List.exists
     (fun (_, se) ->
@@ -134,14 +134,14 @@ let concept_collision mp sel =
    promoted variables the payloads
    name are parameters too ({!Table.ind_promoted_params}): the head spelled
    for the module is the one the inductive's struct is generated with. *)
-let promoted mp sel eponymous_type =
+let promoted scopes mp sel eponymous_type =
   let has_submodules = List.exists (function _, Core.Module.Structure_item.Module _ -> true | _ -> false) sel in
   let inductives =
     List.length
       (List.filter
         (function _, Core.Module.Structure_item.Declaration (Core.Decl.Inductive _) -> true | _ -> false) sel) in
   match eponymous_type with
-  | Some epon when (not (Scope_plan.nested mp)) && (not has_submodules) && inductives <= 1 ->
+  | Some epon when (not (Scope_plan.nested scopes mp)) && (not has_submodules) && inductives <= 1 ->
     List.find_map
       (fun (_, se) ->
         match se with
@@ -156,7 +156,7 @@ let promoted mp sel eponymous_type =
       sel
   | _ -> None
 
-let of_module mp ~name sel ~enclosing =
+let of_module (u : Unit_context.t) mp ~name sel ~enclosing =
   let eponymous_type, eponymous_record = eponymous ~name sel in
   let method_candidates =
     match (eponymous_type, eponymous_record) with
@@ -168,8 +168,8 @@ let of_module mp ~name sel ~enclosing =
   { eponymous_type;
     eponymous_record;
     method_candidates;
-    concept_collision = concept_collision mp sel;
-    promoted = promoted mp sel eponymous_type }
+    concept_collision = concept_collision u.modules mp sel;
+    promoted = promoted u.scopes mp sel eponymous_type }
 
 let equal a b =
   let ref_equal = Option.equal GlobRef.UserOrd.equal in
@@ -194,16 +194,16 @@ let planned mp =
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned frame.")
 
-let frames_around mp =
-  match Scope_plan.frames mp with
+let frames_around scopes mp =
+  match Scope_plan.frames scopes mp with
   | Some frames -> frames
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned frames.")
 
-let demoted_around mp =
+let demoted_around scopes mp =
   List.filter_map
     (fun m ->
       let frame = planned m in
       if Option.has_some frame.promoted then None else frame.eponymous_type )
-    (frames_around mp)
+    (frames_around scopes mp)

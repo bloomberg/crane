@@ -64,12 +64,13 @@ val writes_into_a_struct : Cpp_name.written -> bool
     function declaration ending at its semicolon. *)
 val is_static_member_declaration : Cpp_ir.Resolved.Decl.t -> bool
 
-(** [stand_ins t] is, for each type the declarations of [t] declare, a
+(** [stand_ins layout t] is, for each type the declarations of [t] declare
+    -- the structs [layout] lifts to namespace scope among them -- a
     member alias of it ({!Cpp_ast.global_alias}): what a struct holds in
     place of [t] once [t] is moved out of it to namespace scope.  Only an
     alias's name and an enum's are spelled the way a reference to them is,
     so only those are stood in for. *)
-val stand_ins : Cpp_ast.t -> Cpp_ast.t list
+val stand_ins : Module_plan.layout -> Cpp_ast.t -> Cpp_ast.t list
 
 (** The wrapper structs the declaration writes around something other than
     a sole struct merged into them, in the order it writes them, each by the
@@ -132,15 +133,16 @@ val type_globals : Cpp_ir.Resolved.Type.t -> GlobRef.t list
 (** The globals printing the declaration [d] names, for {!global_names}:
     those it holds, those written beside them -- a template template
     argument's head, the primitive integer type, the custom a custom match
-    or a block custom is written from -- and those it declares. *)
-val declaration_globals : Cpp_ir.Resolved.Decl.t -> GlobRef.t list
+    or a block custom is written from -- and those it declares, in the unit
+    given. *)
+val declaration_globals : Unit_context.t -> Cpp_ir.Resolved.Decl.t -> GlobRef.t list
 
 (** What printing a declaration not yet printed names through the type and
     expression printers, at the frames inside it it names them at, for
     {!Cpp_ast.resolve} to resolve before it is printed: of a declaration of
     the program, every global it holds, at every frame its printing
     enters. *)
-val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
+val unprinted_names : Unit_context.t -> Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
 
 (** What the finished declaration written at the position given, in the
     file it is in, writes; the render of the declaration there reads it back

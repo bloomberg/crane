@@ -647,8 +647,9 @@ let plan_method name vars ((func_ref, _, ty, _) as candidate) =
     of the variables it drops.  Under [CRANE_CHECK_IR] the head is decided
     again ({!method_head}) and checked against the plan. *)
 let planned_method_head func_ref vars s =
-  let abi = Callable_abi.planned func_ref in
-  if Probe.checking () then Callable_abi.check (method_plan func_ref s (method_head vars s));
+  let abi = Callable_abi.planned (Translation_state.callables ()) func_ref in
+  if Probe.checking () then
+    Callable_abi.check (Translation_state.callables ()) (method_plan func_ref s (method_head vars s));
   match Callable_abi.receiver abi with
   | Some r ->
     (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
@@ -727,8 +728,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      saves are planned with the body: certainly, or perhaps. *)
   let resumes, certain =
     match
-      Control_to_cpp_ir.method_resumes func_ref ~inductive:name ~receiver:this_pos
-        ~depth:(List.length (fst env))
+      Control_to_cpp_ir.method_resumes ~unit:(Translation_state.unit_context ()) func_ref ~inductive:name
+        ~receiver:this_pos ~depth:(List.length (fst env))
     with
     | Some (resumes, certain) -> (Some resumes, Some certain)
     | None -> (None, None)
@@ -853,7 +854,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       | Entity (_, _, Some {inline = Some _; _}) -> ()
       | Call (_, Entity (_, _, Some {inline = Some _; _}), args) -> List.iter on_expr args
       | Entity (r, tys, ci) when Cpp_names.lookup_method_this_pos r <> None ->
-        Cpp_ir.Children.expr (Lazy.force visitor) (Entity (r, Cpp_names.method_type_args r tys, ci))
+        let tys = Cpp_names.method_type_args (Translation_state.callables ()) r tys in
+        Cpp_ir.Children.expr (Lazy.force visitor) (Entity (r, tys, ci))
       | e -> Cpp_ir.Children.expr (Lazy.force visitor) e
     in
     List.iter (fun s -> Cpp_ir.Children.stmt (Lazy.force visitor) s) stmts;
@@ -1002,7 +1004,7 @@ let gen_methods ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
   in
-  Control_to_cpp_ir.lower_struct_methods ~merged name vars
+  Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context ()) ~merged name vars
     (List.concat_map
        (fun c -> Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c))
        candidates )
@@ -1126,7 +1128,7 @@ let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir
 (** The fields of a constructor of [name], of types [tys], that its struct
     stores behind the smart pointer, each with whether it holds [name]
     itself: what loop lowering reads off the struct, decided before it is
-    generated ({!Loopify_analysis.add_pointer_fields}). *)
+    generated ({!Pointer_fields.add}). *)
 let constructor_pointer_fields ~name ~is_coinductive vars tys =
   List.concat
     (List.mapi
@@ -1905,7 +1907,7 @@ let gen_ind_header_v2
              and <atomic>, which {!Cpp_demands} demands for the fence's text,
              is not included on its account. *)
           let unique_fence =
-            if Table.non_atomic_rc () then []
+            if Translation_state.non_atomic_rc () then []
             else [S.Foreign_text Cpp_demands.acquire_fence]
           in
           let is_sole p =
@@ -2884,7 +2886,7 @@ let gen_ind_header_v2
            for arena allocation, nor for coinductive or shared-variant types,
            whose cells are made differently. *)
         let child_field (_, storage_ty, _) ty =
-          Table.non_atomic_rc () && (not is_coinductive) && (not arena_runtime_ok)
+          Translation_state.non_atomic_rc () && (not is_coinductive) && (not arena_runtime_ok)
           && (not (Table.is_shared_variant name))
           && is_ref_to name vars ty
           && (match (storage_ty : Cpp_ir.Lowered.Type.t) with Shared_pointer _ -> true | _ -> false)
@@ -2970,7 +2972,7 @@ let gen_ind_header_v2
           else
           match token_field with
           | Some (tok_j, rec_inner)
-            when Table.reuse_anywhere () && Table.non_atomic_rc () && (not is_coinductive)
+            when Table.reuse_anywhere () && Translation_state.non_atomic_rc () && (not is_coinductive)
                  (* A shared variant's slot holds no cell to recycle. *)
                  && not (Table.is_shared_variant name) ->
               let tok_id = Id.of_string "_tok" in

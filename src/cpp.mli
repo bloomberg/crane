@@ -32,7 +32,7 @@
 (** Language descriptor for C++. Provides the preamble, file suffix,
     pretty-printers, and other hooks that {!Extract_env} needs to drive a full
     extraction pass. *)
-val cpp_descr : Backend.t
+val cpp_descr : Unit_context.t Backend.t
 
 (** The methods registered for the inductives of a structure
     ({!Method_registry.create}), decided outside every module body. *)
@@ -40,9 +40,9 @@ val method_registry_of : Core.Program.t -> Method_registry.t
 
 (** Decide the unit's layout before either file is rendered: analyse the
     structure ({!Structure_analysis}), record what rendering reads of the
-    analysis, and return the {!Module_plan} it decides, which is not yet
-    installed. *)
-val prepare_structure : Core.Program.t -> Module_plan.t
+    analysis, and return the {!Module_plan} it decides, which the unit's
+    context [u] does not hold yet. *)
+val prepare_structure : Unit_context.t -> Core.Program.t -> Module_plan.t
 
 (** [registered_methods kn ind] -- each function registered as a method of
     one of [ind]'s inductives, generated with it: the inductive, the
@@ -68,22 +68,22 @@ val plan_callables :
 
 (** Generate every function the renders write, and every instance's struct,
     before either file is rendered, for both files
-    ({!Cpp_ind.generating_ahead}). *)
-val generate_ahead : Core.Program.t -> unit
+    ({!Cpp_ind.generating_ahead}), in the unit given. *)
+val generate_ahead : Unit_context.t -> Core.Program.t -> unit
 
 (** Generate what one declaration, an element of the module [module_], is
     written as, before it is rendered, and finish it into the unit's
     program: the walk {!generate_ahead} would make for a structure holding
-    only it. *)
-val generate_decl_ahead : module_:Names.ModPath.t -> Core.Decl.t -> unit
+    only it, in the unit given. *)
+val generate_decl_ahead : Unit_context.t -> module_:Names.ModPath.t -> Core.Decl.t -> unit
 
 (** The files the names of the unit [s] are written through, read off what
     {!generate_ahead} generated: what its files include. *)
 val files_named_ahead : Core.Program.t -> Names.ModPath.t list
 
 (** The customs the unit's files write, read off what {!generate_ahead}
-    generated: whose imports its files include. *)
-val customs_written_ahead : unit -> Ref.User.Set.t
+    generated in the unit given: whose imports its files include. *)
+val customs_written_ahead : Unit_context.t -> Ref.User.Set.t
 
 (** Plan, from what {!generate_ahead} finished, which globals the unit's
     function bodies read ({!Cpp_state.read_by_a_function}): every installed
@@ -97,8 +97,9 @@ val plan_function_reads : unit -> unit
     top, the member definitions a datatype gave up at the end -- and which
     modules' structs it declares ahead of the file: a struct of nothing but
     static function declarations whose types are declared by the file's
-    forward declarations and name nothing inside another struct. *)
-val plan_file_layout : Core.Program.t -> unit
+    forward declarations and name nothing inside another struct.  [u] is
+    the unit's context. *)
+val plan_file_layout : Unit_context.t -> Core.Program.t -> unit
 
 (** Plan the synthesised templates each file writes, before either is
     rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
@@ -136,18 +137,19 @@ val plan_module_names : Core.Program.t -> (Names.ModPath.t * string) list
 val plan_field_names : Core.Program.t -> (Names.GlobRef.t * Names.Id.t list) list
 
 (** The inductives promoted to their eponymous module's struct, which the
-    module's struct then is ({!Table.with_promoted_inductives}): those of the
+    module's struct then is ({!Unit_context.t.promoted_inductives}): those of the
     modules outside a functor's body, which the implementation renders
-    outside every struct. *)
-val plan_promoted_inductives : Core.Program.t -> Names.GlobRef.t list
+    outside every struct, as the unit's context [u] plans its scopes. *)
+val plan_promoted_inductives : Unit_context.t -> Core.Program.t -> Names.GlobRef.t list
 
 (** The constants emitted as an accessor function returning a function-local
     static (a Meyers singleton), which a use spells as a call: one written in
     a template -- a functor's body, or a module promoted to its eponymous
     inductive's struct where that has parameters -- and, inside a module's
     struct, one that is a template itself, or any under separate extraction;
-    each a constant its generation does not make a function. *)
-val plan_accessors : Core.Program.t -> Names.GlobRef.t list
+    each a constant its generation does not make a function.  [u] is the
+    unit's context. *)
+val plan_accessors : Unit_context.t -> Core.Program.t -> Names.GlobRef.t list
 
 (** The scope of each module the unit emits as a struct: how a definition of
     one of its members, written outside the struct's body, names the

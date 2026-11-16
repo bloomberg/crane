@@ -999,6 +999,16 @@ let module_filename mp =
   let fimpl = Filename.concat (output_directory_for_module ()) fimpl_base in
   (Some fimpl, Option.map (( ^ ) f) d.sig_suffix, id)
 
+(** [with_context u f] is [f u] with lowering reading the unit's context
+    [u] ({!Translation_state.unit_context}), a context the planning so far
+    has added to. *)
+let with_context (u : Unit_context.t) f =
+  Translation_state.with_unit_facts {(Translation_state.unit_facts ()) with context = u} (fun () -> f u)
+
+(** [with_plan u acc f] is {!with_context} of the unit's context [u]
+    holding the facts [acc] holds ({!Accumulated_plan.context}). *)
+let with_plan u acc f = with_context (Accumulated_plan.context acc u) f
+
 (** The steps of {!plan_layout}, in order. *)
 let prepare_layout = "prepare"
 let plan_names = "plan_names"
@@ -1049,21 +1059,24 @@ let layout_pass_names =
     ({!Core_elaborate.structure}), so that planning the callables reads
     them as emission does, then plan the callable of each
     function and method a render will generate.  Each decision a later one
-    or a reader asks about is bound for the rest of the unit as soon as it
-    is taken: added to [acc], what the unit and the earlier units of its
-    extraction decided ({!Accumulated_plan.bind}), or, for the scopes, the
-    unit's own ({!Scope_plan.with_plan}).  Hands all of them, with the
+    or a reader asks about is in the unit's context [u] for the rest of the
+    unit as soon as it is taken (lowering reads it through
+    {!with_context}): added to [acc], what the unit and the earlier units
+    of its extraction decided ({!with_plan}), or, for the scopes and the
+    callables, the unit's own.  Hands all of them, with the
     callables assumed of the functions that have no plan, the elaborations,
     and [acc] with the unit's decisions, to [k], which runs lowering with
     the elaborations.  Under [CRANE_CHECK_IR] the callables are
     planned a second time with every list reversed, and the two must agree:
     a head is a function of its declaration, not of what was planned before
-    it.  Runs in the planning phase, which is the one that names modules. *)
-let plan_layout (acc : Accumulated_plan.t) struc k =
+    it.  Runs in the planning phase, which is the one that names modules.
+    [u] is the unit's context, which [k] is handed with the callable plans
+    in it. *)
+let plan_layout u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" prepare_layout;
-  let modules = Cpp.prepare_structure struc in
+  let modules = Cpp.prepare_structure u struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
-  Accumulated_plan.bind acc @@ fun () ->
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
@@ -1073,8 +1086,8 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
   let field_names = Cpp.plan_field_names struc in
   Pipeline_trace.event "layout" plan_pointer_fields;
   let pointer_fields = Cpp.plan_pointer_fields struc in
-  let acc = {acc with pointer_fields = Loopify_analysis.add_pointer_fields acc.pointer_fields pointer_fields} in
-  Accumulated_plan.bind acc @@ fun () ->
+  let acc = {acc with pointer_fields = Pointer_fields.add acc.pointer_fields pointer_fields} in
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
   let acc =
@@ -1082,31 +1095,31 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
       unmerged_wrappers =
         List.fold_left (fun m (name, mp) -> CString.Map.add name mp m) acc.unmerged_wrappers unmerged_wrappers }
   in
-  Accumulated_plan.bind acc @@ fun () ->
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_concept_prerequisites;
   let modules = Cpp.plan_concept_prerequisites modules struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
-  Accumulated_plan.bind acc @@ fun () ->
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_scopes;
   let scopes = Cpp.plan_scopes struc in
-  Scope_plan.with_plan scopes @@ fun () ->
+  with_context {u with scopes = Scope_plan.bound_of scopes} @@ fun u ->
   Pipeline_trace.event "layout" plan_promoted_inductives;
-  let promoted_inductives = Cpp.plan_promoted_inductives struc in
+  let promoted_inductives = Cpp.plan_promoted_inductives u struc in
   let acc =
     { acc with
       promoted_inductives =
         List.fold_left (fun s r -> Ref.User.Set.add r s) acc.promoted_inductives promoted_inductives }
   in
-  Accumulated_plan.bind acc @@ fun () ->
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_accessors;
-  let accessors = Cpp.plan_accessors struc in
+  let accessors = Cpp.plan_accessors u struc in
   let acc = {acc with accessors = List.fold_left Cpp_state.add_accessor_ref acc.accessors accessors} in
-  Accumulated_plan.bind acc @@ fun () ->
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
   let acc =
     {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
-  Accumulated_plan.bind acc @@ fun () ->
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
   let acc =
@@ -1116,7 +1129,7 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
           (fun m (r, bindings) -> GlobRef.Map.add r bindings m)
           acc.instance_promoted_types instance_promoted_types }
   in
-  Accumulated_plan.bind acc @@ fun () ->
+  with_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" elaborate_calls;
   let elaborations =
     Translation_state.generating_outside_modules @@ fun () ->
@@ -1139,9 +1152,9 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
   let assumed =
     Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
   Pipeline_trace.event "layout" decide_callables;
-  let acc = {acc with callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
-  Accumulated_plan.bind acc @@ fun () ->
-  k acc
+  let u = {u with Unit_context.callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
+  with_context u @@ fun u ->
+  k u acc
   ( modules,
     { Target_plan.module_names;
       names;
@@ -1489,21 +1502,26 @@ let represent_pass_names = [template_kinds]
 let plan_foreign_callables = "plan_foreign_callables"
 let elaborate_pass_names = [plan_foreign_callables]
 
-(** Plan the callables of the globals the unit's [elaborations] name that it
-    does not declare, and the calls of class fields it may project through
-    an instance. *)
-let elaborate_unit elaborations =
+(** The unit's context [u] with the plans of the callables of the globals
+    the unit's [elaborations] name that it does not declare, and of the
+    calls of class fields it may project through an instance. *)
+let elaborate_unit (u : Unit_context.t) elaborations =
   Translation_state.generating_outside_modules @@ fun () ->
   Pipeline_trace.event "elaborate" plan_foreign_callables;
-  Callable_abi.install_foreign
-    (fun r -> Translation_calls.callee_abi ~instances:0 r)
-    (Core_elaborate.referenced elaborations);
+  let foreign =
+    Callable_abi.with_foreign u.callables
+      (fun r -> Translation_calls.callee_abi ~instances:0 r)
+      (Core_elaborate.referenced elaborations)
+  in
+  with_context {u with callables = foreign} @@ fun u ->
   (* Every global a call may project through an instance
      ({!Core_query.static_projection}). *)
-  Callable_abi.install_projections Translation_calls.projection_abi
-    (List.filter
-       (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)
-       (Core_elaborate.referenced elaborations) )
+  { u with
+    callables =
+      Callable_abi.with_projections u.callables Translation_calls.projection_abi
+        (List.filter
+           (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)
+           (Core_elaborate.referenced elaborations) ) }
 
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan].  They are decided from the inductive kinds
@@ -1634,19 +1652,24 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       magic = false;
     }
   in
-  Accumulated_plan.bind earlier @@ fun () ->
+  (* The unit's context holds what the earlier units decided from the
+     start; its configuration is its plan's. *)
+  with_plan Unit_context.detached earlier @@ fun u ->
   let facts, plan = analyze_and_plan struc in
-  Table.with_unit_config plan.config @@ fun () ->
+  let u = {u with config = plan.config} in
   Translation_state.with_unit_facts
-    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
+    { higher_order_projections = facts.higher_order_projections;
+      effects = facts.effects;
+      elaborations = None;
+      context = u }
   @@ fun () ->
   Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  plan_layout earlier struc @@ fun acc (modules, representation, callables, assumed, elaborations) ->
+  plan_layout u earlier struc @@ fun u acc (modules, representation, callables, assumed, elaborations) ->
   let plan = Target_plan.with_layout plan modules representation callables assumed in
-  elaborate_unit elaborations;
+  with_context (elaborate_unit u elaborations) @@ fun u ->
   let planned_checkpoint = checkpoint () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
@@ -1663,24 +1686,24 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      same: rendering is a function of the frozen plan alone. *)
   let render_impl () =
     Pipeline_trace.event "emit" "render_impl";
-    d.pp_struct struc
+    d.pp_struct u struc
   in
   let render_intf () =
     Pipeline_trace.event "emit" "render_intf";
-    d.pp_hstruct struc
+    d.pp_hstruct u struc
   in
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
   (* Every function is generated before either render, reading the plans
      emission reads, and each pass is handed the position it plans for. *)
   end_planning ();
   Pipeline_trace.event "emit" "generate_ahead";
-  Cpp.generate_ahead struc;
+  Cpp.generate_ahead u struc;
   Common.plan_written_files (Cpp.files_named_ahead struc);
-  Table.plan_written_customs (Cpp.customs_written_ahead ());
+  Table.plan_written_customs (Cpp.customs_written_ahead u);
   Table.check_written_mapping_headers ();
   Cpp.plan_function_reads ();
   Pipeline_trace.event "emit" "plan_file_layout";
-  Cpp.plan_file_layout struc;
+  Cpp.plan_file_layout u struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";
   Cpp.plan_ctor_aliases struc;
   let generated_checkpoint = checkpoint () in
@@ -1714,7 +1737,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   if Pipeline_trace.enabled () then begin
     Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
     Pipeline_trace.event "emit" (Core_effects.report facts.effects);
-    Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
+    Pipeline_trace.event "emit" (Callable_abi.report_foreign u.callables)
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   (* The header includes every file either of the unit's files names, so a
@@ -2544,17 +2567,21 @@ let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
   let facts = Program_facts.analyze struc in
+  let u = Unit_context.detached in
   Translation_state.with_unit_facts
-    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
+    { higher_order_projections = facts.higher_order_projections;
+      effects = facts.effects;
+      elaborations = None;
+      context = u }
   @@ fun () ->
   Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
-  plan_layout (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
-  @@ fun _ (_, _, _, _, elaborations) ->
-  elaborate_unit elaborations;
+  plan_layout u (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
+  @@ fun u _ (_, _, _, _, elaborations) ->
+  with_context (elaborate_unit u elaborations) @@ fun u ->
   end_planning ();
   let ans =
-    Cpp.generate_decl_ahead ~module_:mp decl;
-    d.pp_decl ~module_:mp decl
+    Cpp.generate_decl_ahead u ~module_:mp decl;
+    d.pp_decl u ~module_:mp decl
   in
   (* The one box the printers rely on: inside it every break is a newline,
      which is what turns {!Cpp_print.cut2} into the blank line between two

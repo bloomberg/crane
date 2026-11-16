@@ -857,7 +857,7 @@ let lower_qualifiers (d : settled) : settled =
    that and the pointer [P].  What is left as a pointer is an ordinary
    pointer.  A slot already chosen is a fixed point: [shared_or_t]'s pointer
    argument is not chosen again.  Expressions a type holds are reached too. *)
-let pointer_slots () =
+let pointer_slots u () =
   let rec ft (t : ty) : ty =
     Types.rewrite
       (fun (t : ty) ->
@@ -888,16 +888,16 @@ let pointer_slots () =
       Type_member (External (Crane_rt.shared_box, [t]), Id.of_string "make")
     (* A unit of non-atomic pointers allocates in an arena through its own
        pointer's factory. *)
-    | Allocate (Arena_scoped, t) when Table.non_atomic_rc () ->
+    | Allocate (Arena_scoped, t) when Unit_context.non_atomic_rc u ->
       Type_member (External (Crane_rt.rc, [t]), Id.of_string "make")
     | e -> e
   and fs s = Map.stmt (rw ()) s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:ft () in
   rw
 
-let lower_pointer_slots (d : settled) : settled = Map.decl (pointer_slots () ()) d
+let lower_pointer_slots u (d : settled) : settled = Map.decl (pointer_slots u () ()) d
 
-let instantiate_type t = (pointer_slots () ()).type_ (instantiated_type ~boxing:true t)
+let instantiate_type u t = (pointer_slots u () ()).type_ (instantiated_type ~boxing:true t)
 
 (** {2 Naming scrutinees} *)
 
@@ -1025,7 +1025,7 @@ let invoke_capturing_initialisers (d : settled) : settled =
    parameter can only be spelled where that parameter is in scope, which a
    lambda in a static data member's initialiser is not, so such a type is left
    generic; a method planned nowhere leaves only the generic form. *)
-let method_value n (tys : ty list) pos : expr =
+let method_value u n (tys : ty list) pos : expr =
   let contains_tvar = Cpp_ir.Children.exists_type (function Variable _ | Auto -> true | _ -> false) in
   let spellable ty = if contains_tvar ty then None else Some ty in
   let receiver =
@@ -1046,7 +1046,7 @@ let method_value n (tys : ty list) pos : expr =
       (* The plan records the declared parameters in order, without the
          receiver's slot; each carries however many qualifiers the
          declaration gave it, and the lambda spells its own. *)
-      let declared = Option.default [] (Callable_abi.method_params n) in
+      let declared = Option.default [] (Callable_abi.method_params u.Unit_context.callables n) in
       let rec unqualified : ty -> ty = function Reference (_, t) | Const t -> unqualified t | t -> t in
       let param i =
         if i = pos then receiver
@@ -1057,14 +1057,18 @@ let method_value n (tys : ty list) pos : expr =
       (List.init arity param, pos)
   in
   Method_value
-    {method_ = n; access = Dot; receiver = receiver_pos; params; type_args = Cpp_names.method_type_args n tys}
+    { method_ = n;
+      access = Dot;
+      receiver = receiver_pos;
+      params;
+      type_args = Cpp_names.method_type_args u.Unit_context.callables n tys }
 
 (* Whether a global is written as a function of its own, not a mapping's
    text. *)
 let not_inline : phase Cpp_ir.Foreign.custom option -> bool =
   function None | Some {inline = None; _} -> true | _ -> false
 
-let lower_method_calls (d : settled) : settled =
+let lower_method_calls u (d : settled) : settled =
   let rec fe (e : expr) : expr =
     match e with
     | Call (_, Entity (n, tys, ci), args) when not_inline ci -> (
@@ -1084,10 +1088,11 @@ let lower_method_calls (d : settled) : settled =
             match receiver with This -> (Arrow, This) | Dereference p -> (Arrow, p) | receiver -> (Dot, receiver)
           in
           let args = List.map fe rest in
-          Method_call {method_ = n; access; receiver; type_args = Cpp_names.method_type_args n tys; args}
+          let type_args = Cpp_names.method_type_args u.Unit_context.callables n tys in
+          Method_call {method_ = n; access; receiver; type_args; args}
         | None, _ -> Map.expr (rw ()) e ) )
     | Entity (n, tys, ci) when not_inline ci -> (
-      match Cpp_names.lookup_method_this_pos n with Some pos -> method_value n tys pos | None -> e )
+      match Cpp_names.lookup_method_this_pos n with Some pos -> method_value u n tys pos | None -> e )
     | e -> Map.expr (rw ()) e
   and fs s = Map.stmt (rw ()) s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in

@@ -1225,25 +1225,6 @@ let (_, add_value_dep_type_scheme, is_value_dep_type_scheme)
   =
   make_refset_can_with_functor_fallback ~name:"value_dep_type_schemes" ()
 
-(* Promoted type bindings for typeclass instances. Maps an instance
-   ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
-   nat)], so that call sites can substitute promoted type variables with
-   concrete types during eta expansion.  Bound for a unit's extent
-   ({!with_instance_promoted_types}), not reset. *)
-let instance_promoted_types =
-  ref (GlobRef.Map.empty : (Names.Id.t * Core.Type.t) list GlobRef.Map.t)
-
-let () =
-  register_census "instance_promoted_types" (fun () ->
-      GlobRef.Map.cardinal !instance_promoted_types )
-
-let with_instance_promoted_types m f = State.bind instance_promoted_types m f
-
-let get_instance_promoted_types r =
-  match GlobRef.Map.find_opt r !instance_promoted_types with
-  | Some bindings -> bindings
-  | None -> []
-
 (* An applied instance, as the Rocq type writes it: a head and what it is
    applied to, recursively.  [Carg_unknown] is an argument whose head is not a
    constant -- a context variable, typically -- which the reader fills
@@ -2875,18 +2856,6 @@ let modfile_ids = ref Id.Set.empty
 
 let modfile_mps = ref MPmap.empty
 
-(** Inductives that have been "promoted" into their own namespace struct
-    (e.g. [String.string] → [namespace String { struct String { ... }; }]).
-    Referenced by both [Translation] and the [Cpp_state]/[Cpp_print] pipeline
-    so it lives here to avoid a dependency cycle.  Bound for a unit's extent
-    ({!with_promoted_inductives}), not reset. *)
-let promoted_inductives = ref Ref.User.Set.empty
-
-let () = register_census "promoted_inductives" (fun () -> Ref.User.Set.cardinal !promoted_inductives)
-
-let with_promoted_inductives s f = State.bind promoted_inductives s f
-let is_promoted_inductive r = Ref.User.Set.mem r !promoted_inductives
-
 let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty
@@ -3499,14 +3468,6 @@ type unit_config = {concurrent : bool}
 
 let unit_config ~names = {concurrent = runs_on_threads names}
 
-(* The configuration of the unit being extracted, for its extent
-   ({!with_unit_config}); a unit's own is bound once its plan decides it. *)
-let current_unit_config = ref {concurrent = false}
-
-let with_unit_config c f = State.bind current_unit_config c f
-
-let unit_is_concurrent () = !current_unit_config.concurrent
-
 let check_concurrency_decided config =
   if Probe.checking () && runs_on_threads (written_customs ()) && not config.concurrent then
     Probe.violation "written customs"
@@ -3522,11 +3483,7 @@ let check_concurrency_decided config =
    thread ({!concurrency_headers}). *)
 let non_atomic_rc_for config = non_atomic_rc_requested () && not config.concurrent
 
-let non_atomic_rc () = non_atomic_rc_for !current_unit_config
-
 let single_threaded_for config = single_threaded_requested () && not config.concurrent
-
-let single_threaded () = single_threaded_for !current_unit_config
 
 (* [CRANE_COUNT_RC=1] swaps the shared pointer for the counting one in
    count_rc.h, so a run reports its reference-count traffic.  It is an
@@ -3540,8 +3497,6 @@ let single_threaded () = single_threaded_for !current_unit_config
    outright), and substituting a different pointer under it would not
    compile. *)
 let count_rc_for config = Sys.getenv_opt "CRANE_COUNT_RC" = Some "1" && not (non_atomic_rc_for config)
-
-let count_rc () = count_rc_for !current_unit_config
 
 (* [CRANE_STAMP=1] prints, as a comment at the top of every generated file, a
    digest of the plugin binary that produced it.  Like [CRANE_COUNT_RC] it is
@@ -3584,23 +3539,6 @@ let plugin_digest =
       with _ -> "unavailable" )
 
 let plugin_build_stamp () = Lazy.force plugin_digest
-
-(* Resolved smart-pointer names for string-level codegen (kept here, in a low
-   module, so both [Cpp_state.init_std_names] and the string-building sites in
-   Translation/Gen_decls agree without a module cycle).  [CRANE_COUNT_RC]
-   selects the counting pointer, [Crane NonAtomicRc] the namespace-neutral
-   [crane::rc]; otherwise the std/BDE flavor. *)
-let shared_ptr_name () =
-  if count_rc () then Crane_rt.counting_ptr
-  else if non_atomic_rc () then Crane_rt.rc
-  else if std_lib () = "BDE" then "bsl::shared_ptr"
-  else "std::shared_ptr"
-
-let make_shared_name () =
-  if count_rc () then Crane_rt.make_counting
-  else if non_atomic_rc () then Crane_rt.make_rc
-  else if std_lib () = "BDE" then "bsl::make_shared"
-  else "std::make_shared"
 
 let warn_non_atomic_rc_concurrent =
   CWarnings.create ~name:"crane-non-atomic-rc-concurrent"

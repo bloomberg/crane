@@ -239,7 +239,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
          call sites substitute, were planned before rendering
          ({!instance_promoted_types}). *)
       if Probe.checking () then begin
-        let planned = Table.get_instance_promoted_types name in
+        let planned = Unit_context.instance_promoted_types_of (Translation_state.unit_context ()) name in
         let generated = instance_promoted_types name body ty in
         if
           not

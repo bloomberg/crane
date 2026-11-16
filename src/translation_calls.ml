@@ -93,7 +93,8 @@ let check_planned_arity abi (live : Cpp_ir.Lowered.Type.t) =
 
 (** {!check_planned_arity} for the installed plan of [id], where it has one. *)
 let check_installed_arity id live =
-  if Probe.checking () then Option.iter (fun abi -> check_planned_arity abi live) (Callable_abi.lookup id)
+  if Probe.checking () then
+    Option.iter (fun abi -> check_planned_arity abi live) (Callable_abi.lookup (Translation_state.callables ()) id)
 
 (** {!instantiate_at_call} at the type arguments [use] wrote, read by the
     callee's scheme variables. *)
@@ -741,7 +742,7 @@ let callee_abi ~instances id =
   let hk = Option.cata declared_higher_kinded_tvars IntSet.empty core_ty in
   let relaxed_tt = relaxed_tt_return_var id in
   let omitted = Translation_tvars.type_arg_omission id in
-  Callable_abi.plan id ~scheme:(Core_util.reference_scheme id) ~instances ~omitted
+  Callable_abi.plan (Translation_state.callables ()) id ~scheme:(Core_util.reference_scheme id) ~instances ~omitted
     ~higher_kinded:(fun v -> IntSet.mem (Scheme.Var.ordinal v) hk)
     ~kept:(fun v -> omitted v = None && relaxed_tt <> Some (Scheme.Var.ordinal v))
     ?reachable:(writable_tvar_count id)
@@ -1385,7 +1386,8 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
              when Cpp_ir.Types.prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
              [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
                  (Scheme.Var.ordinal v)
-                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] (Cpp_pipeline.spell_type a))) ]
+                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type (Translation_state.unit_context ()) false []
+                    (Cpp_pipeline.spell_type a))) ]
            | _ -> [] )
          (Callable_abi.template_head abi) )
   in
@@ -1666,7 +1668,7 @@ let rec core_arg_to_template_type ?expected env core_arg : Cpp_ir.Lowered.Type.t
     argument written against the erased slot -- adapted to unbox
     [List<std::any>] where the callee hands it a [List<T2>] -- reads the
     wrong type out of every box ({!Callable_abi.deduces_callable}). *)
-let deduces_callable = Callable_abi.deduces_callable
+let deduces_callable r pos = Callable_abi.deduces_callable (Translation_state.callables ()) r pos
 
 (** For the function [r] of the unit, [b] its body and [ty] its type, the
     declared positions of the callables a call to it assumes it deduces where
@@ -1923,7 +1925,7 @@ let plan_call ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Ela
           let cpp_ty = Translation_types.cpp_of_core env core_ty in
           if Cpp_ir.Types.prints_as_any cpp_ty then None
           else Some (var_name, cpp_ty)
-        ) (Table.get_instance_promoted_types r)
+        ) (Unit_context.instance_promoted_types_of (Translation_state.unit_context ()) r)
       | _ -> []
     ) typeclass_core_args
   in

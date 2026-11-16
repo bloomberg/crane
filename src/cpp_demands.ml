@@ -29,7 +29,9 @@ let of_external name =
    a structured binding's field types -- are not written, and neither is
    what a printing rule drops (the type of an abort that is returned, a move
    out of a returned variable).  [visit] is handed the declaration and the
-   type visitors. *)
+   type visitors.  The headers an allocation needs turn on the configuration
+   of the unit [unit] it is written in; a collector that keeps no header
+   leaves it out. *)
 module Ir = struct
   open Cpp_ir
 
@@ -39,7 +41,8 @@ module Ir = struct
 
   let at_type_variable : ty -> bool = function Variable _ | Apply (Variable _, _) -> true | _ -> false
 
-  let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:_ _ -> ()) ?(vl = []) visit =
+  let collect ?(unit = Unit_context.detached) ?(global = ignore) ?(promoted = ignore)
+      ?(tyctor = fun ~vl:_ ~owner:_ _ -> ()) ?(vl = []) visit =
     let found = ref [] in
     (* The names of the template parameters the type variables written are
        read as, and the struct whose members are being written. *)
@@ -117,7 +120,7 @@ module Ir = struct
       | Lambda {capture = Written (By_copy {moved = _ :: _; _}); _} -> std "utility"
       | Allocate (Heap, _) -> std "memory"
       | Allocate (Arena_scoped, _) ->
-        if Table.non_atomic_rc () then std "memory"
+        if Unit_context.non_atomic_rc unit then std "memory"
         else if not (String.equal (Table.std_lib ()) "BDE") then need Table.arena_header
       | Converting_construct (t, _) when at_type_variable t -> obj ()
       | Conditional (_, Call (_, Allocate (Heap, _), _), Literal Null_pointer) -> std "memory"
@@ -255,9 +258,9 @@ module Ir = struct
     !found
 end
 
-let of_decl d = Ir.collect (fun ~decl ~ty:_ -> decl d)
+let of_decl unit d = Ir.collect ~unit (fun ~decl ~ty:_ -> decl d)
 
-let of_type t = Ir.collect (fun ~decl:_ ~ty -> ty t)
+let of_type unit t = Ir.collect ~unit (fun ~decl:_ ~ty -> ty t)
 
 (* The globals [visit] writes the names of, as {!Ir.collect} meets them. *)
 let ir_globals visit =
@@ -285,23 +288,23 @@ let promoted_of_decl d = ir_promoted (fun ~decl ~ty:_ -> decl d)
 
 let promoted_of_type t = ir_promoted (fun ~decl:_ ~ty -> ty t)
 
-let of_modtype_concept (c : Modtype_concept.t) =
+let of_modtype_concept unit (c : Modtype_concept.t) =
   let found = ref [] in
   let need hs = List.iter (fun h -> if not (List.mem h !found) then found := h :: !found) hs in
   let concepts () = need [Table.Standard "concepts"] in
   let rec cty : Modtype_concept.concept_type -> unit = function
     | Member {arguments; _} -> List.iter cty arguments
-    | Parameter t | Plain t -> need (of_type t)
+    | Parameter t | Plain t -> need (of_type unit t)
     | Foreign {pieces; arguments; _} ->
       List.iter
         (function Cpp_ir.Foreign.Type_argument i
           | Element (i, _) -> Option.iter cty (List.nth_opt arguments i) | _ -> ())
         pieces
     | Global (r, args) ->
-      need (of_type (Entity_application (r, [], [])));
+      need (of_type unit (Entity_application (r, [], [])));
       List.iter cty args
     | Namespaced (r, r', e, args) ->
-      need (of_type (In_namespace (r, Entity_application (r', [], e))));
+      need (of_type unit (In_namespace (r, Entity_application (r', [], e))));
       List.iter cty args
     | Shared_pointer t -> cty t
     | Variant (_, ts) -> List.iter cty ts
@@ -312,7 +315,7 @@ let of_modtype_concept (c : Modtype_concept.t) =
   in
   let requirement : Modtype_concept.requirement -> unit = function
     (* Its arguments are written as erased placeholders. *)
-    | Inductive_member {arity; _} -> if arity > 0 then need (of_type Any)
+    | Inductive_member {arity; _} -> if arity > 0 then need (of_type unit Any)
     | Type_member _ | Submodule _ -> ()
     | Instance_member {arguments; _} ->
       concepts ();
@@ -335,6 +338,6 @@ let of_modtype_concept (c : Modtype_concept.t) =
   ( match c with
   | Alias {refinements; _} ->
     if refinements <> [] then concepts ();
-    List.iter (fun (_, t) -> need (of_type t)) refinements
+    List.iter (fun (_, t) -> need (of_type unit t)) refinements
   | Constraint c -> constraint_ c );
   !found

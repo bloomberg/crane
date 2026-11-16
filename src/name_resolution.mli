@@ -35,23 +35,10 @@ type t
 
 (** Create the cache for a structure. Called once per extraction pass, after
     {!Structure_analysis.analyze}.  Inductives inside functor bodies are not
-    scanned.
+    scanned.  A record is eponymous as [layout] says
+    ({!Module_plan.is_eponymous_record}).
     @return a freshly built name resolution cache *)
-val create : Core.Program.t -> t
-
-(** Check if a type is an eponymous record.  Reads
-    {!Module_plan.is_eponymous_record}, not the cache.
-    @param t the name resolution cache (ignored)
-    @param r the inductive reference to test
-    @return [true] if [r] is an eponymous record flattened into its parent namespace *)
-val is_eponymous : t -> GlobRef.t -> bool
-
-(** Check if a type is an enum at global scope.  Reads
-    {!Module_plan.is_global_scope_enum}, not the cache.
-    @param t the name resolution cache (ignored)
-    @param r the inductive reference to test
-    @return [true] if [r] is an enum class emitted at global scope *)
-val is_global_scope_enum : t -> GlobRef.t -> bool
+val create : Module_plan.layout -> Core.Program.t -> t
 
 (** Get the inductive classification for a type.
     @param t the name resolution cache

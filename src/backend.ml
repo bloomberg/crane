@@ -24,8 +24,9 @@ type unsafe_needs = {
     ([file_suffix], [file_naming], [preamble]) and printers ([pp_struct],
     [pp_hstruct]), the optional interface-file conventions ([sig_suffix],
     [sig_preamble]), and [pp_decl] for printing one declaration in
-    isolation. *)
-type t = {
+    isolation.  The printers render in a context ['context], the unit's,
+    built where the unit starts. *)
+type 'context t = {
   keywords : Id.Set.t;
   global_scope_keywords : Id.Set.t;
       (** Names refused only to a declaration the backend emits at global
@@ -35,12 +36,12 @@ type t = {
   file_naming : ModPath.t -> string;
   (* the second argument is a comment to add to the preamble *)
   preamble : Id.t -> string option -> ModPath.t list -> unsafe_needs -> Pp.t;
-  pp_struct : Core.Program.t -> Pp.t;
-  pp_hstruct : Core.Program.t -> Pp.t;
+  pp_struct : 'context -> Core.Program.t -> Pp.t;
+  pp_hstruct : 'context -> Core.Program.t -> Pp.t;
   (* Concerning a possible interface file *)
   sig_suffix : string option;
   (* the second argument is a comment to add to the preamble *)
   sig_preamble : Id.t -> string option -> ModPath.t list -> unsafe_needs -> Pp.t;
   (* for an isolated declaration print, an element of the module given *)
-  pp_decl : module_:ModPath.t -> Core.Decl.t -> Pp.t;
+  pp_decl : 'context -> module_:ModPath.t -> Core.Decl.t -> Pp.t;
 }

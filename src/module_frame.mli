@@ -29,9 +29,11 @@ type t = {
           module's struct is that inductive promoted. *)
 }
 
-(** [of_module mp ~name sel ~enclosing] is the frame of the module [mp],
-    printed [name], of elements [sel], declared among [enclosing]. *)
+(** [of_module u mp ~name sel ~enclosing] is the frame of the module [mp],
+    printed [name], of elements [sel], declared among [enclosing], in the
+    unit [u]. *)
 val of_module :
+  Unit_context.t ->
   ModPath.t ->
   name:string ->
   (Label.t * Core.Module.Structure_item.t) list ->
@@ -39,8 +41,8 @@ val of_module :
   t
 
 (** Whether a class [sel] declares has a concept named as the module [mp]
-    is, by the names both are planned under. *)
-val concept_collision : ModPath.t -> (Label.t * Core.Module.Structure_item.t) list -> bool
+    is, by the names both are planned under in [layout]. *)
+val concept_collision : Module_plan.layout -> ModPath.t -> (Label.t * Core.Module.Structure_item.t) list -> bool
 
 (** Whether two frames say the same of a module: the same eponymous
     inductive and record, the same candidates at the same receiver
@@ -55,10 +57,10 @@ val plan : ModPath.t -> t -> unit
 val planned : ModPath.t -> t
 
 (** The modules whose frames the body of the module [mp] is written in,
-    innermost first, as planned ({!Scope_plan.frames}). *)
-val frames_around : ModPath.t -> ModPath.t list
+    innermost first, as [scopes] plans them ({!Scope_plan.frames}). *)
+val frames_around : Scope_plan.bound -> ModPath.t -> ModPath.t list
 
 (** The inductives not promoted in the body of the module [mp]: the
     eponymous inductive of each frame around it that does not promote it,
-    whatever the unit's plan promotes. *)
-val demoted_around : ModPath.t -> GlobRef.t list
+    whatever the unit's plan promotes; [scopes] is the unit's scope plan. *)
+val demoted_around : Scope_plan.bound -> ModPath.t -> GlobRef.t list

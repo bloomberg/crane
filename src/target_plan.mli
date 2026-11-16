@@ -12,8 +12,8 @@
     its constructors' fields, how those fields are stored, and the callable
     plan of every generated function and method.  It is filled in stages
     ({!plan}, {!with_template_kinds}, {!with_layout}).  Its readers do not
-    ask it: the configuration is bound with {!Table.with_unit_config}, the
-    inductive kinds are written into the structure ({!record_kinds}), and
+    ask it: the configuration is handed to the stages in the unit's
+    context ({!Unit_context}), the inductive kinds are written into the structure ({!record_kinds}), and
     each layout decision is bound as it is taken, over the earlier units'
     ({!Accumulated_plan}).  Under [CRANE_CHECK_IR] the plan is what the
     emitted result is compared against once the unit is rendered. *)
@@ -84,7 +84,7 @@ type t = {
           whether it runs on several threads, which withholds a [Crane
           NonAtomicRc] or [Crane SingleThreaded] request.  Generation, the
           finishing passes, the printer and the runtime's spelling read it
-          inside {!Table.with_unit_config}. *)
+          off the unit's context ({!Unit_context.t.config}). *)
   inductive_kinds : kind_decision list;
       (** In the order they were decided; a later decision about a block
           supersedes an earlier one. *)

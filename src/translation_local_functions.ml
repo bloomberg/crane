@@ -75,7 +75,8 @@ let local_fix_stmts selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowered.S
         body = List.map flat body }
     in
     match
-      Control_to_cpp_ir.local_loop ~owner:(!tctx).input.body_owner ~function_:(!tctx).input.body_function
+      Control_to_cpp_ir.local_loop ~unit:(Translation_state.unit_context ()) ~owner:(!tctx).input.body_owner
+        ~function_:(!tctx).input.body_function
         ~lifted:(!tctx).lexical.lifted_fixpoints ~member
         ~tparams:(get_current_template_head ()) ~name:fix_id lam
     with
@@ -533,14 +534,16 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     match (local, lifted) with
     | Some occ, _ when n_fix_funs = 1 -> (
       match
-        Control_to_cpp_ir.local_resumes ~owner:(!tctx).input.body_owner ~function_:(!tctx).input.body_function
+        Control_to_cpp_ir.local_resumes ~unit:(Translation_state.unit_context ()) ~owner:(!tctx).input.body_owner
+          ~function_:(!tctx).input.body_function
           ~lifted:(!tctx).lexical.lifted_fixpoints ~member:(occ, fix_idx)
             ~depth:(List.length (fst env)) ~arity:n_lam_params
       with
       | Some (resumes, certain) -> (Some resumes, Some certain)
       | None -> (None, None) )
     | _, Some r when n_fix_funs = 1 ->
-      ( Control_to_cpp_ir.lifted_resumes r ~owner:(!tctx).input.body_owner ~depth:(List.length (fst env))
+      ( Control_to_cpp_ir.lifted_resumes ~unit:(Translation_state.unit_context ()) r ~owner:(!tctx).input.body_owner
+          ~depth:(List.length (fst env))
           ~arity:n_lam_params,
         None )
     | _ -> (None, None)
@@ -647,7 +650,7 @@ let gen_let_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~
         let lifted_decl =
           lifted_definition ~binders ~ret:cod member_refs.(i) cpp_params body (class_temps @ all_temps_with_funs)
         in
-        add_lifted_decl (Control_to_cpp_ir.lower_lifted lifted_decl) )
+        add_lifted_decl (Control_to_cpp_ir.lower_lifted ~unit:(Translation_state.unit_context ()) lifted_decl) )
       funs_compiled;
     (* In the continuation body b, the fixpoint name should resolve to a call
        to the lifted function with appropriate type arguments. We push the fix
@@ -1257,7 +1260,7 @@ let gen_applied_fix ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
             lifted_definition ~binders:param_binders ~ret:cod member_refs.(i) cpp_params body
               (class_temps @ all_temps_with_funs)
           in
-          add_lifted_decl (Control_to_cpp_ir.lower_lifted lifted_decl) )
+          add_lifted_decl (Control_to_cpp_ir.lower_lifted ~unit:(Translation_state.unit_context ()) lifted_decl) )
         funs_compiled;
       let call_type_args =
         Translation_calls.lifted_call_type_args ~class_args ~env ~outer_tvars

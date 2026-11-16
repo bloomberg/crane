@@ -212,7 +212,12 @@ let spec_is_hoistable ~module_ (spec : Cpp_ir.Resolved.Decl.t) : bool =
 
 (* Whether the module [mp] is rendered outside every struct, as planned
    ({!Scope_plan.nested}). *)
-let outside_every_struct mp = not (Scope_plan.nested mp)
+(* The context of the unit being generated, and its layout
+   ({!Unit_context.t.modules}). *)
+let unit_context () = Translation_state.unit_context ()
+let layout () = (unit_context ()).modules
+
+let outside_every_struct scopes mp = not (Scope_plan.nested scopes mp)
 
 (** Whether the declaration of each lifted helper the header places at
     namespace scope is hoisted ahead of every definition, by the helper:
@@ -502,7 +507,7 @@ let declared_classes sel =
 (** Whether a name collision puts the module [mp] inside a wrapper struct,
     flattened or as a bystander. *)
 let is_wrapped_child mp =
-  match Module_plan.wrapper_role mp with
+  match Module_plan.wrapper_role (layout ()) mp with
   | Some (Flattened | Bystander) -> true
   | Some Own | None -> false
 
@@ -814,7 +819,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
           Probe.checking ()
           && not
                (Module_frame.equal frame
-                  (Module_frame.of_module mp ~name sel
+                  (Module_frame.of_module ctx.unit mp ~name sel
                      ~enclosing:!current_structure_decls ) )
         then
           Probe.violation "module frames"
@@ -889,7 +894,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
            the module, not about the file: the implementation writes no
            struct around a nested module, but the header does, and promotes
            it only where none encloses it. *)
-        if is_header && Probe.checking () && old_context = outside_every_struct mp then
+        if is_header && Probe.checking () && old_context = outside_every_struct ctx.unit.scopes mp then
           Probe.violation "promoted inductives"
             Pp.(
               str "the module " ++ str (ModPath.to_string mp)
@@ -1120,7 +1125,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
     it, each written in the visibility planned for the module
     ({!Cpp_state.element_position}). *)
 and pp_module_body ~is_header f ctx mp sel =
-  if is_header && Probe.checking () && ctx.in_template <> Scope_plan.templated mp then
+  if is_header && Probe.checking () && ctx.in_template <> Scope_plan.templated ctx.unit.scopes mp then
     Probe.violation "templated modules"
       Pp.(
         str "the module " ++ str (ModPath.to_string mp)
@@ -1416,7 +1421,7 @@ let method_registry_of s =
     rendered: the tables it fills are read by both the header and the
     implementation, so they must hold one answer, decided before anything
     renders, which is what lets the layout be planned ahead. *)
-let prepare_structure s =
+let prepare_structure (u : Unit_context.t) s =
   let analysis =
     Common.detect_sibling_module_inductive_collisions s;
   method_registry :=
@@ -1450,7 +1455,7 @@ let prepare_structure s =
     (fun _ -> ())
     (fun _ -> ())
     s;
-    name_cache := Some (Name_resolution.create s);
+    name_cache := Some (Name_resolution.create u.modules s);
     analysis
   in
   structure_analysis := Some analysis;
@@ -1537,7 +1542,10 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
      class concepts name its members. *)
   let in_module_frame ~module_ mp sel k =
     let name = Cpp_names.module_declared_name mp in
-    let frame = Module_frame.of_module mp ~name sel ~enclosing:!current_structure_decls in
+    let frame =
+      Module_frame.of_module (Translation_state.unit_context ()) mp ~name sel
+        ~enclosing:!current_structure_decls
+    in
     Module_frame.plan mp frame;
     let outer = !header in
     let class_concepts =
@@ -1699,8 +1707,8 @@ let convert_eponymous_record_fields ~module_ frame =
     generates it in, an inductive, an alias and a concept in the scope the
     header writes their module in.  What is generated is recorded for both
     files ({!Cpp_ind.generating_ahead}); the renders take it from there. *)
-let generating_ahead f =
-  init_std_names ();
+let generating_ahead u f =
+  init_std_names u;
   Cpp_ind.generating_ahead f
 
 (** What finishing [aheads] takes: what each generated, in the order
@@ -1721,20 +1729,21 @@ let finishing (aheads : Cpp_ind.ahead list) =
     header the files will need for what they write ({!Cpp_demands}): the
     finished program's, and those of the module-type concepts and eponymous
     record fields generated ahead of them. *)
-let finish_ahead (aheads : Cpp_ind.ahead list) =
+let finish_ahead u (aheads : Cpp_ind.ahead list) =
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Unit_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   Unit_program.record_lifted_ahead helpers;
-  let program = Unit_program.finish (finishing aheads) in
+  let program = Unit_program.finish u (finishing aheads) in
   Unit_program.check_finished program;
   Unit_program.install program;
   List.iter Table.demand_header
     (Unit_program.demands program
-    @ List.concat_map Cpp_demands.of_modtype_concept (Cpp_ind.generated_concepts ())
-    @ List.concat_map Cpp_demands.of_type (Cpp_ind.generated_record_field_types ()))
+    @ List.concat_map (Cpp_demands.of_modtype_concept u) (Cpp_ind.generated_concepts ())
+    @ List.concat_map (Cpp_demands.of_type u) (Cpp_ind.generated_record_field_types ()))
 
 (** Generate and finish the one declaration [d], an element of [module_]. *)
-let generate_decl_ahead ~module_ d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead ~module_ d]
+let generate_decl_ahead u ~module_ d =
+  generating_ahead u @@ fun () -> finish_ahead u [Cpp_ind.generate_ahead ~module_ d]
 
 (** What the modules of the structure [s] name around their declarations,
     as {!pp_structure_elem} writes them: the concept constraining a functor's
@@ -1768,7 +1777,7 @@ let structure_module_names s =
     | Core.Module.Expr.Functor {parameter_type = param; body; _} -> concept param @ functor_body mp body
     | Core.Module.Expr.Apply _ as me -> application me @ concept mt
     | Core.Module.Expr.Structure {path = body_mp; items = sel} ->
-      (if Module_frame.concept_collision mp sel then [] else concept mt) @ elems ~in_struct:true body_mp sel
+      (if Module_frame.concept_collision (layout ()) mp sel then [] else concept mt) @ elems ~in_struct:true body_mp sel
     | Core.Module.Expr.Path target -> (
       match functor_params mt with [] when is_modfile target && in_struct -> []
         | ps -> Cpp_resolution.Module target :: ps )
@@ -1802,9 +1811,9 @@ let files_named_ahead s =
     the installed finished program's declarations, the types of the
     eponymous record fields generated with it, and the module-type concepts
     generated with it ({!Cpp_concepts.concept_body_names}). *)
-let customs_written_ahead () =
+let customs_written_ahead u =
   let globals =
-    List.concat_map Cpp_leaf_plan.declaration_globals (Unit_program.installed_finished ())
+    List.concat_map (Cpp_leaf_plan.declaration_globals u) (Unit_program.installed_finished ())
     @ List.concat_map Cpp_leaf_plan.type_globals (Cpp_ind.generated_record_field_types ())
   in
   let keys =
@@ -1836,8 +1845,8 @@ let plan_function_reads () =
        (fun reads d -> List.fold_right Ref.Can.Set.add (function_globals d) reads)
        Ref.Can.Set.empty (Unit_program.installed_finished ()))
 
-let generate_ahead s =
-  generating_ahead @@ fun () ->
+let generate_ahead u s =
+  generating_ahead u @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A
      wrapper's functions are finished as one group, as {!file_views} finishes
      them. *)
@@ -1896,14 +1905,14 @@ let generate_ahead s =
       | _ -> ())
     s;
   let aheads = List.rev !aheads in
-  finish_ahead aheads;
+  finish_ahead u aheads;
   (* A body is a function of its declaration, not of the bodies generated or
      finished before it: under [CRANE_CHECK_IR] everything is finished and
      generated again in the reverse order and must come out the same, so no
      body can depend on what happened to be generated before it. *)
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
-    Unit_program.refinish (finishing (List.rev aheads));
+    Unit_program.refinish u (finishing (List.rev aheads));
     walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
       ~after_module:(fun ~module_ frame _ ->
         convert_eponymous_record_fields ~module_ frame;
@@ -2006,11 +2015,11 @@ let promoted_alias_import files id =
     Asked of what was generated ahead of the files, in the context the
     header writes each struct in ({!walk_as_rendered}), before either file is
     rendered. *)
-let plan_file_layout s =
+let plan_file_layout (u : Unit_context.t) s =
   let hoists ~wrapper mp sel =
     (wrapper
     || (match mp with MPdot (parent, _) -> is_modfile parent | MPfile _ | MPbound _ -> false)
-       && outside_every_struct mp && not (Scope_plan.templated mp))
+       && outside_every_struct u.scopes mp && not (Scope_plan.templated u.scopes mp))
     && module_members_name_only_inductives sel
     && Option.cata
          (List.for_all (fun d ->
@@ -2036,7 +2045,7 @@ let plan_file_layout s =
       (fun (_, d') ->
         List.iter
           (fun (wrapper_ref, name) ->
-            match unmerged_wrapper name with
+            match unmerged_wrapper u name with
             | Some wrapped ->
               homes := (position mp, position wrapped, {wrapper = name; wrapper_ref; wrapped; home = d}) :: !homes
             | None -> () )
@@ -2456,7 +2465,7 @@ let promoted_template mp sel =
 
 (* A module outside every struct is promoted where {!promoted_inductive}
    says.  A promotion outlives the rendering that decided it. *)
-let plan_promoted_inductives s =
+let plan_promoted_inductives (u : Unit_context.t) s =
   let rec elems parent sel =
     List.concat_map
       (fun (l, se) ->
@@ -2464,7 +2473,7 @@ let plan_promoted_inductives s =
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sel'; _}; _} ->
           let mp = MPdot (parent, l) in
           let own =
-            if outside_every_struct mp then Option.cata (fun (r, _) -> [r]) [] (promoted_inductive mp sel')
+            if outside_every_struct u.scopes mp then Option.cata (fun (r, _) -> [r]) [] (promoted_inductive mp sel')
             else []
           in
           own @ elems mp sel'
@@ -2481,7 +2490,7 @@ let wrapped_files () =
     (fun (mi : Structure_analysis.module_info) -> if mi.wrapper_name <> None then Some mi.modpath else None)
     (get_structure_analysis ()).sorted_modules
 
-let plan_accessors s =
+let plan_accessors (u : Unit_context.t) s =
   Translation_state.generating_outside_modules @@ fun () ->
   let accessor ~in_struct ~in_template r ty =
     if is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None
@@ -2507,7 +2516,7 @@ let plan_accessors s =
           when accessor ~in_struct ~in_template r ty -> [r]
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = mp;
                                                                                             items = sel}; _} ->
-          elems ~in_struct:true ~in_template:(Scope_plan.templated mp) sel
+          elems ~in_struct:true ~in_template:(Scope_plan.templated u.scopes mp) sel
         | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> [] )
       sel
@@ -2560,7 +2569,7 @@ let plan_visibility s =
           match se with
           | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = inner;
                                                                                               items = sel'}; _}
-            when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
+            when Module_plan.wrapper_role (layout ()) (MPdot (mp, l)) = Some Module_plan.Flattened ->
             body (inside inner [] v) inner sel' acc
           | se -> elems v [(l, se)] acc )
         ((mp, v) :: acc) sel
@@ -2596,7 +2605,8 @@ let declared_at s mp =
   in
   match struct_at mp with
   | Some (params, body_mp, sel) when ModPath.equal body_mp mp ->
-    if is_modfile mp || Module_plan.wrapper_role mp = Some Module_plan.Flattened then Some ([], Id.Set.empty)
+    if is_modfile mp || Module_plan.wrapper_role (layout ()) mp = Some Module_plan.Flattened then
+      Some ([], Id.Set.empty)
     else Some (params, member_names_of_sel sel)
   | Some _ | None -> None
 
@@ -2670,7 +2680,7 @@ let plan_bodies ~start ~enter s =
           match se with
           | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = inner;
                                                                                               items = sel'}; _}
-            when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
+            when Module_plan.wrapper_role (layout ()) (MPdot (mp, l)) = Some Module_plan.Flattened ->
             body state inner sel' acc
           | se -> elems state mp [(l, se)] acc )
         ((mp, state) :: acc) sel
@@ -2711,7 +2721,7 @@ let plan_scopes s =
   let own mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp) in
   let child mp l = MPdot (mp, l) in
   let is_wrapped_child mp l =
-    match Module_plan.wrapper_role (child mp l) with
+    match Module_plan.wrapper_role (layout ()) (child mp l) with
     | Some (Module_plan.Flattened | Module_plan.Bystander) -> true
     | Some Module_plan.Own | None -> false
   in
@@ -2722,7 +2732,7 @@ let plan_scopes s =
     if List.exists (fun (l, _) -> is_wrapped_child mp l) (modules sel) then
       Some
         ( List.find_map
-            (fun (l, _) -> if is_wrapped_child mp l then Module_plan.wrapper_struct (child mp l) else None)
+            (fun (l, _) -> if is_wrapped_child mp l then Module_plan.wrapper_struct (layout ()) (child mp l) else None)
             (modules sel)
         |> Option.default
              (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp))) )
@@ -2730,7 +2740,7 @@ let plan_scopes s =
   in
   let scope_of ~parent mp sel =
     let at module_ qualifier = Some {Scope_plan.module_; qualifier} in
-    match Module_plan.wrapper mp with
+    match Module_plan.wrapper (layout ()) mp with
     | Some (w, Module_plan.Own) -> at mp [w]
     | Some (w, Module_plan.Flattened) ->
       at (match mp with MPdot (p, _) -> p | _ -> mp) [w]
@@ -2739,7 +2749,7 @@ let plan_scopes s =
       match collision_wrapper mp sel with
       | Some w -> at mp [w]
       | None ->
-        if Common.is_struct_module mp && not (Module_frame.concept_collision mp sel) then
+        if Common.is_struct_module mp && not (Module_frame.concept_collision (layout ()) mp sel) then
           at mp (Option.cata (fun (p : Scope_plan.scope) -> p.qualifier) [] parent @ [own mp])
         else None )
   in
@@ -2819,23 +2829,23 @@ let plan_nested_structs s =
      ({!Cpp_names.merged_at}), which spells the inductive the way
      the declaration does. *)
   let promoted _ = false in
-  let merged r = not (in_unmerged_wrapper r) in
+  let merged r = not (in_unmerged_wrapper (unit_context ()) r) in
   let inductives ~in_struct ~local kn (ind : Core.Inductive.t) =
     List.concat
       (List.mapi
          (fun i _ ->
            let r = GlobRef.IndRef (kn, i) in
-           if is_custom r || is_monad r || not (in_struct || in_unmerged_wrapper r) then []
+           if is_custom r || is_monad r || not (in_struct || in_unmerged_wrapper (unit_context ()) r) then []
            else
              match ind.kind with
              | Core.Inductive.Kind.Type_class _ -> []
-             | Core.Inductive.Kind.Record _ when Module_plan.is_eponymous_record r -> []
+             | Core.Inductive.Kind.Record _ when Module_plan.is_eponymous_record (layout ()) r -> []
              | _ when Table.is_enum_inductive r ->
                [(enum_declaration_name r, Global r)]
              (* Moved out of the collision struct holding it to namespace
                 scope, where it is generated ({!plan_concept_prerequisites}). *)
-             | _ when Module_plan.is_namespace_scope_ref r -> []
-             | _ -> [(struct_declaration_name ~merged ~promoted ~local r, Global r)] )
+             | _ when Module_plan.is_namespace_scope_ref (layout ()) r -> []
+             | _ -> [(struct_declaration_name (layout ()) ~merged ~promoted ~local r, Global r)] )
          (Array.to_list ind.packets) )
   in
   let rec elems ~in_struct ~local ?(role = fun _ -> None) parent sel =
@@ -2848,7 +2858,7 @@ let plan_nested_structs s =
            lifted out to namespace scope. *)
         | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = a; type_ = t})
           when in_struct && is_typeclass_instance t && instance_has_struct a t
-               && not (Module_plan.is_namespace_scope_ref r) ->
+               && not (Module_plan.is_namespace_scope_ref (layout ()) r) ->
           [(Common.pp_global_name Type r, Global r)]
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> []
         | Core.Module.Structure_item.Module m -> (
@@ -2875,7 +2885,7 @@ let plan_nested_structs s =
     (fun (mp, sel) ->
       let role l =
         if List.exists (ModPath.equal mp) wrapper_files then None
-        else Module_plan.wrapper_role (MPdot (mp, l))
+        else Module_plan.wrapper_role (layout ()) (MPdot (mp, l))
       in
       let collision =
         List.exists
@@ -3147,7 +3157,7 @@ let concept_prereqs ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
             (fun r ->
               Ref.User.Set.mem r complete
               || Ref.User.Set.mem r needed
-                 && (Cpp_state.in_unmerged_wrapper r || held_in_collision_struct mp) )
+                 && (Cpp_state.in_unmerged_wrapper (unit_context ()) r || held_in_collision_struct mp) )
             (packet_refs kn ind)
         then Some l
         else None )
@@ -3334,11 +3344,11 @@ let check_value_order scheduled =
     @return Pretty-printer document for the complete output file (header or
             implementation), including lifted declarations and deferred
             out-of-line function definitions. *)
-let do_struct_with_decl_tracking ~is_header f s =
+let do_struct_with_decl_tracking u ~is_header f s =
   (* The file is written from its start, threaded through everything the
      driver writes. *)
   let file = if is_header then Common.Intf else Common.Impl in
-  let top = file_start file in
+  let top = file_start u file in
   (* A synthesised alias is emitted in front of the top-level element that
      writes it, rather than collected into the file's prologue.
 
@@ -3422,7 +3432,9 @@ let do_struct_with_decl_tracking ~is_header f s =
     (* A struct's member is not a chunk at namespace scope: the struct is. *)
     let p = if ctx.in_struct then p else Cpp_ast.top_level p in
     if hoists then (Cpp_ast.empty, {nothing_moved with hoisted = [p]; concepts = c})
-    else if is_header && Module_plan.is_concept_prerequisite l && is_modfile source && not (Cpp_ast.is_empty p) then (
+    else if
+      is_header && Module_plan.is_concept_prerequisite u.modules l && is_modfile source && not (Cpp_ast.is_empty p)
+    then (
       (* The prerequisites are asked for by label, of the files' top-level
          elements: a flattened child's element sharing the label is not one.
          A top-level element of a file a collision struct holds is a member
@@ -3434,7 +3446,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       let moved = {nothing_moved with prereqs = [p]; concepts = c} in
       if not ctx.in_struct then (Cpp_ast.empty, moved)
       else
-        let stand_ins = Cpp_leaf_plan.stand_ins p in
+        let stand_ins = Cpp_leaf_plan.stand_ins u.modules p in
         if Probe.checking () && stand_ins = [] then
           Probe.violation "concept prerequisites"
             Pp.(
@@ -3447,7 +3459,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.start_ctor_alias_census ();
   Cpp_print.start_file_scope_census ();
   Cpp_ind.start_render ~file;
-  init_std_names ();
+  init_std_names u;
   (* [ppl] writes each module's elements in the visibility planned for it
      ({!Cpp_state.element_position}); what follows only assembles what was written
      there. *)
@@ -3475,7 +3487,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               pp_wrapper_module_dual ~is_header top mp func_sels
             in
             current_structure_decls := old_decls;
-            if is_header && Cpp_ast.body_is_empty p_specs = Option.has_some (unmerged_wrapper name) then
+            if is_header && Cpp_ast.body_is_empty p_specs = Option.has_some (unmerged_wrapper u name) then
               Probe.violation "unmerged wrappers"
                 Pp.(
                   str "the wrapper " ++ str name
@@ -3550,7 +3562,7 @@ let do_struct_with_decl_tracking ~is_header f s =
              layout, decided by {!Structure_analysis} before any rendering began;
              here we only read the answer back. *)
           let is_colliding_child l _se =
-            Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened
+            Module_plan.wrapper_role u.modules (MPdot (mp, l)) = Some Module_plan.Flattened
           in
           (* Whether a wrapper formed is not the same question as which children
              it flattens: a bystander is recorded only when one did, so a child
@@ -3565,7 +3577,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                 (fun (l, se) ->
                   match se with
                   | Core.Module.Structure_item.Module _ when is_wrapped_child l ->
-                    Module_plan.wrapper_struct (MPdot (mp, l))
+                    Module_plan.wrapper_struct u.modules (MPdot (mp, l))
                   | _ -> None )
                 sel
               |> Option.default
@@ -3758,16 +3770,18 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.check_file_scope_types ~file:written;
   file ++ fnl ()
 
-(** Main entry point: render structure to C++ implementation file. *)
-let pp_struct s =
-  do_struct_with_decl_tracking
+(** Main entry point: render structure to C++ implementation file, in the
+    unit given. *)
+let pp_struct u s =
+  do_struct_with_decl_tracking u
     ~is_header:false
     (pp_structure_elem ~is_header:false impl_decls)
     s
 
-(** Main entry point: render structure to C++ header file. *)
-let pp_hstruct s =
-  do_struct_with_decl_tracking
+(** Main entry point: render structure to C++ header file, in the unit
+    given. *)
+let pp_hstruct u s =
+  do_struct_with_decl_tracking u
     ~is_header:true
     (pp_structure_elem ~is_header:true header_decls)
     s
@@ -3787,7 +3801,7 @@ let cpp_descr =
     (* A declaration printed on its own is written at the start of an
        implementation, where its module is the only one visible. *)
     pp_decl =
-      (fun ~module_ d ->
-        let ctx = {(file_start Common.Impl) with visibility = Some (toplevel_visibility [module_])} in
+      (fun u ~module_ d ->
+        let ctx = {(file_start u Common.Impl) with visibility = Some (toplevel_visibility [module_])} in
         Cpp_ast.to_pp (pp_decls ctx (impl_decls ctx ~module_ d).rendered) );
   }

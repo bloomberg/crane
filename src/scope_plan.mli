@@ -5,7 +5,7 @@
     part of the {!Target_plan}: for each module the unit emits as a struct, how
     a definition of one of its members, written out of line, names that struct.
     Planned from the layout and the names before anything is rendered
-    ({!Cpp.plan_scopes}), bound for the unit ({!with_plan}), and read by
+    ({!Cpp.plan_scopes}), held by the unit's context ({!Unit_context.t.scopes}), and read by
     declaration: where a definition goes is a question about the definition, not
     about where a printer happens to be. *)
 
@@ -50,42 +50,49 @@ val empty : t
 (** Whether two plans hold the same entries in the same order. *)
 val equal_plans : t -> t -> bool
 
-(** [with_plan t f] is [f ()] with [t] the unit's scopes, which the queries
-    below answer from; outside it there are none. *)
-val with_plan : t -> (unit -> 'a) -> 'a
+(** A plan as the queries below read it, which a unit's context holds
+    ({!Unit_context.t.scopes}). *)
+type bound
+
+(** [bound_of t] is [t] as the queries read it. *)
+val bound_of : t -> bound
+
+(** No scopes, as the queries read them: the plan before the unit's is
+    decided. *)
+val none : bound
 
 (** The scope of the struct the module [mp] is emitted as, if it is emitted
     as one. *)
-val of_module : ModPath.t -> scope option
+val of_module : bound -> ModPath.t -> scope option
 
 (** Whether the module [mp] is written inside a struct's body.  The same in
     both files, though only the header writes the struct. *)
-val nested : ModPath.t -> bool
+val nested : bound -> ModPath.t -> bool
 
 (** Whether the header writes the members of the module [mp] inside a class
     template -- a functor's body, a module promoted to its eponymous
     inductive's template, or a module nested in either -- and so defines
     them there, where the implementation writes none of them.  A question
     about the module, answered the same for both files. *)
-val templated : ModPath.t -> bool
+val templated : bound -> ModPath.t -> bool
 
 (** The scope of a definition of [r] written outside every struct body:
     the one its module is emitted as, if any.  A helper lifted out of a
     declaration takes that declaration's, unless the declaration was itself
-    lifted to namespace scope ({!Module_plan.is_namespace_scope_ref}), in
-    which case so is the helper. *)
-val of_declaration : GlobRef.t -> scope option
+    lifted to namespace scope ({!Module_plan.is_namespace_scope_ref} of
+    [layout]), in which case so is the helper. *)
+val of_declaration : Module_plan.layout -> bound -> GlobRef.t -> scope option
 
 (** The visibility the body of the module [mp] is written in: the scopes
     enclosing it and its own, innermost first, each with the names it
     declares and the functor parameters it binds. *)
-val visibility : ModPath.t -> Common.visibility option
+val visibility : bound -> ModPath.t -> Common.visibility option
 
 (** The inductives the body of the module [mp] spells bare: those it and
     each module body enclosing it declare, as [Cpp.inductives_declared_in]
     says, and, in a file module that is not a library's, those
     [Cpp.file_local_inductives] says every such module does. *)
-val local_inductives : ModPath.t -> GlobRef.t list option
+val local_inductives : bound -> ModPath.t -> GlobRef.t list option
 
 (** The modules whose frames ({!Module_frame}) are around the body of the
     module [mp], innermost first: every module declared with a struct for
@@ -93,4 +100,4 @@ val local_inductives : ModPath.t -> GlobRef.t list option
     encloses it.  A functor's body is entered without one, and so is a
     child a name collision flattens into its parent's wrapper, which is
     written beside its parent's elements; a file module has none. *)
-val frames : ModPath.t -> ModPath.t list option
+val frames : bound -> ModPath.t -> ModPath.t list option

@@ -1338,7 +1338,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
          rather than copying the child into a new one (see
          [Crane_rt.Share_child] and the factory's [crane::child_slot]). *)
       let shares_child =
-        Table.non_atomic_rc ()
+        Translation_state.non_atomic_rc ()
         && (match expr with Local _ -> true | _ -> false)
         && match ft_opt, resolve_meta ty with
            | Some ft, Core.Type.Global_app {head = n_ind; _} ->

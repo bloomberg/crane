@@ -11,9 +11,9 @@
    (refs and hashtables) that {!reset_cpp_state} empties between extractions;
    it lives here so the other [cpp_*] modules can share it without depending
    on each other.  The facts a unit's plan decides -- the accessors, the
-   unmerged wrappers, the nested struct names -- are not reset but bound
-   for the unit's extent ({!with_accessors}, {!with_unmerged_wrappers},
-   {!with_nested_struct_names}, all through {!Accumulated_plan.bind}). *)
+   unmerged wrappers, the nested struct names -- are not here: they are
+   fields of the unit's context ({!Unit_context.t}), which the queries
+   below are handed. *)
 
 (** {2 Owned cells}
 
@@ -278,11 +278,12 @@ and render_ctx = {
   tyctors : tyctor_plan;
       (** How the type constructors written from here are written
           ({!tyctor_plan}). *)
+  unit : Unit_context.t;  (** The unit the file is of. *)
 }
 
-(** The context at the start of the file [file]: file scope, outside every
-    struct. *)
-val file_start : Common.file -> render_ctx
+(** The context at the start of the file [file] of the unit [u]: file
+    scope, outside every struct. *)
+val file_start : Unit_context.t -> Common.file -> render_ctx
 
 (** What a file declares at file scope: the types, by the entity each
     declaration declares, and the promoted type variables among them, by
@@ -356,12 +357,13 @@ val plan_module_concepts : Names.ModPath.t -> concept_plan -> unit
 (** The concepts planned for the module [mp]; an anomaly if none were. *)
 val concept_plan : Names.ModPath.t -> concept_plan
 
-(** [planned_held_back ~file mp] is what the concepts held back around the
-    body of the module [mp] are in [file], innermost first: in the header,
-    those each module frame around it ({!Scope_plan.frames}) holds back,
+(** [planned_held_back scopes ~file mp] is what the concepts held back
+    around the body of the module [mp] are in [file], innermost first: in
+    the header, those each module frame around it ({!Scope_plan.frames} of
+    [scopes]) holds back,
     as planned ({!concept_plan}); in the implementation, which declares no
     concept, none. *)
-val planned_held_back : file:Common.file -> Names.ModPath.t -> held_concept list
+val planned_held_back : Scope_plan.bound -> file:Common.file -> Names.ModPath.t -> held_concept list
 
 (** Whether the struct the position is in holds concept [c] back: declared
     after it, so a constraint inside it cannot name [c] yet.  What is held
@@ -407,8 +409,8 @@ val read_by_a_function : Names.GlobRef.t -> bool
     instead of static inline variables, to avoid template static
     initialisation order problems: by module path and label, and by the
     canonical kernel name of a constant, which is what a constant reached
-    through a module alias is. *)
-type accessors
+    through a module alias is ({!Struct_plan.accessors}). *)
+type accessors = Struct_plan.accessors
 
 (** No accessors. *)
 val no_accessors : accessors
@@ -420,21 +422,19 @@ val add_accessor : accessors -> Names.ModPath.t -> Names.Label.t -> accessors
     constant's kername for cross-functor matching. *)
 val add_accessor_ref : accessors -> Names.GlobRef.t -> accessors
 
-(** [with_accessors a f] is [f ()] with [a] the accessors: those the
-    unit's plan decided ([Cpp.plan_accessors]), every earlier unit's of a
+(** The module paths and labels of the accessors of the unit given: those
+    its plan decided ([Cpp.plan_accessors]), every earlier unit's of a
     separate extraction, and those its pre-scan of the whole program
-    found. *)
-val with_accessors : accessors -> (unit -> 'a) -> 'a
+    found ({!Unit_context.t.accessors}). *)
+val template_static_accessor_names : Unit_context.t -> (Names.ModPath.t * Names.Label.t) list
 
-(** The accessors' module paths and labels, as {!with_accessors} binds
-    them. *)
-val template_static_accessor_names : unit -> (Names.ModPath.t * Names.Label.t) list
+(** Whether the constant's canonical kernel name is an accessor's in the
+    unit given. *)
+val is_template_static_accessor_constant : Unit_context.t -> Names.Constant.t -> bool
 
-(** Whether the constant's canonical kernel name is an accessor's. *)
-val is_template_static_accessor_constant : Names.Constant.t -> bool
-
-(** Whether the definition [lbl] of [mp] is an accessor. *)
-val is_template_static_accessor : Names.ModPath.t -> Names.Label.t -> bool
+(** Whether the definition [lbl] of [mp] is an accessor in the unit
+    given. *)
+val is_template_static_accessor : Unit_context.t -> Names.ModPath.t -> Names.Label.t -> bool
 
 (** {2 Eponymous records} *)
 
@@ -514,47 +514,36 @@ val mk_std_names : string -> std_names
     [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
     [Table.fast_variant ()] or [Table.shared_variant ()], the [crane::]
     variant accessors (and, for the former, [crane::variant]); then, under
-    [Table.count_rc ()], the counting pointer, or else under
-    [Table.non_atomic_rc ()], [crane::rc] / [crane::make_rc] /
-    [crane::enable_rc_from_this]. *)
-val init_std_names : unit -> unit
+    [Table.count_rc_for], the counting pointer, or else under
+    [Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
+    [crane::enable_rc_from_this], in the configuration of the unit given. *)
+val init_std_names : Unit_context.t -> unit
 
 (** Shorthand for [!std_names]. *)
 val sn : unit -> std_names
 
 (** {2 Wrapper and scope tables} *)
 
-(** [with_unmerged_wrappers m f] is [f ()] with [m] the wrapper structs that
-    hold declarations and therefore cannot be merged, by struct name, with
-    the module each wraps: the unit's, planned
+(** The module the wrapper struct of this name wraps, where it holds
+    declarations and therefore cannot be merged with the module's
+    inductive, among the unit's: its own, planned
     ([Cpp.plan_unmerged_wrappers]), and every earlier unit's of a separate
-    extraction. *)
-val with_unmerged_wrappers : Names.ModPath.t CString.Map.t -> (unit -> 'a) -> 'a
-
-(** The module the unmerged wrapper struct of this name wraps, as
-    {!with_unmerged_wrappers} binds them. *)
-val unmerged_wrapper : string -> Names.ModPath.t option
+    extraction ({!Unit_context.t.unmerged_wrappers}). *)
+val unmerged_wrapper : Unit_context.t -> string -> Names.ModPath.t option
 
 (** Whether an inductive's struct is written inside a wrapper that holds
     other declarations, and so is spelled [List::list] rather than [List]: a
-    property of its declaration, the same wherever a use is written. *)
-val in_unmerged_wrapper : Names.GlobRef.t -> bool
+    property of its declaration, the same wherever a use is written.  The
+    wrappers are the unit's ({!unmerged_wrapper}). *)
+val in_unmerged_wrapper : Unit_context.t -> Names.GlobRef.t -> bool
 
 (** {!in_unmerged_wrapper}, the inductive's short name given. *)
-val in_unmerged_wrapper_named : string -> Names.GlobRef.t -> bool
+val in_unmerged_wrapper_named : Unit_context.t -> string -> Names.GlobRef.t -> bool
 
-(** What a nested struct name was emitted for: a Rocq reference, or a module
-    (which has no [GlobRef.t]). *)
-type nested_struct_owner =
+(** What a nested struct name was emitted for ({!Struct_plan.nested_struct_owner}). *)
+type nested_struct_owner = Struct_plan.nested_struct_owner =
   | Global of Names.GlobRef.t
   | Module of Names.ModPath.t
-
-(** [with_nested_struct_names m f] is [f ()] with [m] the C++ names of the
-    structs emitted as members of an enclosing struct, mapped to every owner
-    they stand for: the unit's, planned ([Cpp.plan_nested_structs]), and
-    every earlier unit's of a separate extraction.  A nested struct shadows
-    any global-scope type of the same name. *)
-val with_nested_struct_names : nested_struct_owner list CString.Map.t -> (unit -> 'a) -> 'a
 
 (** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]. *)
 val rendered_promotions : Names.GlobRef.t list ref
@@ -579,20 +568,25 @@ val printed_nested_struct : string -> nested_struct_owner -> unit
 val add_nested_struct_name :
   nested_struct_owner list CString.Map.t -> string * nested_struct_owner -> nested_struct_owner list CString.Map.t
 
-(** Whether the reference is itself emitted as a struct nested in another. *)
-val is_nested_struct_ref : Names.GlobRef.t -> bool
+(** Whether the reference is itself emitted as a struct nested in another,
+    among the nested structs of the unit given: its own, planned
+    ([Cpp.plan_nested_structs]), and every earlier unit's of a separate
+    extraction ({!Unit_context.t.nested_structs}). *)
+val is_nested_struct_ref : Unit_context.t -> Names.GlobRef.t -> bool
 
 (** Whether a reference rendered unqualified under the given name is shadowed
-    by a nested struct of that name. False for the shadower itself. *)
-val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
+    by a nested struct of that name in the unit given: a nested struct
+    shadows any global-scope type of the same name. False for the shadower
+    itself. *)
+val is_shadowed_global_name : Unit_context.t -> string -> Names.GlobRef.t -> bool
 
 (** Qualify a C++ name with its wrapper struct when the reference's module path
     is a wrapper module. [VarRef] references (lifted declarations) are never
     qualified, and already-qualified names are only rewritten for
     collision-wrapped modules, whose child qualifier is replaced by the wrapper
-    struct name.
+    struct name.  The wrappers are those [layout] plans.
     @return the possibly-qualified name *)
-val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
 (** {2 Method registration} *)
 

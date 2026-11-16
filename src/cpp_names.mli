@@ -155,8 +155,9 @@ type struct_spelling =
     the declaration is rendered among the inductives local to it; [merged]
     says whether its namespace wrapper is merged with it, as a reference
     sees it ({!merged_at}), and [promoted] whether it is promoted where it
-    is declared. *)
+    is declared; [layout] the unit's. *)
 val struct_spelling :
+  Module_plan.layout ->
   merged:(Names.GlobRef.t -> bool) ->
   promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
@@ -168,6 +169,7 @@ val enum_declaration_name : Names.GlobRef.t -> string
 
 (** {!struct_spelling} as a string. *)
 val struct_declaration_name :
+  Module_plan.layout ->
   merged:(Names.GlobRef.t -> bool) ->
   promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
@@ -186,11 +188,12 @@ val typename_prefix_for : Cpp_state.render_ctx -> Cpp_name.t -> Pp.t
 val struct_scopes_for : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
 
 (** The global-scope qualifier needed in front of an inductive's type name,
-    written otherwise as given, where a nested struct shadows it. *)
-val global_scopes_for : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
+    written otherwise as given, where a nested struct of the unit given
+    shadows it. *)
+val global_scopes_for : Unit_context.t -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
 
 (** {!Cpp_state.wrapper_qualify}. *)
-val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
 (** The name a type is written under from outside the wrapper struct that owns
     it; the name unchanged while that struct's own body is being printed, as
@@ -240,11 +243,11 @@ val with_cache :
   (Name_resolution.t -> Names.GlobRef.t -> 'a) ->
   (Names.GlobRef.t -> 'a) -> Names.GlobRef.t -> 'a
 
-(** Cached: whether the global is an eponymous record. *)
-val is_eponymous_record_cached : Names.GlobRef.t -> bool
+(** Whether the global is an eponymous record, in the layout given. *)
+val is_eponymous_record_cached : Module_plan.layout -> Names.GlobRef.t -> bool
 
-(** Cached: whether the global is a global-scope enum. *)
-val is_global_scope_enum_cached : Names.GlobRef.t -> bool
+(** Whether the global is a global-scope enum, in the layout given. *)
+val is_global_scope_enum_cached : Module_plan.layout -> Names.GlobRef.t -> bool
 
 (** Cached: the C++ inductive kind of the global, if any. *)
 val get_ind_kind_cached : Names.GlobRef.t -> Cpp_ir.Inductive.Kind.t option
@@ -260,11 +263,11 @@ val is_record_cached : Names.GlobRef.t -> bool
 (** The position of the [this] argument for a method global, if any. *)
 val lookup_method_this_pos : Names.GlobRef.t -> int option
 
-(** [method_type_args n tys] -- of the type arguments [tys] a reference to
+(** [method_type_args d n tys] -- of the type arguments [tys] a reference to
     the method [n] was instantiated at, the ones a call must write: the
     receiver's struct carries its own parameters, and the parameters the
     method's plan drops are not in its signature at all. *)
-val method_type_args : Names.GlobRef.t -> 'a list -> 'a list
+val method_type_args : Callable_abi.decided -> Names.GlobRef.t -> 'a list -> 'a list
 
 (** Sets of identifiers ([Names.variable]). *)
 module IdSet : Set.S with type elt = Names.variable
@@ -291,8 +294,9 @@ val concept_extra_args : Names.ModPath.t -> Names.ModPath.t list
     with its module where another concept shares its name
     ({!Module_plan.modtype_concept_name}); and otherwise its label
     ({!Structure_analysis.concept_name_of_label}).  Every site naming a
-    module-type concept goes through this, so no two can disagree. *)
-val modtype_concept_name : Names.ModPath.t -> string
+    module-type concept goes through this, so no two can disagree.  The
+    names are planned in [layout]. *)
+val modtype_concept_name : Module_plan.layout -> Names.ModPath.t -> string
 
 (** The file whose namespace a name, written for [key] in the unit of the
     files [unit_files], reaches into: what resolving it notes

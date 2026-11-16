@@ -328,80 +328,31 @@ let rec is_borrowed = function
 let movable ty = (not (is_borrowed ty)) && (ty = Auto || worthwhile_move_type ty)
 
 (* Global mutable state in this file and their lifetimes:
-   - outcomes : reset per generated file (State.Unit)
-   - ctor_ptr_fields : bound for a unit's extent ({!with_pointer_fields}) *)
+   - outcomes : reset per generated file (State.Unit) *)
 
-(** A constructor field stored behind the smart pointer: a recursive one, which
-    holds the inductive itself, or one [Crane BoxedFields] boxed for holding
-    some other inductive. *)
-type ptr_field = Recursive of int | Boxed of int
+(** A constructor field stored behind the smart pointer
+    ({!Pointer_fields.field}). *)
+type ptr_field = Pointer_fields.field = Recursive of int | Boxed of int
 
-let ptr_field_index = function Recursive i | Boxed i -> i
+let ptr_field_index = Pointer_fields.index
 
-(** A constructor struct's key: {!Common.ctor_owner_key} of its inductive
-    and the struct's name (see {!ctor_ptr_fields}). *)
-module Struct_key = struct
-  type t = string * string
+(** The pointer fields of the constructor struct [key] in the unit [u], if
+    it has any; queried by {!Loopify_tmc.make_cell} to determine which
+    fields need [make_shared] wrapping in the direct-struct-construction
+    path. *)
+let pointer_fields_of (u : Unit_context.t) key = Pointer_fields.find u.pointer_fields key
 
-  let compare (o, c) (o', c') = match String.compare o o' with 0 -> String.compare c c' | n -> n
-end
-
-(** Maps keyed by constructor struct. *)
-module Struct_map = Map.Make (Struct_key)
-
-(** The fields each constructor struct stores behind the pointer, by
-    struct: the [pointer_fields] of {!Accumulated_plan.t}, accumulated over
-    the units of an extraction by {!add_pointer_fields}. *)
-type pointer_fields = ptr_field list Struct_map.t
-
-(** No constructor struct with a pointer field. *)
-let no_pointer_fields = Struct_map.empty
-
-(** [m] with the pointer fields of each constructor struct planned before
-    rendering: the inductive, the constructor's struct name and each field's
-    index with whether it holds the inductive itself
-    ({!Gen_inductives.constructor_pointer_fields}); the struct read later
-    must agree ({!agree_ptr_fields}). *)
-let add_pointer_fields m planned =
-  List.fold_left
-    (fun m (owner, ctor_name, fields) ->
-      Struct_map.add
-        (Common.ctor_owner_key owner, ctor_name)
-        (List.map (fun (i, recursive) -> if recursive then Recursive i else Boxed i) fields)
-        m )
-    m planned
-
-(** The pointer fields of each constructor struct, by key, for the extent
-    {!with_pointer_fields} binds them for; queried by {!Loopify_tmc.make_cell}
-    to determine which fields need [make_shared] wrapping in the
-    direct-struct-construction path.
-
-    The key pairs {!Common.ctor_owner_key} of the owning inductive with the
-    capitalized constructor name (e.g., ["App"], ["Cons"]); the owner is part
-    of it because a constructor name alone does not identify a struct -- two
-    inductives may each have a [Cons], with different fields.  The value is a
-    list of the constructor's pointer fields, by 0-based index. *)
-let ctor_ptr_fields = ref no_pointer_fields
-
-(** [with_pointer_fields m f] is [f ()] with [m] the pointer fields every
-    query below answers from, bound by {!Accumulated_plan.bind}; outside it
-    no struct has any. *)
-let with_pointer_fields m f = State.bind ctor_ptr_fields m f
-
-(** The pointer fields of the constructor struct [key], if it has any. *)
-let pointer_fields_of key = Struct_map.find_opt key !ctor_ptr_fields
-
-(** The arguments of the constructor [c] its struct stores behind the pointer,
-    as planned, or [None] where it stores none. *)
-let constructor_pointer_fields c =
+(** The arguments of the constructor [c] its struct stores behind the pointer
+    in the unit [u], as planned, or [None] where it stores none. *)
+let constructor_pointer_fields u c =
   Option.map (List.map ptr_field_index)
-    (pointer_fields_of (Common.ctor_owner_key c, Type_util.ctor_struct_name_of_ref c))
+    (pointer_fields_of u (Common.ctor_owner_key c, Type_util.ctor_struct_name_of_ref c))
 
 (** Check the pointer fields read off a generated constructor struct against
     the ones planned before rendering, under [CRANE_CHECK_IR]. *)
-let agree_ptr_fields owner ctor_name fields =
+let agree_ptr_fields u owner ctor_name fields =
   let key = (Common.ctor_owner_key owner, ctor_name) in
-  if pointer_fields_of key <> Some fields then
+  if pointer_fields_of u key <> Some fields then
     Probe.violation "constructor pointer fields"
       Pp.(
         str "the struct " ++ str ctor_name ++ str " of " ++ GlobRef.print owner

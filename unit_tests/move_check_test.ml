@@ -148,10 +148,9 @@ let () =
       ~callables:[Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []]
       ~assumed:[] ~instance_methods:[]
   in
-  Callable_abi.with_decided decided @@ fun () ->
   let cref : ty = Reference (Lvalue, Const tree) in
   let convention name params body expected =
-    let found = Option.map List.length (Move_check.convention_violations f params body) in
+    let found = Option.map List.length (Move_check.convention_violations decided f params body) in
     if found <> Some expected then (
       Printf.eprintf "move_check: %s: %s violations, expected %d\n" name
         (match found with Some n -> string_of_int n | None -> "no plan's") expected;
@@ -166,7 +165,7 @@ let () =
     [decl "b" (v "a"); Return (Some (Move (v "b")))]
     0;
   convention "a parameter the plan does not pass" [(id "a", tree)] [] 1;
-  if Move_check.convention_violations (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
+  if Move_check.convention_violations decided (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
     prerr_endline "move_check: a callable with no plan has a convention";
     exit 1 )
 

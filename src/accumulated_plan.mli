@@ -9,8 +9,8 @@
     which wrapper struct holds it -- so the driver threads this value from
     unit to unit ([Extract_env.print_per_library]): a unit starts from what
     the earlier ones leave ({!for_next_unit}), and its planning extends it
-    one decision at a time, each extension bound ({!bind}) for the rest of
-    the unit. *)
+    one decision at a time, each extension held by the unit's context
+    ({!context}) for the rest of the unit. *)
 
 open Names
 
@@ -18,7 +18,7 @@ type t = {
   modules : Module_plan.layout;
       (** The layout: where each declaration lives and what it is called
           ({!Module_plan.extend}). *)
-  pointer_fields : Loopify_analysis.pointer_fields;
+  pointer_fields : Pointer_fields.t;
       (** The fields each constructor struct stores behind the pointer. *)
   unmerged_wrappers : ModPath.t CString.Map.t;
       (** The wrapper structs that hold declarations, by name, each with
@@ -32,25 +32,19 @@ type t = {
   instance_promoted_types : (Id.t * Core.Type.t) list GlobRef.Map.t;
       (** The concrete types each instance gives its class's promoted
           variables. *)
-  callables : Callable_abi.decided;
-      (** The unit's callable plans, from its [decide_callables] pass on;
-          none before it.  They are not carried to the next unit: a callee
-          another unit defines is planned as foreign
-          ({!Callable_abi.install_foreign}). *)
 }
 
 (** What the first unit of an extraction starts from: [accessors], those
     a pre-scan of the whole program found, and nothing else. *)
 val start : accessors:Cpp_state.accessors -> t
 
-(** [bind t f] is [f ()] with each fact of [t] the one its readers answer
-    from ({!Module_plan.with_layout}, {!Loopify_analysis.with_pointer_fields},
-    {!Cpp_state.with_unmerged_wrappers}, {!Table.with_promoted_inductives},
-    {!Cpp_state.with_accessors}, {!Cpp_state.with_nested_struct_names},
-    {!Table.with_instance_promoted_types}, {!Callable_abi.with_decided}). *)
-val bind : t -> (unit -> 'a) -> 'a
+(** [context t u] is the unit's context [u] holding the facts of [t] its
+    readers read off it: every one. *)
+val context : t -> Unit_context.t -> Unit_context.t
 
 (** What the next unit of the extraction starts from, once a unit planned
     [t]: [t] without the facts that belong to one unit, the per-unit
-    layout ({!Module_plan.for_next_unit}) and the callable plans. *)
+    layout ({!Module_plan.for_next_unit}).  The callable plans are the
+    unit's own ({!Unit_context.t.callables}): a callee another unit defines
+    is planned as foreign ({!Callable_abi.with_foreign}). *)
 val for_next_unit : t -> t

@@ -1183,8 +1183,8 @@ let plan_scope_head n ty scope =
     Under [CRANE_CHECK_IR] the head is decided again from [scope] and checked
     against the plan. *)
 let planned_relaxations n ty scope =
-  if Probe.checking () then Callable_abi.check (plan_scope_head n ty scope);
-  Callable_abi.relaxations (Callable_abi.planned n)
+  if Probe.checking () then Callable_abi.check (Translation_state.callables ()) (plan_scope_head n ty scope);
+  Callable_abi.relaxations (Callable_abi.planned (Translation_state.callables ()) n)
 
 (** The global [r] at the type arguments [tys], with what its custom
     extraction inlines, if anything. *)
@@ -1208,7 +1208,7 @@ let self_call_reference n ~undeducible =
         match (p.Callable_abi.write, p.Callable_abi.origin) with
         | Callable_abi.Deduce_only, _ | _, Callable_abi.From_callable _ -> None
         | _ -> Some (p.Callable_abi.origin, Callable_abi.Template_param.name p.Callable_abi.id) )
-      (Callable_abi.template_head (Callable_abi.planned n))
+      (Callable_abi.template_head (Callable_abi.planned (Translation_state.callables ()) n))
   in
   let written =
     match undeducible with
@@ -1238,7 +1238,7 @@ let self_call_reference n ~undeducible =
     top-level sequential [main] keeps its own signature: it is declared to
     return [int] for the entry point, which no call of it reads. *)
 let declare_planned n decl =
-  let abi = Callable_abi.planned n in
+  let abi = Callable_abi.planned (Translation_state.callables ()) n in
   let is_entry_point =
     match (n, (decl : Cpp_ir.Lowered.Decl.t)) with
     | GlobRef.ConstRef c, Function {return_type = External ("int", []); _} ->
@@ -1436,7 +1436,9 @@ let gen_dfun ~minted n b cty ty temps =
   in
   begin_body ~owner:n ~function_:true ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
-  let resumes = Control_to_cpp_ir.function_resumes n ~depth:(List.length all_ids) in
+  let resumes =
+    Control_to_cpp_ir.function_resumes ~unit:(Translation_state.unit_context ()) n ~depth:(List.length all_ids)
+  in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)
   let owned_params =
@@ -2053,7 +2055,10 @@ let gen_dfuns_dual fds =
         collecting_lifted (fun () -> gen_dfun_def entity body type_))
       fds
   in
-  let lowered = Control_to_cpp_ir.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in
+  let lowered =
+    Control_to_cpp_ir.lower_group ~unit:(Translation_state.unit_context ())
+      (List.map (fun ((ds, _, _), _) -> ds) generated)
+  in
   List.map2
     (fun ds ((_, env, tvars), lifted) -> {entity = defined ds tvars; env = env; lifted = lifted})
     lowered generated

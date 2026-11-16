@@ -76,8 +76,8 @@ let is_moveable_param_type = function
     value-type inductive.  These can be optimised to [const T*] shadows that
     avoid copying the entire value at each loop iteration.
 
-    Under [Crane Reuse] with non-atomic reference counts
-    ({!Table.non_atomic_rc}) an owned by-value parameter qualifies too.  Reuse
+    Under [Crane Reuse] with non-atomic reference counts in the unit [u]
+    ({!Unit_context.non_atomic_rc}) an owned by-value parameter qualifies too.  Reuse
     needs the scrutinee owned (that is what gives the loop cells it may
     recycle), and escape analysis ({!Escape}) therefore passes it by value;
     without this case the shadow
@@ -95,11 +95,11 @@ let is_moveable_param_type = function
     declares its parameters so.
 
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
-let borrowed_value_param_pointee = function
+let borrowed_value_param_pointee u = function
   | Reference (Lvalue, Const t) when is_value_type_ret t -> Some t
   | Const (Reference (Lvalue, t)) when is_value_type_ret t -> Some t
   | Const t when is_value_type_ret t -> Some t
-  | t when Table.reuse_here () && Table.non_atomic_rc () && is_value_type_ret t ->
+  | t when Table.reuse_here () && Unit_context.non_atomic_rc u && is_value_type_ret t ->
     Some t
   | _ -> None
 
@@ -140,8 +140,8 @@ let lookup_tparam_fun_type tparams id =
     arrow the parameter's constraint already states.
 
     Otherwise the shadow inherits the parameter's type verbatim. *)
-let tail_shadow_type ~tparams ~pointer_safe ty =
-  match (pointer_safe, borrowed_value_param_pointee ty) with
+let tail_shadow_type u ~tparams ~pointer_safe ty =
+  match (pointer_safe, borrowed_value_param_pointee u ty) with
   | true, Some t -> Pointer (Const t)
   | _ ->
     ( match Option.bind (extract_fwd_ref_tvar ty) (lookup_tparam_fun_type tparams) with
@@ -153,8 +153,8 @@ let tail_shadow_type ~tparams ~pointer_safe ty =
     - Pointer-safe shadows: [& orig_id] (address-of)
     - Moveable parameters: [std::move(orig_id)]
     - Otherwise: plain copy *)
-let tail_shadow_init orig_id shadow_ty ty =
-  match shadow_ty, borrowed_value_param_pointee ty with
+let tail_shadow_init u orig_id shadow_ty ty =
+  match shadow_ty, borrowed_value_param_pointee u ty with
   | Pointer _, Some _ -> Unary (Address_of, Local orig_id)
   | _ ->
     if is_moveable_param_type ty then Move (Local orig_id)
@@ -202,8 +202,8 @@ let rec storage_root ~root ~bound e =
     what the caller passed for it ([parts], as the loop's ControlIR derives
     it with {!Control_ir.Term.parts_passed}) and its type is a borrowed value
     type ({!borrowed_value_param_pointee}). *)
-let pointer_safe_flags ~parts params =
-  List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee ty)) parts params
+let pointer_safe_flags u ~parts params =
+  List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee u ty)) parts params
 
 (** Rewrite references to pointer-safe shadow variables ([const T*]) so that
     reads dereference the pointer and method calls use [->] via
@@ -932,14 +932,14 @@ let planned_last_reads ~moves e args =
                    shadow types ({!tail_shadow_type})
     @param params  Function parameters [(id, type)]
     @return {!shadow_setup} record consumed by the caller *)
-let build_shadow_setup ~varying ~parts tparams params =
-  let pointer_safe = pointer_safe_flags ~parts params in
+let build_shadow_setup ~unit ~varying ~parts tparams params =
+  let pointer_safe = pointer_safe_flags unit ~parts params in
   let varying_params = filter_by_mask varying params in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
   let shadow_params =
     List.map2
       (fun (id, ty) safe ->
-        (shadow_name id, tail_shadow_type ~tparams ~pointer_safe:safe ty))
+        (shadow_name id, tail_shadow_type unit ~tparams ~pointer_safe:safe ty))
       varying_params varying_pointer_safe
   in
   let subs =
@@ -1059,11 +1059,11 @@ let drop_unread_shadows shadow_decls body =
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying ~parts tparams
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~varying ~parts tparams
   check params ret_ty body =
   let { Shadow_setup.varying = varying; varying_params = varying_params;
         shadow_params = shadow_params; subs = subs } =
-    build_shadow_setup ~varying ~parts tparams params
+    build_shadow_setup ~unit ~varying ~parts tparams params
   in
   let is_void = ret_ty = Void in
   (* Shadow variable declarations (only for varying params) *)
@@ -1073,7 +1073,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None -> tail_shadow_init orig_id shadow_ty ty
+          | None -> tail_shadow_init unit orig_id shadow_ty ty
         in
         Bind_variable
           ( shadow_id,

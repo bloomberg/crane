@@ -1529,7 +1529,7 @@ let make_stack_init varying_params =
 
     @param varying_params The parameters to bind from the frame
     @return List of assignment statements *)
-let make_param_copies varying_params =
+let make_param_copies ~unit varying_params =
   (* Helper: choose the right binding expression for a frame field access. *)
   let bind_field id ty =
     let stripped = strip_ref_type ty in
@@ -1559,7 +1559,7 @@ let make_param_copies varying_params =
     (fun {Frame_param.name = id; ty = ty; pointer_safe} ->
       if not pointer_safe then bind_field id ty
       else
-        match borrowed_value_param_pointee ty with
+        match borrowed_value_param_pointee unit ty with
         | Some t ->
           Bind_variable (id, Declare (Reference (Lvalue, Const t), None),
                  Dereference (Access (Dot, Local (id_f), id)))
@@ -1988,8 +1988,9 @@ let fix_handler_bindings field_names cf_ps handler =
     @raise Not_linearisable where no machine can be made: the recursion plan
            and the body disagree, the plan has no resume point for a call, or
            a frame would point at a copy its handler took. *)
-let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entered_by ?(entered = fun ~resumes:_ _ -> ())
-    ?(outer_env = []) ?(binders = []) ?(entered_pointers = fun _ -> false) ~parts check tparams params ret_ty body =
+let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?entered_by
+    ?(entered = fun ~resumes:_ _ -> ()) ?(outer_env = []) ?(binders = []) ?(entered_pointers = fun _ -> false) ~parts
+    check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
      loopifying them separately leaves the recursion in place.  The calls that
@@ -2061,7 +2062,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     | None -> body
     | Some (ad, _) -> ad.install body
   in
-  let pointer_safe = pointer_safe_flags ~parts params in
+  let pointer_safe = pointer_safe_flags unit ~parts params in
   (* Loopifying a function on its own gives a machine with one entry: the
      function itself, entered through [CraneEnter]. *)
   let own_entry = machine_entry ~enter_id:id_enter ~params ~varying in
@@ -2110,13 +2111,13 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
       in
       List.map
         (fun (id, ty) ->
-          Option.has_some (borrowed_value_param_pointee ty)
+          Option.has_some (borrowed_value_param_pointee unit ty)
           && Option.cata entered_pointers false (List.assoc_opt id ad.binders) )
         ad.params
       @ List.map
           (fun (id, ty) ->
             List.exists (Id.equal id) !dereferences
-            && Option.has_some (borrowed_value_param_pointee ty)
+            && Option.has_some (borrowed_value_param_pointee unit ty)
             && passed_to_pointer id )
           capture_params
   in
@@ -2170,7 +2171,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
   (* The parameters an entry's handler binds as references, with what they
      name, as it binds them ({!make_param_copies}). *)
   let aliased_params ?pointer_safe en =
-    List.fold_left aliased_after Id.Set.empty (make_param_copies (entry_emission ?pointer_safe en []).params)
+    List.fold_left aliased_after Id.Set.empty (make_param_copies ~unit (entry_emission ?pointer_safe en []).params)
   in
   let ctx = { check = check; entries = entries;
                env = env;
@@ -2259,7 +2260,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
   let entry_fields ee =
     List.map
       (fun p ->
-        match p.Frame_param.pointer_safe, borrowed_value_param_pointee p.ty with
+        match p.Frame_param.pointer_safe, borrowed_value_param_pointee unit p.ty with
         | true, Some t -> (p.name, Pointer (Const t))
         | _ -> (p.name, frame_field_type p.ty) )
       ee.Entry_emission.params
@@ -2362,7 +2363,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
        [std::move] into a const reference binding of a frame field, which
        moves nothing. *)
     let handler =
-      adjust_frame_push_args ~frame_sptr all_frame_ps (make_param_copies ee.params @ body)
+      adjust_frame_push_args ~frame_sptr all_frame_ps (make_param_copies ~unit ee.params @ body)
     in
     make_frame_branch (ee_name ee) handler
   in

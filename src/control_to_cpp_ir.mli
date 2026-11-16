@@ -53,7 +53,11 @@
     are read off the Core binders of the receiver and the parameters, and a
     loop tail modulo cons or a machine takes the calls its ControlIR
     continues by ({!lower_struct_methods}).  The parameters a loop varies are its
-    ControlIR's, and a loop with none is not lowered. *)
+    ControlIR's, and a loop with none is not lowered.
+
+    Each entry that lowers is handed the unit it lowers in ([~unit]),
+    whose configuration decides which parameters a loop holds by pointer
+    ({!Frame_storage.passed_holdable}). *)
 
 (** [function_resumes r ~depth]: the points the function [r], its body
     standing under [depth] of its binders, resumes at, where the body is
@@ -65,7 +69,7 @@
     binders bound before a point that what follows reads, except the
     parameters every turn passes on unchanged, which the machine holds
     outside its frames. *)
-val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_ir.resumes option
+val function_resumes : unit:Unit_context.t -> Names.GlobRef.t -> depth:int -> Ownership_ir.resumes option
 
 (** [method_resumes r ~inductive ~receiver ~depth]: the points the method
     made of the function [r] in the struct of [inductive], its receiver its
@@ -77,6 +81,7 @@ val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_ir.resumes opti
     whether it certainly is -- which of its struct's settings decides that,
     its being merged into its module's or not, is decided after. *)
 val method_resumes :
+  unit:Unit_context.t ->
   Names.GlobRef.t ->
   inductive:Names.GlobRef.t ->
   receiver:int ->
@@ -93,6 +98,7 @@ val method_resumes :
     {!local_loop} leaves, perhaps, as Loopify may make one of the
     Y-combinator it is generated as. *)
 val local_resumes :
+  unit:Unit_context.t ->
   owner:Names.GlobRef.t option ->
   function_:bool ->
   lifted:Core.Occurrence.t list ->
@@ -107,6 +113,7 @@ val local_resumes :
     adopting nothing ({!lower_lifted}): its body standing under [depth] of
     [owner]'s binders, the last [arity] of them the fixpoint's parameters. *)
 val lifted_resumes :
+  unit:Unit_context.t ->
   Names.GlobRef.t -> owner:Names.GlobRef.t option -> depth:int -> arity:int -> Ownership_ir.resumes option
 
 (** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name l]
@@ -128,6 +135,7 @@ val lifted_resumes :
     is in the flow of may adopt is lowered so too: that function adopts it only
     where it is a machine. *)
 val local_loop :
+  unit:Unit_context.t ->
   owner:Names.GlobRef.t option ->
   function_:bool ->
   lifted:Core.Occurrence.t list ->
@@ -146,6 +154,7 @@ val local_loop :
     [merged] says whether the struct is merged into its module's, whose
     members Loopify loopifies only where it loopifies everything. *)
 val lower_struct_methods :
+  unit:Unit_context.t ->
   merged:bool ->
   Names.GlobRef.t ->
   Names.Id.t list ->
@@ -161,7 +170,7 @@ val lower_struct_methods :
     no loop is made has the local fixpoints in its body lowered as Loopify
     lowers them ({!Loopify.lower_function_locals}): those translation left
     for the helper's machine to adopt. *)
-val lower_lifted : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
+val lower_lifted : unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
 
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above
@@ -169,7 +178,7 @@ val lower_lifted : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
     member Loopify loopifies of which no loop is made has the local
     fixpoints in its body lowered as {!lower_lifted} lowers a
     helper's. *)
-val lower_group : Cpp_ir.Lowered.Decl.t list -> Cpp_ir.Lowered.Decl.t list
+val lower_group : unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t list -> Cpp_ir.Lowered.Decl.t list
 
 (** [check_lowered d] checks, under [CRANE_CHECK_IR], the finished
     declaration [d] against what control lowering recorded deciding of its
@@ -184,4 +193,4 @@ val lower_group : Cpp_ir.Lowered.Decl.t list -> Cpp_ir.Lowered.Decl.t list
     ({!Lower_control.taken_continues}).  It checks the constructor structs'
     pointer fields against those planned before rendering, which the
     recursion plan's tail-modulo-cons chains were read with. *)
-val check_lowered : Cpp_ir.Lowered.Decl.t -> unit
+val check_lowered : unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit

@@ -33,41 +33,6 @@ let mk_cppglob ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_
   Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r);
                         custom_yields = yields})
 
-(** [callee_core_type r] -- the Core type of the callable [r] as the unit's plan
-    of it records it ({!Callable_abi.core_type}): the signature call
-    translation rebuilds a C++ head from.  While the plans are being made a
-    global has none, and is read off the table; under [CRANE_CHECK_IR] a
-    planned one is held to the table, and emission finding none is a
-    violation. *)
-let callee_core_type (r : GlobRef.t) : Core.Type.t option =
-  match Callable_abi.planned_core_type r with
-  | Some planned ->
-    if Probe.checking () then begin
-      let live = find_type_opt r in
-      let agrees =
-        match (planned, live) with
-        | Some a, Some b -> a == b || Core_util.eq_core_type a b
-        | None, None -> true
-        | _ -> false
-      in
-      Probe.hit "callee-ml-type" (fun () -> if agrees then "planned agree" else "planned disagree");
-      if not agrees then
-        Probe.violation "callee signature"
-          Pp.(str "the plan of " ++ GlobRef.print r ++ str " records an ML type the table does not have")
-    end;
-    planned
-  | None ->
-    let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
-    Probe.hit "callee-ml-type"
-      (fun () -> (if emitting then "unplanned emit " else "unplanned plan ") ^ Pp.string_of_ppcmds (GlobRef.print r));
-    if emitting && Option.has_some (find_type_opt r) then
-      Probe.violation "callee signature"
-        Pp.(str "emission reads the signature of " ++ GlobRef.print r ++ str ", which no plan covers");
-    find_type_opt r
-
-(** {!callee_core_type}, raising [Not_found] where there is none. *)
-let callee_core_type_exn r = match callee_core_type r with Some t -> t | None -> raise Not_found
-
 (** What a binder of the lexical environment stands for ({!Lexenv.role}). *)
 type binder_role = Lexenv.role =
   | Value
@@ -158,15 +123,20 @@ let no_program_facts =
     are written as standalone functions, and the effect operations its
     applications are ({!Program_facts.t}), and the elaborations of the
     unit's calls ({!Core_elaborate.structure}), [None] until the unit is
-    walked. *)
+    walked; and the unit's context ({!Unit_context}). *)
 type unit_facts = {
   higher_order_projections : Ref.User.Set.t;
   effects : Core_effects.t;
   elaborations : Core_elaborate.t option;
+  context : Unit_context.t;
 }
 
 (** The facts of no unit: lowering outside a unit's extent. *)
-let no_unit_facts = {higher_order_projections = Ref.User.Set.empty; effects = Core_effects.empty; elaborations = None}
+let no_unit_facts =
+  { higher_order_projections = Ref.User.Set.empty;
+    effects = Core_effects.empty;
+    elaborations = None;
+    context = Unit_context.detached }
 
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
@@ -538,6 +508,51 @@ let is_higher_order_projection r = Ref.User.Set.mem r (!tctx).input.unit.higher_
     unit is walked. *)
 let elaborations () = (!tctx).input.unit.elaborations
 
+(** The context of the unit being lowered ({!unit_facts}). *)
+let unit_context () = (!tctx).input.unit.context
+
+(** Whether the unit being lowered counts references non-atomically
+    ({!Unit_context.non_atomic_rc}). *)
+let non_atomic_rc () = Unit_context.non_atomic_rc (unit_context ())
+
+(** The callable plans of the unit being lowered ({!Unit_context.t.callables}). *)
+let callables () = (unit_context ()).callables
+
+(** [callee_core_type r] -- the Core type of the callable [r] as the unit's plan
+    of it records it ({!Callable_abi.core_type}): the signature call
+    translation rebuilds a C++ head from.  While the plans are being made a
+    global has none, and is read off the table; under [CRANE_CHECK_IR] a
+    planned one is held to the table, and emission finding none is a
+    violation. *)
+let callee_core_type (r : GlobRef.t) : Core.Type.t option =
+  match Callable_abi.planned_core_type (callables ()) r with
+  | Some planned ->
+    if Probe.checking () then begin
+      let live = find_type_opt r in
+      let agrees =
+        match (planned, live) with
+        | Some a, Some b -> a == b || Core_util.eq_core_type a b
+        | None, None -> true
+        | _ -> false
+      in
+      Probe.hit "callee-ml-type" (fun () -> if agrees then "planned agree" else "planned disagree");
+      if not agrees then
+        Probe.violation "callee signature"
+          Pp.(str "the plan of " ++ GlobRef.print r ++ str " records an ML type the table does not have")
+    end;
+    planned
+  | None ->
+    let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
+    Probe.hit "callee-ml-type"
+      (fun () -> (if emitting then "unplanned emit " else "unplanned plan ") ^ Pp.string_of_ppcmds (GlobRef.print r));
+    if emitting && Option.has_some (find_type_opt r) then
+      Probe.violation "callee signature"
+        Pp.(str "emission reads the signature of " ++ GlobRef.print r ++ str ", which no plan covers");
+    find_type_opt r
+
+(** {!callee_core_type}, raising [Not_found] where there is none. *)
+let callee_core_type_exn r = match callee_core_type r with Some t -> t | None -> raise Not_found
+
 (** Whether the analysis of the program found that the body of the
     definition [r] only throws ({!program_facts}). *)
 let is_throwing_value r = Ref.Can.Set.mem r (!tctx).input.program.throwing_values
@@ -558,7 +573,7 @@ let generating_at (site : generation_site) (f : unit -> 'a) : 'a =
 (** [generating_in mp f] runs [f] generating an element of the body of the
     module [mp], whose planned local inductives it spells bare. *)
 let generating_in (mp : ModPath.t) (f : unit -> 'a) : 'a =
-  match Scope_plan.local_inductives mp with
+  match Scope_plan.local_inductives (unit_context ()).scopes mp with
   | Some _ -> generating_at (In_module mp) f
   | None ->
     CErrors.anomaly
@@ -577,7 +592,7 @@ let generating_outside_modules (f : unit -> 'a) : 'a = generating_at Outside_mod
 let local_inductives_in_scope () =
   match (!tctx).input.generating with
   | Some (In_module mp) -> (
-    match Scope_plan.local_inductives mp with
+    match Scope_plan.local_inductives (unit_context ()).scopes mp with
     | Some local -> local
     | None ->
       CErrors.anomaly

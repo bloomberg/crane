@@ -32,19 +32,19 @@ let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
   | Core.Type.Meta {contents = Some t} -> value_inductive ~abbreviations t
   | _ -> false
 
-let passed_holdable passing ty =
+let passed_holdable u passing ty =
   match passing with
   | Some Callable_abi.Borrowed -> value_inductive ~abbreviations:true ty
-  | Some Owned -> Table.reuse_here () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
+  | Some Owned -> Table.reuse_here () && Unit_context.non_atomic_rc u && value_inductive ~abbreviations:true ty
   | Some Forwarded | None -> false
 
-let local_holdable (l : Term.loop) i =
+let local_holdable u (l : Term.loop) i =
   match l.loop with
   | Loop.Function _ -> None
   | Loop.Member (o, j) ->
     Option.map
       (fun passing ->
-        passed_holdable (Option.flatten (List.nth_opt passing i)) (snd (List.nth l.parameters i)) )
+        passed_holdable u (Option.flatten (List.nth_opt passing i)) (snd (List.nth l.parameters i)) )
       (Ownership_ir.Local_passing.lookup (o, j))
 
 let check_local i ~planned ~declared =

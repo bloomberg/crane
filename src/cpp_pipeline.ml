@@ -82,27 +82,30 @@ let casts = Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
 let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
 let boxed_reads = Pipeline_trace.pass "boxed_reads" Cpp_erasure.lower_boxed_reads
 let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
-let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
+(* The method calls of a declaration of the unit [u]. *)
+let method_calls u = Pipeline_trace.pass "method_calls" (Cpp_erasure.lower_method_calls u)
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
 let conditionals = Pipeline_trace.pass "conditionals" Cpp_erasure.lower_conditionals
 let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
 let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
 let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
 let qualifiers = Pipeline_trace.pass "qualifiers" Cpp_erasure.lower_qualifiers
-let pointer_slots = Pipeline_trace.pass "pointer_slots" Cpp_erasure.lower_pointer_slots
+(* The slots of the pointers of a declaration of the unit [u]. *)
+let pointer_slots u = Pipeline_trace.pass "pointer_slots" (Cpp_erasure.lower_pointer_slots u)
 let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
 
-(** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
-let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
+(** Every pass before the {!Cpp_erasure} seam, in the order they run, over a
+    declaration of the unit [u]. *)
+let lowered_passes u : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_cpp_ir}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)
     on_decl "control" (fun d ->
-        if Probe.checking () then Control_to_cpp_ir.check_lowered d;
+        if Probe.checking () then Control_to_cpp_ir.check_lowered ~unit:u d;
         d );
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
@@ -139,8 +142,9 @@ let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
     input type. *)
 let seam = "materialise"
 
-(** Every pass after the seam, in the order they run. *)
-let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
+(** Every pass after the seam, in the order they run, over a declaration of
+    the unit [u]. *)
+let settled_passes u : Cpp_erasure.settled Pipeline_trace.pass list =
   [ casts;
     (* With the heads final, a body naming a type variable no head declares
        is a name nothing in scope introduces; spell it [std::any] rather than
@@ -154,7 +158,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     template_args;
     (* A call of a methodified function becomes the member call it is, so
        the printer spells the call it is given. *)
-    method_calls;
+    method_calls u;
     (* So does a projection, applied or named as a value. *)
     projections;
     (* A lambda invoked only to choose between two values is the choice. *)
@@ -172,12 +176,15 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     names.  A pointer is written in the slot its pointee is held in.  Each
     match's computed scrutinee is declared, named, in front of it.  With
     every body final, what each lambda captures is written down; last, an
-    initialiser holding a lambda that captures is invoked in place. *)
-let instantiation_passes = [foreign; qualifiers; pointer_slots; scrutinees; captures; initialisers]
+    initialiser holding a lambda that captures is invoked in place.  [u] is
+    the unit the declaration is of. *)
+let instantiation_passes u = [foreign; qualifiers; pointer_slots u; scrutinees; captures; initialisers]
 
 let pass_names =
-  Pipeline_trace.names lowered_passes @ [seam] @ Pipeline_trace.names settled_passes
-  @ Pipeline_trace.names instantiation_passes
+  Pipeline_trace.names (lowered_passes Unit_context.detached)
+  @ [seam]
+  @ Pipeline_trace.names (settled_passes Unit_context.detached)
+  @ Pipeline_trace.names (instantiation_passes Unit_context.detached)
 
 (** {2 What the printer is not owed}
 
@@ -208,14 +215,15 @@ let describe : obligation -> string = function
   | Free_type_variable -> "an undeclared type variable, owed by " ^ free_tvars.name
   | Implicit_boxed_read -> "an implicit boxed read, owed by " ^ boxed_reads.name
   | Missing_template_argument -> "a mapping's unsupplied type argument, owed by " ^ template_args.name
-  | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
+  | Unlowered_method_call ->
+    "a method called as a function, owed by " ^ (method_calls Unit_context.detached).name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
   | Unlowered_conditional -> "a choice written as an invoked lambda, owed by " ^ conditionals.name
   | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
   | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
   | Uninstantiated_mapping -> "an uninstantiated mapping, owed by " ^ foreign.name
   | Unlowered_qualifier -> "a type qualifier in value position, owed by " ^ qualifiers.name
-  | Unslotted_pointer -> "a pointer's unchosen slot, owed by " ^ pointer_slots.name
+  | Unslotted_pointer -> "a pointer's unchosen slot, owed by " ^ (pointer_slots Unit_context.detached).name
   | Unnamed_scrutinee -> "a match's unnamed scrutinee, owed by " ^ scrutinees.name
   | Undecided_capture -> "an undecided lambda capture, owed by " ^ captures.name
   | Capture_outside_a_block -> "a capturing lambda in an initialiser, owed by " ^ initialisers.name
@@ -235,8 +243,8 @@ let mentions p (decl : Cpp_erasure.settled) =
 (** Whether [decl] still owes [o].  Every pass that discharges an obligation
     leaves nothing for a second run to do, so a declaration that has paid one
     is a fixed point of the pass that pays it -- a check that cannot drift
-    from what the pass decides. *)
-let owes (decl : Cpp_erasure.settled) (o : obligation) =
+    from what the pass decides.  [u] is the unit the declaration is of. *)
+let owes u (decl : Cpp_erasure.settled) (o : obligation) =
   let d = (decl :> Cpp_ir.Lowered.Decl.t) in
   let rewrites (p : Cpp_erasure.settled Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
   match o with
@@ -248,19 +256,19 @@ let owes (decl : Cpp_erasure.settled) (o : obligation) =
   | Free_type_variable -> rewrites free_tvars
   | Implicit_boxed_read -> rewrites boxed_reads
   | Missing_template_argument -> rewrites template_args
-  | Unlowered_method_call -> rewrites method_calls
+  | Unlowered_method_call -> rewrites (method_calls u)
   | Unlowered_projection -> rewrites projections
   | Unlowered_conditional -> rewrites conditionals
   | Move_under_access -> rewrites access_moves
   | Undecided_constexpr -> rewrites constexpr
   | Uninstantiated_mapping -> rewrites foreign
   | Unlowered_qualifier -> rewrites qualifiers
-  | Unslotted_pointer -> rewrites pointer_slots
+  | Unslotted_pointer -> rewrites (pointer_slots u)
   | Unnamed_scrutinee -> rewrites scrutinees
   | Undecided_capture -> rewrites captures
   | Capture_outside_a_block -> rewrites initialisers
 
-(** [check_settled obligations decl] fails if [decl] still owes any of
+(** [check_settled u obligations decl] fails if [decl], of the unit [u], still owes any of
     [obligations]: called with those {!checked_before_instantiation} once the
     settled passes have run, and with the rest on what the printer is handed,
     so that between them [decl] owes the printer nothing.
@@ -273,8 +281,8 @@ let owes (decl : Cpp_erasure.settled) (o : obligation) =
     one a user's input can break.  The declaration is named as {!Table} names
     any global, since one a pass generated -- a lifted helper -- is not in the
     name table [Printer.pr_global] reads, and would fail the report itself. *)
-let check_settled obligations (decl : Cpp_erasure.settled) =
-  match List.filter (owes decl) obligations with
+let check_settled u obligations (decl : Cpp_erasure.settled) =
+  match List.filter (owes u decl) obligations with
   | [] -> ()
   | owed ->
     CErrors.user_err
@@ -322,7 +330,7 @@ let spell_type t =
    the instantiation passes ({!checked_before_instantiation}), and the
    instantiated declaration is checked for what it borrows and moves
    ({!Borrow_projection.check_decl}, {!Move_check.check_decl}). *)
-let finish decl =
+let finish u decl =
   let trace = traced decl in
   let steps = ref [] in
   let note name before after =
@@ -341,19 +349,19 @@ let finish decl =
         d' )
       d passes
   in
-  let decl = run Fun.id lowered_passes decl in
+  let decl = run Fun.id (lowered_passes u) decl in
   let settled = Cpp_erasure.materialise decl in
   let inj (d : Cpp_erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
-  let decl = run inj settled_passes settled in
+  let decl = run inj (settled_passes u) settled in
   let early, late = List.partition checked_before_instantiation obligations in
-  if checking then check_settled early decl;
-  let decl = run inj instantiation_passes decl in
+  if checking then check_settled u early decl;
+  let decl = run inj (instantiation_passes u) decl in
   if checking then begin
     Borrow_projection.check_decl (inj decl);
-    Move_check.check_decl (inj decl);
-    check_settled late decl
+    Move_check.check_decl u (inj decl);
+    check_settled u late decl
   end;
   Option.iter
     (fun name ->
