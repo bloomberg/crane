@@ -1291,7 +1291,7 @@ let planned_header_scope mp =
    module [mp] is written, as planned. *)
 let header_element_position u mp =
   let {in_struct; concepts_hoisted} = planned_header_scope mp in
-  { (file_start u Intf) with
+  { (file_start u (Translation_state.plans ()) Intf) with
     in_struct = in_struct;
     concepts_hoisted = concepts_hoisted;
     in_template = Scope_plan.templated u.Unit_context.scopes mp }
@@ -1343,7 +1343,7 @@ let spelling_position ~file spelling =
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> element mp (file_start u Impl)
+  | Impl, Element_of mp -> element mp (file_start u (Translation_state.plans ()) Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
@@ -1351,7 +1351,7 @@ let spelling_position ~file spelling =
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
   | _, Template_in declared ->
-    Cpp_leaf_plan.ctor_alias_render_ctx (file_start u file) declared
+    Cpp_leaf_plan.ctor_alias_render_ctx (file_start u (Translation_state.plans ()) file) declared
 
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)

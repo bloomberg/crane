@@ -814,7 +814,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
       | Core.Module.Expr.Structure {path = body_mp; items = sel} ->
         let old_context = ctx.in_struct in
         with_module_frame @@ fun () ->
-        let frame = Module_frame.planned mp in
+        let frame = Module_frame.planned ctx.plans mp in
         if
           Probe.checking ()
           && not
@@ -859,7 +859,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
            the files planned them ({!Cpp_state.concept_plan}); under
            [CRANE_CHECK_IR] the plan is checked against the concepts
            generated here. *)
-        let plan = if is_header then Some (concept_plan mp) else None in
+        let plan = if is_header then Some (concept_plan ctx.plans mp) else None in
         if
           is_header && Probe.checking ()
           && not
@@ -1310,15 +1310,13 @@ let pp_wrapper_module_dual ~is_header ctx mp func_sels =
   let elements = Cpp_ast.elements ~source:mp in
   (specs, elements defs_pp, elements lifted_pp, elements lifted_specs_pp)
 
-(** What analysing the structure concluded, for the passes that render it. *)
-let structure_analysis : Structure_analysis.t option ref = State.cell State.Unit None
-
-(** The analysis of the structure being rendered.
+(** The analysis of the structure being rendered, as the backend's plans
+    for the unit hold it ({!Cpp_state.plans}).
 
     Absent means a pass was started without {!prepare_structure}, which is a
     bug in the caller rather than a structure with nothing to say. *)
 let get_structure_analysis () =
-  match !structure_analysis with
+  match (Translation_state.plans ()).analysis with
   | Some a -> a
   | None ->
     CErrors.anomaly (Pp.str "cpp: rendering a structure that was never analysed")
@@ -1458,8 +1456,7 @@ let prepare_structure (u : Unit_context.t) s =
     s;
     (analysis, Name_resolution.create u.modules s)
   in
-  structure_analysis := Some analysis;
-  (module_plan_of_analysis analysis, names)
+  (module_plan_of_analysis analysis, names, analysis)
 
 (** The functions registered as methods of each packet of the inductive
     [kn] -- its projections apart, which its struct declares itself --, each
@@ -1517,13 +1514,15 @@ let registered_methods ?(order = Fun.id) kn (ind : Core.Inductive.t) =
     module type, module or functor is.  A
     functor's body is walked as the class
     template it becomes,
-    its parameters visible in it. *)
+    its parameters visible in it.  Returns the frame and the concepts it
+    planned for each module ({!Cpp_state.plans}). *)
 let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = fun ~module_:_ _ -> ())
     ?(after_module = fun ~module_:_ _ _ -> ()) ?(in_body = fun ~wrapper:_ _ _ -> ())
     ?(modtype = fun ~module_:_ _ ~params mt -> Modtype_concept.generate ~params mt)
     ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
+  let frames = ref MPmap.empty and concepts = ref MPmap.empty in
   let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
   let in_module mp sel k =
     Cpp_ind.plan_header_scope mp !header;
@@ -1546,7 +1545,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
       Module_frame.of_module (Translation_state.unit_context ()) mp ~name sel
         ~enclosing:!current_structure_decls
     in
-    Module_frame.plan mp frame;
+    frames := MPmap.add mp frame !frames;
     let outer = !header in
     let class_concepts =
       List.map
@@ -1567,7 +1566,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
         (fun (path, c) -> (Modtype path, Modtype_concept.names_member mp c))
         (modtypes ~module_ mp ~params:[] sel)
     in
-    plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes);
+    let plan = Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes in
+    concepts := MPmap.add mp plan !concepts;
     let with_promotion k =
       match frame.promoted with Some _ -> setting eponymous_promote_ref frame.eponymous_type k | None -> k ()
     in
@@ -1617,7 +1617,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
                 Translation_state.generating_in mi.modpath (fun () ->
                     List.iter (elem ~wrapper:false ~module_:mi.modpath) (order mi.sels);
                     if collision then classes ~module_:mi.modpath (declared_classes mi.sels) ) ) ) )
-    (order analysis.sorted_modules)
+    (order analysis.sorted_modules);
+  (!frames, !concepts)
 
 (** The callable plan of each function the renders will generate, in the
     order of the unit's modules and declarations, or the reverse if
@@ -1669,11 +1670,13 @@ let plan_callables ?(reversed = false) s =
     | Core.Decl.Inductive {entity = kn; definition = ind} -> plan_methods kn ind
     | Core.Decl.Type_alias _ -> ()
   in
-  walk_as_rendered ~reversed
-    ~decl:(fun ~wrapper ~module_:_ -> function Core.Module.Structure_item.Declaration d ->
-        plan_decl ~wrapper d | _ -> ())
-    s;
-  (List.rev !plans, List.rev !instance_plans)
+  let frames, concepts =
+    walk_as_rendered ~reversed
+      ~decl:(fun ~wrapper ~module_:_ -> function Core.Module.Structure_item.Declaration d ->
+          plan_decl ~wrapper d | _ -> ())
+      s
+  in
+  ((List.rev !plans, List.rev !instance_plans), (frames, concepts))
 
 (** The eponymous record of a module of frame [frame] that the header merges
     into the module's struct, with its fields and packet, if it has one: a
@@ -1852,7 +1855,7 @@ let generate_ahead u s =
   let aheads = ref [] in
   let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
   let lifted helpers = later {Cpp_ind.nothing_ahead with helpers} in
-  walk_as_rendered ~modtype:Cpp_ind.modtype_concept
+  ignore @@ walk_as_rendered ~modtype:Cpp_ind.modtype_concept
     ~classes:(fun ~module_ ->
       List.iter (fun (_, r, fields) ->
           let d = Cpp_ind.concept ~module_ r fields in
@@ -1911,7 +1914,7 @@ let generate_ahead u s =
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
     Unit_program.refinish u (finishing (List.rev aheads));
-    walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
+    ignore @@ walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
       ~after_module:(fun ~module_ frame _ ->
         convert_eponymous_record_fields ~module_ frame;
         Option.iter
@@ -1959,7 +1962,7 @@ let struct_members ~wrapper mp sel =
          (fun (specs, _) -> List.map fst specs)
          (file_views ~is_header:true generated) )
   else
-    let frame = Module_frame.planned mp in
+    let frame = Module_frame.planned (Translation_state.plans ()) mp in
     if
       frame.promoted <> None || merged_eponymous_record frame <> None || frame.concept_collision
       || declared_classes sel <> []
@@ -2101,7 +2104,7 @@ let plan_file_layout (u : Unit_context.t) s =
   in
   let in_writing_order band = List.map snd (List.stable_sort (fun (i, _) (j, _) -> Int.compare i j) (List.rev !band)) in
   Cpp_ind.peeking (fun () ->
-      walk_as_rendered
+      ignore @@ walk_as_rendered
         ~decl:(fun ~wrapper ~module_ se ->
           match se with
           | Core.Module.Structure_item.Declaration (Core.Decl.Value _ | Core.Decl.Recursive_group _) when wrapper ->
@@ -2229,7 +2232,7 @@ let plan_ctor_aliases s =
       end
     in
     Cpp_ind.peeking (fun () ->
-        walk_as_rendered ~classes ~after_module
+        ignore @@ walk_as_rendered ~classes ~after_module
           ~decl:(fun ~wrapper ~module_ se ->
             match se with
             | Core.Module.Structure_item.Declaration (Core.Decl.Value _ | Core.Decl.Recursive_group _) when wrapper ->
@@ -3346,7 +3349,7 @@ let do_struct_with_decl_tracking u ~is_header f s =
   (* The file is written from its start, threaded through everything the
      driver writes. *)
   let file = if is_header then Common.Intf else Common.Impl in
-  let top = file_start u file in
+  let top = file_start u (Translation_state.plans ()) file in
   (* A synthesised alias is emitted in front of the top-level element that
      writes it, rather than collected into the file's prologue.
 
@@ -3737,7 +3740,7 @@ let do_struct_with_decl_tracking u ~is_header f s =
           homed = (match a.declared with In_struct_of _ -> true | At_namespace_scope _ -> false);
           holder = Option.has_some a.holder;
           declaration = Cpp_leaf_plan.ctor_alias_declaration a } )
-      (Cpp_leaf_plan.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
+      (Cpp_leaf_plan.ctor_aliases_declared_in top.plans ~file:(if is_header then Common.Intf else Common.Impl))
   in
   let forwards =
     if is_header then
@@ -3763,7 +3766,7 @@ let do_struct_with_decl_tracking u ~is_header f s =
     if state () <> before then
       CErrors.anomaly (str "Crane: printing a scheduled translation unit decided something.")
   end;
-  Cpp_leaf_plan.check_ctor_alias_plan ~file:written;
+  Cpp_leaf_plan.check_ctor_alias_plan top.plans ~file:written;
   Cpp_print.check_file_scope_types ~file:written;
   file ++ fnl ()
 
@@ -3799,6 +3802,9 @@ let cpp_descr =
        implementation, where its module is the only one visible. *)
     pp_decl =
       (fun u ~module_ d ->
-        let ctx = {(file_start u Common.Impl) with visibility = Some (toplevel_visibility [module_])} in
+        let ctx =
+          { (file_start u (Translation_state.plans ()) Common.Impl) with
+            visibility = Some (toplevel_visibility [module_]) }
+        in
         Cpp_ast.to_pp (pp_decls ctx (impl_decls ctx ~module_ d).rendered) );
   }

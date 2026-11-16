@@ -1006,6 +1006,12 @@ let module_filename mp =
 let with_context (u : Unit_context.t) f =
   Translation_state.with_unit_facts {(Translation_state.unit_facts ()) with context = u} (fun () -> f u)
 
+(** [with_plans p f] is [f ()] with lowering and rendering reading [p] as
+    what the backend's passes decided about the unit
+    ({!Translation_state.plans}), a value each of those passes adds to. *)
+let with_plans (p : Cpp_state.plans) f =
+  Translation_state.with_unit_facts {(Translation_state.unit_facts ()) with plans = p} f
+
 (** [with_plan u acc f] is {!with_context} of the unit's context [u]
     holding the facts [acc] holds ({!Accumulated_plan.context}). *)
 let with_plan u acc f = with_context (Accumulated_plan.context acc u) f
@@ -1075,8 +1081,9 @@ let layout_pass_names =
     in it. *)
 let plan_layout u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" prepare_layout;
-  let modules, names = Cpp.prepare_structure u struc in
+  let modules, names, analysis = Cpp.prepare_structure u struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
+  with_plans {Cpp_state.no_plans with analysis = Some analysis} @@ fun () ->
   with_plan {u with names = Some names} acc @@ fun u ->
   Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
@@ -1141,15 +1148,16 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
   Translation_state.with_unit_facts { (Translation_state.unit_facts ()) with elaborations = Some elaborations }
   @@ fun () ->
   Pipeline_trace.event "layout" plan_callables;
-  let ((callables, instance_methods) as planned) = Cpp.plan_callables struc in
+  let ((callables, instance_methods) as planned), (frames, concepts) = Cpp.plan_callables struc in
   if
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
     &&
-    let callables', instance_methods' = Cpp.plan_callables ~reversed:true struc in
+    let (callables', instance_methods'), _ = Cpp.plan_callables ~reversed:true struc in
     not
       ( Target_plan.same_callables callables callables'
       && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
+  with_plans {(Translation_state.plans ()) with frames; concepts} @@ fun () ->
   let assumed =
     Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
   Pipeline_trace.event "layout" decide_callables;
@@ -1663,7 +1671,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
-      context = u }
+      context = u;
+      plans = Cpp_state.no_plans }
   @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
   let plan = plan_representation plan struc in
@@ -1706,7 +1715,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Pipeline_trace.event "emit" "plan_file_layout";
   Cpp.plan_file_layout u struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";
-  Cpp.plan_ctor_aliases struc;
+  let ctor_aliases = Cpp.plan_ctor_aliases struc in
+  with_plans {(Translation_state.plans ()) with ctor_aliases = Some ctor_aliases} @@ fun () ->
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then
@@ -2573,7 +2583,8 @@ let print_one_decl loops struc mp decl =
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
-      context = u }
+      context = u;
+      plans = Cpp_state.no_plans }
   @@ fun () ->
   plan_layout u (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
   @@ fun u _ (_, _, _, _, elaborations) ->

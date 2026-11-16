@@ -10,7 +10,7 @@
 open Names
 
 (** The frame of one module. *)
-type t = {
+type t = Cpp_state.module_frame = {
   eponymous_type : GlobRef.t option;
       (** The inductive the module is named after, case aside, that is
           neither a record nor a class: functions taking it become its
@@ -49,12 +49,10 @@ val concept_collision : Module_plan.layout -> ModPath.t -> (Label.t * Core.Modul
     positions, the same collision and promotion. *)
 val equal : t -> t -> bool
 
-(** [plan mp frame] makes [frame] the planned frame of the module [mp],
-    which the walk ahead of the files works out ({!Cpp.walk_as_rendered}). *)
-val plan : ModPath.t -> t -> unit
-
-(** The planned frame of a module; an anomaly where none was planned. *)
-val planned : ModPath.t -> t
+(** The frame [plans] has for a module, which the walk ahead of the files
+    works out ({!Cpp.walk_as_rendered}); an anomaly where none was
+    planned. *)
+val planned : Cpp_state.plans -> ModPath.t -> t
 
 (** The modules whose frames the body of the module [mp] is written in,
     innermost first, as [scopes] plans them ({!Scope_plan.frames}). *)
@@ -62,5 +60,6 @@ val frames_around : Scope_plan.bound -> ModPath.t -> ModPath.t list
 
 (** The inductives not promoted in the body of the module [mp]: the
     eponymous inductive of each frame around it that does not promote it,
-    whatever the unit's plan promotes; [scopes] is the unit's scope plan. *)
-val demoted_around : Scope_plan.bound -> ModPath.t -> GlobRef.t list
+    whatever the unit's plan promotes, the frames as [plans] has them;
+    [scopes] is the unit's scope plan. *)
+val demoted_around : Cpp_state.plans -> Scope_plan.bound -> ModPath.t -> GlobRef.t list

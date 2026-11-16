@@ -93,7 +93,7 @@ val pp_type : Cpp_state.render_ctx -> ty -> Pp.t
     [~lead:false] drops the leading [typename] of a dependent name about to
     be embedded in a longer one.  The type is resolved already
     ({!Cpp_pipeline.spell_type}): the printer reads no lowered value. *)
-val pp_cpp_type : ?lead:bool -> Unit_context.t -> bool -> Id.t list -> ty -> Pp.t
+val pp_cpp_type : ?lead:bool -> Unit_context.t -> Cpp_state.plans -> bool -> Id.t list -> ty -> Pp.t
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t

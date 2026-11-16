@@ -274,7 +274,7 @@ let promoted_at (c : render_ctx) r =
   Unit_context.is_promoted_inductive c.unit r
   &&
   match c.module_ with
-  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around c.unit.scopes mp))
+  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around c.plans c.unit.scopes mp))
   | None -> true
 
 (** Whether the inductive [r]'s namespace wrapper is merged with its struct

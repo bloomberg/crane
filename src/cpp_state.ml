@@ -473,6 +473,79 @@ module Out_of_line = struct
   }
 end
 
+(** A concept a frame is holding back until after the struct it was written
+    in, identified by whatever declares it. *)
+type held_concept =
+  | Modtype of Names.ModPath.t  (** a module type's concept *)
+  | Class of Names.GlobRef.t  (** a type class's concept *)
+
+(** Where the header declares one of a module's concepts: ahead of its
+    struct, after it (when it names a member), or at file scope (when the
+    module is nested in a struct, where no concept can be declared). *)
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+(** The concepts of a module, planned ahead of the files: where each is
+    declared, and which its struct's body treats as not declared yet. *)
+type concept_plan = {
+  placements : (held_concept * concept_placement) list;
+  held_back : held_concept list;
+}
+
+(** A module's frame, as the render enters its body ({!Module_frame}). *)
+type module_frame = {
+  eponymous_type : Names.GlobRef.t option;
+  eponymous_record : (Names.GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
+  method_candidates : Method_registry.method_candidate list;
+  concept_collision : bool;
+  promoted : Names.Id.t list option;
+}
+
+(** What a file writes that places the templates it writes: a declaration,
+    or the fields of the eponymous record merged into a module's struct,
+    which no declaration holds. *)
+type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of Names.GlobRef.t
+
+(** What a file writes, in the module it is written in. *)
+module Written = Hashtbl.Make (struct
+  type t = Names.ModPath.t * written
+
+  (* [compare] rather than [=]: [compare] takes a NaN literal to be equal to
+     itself, [=] does not. *)
+  let equal (mp, w) (mp', w') =
+    Names.ModPath.equal mp mp'
+    &&
+    match (w, w') with
+    | Written_declaration d, Written_declaration d' -> compare d d' = 0
+    | Written_fields r, Written_fields r' -> Names.GlobRef.UserOrd.equal r r'
+    | (Written_declaration _ | Written_fields _), _ -> false
+
+  let hash (mp, w) =
+    Hashtbl.hash
+      ( Names.ModPath.hash mp,
+        match w with
+        | Written_declaration d -> Hashtbl.hash_param 40 160 d
+        | Written_fields r -> Names.GlobRef.UserOrd.hash r )
+end)
+
+(** The synthesised templates each file writes, planned before either is
+    rendered: each file's, in the order it first writes them, and those each
+    declaration it writes writes, with how it writes its type constructors. *)
+type ctor_alias_plan = {
+  intf : ctor_alias list;
+  impl : ctor_alias list;
+  intf_writes : (ctor_alias list * tyctor_use list) Written.t;
+  impl_writes : (ctor_alias list * tyctor_use list) Written.t;
+}
+
+type plans = {
+  analysis : Structure_analysis.t option;
+  frames : module_frame Names.MPmap.t;
+  concepts : concept_plan Names.MPmap.t;
+  ctor_aliases : ctor_alias_plan option;
+}
+
+let no_plans = {analysis = None; frames = Names.MPmap.empty; concepts = Names.MPmap.empty; ctor_aliases = None}
+
 (** What the names written at a position are read off: nothing, where
     naming anything is an anomaly; the program, where the resolver names
     each key where it stands, through the namers it hands the position
@@ -543,13 +616,16 @@ and render_ctx = {
   tyctors : tyctor_plan;
   (* The unit the file is of. *)
   unit : Unit_context.t;
+  (* What the backend's passes decided about the unit. *)
+  plans : plans;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
     struct. *)
-let file_start unit file =
+let file_start unit plans file =
   {
     unit;
+    plans;
     file;
     in_struct = false;
     concepts_hoisted = false;
@@ -597,11 +673,6 @@ let functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list 
   owned_list "functor_concept_scopes"
 
 
-(** A concept a frame is holding back until after the struct it was written
-    in, identified by whatever declares it. *)
-type held_concept =
-  | Modtype of Names.ModPath.t  (** a module type's concept *)
-  | Class of Names.GlobRef.t  (** a type class's concept *)
 
 (** Equality on {!held_concept}. *)
 let held_concept_equal a b =
@@ -614,35 +685,20 @@ let held_concept_equal a b =
 let is_held_back_in held_back c =
   List.exists (held_concept_equal c) held_back
 
-(** Where the header declares one of a module's concepts: ahead of its
-    struct, after it (when it names a member), or at file scope (when the
-    module is nested in a struct, where no concept can be declared). *)
-type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-(** The concepts of a module, planned ahead of the files: where each is
-    declared, and which its struct's body treats as not declared yet. *)
-type concept_plan = {
-  placements : (held_concept * concept_placement) list;
-  held_back : held_concept list;
-}
 
-(* The concept plan of each module of the unit, by module path. *)
-let concept_plans : concept_plan Names.MPmap.t ref = State.cell State.Unit Names.MPmap.empty
-
-let plan_module_concepts mp plan = concept_plans := Names.MPmap.add mp plan !concept_plans
-
-let concept_plan mp =
-  match Names.MPmap.find_opt mp !concept_plans with
+let concept_plan plans mp =
+  match Names.MPmap.find_opt mp plans.concepts with
   | Some plan -> plan
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned concepts.")
 
-let planned_held_back scopes ~file mp =
+let planned_held_back plans scopes ~file mp =
   match (file : Common.file) with
   | Intf -> (
     match Scope_plan.frames scopes mp with
-    | Some frames -> List.concat_map (fun m -> (concept_plan m).held_back) frames
+    | Some frames -> List.concat_map (fun m -> (concept_plan plans m).held_back) frames
     | None ->
       CErrors.anomaly
         Pp.(str "Crane: the body of the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned frames.") )
@@ -652,7 +708,7 @@ let concept_held_back ctx c =
   ctx.in_struct
   &&
   match ctx.module_ with
-  | Some mp -> is_held_back_in (planned_held_back ctx.unit.scopes ~file:ctx.file mp) c
+  | Some mp -> is_held_back_in (planned_held_back ctx.plans ctx.unit.scopes ~file:ctx.file mp) c
   | None -> false
 
 let class_concept_held_back ctx r = concept_held_back ctx (Class r)

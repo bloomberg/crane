@@ -513,32 +513,10 @@ let is_held_back_assertion ctx d =
 let resolved_names_into_a_struct ctx names (d : Cpp_ir.Resolved.Decl.t) =
   declaration_names_into_a_struct {ctx with names = Names_resolved names} d
 
-(** What a file writes that places the templates it writes: a declaration,
-    or the fields of the eponymous record merged into a module's struct,
-    which no declaration holds. *)
-type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of GlobRef.t
 
-(** What a file writes, in the module it is written in. *)
-module Written = Hashtbl.Make (struct
-  type t = ModPath.t * written
-
-  (* [compare] rather than [=]: [compare] takes a NaN literal to be equal to
-     itself, [=] does not. *)
-  let equal (mp, w) (mp', w') =
-    ModPath.equal mp mp'
-    &&
-    match (w, w') with
-    | Written_declaration d, Written_declaration d' -> compare d d' = 0
-    | Written_fields r, Written_fields r' -> GlobRef.UserOrd.equal r r'
-    | (Written_declaration _ | Written_fields _), _ -> false
-
-  let hash (mp, w) =
-    Hashtbl.hash
-      ( ModPath.hash mp,
-        match w with
-        | Written_declaration d -> Hashtbl.hash_param 40 160 d
-        | Written_fields r -> GlobRef.UserOrd.hash r )
-end)
+(** What a file writes that places the templates it writes
+    ({!Cpp_state.written}). *)
+type written = Cpp_state.written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of GlobRef.t
 
 (** What planning reads off something a file writes: what it is, as the
     render reads it back, the synthesised templates it writes, in the
@@ -551,22 +529,6 @@ module Ctor_aliases_read = struct
     uses : tyctor_use list;
   }
 end
-
-(** The synthesised templates each file writes, planned before either is
-    rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
-    writes them, and those each declaration it writes writes, with how it
-    writes its type constructors. *)
-type ctor_alias_plan = {
-  intf : ctor_alias list;
-  impl : ctor_alias list;
-  intf_writes : (ctor_alias list * tyctor_use list) Written.t;
-  impl_writes : (ctor_alias list * tyctor_use list) Written.t;
-}
-
-(** [None] until the unit's templates are planned: a declaration rendered
-    before then, for its text, or on its own
-    ({!Extract_env.print_one_decl}), places none. *)
-let ctor_alias_plan : ctor_alias_plan option ref = State.cell State.Unit None
 
 (** Plan the templates each file writes, [written file] those of [file] in
     the order written: the header's, then the implementation's. *)
@@ -584,7 +546,7 @@ let plan_ctor_aliases written =
   in
   let intf, intf_writes = planned Common.Intf in
   let impl, impl_writes = planned Common.Impl in
-  ctor_alias_plan := Some {intf; impl; intf_writes; impl_writes}
+  {intf; impl; intf_writes; impl_writes}
 
 (** The declaration of the template [a], printed where the tree puts it as
     declared where it is ({!Cpp_ast.Template_in}). *)
@@ -604,9 +566,9 @@ let ctor_alias_declaration a =
     declared in whichever file writes the use, because repeating a [using]
     with the same definition is legal; repeating a [struct] is not, so the
     header, the one file everything sees, declares every holder. *)
-let ctor_aliases_declared_in ~file =
+let ctor_aliases_declared_in plans ~file =
   let declared =
-    match (!ctor_alias_plan, file) with
+    match (plans.ctor_aliases, file) with
     | None, _ -> []
     | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> Option.has_some a.holder) plan.impl
     | Some plan, Common.Impl -> List.filter (fun a -> Option.is_empty a.holder) plan.impl
@@ -616,14 +578,15 @@ let ctor_aliases_declared_in ~file =
       if List.exists (fun a' -> String.equal (ctor_alias_name a') (ctor_alias_name a)) acc then acc else acc @ [a] )
     [] declared
 
-(* Whether the unit's templates are planned yet. *)
-let alias_plan_made () = Option.has_some !ctor_alias_plan
+(* Whether the unit's templates are planned yet, as the position [ctx] has
+   its plans. *)
+let alias_plan_made ctx = Option.has_some ctx.plans.ctor_aliases
 
 (* What is planned for [w], written in the module [module_], in the file
    [file]: the synthesised templates it writes and how it writes its type
    constructors; none before the unit's templates are planned. *)
-let planned_writes ~file ~module_ w =
-  match !ctor_alias_plan with
+let planned_writes plans ~file ~module_ w =
+  match plans.ctor_aliases with
   | None -> None
   | Some plan -> (
     let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
@@ -638,20 +601,20 @@ let planned_writes ~file ~module_ w =
 
 (** The synthesised templates [w], written in the module [module_], writes
     in the file [file], as planned. *)
-let planned_aliases ~file ~module_ w =
-  match planned_writes ~file ~module_ w with Some (aliases, _) -> aliases | None -> []
+let planned_aliases plans ~file ~module_ w =
+  match planned_writes plans ~file ~module_ w with Some (aliases, _) -> aliases | None -> []
 
 (** How [w], written in the module [module_], writes its type constructors
     in the file [file], as planned; none before the unit's templates are
     planned. *)
-let planned_tyctors ~file ~module_ w = Option.map snd (planned_writes ~file ~module_ w)
+let planned_tyctors plans ~file ~module_ w = Option.map snd (planned_writes plans ~file ~module_ w)
 
 (** Under [CRANE_CHECK_IR], the templates the file [file] spelled must be
     the ones planned for it. *)
-let check_ctor_alias_plan ~file =
+let check_ctor_alias_plan plans ~file =
   if Probe.checking () then begin
     let planned =
-      match (!ctor_alias_plan, file) with
+      match (plans.ctor_aliases, file) with
       | None, _ -> []
       | Some plan, Common.Intf -> plan.intf
       | Some plan, Common.Impl -> plan.impl
@@ -925,7 +888,7 @@ let ctor_alias_visibility scopes : Cpp_ast.declared_in -> _ = function
     spelled at [ctx] are. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   let start =
-    { (file_start ctx.unit ctx.file) with
+    { (file_start ctx.unit ctx.plans ctx.file) with
       visibility = Some (ctor_alias_visibility ctx.unit.scopes declared);
       aliases = ctx.aliases }
   in
@@ -1250,17 +1213,17 @@ let ctor_aliases_of_fields ctx ~vl r types =
 
 (** The synthesised templates the finished declaration [d], written in the
     module [module_], writes in the file [file], as planned. *)
-let planned_ctor_aliases ~file ~module_ (d : Cpp_ir.Resolved.Decl.t) =
-  planned_aliases ~file ~module_ (Written_declaration d)
+let planned_ctor_aliases plans ~file ~module_ (d : Cpp_ir.Resolved.Decl.t) =
+  planned_aliases plans ~file ~module_ (Written_declaration d)
 
 (** The synthesised templates the finished declaration [d] writes at the
     position [ctx], as an element of the module it names, as planned; under
     [CRANE_CHECK_IR], spelled again and compared. *)
 let ctor_aliases_planned ctx (d : Cpp_ir.Resolved.Decl.t) =
-  if not (alias_plan_made ()) then []
+  if not (alias_plan_made ctx) then []
   else
     let file = ctx.file in
-    let aliases = planned_ctor_aliases ~file ~module_:(module_written ctx) d in
+    let aliases = planned_ctor_aliases ctx.plans ~file ~module_:(module_written ctx) d in
     if Probe.checking () && (ctor_aliases_written ctx d).aliases <> aliases then
       Probe.violation "constructor aliases"
         Pp.(str "a declaration of the " ++ str (Common.file_name file)
@@ -1298,8 +1261,8 @@ let needs_of ~templates d =
    their types name. *)
 let fields_needs ctx ~module_ ~vl r types =
   let file = ctx.file in
-  let aliases = planned_aliases ~file ~module_ (Written_fields r) in
-  if Probe.checking () && alias_plan_made () && (ctor_aliases_of_fields ctx ~vl r types).aliases <> aliases
+  let aliases = planned_aliases ctx.plans ~file ~module_ (Written_fields r) in
+  if Probe.checking () && alias_plan_made ctx && (ctor_aliases_of_fields ctx ~vl r types).aliases <> aliases
   then
     Probe.violation "constructor aliases"
       Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
@@ -1364,9 +1327,9 @@ let writing ctx d =
       (declaration_names ctx.unit d)
   in
   let ctx = {ctx with names = Names_resolved names} in
-  if not (alias_plan_made ()) then deciding ctx (ref [])
+  if not (alias_plan_made ctx) then deciding ctx (ref [])
   else
-    match planned_tyctors ~file:ctx.file ~module_:(module_written ctx) (Written_declaration d) with
+    match planned_tyctors ctx.plans ~file:ctx.file ~module_:(module_written ctx) (Written_declaration d) with
     | Some uses -> {ctx with tyctors = Planned uses}
     | None -> deciding ctx (ref [])
 
@@ -1436,8 +1399,8 @@ let write_decl ctx env d =
     behind what placing the declarations it needs reads. *)
 let write_absorbing ctx ~homed env d =
   let tyctors =
-    if not (alias_plan_made ()) then None
-    else planned_tyctors ~file:ctx.file ~module_:(module_written ctx) (Written_declaration d)
+    if not (alias_plan_made ctx) then None
+    else planned_tyctors ctx.plans ~file:ctx.file ~module_:(module_written ctx) (Written_declaration d)
   in
   let tree = absorbing (writing ctx d) ~homed ?tyctors env d in
   let needs = printed_needs ctx d in
@@ -1453,19 +1416,19 @@ let write_absorbing ctx ~homed env d =
             ++ str " need" ) );
   Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
 
-let planned_needs ~file ~module_ d =
-  needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ d)) d
+let planned_needs plans ~file ~module_ d =
+  needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases plans ~file ~module_ d)) d
 
 let unprinted ctx ~module_ env d =
   let file = ctx.file in
-  Cpp_ast.unprinted ~needs:(planned_needs ~file ~module_ d)
-    ?tyctors:(planned_tyctors ~file ~module_ (Written_declaration d))
+  Cpp_ast.unprinted ~needs:(planned_needs ctx.plans ~file ~module_ d)
+    ?tyctors:(planned_tyctors ctx.plans ~file ~module_ (Written_declaration d))
     env d
 
 let unprinted_fields ctx ~module_ ~vl r fields =
   Cpp_ast.fields
     ~needs:(fields_needs ctx ~module_ ~vl r (List.map snd fields))
-    ?tyctors:(planned_tyctors ~file:ctx.file ~module_ (Written_fields r))
+    ?tyctors:(planned_tyctors ctx.plans ~file:ctx.file ~module_ (Written_fields r))
     ~record:r ~vars:vl fields
 
 

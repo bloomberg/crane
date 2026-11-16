@@ -41,9 +41,11 @@ val method_registry_of : Core.Program.t -> Method_registry.t
 (** Decide the unit's layout before either file is rendered: analyse the
     structure ({!Structure_analysis}), record what rendering reads of the
     analysis, and return the {!Module_plan} it decides, which the unit's
-    context [u] does not hold yet, and how the unit's inductives are
-    classified ({!Unit_context.t.names}). *)
-val prepare_structure : Unit_context.t -> Core.Program.t -> Module_plan.t * Name_resolution.t
+    context [u] does not hold yet, how the unit's inductives are
+    classified ({!Unit_context.t.names}), and the analysis, which the
+    backend's plans for the unit hold ({!Cpp_state.plans.analysis}). *)
+val prepare_structure :
+  Unit_context.t -> Core.Program.t -> Module_plan.t * Name_resolution.t * Structure_analysis.t
 
 (** [registered_methods kn ind] -- each function registered as a method of
     one of [ind]'s inductives, generated with it: the inductive, the
@@ -61,11 +63,14 @@ val registered_methods :
     installed, and before anything is rendered.  A function no render
     generates -- a method, a projection, an
     inline custom -- has none.  With them, the plans of each instance's
-    struct's methods, by name. *)
+    struct's methods, by name; and the frame and the concepts of each
+    module, as the walk planning them entered it, which the backend's plans
+    for the unit hold ({!Cpp_state.plans}). *)
 val plan_callables :
   ?reversed:bool ->
   Core.Program.t ->
-  Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list
+  (Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list)
+  * (Cpp_state.module_frame Names.MPmap.t * Cpp_state.concept_plan Names.MPmap.t)
 
 (** Generate every function the renders write, and every instance's struct,
     before either file is rendered, for both files
@@ -102,9 +107,9 @@ val plan_function_reads : unit -> unit
     the unit's context. *)
 val plan_file_layout : Unit_context.t -> Core.Program.t -> unit
 
-(** Plan the synthesised templates each file writes, before either is
-    rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
-val plan_ctor_aliases : Core.Program.t -> unit
+(** The plan of the synthesised templates each file writes, before either
+    is rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
+val plan_ctor_aliases : Core.Program.t -> Cpp_state.ctor_alias_plan
 
 (** The C++ name of each global the unit declares, a functor's body
     included, decided in declaration order ({!Common.pp_global_name}): an

@@ -3029,4 +3029,4 @@ let pp_cpp_type_at ctx par vl t = pp_cpp_type ctx par vl t
 
 (* The type printer's entry for a type written outside every declaration of
    the tree, at the start of the header of the unit [u]. *)
-let pp_cpp_type ?lead u par vl t = pp_cpp_type ?lead (file_start u Common.Intf) par vl t
+let pp_cpp_type ?lead u plans par vl t = pp_cpp_type ?lead (file_start u plans Common.Intf) par vl t
