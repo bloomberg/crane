@@ -24,17 +24,17 @@ let self_scope = Structure_analysis.concept_self_param ^ "::"
     anonymous signature has requirements of its own, and those are a list of
     lines rather than one blob, so "does this concept ask for anything" is a
     question about the list and not about the rendered text. *)
-type module_constraint = MCname of Pp.t | MCrequirements of Pp.t list
+type module_constraint = Name of Pp.t | Requirements of Pp.t list
 
 (** A module type's contribution as one document. *)
 let module_constraint_pp = function
-  | MCname n -> n
-  | MCrequirements reqs -> prlist identity reqs
+  | Name n -> n
+  | Requirements reqs -> prlist identity reqs
 
 (** The body of a [concept N = ...] declaration for a module type, or [None]
     when the module type asks for nothing and the concept is just [true]. *)
 let concept_body_pp = function
-  | MCrequirements [] -> None
+  | Requirements [] -> None
   | mc -> Some (module_constraint_pp mc)
 
 (** [concept N = requires { ... };], or [concept N = true;] when the module
@@ -265,7 +265,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
     the signature and the functor parameters visible in it visible, which
     is the frame [names] names them at. *)
 let rec pp_constraint ctx names frame : Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
-  | Named kn -> ([], MCname (Cpp_name.pp (name_in ctx names frame (Module kn))))
+  | Named kn -> ([], Name (Cpp_name.pp (name_in ctx names frame (Module kn))))
   | Requirements {signature; parameters; items} ->
     let entered = Cpp_resolution.Signature {signature; parameters} in
     let frame = entered :: frame in
@@ -280,7 +280,7 @@ let rec pp_constraint ctx names frame : Modtype_concept.constraint_ -> Pp.t list
         (def :: List.rev_append inner hoisted, reqs)
     in
     let hoisted, reqs = List.fold_left item ([], []) items in
-    (List.rev hoisted, MCrequirements (List.rev reqs))
+    (List.rev hoisted, Requirements (List.rev reqs))
 
 (** The [std::same_as] constraints the [with Definition] refinements of a
     module type conjoin onto the concept it refines
