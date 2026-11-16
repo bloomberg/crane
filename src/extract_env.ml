@@ -806,7 +806,7 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
     else
       h
   in
-  (* [crane::immortal], for a function's constants (see {!Cpp_constants}). *)
+  (* [crane::immortal], for a function's constants (see {!Cpp_passes.Constants}). *)
   let h =
     if Base.Table.demanded Cpp_ir.Crane_rt.shared_block_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.shared_block_header ++ fnl ()
@@ -1219,7 +1219,7 @@ let report_decided_while_rendering before =
     too, and the names of the helpers lifted out of a body as it is
     generated, which {!Base.Common.names_decided_while_emitting} lists for the
     check below.  Rendering may add to none: the headers are
-    demanded from what was generated ({!Cpp_demands}). *)
+    demanded from what was generated ({!Cpp_passes.Demands}). *)
 let generation_products = ["demands"; "written_customs"; "ref_renaming"; "mp_renaming"; "global_ids"]
 
 let rendering_products = []
@@ -1757,8 +1757,8 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   Base.Common.check_written_files ();
   Base.Table.check_concurrency_decided plan.config;
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
-  Unit_program.check_against_plan ~declares:(declares struc);
-  Unit_program.check_against_ahead ();
+  Cpp_passes.Unit_program.check_against_plan ~declares:(declares struc);
+  Cpp_passes.Unit_program.check_against_ahead ();
   check_against_plan plan;
   check_structure_unchanged planned struc;
   if Base.Pipeline_trace.enabled () then begin
@@ -1808,7 +1808,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
          [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
          calls [_main()->run()] to execute the ITree; in sequential mode (monad
          erased) it just calls [_main()] directly. *)
-      ( match Unit_program.entry_point () with
+      ( match Cpp_passes.Unit_program.entry_point () with
       | Some {name = main_name; struct_ = struct_qual; runs_tree = needs_run} ->
         let qualified_name =
           match struct_qual with

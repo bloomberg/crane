@@ -4,7 +4,7 @@
 (** Rendering CppIR as C++ source text.
 
     The last stage of the pipeline, after the passes that settle a
-    declaration ({!Cpp_pipeline.finish}).  The declaration printer's input
+    declaration ({!Cpp_passes.Pipeline.finish}).  The declaration printer's input
     is a finished declaration in CppIR ({!Cpp_ir.Resolved}): it runs no
     compiler pass.  The registries below
     are the printer's remaining state: forward declarations and synthesised
@@ -92,7 +92,7 @@ val pp_type : Unit_plan.Cpp_state.render_ctx -> ty -> Pp.t
     precedence needs them, [vl] names the type variables by index.
     [~lead:false] drops the leading [typename] of a dependent name about to
     be embedded in a longer one.  The type is resolved already
-    ({!Cpp_pipeline.spell_type}): the printer reads no lowered value. *)
+    ({!Cpp_passes.Pipeline.spell_type}): the printer reads no lowered value. *)
 val pp_cpp_type : ?lead:bool -> Unit_plan.Context.t -> Unit_plan.Cpp_state.plans -> bool -> Id.t list -> ty -> Pp.t
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)

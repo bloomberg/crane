@@ -15,7 +15,7 @@
 
     The last stage of the pipeline: it reads CppIR at the resolved phase
     ({!Cpp_ir.Resolved}), after the passes that settle a declaration
-    ({!Cpp_pipeline.finish}) have run, and turns each node into the [Pp.t]
+    ({!Cpp_passes.Pipeline.finish}) have run, and turns each node into the [Pp.t]
     of its C++ source.  It runs no compiler pass of its own; what it still
     decides is spelling, the headers a construct needs, and, under
     [CRANE_CHECK_IR], checks that what it writes agrees with what planning
@@ -67,7 +67,7 @@ let escape_cpp_string (s : string) : string =
 
 (** {2 Pretty-printing C++ syntax.} *)
 
-(** A lambda's capture as decided ({!Cpp_erasure.decide_captures}); a
+(** A lambda's capture as decided ({!Cpp_passes.Erasure.decide_captures}); a
     variable whose last use is the capture moves into it. *)
 let pp_capture : I.Expr.Written_capture.t -> _ = function
   | Nothing -> str "[]"
@@ -329,7 +329,7 @@ let projection_field_name (r : GlobRef.t) : string =
 
 
 (** Whether a definition whose eligibility the seam decided
-    ({!Cpp_erasure.decide_constexpr}) may be [constexpr]. *)
+    ({!Cpp_passes.Erasure.decide_constexpr}) may be [constexpr]. *)
 let may_be_constexpr : I.Resolved.phase I.Decl.Constexpr.t -> _ = function
   | Eligible -> true
   | Ineligible -> false
@@ -503,7 +503,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     | Entity_application (r, tys, _) ->
       ( match Unit_plan.Cpp_names.inline_custom_text ctx r with
       (* A mapped type is instantiated before it is printed
-         ({!Cpp_erasure.instantiate_foreign}, {!Cpp_erasure.instantiate_type}
+         ({!Cpp_passes.Erasure.instantiate_foreign}, {!Cpp_passes.Erasure.instantiate_type}
          for one written outside a declaration), and one mapped to nothing
          has no spelling to print: the [Apply] arm writes such a head's
          arguments, and anywhere else it is refused at the seam. *)
@@ -580,7 +580,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
          with no name -- a constructor [Crane Extract Skip] removed, written
          as nothing, and nothing followed by [<args>] is a syntax error
          ([crane_event_as<<typename I::PROV>>]) -- was replaced by its
-         argument at the seam ({!Cpp_erasure.instantiate_foreign}). *)
+         argument at the seam ({!Cpp_passes.Erasure.instantiate_foreign}). *)
       if Base.Probe.checking () then begin
         match head with
         | Entity_application (r, _, _) when Base.Type_util.ref_has_no_cpp_name r ->
@@ -610,12 +610,12 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes (Base.Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
       cpp_angle Cpp_ir.Crane_rt.shared_variant (pp_list (pp_rec false) tys)
     (* The slot a pointer is held in was written down at the seam
-       ({!Cpp_erasure.lower_pointer_slots}): what is left is a pointer -- to
+       ({!Cpp_passes.Erasure.lower_pointer_slots}): what is left is a pointer -- to
        an inductive only a functor's instantiation knows the representation
        of, the pointer [shared_or_t] is given as its alternative. *)
     | Shared_pointer t ->
       if Base.Probe.checking () && Core_plan.Pointer_slot.of_pointee t = Core_plan.Pointer_slot.Shared then
-        CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_erasure.lower_pointer_slots)");
+        CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_passes.Erasure.lower_pointer_slots)");
       writes_standard "memory";
       cpp_angle (sn ctx.unit).shared_ptr (pp_rec false t)
     | Void -> str "void"
@@ -830,7 +830,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     in
     apply full_name
   (* A callee's text was instantiated as the call's callee, and a template's
-     or a block's as the whole call ({!Cpp_erasure.instantiate_foreign}). *)
+     or a block's as the whole call ({!Cpp_passes.Erasure.instantiate_foreign}). *)
   | Call (_, Entity (n, _, Some {inline = Some _; _}), _) -> Cpp_ir.Foreign.uninstantiated n
   | Method_call {method_; access; receiver; type_args; args = method_args} ->
     pp_cpp_expr ctx env args receiver
@@ -942,7 +942,7 @@ and pp_cpp_expr ctx env args (t : expr) =
        for the current pointer flavor.  Falls back to a plain heap allocation at
        runtime whenever no arena scope is open at the call site.  A unit of
        non-atomic pointers has its pointer's factory instead, chosen at the
-       seam ({!Cpp_erasure.lower_pointer_slots}). *)
+       seam ({!Cpp_passes.Erasure.lower_pointer_slots}). *)
     ( if Base.Probe.checking () then
         if Unit_plan.Context.non_atomic_rc ctx.unit then
           CErrors.anomaly (Pp.str "pp_cpp_expr: an arena allocation of a non-atomic pointer reached the printer") );
@@ -1071,11 +1071,11 @@ and pp_cpp_expr ctx env args (t : expr) =
     pp_cpp_expr ctx env args e ++ str "::template " ++ Id.print id ++ str "<"
     ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
   (* A named global qualifying a member in value position was spelled as the
-     value it names at the seam ({!Cpp_erasure.lower_qualifiers}): what is
+     value it names at the seam ({!Cpp_passes.Erasure.lower_qualifiers}): what is
      left is a type, written without [typename], since a member follows. *)
   | Type_member (Entity_application (_, _, []), _) ->
     CErrors.anomaly
-      (Pp.str "pp_cpp_expr: a type qualifier in value position not lowered (Cpp_erasure.lower_qualifiers)")
+      (Pp.str "pp_cpp_expr: a type qualifier in value position not lowered (Cpp_passes.Erasure.lower_qualifiers)")
   | Type_member (ty, id) ->
     pp_cpp_type ~lead:false ctx false [] ty ++ str "::" ++ Id.print id
   | Convertible_to ty ->
@@ -1195,11 +1195,11 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Any_cast (ty, e) | Tolerant_any_cast (ty, e) ->
     writes_obj ();
     (* A binder holding a known type in a box is read bare inside a cast
-       that already names its type; {!Cpp_erasure.lower_boxed_reads} leaves
+       that already names its type; {!Cpp_passes.Erasure.lower_boxed_reads} leaves
        it so. *)
     let inner = pp_cpp_expr ctx env args e in
     (* Which caster, and whether the cast is needed at all, was decided by
-       {!Cpp_erasure.resolve_casts}. *)
+       {!Cpp_passes.Erasure.resolve_casts}. *)
     let caster =
       match t with
       | Tolerant_any_cast _ ->
@@ -1260,7 +1260,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     ++ pp_cpp_expr ctx env args e
     ++ str ")"
   (* Whether the target boxes its elements was decided at the seam
-     ({!Cpp_erasure.instantiate_foreign}). *)
+     ({!Cpp_passes.Erasure.instantiate_foreign}). *)
   | Container_cast (ty, e, _) ->
     writes Base.Table.erase_fn_header;
     str Cpp_ir.Crane_rt.container_cast ++ str "<"
@@ -1523,13 +1523,13 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
       | Matched_type -> pp_cpp_type ctx false [] typ
       | Type_argument i -> (
         (* Every type argument the text names was supplied at the seam
-           ({!Cpp_erasure.supply_template_args}). *)
+           ({!Cpp_passes.Erasure.supply_template_args}). *)
         match List.nth_opt tyargs i with Some ty -> pp_cpp_type ctx false [] ty | None -> unbound "type argument" )
       | Branch i ->
         pp_list_stmt (pp_cpp_stmt ctx env []) (branch i).body
       | Binder (i, j) -> Id.print (binder i j).name
       (* Spellable: one that is not was materialised at the seam
-         ({!Cpp_erasure.materialise}). *)
+         ({!Cpp_passes.Erasure.materialise}). *)
       | Binder_type (i, j) -> pp_cpp_type ctx false [] (binder i j).type_
     in
     List.fold_left (fun acc p -> acc ++ piece p) (mt ()) pieces
@@ -1555,7 +1555,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
        Branches without a binding ([var = None]) emit no binding.
 
        A computed scrutinee was declared, named, in front of the match at
-       the seam ({!Cpp_erasure.name_scrutinees}): what is read here is a
+       the seam ({!Cpp_passes.Erasure.name_scrutinees}): what is read here is a
        local or the receiver.
 
        The last explicit branch before [None] default (= exhaustive match
@@ -1647,7 +1647,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
         name ^ (if is_owned then "->v_mut()" else "->v()")
     in
     let unnamed () =
-      CErrors.anomaly (Pp.str "pp_cpp_stmt: a match reads a scrutinee no local holds (Cpp_erasure.name_scrutinees)")
+      CErrors.anomaly (Pp.str "pp_cpp_stmt: a match reads a scrutinee no local holds (Cpp_passes.Erasure.name_scrutinees)")
     in
     (* Forced only where it is written: a match of one constructor that
        binds nothing writes no scrutinee, and none was named for it. *)
@@ -1824,10 +1824,10 @@ let pp_type ctx t = pp_cpp_type ctx false [] t
     A callable parameter ([Invocable]) is written [typename]; what it must
     accept goes in the [requires] clause ({!pp_requires_of_tparams}).  One
     whose constraint was never settled from its body
-    ({!Cpp_constraints.settle}) is printed unconstrained -- a constraint
+    ({!Cpp_passes.Constraints.settle}) is printed unconstrained -- a constraint
     guessed from its declared type could name the wrong operands.  Under
     [CRANE_CHECK_IR] none gets here: the seam checks that the constraints were
-    settled ({!Cpp_pipeline.finish}). *)
+    settled ({!Cpp_passes.Pipeline.finish}). *)
 let pp_template_type ctx : I.Resolved.phase I.Template.Parameter_kind.t -> _ = function
   | Typename -> str "typename"
   | Typename_default _ -> str "typename"
@@ -1892,7 +1892,7 @@ let pp_requires_of_tparams ctx tparams =
       (fun ((tt : I.Resolved.phase I.Template.Parameter_kind.t), id) ->
         match tt with
         (* What a callable must accept was settled from the body before
-           printing: see {!Cpp_constraints.settle}. *)
+           printing: see {!Cpp_passes.Constraints.settle}. *)
         | Invocable (invs, cod) ->
           writes_standard "type_traits";
           let operand (cat : I.Template.Value_category.t) ty =
@@ -2448,7 +2448,7 @@ let rec pp_initialiser ctx env (ty : ty) (e : expr) =
 
 (** Pretty-print a finished declaration as C++ source: every type here is
     spelled the way it will be written out, and the passes that settle a
-    declaration ({!Cpp_pipeline.finish}) have already run.
+    declaration ({!Cpp_passes.Pipeline.finish}) have already run.
 
     @param ctx  where it is written, as the scopes entered from where the
                 declaration of the tree holding it is written say
@@ -2754,7 +2754,7 @@ and pp_leaf_decl ctx env (d : decl) =
         | false, false -> mt ()
       in
       (* An initialiser holding a lambda that captures is invoked in place
-         already ({!Cpp_erasure.invoke_capturing_initialisers}). *)
+         already ({!Cpp_passes.Erasure.invoke_capturing_initialisers}). *)
       h
         ( static_kw
         ++ pp_type ctx ty

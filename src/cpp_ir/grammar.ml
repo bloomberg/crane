@@ -3,9 +3,9 @@
 
 (** CppIR: the structured C++ program.  Lowering builds it from Core and
     ControlIR (the [Translation_*] modules, {!Control_to_cpp_ir}) at the
-    [lowered] phase; CppIR finishing ({!Cpp_pipeline}) rewrites it until it
+    [lowered] phase; CppIR finishing ({!Cpp_passes.Pipeline}) rewrites it until it
     owes nothing, and restates it at the [resolved] phase ({!Resolve}, which
-    no module but {!Cpp_pipeline} calls).  Names
+    no module but {!Cpp_passes.Pipeline} calls).  Names
     are resolved and declarations scheduled only after that, when
     {!Cpp_leaf_plan} and {!Unit_plan.Cpp_resolution} turn it into {!Cpp_ast}.
 

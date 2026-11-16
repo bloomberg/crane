@@ -18,7 +18,7 @@ open Translation_knot
 open Translation_lambda
 open Translation_application
 
-(** The name a hoisted constant is declared under (see {!Cpp_constants}): a
+(** The name a hoisted constant is declared under (see {!Cpp_passes.Constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
    [nat] -- [pos_10], [z_neg_5], [pos] past twenty digits -- and [k]
    otherwise. *)
@@ -74,7 +74,7 @@ let constant_name e =
     stands for. *)
 let gen_stored_value cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env e : Cpp_ir.Lowered.Expr.t =
   match e with
-  | Core.Expr.Erased_value _ -> Cpp_erasure.empty_box
+  | Core.Expr.Erased_value _ -> Cpp_passes.Erasure.empty_box
   | e when Translation_monadic.core_value_is_void_call cx e ->
     Translation_monadic.wrap_void_call_as_value (gen_expr cx ~slot env e)
   | _ -> gen_expr cx ?expected_ty ~slot env e
@@ -680,7 +680,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
            element erasure in the custom-cons path, extending it to plain
            value-type constructors.  A list is the exception to keeping
            the structure: it goes into a box with its elements boxed one at
-           a time ({!Cpp_erasure.erased_list_shape}), so a list of lists is
+           a time ({!Cpp_passes.Erasure.erased_list_shape}), so a list of lists is
            a [List<std::any>] whose elements are boxed lists in turn. *)
         let temps =
           if Translation_slot.boxed slot && temps <> [] then
@@ -916,7 +916,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
                   let cast_stmt = Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-                    Cpp_erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                    Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1085,7 +1085,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               let new_body =
                 List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
                   let cast_stmt = Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-                    Cpp_erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
+                    Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id)) in
                   cast_stmt :: stmts
                 ) body_stmts (List.rev cast_bindings)
               in
@@ -1112,7 +1112,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                   ~ret:new_ret_ty
                   ~body:new_body in
               let func_ty = Cpp_ir.Type.Function (safe_firstn n_params erased_param_tys, erased_ret_ty) in
-              Cpp_erasure.converting_ctor func_ty [new_lambda]
+              Cpp_passes.Erasure.converting_ctor func_ty [new_lambda]
             (* A function value that is not a lambda literal (a reference to a
                global, or a methodified one) cannot have its parameters
                rewritten the way the branch above rewrites a literal's, so
@@ -1146,7 +1146,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                   | Some t -> t
                   | None -> Cpp_ir.Type.Void )
               in
-              Cpp_erasure.converting_ctor (Cpp_ir.Type.Function (param_types, ret_ty)) [expr]
+              Cpp_passes.Erasure.converting_ctor (Cpp_ir.Type.Function (param_types, ret_ty)) [expr]
             | _ -> expr )
       | ft ->
         (* Handle arrow types containing erased type variables.
@@ -1277,7 +1277,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
           ) new_params in
           let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
             Cpp_ir.Stmt.Bind_variable (orig_id, Declare (concrete_ty, None),
-              Cpp_erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
+              Cpp_passes.Erasure.unbox concrete_ty (Cpp_ir.Expr.Local any_id))
           ) cast_bindings in
           let new_body = cast_stmts @ body_stmts in
           let new_ret_ty = match ret_ty_opt with
@@ -1289,7 +1289,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               ~ret:new_ret_ty
               ~body:new_body in
           let func_ty = Cpp_ir.Type.Function (safe_firstn n_params erased_param_tys, erased_ret_ty) in
-          Cpp_erasure.converting_ctor func_ty [new_lambda]
+          Cpp_passes.Erasure.converting_ctor func_ty [new_lambda]
         (* The same erased-argument adaptation, for a function value that is
            not a lambda literal (a reference to a global, or to a method):
            there are no parameters here to rewrite, so defer to the runtime

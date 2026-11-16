@@ -13,7 +13,7 @@
     whose scrutinee no local holds, a lambda whose capture is not decided.
 
     Each but {!Unresolved_type} is discharged by one pass of CppIR
-    finishing ({!Cpp_pipeline}, which checks each with [owes]), and a
+    finishing ({!Cpp_passes.Pipeline}, which checks each with [owes]), and a
     resolved declaration owes none.  The list is closed: a new kind of debt
     the printer must not see is a new constructor here, with the pass that
     pays it. *)

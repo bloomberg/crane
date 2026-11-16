@@ -47,7 +47,7 @@
       nothing but the names of the helpers it lifts out of bodies; the table
       census taken after planning is compared after emission
       ([check_no_late_decisions]), what it generated against what the unit
-      declares ({!Unit_program.check_against_plan}), and, under
+      declares ({!Cpp_passes.Unit_program.check_against_plan}), and, under
       [CRANE_CHECK_IR], what the tables and the renders record against the
       target plan ([check_against_plan]: the inductive and
       template-parameter kinds, the decided names, the promoted inductives
@@ -58,11 +58,11 @@
     Each Core declaration is generated ahead of the files
     ({!Cpp_ind.generate_ahead}, {!Gen_decls}, which translate bodies through
     {!Translation}, lowering control as they go), finished
-    ({!Cpp_pipeline.finish}: local closures, constants, temporaries,
+    ({!Cpp_passes.Pipeline.finish}: local closures, constants, temporaries,
     simplification, depth flattening, constraint settling, and the
-    {!Cpp_erasure} seam's casts, free type variables, projections and
+    {!Cpp_passes.Erasure} seam's casts, free type variables, projections and
     captures), and printed ({!Cpp_print.read_cpp_decl}, which accepts only a
-    {!Cpp_erasure.settled} declaration).
+    {!Cpp_passes.Erasure.settled} declaration).
 
     Mutable state is registered with {!Base.State} under one of two scopes:
     [Extraction] (one command) and [Unit] (one generated file).

@@ -244,7 +244,7 @@ let pattern_field_pins cx ~scrut_pinned ~cname ~typ ~env ~n_fields
   (* Whether an opaque type among the scrutinee's template arguments is
      a box.  [Topaque] only admits that the argument could not be resolved --
      but for an inductive Crane generates, the field that names it is written
-     out, and {!Cpp_erasure.materialise} spells that declaration [std::any], so
+     out, and {!Cpp_passes.Erasure.materialise} spells that declaration [std::any], so
      the value really is boxed.  A custom-extracted scrutinee has no such
      declaration: [std::optional<T>] is spelled by the mapping, and where the
      scrutinee is only ever bound to [auto] nothing wrote a box at all. *)
@@ -497,7 +497,7 @@ let recover_erased_scrutinee cx env ~is_magic typ (expr : Cpp_ir.Lowered.Expr.t)
   if not is_magic then expr
   else
     let cpp_ty = Translation_types.cpp_of_core cx env typ in
-    if Cpp_ir.Types.prints_as_any cpp_ty then expr else Cpp_erasure.unbox cpp_ty expr
+    if Cpp_ir.Types.prints_as_any cpp_ty then expr else Cpp_passes.Erasure.unbox cpp_ty expr
 
 (** Build the qualified constructor struct type for a pattern match branch.
 

@@ -6,7 +6,7 @@
     and handed to the stages that generate, finish and render it.  Lowering
     finds it in its input ({!Translation_state.unit_context}), naming and
     printing in the position they write at ({!Cpp_state.render_ctx}), the
-    finishing passes in their argument ({!Cpp_pipeline.finish}).  Nothing
+    finishing passes in their argument ({!Cpp_passes.Pipeline.finish}).  Nothing
     installs it anywhere for a reader to find. *)
 
 (** The standard library names a unit's files are written with: each the

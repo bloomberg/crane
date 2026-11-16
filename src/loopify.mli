@@ -4,7 +4,7 @@
 (** Loopify pass: transforms recursive C++ functions into iterative ones.
 
     Operates on {!Cpp_ir.Lowered} declarations after translation produces them
-    and before the finish pipeline ({!Cpp_pipeline}); ControlIR lowering
+    and before the finish pipeline ({!Cpp_passes.Pipeline}); ControlIR lowering
     ({!Control_to_cpp_ir}) is its main caller.  Each function, method and local fixpoint is
     lowered as the recursion plan decided from its Core body
     ({!Core_plan.Recursion.strategy}): a [while] loop, a loop tail modulo cons,
@@ -231,7 +231,7 @@ val worthwhile_move_type : ty -> bool
 (** Whether a value of this type is expensive enough to copy that writing
     [std::move] around it earns its keep: a reference count to bump, an
     inductive to clone, or a type parameter that may be either.  Exported for
-    {!Cpp_simplify}, which asks the same question of a local as loopify asks
+    {!Cpp_passes.Simplify}, which asks the same question of a local as loopify asks
     of a frame field. *)
 
 (** {2 Diagnostics}

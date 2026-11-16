@@ -221,7 +221,7 @@ let into_branches ~fresh ~rty (id, ty, occ) branches rest =
    reads is bound like any other, [S (eval x)] becoming
    [let t := eval x in S t], with the coercion kept around the temporary
    ({!held}).  Tail modulo cons sees through the bindings
-   ({!Cpp_temporaries} restores the expression before it looks), so a
+   ({!Cpp_passes.Temporaries} restores the expression before it looks), so a
    constructor's arguments are bound like any other.
 
    A match bound to a variable runs where it is bound, in a lambda invoked

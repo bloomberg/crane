@@ -4,7 +4,7 @@
 (** A generated declaration finished once, and the two views of it a file
     writes: its declaration and its definition.
 
-    The whole definition is finished ({!Cpp_pipeline.finish}) before it is
+    The whole definition is finished ({!Cpp_passes.Pipeline.finish}) before it is
     split, so the declaration states the template head the finished body
     settled -- which callback constraints survive is decided with the body in
     hand.  A declaration and a definition that differ in a constraint are two

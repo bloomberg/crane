@@ -188,7 +188,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
             | Entity_application (g, _ :: _, _) -> is_list_global g
             | _ -> false
           in
-          let unbox_at t = Cpp_erasure.unbox t result in
+          let unbox_at t = Cpp_passes.Erasure.unbox t result in
           if ty_is_list ty then
              (* Canonical erased shape is [deque<std::any>] -- every element
                 boxed as a single [std::any] (see [gen_expr_custom_cons]'s
@@ -280,7 +280,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
      [ReSum_inr] composed from instances and closed lambdas, say -- is the
      same value every time it is evaluated, and evaluating it composes fresh
      closures.  It is built once and kept, as a closed constructor term is
-     (see {!Cpp_constants}).  An instance is a pure value, so building it
+     (see {!Cpp_passes.Constants}).  An instance is a pure value, so building it
      once cannot drop an effect; only where it comes out as a call.  Core
      decides which calls those are ({!Core_plan.Elaborate.closed_instance_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use); arguments = args} as e

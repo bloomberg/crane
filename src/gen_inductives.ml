@@ -995,7 +995,7 @@ let gen_single_method cx name vars ((func_ref, _, _, _) as candidate) =
           ++ str " was not generated ahead of the files.")
 
 (** The methods made of [candidates] in the inductive [name], as its struct
-    declares them ({!Borrow_projection.lend}), with their control lowered
+    declares them ({!Cpp_passes.Borrow_projection.lend}), with their control lowered
     from their ControlIR where that is the bridge's to lower
     ({!Control_to_cpp_ir.lower_struct_methods}).  The struct is merged into
     its module's where it is the one the module is promoting, or [merged]
@@ -1006,7 +1006,7 @@ let gen_methods cx ?(merged = false) name vars candidates =
   in
   Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context cx) ~merged name vars
     (List.concat_map
-       (fun c -> Borrow_projection.lend ~coinductive:(Base.Table.is_coinductive name) (gen_single_method cx name vars c))
+       (fun c -> Cpp_passes.Borrow_projection.lend ~coinductive:(Base.Table.is_coinductive name) (gen_single_method cx name vars c))
        candidates )
 
 (** Does the Core type [core_ty] contain [ind_ref] (or a mutual sibling) anywhere
@@ -1904,11 +1904,11 @@ let gen_ind_header_v2 cx
 
              Under [Crane NonAtomicRc] the control block is single-threaded --
              no atomics, no decrement to pair with -- so no fence is emitted,
-             and <atomic>, which {!Cpp_demands} demands for the fence's text,
+             and <atomic>, which {!Cpp_passes.Demands} demands for the fence's text,
              is not included on its account. *)
           let unique_fence =
             if Translation_state.non_atomic_rc cx then []
-            else [S.Foreign_text Cpp_demands.acquire_fence]
+            else [S.Foreign_text Cpp_passes.Demands.acquire_fence]
           in
           let is_sole p =
             E.Binary (Equal, E.Access_call (Dot, p, Id.of_string "use_count", []), E.Literal (Int 1))
@@ -2651,12 +2651,12 @@ let gen_ind_header_v2 cx
                     :: partner_drains; else_ = []}]
                 in
                 [S.If_declaration
-                  {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer partner_ty)
+                  {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_passes.Erasure.unbox (T.Shared_pointer partner_ty)
                     (E.Unary (Address_of, E.Local _cur_id)); then_ = partner_body; else_ = inner}]
             in
             let loop_body_stmts =
               [S.If_declaration
-                {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_erasure.unbox (T.Shared_pointer self_ty)
+                {name = _sp_id; type_ = T.Pointer T.Auto; init = Cpp_passes.Erasure.unbox (T.Shared_pointer self_ty)
                   (E.Unary (Address_of, E.Local _cur_id)); then_ = self_branch_body;
                     else_ = build_if_chain partner_branches}]
             in

@@ -1271,7 +1271,7 @@ and rewrite_enter_stmts ctx stmts =
       (* The handler restores what it saved and rebuilds what it did not,
          then binds the call's result.  The temporaries among the restores
          come last, next to the result: what reads them follows, so
-         {!Cpp_temporaries} can put each back where it is read. *)
+         {!Cpp_passes.Temporaries} can put each back where it is read. *)
       let early, late =
         let read_by_remat = List.concat_map free_vars_stmt remat_stmts in
         List.partition

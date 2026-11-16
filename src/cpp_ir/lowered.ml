@@ -3,7 +3,7 @@
 
 (** CppIR at the phase that may still owe resolution a decision
     ({!Representation_obligation}): what lowering builds and CppIR
-    finishing ({!Cpp_pipeline}) rewrites. *)
+    finishing ({!Cpp_passes.Pipeline}) rewrites. *)
 
 (** The phase index of a lowered value. *)
 type phase = Grammar.lowered

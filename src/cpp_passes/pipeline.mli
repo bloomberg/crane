@@ -8,10 +8,10 @@
 
     Control was lowered as the declaration was generated
     ({!Control_to_cpp_ir}), and is only checked here, under
-    [CRANE_CHECK_IR] ({!Control_to_cpp_ir.check_lowered}).  Depth flattening and the {!Cpp_erasure} seam
+    [CRANE_CHECK_IR] ({!Control_to_cpp_ir.check_lowered}).  Depth flattening and the {!Erasure} seam
     have to run in that order, and both have to run: a declaration that skipped
     flattening crashes the C++ parser, and one that skipped the seam is not a
-    {!Cpp_erasure.settled} declaration at all.  So the sequence is a single
+    {!Erasure.settled} declaration at all.  So the sequence is a single
     function rather than a sequence its callers spell out -- there are no
     intermediate declarations to hand to the wrong pass, because none of them
     is nameable from outside. *)
@@ -53,6 +53,6 @@ val resolve_expr : what:string -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Resolved.Expr.
     spelled for a diagnostic. *)
 val spell_type : Cpp_ir.Lowered.Type.t -> Cpp_ir.Resolved.Type.t
 
-(** The names of the passes {!finish} runs, in order, the {!Cpp_erasure} seam
+(** The names of the passes {!finish} runs, in order, the {!Erasure} seam
     among them.  Read by [unit_tests/pipeline_manifest.ml]. *)
 val pass_names : string list

@@ -172,7 +172,7 @@ type helper =
   | Constant of string
       (** A closed constructor term of a shared variant, marked where
           translation builds it -- called on the term, and carrying the name
-          it is to be declared under, a hint -- for {!Cpp_constants} to
+          it is to be declared under, a hint -- for {!Cpp_passes.Constants} to
           declare once as a static local.  Never printed.  The name is part
           of the helper rather than an argument, out of the reach of the
           passes that rewrite variables. *)

@@ -18,7 +18,7 @@
     rendering reads (the [plan_*] values: names, scopes, callable heads,
     file layout, synthesised templates), generates every declaration the
     files write and finishes it into CppIR in the unit's program
-    ({!generate_ahead}, {!Unit_program}).  Each file's render then assembles
+    ({!generate_ahead}, {!Cpp_passes.Unit_program}).  Each file's render then assembles
     the finished declarations into a CppAST tree ({!Cpp_ast}), schedules,
     resolves and prints it.  Lower-level work is delegated to:
     {ul

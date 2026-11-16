@@ -4,7 +4,7 @@
 (** A function's {!Control_ir} lowered, as the function is generated, to
     the CppIR loop the passes after it read ({!Cpp_ir.Lowered}): the bridge
     from ControlIR to the loop shapes Loopify's transforms build.  Every loop
-    of the program is made here, from the plan; {!Cpp_pipeline.finish} runs
+    of the program is made here, from the plan; {!Cpp_passes.Pipeline.finish} runs
     no loop transform of its own.
 
     It lowers the loop of direct tail recursion of a top-level

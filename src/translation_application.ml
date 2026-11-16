@@ -196,9 +196,9 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
           (List.init (count_core_value_arrows pt) (fun _ ->
                ((Reference (Lvalue, Const Auto) : Cpp_ir.Lowered.Type.t), None) ))
           None
-          [Return (Some Cpp_erasure.empty_box)]
+          [Return (Some Cpp_passes.Erasure.empty_box)]
           ~capture:Stored
-      | _ -> Cpp_erasure.empty_box )
+      | _ -> Cpp_passes.Erasure.empty_box )
     | _ ->
     let ({Translation_calls.index = param_index; param = param_core_ty; expected = arg_expected_ty;
            ret = ret; tvar_erased = param_tvar_erased; written_by_call = param_written_by_call;
@@ -462,9 +462,9 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
         | Converting_construct (t, _) as recovered when cpp_ty_eq t cpp_ty ->
           recovered
         | Any_cast _ as already_cast ->
-          Cpp_erasure.converting_ctor cpp_ty [already_cast]
+          Cpp_passes.Erasure.converting_ctor cpp_ty [already_cast]
         | v ->
-          Cpp_erasure.converting_ctor cpp_ty [Cpp_erasure.unbox list_any_ty v] )
+          Cpp_passes.Erasure.converting_ctor cpp_ty [Cpp_passes.Erasure.unbox list_any_ty v] )
       | Entity_application (g, [_], _) when Base.Type_util.is_custom_list_global g ->
         let clean_cpp_ty = Translation_conversion.clean_self_ns cpp_ty in
         (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
@@ -490,7 +490,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
         in
         let inner = match as_value () with
           | Any_cast _ as already_cast -> already_cast
-          | v -> Cpp_erasure.unbox erased_ty v
+          | v -> Cpp_passes.Erasure.unbox erased_ty v
         in
         (* When the callee is a REAL function whose parameter has a CONCRETE
            element type — a wholesale-boxed opaque element
@@ -513,7 +513,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
           &&
           match Translation_conversion.strip_ns_global_app clean_cpp_ty with
           | Entity_application (_, [et], _) ->
-            et <> Cpp_erasure.erase_type_to_any et
+            et <> Cpp_passes.Erasure.erase_type_to_any et
           | _ -> false
         in
         if needs_concrete then begin
@@ -823,7 +823,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
       if excess_args = [] then
         base
       else (
-        (* A closed head is built once ({!Cpp_constants}), not at every
+        (* A closed head is built once ({!Cpp_passes.Constants}), not at every
            evaluation of the application: in OCaml it would be a partial
            application, evaluated where the handler is passed rather than at
            every event the handler answers. *)
@@ -1014,7 +1014,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                 | Some (Cpp_ir.Type.Entity_application ((GlobRef.IndRef _ as g), (_ :: _ as args), ns))
                   when (not (Base.Table.is_custom g))
                        && not (List.for_all is_any args) ->
-                  Cpp_erasure.converting_ctor (Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)) [e]
+                  Cpp_passes.Erasure.converting_ctor (Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)) [e]
                 | _ -> e )
               | _ -> e )
             excess
@@ -1071,7 +1071,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
             match (Option.map resolve_meta cod_inst, expected_ty) with
             | Some (Core.Type.Erased Core.Erasure_reason.Type_argument), Some t
               when not (Cpp_ir.Types.prints_as_any t) ->
-              Cpp_erasure.unbox_tolerant t r
+              Cpp_passes.Erasure.unbox_tolerant t r
             | _ -> r
         else
           Abort ("untranslatable curried proof term", Translation_cpp_build.abort_ty expected_ty) )
@@ -1654,7 +1654,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                component.  What comes out is concrete, so the accessor's
                result needs no further recovery. *)
             Cpp_ir.Build.call cglob'
-              [Cpp_erasure.unbox_tolerant (Entity_application (g, glob_tys, [])) single_arg]
+              [Cpp_passes.Erasure.unbox_tolerant (Entity_application (g, glob_tys, [])) single_arg]
           | Some g, _ ->
             (* Tolerantly: the Core type says the argument is a box, but a
                producer that could name the pair's shape may have emitted the
@@ -1663,7 +1663,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                pair already in hand through -- where a plain [any_cast] would
                throw on the latter. *)
             Cpp_ir.Build.call cglob'
-              [ Cpp_erasure.unbox_tolerant (Entity_application (g, [Any; Any], [])) single_arg ]
+              [ Cpp_passes.Erasure.unbox_tolerant (Entity_application (g, [Any; Any], [])) single_arg ]
           | None, _ -> primary_result )
         else
           primary_result
@@ -1912,7 +1912,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           let expected = Translation_types.param_expected_cpp_ty cx env callee_param_tys i in
           ( match expected with
             | Some ty ->
-              Cpp_erasure.unbox (Translation_erasure.erase_type_args_to_any ty) inner
+              Cpp_passes.Erasure.unbox (Translation_erasure.erase_type_args_to_any ty) inner
             | None ->
               has_unresolved_boxed_arg := true;
               inner )

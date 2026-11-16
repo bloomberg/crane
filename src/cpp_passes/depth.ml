@@ -13,8 +13,8 @@
     initialiser that is too deep into such a run, inside an immediately-invoked
     lambda so that it stays an expression.
 
-    One of the per-declaration passes of {!Cpp_pipeline}, run before the
-    {!Cpp_erasure} seam. *)
+    One of the per-declaration passes of {!Pipeline}, run before the
+    {!Erasure} seam. *)
 
 open Names
 

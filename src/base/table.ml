@@ -549,7 +549,7 @@ let has_any_coinductive () =
     A demand is something the preamble of the generated file must provide -- a
     standard or runtime header, a directive -- that only code generation can
     discover.  It is raised before either file is rendered, from what was
-    generated ahead of them ({!Cpp_demands}), and read when the preamble is
+    generated ahead of them ({!Cpp_passes.Demands}), and read when the preamble is
     emitted, which comes first in the file.  The printer raises none: what it
     writes is only checked against them ({!written_needs_header}).
 

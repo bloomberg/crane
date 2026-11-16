@@ -176,7 +176,7 @@ let rec expr_contains_capturing_lambda (e : expr) : bool =
   | Lambda {capture = Written Nothing; body; _} -> List.exists stmt_contains_capturing_lambda body
   | Lambda {capture = Written (By_reference | By_copy _); _} -> true
   | Lambda {capture = Runs_in_place | Stored; _} ->
-    invalid_arg "Cpp_erasure.expr_contains_capturing_lambda: a capture not written down"
+    invalid_arg "Erasure.expr_contains_capturing_lambda: a capture not written down"
   | _ ->
     let exception Found in
     ( try

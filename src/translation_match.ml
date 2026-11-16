@@ -433,15 +433,15 @@ let gen_match_branch cx env (typ : Core.Type.t) rty cname ids dummies body sname
                    | In_namespace (ns_g, _) -> In_namespace (ns_g, Entity_application (g, [Any], []))
                    | _ -> Entity_application (g, [Any], [])
                  in
-                 Cpp_erasure.converting_ctor bare_ty [Cpp_erasure.unbox list_any_ty (Cpp_ir.Expr.Local binding_name)]
+                 Cpp_passes.Erasure.converting_ctor bare_ty [Cpp_passes.Erasure.unbox list_any_ty (Cpp_ir.Expr.Local binding_name)]
                | Entity_application (g, [elem_ty], _) when Base.Type_util.is_custom_list_global g ->
-                 let erased_elem = Cpp_erasure.erase_type_to_any elem_ty in
+                 let erased_elem = Cpp_passes.Erasure.erase_type_to_any elem_ty in
                  let cast_ty : Cpp_ir.Lowered.Type.t =
                    if erased_elem = Any then bare_ty
                    else Entity_application (g, [erased_elem], [])
                  in
-                 Cpp_erasure.unbox cast_ty (Cpp_ir.Expr.Local binding_name)
-               | _ -> Cpp_erasure.unbox bare_ty (Cpp_ir.Expr.Local binding_name))
+                 Cpp_passes.Erasure.unbox cast_ty (Cpp_ir.Expr.Local binding_name)
+               | _ -> Cpp_passes.Erasure.unbox bare_ty (Cpp_ir.Expr.Local binding_name))
             else
               Local binding_name
           in
@@ -1023,7 +1023,7 @@ let gen_cpp_custom_body cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
           not (Translation_binders.read_is_boxed cx i occ) && Translation_erasure.is_env_var_erased cx env tvars i
         | _ -> false
       in
-      if body_is_erased then (fun e -> k (Cpp_erasure.unbox ret e))
+      if body_is_erased then (fun e -> k (Cpp_passes.Erasure.unbox ret e))
       else k
     | _ -> k
   in
@@ -1106,7 +1106,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
     let needs_pair_any_cast = cs.Translation_match_types.pair_any_cast in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
-      (Cpp_erasure.unbox (Entity_application (g, [Any; Any], [])) t, true, None)
+      (Cpp_passes.Erasure.unbox (Entity_application (g, [Any; Any], [])) t, true, None)
     end
     else if (scrut_is_wrapped || (scrut_is_magic && Cpp_ir.Types.prints_as_any typ)
              || scrut_is_cpp_erased)
@@ -1133,12 +1133,12 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
           Entity_application (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
-      (Cpp_erasure.unbox cast_ty t, false, Some cast_ty)
+      (Cpp_passes.Erasure.unbox cast_ty t, false, Some cast_ty)
     else
       (t, false, None)
   in
   (* When [fix_a_fired], pass [pair<any,any>] as the [Custom_match] type so
-     that {!Cpp_erasure.lower_boxed_reads} reads the scrutinee at
+     that {!Cpp_passes.Erasure.lower_boxed_reads} reads the scrutinee at
      [pair<any,any>] instead of the concrete nested pair type. *)
   let case_typ : Cpp_ir.Lowered.Type.t =
     if fix_a_fired then
@@ -1200,7 +1200,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
          also [std::any] — they came from [.second] of a [pair<any,any>].
          Re-type them as [Any] so that:
          (1) inner pair matches see an erased scrutinee and emit [any_cast],
-         (2) {!Cpp_erasure.lower_boxed_reads} treats them as boxed.
+         (2) {!Cpp_passes.Erasure.lower_boxed_reads} treats them as boxed.
          Non-pair leaf types (e.g. [List<any>]) are left unchanged so the
          use-site [any_cast] pass can still insert the correct cast. *)
       let scrut_elems_are_any =
@@ -1297,7 +1297,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
                  let cast_expr : Cpp_ir.Lowered.Expr.t =
                    match stripped with
                    | Entity_application (g, _, _) when is_prod_global g ->
-                     Cpp_erasure.unbox (Entity_application (g, [Any; Any], [])) (Cpp_ir.Expr.Local name)
+                     Cpp_passes.Erasure.unbox (Entity_application (g, [Any; Any], [])) (Cpp_ir.Expr.Local name)
                    | Entity_application (g, [_], _) when is_list_global g && not (Base.Table.is_custom g) ->
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -1309,7 +1309,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
                          In_namespace (ns_g, Entity_application (g, [Any], []))
                        | _ -> Entity_application (g, [Any], [])
                      in
-                     Cpp_erasure.converting_ctor cpp_ty [Cpp_erasure.unbox list_any_ty (Cpp_ir.Expr.Local name)]
+                     Cpp_passes.Erasure.converting_ctor cpp_ty [Cpp_passes.Erasure.unbox list_any_ty (Cpp_ir.Expr.Local name)]
                    | Entity_application (g, [_], _) when Base.Type_util.is_custom_list_global g ->
                      Local name
                    | Member _ | Entity_application (GlobRef.ConstRef _, _, _) ->
@@ -1319,7 +1319,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
                         wrapping it. any_cast<std::any>(any(V)) throws; pass
                         the std::any value as-is. *)
                      Local name
-                   | _ -> Cpp_erasure.unbox cpp_ty (Cpp_ir.Expr.Local name)
+                   | _ -> Cpp_passes.Erasure.unbox cpp_ty (Cpp_ir.Expr.Local name)
                  in
                  List.map (fun st -> Translation_lifting.local_var_subst_stmt ~keep_cast:true name cast_expr st) stmts
                else stmts)
@@ -1437,7 +1437,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
               match s with
               | Return (Some (Local name))
                 when Id.Set.mem name erased_pat_vars ->
-                Return (Some (Cpp_erasure.unbox br_ret (Cpp_ir.Expr.Local name)))
+                Return (Some (Cpp_passes.Erasure.unbox br_ret (Cpp_ir.Expr.Local name)))
               | s -> s)
               br_stmts
         | _ -> br_stmts

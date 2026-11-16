@@ -426,7 +426,7 @@ let build_cell_call ~unit ?token ?(rec_arg = Literal Null_pointer) ?(allocate = 
     the reuse cursor the scrutinee is owned but not known to be unique, and only
     [crane::reuse_step] may consume it. *)
 let borrow_cursor_matches shadow_params stmts =
-  Cpp_simplify.borrow_matches_on
+  Cpp_passes.Simplify.borrow_matches_on
     (List.filter_map
        (fun (id, ty) -> match ty with Pointer _ -> Some id | _ -> None)
        shadow_params)

@@ -61,7 +61,7 @@
     {- {b Normalized input}: {!Core_plan.Normalize} binds every non-tail recursive
        call in evaluation order before translation, so the transforms meet
        each one as a statement; tail modulo cons reads the body with those
-       bindings put back ({!Cpp_temporaries.own_stmts}).}
+       bindings put back ({!Cpp_passes.Temporaries.own_stmts}).}
     {- {b Frame generation}: typed frame structs ([CraneEnter],
        [CraneContN]) and a dispatch loop that tests the popped frame with
        [std::holds_alternative] in an if/else-if chain.}
@@ -668,7 +668,7 @@ let apply_nontail_loopification ~unit ?(param_inits = []) ?fn_name ?adopted ?ent
   (* Tail modulo cons reads constructor cells around calls, which
      {!Core_plan.Normalize} took out into temporaries; it reads the body with them put
      back.  Everything else reads the normalized body. *)
-  let restored = Cpp_temporaries.own_stmts body in
+  let restored = Cpp_passes.Temporaries.own_stmts body in
   (* The loop, where the plan lowers the function tail modulo cons: every
      call that is not a tail call is the one call of one of its chains
      ({!Core_plan.Recursion.Modulo_cons}), so the transform, which rewrites calls
@@ -782,7 +782,7 @@ let modulo_cons_loop ~unit ~jumped ?cursor ~varying ~parts ~shapes ~tparams chec
   else
     let loop =
       transform_tmc ~unit ~jumped ?cursor ~varying ~parts ~shapes tparams check params f.return_type
-        (Cpp_temporaries.own_stmts body)
+        (Cpp_passes.Temporaries.own_stmts body)
     in
     if classify (survivors ~unit f) loop = No_recursion then Some loop else None
 

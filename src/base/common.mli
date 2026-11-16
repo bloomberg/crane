@@ -580,7 +580,7 @@ val enum_ctor_name_of_ref : MutInd.t -> int -> int -> string
 
 (** [writes h] records that what is being written needs the header [h].  It
     demands nothing: a unit's demands are read off what is generated ahead of
-    its files ({!Cpp_demands}), and under [CRANE_CHECK_IR] what was written is
+    its files ({!Cpp_passes.Demands}), and under [CRANE_CHECK_IR] what was written is
     checked against them ({!Table.written_needs_header}). *)
 val writes : Table.header -> unit
 

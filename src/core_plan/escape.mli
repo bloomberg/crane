@@ -133,7 +133,7 @@ val infer_sub_bindings_escape_params : int -> Core.Expr.t -> bool list
     returns one field of it as it is: a single-branch constructor match on
     the receiver whose body is a variable the branch binds.  The result is
     then a place inside the receiver, which a method may lend out rather
-    than copy ({!Borrow_projection}). *)
+    than copy ({!Cpp_passes.Borrow_projection}). *)
 val returns_receiver_field : this_pos:int -> Core.Expr.t -> bool
 
 (** {2 Utility functions} *)

@@ -593,7 +593,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
                     (Cpp_ir.Stmt.Bind_variable
-                       (name, Declare (body_cpp, None), Cpp_erasure.unbox body_cpp (Local param_name))
+                       (name, Declare (body_cpp, None), Cpp_passes.Erasure.unbox body_cpp (Local param_name))
                       : Cpp_ir.Lowered.Stmt.t)
                     :: acc
                   ) stmts (List.rev cast_info)

@@ -1393,7 +1393,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
                  (Core.Scheme.Var.ordinal v)
                  (Pp.string_of_ppcmds
                     (cx.Translation_state.pp_cpp_type (Translation_state.unit_context cx) (Translation_state.plans cx) false []
-                       (Cpp_pipeline.spell_type a))) ]
+                       (Cpp_passes.Pipeline.spell_type a))) ]
            | _ -> [] )
          (Core_plan.Callable_abi.template_head abi) )
   in

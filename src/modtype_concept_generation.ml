@@ -10,8 +10,8 @@ open Cpp_ast.Modtype_concept
 (* A type translation writes for a concept, in CppIR: a concept is generated
    after its module type is settled, so every type it writes has a C++
    spelling. *)
-let ir_type t = Cpp_pipeline.resolve_type ~what:"a type written outside every finished declaration" t
-let ir_expr e = Cpp_pipeline.resolve_expr ~what:"a value in a module type's concept" e
+let ir_type t = Cpp_passes.Pipeline.resolve_type ~what:"a type written outside every finished declaration" t
+let ir_expr e = Cpp_passes.Pipeline.resolve_expr ~what:"a value in a module type's concept" e
 
 (* The module path [mp] is rooted at: a file, or a bound functor parameter. *)
 let rec base_mp = function MPdot (parent, _) -> base_mp parent | mp -> mp
@@ -45,9 +45,9 @@ let rec concept_type cx signature (ty : Cpp_ir.Lowered.Type.t) =
   | Entity_application (r, tys, _) -> (
     match Base.Table.find_custom_opt r with
     | Some text ->
-      let pieces = Cpp_erasure.type_pieces r text tys in
+      let pieces = Cpp_passes.Erasure.type_pieces r text tys in
       (* A type argument the text names and the use does not supply is
-         erased, as the seam writes one ({!Cpp_erasure.supply_template_args}). *)
+         erased, as the seam writes one ({!Cpp_passes.Erasure.supply_template_args}). *)
       let arity =
         List.fold_left
           (fun n -> function Cpp_ir.Foreign.Type_argument i | Element (i, _) -> max n (i + 1) | _ -> n)
@@ -148,7 +148,7 @@ let refinements cx mt =
   let rec go acc = function
     | Core.Module.Type.Refined {base = inner;
                                 refinement = Core.Module.Refinement.Type_equation {path = idl; definition = typ; _}} ->
-      go ((idl, ir_type (Cpp_erasure.instantiate_type (Translation_state.unit_context cx) (convert cx typ))) ::
+      go ((idl, ir_type (Cpp_passes.Erasure.instantiate_type (Translation_state.unit_context cx) (convert cx typ))) ::
         acc) inner
     | Core.Module.Type.Refined {base = inner; refinement = Core.Module.Refinement.Module_equation _} -> go acc inner
     | _ -> acc

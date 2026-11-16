@@ -94,7 +94,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
      constructor, a [make_shared<...>] argument), so it must be spelled exactly
      as the printer spells the same type in the surrounding generated code:
      each one is handed to the printer as a type node ([Convert], [Allocate],
-     {!Cpp_erasure.converting_ctor}), never rendered here. *)
+     {!Cpp_passes.Erasure.converting_ctor}), never rendered here. *)
   (* Strip a single namespace wrapper when it matches the inner application.
      [convert_core_type_to_cpp_type] wraps external inductives as
      [In_namespace (g, Entity_application (g, ...))] for qualified rendering,
@@ -162,7 +162,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
          name. *)
       let inner = strip_ns inner in
       let derefed : Cpp_ir.Lowered.Expr.t = Dereference expr in
-      if inner = dst_ty then derefed else Cpp_erasure.converting_ctor orig_dst_ty [derefed]
+      if inner = dst_ty then derefed else Cpp_passes.Erasure.converting_ctor orig_dst_ty [derefed]
     | _, Shared_pointer inner -> Cpp_ir.Build.call (Allocate (Heap, inner)) [expr]
     | Entity_application (g1, src_ts, _), Entity_application (g2, dst_ts, _)
       when GlobRef.CanOrd.equal g1 g2 && src_ts <> dst_ts && not (Base.Table.is_inline_custom g1) ->
@@ -185,7 +185,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
          [U] may be [std::any], and [pair<K,V>] has no constructor from one --
          nor from [pair<any,any>], which is how a pair's components are boxed
          one at a time.  Dispatch at compile time instead. *)
-      if not (is_access_path expr) then Cpp_erasure.converting_ctor orig_dst_ty [expr]
+      if not (is_access_path expr) then Cpp_passes.Erasure.converting_ctor orig_dst_ty [expr]
       else
         (* Which way [U] is read at [A] -- unboxed, converted, or taken apart
            component by component -- cannot be decided until C++ substitutes
@@ -213,13 +213,13 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
     | _, (Entity_application (g, [elem_ty], _) | In_namespace (_, Entity_application (g, [elem_ty], _)))
       when Base.Type_util.is_custom_list_global g && elem_ty <> Any && elem_ty <> Auto -> (
       match src_ty with
-      | Any -> Cpp_erasure.unbox (Entity_application (g, [Any], [])) expr
+      | Any -> Cpp_passes.Erasure.unbox (Entity_application (g, [Any], [])) expr
       | _ -> expr )
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never shared_ptr)
          because nested self-references are wrapped at the field level. *)
-      Cpp_erasure.converting_ctor orig_dst_ty [expr]
+      Cpp_passes.Erasure.converting_ctor orig_dst_ty [expr]
 
 (** Wrap [expr] when [storage_ty] and [api_ty] differ due to pointer
     wrapping.  Converts from API form to storage form (e.g. bare value →

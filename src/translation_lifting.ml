@@ -82,7 +82,7 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = []) (target : I
   let sub = local_var_subst_expr ~keep_cast ~extra_args target repl in
   match e with
   | Any_cast (ty, Local id) when keep_cast && Id.equal id target ->
-    Cpp_erasure.unbox ty (match repl with Any_cast (_, inner) -> inner | r -> r)
+    Cpp_passes.Erasure.unbox ty (match repl with Any_cast (_, inner) -> inner | r -> r)
   | Call (o, Local id, args) when extra_args <> [] && Id.equal id target ->
     Call (o, repl, List.map sub args @ extra_args)
   | Local id when Id.equal id target -> repl

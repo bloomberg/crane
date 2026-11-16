@@ -4,7 +4,7 @@
 (** A unit's program: what it generated and what that finished as, one
     value keyed by one kind of id.  It sits at CppIR finishing: lowering
     (the Translation_* modules, driven by {!Cpp_ind}) fills it, the
-    finishing passes ({!Cpp_pipeline}) turn its declarations into resolved
+    finishing passes ({!Pipeline}) turn its declarations into resolved
     CppIR, and the printer's renders read it.
 
     The walk ahead of the files generates every declaration the files write,
@@ -13,7 +13,7 @@
     ({!record_lifted_ahead}); nothing records a helper as it is lifted.  An
     entity names the declarations its generation gives to finish by their
     {!id}.  {!Cpp.generate_ahead} then finishes all of them at once
-    ({!finish}), each {!Cpp_pipeline.finish}ed once under its id, and
+    ({!finish}), each {!Pipeline.finish}ed once under its id, and
     installs the program ({!install}); nothing else finishes a declaration.
     A file's render finds what it writes by id ({!find}): it takes the
     generation it writes from the walk ahead of the files, and numbers its
@@ -28,8 +28,8 @@
 
     It is a top-level module rather than a member of a [src/cpp_ir/]
     directory on purpose: a directory is one node of the dependency graph,
-    and this module reaches the whole finishing pipeline ({!Cpp_pipeline},
-    {!Cpp_erasure}), so as a member it would keep every pass from ever
+    and this module reaches the whole finishing pipeline ({!Pipeline},
+    {!Erasure}), so as a member it would keep every pass from ever
     naming [Cpp_ir]. *)
 
 (** {2 Ids} *)
@@ -134,11 +134,11 @@ val declarations : t -> declaration list
 val helpers : t -> (Base.Generated_entity_id.t * Cpp_ir.Resolved.Decl.t) list
 
 (** The headers the declarations of a program need for what they write down
-    ({!Cpp_demands}). *)
+    ({!Demands}). *)
 val demands : t -> Base.Table.header list
 
 (** The globals the declarations of a program write the names of
-    ({!Cpp_demands.globals_of_decl}). *)
+    ({!Demands.globals_of_decl}). *)
 val globals : t -> Names.GlobRef.t list
 
 (** {2 Building the unit's program}
@@ -160,10 +160,10 @@ val record_lifted_ahead : Cpp_ir.Lowered.Decl.t list -> unit
 
 (** [finish u jobs] is the program of the unit [u] with [jobs] finished,
     each once, in order: a job whose {!id} an earlier one finished already is that
-    declaration.  What {!Cpp_demands} reads is read off the finished
+    declaration.  What {!Demands} reads is read off the finished
     declaration.  Under [CRANE_CHECK_IR], two different declarations under
     one id are a violation. *)
-val finish : check_control:Cpp_pipeline.control_check -> Unit_plan.Context.t -> job list -> t
+val finish : check_control:Pipeline.control_check -> Unit_plan.Context.t -> job list -> t
 
 (** Under [CRANE_CHECK_IR], fail unless [t] finished exactly the
     declarations its generations gave: those its entities name, and each
@@ -202,11 +202,11 @@ val find_declaration : id -> declaration option
 (** [finishes_as u d f] is whether finishing [d], of the unit [u], again
     gives [f]. *)
 val finishes_as :
-  check_control:Cpp_pipeline.control_check -> Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t -> bool
+  check_control:Pipeline.control_check -> Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t -> bool
 
 (** [refinish u jobs] finishes [jobs], of the unit [u], again, in order, and fails unless each
     comes out as it is in the installed program, under the same {!id}. *)
-val refinish : check_control:Cpp_pipeline.control_check -> Unit_plan.Context.t -> job list -> unit
+val refinish : check_control:Pipeline.control_check -> Unit_plan.Context.t -> job list -> unit
 
 (** {!globals} of the installed program. *)
 val installed_globals : unit -> Names.GlobRef.t list
@@ -216,7 +216,7 @@ val installed_globals : unit -> Names.GlobRef.t list
 val installed_finished : unit -> Cpp_ir.Resolved.Decl.t list
 
 (** The promoted type variables the installed program's declarations write
-    ({!Cpp_demands.promoted_of_decl}), in the order they were finished. *)
+    ({!Demands.promoted_of_decl}), in the order they were finished. *)
 val installed_promoted : unit -> Names.Id.t list
 
 (** {2 Checking what the files took} *)

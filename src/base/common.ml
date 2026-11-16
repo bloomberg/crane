@@ -1915,7 +1915,7 @@ let enum_ctor_name_of_ref kn i j =
 (** {2 Needed C++ headers} *)
 
 (* The printer demands no header: a unit's demands are read off what is
-   generated ahead of its files ({!Cpp_demands}).  What it writes is recorded
+   generated ahead of its files ({!Cpp_passes.Demands}).  What it writes is recorded
    under [CRANE_CHECK_IR], and only then, for {!Table.freeze_demands} to check
    against the demands. *)
 

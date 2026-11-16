@@ -253,7 +253,7 @@ let plan_helper_hoist cx ~module_ ((_, d) as placed) =
     Both come from one finished definition, so the hoisted declaration states
     the head the definition does; the definition then leaves the template
     defaults to the declaration. *)
-let lifted_views cx ~module_ ?(may_hoist = true) ((_, d) as placed : Unit_program.id * Cpp_ir.Lowered.Decl.t) =
+let lifted_views cx ~module_ ?(may_hoist = true) ((_, d) as placed : Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t) =
   let e = helper_entity cx placed in
   let planned = Option.bind (hoistable_function e d) (fun r -> GlobRef.Map_env.find_opt r !hoisted_helpers) in
   ( match planned with
@@ -483,7 +483,7 @@ let record_method_entities r fields lifted =
 let generated_record_methods cx ~module_ r vars candidates =
   let fields, lifted = Cpp_ind.record_methods cx ~module_ r vars candidates in
   List.iter
-    (fun e -> ignore (Unit_program.record e))
+    (fun e -> ignore (Cpp_passes.Unit_program.record e))
     (record_method_entities r fields lifted);
   (fields, lifted)
 
@@ -557,7 +557,7 @@ let file_local_inductives (analysis : Core_plan.Structure.t) =
     std::any;], which names nothing. *)
 let is_erased_alias (_, (d : Cpp_ir.Resolved.Decl.t)) =
   match d with
-  | Type_alias {rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
+  | Type_alias {rhs = Some rhs; _} -> Cpp_passes.Erasure.is_any_shaped rhs
   | _ -> false
 
 (** What writing a structure element gives: its text, written where it is,
@@ -1449,7 +1449,7 @@ let prepare_structure cx (u : Unit_plan.Context.t) s =
       | Core.Decl.Type_alias {entity = r;
                               body = Core.Type.Axiom; _} when (not (is_any_inline_custom r))
                                 && Base.Table.singleton_class_method r = None ->
-        Cpp_erasure.register_axiom_type r;
+        Cpp_passes.Erasure.register_axiom_type r;
         Base.Table.add_erased_type_const r
       | _ -> () )
     (fun _ -> ())
@@ -1722,26 +1722,26 @@ let finishing (aheads : Cpp_ind.ahead list) =
   List.concat_map (fun (a : Cpp_ind.ahead) -> a.finishing) aheads
   @ List.concat_map
       (fun (a : Cpp_ind.ahead) ->
-        List.map (fun d -> Unit_program.job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
+        List.map (fun d -> Cpp_passes.Unit_program.job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
       aheads
 
-(** Record the unit's program ({!Unit_program.record_ahead}) and finish
+(** Record the unit's program ({!Cpp_passes.Unit_program.record_ahead}) and finish
     what was generated ahead, [aheads] in the order generated, all at once
-    ({!Unit_program.finish}), installing the program.  Then demand every
-    header the files will need for what they write ({!Cpp_demands}): the
+    ({!Cpp_passes.Unit_program.finish}), installing the program.  Then demand every
+    header the files will need for what they write ({!Cpp_passes.Demands}): the
     finished program's, and those of the module-type concepts and eponymous
     record fields generated ahead of them. *)
 let finish_ahead cx u (aheads : Cpp_ind.ahead list) =
-  List.iter (fun (a : Cpp_ind.ahead) -> List.iter Unit_program.record_ahead a.entities) aheads;
+  List.iter (fun (a : Cpp_ind.ahead) -> List.iter Cpp_passes.Unit_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
-  Unit_program.record_lifted_ahead helpers;
-  let program = Unit_program.finish ~check_control:Control_to_cpp_ir.check_lowered u (finishing aheads) in
-  Unit_program.check_finished program;
-  Unit_program.install program;
+  Cpp_passes.Unit_program.record_lifted_ahead helpers;
+  let program = Cpp_passes.Unit_program.finish ~check_control:Control_to_cpp_ir.check_lowered u (finishing aheads) in
+  Cpp_passes.Unit_program.check_finished program;
+  Cpp_passes.Unit_program.install program;
   List.iter Base.Table.demand_header
-    (Unit_program.demands program
-    @ List.concat_map (Cpp_demands.of_modtype_concept u) (Cpp_ind.generated_concepts ())
-    @ List.concat_map (Cpp_demands.of_type u) (Cpp_ind.generated_record_field_types ()))
+    (Cpp_passes.Unit_program.demands program
+    @ List.concat_map (Cpp_passes.Demands.of_modtype_concept u) (Cpp_ind.generated_concepts ())
+    @ List.concat_map (Cpp_passes.Demands.of_type u) (Cpp_ind.generated_record_field_types ()))
 
 (** Generate and finish the one declaration [d], an element of [module_]. *)
 let generate_decl_ahead cx u ~module_ d =
@@ -1793,15 +1793,15 @@ let structure_module_names cx s =
 
 (** The files the unit [s], of context [u], names are written through, read off what was
     generated ahead of its files where the printer writes it
-    ({!Cpp_demands.globals_of_decl}): the installed finished program's, the
+    ({!Cpp_passes.Demands.globals_of_decl}): the installed finished program's, the
     types of the eponymous record fields generated with it, and what the
     module-type concepts generated with it name; and off the modules of [s]
     ({!structure_module_names}). *)
 let files_named_ahead cx u s =
   let unit_files = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
   let globals =
-    Unit_program.installed_globals ()
-    @ List.concat_map Cpp_demands.globals_of_type (Cpp_ind.generated_record_field_types ())
+    Cpp_passes.Unit_program.installed_globals ()
+    @ List.concat_map Cpp_passes.Demands.globals_of_type (Cpp_ind.generated_record_field_types ())
   in
   let keys = List.map snd (List.concat_map (Cpp_concepts.concept_body_names cx u) (Cpp_ind.generated_concepts ())) in
   List.filter_map (Base.Common.file_named_by ~unit_files) globals
@@ -1815,7 +1815,7 @@ let files_named_ahead cx u s =
     generated with it ({!Cpp_concepts.concept_body_names}). *)
 let customs_written_ahead cx u =
   let globals =
-    List.concat_map (Cpp_leaf_plan.declaration_globals u) (Unit_program.installed_finished ())
+    List.concat_map (Cpp_leaf_plan.declaration_globals u) (Cpp_passes.Unit_program.installed_finished ())
     @ List.concat_map Cpp_leaf_plan.type_globals (Cpp_ind.generated_record_field_types ())
   in
   let keys =
@@ -1845,7 +1845,7 @@ let plan_function_reads () =
   Unit_plan.Cpp_state.plan_function_reads
     (List.fold_left
        (fun reads d -> List.fold_right Core.Ref.Can.Set.add (function_globals d) reads)
-       Core.Ref.Can.Set.empty (Unit_program.installed_finished ()))
+       Core.Ref.Can.Set.empty (Cpp_passes.Unit_program.installed_finished ()))
 
 let generate_ahead cx u s =
   generating_ahead @@ fun () ->
@@ -1863,7 +1863,7 @@ let generate_ahead cx u s =
           later
             { Cpp_ind.nothing_ahead with
               entities = [Cpp_ind.entity r [Cpp_ind.concept_id r] []];
-              finishing = [Unit_program.job (Cpp_ind.concept_id r) d] } ) )
+              finishing = [Cpp_passes.Unit_program.job (Cpp_ind.concept_id r) d] } ) )
     ~after_module:(fun ~module_ frame _ ->
       convert_eponymous_record_fields cx ~module_ frame;
       Option.iter
@@ -1914,7 +1914,7 @@ let generate_ahead cx u s =
      body can depend on what happened to be generated before it. *)
   if Base.Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
-    Unit_program.refinish ~check_control:Control_to_cpp_ir.check_lowered u (finishing (List.rev aheads));
+    Cpp_passes.Unit_program.refinish ~check_control:Control_to_cpp_ir.check_lowered u (finishing (List.rev aheads));
     ignore @@ walk_as_rendered cx ~reversed:true ~modtype:(Cpp_ind.modtype_concept cx)
       ~after_module:(fun ~module_ frame _ ->
         convert_eponymous_record_fields cx ~module_ frame;
@@ -2119,8 +2119,8 @@ let plan_file_layout cx (u : Unit_plan.Context.t) s =
     let files = toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s) in
     List.sort_uniq String.compare
       (List.filter_map (promoted_alias_import files)
-         ( Unit_program.installed_promoted ()
-         @ List.concat_map Cpp_demands.promoted_of_type (Cpp_ind.generated_record_field_types ()) ))
+         ( Cpp_passes.Unit_program.installed_promoted ()
+         @ List.concat_map Cpp_passes.Demands.promoted_of_type (Cpp_ind.generated_record_field_types ()) ))
   in
   let forward =
     List.concat_map snd
@@ -3296,7 +3296,7 @@ let check_value_order cx scheduled =
             match Cpp_ir.Globrefs.declared d with
             | Some r -> Core.Ref.Can.Map.update r (fun l -> Some (names d @ Option.default [] l)) m
             | None -> m ))
-        Core.Ref.Can.Map.empty (Unit_program.installed_finished ())
+        Core.Ref.Can.Map.empty (Cpp_passes.Unit_program.installed_finished ())
     in
     (* The values of the file [r]'s initialiser reads, directly or through a
        function: what a value reads is its own to check. *)

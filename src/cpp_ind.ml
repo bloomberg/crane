@@ -19,7 +19,7 @@
        being written;}
     {- generating once ({!ahead_once}): everything is generated ahead of
        both files ({!generate_ahead}), finished in the unit's program
-       ({!Unit_program}), and taken from there by each file's pass;}
+       ({!Cpp_passes.Unit_program}), and taken from there by each file's pass;}
     {- {!impl_decls} and {!header_decls}, which pick what the [.cpp] and the
        [.h] write of a declaration, and the [_ahead] readers, which read the
        same without taking it;}
@@ -1017,20 +1017,20 @@ let generate cx scope ~module_ d =
 (** {2 The finished program}
 
     What a file writes is read from the unit's finished program
-    ({!Unit_program}), finished ahead of the files; a file's pass
+    ({!Cpp_passes.Unit_program}), finished ahead of the files; a file's pass
     finishes a declaration again under [CRANE_CHECK_IR] to compare, and
     finds one missing only as an anomaly. *)
 
-let source r = Unit_program.Source (Base.Entity_id.of_ref r)
+let source r = Cpp_passes.Unit_program.Source (Base.Entity_id.of_ref r)
 
 (** [declaration owner n] is the [n]th declaration of [owner]'s generation. *)
-let declaration owner n = {Unit_program.owner; part = Declaration n}
+let declaration owner n = {Cpp_passes.Unit_program.owner; part = Declaration n}
 
 (** The id of the lifted helper [d] in the unit's program: its own
     generation's only declaration. *)
 let helper_id d =
-  match Unit_program.helper d with
-  | Some h -> declaration (Unit_program.Generated h.helper_id) 0
+  match Cpp_passes.Unit_program.helper d with
+  | Some h -> declaration (Cpp_passes.Unit_program.Generated h.helper_id) 0
   | None -> CErrors.anomaly Pp.(str "Crane: a declaration placed as a lifted helper is not one.")
 
 (** The declaration a generated function finishes. *)
@@ -1049,16 +1049,16 @@ let function_id ~fallback g = declaration (source (function_ref ~fallback g)) 0
 let numbered ?(from = 0) owner ds = List.mapi (fun i _ -> declaration owner (from + i)) ds
 
 (** [finished_of ~what id d] is the declaration [id] of the unit's
-    program ({!Unit_program.find_declaration}), finished from [d]. *)
+    program ({!Cpp_passes.Unit_program.find_declaration}), finished from [d]. *)
 let finished_of cx ~what id d =
-  match (get_phase (), Unit_program.find_declaration id) with
+  match (get_phase (), Cpp_passes.Unit_program.find_declaration id) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
     let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
     if
       (not ahead)
       && Sys.getenv_opt "CRANE_CHECK_IR" <> None
-      && not (Unit_program.finishes_as ~check_control:Control_to_cpp_ir.check_lowered (Translation_state.unit_context cx) d
+      && not (Cpp_passes.Unit_program.finishes_as ~check_control:Control_to_cpp_ir.check_lowered (Translation_state.unit_context cx) d
            f.finished)
     then
       CErrors.anomaly
@@ -1099,7 +1099,7 @@ let instance_ids r ds = numbered (source r) ds
 let finished_instance cx r ds = finished_group cx ~what:"an instance" (instance_ids r ds) ds
 
 let instance_jobs r (ds : generated) =
-  List.map2 (fun id (_, d) -> Unit_program.job id d) (instance_ids r ds) ds
+  List.map2 (fun id (_, d) -> Cpp_passes.Unit_program.job id d) (instance_ids r ds) ds
 
 let instance_placed r (ds : generated) helpers =
   helpers_placed helpers @ List.combine (instance_ids r ds) (List.map snd ds)
@@ -1114,7 +1114,7 @@ let finished_concept cx r d = finished_of cx ~what:"a class concept" (concept_id
     among them, then every declaration. *)
 let functions_finishing elements =
   let funs = List.concat_map (fun (fallback, gs) -> List.map (fun g -> (fallback, g)) gs) elements in
-  let job (fallback, g) = Unit_program.job (function_id ~fallback g) (function_decl g) in
+  let job (fallback, g) = Cpp_passes.Unit_program.job (function_id ~fallback g) (function_decl g) in
   List.filter_map
     (fun ((_, (g : Gen_decls.generated_fun)) as f) ->
       match g.entity with Defined _ -> Some (job f) | Declared _ -> None )
@@ -1197,7 +1197,7 @@ let function_views cx ~is_header ~lifted_inline ~fallback scope funs =
 (** {2 The generated program}
 
     Every generation the printer is about to render is recorded as an entity
-    of {!Unit_program}, and what the printer writes is read back from
+    of {!Cpp_passes.Unit_program}, and what the printer writes is read back from
     the recorded entity. *)
 
 (** The source entity a Core declaration is: an inductive block by its
@@ -1209,13 +1209,13 @@ let decl_entity = function
 
 (** [entity r ids helpers] is the generation of [r]: the declarations
     [ids], and the helpers among [helpers]. *)
-let entity r ids helpers : Unit_program.entity =
+let entity r ids helpers : Cpp_passes.Unit_program.entity =
   { entity_id = Base.Entity_id.of_ref r;
     declarations = ids;
-    helpers = List.filter_map Unit_program.helper helpers }
+    helpers = List.filter_map Cpp_passes.Unit_program.helper helpers }
 
 (** [record_entity r ids helpers] records the generation of [r]. *)
-let record_entity r ids helpers = Unit_program.record (entity r ids helpers)
+let record_entity r ids helpers = Cpp_passes.Unit_program.record (entity r ids helpers)
 
 (** [funs_entities ~fallback funs] is each generated function as the entity
     its declaration is about, [fallback] where it says none. *)
@@ -1226,7 +1226,7 @@ let funs_entities ~fallback (funs : Gen_decls.generated_fun list) =
 
 (** [record_funs ~fallback funs] records {!funs_entities}. *)
 let record_funs ~fallback funs =
-  List.iter (fun e -> ignore (Unit_program.record e)) (funs_entities ~fallback funs)
+  List.iter (fun e -> ignore (Cpp_passes.Unit_program.record e)) (funs_entities ~fallback funs)
 
 
 (** What a file writes for one Core declaration, and the helpers lifted
@@ -1471,7 +1471,7 @@ let () = Base.State.on_reset Base.State.Unit (fun () -> Core.Ref.User.Tbl.reset 
 (** [record_field_types r vars fields] is the C++ type of each of the fields
     [fields] of the eponymous record [r], of variables [vars], as the header
     writes them in the struct [r] is merged into: converted and instantiated
-    ({!Cpp_erasure.instantiate_type}) and resolved ahead of the files, and
+    ({!Cpp_passes.Erasure.instantiate_type}) and resolved ahead of the files, and
     taken from there by the header
     ({!ahead_once}) -- so what plans from them reads the types the header
     writes. *)
@@ -1484,8 +1484,8 @@ let record_field_types cx ~module_ r vars (fields : Core.Record.Field.t list) =
     (fun () ->
       List.map
         (fun (f : Core.Record.Field.t) ->
-          Cpp_pipeline.resolve_type ~what:"a record field type"
-            (Cpp_erasure.instantiate_type (Translation_state.unit_context cx)
+          Cpp_passes.Pipeline.resolve_type ~what:"a record field type"
+            (Cpp_passes.Erasure.instantiate_type (Translation_state.unit_context cx)
                (Translation_types.cpp_ir_of_core_type cx (empty_env ()) vars f.type_)) )
         fields )
 
@@ -1511,10 +1511,10 @@ let record_methods_decl r vars fields : Cpp_ir.Lowered.Decl.t =
       needs_shared_from_this = false }
 
 (** The id of the methods of the eponymous record [r]. *)
-let record_methods_id r = {Unit_program.owner = source r; part = Methods}
+let record_methods_id r = {Cpp_passes.Unit_program.owner = source r; part = Methods}
 
 let record_methods_finishing r vars fields =
-  Unit_program.job (record_methods_id r) (record_methods_decl r vars fields)
+  Cpp_passes.Unit_program.job (record_methods_id r) (record_methods_decl r vars fields)
 
 let finished_record_methods cx r vars fields =
   finished_of cx ~what:"an eponymous record's methods" (record_methods_id r) (record_methods_decl r vars fields)
@@ -1570,11 +1570,11 @@ let finished_header cx ids ds = finished_group cx ~what:"a header declaration" i
 let generate_in_scope cx ~module_ d k = k (generate cx (planned_header_scope module_) ~module_ d)
 
 type ahead = {
-  entities : Unit_program.entity list;
+  entities : Cpp_passes.Unit_program.entity list;
   functions : Cpp_ir.Lowered.Decl.t list;
-  finishing : Unit_program.job list;
+  finishing : Cpp_passes.Unit_program.job list;
   helpers : Cpp_ir.Lowered.Decl.t list;
-  handed_on : Unit_program.job list;
+  handed_on : Cpp_passes.Unit_program.job list;
 }
 
 let nothing_ahead = {entities = []; functions = []; finishing = []; helpers = []; handed_on = []}
@@ -1603,7 +1603,7 @@ let generate_ahead cx ~module_ d =
   | Header_only gen ->
     let g, lifted = header_entity cx ~module_ d gen in
     let member_def_ids, decl_ids = header_ids d g in
-    let jobs ids ds = List.map2 (fun id (_, decl) -> Unit_program.job id decl) ids ds in
+    let jobs ids ds = List.map2 (fun id (_, decl) -> Cpp_passes.Unit_program.job id decl) ids ds in
     { nothing_ahead with
       entities = [entity (decl_entity d) (member_def_ids @ decl_ids) lifted];
       finishing = jobs member_def_ids g.member_defs @ jobs decl_ids g.decls }

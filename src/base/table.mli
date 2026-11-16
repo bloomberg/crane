@@ -310,7 +310,7 @@ val is_coinductive_type : 'p Core.Type.at -> bool
     A demand is something the preamble of the generated file must provide -- a
     standard or runtime header, a directive -- that only code generation can
     discover.  It is raised before either file is rendered, from what was
-    generated ahead of them ({!Cpp_demands}), and read when the preamble is
+    generated ahead of them ({!Cpp_passes.Demands}), and read when the preamble is
     emitted, which comes first in the file.  The printer raises none: what it
     writes is only checked against them ({!written_needs_header}). *)
 
@@ -351,7 +351,7 @@ val reset_demands : unit -> unit
 
 (** [written_needs_header h] records that what a file being rendered writes
     needs [h].  It demands nothing: a unit's demands are read off what is
-    generated ahead of its files ({!Cpp_demands}).  Recorded under
+    generated ahead of its files ({!Cpp_passes.Demands}).  Recorded under
     [CRANE_CHECK_IR] only, for {!freeze_demands} to check. *)
 val written_needs_header : header -> unit
 

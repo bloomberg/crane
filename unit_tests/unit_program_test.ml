@@ -2,11 +2,11 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (* Entity identities, and the check that emission generates what the plan
-   accounts for: {!Unit_program.helper} recognises a lifted helper and keys
-   it by its {!Base.Lifted.t}; {!Unit_program.record} refuses to run while
-   planning; {!Unit_program.check_against_plan} refuses an entity, or a
+   accounts for: {!Cpp_passes.Unit_program.helper} recognises a lifted helper and keys
+   it by its {!Base.Lifted.t}; {!Cpp_passes.Unit_program.record} refuses to run while
+   planning; {!Cpp_passes.Unit_program.check_against_plan} refuses an entity, or a
    helper lifted out of one, the unit does not declare; and
-   {!Unit_program.record_lifted_ahead} accepts one helper handed on twice
+   {!Cpp_passes.Unit_program.record_lifted_ahead} accepts one helper handed on twice
    but refuses two generations lifting the same helper. *)
 
 open Crane_plugin
@@ -48,7 +48,7 @@ let () =
     dfun (Base.Lifted.ref_of helper) [Return (Some (Entity (r "callee", [], None)))]
   in
   let h =
-    match Unit_program.helper helper_decl with
+    match Cpp_passes.Unit_program.helper helper_decl with
     | Some h -> h
     | None -> check "a lifted helper is recognised" false; assert false
   in
@@ -57,28 +57,28 @@ let () =
   check "a helper is keyed by itself"
     (match Base.Generated_entity_id.role h.helper_id with Lifted_helper h -> Base.Lifted.equal h helper);
   check "an ordinary declaration is not a helper"
-    (Unit_program.helper (dfun (r "f") [])
+    (Cpp_passes.Unit_program.helper (dfun (r "f") [])
      = None);
   check "dependencies are the globals named"
     (Base.Entity_id.Set.mem (Base.Entity_id.of_ref (r "callee"))
-       (Unit_program.dependencies [helper_decl]));
+       (Cpp_passes.Unit_program.dependencies [helper_decl]));
   let entity name helpers =
-    { Unit_program.entity_id = Base.Entity_id.of_ref (r name); declarations = []; helpers }
+    { Cpp_passes.Unit_program.entity_id = Base.Entity_id.of_ref (r name); declarations = []; helpers }
   in
   check "nothing is generated while planning"
-    (raises_anomaly (fun () -> ignore (Unit_program.record (entity "a" []))));
+    (raises_anomaly (fun () -> ignore (Cpp_passes.Unit_program.record (entity "a" []))));
   let declares r' = List.exists (Names.GlobRef.UserOrd.equal r') [r "a"; r "owner"] in
-  let check_plan () = Unit_program.check_against_plan ~declares in
+  let check_plan () = Cpp_passes.Unit_program.check_against_plan ~declares in
   Base.Common.end_planning ();
-  ignore (Unit_program.record (entity "a" [h]));
-  Unit_program.record_lifted_ahead [helper_decl];
+  ignore (Cpp_passes.Unit_program.record (entity "a" [h]));
+  Cpp_passes.Unit_program.record_lifted_ahead [helper_decl];
   check "emitting what the unit declares passes" (not (raises_anomaly check_plan));
   check "the files took something generated ahead of nothing"
-    (raises_anomaly Unit_program.check_against_ahead);
-  Unit_program.record_ahead (entity "a" [h]);
+    (raises_anomaly Cpp_passes.Unit_program.check_against_ahead);
+  Cpp_passes.Unit_program.record_ahead (entity "a" [h]);
   check "the files took what was generated ahead of them"
-    (not (raises_anomaly Unit_program.check_against_ahead));
-  ignore (Unit_program.record (entity "b" []));
+    (not (raises_anomaly Cpp_passes.Unit_program.check_against_ahead));
+  ignore (Cpp_passes.Unit_program.record (entity "b" []));
   check "an entity the unit does not declare is refused" (raises_anomaly check_plan);
   Base.State.reset Base.State.Unit;
   let owned =
@@ -86,13 +86,13 @@ let () =
       (Let (Core.Occurrence.fresh ()))
   in
   let owned_decl = dfun (Base.Lifted.ref_of owned) [] in
-  Unit_program.record_lifted_ahead [owned_decl];
+  Cpp_passes.Unit_program.record_lifted_ahead [owned_decl];
   check "a helper lifted out of nothing the unit declares or emits is refused"
     (raises_anomaly check_plan);
   Base.State.reset Base.State.Unit;
   let again = dfun (Base.Lifted.ref_of owned) [] in
-  Unit_program.record_lifted_ahead [owned_decl; owned_decl];
+  Cpp_passes.Unit_program.record_lifted_ahead [owned_decl; owned_decl];
   check "a helper handed on to another generation is one helper"
-    (not (raises_user_error (fun () -> Unit_program.record_lifted_ahead [owned_decl])));
+    (not (raises_user_error (fun () -> Cpp_passes.Unit_program.record_lifted_ahead [owned_decl])));
   check "a helper two generations lifted is refused"
-    (raises_user_error (fun () -> Unit_program.record_lifted_ahead [again]))
+    (raises_user_error (fun () -> Cpp_passes.Unit_program.record_lifted_ahead [again]))

@@ -210,12 +210,12 @@ let finish ~check_control u jobs =
           | Source e -> Some (Base.Entity_id.to_ref e)
           | Generated g -> Option.map Base.Entity_id.to_ref (Base.Generated_entity_id.owner g)
         in
-        let finish () = Cpp_pipeline.finish ~check_control u d in
+        let finish () = Pipeline.finish ~check_control u d in
         let finished = match owner_ref with Some r -> Base.Table.with_decl_ref r finish | None -> finish () in
         Base.Probe.hit "cpp_ir" (fun () -> "converted");
-        demands := List.rev_append (Cpp_demands.of_decl u finished) !demands;
-        globals := List.rev_append (Cpp_demands.globals_of_decl finished) !globals;
-        promoted := List.rev_append (Cpp_demands.promoted_of_decl finished) !promoted;
+        demands := List.rev_append (Demands.of_decl u finished) !demands;
+        globals := List.rev_append (Demands.globals_of_decl finished) !globals;
+        promoted := List.rev_append (Demands.promoted_of_decl finished) !promoted;
         declarations := {id; finished} :: !declarations;
         sources := Id_map.add id d !sources;
         by_id := Id_map.add id {id; finished} !by_id )
@@ -254,7 +254,7 @@ let installed_finished () = List.map (fun d -> d.finished) !program.declarations
 let installed_promoted () = !program.promoted
 
 let finishes_as ~check_control u d f =
-  compare f (Cpp_pipeline.finish ~check_control u d) = 0
+  compare f (Pipeline.finish ~check_control u d) = 0
 
 let find_declaration id = Id_map.find_opt id !program.by_id
 

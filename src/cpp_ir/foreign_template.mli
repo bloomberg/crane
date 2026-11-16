@@ -5,7 +5,7 @@
     [Crane Extract Constant] and the like), parsed into tokens, once per text
     and category.  Literal C++ between placeholders stays opaque.  The only
     module that knows the syntax: translation and the printer
-    ({!Cpp_erasure}) fold over the tokens. *)
+    ({!Cpp_passes.Erasure}) fold over the tokens. *)
 
 (** One token of a parsed mapping. *)
 type custom_case =

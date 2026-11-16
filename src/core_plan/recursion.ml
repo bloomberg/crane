@@ -246,7 +246,7 @@ let combine a b =
 
 (* [e] with each temporary {!Normalize} bound a call to put back where it
    is read, when it is read once: the expression Normalize took the call out
-   of, as {!Cpp_temporaries} restores it for the transform that reads
+   of, as {!Cpp_passes.Temporaries} restores it for the transform that reads
    constructors around calls. *)
 let rec restore_temporaries e =
   match e with

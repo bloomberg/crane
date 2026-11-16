@@ -8,7 +8,7 @@
    ({!Translation}, {!Gen_decls}) and the printer ({!Cpp}).  Everything a
    declaration becomes is generated once, ahead of both files
    ({!generate_ahead}), finished in the unit's program
-   ({!Unit_program}), and taken from there by each file's pass:
+   ({!Cpp_passes.Unit_program}), and taken from there by each file's pass:
 
    {ul
    {- the source-file family ({!impl_decls}) gives the full definitions
@@ -31,7 +31,7 @@
 type generated = (Base.Common.env * Cpp_ir.Lowered.Decl.t) list
 
 (** Declarations finished for the printer: what one Core declaration
-    became, as the unit's program finished it ({!Unit_program.finish}), in
+    became, as the unit's program finished it ({!Cpp_passes.Unit_program.finish}), in
     CppIR. *)
 type rendered = (Base.Common.env * Cpp_ir.Resolved.Decl.t) list
 
@@ -82,42 +82,42 @@ val generating_ahead : (unit -> 'a) -> 'a
 val start_render : file:Base.Common.file -> unit
 
 (** [source r] is the source entity [r], as an owner. *)
-val source : Names.GlobRef.t -> Unit_program.owner
+val source : Names.GlobRef.t -> Cpp_passes.Unit_program.owner
 
 (** [helper_id d] is the id of the lifted helper [d] in the unit's program
-    ({!Unit_program.id}): the only declaration of its own generation.
+    ({!Cpp_passes.Unit_program.id}): the only declaration of its own generation.
     That [d] is not a lifted helper is an anomaly. *)
-val helper_id : Cpp_ir.Lowered.Decl.t -> Unit_program.id
+val helper_id : Cpp_ir.Lowered.Decl.t -> Cpp_passes.Unit_program.id
 
 (** [helper_placed d] is the lifted helper [d] under its {!helper_id}, in
     CppIR. *)
-val helper_placed : Cpp_ir.Lowered.Decl.t -> Unit_program.id * Cpp_ir.Lowered.Decl.t
+val helper_placed : Cpp_ir.Lowered.Decl.t -> Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t
 
 (** [helpers_placed ds] is each lifted helper of [ds] under its
     {!helper_id}, in CppIR. *)
-val helpers_placed : Cpp_ir.Lowered.Decl.t list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
+val helpers_placed : Cpp_ir.Lowered.Decl.t list -> (Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t) list
 
 (** [instance_ids r ds] is the id of each of [ds], the declarations of the
     instance [r]. *)
-val instance_ids : Names.GlobRef.t -> generated -> Unit_program.id list
+val instance_ids : Names.GlobRef.t -> generated -> Cpp_passes.Unit_program.id list
 
 (** [instance_jobs r ds] is [ds], the declarations of the instance [r], to
     finish, each under its id. *)
-val instance_jobs : Names.GlobRef.t -> generated -> Unit_program.job list
+val instance_jobs : Names.GlobRef.t -> generated -> Cpp_passes.Unit_program.job list
 
 (** [instance_placed r ds helpers] is [helpers], the helpers lifted out of
     the methods of the instance [r], then [ds], its declarations, each under
     its id: how a wrapper module places an instance, as it places a lifted
     helper. *)
 val instance_placed :
-  Names.GlobRef.t -> generated -> Cpp_ir.Lowered.Decl.t list -> (Unit_program.id * Cpp_ir.Lowered.Decl.t) list
+  Names.GlobRef.t -> generated -> Cpp_ir.Lowered.Decl.t list -> (Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t) list
 
 (** [concept_id r] is the id of the concept of the class [r]. *)
-val concept_id : Names.GlobRef.t -> Unit_program.id
+val concept_id : Names.GlobRef.t -> Cpp_passes.Unit_program.id
 
 (** [record_methods_id r] is the id of the methods of the eponymous record
-    [r] ({!Unit_program.Methods}). *)
-val record_methods_id : Names.GlobRef.t -> Unit_program.id
+    [r] ({!Cpp_passes.Unit_program.Methods}). *)
+val record_methods_id : Names.GlobRef.t -> Cpp_passes.Unit_program.id
 
 
 (** What generating a declaration ahead of the files leaves for later: the
@@ -126,17 +126,17 @@ val record_methods_id : Names.GlobRef.t -> Unit_program.id
     it to finish; and the helpers lifted out of it, finished once everything
     else is. *)
 type ahead = {
-  entities : Unit_program.entity list;
+  entities : Cpp_passes.Unit_program.entity list;
       (** What was generated, as the entities a file records taking it. *)
   functions : Cpp_ir.Lowered.Decl.t list;
       (** The function definitions generated, registered with Loopify
           before any function of the unit is finished. *)
-  finishing : Unit_program.job list;
+  finishing : Cpp_passes.Unit_program.job list;
       (** What of the declaration to finish, each under its id. *)
   helpers : Cpp_ir.Lowered.Decl.t list;
       (** The helpers lifted out of it, finished after everything else, each
           under its {!helper_id}. *)
-  handed_on : Unit_program.job list;
+  handed_on : Cpp_passes.Unit_program.job list;
       (** Declarations of its own handed on to be finished with its helpers,
           after them. *)
 }
@@ -153,12 +153,12 @@ val functions_ahead : (Names.GlobRef.t * Gen_decls.generated_fun list) list -> a
 (** [entity r ids helpers] is the generation of [r]: the declarations
     [ids], and the helpers among [helpers]. *)
 val entity :
-  Names.GlobRef.t -> Unit_program.id list -> Cpp_ir.Lowered.Decl.t list -> Unit_program.entity
+  Names.GlobRef.t -> Cpp_passes.Unit_program.id list -> Cpp_ir.Lowered.Decl.t list -> Cpp_passes.Unit_program.entity
 
 (** [funs_entities ~fallback funs] is each generated function as the entity
     its declaration is about, [fallback] where it says none. *)
 val funs_entities :
-  fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> Unit_program.entity list
+  fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> Cpp_passes.Unit_program.entity list
 
 (** Generate, ahead of both files, what the declaration [d] is written as
     that {!impl_decls} and {!header_decls} then take from here: its
@@ -312,12 +312,12 @@ val generated_record_field_types : unit -> Cpp_ir.Resolved.Type.t list
 (** [record_methods_finishing r vars fields] is what finishing [fields],
     the methods of the eponymous record [r] of variables [vars], takes: the
     members of its module's struct, as the owner's methods
-    ({!Unit_program.Methods}). *)
+    ({!Cpp_passes.Unit_program.Methods}). *)
 val record_methods_finishing :
   Names.GlobRef.t ->
   Names.Id.t list ->
   Cpp_ir.Lowered.phase Cpp_ir.Field.member list ->
-  Unit_program.job
+  Cpp_passes.Unit_program.job
 
 (** [finished_record_methods r vars fields] is {!record_methods_finishing}
     finished ahead of the files, taken from there by the header. *)
@@ -346,10 +346,10 @@ val regenerate_ahead : Translation_state.t -> module_:Names.ModPath.t -> Core.De
 
 (** [finished_placed (id, d)] is [d], the declaration [id] placed beside
     the generation it was lifted out of or handed on with, as the unit's
-    program has it ({!Unit_program}).  That the program does not have it
+    program has it ({!Cpp_passes.Unit_program}).  That the program does not have it
     is an anomaly; a file's pass finishes it again under [CRANE_CHECK_IR]
     and checks.  So for every [finished_] reader below. *)
-val finished_placed : Translation_state.t -> Unit_program.id * Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
+val finished_placed : Translation_state.t -> Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [finished_helper d] is the lifted helper [d] ({!finished_placed} under
     its {!helper_id}). *)
@@ -357,7 +357,7 @@ val finished_helper : Translation_state.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Res
 
 (** [entity_placed (id, d)] is the function entity of {!finished_placed}:
     its declaration and definition. *)
-val entity_placed : Translation_state.t -> Unit_program.id * Cpp_ir.Lowered.Decl.t -> Function_entity.t
+val entity_placed : Translation_state.t -> Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t -> Function_entity.t
 
 (** [helper_entity d] is {!entity_placed} of the lifted helper [d] under
     its {!helper_id}. *)
@@ -397,14 +397,14 @@ val template_kinds : Translation_state.t -> Core.Program.t -> (Names.GlobRef.t *
 
 (** {2 Recording the generated program}
 
-    What the printer renders is recorded in {!Unit_program} as it is
+    What the printer renders is recorded in {!Cpp_passes.Unit_program} as it is
     generated. *)
 
 (** [record_entity r ids helpers] records that generating the source
     entity [r] gave the declarations [ids] to finish and lifted
     [helpers]. *)
 val record_entity :
-  Names.GlobRef.t -> Unit_program.id list -> Cpp_ir.Lowered.Decl.t list -> Unit_program.entity
+  Names.GlobRef.t -> Cpp_passes.Unit_program.id list -> Cpp_ir.Lowered.Decl.t list -> Cpp_passes.Unit_program.entity
 
 (** [record_funs ~fallback funs] records each generated function as the
     entity its declaration is about, [fallback] where it names none. *)

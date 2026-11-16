@@ -15,7 +15,7 @@
     ([crane_erase_fn]) over a closed lambda is hoisted the same way, as
     [erased_fn]: it too is the same value wherever it is evaluated.
 
-    One of the per-declaration passes of {!Cpp_pipeline}. *)
+    One of the per-declaration passes of {!Pipeline}. *)
 
 (** [d] with each function body's constants declared once at its top; a
     constant in a lambda nested in a function body is declared at the top of

@@ -680,9 +680,9 @@ let global_names u frames globals =
   List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
 
 (* The globals writing [ty] names: those its printing writes the names of
-   ({!Cpp_demands.globals_of_type}), and the head of every global type in
+   ({!Cpp_passes.Demands.globals_of_type}), and the head of every global type in
    it, a custom whose text it is written from among them. *)
-let type_globals ty = Cpp_demands.globals_of_type ty @ Ir.type_heads ty
+let type_globals ty = Cpp_passes.Demands.globals_of_type ty @ Ir.type_heads ty
 
 (** The assertions [d] holds back, in the order it writes them: those that
     a class's concept holds of an instance where the concept is declared
@@ -796,9 +796,9 @@ let rec tyctor_spelled ctx vl x =
     match c with Member (base, _) -> tyctors_spelled ctx vl base | _ -> () )
 
 (* {!tyctor_spelled} at each type constructor writing [t] writes, in the
-   order demands find them ({!Cpp_demands.tyctors_of_type}). *)
+   order demands find them ({!Cpp_passes.Demands.tyctors_of_type}). *)
 and tyctors_spelled ctx vl t =
-  Cpp_demands.tyctors_of_type
+  Cpp_passes.Demands.tyctors_of_type
     (fun ~vl ~owner:_ (t : ty) -> match t with Type_constructor x -> tyctor_spelled ctx vl x | _ -> ())
     ~vl t
 
@@ -1204,11 +1204,11 @@ let ctor_aliases_found ctx visit =
 (* What planning reads off [d] written at [ctx]: the synthesised templates
    it writes and how it writes its type constructors. *)
 let ctor_aliases_written ctx (d : Cpp_ir.Resolved.Decl.t) =
-  let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f d) in
+  let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_passes.Demands.tyctors_of_decl f d) in
   {Ctor_aliases_read.written = (module_written ctx, Written_declaration d); aliases = aliases; uses = uses}
 
 let ctor_aliases_of_fields ctx ~vl r types =
-  let aliases, uses = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) in
+  let aliases, uses = ctor_aliases_found ctx (fun f -> List.iter (Cpp_passes.Demands.tyctors_of_type f ~vl) types) in
   {Ctor_aliases_read.written = (module_written ctx, Written_fields r); aliases = aliases; uses = uses}
 
 (** The synthesised templates the finished declaration [d], written in the
@@ -1251,7 +1251,7 @@ let constrained_named ~names ~defined =
 let needs_of ~templates d =
   let names, defines =
     constrained_named
-      ~names:(fun () -> Cpp_demands.globals_of_decl d)
+      ~names:(fun () -> Cpp_passes.Demands.globals_of_decl d)
       ~defined:(fun () -> Ir.structs_defined d)
   in
   {Cpp_ast.Needs.templates; names; defines}
@@ -1268,7 +1268,7 @@ let fields_needs ctx ~module_ ~vl r types =
       Pp.(str "the fields of a record in the " ++ str (Base.Common.file_name file)
           ++ str " write other templates than were planned for them");
   let names, _ =
-    constrained_named ~names:(fun () -> List.concat_map Cpp_demands.globals_of_type types) ~defined:(fun () -> [])
+    constrained_named ~names:(fun () -> List.concat_map Cpp_passes.Demands.globals_of_type types) ~defined:(fun () -> [])
   in
   {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
 

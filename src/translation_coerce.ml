@@ -140,7 +140,7 @@ let mk_arity_call ?(params : Cpp_ir.Lowered.Type.t list option)
 let apply_erased_curried ?(box = false) (callee : Cpp_ir.Lowered.Expr.t) arg_exprs : Cpp_ir.Lowered.Expr.t =
   List.fold_left
     (fun (f : Cpp_ir.Lowered.Expr.t) a ->
-      let a = if box then Cpp_erasure.converting_ctor Any [a] else a in
+      let a = if box then Cpp_passes.Erasure.converting_ctor Any [a] else a in
       match f with
       (* A callable boxed right here never lost its type: recovering it would
          be a cast straight back to what it already was. *)
@@ -238,12 +238,12 @@ let rec coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.L
         (* A list went into the box with its elements boxed, so that is the
            shape the cast has to name however concrete the context's element
            type is; the converting constructor then recovers each element. *)
-        match Cpp_erasure.erased_list_shape into with
+        match Cpp_passes.Erasure.erased_list_shape into with
         (* A custom list has no converting constructor to unbox its elements
            with, so it stays at the flat shape until a consumer converts it. *)
-        | Some (g, shape) when Base.Table.is_custom g -> Cpp_erasure.unbox shape expr
-        | Some (_, shape) -> Cpp_erasure.converting_ctor into [Cpp_erasure.unbox shape expr]
-        | None -> Cpp_erasure.unbox into expr ) )
+        | Some (g, shape) when Base.Table.is_custom g -> Cpp_passes.Erasure.unbox shape expr
+        | Some (_, shape) -> Cpp_passes.Erasure.converting_ctor into [Cpp_passes.Erasure.unbox shape expr]
+        | None -> Cpp_passes.Erasure.unbox into expr ) )
     (* Nothing may be boxed or cast on the strength of an admission that the
        representation is unknown. *)
     | `Opaque -> expr
@@ -270,7 +270,7 @@ let rec coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.L
           let adapted =
             if is_function_value then wrap_crane_erase_fn Boxed_whole (erased_fn_instantiation expr) else expr
           in
-          Cpp_erasure.converting_ctor Any [adapted]
+          Cpp_passes.Erasure.converting_ctor Any [adapted]
       else
         match into with
         (* A slot that erased its domain -- a record field whose Rocq type is
@@ -379,7 +379,7 @@ let deep_box_list cx e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   | e -> (
     match
       Option.bind (infer_core_body_type e) (fun t ->
-          Cpp_erasure.erased_list_shape (Translation_types.cpp_of_core cx (empty_env ()) t) )
+          Cpp_passes.Erasure.erased_list_shape (Translation_types.cpp_of_core cx (empty_env ()) t) )
     with
     | Some _ -> Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Deep_box) [expr]
     | None -> expr )

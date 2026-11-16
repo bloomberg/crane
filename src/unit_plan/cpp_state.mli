@@ -430,7 +430,7 @@ val element_position : Names.ModPath.t -> render_ctx -> render_ctx
 
 (** [plan_function_reads s]: [s] is every global a function body of the
     unit names, from the unit's installed declarations
-    ({!Unit_program.installed_finished}), before either file is rendered.
+    ({!Cpp_passes.Unit_program.installed_finished}), before either file is rendered.
     The program-wide set from {!note_program_reads} is added to it. *)
 val plan_function_reads : Core.Ref.Can.Set.t -> unit
 

@@ -176,7 +176,7 @@ let value_indexed_family r =
     ground type alone: [deque<Nat>] becomes [deque<any>], while [Nat] stays
     [Nat].  This is the shape a box built out of a pattern binder physically
     has, and so the type an [any_cast] recovering it must name.  Deliberately
-    weaker than {!Cpp_erasure}'s [erase_type_to_any], which boxes the leaf
+    weaker than {!Cpp_passes.Erasure}'s [erase_type_to_any], which boxes the leaf
     too. *)
 let rec erase_type_args_to_any : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Entity_application (g, (_ :: _ as args), ns) -> Entity_application (g, List.map erase_type_args_to_any args, ns)

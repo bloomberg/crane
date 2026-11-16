@@ -76,30 +76,30 @@ let on_decl = Base.Pipeline_trace.pass
 
 (** The passes below that discharge an {!obligation}, named once so that
     the list of obligations refers to the pass rather than to its name. *)
-let constraints = on_decl "constraints" Cpp_constraints.settle
+let constraints = on_decl "constraints" Constraints.settle
 
-let casts = Base.Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
-let free_tvars = Base.Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
-let boxed_reads = Base.Pipeline_trace.pass "boxed_reads" Cpp_erasure.lower_boxed_reads
-let template_args = Base.Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
+let casts = Base.Pipeline_trace.pass "casts" Erasure.resolve_casts
+let free_tvars = Base.Pipeline_trace.pass "free_tvars" Erasure.bind_free_tvars
+let boxed_reads = Base.Pipeline_trace.pass "boxed_reads" Erasure.lower_boxed_reads
+let template_args = Base.Pipeline_trace.pass "template_args" Erasure.supply_template_args
 (* The method calls of a declaration of the unit [u]. *)
-let method_calls u = Base.Pipeline_trace.pass "method_calls" (Cpp_erasure.lower_method_calls u)
-let projections = Base.Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
-let conditionals = Base.Pipeline_trace.pass "conditionals" Cpp_erasure.lower_conditionals
-let access_moves = Base.Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
-let constexpr = Base.Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
-let foreign = Base.Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
-let qualifiers = Base.Pipeline_trace.pass "qualifiers" Cpp_erasure.lower_qualifiers
+let method_calls u = Base.Pipeline_trace.pass "method_calls" (Erasure.lower_method_calls u)
+let projections = Base.Pipeline_trace.pass "projections" Erasure.lower_projections
+let conditionals = Base.Pipeline_trace.pass "conditionals" Erasure.lower_conditionals
+let access_moves = Base.Pipeline_trace.pass "access_moves" Erasure.lower_access_moves
+let constexpr = Base.Pipeline_trace.pass "constexpr" Erasure.decide_constexpr
+let foreign = Base.Pipeline_trace.pass "foreign" Erasure.instantiate_foreign
+let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
-let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Cpp_erasure.lower_pointer_slots u)
-let unused_bindings = Base.Pipeline_trace.pass "unused_bindings" Cpp_erasure.mark_unused_bindings
-let scrutinees = Base.Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
-let captures = Base.Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
-let initialisers = Base.Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
+let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Erasure.lower_pointer_slots u)
+let unused_bindings = Base.Pipeline_trace.pass "unused_bindings" Erasure.mark_unused_bindings
+let scrutinees = Base.Pipeline_trace.pass "scrutinees" Erasure.name_scrutinees
+let captures = Base.Pipeline_trace.pass "captures" Erasure.decide_captures
+let initialisers = Base.Pipeline_trace.pass "initialisers" Erasure.invoke_capturing_initialisers
 
 type control_check = unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
 
-(** Every pass before the {!Cpp_erasure} seam, in the order they run, over a
+(** Every pass before the {!Erasure} seam, in the order they run, over a
     declaration of the unit [u]. *)
 let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
@@ -114,24 +114,24 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
        The moves they hold were decided over Core, the arguments a local
        fixpoint applied in place binds its parameters to in order
        ({!Ownership_ir.Region.evaluated_first}). *)
-    on_decl "local_closures" Cpp_local_closures.transform_decl;
+    on_decl "local_closures" Local_closures.transform_decl;
     (* A function's constants are declared once at its top, now that nothing
        moves code between functions -- and before the passes that rewrite what
        an initialiser holds: [depth] splits a deep one into bindings, which in
        a static's initialiser run once. *)
-    on_decl "constants" Cpp_constants.decl;
+    on_decl "constants" Constants.decl;
     (* The temporaries Normalize named for loopification and loopification did
        not need go back where they are read. *)
-    on_decl "temporaries" Cpp_temporaries.decl;
+    on_decl "temporaries" Temporaries.decl;
     (* An argument a mapping would splice, and so evaluate, more than once is
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
-    on_decl "shared_args" Cpp_shared_args.transform_decl;
+    on_decl "shared_args" Shared_args.transform_decl;
     (* Small local simplifications, each removing something. *)
-    on_decl "simplify" Cpp_simplify.transform_decl;
+    on_decl "simplify" Simplify.transform_decl;
     (* An initialiser nested deeper than a compiler will parse becomes a run of
        bindings; everything shallower is left as it stands. *)
-    on_decl "depth" Cpp_depth.flatten;
+    on_decl "depth" Depth.flatten;
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
     on_decl "return_moves" Return_moves.drop_return_moves;
@@ -141,13 +141,13 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
 
 (** Writing a type down is what decides its representation, so the unknown
     representations are settled before anything reads the declaration as final.
-    Crossing this seam is what gives {!Cpp_erasure.settled}, the printer's
+    Crossing this seam is what gives {!Erasure.settled}, the printer's
     input type. *)
 let seam = "materialise"
 
 (** Every pass after the seam, in the order they run, over a declaration of
     the unit [u]. *)
-let settled_passes u : Cpp_erasure.settled Base.Pipeline_trace.pass list =
+let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
   [ casts;
     (* With the heads final, a body naming a type variable no head declares
        is a name nothing in scope introduces; spell it [std::any] rather than
@@ -195,7 +195,7 @@ let pass_names =
 
     A declaration leaves translation owing the printer decisions C++ cannot
     be handed undecided ({!Cpp_ir.Representation_obligation}).  Each is
-    discharged by one pass above, and {!Cpp_erasure.settled} claims that by
+    discharged by one pass above, and {!Erasure.settled} claims that by
     the end none is outstanding. *)
 type obligation = Cpp_ir.Representation_obligation.t
 
@@ -235,7 +235,7 @@ let describe : obligation -> string = function
 
 (** Whether [decl] writes down a type [p] holds of, a carrier abstraction's
     body included. *)
-let mentions p (decl : Cpp_erasure.settled) =
+let mentions p (decl : Erasure.settled) =
   let exception Found in
   let ft t = if Cpp_ir.Children.exists_type p t then raise_notrace Found else t in
   let rec fe e = Cpp_ir.Map.expr (rw ()) e
@@ -249,13 +249,13 @@ let mentions p (decl : Cpp_erasure.settled) =
     leaves nothing for a second run to do, so a declaration that has paid one
     is a fixed point of the pass that pays it -- a check that cannot drift
     from what the pass decides.  [u] is the unit the declaration is of. *)
-let owes u (decl : Cpp_erasure.settled) (o : obligation) =
+let owes u (decl : Erasure.settled) (o : obligation) =
   let d = (decl :> Cpp_ir.Lowered.Decl.t) in
-  let rewrites (p : Cpp_erasure.settled Base.Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
+  let rewrites (p : Erasure.settled Base.Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
   match o with
   | Unresolved_type -> mentions (function Obligation Unresolved_type -> true | _ -> false) decl
   | Opaque_type -> mentions (function Obligation Opaque_type -> true | _ -> false) decl
-  | Unspellable_binder -> Cpp_erasure.writes_unspellable_binder decl
+  | Unspellable_binder -> Erasure.writes_unspellable_binder decl
   | Unsettled_callable -> compare (constraints.run d) d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
@@ -286,7 +286,7 @@ let owes u (decl : Cpp_erasure.settled) (o : obligation) =
     one a user's input can break.  The declaration is named as {!Base.Table} names
     any global, since one a pass generated -- a lifted helper -- is not in the
     name table [Printer.pr_global] reads, and would fail the report itself. *)
-let check_settled u obligations (decl : Cpp_erasure.settled) =
+let check_settled u obligations (decl : Erasure.settled) =
   match List.filter (owes u decl) obligations with
   | [] -> ()
   | owed ->
@@ -301,7 +301,7 @@ let check_settled u obligations (decl : Cpp_erasure.settled) =
 
 (** [resolved d] is [d], which owes the printer nothing, at the phase that
     says so. *)
-let resolved (d : Cpp_erasure.settled) =
+let resolved (d : Erasure.settled) =
   match Cpp_ir.Resolve.decl (d :> Cpp_ir.Lowered.Decl.t) with
   | d -> d
   | exception Cpp_ir.Resolve.Owed form ->
@@ -355,8 +355,8 @@ let finish ~check_control u decl =
       d passes
   in
   let decl = run Fun.id (lowered_passes ~check_control u) decl in
-  let settled = Cpp_erasure.materialise decl in
-  let inj (d : Cpp_erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
+  let settled = Erasure.materialise decl in
+  let inj (d : Erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
   let decl = run inj (settled_passes u) settled in
