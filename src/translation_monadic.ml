@@ -39,13 +39,13 @@ let is_monad_reified = Table.is_monad_reified
     ({!Translation_state.unit_facts}).  One the analysis did not reach heads
     none.  Under [CRANE_CHECK_IR] both are checked against what the global's
     registration and the mode of the generation translating it would say. *)
-let effect_of (use : Core.Global_use.t) =
-  let found = Core_effects.lookup (!tctx).input.unit.effects use in
+let effect_of cx (use : Core.Global_use.t) =
+  let found = Core_effects.lookup cx.ctx.input.unit.effects use in
   if Option.has_some found then Core_effects.tally ();
   if Probe.checking () then begin
     let here =
       Option.map
-        (fun operation -> {Core_effects.operation; mode = (!tctx).input.itree_mode})
+        (fun operation -> {Core_effects.operation; mode = cx.ctx.input.itree_mode})
         (Core_effects.operation_of use.callee)
     in
     match (found, here) with
@@ -64,13 +64,13 @@ let effect_of (use : Core.Global_use.t) =
   found
 
 (** Whether the use [use] heads the effect operation [op]. *)
-let is_effect op use =
-  match effect_of use with Some e -> e.Core_effects.operation = op | None -> false
+let is_effect cx op use =
+  match effect_of cx use with Some e -> e.Core_effects.operation = op | None -> false
 
 (** Whether the use [use] heads the effect operation [op], generated in
     {!Core_effects.Sequential} mode. *)
-let is_sequential_effect op use =
-  match effect_of use with
+let is_sequential_effect cx op use =
+  match effect_of cx use with
   | Some {Core_effects.operation; mode = Sequential} -> operation = op
   | _ -> false
 
@@ -147,7 +147,7 @@ let wrap_void_call_as_value (call_expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
     - [Core.Expr.Global(r, _)]  — named function, look up type in extraction table
     - [Core.Expr.Bound_variable(i)]       — variable (e.g. callback), look up type in env
     - [Core.Expr.Coerce]/[Core.Expr.Boxed_value]/[Core.Expr.Lambda_group_barrier] — transparent wrapper, recurse *)
-let rec core_callee_is_void = function
+let rec core_callee_is_void cx = function
   (* A record field of a [unit]-returning function type is stored as a
      [std::function<void(...)>]: [globals_object.(globals_set) gs]. *)
   | Core.Expr.Global {callee = r; _} when Table.is_projection r -> (
@@ -156,27 +156,27 @@ let rec core_callee_is_void = function
   | Core.Expr.Coerce {value = inner; _}
   | Core.Expr.Boxed_value {value = inner; _}
   | Core.Expr.Lambda_group_barrier {value = inner; _} ->
-    core_callee_is_void inner
-  | Core.Expr.Bound_variable {index = i; _} -> ( try core_type_is_void_call (get_env_type i) with _ -> false )
+    core_callee_is_void cx inner
+  | Core.Expr.Bound_variable {index = i; _} -> ( try core_type_is_void_call (get_env_type cx i) with _ -> false )
   | _ -> false
 
 (** Whether the C++ for a Core expression is a statement rather than a value:
     a call to something void-ified, applied or not. *)
-let core_expr_is_void_call = function
-  | Core.Expr.Apply {callee = f; _} -> core_callee_is_void f
-  | e -> core_callee_is_void e
+let core_expr_is_void_call cx = function
+  | Core.Expr.Apply {callee = f; _} -> core_callee_is_void cx f
+  | e -> core_callee_is_void cx e
 
 (** Whether a Core expression in a value position may compile to a [void] call,
     and so has to be wrapped by {!wrap_void_call_as_value}: a call to something
     void-ified, or a match whose every branch is one -- the projection
     extraction writes [r.(f) x] as, applying a field binder of a
     [unit]-returning function type, stored as [std::function<void(...)>]. *)
-let rec core_value_is_void_call = function
-  | Core.Expr.Apply {callee = f; _} -> core_callee_is_void f
+let rec core_value_is_void_call cx = function
+  | Core.Expr.Apply {callee = f; _} -> core_callee_is_void cx f
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    core_value_is_void_call e
+    core_value_is_void_call cx e
   | Core.Expr.Match {branches = pv; _} ->
     Array.length pv > 0
     && Array.for_all
@@ -187,7 +187,7 @@ let rec core_value_is_void_call = function
                match List.nth_opt binds (List.length binds - k) with
                | Some (_, ty) -> core_type_is_void_call ty
                | None -> false )
-             | e -> core_value_is_void_call e
+             | e -> core_value_is_void_call cx e
            in
            match body with
            | Core.Expr.Coerce {value = b; _}
@@ -240,8 +240,8 @@ let mk_itree_ret_for_value (r_cpp : Cpp_ir.Lowered.Type.t) r_core v =
     monad erasure is just [R].  This function wraps it back into
     [shared_ptr<ITree<R>>] so the tree can be passed as a first-class value.
     Does nothing in sequential mode or when [core_ty] is not monadic. *)
-let reify_monadic_param_type core_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-  if is_monadic_core_type core_ty && (!tctx).input.itree_mode = Reified then begin
+let reify_monadic_param_type cx core_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+  if is_monadic_core_type core_ty && cx.ctx.input.itree_mode = Reified then begin
     let r_ty : Cpp_ir.Lowered.Type.t =
       match cpp_ty with
       | Entity_application (_, _ :: r :: _, _) -> r
@@ -268,7 +268,7 @@ let reify_monadic_param_type core_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.L
     exception is a mapping whose result is a {e reified} monad: that monad's
     values are trees, so its mappings -- [itree_trigger], [itree_ret] -- are
     spelled as expressions that build one, and wrapping would double it. *)
-let rec is_reified_monadic_expr core_expr =
+let rec is_reified_monadic_expr cx core_expr =
   (* The result of applying [n] arguments to something of Core type [ty].  A
      dummy domain is an erased type parameter, which the term does not pass, so
      it is stepped over without spending an argument; an alias still owed
@@ -355,17 +355,17 @@ let rec is_reified_monadic_expr core_expr =
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
-    is_reified_monadic_expr e
+    is_reified_monadic_expr cx e
   | Core.Expr.Apply
     {callee =
       (Core.Expr.Coerce {value = f; _} | Core.Expr.Boxed_value {value = f; _}
         | Core.Expr.Lambda_group_barrier {value = f; _});
                      arguments = args} ->
-    is_reified_monadic_expr (Core.Expr.Apply {callee = f; arguments = args})
+    is_reified_monadic_expr cx (Core.Expr.Apply {callee = f; arguments = args})
   | Core.Expr.Bound_variable {index = i; _} ->
-    (match get_env_type_opt i with Some ty -> says_monadic ty | None -> false)
+    (match get_env_type_opt cx i with Some ty -> says_monadic ty | None -> false)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = i; _}; arguments = args} ->
-    (match get_env_type_opt i with
+    (match get_env_type_opt cx i with
      | Some ty -> says_monadic (core_result_after (List.length args) ty)
      | None -> false)
   (* A global of monadic type is already a tree whether or not it is applied:

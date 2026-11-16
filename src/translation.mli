@@ -34,13 +34,14 @@ open Names
     ({!Translation_expr.gen_expr}).  [slot] describes the position; callers
     outside lowering leave it at {!Translation_slot.empty_slot}. *)
 val gen_expr :
-  ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:Translation_slot.slot -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t
+  Translation_state.t -> ?expected_ty:Cpp_ir.Lowered.Type.t -> ?slot:Translation_slot.slot -> env ->
+    Core.Expr.t -> Cpp_ir.Lowered.Expr.t
 
 (** Generate C++ statements from a Core expression
     ({!Translation_stmts.gen_stmts}).  The continuation [k] turns the final
     expression into a statement (a return, an assignment). *)
 val gen_stmts :
-  ?slot:Translation_slot.slot ->
+  Translation_state.t -> ?slot:Translation_slot.slot ->
   env ->
   (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ->
   Core.Expr.t ->
@@ -52,11 +53,11 @@ val gen_stmts :
     method-self namespace, restoring the enclosing one on the way out however
     [f] leaves.  Containers built inside such a scope then spell those
     inductives' type parameters as their struct fields do. *)
-val with_method_ns_for_locals : ?base:Ref.User.Set.t -> (unit -> 'a) -> 'a
+val with_method_ns_for_locals : Translation_state.t -> ?base:Ref.User.Set.t -> (unit -> 'a) -> 'a
 
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
     on an inductive whose kept parameters are [param_vars], has no C++ spelling
     and must be rendered as [std::any].  Pass this to
     {!Method_registry.create}: the registry needs the judgement but is kept
     below the type translation, so it is told rather than deciding. *)
-val return_type_is_erased : Id.t list -> Core.Type.t -> bool
+val return_type_is_erased : Translation_state.t -> Id.t list -> Core.Type.t -> bool

@@ -32,11 +32,11 @@
 (** Language descriptor for C++. Provides the preamble, file suffix,
     pretty-printers, and other hooks that {!Extract_env} needs to drive a full
     extraction pass. *)
-val cpp_descr : Unit_context.t Backend.t
+val cpp_descr : Translation_state.t Backend.t
 
 (** The methods registered for the inductives of a structure
     ({!Method_registry.create}), decided outside every module body. *)
-val method_registry_of : Core.Program.t -> Method_registry.t
+val method_registry_of : Translation_state.t -> Core.Program.t -> Method_registry.t
 
 (** Decide the unit's layout before either file is rendered: analyse the
     structure ({!Structure_analysis}), record what rendering reads of the
@@ -45,14 +45,14 @@ val method_registry_of : Core.Program.t -> Method_registry.t
     classified ({!Unit_context.t.names}), and the analysis, which the
     backend's plans for the unit hold ({!Cpp_state.plans.analysis}). *)
 val prepare_structure :
-  Unit_context.t -> Core.Program.t -> Module_plan.t * Name_resolution.t * Structure_analysis.t
+  Translation_state.t -> Unit_context.t -> Core.Program.t -> Module_plan.t * Name_resolution.t * Structure_analysis.t
 
 (** [registered_methods kn ind] -- each function registered as a method of
     one of [ind]'s inductives, generated with it: the inductive, the
     variables of the struct it is generated in -- an eponymous record's own,
     otherwise the inductive's struct's -- and the method's candidate. *)
 val registered_methods :
-  ?order:(Method_registry.method_candidate list -> Method_registry.method_candidate list) ->
+  Translation_state.t -> ?order:(Method_registry.method_candidate list -> Method_registry.method_candidate list) ->
   Names.MutInd.t ->
   Core.Inductive.t ->
   (Names.GlobRef.t * Names.Id.t list * Method_registry.method_candidate) list
@@ -67,7 +67,7 @@ val registered_methods :
     module, as the walk planning them entered it, which the backend's plans
     for the unit hold ({!Cpp_state.plans}). *)
 val plan_callables :
-  ?reversed:bool ->
+  Translation_state.t -> ?reversed:bool ->
   Core.Program.t ->
   (Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list)
   * (Cpp_state.module_frame Names.MPmap.t * Cpp_state.concept_plan Names.MPmap.t)
@@ -75,21 +75,21 @@ val plan_callables :
 (** Generate every function the renders write, and every instance's struct,
     before either file is rendered, for both files
     ({!Cpp_ind.generating_ahead}), in the unit given. *)
-val generate_ahead : Unit_context.t -> Core.Program.t -> unit
+val generate_ahead : Translation_state.t -> Unit_context.t -> Core.Program.t -> unit
 
 (** Generate what one declaration, an element of the module [module_], is
     written as, before it is rendered, and finish it into the unit's
     program: the walk {!generate_ahead} would make for a structure holding
     only it, in the unit given. *)
-val generate_decl_ahead : Unit_context.t -> module_:Names.ModPath.t -> Core.Decl.t -> unit
+val generate_decl_ahead : Translation_state.t -> Unit_context.t -> module_:Names.ModPath.t -> Core.Decl.t -> unit
 
 (** The files the names of the unit [s] are written through, read off what
     {!generate_ahead} generated: what its files include. *)
-val files_named_ahead : Unit_context.t -> Core.Program.t -> Names.ModPath.t list
+val files_named_ahead : Translation_state.t -> Unit_context.t -> Core.Program.t -> Names.ModPath.t list
 
 (** The customs the unit's files write, read off what {!generate_ahead}
     generated in the unit given: whose imports its files include. *)
-val customs_written_ahead : Unit_context.t -> Ref.User.Set.t
+val customs_written_ahead : Translation_state.t -> Unit_context.t -> Ref.User.Set.t
 
 (** Plan, from what {!generate_ahead} finished, which globals the unit's
     function bodies read ({!Cpp_state.read_by_a_function}): every installed
@@ -105,11 +105,11 @@ val plan_function_reads : unit -> unit
     static function declarations whose types are declared by the file's
     forward declarations and name nothing inside another struct.  [u] is
     the unit's context. *)
-val plan_file_layout : Unit_context.t -> Core.Program.t -> unit
+val plan_file_layout : Translation_state.t -> Unit_context.t -> Core.Program.t -> unit
 
 (** The plan of the synthesised templates each file writes, before either
     is rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
-val plan_ctor_aliases : Core.Program.t -> Cpp_state.ctor_alias_plan
+val plan_ctor_aliases : Translation_state.t -> Core.Program.t -> Cpp_state.ctor_alias_plan
 
 (** The C++ name of each global the unit declares, a functor's body
     included, decided in declaration order ({!Common.pp_global_name}): an
@@ -155,12 +155,12 @@ val plan_promoted_inductives : Unit_context.t -> Core.Program.t -> Names.GlobRef
     struct, one that is a template itself, or any under separate extraction;
     each a constant its generation does not make a function.  [u] is the
     unit's context. *)
-val plan_accessors : Unit_context.t -> Core.Program.t -> Names.GlobRef.t list
+val plan_accessors : Translation_state.t -> Unit_context.t -> Core.Program.t -> Names.GlobRef.t list
 
 (** The scope of each module the unit emits as a struct: how a definition of
     one of its members, written outside the struct's body, names the
     struct. *)
-val plan_scopes : Core.Program.t -> Scope_plan.t
+val plan_scopes : Translation_state.t -> Core.Program.t -> Scope_plan.t
 
 (** The structs written inside another struct, each with the name it is
     written under: a module's, and an inductive's -- its struct or its enum
@@ -168,13 +168,13 @@ val plan_scopes : Core.Program.t -> Scope_plan.t
     [::name] where one of them would capture it, and a reference to one of
     them is qualified by its enclosing struct. *)
 val plan_nested_structs :
-  Core.Program.t -> (string * Cpp_state.nested_struct_owner) list
+  Translation_state.t -> Core.Program.t -> (string * Cpp_state.nested_struct_owner) list
 
 (** The concrete types each instance the unit declares gives its class's
     promoted variables ({!Gen_decls.instance_promoted_types}), which a call
     through it substitutes for them. *)
 val plan_instance_promoted_types :
-  Core.Program.t -> (Names.GlobRef.t * (Names.Id.t * Core.Type.t) list) list
+  Translation_state.t -> Core.Program.t -> (Names.GlobRef.t * (Names.Id.t * Core.Type.t) list) list
 
 (** The wrapper structs that hold declarations of their module's -- its
     functions, generated as the wrapper's members -- and so cannot be merged
@@ -182,14 +182,14 @@ val plan_instance_promoted_types :
     spells the wrapper's member.  Decided from what the wrapper's module
     declares, before the header renders the members.  Each with the module
     it wraps. *)
-val plan_unmerged_wrappers : unit -> (string * Names.ModPath.t) list
+val plan_unmerged_wrappers : Translation_state.t -> unit -> (string * Names.ModPath.t) list
 
 (** [plan_concept_prerequisites plan s] is [plan] with the labels of the
     top-level elements of [s]'s files that the concepts at the top of the
     header cannot be read without, which move ahead of them.  Asked once the
     wrappers holding declarations are installed: whether an inductive is
     spelled qualified by its wrapper depends on them. *)
-val plan_concept_prerequisites : Module_plan.t -> Core.Program.t -> Module_plan.t
+val plan_concept_prerequisites : Translation_state.t -> Module_plan.t -> Core.Program.t -> Module_plan.t
 
 (** The fields each constructor struct of an inductive the unit generates
     stores behind the smart pointer
@@ -197,4 +197,4 @@ val plan_concept_prerequisites : Module_plan.t -> Core.Program.t -> Module_plan.
     constructor's struct name, and each field's index with whether it holds
     the inductive itself.  A flat inductive has no constructor struct. *)
 val plan_pointer_fields :
-  Core.Program.t -> (Names.GlobRef.t * string * (int * bool) list) list
+  Translation_state.t -> Core.Program.t -> (Names.GlobRef.t * string * (int * bool) list) list

@@ -77,11 +77,11 @@ let is_member_ref signature r =
 (* The translated type [ty] as the requirements of the concept of the
    signature at [Core.Signature.t] spell it: [M]'s members, the functor's
    parameters and custom mappings told apart. *)
-let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
-  let args = List.map (concept_type signature) in
+let rec concept_type cx signature (ty : Cpp_ir.Lowered.Type.t) =
+  let args = List.map (concept_type cx signature) in
   match ty with
   | Entity_application (r, tys, _) when (not (Table.is_custom r)) && is_member_ref signature r ->
-    Member {member = r; enum = Cpp_names.is_enum_cached (Translation_state.unit_context ()) r; arguments = args tys}
+    Member {member = r; enum = Cpp_names.is_enum_cached (Translation_state.unit_context cx) r; arguments = args tys}
   | Entity_application (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
   | Entity_application (r, tys, _) -> (
     match Table.find_custom_opt r with
@@ -98,12 +98,12 @@ let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
       let erased = List.init (max 0 (arity - List.length supplied)) (fun _ -> Plain Any) in
       Foreign {custom = r; pieces; arguments = supplied @ erased}
     | None -> Global (r, args tys) )
-  | Shared_pointer ty -> Shared_pointer (concept_type signature ty)
+  | Shared_pointer ty -> Shared_pointer (concept_type cx signature ty)
   | Variant (storage, tys) -> Variant (storage, args tys)
   | In_namespace (r, Entity_application (r', tys, e)) when not (is_member_ref signature r) ->
     Namespaced (r, r', List.map ir_expr e, args tys)
-  | In_namespace (r, ty') when is_member_ref signature r -> concept_type signature ty'
-  | Function (dom, cod) -> Function (args dom, concept_type signature cod)
+  | In_namespace (r, ty') when is_member_ref signature r -> concept_type cx signature ty'
+  | Function (dom, cod) -> Function (args dom, concept_type cx signature cod)
   | ty -> Plain (ir_type ty)
 
 (* The domains and codomain of a Core arrow type. *)
@@ -114,12 +114,12 @@ let rec arrows = function
   | ret -> ([], ret)
 
 (* A Core type as translation converts it, outside any function. *)
-let convert t = Translation_types.cpp_ir_of_core_type (Common.empty_env ()) [] t
+let convert cx t = Translation_types.cpp_ir_of_core_type cx (Common.empty_env ()) [] t
 
 (* The requirements one specification of the signature at [Core.Signature.t]
    asks of [M]; none for an inline custom, whose mapping stands in for the
    member. *)
-let requirements signature = function
+let requirements cx signature = function
   | Core.Signature.Declaration.Value {entity = r; _} when Table.is_inline_custom r -> []
   | Core.Signature.Declaration.Type {entity = r; _} when Table.is_inline_custom r -> []
   (* A record's projection is a data member of the record's struct, which
@@ -135,7 +135,7 @@ let requirements signature = function
            let r = GlobRef.IndRef (kn, i) in
            Inductive_member
              { member = r;
-               enum = Cpp_names.is_enum_cached (Translation_state.unit_context ()) r;
+               enum = Cpp_names.is_enum_cached (Translation_state.unit_context cx) r;
                arity = List.length p.type_variables } )
          ind.packets )
   (* A polymorphic value is a member template, which a requires-expression
@@ -143,7 +143,7 @@ let requirements signature = function
   | Core.Signature.Declaration.Value {type_ = t; _} when Type_util.has_tvar t -> []
   | Core.Signature.Declaration.Value {entity = r; type_ = t; _} -> (
     let args, ret = arrows t in
-    let result = convert ret in
+    let result = convert cx ret in
     match ret with
     (* A parameter whose type is a type class names an instance, which Crane
        emits as a nested struct satisfying the class's concept: a concept
@@ -153,28 +153,29 @@ let requirements signature = function
       [ Instance_member
           { value = r;
             class_ = cls;
-            arguments = List.map (fun a -> concept_type signature (convert a)) cls_args } ]
-    | _ when args = [] -> [Nullary_member {value = r; result = concept_type signature result}]
+            arguments = List.map (fun a -> concept_type cx signature (convert cx a)) cls_args } ]
+    | _ when args = [] -> [Nullary_member {value = r; result = concept_type cx signature result}]
     | _ ->
-      let parameters = List.map (fun a -> concept_type signature (convert a)) args in
-      [Function_member {value = r; parameters; result = concept_type signature result}] )
+      let parameters = List.map (fun a -> concept_type cx signature (convert cx a)) args in
+      [Function_member {value = r; parameters; result = concept_type cx signature result}] )
   | Core.Signature.Declaration.Type {entity = r; parameters = vl; _} ->
     [Type_member {member = r; arity = List.length vl}]
 
-let rec constraint_of ~params = function
+let rec constraint_of cx ~params = function
   | Core.Module.Type.Path kn -> Named kn
-  | Core.Module.Type.Functor {parameter = mbid; result = mt; _} -> constraint_of ~params:(MPbound mbid :: params) mt
+  | Core.Module.Type.Functor {parameter = mbid; result = mt; _} -> constraint_of cx ~params:(MPbound mbid :: params) mt
   | Core.Module.Type.Signature {path = mp; items = sign} ->
     let item (label, specif) =
       match specif with
-      | Core.Module.Signature_item.Declaration s -> List.map (fun r -> Requirement r) (requirements mp s)
+      | Core.Module.Signature_item.Declaration s -> List.map (fun r -> Requirement r) (requirements cx mp s)
       | Core.Module.Signature_item.Module (Core.Module.Type.Path kn) ->
         [Requirement (Submodule {label; module_type = kn})]
       | Core.Module.Signature_item.Module _ -> []
-      | Core.Module.Signature_item.Module_type nested -> [Nested (MPdot (mp, label), constraint_of ~params:[] nested)]
+      | Core.Module.Signature_item.Module_type nested -> [Nested (MPdot (mp, label), constraint_of cx
+        ~params:[] nested)]
     in
     Requirements {signature = mp; parameters = params; items = List.concat_map item sign}
-  | Core.Module.Type.Refined {base = mt; _} -> constraint_of ~params:[] mt
+  | Core.Module.Type.Refined {base = mt; _} -> constraint_of cx ~params:[] mt
 
 (* The named module type a module type refines, if it is one. *)
 let rec base_concept = function
@@ -184,20 +185,21 @@ let rec base_concept = function
 
 (* The [with Definition] refinements of a module type over a named one,
    innermost first. *)
-let refinements mt =
+let refinements cx mt =
   let rec go acc = function
     | Core.Module.Type.Refined {base = inner;
                                 refinement = Core.Module.Refinement.Type_equation {path = idl; definition = typ; _}} ->
-      go ((idl, ir_type (Cpp_erasure.instantiate_type (Translation_state.unit_context ()) (convert typ))) :: acc) inner
+      go ((idl, ir_type (Cpp_erasure.instantiate_type (Translation_state.unit_context cx) (convert cx typ))) ::
+        acc) inner
     | Core.Module.Type.Refined {base = inner; refinement = Core.Module.Refinement.Module_equation _} -> go acc inner
     | _ -> acc
   in
   go [] mt
 
-let generate ~params mt =
+let generate cx ~params mt =
   match base_concept mt with
-  | Some base -> Alias {base; refinements = refinements mt}
-  | None -> Constraint (constraint_of ~params mt)
+  | Some base -> Alias {base; refinements = refinements cx mt}
+  | None -> Constraint (constraint_of cx ~params mt)
 
 (* The global references printing a concept resolves by name, each with the
    signatures visible where it is resolved: a member of one of those is
@@ -247,7 +249,7 @@ let rec constraint_refs ~visible note = function
         | Nested (_, c) -> constraint_refs ~visible note c )
       items
 
-let names_member mp c =
+let names_member cx mp c =
   let names = ref false in
   let note r = if is_under mp (Table.modpath_of_r r) then names := true in
   ( match c with

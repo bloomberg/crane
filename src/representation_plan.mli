@@ -70,7 +70,7 @@
     converted.  Each read is planned at the C++ type of its binder too.  A
     binder's recorded C++ type is never read. *)
 val region :
-  Translation_state.translation_ctx ->
+  Translation_state.t ->
   Core.Expr.t ->
   (Core_binder.site * int * Translation_state.planned_repr) list
   * (Core.Occurrence.t * Translation_state.Planned_read.t) list

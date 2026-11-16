@@ -20,7 +20,7 @@
     body translation generates, here once for every consumer instead of
     re-derived by each.  It runs first in {!Core_phase.normalize}, so the calls
     {!structure} names are those of that body. *)
-val eta_expand : Core.Program.t -> Core.Program.t
+val eta_expand : Translation_state.t -> Core.Program.t -> Core.Program.t
 
 (** [let_lambdas s] puts every let-bound lambda in [s]'s definitions as it is
     generated ({!Core_elaborate.generated_definition}): an alias of a
@@ -52,4 +52,4 @@ val into_branches :
     function is to have inlined is spliced into it
     ({!Recursion_plan.splice_partners}), and records what splicing
     decided. *)
-val structure : Core_phase.normalizing -> Core_phase.normalizing
+val structure : Translation_state.t -> Core_phase.normalizing -> Core_phase.normalizing

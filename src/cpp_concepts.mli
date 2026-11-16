@@ -15,7 +15,7 @@ open Names
     declaring it, with the concepts its nested module types are hoisted into
     ahead of it, naming what [names] names ({!names_requested}). *)
 val pp_modtype_concept :
-  Cpp_state.render_ctx ->
+  Translation_state.t -> Cpp_state.render_ctx ->
   names:Cpp_resolution.table ->
   params:ModPath.t list ->
   ModPath.t ->
@@ -31,10 +31,12 @@ val pp_assertion : Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
     concept, every name its declaration writes, the globals of the types it
     writes included ({!Cpp_leaf_plan.global_names}); of any other
     declaration, nothing. *)
-val names_requested : Unit_context.t -> Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
+val names_requested :
+  Translation_state.t -> Unit_context.t -> Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
 
 (** What the definition of the concept [c] names after its head, at the
     frames inside it: the base concept it refines, the modules that concept
     is applied to past [M] and the globals of the refinements' types, or its
     requirements' names. *)
-val concept_body_names : Unit_context.t -> Modtype_concept.t -> (Cpp_resolution.frame * Cpp_resolution.key) list
+val concept_body_names :
+  Translation_state.t -> Unit_context.t -> Modtype_concept.t -> (Cpp_resolution.frame * Cpp_resolution.key) list

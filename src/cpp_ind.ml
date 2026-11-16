@@ -59,8 +59,8 @@ let pp_decls ctx (ds : rendered) =
     because nothing has to -- its body's visibility is still entered where its
     members are spelled.  Both kinds are emitted after every datatype, so a
     datatype's member naming either one is naming something still to come. *)
-let module_struct_name (mp : ModPath.t) : string option =
-  match Module_plan.wrapper_struct (Translation_state.unit_context ()).modules mp with
+let module_struct_name cx (mp : ModPath.t) : string option =
+  match Module_plan.wrapper_struct (Translation_state.unit_context cx).modules mp with
   | Some name -> Some name
   | None -> (
     match mp with
@@ -88,7 +88,7 @@ let ind_template_kinds kn (ind : Core.Inductive.t) =
 
 (* The same for a type alias [generate] writes: its kinds come out of its
    rendered right-hand side, and only the alias's own generation renders it. *)
-let alias_template_kinds r l t =
+let alias_template_kinds cx r l t =
   let written =
     match t with
     | Core.Type.Erased Core.Erasure_reason.Type_argument -> false
@@ -96,12 +96,12 @@ let alias_template_kinds r l t =
       not
         ( is_any_inline_custom r
         || Table.singleton_class_method r <> None
-        || Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type (empty_env ()) l t) )
+        || Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type cx (empty_env ()) l t) )
   in
-  if written then [(r, type_alias_kinds r l t)] else []
+  if written then [(r, type_alias_kinds cx r l t)] else []
 
-let template_kinds struc =
-  Translation_state.generating_outside_modules @@ fun () ->
+let template_kinds cx struc =
+  Translation_state.generating_outside_modules cx @@ fun () ->
   let kinds = ref [] in
   let decide l =
     List.iter (fun (r, k) -> Tparam_kinds.record r k) l;
@@ -110,7 +110,7 @@ let template_kinds struc =
   Modutil.struct_iter
     (function
       | Core.Decl.Inductive {entity = kn; definition = ind} -> decide (ind_template_kinds kn ind)
-      | Core.Decl.Type_alias {entity = r; parameters = l; body = t} -> decide (alias_template_kinds r l t)
+      | Core.Decl.Type_alias {entity = r; parameters = l; body = t} -> decide (alias_template_kinds cx r l t)
       | _ -> () )
     (fun _ -> ())
     (fun _ -> ())
@@ -178,14 +178,14 @@ let scope_at (ctx : render_ctx) = {in_struct = ctx.in_struct; concepts_hoisted =
     ("redefinition as different kind of symbol").
 
     Written in the header scope [scope]. *)
-let ind_header_decls scope kn (ind : Core.Inductive.t) =
+let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.packets in
   (* Written at namespace scope: outside every struct, or moved out of the
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
     (not scope.in_struct)
-    || Array.for_all (Module_plan.is_namespace_scope_ref (Translation_state.unit_context ()).modules) names
+    || Array.for_all (Module_plan.is_namespace_scope_ref (Translation_state.unit_context cx).modules) names
   in
   let cnames =
     Array.mapi
@@ -199,7 +199,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
     (* Skip if concepts have been hoisted or we're inside a struct *)
     declarations_only
       ( if scope.in_struct || scope.concepts_hoisted then []
-        else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
+        else [(empty_env (), gen_typeclass_cpp cx names.(0) fields)] )
   | Core.Inductive.Kind.Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
@@ -207,7 +207,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
       ( match !eponymous_record with
       | Some (epon_ref, _, _) when globref_equal ind_ref epon_ref ->
         [] (* Skip - merged into module struct *)
-      | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.packets.(0))] )
+      | _ -> [(empty_env (), gen_record_cpp cx names.(0) fields ind.packets.(0))] )
   | _ ->
     let is_mutual = Array.length ind.packets > 1 in
     let forward_decls =
@@ -483,7 +483,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
             else []
           in
           let decl =
-            gen_ind_header_v2
+            gen_ind_header_v2 cx
               ~is_mutual
               ~consarg_names:p.constructor_argument_names
               ~mutual_partners
@@ -535,7 +535,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
                      planned into the wrapper. *)
                   let merges =
                     (match decl with Struct _ -> true | _ -> false)
-                    && not (Cpp_state.in_unmerged_wrapper (Translation_state.unit_context ()) names.(i))
+                    && not (Cpp_state.in_unmerged_wrapper (Translation_state.unit_context cx) names.(i))
                   in
                   Namespace (Some {ref_ = names.(i); merges}, [decl])
                 else decl
@@ -579,7 +579,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
             ~names:(fun r ->
               let mp = modpath_of_r r in
               (not (ModPath.equal mp home))
-              && module_struct_name mp <> None
+              && module_struct_name cx mp <> None
               (* A module path in the table says where the name was written in
                  Rocq, not which struct it ends up in: a function promoted onto
                  a datatype is emitted with that datatype, among the structs
@@ -594,7 +594,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
                  after itself, and a module of that same name is merged into
                  it -- so the callee is a sibling already above us, not a
                  struct still to come. *)
-              && not (List.mem (module_struct_name mp) own_nspace_names) )
+              && not (List.mem (module_struct_name cx mp) own_nspace_names) )
             group
         in
         (group, defs)
@@ -605,18 +605,18 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
     and generated, the same in both. *)
 let finish_instance_struct = Plan_templates.deapply_plain_struct_tvars
 
-let plan_instance_methods r a t =
-  Gen_decls.plan_instance_methods ~finish:finish_instance_struct r a t
+let plan_instance_methods cx r a t =
+  Gen_decls.plan_instance_methods cx ~finish:finish_instance_struct r a t
 
 (* Each method of the struct of the instance [r] declared with the head its
    plan gives it, which was made before anything was generated; under
    [CRANE_CHECK_IR] the head it was generated with is checked against it. *)
-let planned_methods ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
+let planned_methods cx ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
   let planned (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
     if Probe.checking () then
-      Callable_abi.check_instance_method (Translation_state.callables ()) ~instance:r m.name
+      Callable_abi.check_instance_method (Translation_state.callables cx) ~instance:r m.name
         (Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:r m);
-    let abi = Callable_abi.planned_instance_method (Translation_state.callables ()) ~instance:r m.name in
+    let abi = Callable_abi.planned_instance_method (Translation_state.callables cx) ~instance:r m.name in
     match Callable_abi.receiver abi with
     | Some {params; ret; _} when List.length params = List.length m.params ->
       { m with
@@ -652,11 +652,11 @@ let planned_methods ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
     only worth emitting for a ground instance.  Both declarations go to
     namespace scope; an instance declared inside a module is lifted out of the
     module's struct rather than emitted as a member of it. *)
-let instance_decls r a t =
+let instance_decls cx r a t =
   let ds_opt, class_ref_opt, concept_args, minted =
-    Gen_decls.gen_instance_struct r a t
+    Gen_decls.gen_instance_struct cx r a t
   in
-  let ds_opt = Option.map (fun d -> planned_methods ~minted r (finish_instance_struct d)) ds_opt in
+  let ds_opt = Option.map (fun d -> planned_methods cx ~minted r (finish_instance_struct d)) ds_opt in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]
@@ -702,18 +702,18 @@ and lifted_placement =
     in a class template ({!Scope_plan.templated}).  Asked of the
     plan, not of the render context: the implementation writes no template,
     and generates what the header does all the same. *)
-let in_template ~module_ = Scope_plan.templated (Translation_state.unit_context ()).scopes module_
+let in_template cx ~module_ = Scope_plan.templated (Translation_state.unit_context cx).scopes module_
 
 (** [functions ~module_ ~lifted funs], generated in [module_], with every
     definition filed in the header inside a template struct, which has no
     implementation file. *)
-let functions ~module_ ~lifted (funs : Gen_decls.generated_fun list) =
+let functions cx ~module_ ~lifted (funs : Gen_decls.generated_fun list) =
   let in_header (g : Gen_decls.generated_fun) =
     match g.entity with
     | Defined (d, _) -> {g with entity = Defined (d, Header)}
     | Declared _ -> g
   in
-  let funs = if in_template ~module_ then List.map in_header funs else funs in
+  let funs = if in_template cx ~module_ then List.map in_header funs else funs in
   Functions {funs; lifted}
 
 (** {2 Generating once}
@@ -784,11 +784,11 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
     declaration a render reaches, an anomaly about [what].  While planning,
     it is [gen ()].  Read while {!peeking}, it is what was recorded, handed
     to [peek] for what taking it would give without taking it. *)
-let ahead_once ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
-  let generated () = Translation_state.generating_in module_ gen in
+let ahead_once cx ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
+  let generated () = Translation_state.generating_in cx module_ gen in
   let check v ~again =
     if Sys.getenv_opt "CRANE_CHECK_IR" <> None
-      && not (same v (fst (Translation_state.collecting_lifted generated))) then
+      && not (same v (fst (Translation_state.collecting_lifted cx generated))) then
       CErrors.anomaly
         Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and " ++ str again)
   in
@@ -905,9 +905,9 @@ let header_claim key lifted =
     {!ahead_once} for the functions generated at the Core node [node] in
     [module_]: a file's pass hands them to [on_reuse] to replay any effect
     generating them had, and a peek hands them to [on_peek]. *)
-let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
+let generated_once cx ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
   let recorded, record = in_node_table generated node in
-  ahead_once ~module_ ~what:(fun () -> Pp.str "a function") ~recorded ~record
+  ahead_once cx ~module_ ~what:(fun () -> Pp.str "a function") ~recorded ~record
     ~same:(List.equal same_generation)
     ?planned
     ~take:(fun funs -> on_reuse funs; funs)
@@ -924,10 +924,10 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
     over [l] the alias [d] abbreviates is written in C++, asked of the type
     as it would be printed.  Translating the type is generating: a file
     takes the answer. *)
-let alias_written ~module_ d l t =
+let alias_written cx ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
-  ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type (empty_env ()) l t)) )
+  ahead_once cx ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
+      not (Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type cx (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the Core declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
@@ -935,26 +935,26 @@ let alias_written ~module_ d l t =
     recorded, or declarations only the header writes.  Inline customs,
     projections merged into a struct, and functions emitted as methods
     generate nothing. *)
-let generate scope ~module_ d =
+let generate cx scope ~module_ d =
   (* A method candidate is a registered method
      ({!Method_registry.planned_candidate}). *)
   let skipped r =
     is_eponymous_record_projection r
-    || is_suppressed_projection ~higher_order:Translation_state.is_higher_order_projection r
+    || is_suppressed_projection ~higher_order:(Translation_state.is_higher_order_projection cx) r
     || is_registered_method r <> None
   in
   let group fds =
-    match filter_dfix ~higher_order:Translation_state.is_higher_order_projection fds with
+    match filter_dfix ~higher_order:(Translation_state.is_higher_order_projection cx) fds with
     | [] -> Nothing
     | fds ->
-      functions ~module_
-        ~lifted:(if in_template ~module_ then Unwritten else Inline)
-        (generated_once ~module_ d (fun () -> gen_dfuns_dual fds))
+      functions cx ~module_
+        ~lifted:(if in_template cx ~module_ then Unwritten else Inline)
+        (generated_once cx ~module_ d (fun () -> gen_dfuns_dual cx fds))
   in
   match d with
   | (Core.Decl.Type_alias {entity = r; _} | Core.Decl.Value {entity = r; _}) when is_any_inline_custom r -> Nothing
   | Core.Decl.Value {entity = r; _} when skipped r -> Nothing
-  | Core.Decl.Inductive {entity = kn; definition = ind} -> Header_only (fun () -> ind_header_decls scope kn ind)
+  | Core.Decl.Inductive {entity = kn; definition = ind} -> Header_only (fun () -> ind_header_decls cx scope kn ind)
   (* A singleton class is a concept, declared where concepts are. *)
   | Core.Decl.Type_alias {entity = r; _} when Table.singleton_class_method r <> None ->
     if scope.in_struct || scope.concepts_hoisted then Nothing
@@ -962,11 +962,11 @@ let generate scope ~module_ d =
       Header_only
         (fun () ->
           declarations_only
-            [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))] )
+            [(empty_env (), gen_typeclass_cpp cx r (Table.get_record_field_bindings r))] )
   | Core.Decl.Type_alias {entity = r; parameters = l; body = t} ->
     ( match t with
     | Core.Type.Erased Core.Erasure_reason.Type_argument -> Nothing (* erased Type aliases *)
-    | t when not (alias_written ~module_ d l t) ->
+    | t when not (alias_written cx ~module_ d l t) ->
       (* An abbreviation for a type that is not written in C++ is not written
          either, asked of the type as it would be printed: [Definition bigE :=
          ioE +' envE] is a [Sum1] of event families that have no C++ name, and
@@ -976,7 +976,7 @@ let generate scope ~module_ d =
       Nothing
     | t ->
       Header_only
-        (fun () -> declarations_only [(empty_env (), gen_type_alias r l (Some t))]) )
+        (fun () -> declarations_only [(empty_env (), gen_type_alias cx r l (Some t))]) )
   | Core.Decl.Value {entity = r; body = a; type_ = (Core.Type.Global_app {head = ty; _} as t)} when is_monad ty ->
     group (Core.Nonempty.singleton {Core.Recursion.Definition.entity = r; body = a; type_ = t})
   | Core.Decl.Value {entity = r; body = a; type_ = t} when is_typeclass_instance t -> Instance (r, a, t)
@@ -985,15 +985,15 @@ let generate scope ~module_ d =
        no earlier element of the header places ({!plan_header_claim}). *)
     let gen () =
       let (gf_entity, gf_env), gf_lifted =
-        Translation_state.collecting_lifted @@ fun () ->
-        match gen_decl_for_pp r a t with
+        Translation_state.collecting_lifted cx @@ fun () ->
+        match gen_decl_for_pp cx r a t with
         | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
-        | None, _, _ when in_template ~module_ ->
-          let ds, env, _ = gen_decl r a t in
+        | None, _, _ when in_template cx ~module_ ->
+          let ds, env, _ = gen_decl cx r a t in
           (Defined (ds, Header), env)
         | None, _, _ ->
           (* Not a function: a declaration, and no definition anywhere. *)
-          let ds, env = gen_spec r a t in
+          let ds, env = gen_spec cx r a t in
           (Declared ds, env)
       in
       [{Gen_decls.entity = gf_entity; env = gf_env; lifted = gf_lifted}]
@@ -1003,7 +1003,7 @@ let generate scope ~module_ d =
     let reuse funs = claimed := Some (header_claim funs (lifted funs)) in
     let peek funs = claimed := Some (planned_claim funs) in
     let funs =
-      generated_once ~module_ ~planned:(fun funs -> plan_header_claim funs (lifted funs)) ~on_reuse:reuse
+      generated_once cx ~module_ ~planned:(fun funs -> plan_header_claim funs (lifted funs)) ~on_reuse:reuse
         ~on_peek:peek d gen
     in
     let helpers =
@@ -1011,7 +1011,7 @@ let generate scope ~module_ d =
       | Some helpers -> helpers
       | None -> List.concat_map (fun g -> g.Gen_decls.lifted) funs
     in
-    functions ~module_ ~lifted:(By_element helpers) funs
+    functions cx ~module_ ~lifted:(By_element helpers) funs
   | Core.Decl.Recursive_group fds -> group fds
 
 (** {2 The finished program}
@@ -1050,7 +1050,7 @@ let numbered ?(from = 0) owner ds = List.mapi (fun i _ -> declaration owner (fro
 
 (** [finished_of ~what id d] is the declaration [id] of the unit's
     program ({!Unit_program.find_declaration}), finished from [d]. *)
-let finished_of ~what id d =
+let finished_of cx ~what id d =
   match (get_phase (), Unit_program.find_declaration id) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
@@ -1058,7 +1058,7 @@ let finished_of ~what id d =
     if
       (not ahead)
       && Sys.getenv_opt "CRANE_CHECK_IR" <> None
-      && not (Unit_program.finishes_as (Translation_state.unit_context ()) d f.finished)
+      && not (Unit_program.finishes_as (Translation_state.unit_context cx) d f.finished)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1071,31 +1071,31 @@ let finished_of ~what id d =
 
 (** The function entity of the declaration [id] of the unit's program,
     finished from [d]. *)
-let entity_of ~what id d = Function_entity.of_finished (finished_of ~what id d)
+let entity_of cx ~what id d = Function_entity.of_finished (finished_of cx ~what id d)
 
-let finished_placed (id, d) = finished_of ~what:"a lifted declaration" id d
+let finished_placed cx (id, d) = finished_of cx ~what:"a lifted declaration" id d
 
 (** The lifted helper [d] under its {!helper_id}. *)
 let helper_placed d = (helper_id d, d)
 
-let finished_helper d = finished_placed (helper_placed d)
+let finished_helper cx d = finished_placed cx (helper_placed d)
 
-let entity_placed (id, d) = entity_of ~what:"a lifted declaration" id d
+let entity_placed cx (id, d) = entity_of cx ~what:"a lifted declaration" id d
 
-let helper_entity d = entity_placed (helper_placed d)
+let helper_entity cx d = entity_placed cx (helper_placed d)
 
 let helpers_placed ds = List.map helper_placed ds
 
 (** [finished_group ~what ids ds] is [ds], each finished ahead of the files
     under its id in [ids]. *)
-let finished_group ~what ids (ds : generated) : rendered =
-  List.map2 (fun id (env, d) -> (env, finished_of ~what id d)) ids ds
+let finished_group cx ~what ids (ds : generated) : rendered =
+  List.map2 (fun id (env, d) -> (env, finished_of cx ~what id d)) ids ds
 
 (** The ids of the declarations [ds] of the instance [r]. *)
 let instance_ids r ds = numbered (source r) ds
 
 (** The instance [r], generated as [ds], finished ahead of the files. *)
-let finished_instance r ds = finished_group ~what:"an instance" (instance_ids r ds) ds
+let finished_instance cx r ds = finished_group cx ~what:"an instance" (instance_ids r ds) ds
 
 let instance_jobs r (ds : generated) =
   List.map2 (fun id (_, d) -> Unit_program.job id d) (instance_ids r ds) ds
@@ -1106,7 +1106,7 @@ let instance_placed r (ds : generated) helpers =
 (** The id of the concept of the class [r]. *)
 let concept_id r = declaration (source r) 0
 
-let finished_concept r d = finished_of ~what:"a class concept" (concept_id r) d
+let finished_concept cx r d = finished_of cx ~what:"a class concept" (concept_id r) d
 
 (** What finishing [elements], the functions generated for each of a group
     of elements with the entity each falls back to, takes: every definition
@@ -1127,22 +1127,22 @@ type finished_fun =
   | Finished_definition of Gen_decls.definition_file * Function_entity.t
   | Finished_declaration of Cpp_ir.Lowered.Decl.t
 
-let finalized ~fallback (funs : Gen_decls.generated_fun list) =
+let finalized cx ~fallback (funs : Gen_decls.generated_fun list) =
   List.map
     (fun (g : Gen_decls.generated_fun) ->
       match g.entity with
       | Declared d -> (g, Finished_declaration d)
       | Defined (d, file) ->
-        (g, Finished_definition (file, entity_of ~what:"a function" (function_id ~fallback g) d)) )
+        (g, Finished_definition (file, entity_of cx ~what:"a function" (function_id ~fallback g) d)) )
     funs
 
-let finished_declared ~fallback g d = finished_of ~what:"a declaration" (function_id ~fallback g) d
+let finished_declared cx ~fallback g d = finished_of cx ~what:"a declaration" (function_id ~fallback g) d
 
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
     implementation file holds. *)
-let function_views ~is_header ~lifted_inline ~fallback scope funs =
-  let paired = finalized ~fallback funs in
+let function_views cx ~is_header ~lifted_inline ~fallback scope funs =
+  let paired = finalized cx ~fallback funs in
   (* Functions of one group the header defines may call one another, and at
      namespace scope a call is looked up where it is written: a struct sees
      its later members, a namespace does not, and an explicit template
@@ -1171,7 +1171,7 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
       let with_env d = (g.env, d) in
       let lifted =
         if is_header && lifted_inline then
-          List.map (fun d -> (empty_env (), finished_helper d)) g.lifted
+          List.map (fun d -> (empty_env (), finished_helper cx d)) g.lifted
         else []
       in
       let views =
@@ -1188,7 +1188,7 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
           | Implementation, true -> [with_env (Function_entity.declaration e)]
           | Header, false -> [] )
         | Finished_declaration d ->
-          if is_header then [with_env (finished_declared ~fallback g d)] else []
+          if is_header then [with_env (finished_declared cx ~fallback g d)] else []
       in
       lifted @ views )
     paired
@@ -1257,9 +1257,9 @@ let same_generated (a : generated) (b : generated) =
     helpers lifted out of its methods, which come before it.  It is
     generated ahead of the files, like a function ({!generated_once}), and
     taken from there by the header. *)
-let instance_entity ~module_ r a t =
+let instance_entity cx ~module_ r a t =
   let recorded, record = in_node_table instances_generated a in
-  ahead_once ~module_
+  ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the instance " ++ GlobRef.print r))
     ~recorded ~record
     ~same:(fun (ds, _) (ds', _) -> same_generated ds ds')
@@ -1269,7 +1269,7 @@ let instance_entity ~module_ r a t =
       ignore (record_entity r (instance_ids r ds) helpers);
       (ds, helpers) )
     ~peek:(fun ((ds, _) as v) -> (ds, planned_claim v))
-    (fun () -> Translation_state.collecting_lifted (fun () -> instance_decls r a t))
+    (fun () -> Translation_state.collecting_lifted cx (fun () -> instance_decls cx r a t))
 
 (** {2 The header's scope of a module} *)
 
@@ -1289,9 +1289,9 @@ let planned_header_scope mp =
 
 (* The position at file scope of the header from which an element of the
    module [mp] is written, as planned. *)
-let header_element_position u mp =
+let header_element_position cx u mp =
   let {in_struct; concepts_hoisted} = planned_header_scope mp in
-  { (file_start u (Translation_state.plans ()) Intf) with
+  { (file_start u (Translation_state.plans cx) Intf) with
     in_struct = in_struct;
     concepts_hoisted = concepts_hoisted;
     in_template = Scope_plan.templated u.Unit_context.scopes mp }
@@ -1334,16 +1334,16 @@ let planned_visibility (u : Unit_context.t) mp =
 
 (* The position a declaration spelled [spelling] is written at in [file],
    a function of the plan alone: nothing installed around it reaches it. *)
-let spelling_position ~file spelling =
-  let u = Translation_state.unit_context () in
+let spelling_position cx ~file spelling =
+  let u = Translation_state.unit_context cx in
   let element mp c = {c with module_ = Some mp; visibility = Some (planned_visibility u mp)} in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> element mp (header_element_position u mp)
-  | Intf, Member_of mp -> element mp {(header_element_position u mp) with in_struct = true}
+  | Intf, Element_of mp -> element mp (header_element_position cx u mp)
+  | Intf, Member_of mp -> element mp {(header_element_position cx u mp) with in_struct = true}
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> element mp (file_start u (Translation_state.plans ()) Impl)
+  | Impl, Element_of mp -> element mp (file_start u (Translation_state.plans cx) Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
@@ -1351,42 +1351,44 @@ let spelling_position ~file spelling =
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
   | _, Template_in declared ->
-    Cpp_leaf_plan.ctor_alias_render_ctx (file_start u (Translation_state.plans ()) file) declared
+    Cpp_leaf_plan.ctor_alias_render_ctx (file_start u (Translation_state.plans cx) file) declared
 
 (* [k] of the position of [spelling] in [file]. *)
-let at_spelling ~file spelling k = k (spelling_position ~file spelling)
+let at_spelling cx ~file spelling k = k (spelling_position cx ~file spelling)
 
 (* The live name of [key] at [frame] inside the position of [spelling] in
    [file], noting it as written. *)
-let head_resolver_at ~file spelling frame key =
-  at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_value ctx key))
+let head_resolver_at cx ~file spelling frame key =
+  at_spelling cx ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_value ctx key))
 
 (* A declaration's names are noted as written where it is printed, which
    names them again under CRANE_CHECK_IR ({!Cpp_names.checked}); a struct's
    head is printed as resolved, so its names are noted here. *)
-let resolver_at ~file spelling frame key =
-  Common.without_noting_written_files (fun () -> head_resolver_at ~file spelling frame key)
+let resolver_at cx ~file spelling frame key =
+  Common.without_noting_written_files (fun () -> head_resolver_at cx ~file spelling frame key)
 
 (* The names a declaration asks resolution for: those its leaves print and
    those its concepts name. *)
-let requested d =
-  let u = Translation_state.unit_context () in
-  Cpp_leaf_plan.unprinted_names u d @ Cpp_concepts.names_requested u d
+let requested cx d =
+  let u = Translation_state.unit_context cx in
+  Cpp_leaf_plan.unprinted_names u d @ Cpp_concepts.names_requested cx u d
 
-let resolve_tree ~file t =
+let resolve_tree cx ~file t =
   Common.without_noting_written_files (fun () ->
-      Cpp_ast.resolve_tree ~requested ~resolve:(resolver_at ~file) ~resolve_head:(head_resolver_at ~file) t )
+      Cpp_ast.resolve_tree ~requested:(requested cx) ~resolve:(resolver_at cx ~file)
+        ~resolve_head:(head_resolver_at cx ~file) t )
 
-let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file) ~resolve_head:(head_resolver_at ~file)
+let resolve cx ~file = Cpp_ast.resolve ~requested:(requested cx) ~resolve:(resolver_at cx ~file)
+  ~resolve_head:(head_resolver_at cx ~file)
 
-let names_into_a_struct_as_written ~file spelling decl =
-  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env ();
+let names_into_a_struct_as_written cx ~file spelling decl =
+  let names = Cpp_resolution.resolve (resolver_at cx ~file spelling) (requested cx (Declaration {env = empty_env ();
                                                                                            decl})) in
-  at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names decl)
+  at_spelling cx ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names decl)
 
-let write_unprinted ~file spelling u =
-  at_spelling ~file spelling (fun ctx ->
-      Cpp_leaf_plan.print_unprinted ctx ~modtype_concept:Cpp_concepts.pp_modtype_concept
+let write_unprinted cx ~file spelling u =
+  at_spelling cx ~file spelling (fun ctx ->
+      Cpp_leaf_plan.print_unprinted ctx ~modtype_concept:(Cpp_concepts.pp_modtype_concept cx)
         ~assertion:Cpp_concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
@@ -1410,13 +1412,13 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset concepts_genera
     generated ahead of the files ({!generating_ahead}) and taken from there
     by the header, which generates it again under [CRANE_CHECK_IR] to
     compare. *)
-let concept ~module_ r fields =
-  ahead_once ~module_
+let concept cx ~module_ r fields =
+  ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the concept of " ++ GlobRef.print r))
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt concepts_generated r))
     ~record:(Ref.User.Tbl.replace concepts_generated r)
     ~same:(fun d d' -> compare d d' = 0)
-    (fun () -> Gen_decls.gen_typeclass_cpp r fields)
+    (fun () -> Gen_decls.gen_typeclass_cpp cx r fields)
 
 (** The concept of each module type, generated ahead of the files where
     the header writes it, by the module type's path. *)
@@ -1426,13 +1428,13 @@ let modtype_concepts_generated : (ModPath.t * Modtype_concept.t) list MPmap.t re
 (** [modtype_concept path ~params mt] is the concept of the module type
     [mt] at [path], over the functor parameters [params]: generated ahead of
     the files and taken from there by the header ({!ahead_once}). *)
-let modtype_concept ~module_ path ~params mt =
-  ahead_once ~module_
+let modtype_concept cx ~module_ path ~params mt =
+  ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the concept of the module type " ++ str (ModPath.to_string path)))
     ~recorded:(fun () -> Option.default [] (MPmap.find_opt path !modtype_concepts_generated))
     ~record:(fun l -> modtype_concepts_generated := MPmap.add path l !modtype_concepts_generated)
     ~same:(fun c c' -> compare c c' = 0)
-    (fun () -> Modtype_concept.generate ~params mt)
+    (fun () -> Modtype_concept.generate cx ~params mt)
 
 (** The methods of each eponymous record, generated ahead of the files with
     the helpers lifted out of them, by the record. *)
@@ -1447,8 +1449,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_methods_
     [r], of variables [vars], is given, made of [candidates], with the
     helpers lifted out of them: generated ahead of the files, and taken from
     there by the header ({!ahead_once}). *)
-let record_methods ~module_ r vars candidates =
-  ahead_once ~module_
+let record_methods cx ~module_ r vars candidates =
+  ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the methods of the record " ++ GlobRef.print r))
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_methods_generated r))
     ~record:(Ref.User.Tbl.replace record_methods_generated r)
@@ -1456,7 +1458,7 @@ let record_methods ~module_ r vars candidates =
     ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
     ~take:(fun ((fields, lifted) as v) -> (fields, header_claim v lifted))
     (fun () ->
-      Translation_state.collecting_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
+      Translation_state.collecting_lifted cx (fun () -> Gen_decls.gen_record_methods cx r vars candidates) )
 
 (** The C++ types of each eponymous record's fields, converted ahead of the
     files, by the record. *)
@@ -1472,8 +1474,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
     taken from there by the header
     ({!ahead_once}) -- so what plans from them reads the types the header
     writes. *)
-let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
-  ahead_once ~module_
+let record_field_types cx ~module_ r vars (fields : Core.Record.Field.t list) =
+  ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the field types of the record " ++ GlobRef.print r))
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_field_types_generated r))
     ~record:(Ref.User.Tbl.replace record_field_types_generated r)
@@ -1482,8 +1484,8 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
       List.map
         (fun (f : Core.Record.Field.t) ->
           Cpp_pipeline.resolve_type ~what:"a record field type"
-            (Cpp_erasure.instantiate_type (Translation_state.unit_context ())
-               (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) )
+            (Cpp_erasure.instantiate_type (Translation_state.unit_context cx)
+               (Translation_types.cpp_ir_of_core_type cx (empty_env ()) vars f.type_)) )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)
@@ -1513,8 +1515,8 @@ let record_methods_id r = {Unit_program.owner = source r; part = Methods}
 let record_methods_finishing r vars fields =
   Unit_program.job (record_methods_id r) (record_methods_decl r vars fields)
 
-let finished_record_methods r vars fields =
-  finished_of ~what:"an eponymous record's methods" (record_methods_id r) (record_methods_decl r vars fields)
+let finished_record_methods cx r vars fields =
+  finished_of cx ~what:"an eponymous record's methods" (record_methods_id r) (record_methods_decl r vars fields)
 
 (** What was generated ahead of the header for each declaration it writes
     alone, by the declaration's physical node, with the module it was
@@ -1545,9 +1547,9 @@ let header_declarations d g =
     entity [d] is.  It is generated ahead of the files, in the scope the
     header writes the module in ({!header_scope}), like an instance
     ({!instance_entity}), and taken from there by the header. *)
-let header_entity ~module_ d gen =
+let header_entity cx ~module_ d gen =
   let recorded, record = in_node_table headers_generated d in
-  ahead_once ~module_
+  ahead_once cx ~module_
     ~what:(fun () -> GlobRef.print (decl_entity d))
     ~recorded ~record
     ~same:(fun (g, _) (g', _) -> same_header_generation g g')
@@ -1557,14 +1559,14 @@ let header_entity ~module_ d gen =
       ignore (record_entity (decl_entity d) (header_declarations d g) helpers);
       (g, helpers) )
     ~peek:(fun ((g, _) as v) -> (g, planned_claim v))
-    (fun () -> Translation_state.collecting_lifted gen)
+    (fun () -> Translation_state.collecting_lifted cx gen)
 
-let finished_header ids ds = finished_group ~what:"a header declaration" ids ds
+let finished_header cx ids ds = finished_group cx ~what:"a header declaration" ids ds
 
 (** What [d] generates, at the position the header writes an element of
     [module_] at, as planned ({!header_scope}): what an inductive or an
     alias generates, the header alone writes. *)
-let generate_in_scope ~module_ d k = k (generate (planned_header_scope module_) ~module_ d)
+let generate_in_scope cx ~module_ d k = k (generate cx (planned_header_scope module_) ~module_ d)
 
 type ahead = {
   entities : Unit_program.entity list;
@@ -1588,17 +1590,17 @@ let functions_ahead elements =
     helpers = List.concat_map (fun (g : Gen_decls.generated_fun) -> g.lifted) funs;
     handed_on = [] }
 
-let generate_ahead ~module_ d =
-  generate_in_scope ~module_ d @@ function
+let generate_ahead cx ~module_ d =
+  generate_in_scope cx ~module_ d @@ function
   | Functions {funs; _} -> functions_ahead [(decl_entity d, funs)]
   | Instance (r, a, t) ->
-    let ds, helpers = instance_entity ~module_ r a t in
+    let ds, helpers = instance_entity cx ~module_ r a t in
     { nothing_ahead with
       entities = [entity r (instance_ids r ds) helpers];
       finishing = instance_jobs r ds;
       helpers }
   | Header_only gen ->
-    let g, lifted = header_entity ~module_ d gen in
+    let g, lifted = header_entity cx ~module_ d gen in
     let member_def_ids, decl_ids = header_ids d g in
     let jobs ids ds = List.map2 (fun id (_, decl) -> Unit_program.job id decl) ids ds in
     { nothing_ahead with
@@ -1606,19 +1608,19 @@ let generate_ahead ~module_ d =
       finishing = jobs member_def_ids g.member_defs @ jobs decl_ids g.decls }
   | Nothing -> nothing_ahead
 
-let regenerate_ahead ~module_ d =
+let regenerate_ahead cx ~module_ d =
   regenerating @@ fun () ->
-  generate_in_scope ~module_ d @@ function
-  | Instance (r, a, t) -> ignore (instance_entity ~module_ r a t : generated * Cpp_ir.Lowered.Decl.t list)
-  | Header_only gen -> ignore (header_entity ~module_ d gen : header_generation * Cpp_ir.Lowered.Decl.t list)
+  generate_in_scope cx ~module_ d @@ function
+  | Instance (r, a, t) -> ignore (instance_entity cx ~module_ r a t : generated * Cpp_ir.Lowered.Decl.t list)
+  | Header_only gen -> ignore (header_entity cx ~module_ d gen : header_generation * Cpp_ir.Lowered.Decl.t list)
   | Functions _ | Nothing -> ()
 
 (* What the header ([is_header]) or the implementation writes for [d] at
    [ctx], taken from what was generated ahead of the files.  Functions are
    recorded as entities unless only peeking. *)
-let decls_for ~is_header ctx ~module_ d =
+let decls_for cx ~is_header ctx ~module_ d =
   let scope = scope_at ctx in
-  match generate scope ~module_ d with
+  match generate cx scope ~module_ d with
   | Functions {funs; lifted} ->
     if !mode <> Peeking then record_funs ~fallback:(decl_entity d) funs;
     let lifted_inline, helpers =
@@ -1627,32 +1629,33 @@ let decls_for ~is_header ctx ~module_ d =
       | By_element helpers -> (false, helpers)
       | Unwritten -> (false, [])
     in
-    { rendered = function_views ~is_header ~lifted_inline ~fallback:(decl_entity d) scope funs;
+    { rendered = function_views cx ~is_header ~lifted_inline ~fallback:(decl_entity d) scope funs;
       helpers;
       member_defs = [] }
   | Header_only gen when is_header ->
-    let g, helpers = header_entity ~module_ d gen in
+    let g, helpers = header_entity cx ~module_ d gen in
     let member_def_ids, decl_ids = header_ids d g in
-    { rendered = finished_header decl_ids g.decls; helpers; member_defs = finished_header member_def_ids g.member_defs }
+    { rendered = finished_header cx decl_ids g.decls; helpers; member_defs = finished_header cx member_def_ids
+      g.member_defs }
   | Instance (r, a, t) when is_header ->
-    let ds, helpers = instance_entity ~module_ r a t in
-    { rendered = finished_instance r ds; helpers; member_defs = [] }
+    let ds, helpers = instance_entity cx ~module_ r a t in
+    { rendered = finished_instance cx r ds; helpers; member_defs = [] }
   | Header_only _ | Instance _ | Nothing -> { rendered = []; helpers = []; member_defs = [] }
 
-let impl_decls = decls_for ~is_header:false
-let header_decls = decls_for ~is_header:true
+let impl_decls cx = decls_for cx ~is_header:false
+let header_decls cx = decls_for cx ~is_header:true
 
 (** What the header writes for the declaration [d] and the helpers it
     places, read off what was generated ahead of the files without taking
     it: nothing is recorded or claimed. *)
-let header_element_ahead ctx ~module_ d = peeking (fun () -> header_decls ctx ~module_ d)
+let header_element_ahead cx ctx ~module_ d = peeking (fun () -> header_decls cx ctx ~module_ d)
 
 (** What the implementation writes for the declaration [d], read off what
     was generated ahead of the files without taking it. *)
-let impl_element_ahead ctx ~module_ d = peeking (fun () -> impl_decls ctx ~module_ d)
+let impl_element_ahead cx ctx ~module_ d = peeking (fun () -> impl_decls cx ctx ~module_ d)
 
-let promoted_shared_from_this ctx ~module_ d =
+let promoted_shared_from_this cx ctx ~module_ d =
   peeking @@ fun () ->
-  match generate (scope_at ctx) ~module_ d with
-  | Header_only gen -> (fst (header_entity ~module_ d gen)).promoted_sft = Some true
+  match generate cx (scope_at ctx) ~module_ d with
+  | Header_only gen -> (fst (header_entity cx ~module_ d gen)).promoted_sft = Some true
   | Functions _ | Instance _ | Nothing -> false

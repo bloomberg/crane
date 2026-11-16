@@ -139,7 +139,7 @@ val mono_environment :
     @param mp the module path under which the declaration lives
     @param decl the declaration to render
     @return a pretty-printed Pp.t document *)
-val print_one_decl : Loop_facts.t -> Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
+val print_one_decl : Translation_state.t -> Loop_facts.t -> Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
 
 (** [Show Extraction]: show the extraction of the current ongoing proof.
     @param pstate the current proof state *)

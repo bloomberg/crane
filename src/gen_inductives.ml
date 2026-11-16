@@ -256,13 +256,13 @@ type method_scope = {
     of the method made of the function [func_ref], of body [body] and type
     [ty], in the inductive [name] whose template variables are [vars];
     [this_pos] is the 0-based index of the parameter that becomes [this]. *)
-let method_scope name vars (func_ref, body, ty, this_pos) =
+let method_scope cx name vars (func_ref, body, ty, this_pos) =
   (* Promotion moves a function into a struct; it does not change what the
      function returns.  The mode is read off the codomain here exactly as it is
      for a function left at top level -- otherwise an [itree] body reached as a
      method would be desugared sequentially while the signature it is being
      given says [shared_ptr<ITree<_>>]. *)
-  with_itree_mode_for ty @@ fun () ->
+  with_itree_mode_for cx ty @@ fun () ->
   let decl_ty = ty in
   let num_ind_vars = List.length vars in
   let _, ret_ty = get_args_and_ret [] ty in
@@ -300,7 +300,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     | _ -> ty
   in
   let strip_top_level_self_ptr ty = strip_self_ptr ty in
-  let ret_cpp = Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:method_ns vars ret_ty in
+  let ret_cpp = Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:method_ns vars ret_ty in
   let ret_cpp = strip_top_level_self_ptr ret_cpp in
   let ret_cpp = subst_extra_tvars ret_cpp in
   (* A method returns [void] where the function it was made of does. *)
@@ -325,16 +325,16 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      as a function's is. *)
   let ids_with_types, inner_body = declared_parameters ty body in
   let ids_converted, typeclass_temps =
-    promote_typeclass_params
+    promote_typeclass_params cx
       (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_binder_name x), ty)) ids_with_types)
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
-  reset_env_types ();
-  Translation_binders.push_parameters env all_ids;
+  reset_env_types cx;
+  Translation_binders.push_parameters cx env all_ids;
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
-  let method_owned_flags = Ownership.read_off ~settled:settled_ownership ids_with_types inner_body in
+  let method_owned_flags = Ownership.read_off ~settled:(settled_ownership cx) ids_with_types inner_body in
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with
      body *)
@@ -376,13 +376,13 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      not where a self-call passes something else for it, nor where a closure
      holds on to it. *)
   let ungeneralised =
-    Translation_callable_params.ungeneralised_callable_params ~self_ref:func_ref
+    Translation_callable_params.ungeneralised_callable_params cx ~self_ref:func_ref
       ~suspended:(Table.is_coinductive_type ret_ty) n_method_params inner_body
   in
   let params_with_idx =
     List.mapi
       (fun i (id, ty, orig_idx) ->
-        let cpp_ty = Translation_types.cpp_ir_of_core_type env ~ns:method_ns vars ty in
+        let cpp_ty = Translation_types.cpp_ir_of_core_type cx env ~ns:method_ns vars ty in
         let cpp_ty = strip_top_level_self_ptr cpp_ty in
         let cpp_ty = subst_extra_tvars cpp_ty in
         let owned = get_param_owned_flag orig_idx in
@@ -439,7 +439,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
         let wrapped : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
           | Function _ when generalised -> Reference (Forwarding, Variable (Named (fun_tparam_id i)))
-          | _ -> Translation_ownership.wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
+          | _ -> Translation_ownership.wrap_param_by_ownership cx ~is_owned:owned ~core cpp_ty
         in
         (id, wrapped) )
       params_with_idx param_ids_with_pos
@@ -509,7 +509,7 @@ type method_head = {
 
 (** [method_head vars s] decides the {!method_head} of the method whose scope
     is [s], in an inductive whose template variables are [vars]. *)
-let method_head vars s =
+let method_head cx vars s =
   let {
     extra_tvars_orig = extra_tvars_orig;
     extra_tvar_names = extra_tvar_names;
@@ -547,12 +547,12 @@ let method_head vars s =
     (* A hole names no variable; it is declined rather than converted. *)
     let declined = Core_util.map_core_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
     let annotations =
-      with_type_vars (vars @ extra_tvar_names) (fun () ->
+      with_type_vars cx (vars @ extra_tvar_names) (fun () ->
           List.rev_map
             (fun t ->
               subst_extra_tvars
                 (strip_top_level_self_ptr
-                  (Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:method_ns vars (declined t))) )
+                  (Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:method_ns vars (declined t))) )
             !annotations )
     in
     let constraints =
@@ -637,19 +637,19 @@ let method_plan func_ref s h =
 (** [plan_method name vars candidate] is the callable plan of the method
     made of [candidate] in the inductive [name] whose variables are [vars],
     as generating it would plan it, without generating its body. *)
-let plan_method name vars ((func_ref, _, ty, _) as candidate) =
-  let s = method_scope name vars candidate in
-  with_itree_mode_for ty @@ fun () -> method_plan func_ref s (method_head vars s)
+let plan_method cx name vars ((func_ref, _, ty, _) as candidate) =
+  let s = method_scope cx name vars candidate in
+  with_itree_mode_for cx ty @@ fun () -> method_plan func_ref s (method_head cx vars s)
 
 (** The head of the method [func_ref] whose scope is [s]: its plan's, which
     was made before anything was generated, as its template parameters, its
     return type, the variables the return type alone mentions, and the names
     of the variables it drops.  Under [CRANE_CHECK_IR] the head is decided
     again ({!method_head}) and checked against the plan. *)
-let planned_method_head func_ref vars s =
-  let abi = Callable_abi.planned (Translation_state.callables ()) func_ref in
+let planned_method_head cx func_ref vars s =
+  let abi = Callable_abi.planned (Translation_state.callables cx) func_ref in
   if Probe.checking () then
-    Callable_abi.check (Translation_state.callables ()) (method_plan func_ref s (method_head vars s));
+    Callable_abi.check (Translation_state.callables cx) (method_plan func_ref s (method_head cx vars s));
   match Callable_abi.receiver abi with
   | Some r ->
     (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
@@ -659,12 +659,12 @@ let planned_method_head func_ref vars s =
 
 (** Generate a single method for an inductive type from a method candidate:
     its body, generated under {!method_scope} and its planned head. *)
-let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
-  let s = method_scope name vars candidate in
+let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
+  let s = method_scope cx name vars candidate in
   (* Promotion moves a function into a struct; it does not change what the
      function returns: see {!method_scope}. *)
-  with_itree_mode_for ty @@ fun () ->
-  let tparams, ret, return_only, dropped_names = planned_method_head func_ref vars s in
+  with_itree_mode_for cx ty @@ fun () ->
+  let tparams, ret, return_only, dropped_names = planned_method_head cx func_ref vars s in
   let func_name = Common.id_of_global Term func_ref in
   let {
     ty = ty;
@@ -691,7 +691,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let method_k x : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_method then
       suspend_whole
-        ~cpp_of:(Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
+        ~cpp_of:(Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
         ~cod:ret_cpp ret_ty x
     else
       Return (Some x)
@@ -699,7 +699,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   (* Generate the method body, owning its owned parameters.  The de Bruijn
      environment has parameters in reverse order: ids_normal_order has
      outermost-first, push_vars' reverses them. *)
-  begin_body ~owner:func_ref ();
+  begin_body cx ~owner:func_ref ();
   let method_n_params = List.length ids_with_types in
   (* method_owned_flags[i] corresponds to de Bruijn index i+1.
      db index i+1 maps to ids_with_types[i] (innermost first, the order
@@ -728,7 +728,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      saves are planned with the body: certainly, or perhaps. *)
   let resumes, certain =
     match
-      Control_to_cpp_ir.method_resumes ~unit:(Translation_state.unit_context ()) func_ref ~inductive:name
+      Control_to_cpp_ir.method_resumes ~unit:(Translation_state.unit_context cx) func_ref ~inductive:name
         ~receiver:this_pos ~depth:(List.length (fst env))
     with
     | Some (resumes, certain) -> (Some resumes, Some certain)
@@ -740,16 +740,16 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      exposed to the body as [gen_dfun] exposes a function's, so a result
      recovered from a box is recovered at it. *)
   let stmts =
-    with_cpp_return_type (Some ret_cpp) @@ fun () ->
-    with_type_vars (vars @ extra_tvar_names) (fun () ->
+    with_cpp_return_type cx (Some ret_cpp) @@ fun () ->
+    with_type_vars cx (vars @ extra_tvar_names) (fun () ->
         (* Include all local value-type inductives with recursive fields in the
            method ns.  This ensures that when the method body constructs or
            manipulates containers of recursive types (e.g. List<tree>), the
            type arguments get shared_ptr wrapping to match struct field
            types. *)
-        with_method_ns_for_locals ~base:method_ns (fun () ->
-            with_region ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
-                gen_stmts env method_k inner_body ) ) )
+        with_method_ns_for_locals cx ~base:method_ns (fun () ->
+            with_region cx ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
+                gen_stmts cx env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
@@ -829,7 +829,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   (* A [tt] the method returns is dead where its result is not [unit] -- with
      the codomain read as a top-level function's is, a monad's unit included. *)
   let stmts =
-    finish_fn_body
+    finish_fn_body cx
       (if Translation_monadic.core_type_is_void_call ty then Void else ret_cpp)
       (List.map (tvar_subst_stmt extended_vars) stmts)
   in
@@ -854,7 +854,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       | Entity (_, _, Some {inline = Some _; _}) -> ()
       | Call (_, Entity (_, _, Some {inline = Some _; _}), args) -> List.iter on_expr args
       | Entity (r, tys, ci) when Cpp_names.lookup_method_this_pos r <> None ->
-        let tys = Cpp_names.method_type_args (Translation_state.callables ()) r tys in
+        let tys = Cpp_names.method_type_args (Translation_state.callables cx) r tys in
         Cpp_ir.Children.expr (Lazy.force visitor) (Entity (r, tys, ci))
       | e -> Cpp_ir.Children.expr (Lazy.force visitor) e
     in
@@ -923,8 +923,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
           constexpr = Undecided;
           is_noexcept = false;
           is_conversion = false;
-          binders = parameter_binders env params;
-          receiver_binder = Option.bind this_arg_id (local_binder env);
+          binders = parameter_binders cx env params;
+          receiver_binder = Option.bind this_arg_id (local_binder cx env);
           loop = None },
       Public,
       Untagged )
@@ -944,8 +944,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset methods_ahead)
     [candidate] in the inductive [name], whose variables are [vars], before
     the files are rendered, records it in {!methods_ahead} with the helpers
     lifted out of its body, and returns those helpers. *)
-let generate_method_ahead name vars ((func_ref, _, _, _) as candidate) =
-  let generation = collecting_lifted (fun () -> generate_method name vars candidate) in
+let generate_method_ahead cx name vars ((func_ref, _, _, _) as candidate) =
+  let generation = collecting_lifted cx (fun () -> generate_method cx name vars candidate) in
   Ref.User.Tbl.replace methods_ahead func_ref
     (((name, vars), generation)
      :: Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref) );
@@ -955,14 +955,14 @@ let generate_method_ahead name vars ((func_ref, _, _, _) as candidate) =
     raises an anomaly unless it is the one {!generate_method_ahead}
     recorded.  Run under [CRANE_CHECK_IR], in the reverse order: the order
     methods are generated in must not change them. *)
-let check_method_ahead name vars ((func_ref, _, _, _) as candidate) =
+let check_method_ahead cx name vars ((func_ref, _, _, _) as candidate) =
   let recorded =
     List.find_map
       (fun ((name', vars'), (field, _)) ->
         if globref_equal name name' && List.equal Id.equal vars vars' then Some field else None )
       (Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref))
   in
-  let again = fst (collecting_lifted (fun () -> generate_method name vars candidate)) in
+  let again = fst (collecting_lifted cx (fun () -> generate_method cx name vars candidate)) in
   if not (Option.equal (fun a b -> compare a b = 0) recorded (Some again)) then
     CErrors.anomaly
       Pp.(str "Crane: the method " ++ GlobRef.print func_ref
@@ -973,7 +973,7 @@ let check_method_ahead name vars ((func_ref, _, _, _) as candidate) =
     generated ahead of the files ({!generate_method_ahead}), its helpers
     lifted again into the generation that takes it.  Under [CRANE_CHECK_IR]
     it is generated again and compared. *)
-let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
+let gen_single_method cx name vars ((func_ref, _, _, _) as candidate) =
   match
     List.find_map
       (fun ((name', vars'), g) ->
@@ -981,9 +981,9 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
       (Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref))
   with
   | Some (field, lifted) ->
-    relift lifted;
+    relift cx lifted;
     if Probe.checking ()
-       && compare field (fst (collecting_lifted (fun () -> generate_method name vars candidate))) <> 0
+       && compare field (fst (collecting_lifted cx (fun () -> generate_method cx name vars candidate))) <> 0
     then
       CErrors.anomaly
         Pp.(str "Crane: the method " ++ GlobRef.print func_ref
@@ -1000,13 +1000,13 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
     ({!Control_to_cpp_ir.lower_struct_methods}).  The struct is merged into
     its module's where it is the one the module is promoting, or [merged]
     says so. *)
-let gen_methods ?(merged = false) name vars candidates =
+let gen_methods cx ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
   in
-  Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context ()) ~merged name vars
+  Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context cx) ~merged name vars
     (List.concat_map
-       (fun c -> Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c))
+       (fun c -> Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method cx name vars c))
        candidates )
 
 (** Does the Core type [core_ty] contain [ind_ref] (or a mutual sibling) anywhere
@@ -1083,9 +1083,9 @@ let maybe_record_boxed_recursive_ind ~ind_ref core_ty =
     smart pointer ([Tshared_ptr], rendered as std::shared_ptr / crane::rc);
     whether an object lives in an arena is decided per object at the factory
     call site, not baked into the field type. *)
-let constructor_field_storage ~name ~is_coinductive var_names ty =
+let constructor_field_storage cx ~name ~is_coinductive var_names ty =
   let cpp_ty =
-    Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
+    Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
   in
   (* Wrap fields that contain a nested self-reference in
      their type arguments (e.g. list(tree(A)) inside tree).
@@ -1099,7 +1099,7 @@ let constructor_field_storage ~name ~is_coinductive var_names ty =
   (* Completeness-aware element wrapping: record [name] as boxed wherever it
      is a container element ({!maybe_record_boxed_recursive_ind}). *)
   maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-  let bare_cpp_ty = Translation_types.cpp_ir_of_core_type (empty_env ()) var_names ty in
+  let bare_cpp_ty = Translation_types.cpp_ir_of_core_type cx (empty_env ()) var_names ty in
   if core_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
     (* If the field recurses THROUGH a boxed-element container, the
        element box already breaks the completeness cycle, so the outer
@@ -1129,13 +1129,13 @@ let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir
     stores behind the smart pointer, each with whether it holds [name]
     itself: what loop lowering reads off the struct, decided before it is
     generated ({!Pointer_fields.add}). *)
-let constructor_pointer_fields ~name ~is_coinductive vars tys =
+let constructor_pointer_fields cx ~name ~is_coinductive vars tys =
   List.concat
     (List.mapi
        (fun i ty ->
          match
            constructor_field_at_own_vars vars
-             (constructor_field_storage ~name ~is_coinductive vars ty)
+             (constructor_field_storage cx ~name ~is_coinductive vars ty)
          with
          | Shared_pointer (Entity_application (r, _, _)) when globref_equal r name -> [(i, true)]
          | Shared_pointer _ -> [(i, false)]
@@ -1305,7 +1305,7 @@ let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_i
     @param method_candidates
       functions to generate as methods: [(func_ref, body, type, this_pos)]
     @param kind        whether the inductive is coinductive *)
-let gen_ind_header_v2
+let gen_ind_header_v2 cx
     ?(is_mutual = false)
     ?(consarg_names = [||])
     ?(mutual_partners = [])
@@ -1349,7 +1349,7 @@ let gen_ind_header_v2
        empty { empty() = delete; }; This type cannot be constructed, matching
        the semantics of empty types. *)
     let method_fields =
-      gen_methods name vars method_candidates
+      gen_methods cx name vars method_candidates
     in
     (Struct
        { ref_ = name;
@@ -1412,7 +1412,7 @@ let gen_ind_header_v2
         (* A field's value type, and the type the struct stores it at:
            boxed under [Crane BoxedFields] when it holds an inductive. *)
         let value_ty var_names ty =
-          erase_if_needed (Translation_types.cpp_ir_of_core_type (empty_env ()) var_names ty)
+          erase_if_needed (Translation_types.cpp_ir_of_core_type cx (empty_env ()) var_names ty)
         in
         let stored_ty var_names ty =
           let t = value_ty var_names ty in
@@ -1429,7 +1429,7 @@ let gen_ind_header_v2
         let conversion_field =
           (* An inductive's [vars] already begin with its promoted variables
              (see [Cpp_ind]), so nothing is left to keep. *)
-          conversion_to_other_instantiation ~leading:[] ~name ~templates ~vars
+          conversion_to_other_instantiation cx ~leading:[] ~name ~templates ~vars
             ~fields:
               (List.mapi
                  (fun j ty -> (List.nth field_ids j, fun var_names -> stored_ty var_names ty))
@@ -1454,7 +1454,7 @@ let gen_ind_header_v2
                  ~params:factory_params ~body:factory_body),
             V.Public, Sec.Creators )
         in
-        let method_fields = gen_methods name vars method_candidates in
+        let method_fields = gen_methods cx name vars method_candidates in
         let all_flat_fields =
           flat_fields @ [clone_field] @ conversion_field @ [factory_field]
           @ method_fields
@@ -1470,7 +1470,7 @@ let gen_ind_header_v2
 
 
 
-      let field_storage_ty var_names ty = constructor_field_storage ~name ~is_coinductive var_names ty in
+      let field_storage_ty var_names ty = constructor_field_storage cx ~name ~is_coinductive var_names ty in
       let compute_field_cpp_ty ty =
         let cpp_ty = field_storage_ty vars ty in
         constructor_field_at_own_vars vars cpp_ty
@@ -1907,7 +1907,7 @@ let gen_ind_header_v2
              and <atomic>, which {!Cpp_demands} demands for the fence's text,
              is not included on its account. *)
           let unique_fence =
-            if Translation_state.non_atomic_rc () then []
+            if Translation_state.non_atomic_rc cx then []
             else [S.Foreign_text Cpp_demands.acquire_fence]
           in
           let is_sole p =
@@ -1959,7 +1959,7 @@ let gen_ind_header_v2
             p ^ string_of_int !hv_seq
           in
           let cpp_of_core t =
-            Translation_types.cpp_ir_of_core_type (empty_env ()) vars t
+            Translation_types.cpp_ir_of_core_type cx (empty_env ()) vars t
           in
 
           (* Spelled as from outside the inductive's own scope, which is where
@@ -2731,7 +2731,7 @@ let gen_ind_header_v2
               (* The field as the struct declares it. *)
               let storage_ty = compute_field_cpp_ty ty in
               let api_ty =
-                Translation_types.cpp_ir_of_core_type
+                Translation_types.cpp_ir_of_core_type cx
                   (empty_env ())
                   vars
                   ty
@@ -2886,7 +2886,7 @@ let gen_ind_header_v2
            for arena allocation, nor for coinductive or shared-variant types,
            whose cells are made differently. *)
         let child_field (_, storage_ty, _) ty =
-          Translation_state.non_atomic_rc () && (not is_coinductive) && (not arena_runtime_ok)
+          Translation_state.non_atomic_rc cx && (not is_coinductive) && (not arena_runtime_ok)
           && (not (Table.is_shared_variant name))
           && is_ref_to name vars ty
           && (match (storage_ty : Cpp_ir.Lowered.Type.t) with Shared_pointer _ -> true | _ -> false)
@@ -2972,7 +2972,7 @@ let gen_ind_header_v2
           else
           match token_field with
           | Some (tok_j, rec_inner)
-            when Table.reuse_anywhere () && Translation_state.non_atomic_rc () && (not is_coinductive)
+            when Table.reuse_anywhere () && Translation_state.non_atomic_rc cx && (not is_coinductive)
                  (* A shared variant's slot holds no cell to recycle. *)
                  && not (Table.is_shared_variant name) ->
               let tok_id = Id.of_string "_tok" in
@@ -3177,7 +3177,7 @@ let gen_ind_header_v2
                         ~skip:(fun g ->
                           GlobRef.CanOrd.equal g name
                           || Table.same_mutual_block g name
-                          || spells_bare g)
+                          || spells_bare cx g)
                         ~src_ty:src_fty ~dst_ty:dst_fty
                         src_expr)
                     field_info
@@ -3326,7 +3326,7 @@ let gen_ind_header_v2
 
       (* 6. Generate methods from method candidates using shared helper *)
       let method_fields =
-        gen_methods name vars method_candidates
+        gen_methods cx name vars method_candidates
       in
 
       (* Detect if any method contains shared_from_this (i.e., returns 'this').
@@ -3420,6 +3420,6 @@ let gen_ind_header_v2
     @param vars the record's type variables (e.g. [[K; V]] for [CHT<K, V>])
     @param method_candidates
       functions to generate as methods: [(func_ref, body, type, this_pos)] *)
-let gen_record_methods (name : GlobRef.t) (vars : Id.t list) method_candidates =
-  gen_methods ~merged:true name vars method_candidates
+let gen_record_methods cx (name : GlobRef.t) (vars : Id.t list) method_candidates =
+  gen_methods cx ~merged:true name vars method_candidates
  

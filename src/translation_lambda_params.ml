@@ -131,11 +131,11 @@ let rec has_open_meta t =
     own ([state_get]'s [s : T1]).  A hole a binder's type is filled at is the
     hole the other binders' and the body's annotations mention -- the match
     destructuring the binder among them -- so they are filled too. *)
-let slot_refined_lambda env ~expected_core_ty args body =
+let slot_refined_lambda cx env ~expected_core_ty args body =
   let rec erase_unscoped t =
     match resolve_meta t with
     | Core.Type.Variable _ as v
-      when not (Translation_types.names_only_scoped_tvars (Translation_types.cpp_of_core env v)) ->
+      when not (Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env v)) ->
       Core.Type.Unknown
     | Core.Type.Arrow {parameter = a; result = b} ->
       Core.Type.Arrow {parameter = erase_unscoped a; result = erase_unscoped b}
@@ -160,7 +160,7 @@ let slot_refined_lambda env ~expected_core_ty args body =
           else
             let d = doms.(n - 1 - i) in
             let d = if has_open_meta ty then erase_unscoped d else d in
-            let writable t = Translation_types.names_only_scoped_tvars (Translation_types.cpp_of_core env t) in
+            let writable t = Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env t) in
             (x, Type_util.refine_erased ~fills ~writable ty d) )
         args
     | None -> args
@@ -242,7 +242,7 @@ let binder_matched_at body =
     [forall T] -- and unused it is erased like a dummy.  The count of binders
     the term writes and the parameter list it is written with are both read
     off this, so they cannot disagree. *)
-let lambda_binder_emitted env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~body binders i ty =
+let lambda_binder_emitted cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~body binders i ty =
   let slot_value_doms =
     let rec alias_ref (t : Cpp_ir.Lowered.Type.t) =
       match Cpp_ir.Types.strip_param_spelling t with
@@ -263,7 +263,7 @@ let lambda_binder_emitted env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~bod
     | None -> []
   in
   let slot_doms_cpp =
-    match Option.map (Translation_types.unfold_cpp_typedef env) expected_ty with
+    match Option.map (Translation_types.unfold_cpp_typedef cx env) expected_ty with
     | Some (Function (doms, _)) -> doms
     | _ -> []
   in
@@ -290,7 +290,7 @@ let lambda_binder_emitted env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~bod
     positions at; [reified], that itree terms are extracted reified.  Lowering
     passes what it is generating against, the representation plan what it
     reads off Core. *)
-let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body ~unused ~slot_dom (id, ty, owned) =
+let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body ~unused ~slot_dom (id, ty, owned) =
   let at_carrier ty = match rank2_carrier with None -> ty | Some x -> Rank2.at_carrier x ty in
   let tvar_in_scope n = List.exists (Id.equal n) tvars in
   let slot_param_cpp_ty =
@@ -306,10 +306,10 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
     | _ -> None
   in
   let bare_cpp_ty =
-    Translation_types.cpp_of_core env ty
+    Translation_types.cpp_of_core cx env ty
   in
   let stored_cpp_ty =
-    Translation_types.cpp_ir_of_core_type env ~ns
+    Translation_types.cpp_ir_of_core_type cx env ~ns
       tvars ty
   in
   let body_subst =
@@ -333,9 +333,9 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
        scope, so it would fall back to the file-scope [std::any].  The slot
        writes the definition by name, which its own declaration resolved. *)
     | None
-      when Translation_types.mentions_unresolved_promoted bare_cpp_ty
+      when Translation_types.mentions_unresolved_promoted cx bare_cpp_ty
            && Option.has_some slot_param_cpp_ty ->
-      Translation_ownership.wrap_param_by_ownership ~is_owned:owned
+      Translation_ownership.wrap_param_by_ownership cx ~is_owned:owned
         (Option.get slot_param_cpp_ty)
     | None
       when rank2_carrier <> None
@@ -355,7 +355,7 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          the concrete type the constructor needs.  Written [std::any] instead,
          the parameter is a claim the body cannot keep, and the error lands
          inside the lambda at the use. *)
-      Translation_ownership.wrap_param_by_ownership ~is_owned:owned
+      Translation_ownership.wrap_param_by_ownership cx ~is_owned:owned
         (Option.get slot_param_cpp_ty)
     | None
       when Type_util.has_tany_written bare_cpp_ty
@@ -387,13 +387,13 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          type, uncast. *)
       let refined =
         match (binder_matched_at body, slot_dom) with
-        | Some t, _ -> Translation_types.cpp_of_core env t
+        | Some t, _ -> Translation_types.cpp_of_core cx env t
         | None, Some slot ->
           Type_util.refine_param_from_slot ~tvars ~slot
             bare_cpp_ty
         | None, None -> bare_cpp_ty
       in
-      Translation_ownership.wrap_param_by_ownership ~is_owned:owned refined
+      Translation_ownership.wrap_param_by_ownership cx ~is_owned:owned refined
     | None
       when reified && core_type_is_unit ty ->
       (* A reified tree's continuation is typed [unit -> itree ...] in Core, but
@@ -425,11 +425,11 @@ let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body
          flatten to -- [esc : A -> cont R B], with [cont R B] an alias for a
          function type -- is curried where the slot says ([Declared_at]). *)
       let declared_arity =
-        match Option.map (Translation_types.unfold_cpp_typedef env) slot_dom with
+        match Option.map (Translation_types.unfold_cpp_typedef cx env) slot_dom with
         | Some (Function (doms, _)) -> List.length doms
         | _ -> 0
       in
-      Translation_ownership.wrap_param_by_ownership ~is_owned:owned
+      Translation_ownership.wrap_param_by_ownership cx ~is_owned:owned
         (if declared_arity > 0 then Cpp_ir.Types.spell_arrows (Declared_at declared_arity) bare_cpp_ty
          else bare_cpp_ty)
   in

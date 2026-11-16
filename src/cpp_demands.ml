@@ -288,7 +288,7 @@ let promoted_of_decl d = ir_promoted (fun ~decl ~ty:_ -> decl d)
 
 let promoted_of_type t = ir_promoted (fun ~decl:_ ~ty -> ty t)
 
-let of_modtype_concept unit (c : Modtype_concept.t) =
+let of_modtype_concept cx unit (c : Modtype_concept.t) =
   let found = ref [] in
   let need hs = List.iter (fun h -> if not (List.mem h !found) then found := h :: !found) hs in
   let concepts () = need [Table.Standard "concepts"] in
