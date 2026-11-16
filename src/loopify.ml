@@ -396,13 +396,13 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         let frames = match strategy with Modulo_cons _ | Frame_stack -> true | _ -> false in
         match member_plan ~frames member params with
         | None ->
-          record_outcome name (Lp_declined no_varying_plan);
+          record_outcome name (Declined no_varying_plan);
           None
         | Some {member_varying = varying; member_parts = parts; member_moves = moves} ->
         match
           match strategy with
           | Tail_loop ->
-            report_outcome ~name ~check ~strategy:Lp_tail
+            report_outcome ~name ~check ~strategy:Tail
               (let loop = Some (Control_ir.Loop.Member (fst member, snd member)) in
                checked_tail_loop loop (fun jumped ->
                    transform_tail ~jumped ~moves ~varying ~parts tparams (planned_jumps loop check)
@@ -410,7 +410,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           (* The tail-modulo-cons loop is built for a function, not a lambda:
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
-            report_outcome ~name ~check ~strategy:Lp_frame
+            report_outcome ~name ~check ~strategy:Frame
               (transform_nontail ~fn_name:name
                 ~loop:(Control_ir.Loop.Member (fst member, snd member)) ~varying ~outer_env
                  ~binders ~entered_by:(entered_by_member member) ~parts check tparams
@@ -421,7 +421,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         (* A transform declining declines this fixpoint, which is left as it
            was, not the function it is in. *)
         | exception Not_linearisable why ->
-          record_outcome name (Lp_declined why);
+          record_outcome name (Declined why);
           None
         (* A call the transform left -- one in a closure, say a fixpoint in
            the body that calls back, which a local machine does not adopt --
@@ -646,7 +646,7 @@ type unlowered =
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?cursor ?loop
     ~varying ?binders ~parts check tparams params ret_ty body =
   let declined reason =
-    {nt_body = body; nt_outcome = Lp_declined reason; nt_machine = false}
+    {nt_body = body; nt_outcome = Declined reason; nt_machine = false}
   in
   let frame () =
     let machine =
@@ -655,7 +655,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
             tparams params ret_ty body )
     in
     { nt_body = Option.cata fst body machine;
-      nt_outcome = Lp_frame;
+      nt_outcome = Frame;
      
       nt_machine = Option.has_some machine }
   in
@@ -693,7 +693,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     | None -> None
   in
   match tmc with
-  | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_machine = true}
+  | Some tmc -> {nt_body = tmc; nt_outcome = Tmc; nt_machine = true}
   | None -> frame ()
   with Not_linearisable reason -> declined reason
 
@@ -761,7 +761,7 @@ let modulo_cons_chains = function
   | Recursion_plan.Modulo_cons chains -> Some chains
   | No_loop | Tail_loop | Frame_stack | Suspended _ -> None
 
-let after_tail_loop ?(strategy = Lp_tail) ?survived ~tparams (f : func) params loop =
+let after_tail_loop ?(strategy = Tail) ?survived ~tparams (f : func) params loop =
   report_outcome ?survived ~name:(fundef_display_name f.path) ~check:(survivors f) ~strategy
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
 
@@ -836,10 +836,10 @@ let record_unlowered ?(unlowered = Left None) (f : func) body =
   match (planned_strategy (Some (fst f.path.outer)), unlowered) with
   | No_loop, _ -> ()
   | Suspended _, _ -> record_outcome name deferred_cofixpoint
-  | (Tail_loop | Modulo_cons _ | Frame_stack), Declined why -> record_outcome name (Lp_declined why)
-  | Tail_loop, Left survived -> ignore (report_outcome ?survived ~name ~check ~strategy:Lp_tail body)
+  | (Tail_loop | Modulo_cons _ | Frame_stack), Declined why -> record_outcome name (Declined why)
+  | Tail_loop, Left survived -> ignore (report_outcome ?survived ~name ~check ~strategy:Tail body)
   | (Modulo_cons _ | Frame_stack), Left survived ->
-    ignore (report_outcome ?survived ~name ~check ~strategy:Lp_frame body)
+    ignore (report_outcome ?survived ~name ~check ~strategy:Frame body)
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
@@ -854,7 +854,7 @@ let local_frame_machine ~member ~name ~binders ~varying ~parts ~tparams check pa
            params ret_ty body ) )
     (fun (machine, _) ->
       if classify check machine = No_recursion then
-        Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
+        Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Frame machine))
       else None )
 
 (** Why a method is not lowered to a machine or a loop tail modulo cons
@@ -999,7 +999,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
         Probe.violation "control lowering"
           Pp.(str "the tail loop of the method " ++ str name
               ++ str " has a turn making its receiver that no tail call parks");
-        record_outcome name (Lp_declined value_receiver);
+        record_outcome name (Declined value_receiver);
         Method mf
       end else
       let body_with_self, self_store_ty = if parked = 0 then (body_with_self, None) else (parked_body, self_store_ty) in
@@ -1009,7 +1009,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
         match strategy with
         | Tail_loop ->
           Some
-            (report_outcome ~name ~check:(method_survivors mf) ~strategy:Lp_tail
+            (report_outcome ~name ~check:(method_survivors mf) ~strategy:Tail
                (let loop = Option.bind mf.globref function_loop in
                 checked_tail_loop loop (fun jumped ->
                     transform_tail ~param_inits:[(self_id, This)] ~jumped ?moves ~varying ~parts tparams
@@ -1039,7 +1039,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
             report_outcome ~name ~check:(method_survivors mf) ~strategy:r.nt_outcome
               r.nt_body
           in
-          if r.nt_outcome = Lp_frame && not r.nt_machine then None else Some body'
+          if r.nt_outcome = Frame && not r.nt_machine then None else Some body'
         | No_loop | Suspended _ -> CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
       in
       match lowered with
@@ -1066,6 +1066,6 @@ let record_unlowered_method mf =
   match planned_strategy mf.globref with
   | No_loop -> ()
   | Suspended _ -> record_outcome name deferred_cofixpoint
-  | Tail_loop -> ignore (report_outcome ~name ~check ~strategy:Lp_tail mf.body)
-  | Modulo_cons _ | Frame_stack -> ignore (report_outcome ~name ~check ~strategy:Lp_frame mf.body)
+  | Tail_loop -> ignore (report_outcome ~name ~check ~strategy:Tail mf.body)
+  | Modulo_cons _ | Frame_stack -> ignore (report_outcome ~name ~check ~strategy:Frame mf.body)
 

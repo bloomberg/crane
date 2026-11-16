@@ -472,20 +472,20 @@ type recursion_kind =
 
 (** What the pass did with one recursive function. *)
 type loopify_outcome =
-  | Lp_tail  (** Rewritten to a flat [while] loop by {!Loopify_tail.transform_tail}. *)
-  | Lp_tmc  (** Rewritten by the tail-modulo-cons transform. *)
-  | Lp_frame  (** Rewritten to an explicit frame stack. *)
-  | Lp_deferred of string
+  | Tail  (** Rewritten to a flat [while] loop by {!Loopify_tail.transform_tail}. *)
+  | Tmc  (** Rewritten by the tail-modulo-cons transform. *)
+  | Frame  (** Rewritten to an explicit frame stack. *)
+  | Deferred of string
       (** Intentionally not rewritten because the shape already runs in O(1)
           stack (e.g. a [lazy_]-wrapped cofixpoint body). Not a failure. *)
-  | Lp_declined of string  (** Left as C++ recursion; the string is the reason. *)
+  | Declined of string  (** Left as C++ recursion; the string is the reason. *)
 
 let string_of_outcome = function
-  | Lp_tail -> "tail loop"
-  | Lp_tmc -> "tail-modulo-cons"
-  | Lp_frame -> "frame stack"
-  | Lp_deferred why -> "deferred (" ^ why ^ ")"
-  | Lp_declined why -> "DECLINED: " ^ why
+  | Tail -> "tail loop"
+  | Tmc -> "tail-modulo-cons"
+  | Frame -> "frame stack"
+  | Deferred why -> "deferred (" ^ why ^ ")"
+  | Declined why -> "DECLINED: " ^ why
 
 (** Outcomes recorded during the current extraction, most recent first. *)
 let outcomes : (string * loopify_outcome) list ref = ref []
@@ -511,7 +511,7 @@ let get_outcomes () =
 
 (** What a suspended cofixpoint's function is: its calls run when a thunk is
     forced, and need no loop. *)
-let deferred_cofixpoint = Lp_deferred "cofixpoint body is lazy_-wrapped"
+let deferred_cofixpoint = Deferred "cofixpoint body is lazy_-wrapped"
 
 (** Why a function a self-call is left in was declined, where nothing
     sharper is known. *)
@@ -538,7 +538,7 @@ let report_outcomes ?(unit_name = "") () =
   if Table.loopify_strict () then
     List.iter
       (function
-        | (name, Lp_declined why) ->
+        | (name, Declined why) ->
           CErrors.user_err
             (Pp.str ("loopify: cannot linearise " ^ name ^ " (" ^ why ^ ")"))
         | _ -> ())
@@ -986,7 +986,7 @@ let classify check body =
     [strategy] is the outcome the pass {e believes} it achieved.  Before
     accepting it we re-run {!classify} on the transformed body: if a recursive
     call survived, the strategy did not actually linearise the function and the
-    outcome is downgraded to {!Lp_declined}.  A decline the transform reported
+    outcome is downgraded to {!Declined}.  A decline the transform reported
     itself stands, since its reason is more specific than "a self-call
     remains".
 
@@ -1000,9 +1000,9 @@ let classify check body =
 let report_outcome ?survived ~name ~check ~strategy body =
   let outcome =
     match strategy with
-    | Lp_declined _ -> strategy
+    | Declined _ -> strategy
     | _ when classify check body <> No_recursion ->
-      Lp_declined
+      Declined
         (Option.default survived_generically survived)
     | _ -> strategy
   in

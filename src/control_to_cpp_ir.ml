@@ -434,7 +434,7 @@ and lower_modulo_cons ~tparams (f : func) params body l ?cursor ~varying ~parts 
   | None -> Error (Loopify.Left None)
   | Some loop -> (
     if Probe.checking () then check_jumps ~loop:"loop tail modulo cons" f ~continues ~jumped:(List.rev !jumps);
-    match Loopify.after_tail_loop ~strategy:Lp_tmc ~tparams f params loop with
+    match Loopify.after_tail_loop ~strategy:Tmc ~tparams f params loop with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | body -> Ok {f with shape = Definition (List.rev params, body); loop = Some l.loop} )
 
@@ -462,7 +462,7 @@ and lower_frames ~tparams (f : func) params body (l : Control_ir.Term.loop) ~var
   | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
   | Error why -> Error why
   | Ok (machine, survived) -> (
-    match Loopify.after_tail_loop ~strategy:Lp_frame ?survived ~tparams f params machine with
+    match Loopify.after_tail_loop ~strategy:Frame ?survived ~tparams f params machine with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | body -> Ok {f with shape = Definition (List.rev params, body); loop = Some l.loop} )
 
@@ -574,7 +574,7 @@ let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lambda) :
   (* A loop or machine leaving a call behind is a decline, as Loopify
      records it of the Y-combinator then left. *)
   let declined () =
-    Loopify_analysis.record_outcome (Id.to_string name) (Lp_declined Loopify_analysis.survived_generically);
+    Loopify_analysis.record_outcome (Id.to_string name) (Declined Loopify_analysis.survived_generically);
     unlowered Loopify_analysis.survived_generically
   in
   match ((Lower_control.loop (Loop_facts.control ())) member_loop, lowering) with
@@ -615,7 +615,7 @@ let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lambda) :
             Probe.violation "control IR"
               Pp.(str "the calls the tail loop of the local fixpoint " ++ Id.print name
                   ++ str " jumps at are not its Continues");
-          if lowering = Tail then Loopify_analysis.record_outcome (Id.to_string name) Lp_tail;
+          if lowering = Tail then Loopify_analysis.record_outcome (Id.to_string name) Tail;
           let loop = {lam with body = body; moved = []} in
           let moved = List.filter (fun x -> List.mem x (Loopify_analysis.free_vars_expr (Lambda loop))) lam.moved in
           Loop_verdicts.record member_loop Lowered;
@@ -625,7 +625,7 @@ let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lambda) :
      it, and declines it, where Loopify reaches the fixpoint -- in a body it
      loopifies. *)
   | Some _, Some _ when Option.cata loopified false owner ->
-    Loopify_analysis.record_outcome (Id.to_string name) (Lp_declined Loopify_analysis.survived_generically);
+    Loopify_analysis.record_outcome (Id.to_string name) (Declined Loopify_analysis.survived_generically);
     Loop_verdicts.record member_loop Kept;
     None
   | (Some _ | None), _ ->
@@ -706,7 +706,7 @@ let lower_method ~tparams ~self_ty (m : meth) =
     in
     match (transform, value_receiver) with
     | None, Some why ->
-      Loopify_analysis.record_outcome (Id.to_string m.name) (Lp_declined why);
+      Loopify_analysis.record_outcome (Id.to_string m.name) (Declined why);
       Loop_verdicts.record l.loop (Declined why);
       None
     | None, None ->
