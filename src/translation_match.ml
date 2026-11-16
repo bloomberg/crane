@@ -739,7 +739,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
     let reuse_stmts_opt =
       if Table.reuse_here () && Table.reuse_loopify_ok ()
          && (if scrut_is_shared then scrut_consumable
-             else Table.non_atomic_rc () && scrut_is_owned)
+             else Translation_state.non_atomic_rc () && scrut_is_owned)
          && (not is_flat_match) && (not is_enum)
          && (match typ with Core.Type.Global_app {head = r; _} -> not (Table.is_coinductive r) | _ -> true)
       then

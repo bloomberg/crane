@@ -1,0 +1,11 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** The context of one unit's extraction.  See [unit_context.mli]. *)
+
+type t = {config : Table.unit_config}
+
+let make ~config = {config}
+let detached = {config = {Table.concurrent = false}}
+let non_atomic_rc u = Table.non_atomic_rc_for u.config
+let count_rc u = Table.count_rc_for u.config

@@ -158,15 +158,20 @@ let no_program_facts =
     are written as standalone functions, and the effect operations its
     applications are ({!Program_facts.t}), and the elaborations of the
     unit's calls ({!Core_elaborate.structure}), [None] until the unit is
-    walked. *)
+    walked; and the unit's context ({!Unit_context}). *)
 type unit_facts = {
   higher_order_projections : Ref.User.Set.t;
   effects : Core_effects.t;
   elaborations : Core_elaborate.t option;
+  context : Unit_context.t;
 }
 
 (** The facts of no unit: lowering outside a unit's extent. *)
-let no_unit_facts = {higher_order_projections = Ref.User.Set.empty; effects = Core_effects.empty; elaborations = None}
+let no_unit_facts =
+  { higher_order_projections = Ref.User.Set.empty;
+    effects = Core_effects.empty;
+    elaborations = None;
+    context = Unit_context.detached }
 
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
@@ -537,6 +542,13 @@ let is_higher_order_projection r = Ref.User.Set.mem r (!tctx).input.unit.higher_
 (** The elaborations of the unit's calls ({!unit_facts}): [None] until the
     unit is walked. *)
 let elaborations () = (!tctx).input.unit.elaborations
+
+(** The context of the unit being lowered ({!unit_facts}). *)
+let unit_context () = (!tctx).input.unit.context
+
+(** Whether the unit being lowered counts references non-atomically
+    ({!Unit_context.non_atomic_rc}). *)
+let non_atomic_rc () = Unit_context.non_atomic_rc (unit_context ())
 
 (** Whether the analysis of the program found that the body of the
     definition [r] only throws ({!program_facts}). *)

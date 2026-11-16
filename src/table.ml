@@ -3499,14 +3499,6 @@ type unit_config = {concurrent : bool}
 
 let unit_config ~names = {concurrent = runs_on_threads names}
 
-(* The configuration of the unit being extracted, for its extent
-   ({!with_unit_config}); a unit's own is bound once its plan decides it. *)
-let current_unit_config = ref {concurrent = false}
-
-let with_unit_config c f = State.bind current_unit_config c f
-
-let unit_is_concurrent () = !current_unit_config.concurrent
-
 let check_concurrency_decided config =
   if Probe.checking () && runs_on_threads (written_customs ()) && not config.concurrent then
     Probe.violation "written customs"
@@ -3522,11 +3514,7 @@ let check_concurrency_decided config =
    thread ({!concurrency_headers}). *)
 let non_atomic_rc_for config = non_atomic_rc_requested () && not config.concurrent
 
-let non_atomic_rc () = non_atomic_rc_for !current_unit_config
-
 let single_threaded_for config = single_threaded_requested () && not config.concurrent
-
-let single_threaded () = single_threaded_for !current_unit_config
 
 (* [CRANE_COUNT_RC=1] swaps the shared pointer for the counting one in
    count_rc.h, so a run reports its reference-count traffic.  It is an
@@ -3540,8 +3528,6 @@ let single_threaded () = single_threaded_for !current_unit_config
    outright), and substituting a different pointer under it would not
    compile. *)
 let count_rc_for config = Sys.getenv_opt "CRANE_COUNT_RC" = Some "1" && not (non_atomic_rc_for config)
-
-let count_rc () = count_rc_for !current_unit_config
 
 (* [CRANE_STAMP=1] prints, as a comment at the top of every generated file, a
    digest of the plugin binary that produced it.  Like [CRANE_COUNT_RC] it is
@@ -3584,23 +3570,6 @@ let plugin_digest =
       with _ -> "unavailable" )
 
 let plugin_build_stamp () = Lazy.force plugin_digest
-
-(* Resolved smart-pointer names for string-level codegen (kept here, in a low
-   module, so both [Cpp_state.init_std_names] and the string-building sites in
-   Translation/Gen_decls agree without a module cycle).  [CRANE_COUNT_RC]
-   selects the counting pointer, [Crane NonAtomicRc] the namespace-neutral
-   [crane::rc]; otherwise the std/BDE flavor. *)
-let shared_ptr_name () =
-  if count_rc () then Crane_rt.counting_ptr
-  else if non_atomic_rc () then Crane_rt.rc
-  else if std_lib () = "BDE" then "bsl::shared_ptr"
-  else "std::shared_ptr"
-
-let make_shared_name () =
-  if count_rc () then Crane_rt.make_counting
-  else if non_atomic_rc () then Crane_rt.make_rc
-  else if std_lib () = "BDE" then "bsl::make_shared"
-  else "std::make_shared"
 
 let warn_non_atomic_rc_concurrent =
   CWarnings.create ~name:"crane-non-atomic-rc-concurrent"

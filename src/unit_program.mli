@@ -158,12 +158,12 @@ val record_ahead : entity -> unit
     handed on to another generation is not. *)
 val record_lifted_ahead : Cpp_ir.Lowered.Decl.t list -> unit
 
-(** [finish jobs] is the unit's program with [jobs] finished, each once, in
-    order: a job whose {!id} an earlier one finished already is that
+(** [finish u jobs] is the program of the unit [u] with [jobs] finished,
+    each once, in order: a job whose {!id} an earlier one finished already is that
     declaration.  What {!Cpp_demands} reads is read off the finished
     declaration.  Under [CRANE_CHECK_IR], two different declarations under
     one id are a violation. *)
-val finish : job list -> t
+val finish : Unit_context.t -> job list -> t
 
 (** Under [CRANE_CHECK_IR], fail unless [t] finished exactly the
     declarations its generations gave: those its entities name, and each
@@ -199,12 +199,13 @@ val find : id -> Cpp_ir.Resolved.Decl.t option
 (** {!find}, with the declaration's id. *)
 val find_declaration : id -> declaration option
 
-(** [finishes_as d f] is whether finishing [d] again gives [f]. *)
-val finishes_as : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t -> bool
+(** [finishes_as u d f] is whether finishing [d], of the unit [u], again
+    gives [f]. *)
+val finishes_as : Unit_context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t -> bool
 
-(** [refinish jobs] finishes [jobs] again, in order, and fails unless each
+(** [refinish u jobs] finishes [jobs], of the unit [u], again, in order, and fails unless each
     comes out as it is in the installed program, under the same {!id}. *)
-val refinish : job list -> unit
+val refinish : Unit_context.t -> job list -> unit
 
 (** {!globals} of the installed program. *)
 val installed_globals : unit -> Names.GlobRef.t list

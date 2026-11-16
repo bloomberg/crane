@@ -99,8 +99,8 @@ let storage_of (planned : planned_result) ret_ty = if planned.values then Value_
 
 (* Whether a result may be assembled in cells a reuse cursor recycles: one
    of values under the reuse policy, unless a shared variant. *)
-let recyclable_result (planned : planned_result) =
-  planned.values && Table.reuse_here () && Table.non_atomic_rc () && not planned.shared
+let recyclable_result u (planned : planned_result) =
+  planned.values && Table.reuse_here () && Unit_context.non_atomic_rc u && not planned.shared
 
 (** The value type a cell holds behind its pointer, when cells are values. *)
 let cell_value_type = function
@@ -892,13 +892,13 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts ~shapes tparams
+let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying ~parts ~shapes tparams
   check params ret_ty body =
   let branch = branch_along shapes check in
   let planned = planned_result shapes ret_ty in
   let { Loopify_tail.Shadow_setup.varying = varying; varying_params = varying_params;
         shadow_params = shadow_params; subs = subs } =
-    build_shadow_setup ~varying ~parts tparams params
+    build_shadow_setup ~unit ~varying ~parts tparams params
   in
   (* Shadow variable declarations.
      For pointer params with custom inits (e.g., _self = this in methods), only
@@ -912,7 +912,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None -> tail_shadow_init orig_id shadow_ty ty
+          | None -> tail_shadow_init unit orig_id shadow_ty ty
         in
         (* Declare the shadow at the shadow's type, not the parameter's: where
            {!tail_shadow_type} chose something else, it chose it because the
@@ -935,7 +935,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
      parameter the head declares by value, not a reference or a receiver. *)
   let cursor =
     match cursor with
-    | Some (c : Reuse_cursor.t) when recyclable_result planned -> (
+    | Some (c : Reuse_cursor.t) when recyclable_result unit planned -> (
       match List.nth_opt params c.parameter with
       | Some (id, ty) when (not (List.mem_assoc id param_inits)) && not (declared_by_reference ty) -> Some c
       | Some _ | None -> None )

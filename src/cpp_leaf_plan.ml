@@ -923,7 +923,7 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
     spelled at [ctx] are. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   let start =
-    { (file_start ctx.file) with
+    { (file_start ctx.unit ctx.file) with
       visibility = Some (ctor_alias_visibility declared);
       aliases = ctx.aliases }
   in

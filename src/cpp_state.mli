@@ -278,11 +278,12 @@ and render_ctx = {
   tyctors : tyctor_plan;
       (** How the type constructors written from here are written
           ({!tyctor_plan}). *)
+  unit : Unit_context.t;  (** The unit the file is of. *)
 }
 
-(** The context at the start of the file [file]: file scope, outside every
-    struct. *)
-val file_start : Common.file -> render_ctx
+(** The context at the start of the file [file] of the unit [u]: file
+    scope, outside every struct. *)
+val file_start : Unit_context.t -> Common.file -> render_ctx
 
 (** What a file declares at file scope: the types, by the entity each
     declaration declares, and the promoted type variables among them, by
@@ -514,10 +515,10 @@ val mk_std_names : string -> std_names
     [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
     [Table.fast_variant ()] or [Table.shared_variant ()], the [crane::]
     variant accessors (and, for the former, [crane::variant]); then, under
-    [Table.count_rc ()], the counting pointer, or else under
-    [Table.non_atomic_rc ()], [crane::rc] / [crane::make_rc] /
-    [crane::enable_rc_from_this]. *)
-val init_std_names : unit -> unit
+    [Table.count_rc_for], the counting pointer, or else under
+    [Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
+    [crane::enable_rc_from_this], in the configuration of the unit given. *)
+val init_std_names : Unit_context.t -> unit
 
 (** Shorthand for [!std_names]. *)
 val sn : unit -> std_names

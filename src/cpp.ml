@@ -1699,8 +1699,8 @@ let convert_eponymous_record_fields ~module_ frame =
     generates it in, an inductive, an alias and a concept in the scope the
     header writes their module in.  What is generated is recorded for both
     files ({!Cpp_ind.generating_ahead}); the renders take it from there. *)
-let generating_ahead f =
-  init_std_names ();
+let generating_ahead u f =
+  init_std_names u;
   Cpp_ind.generating_ahead f
 
 (** What finishing [aheads] takes: what each generated, in the order
@@ -1721,20 +1721,21 @@ let finishing (aheads : Cpp_ind.ahead list) =
     header the files will need for what they write ({!Cpp_demands}): the
     finished program's, and those of the module-type concepts and eponymous
     record fields generated ahead of them. *)
-let finish_ahead (aheads : Cpp_ind.ahead list) =
+let finish_ahead u (aheads : Cpp_ind.ahead list) =
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Unit_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   Unit_program.record_lifted_ahead helpers;
-  let program = Unit_program.finish (finishing aheads) in
+  let program = Unit_program.finish u (finishing aheads) in
   Unit_program.check_finished program;
   Unit_program.install program;
   List.iter Table.demand_header
     (Unit_program.demands program
-    @ List.concat_map Cpp_demands.of_modtype_concept (Cpp_ind.generated_concepts ())
-    @ List.concat_map Cpp_demands.of_type (Cpp_ind.generated_record_field_types ()))
+    @ List.concat_map (Cpp_demands.of_modtype_concept u) (Cpp_ind.generated_concepts ())
+    @ List.concat_map (Cpp_demands.of_type u) (Cpp_ind.generated_record_field_types ()))
 
 (** Generate and finish the one declaration [d], an element of [module_]. *)
-let generate_decl_ahead ~module_ d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead ~module_ d]
+let generate_decl_ahead u ~module_ d =
+  generating_ahead u @@ fun () -> finish_ahead u [Cpp_ind.generate_ahead ~module_ d]
 
 (** What the modules of the structure [s] name around their declarations,
     as {!pp_structure_elem} writes them: the concept constraining a functor's
@@ -1836,8 +1837,8 @@ let plan_function_reads () =
        (fun reads d -> List.fold_right Ref.Can.Set.add (function_globals d) reads)
        Ref.Can.Set.empty (Unit_program.installed_finished ()))
 
-let generate_ahead s =
-  generating_ahead @@ fun () ->
+let generate_ahead u s =
+  generating_ahead u @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A
      wrapper's functions are finished as one group, as {!file_views} finishes
      them. *)
@@ -1896,14 +1897,14 @@ let generate_ahead s =
       | _ -> ())
     s;
   let aheads = List.rev !aheads in
-  finish_ahead aheads;
+  finish_ahead u aheads;
   (* A body is a function of its declaration, not of the bodies generated or
      finished before it: under [CRANE_CHECK_IR] everything is finished and
      generated again in the reverse order and must come out the same, so no
      body can depend on what happened to be generated before it. *)
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
-    Unit_program.refinish (finishing (List.rev aheads));
+    Unit_program.refinish u (finishing (List.rev aheads));
     walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
       ~after_module:(fun ~module_ frame _ ->
         convert_eponymous_record_fields ~module_ frame;
@@ -3334,11 +3335,11 @@ let check_value_order scheduled =
     @return Pretty-printer document for the complete output file (header or
             implementation), including lifted declarations and deferred
             out-of-line function definitions. *)
-let do_struct_with_decl_tracking ~is_header f s =
+let do_struct_with_decl_tracking u ~is_header f s =
   (* The file is written from its start, threaded through everything the
      driver writes. *)
   let file = if is_header then Common.Intf else Common.Impl in
-  let top = file_start file in
+  let top = file_start u file in
   (* A synthesised alias is emitted in front of the top-level element that
      writes it, rather than collected into the file's prologue.
 
@@ -3447,7 +3448,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.start_ctor_alias_census ();
   Cpp_print.start_file_scope_census ();
   Cpp_ind.start_render ~file;
-  init_std_names ();
+  init_std_names u;
   (* [ppl] writes each module's elements in the visibility planned for it
      ({!Cpp_state.element_position}); what follows only assembles what was written
      there. *)
@@ -3758,16 +3759,18 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.check_file_scope_types ~file:written;
   file ++ fnl ()
 
-(** Main entry point: render structure to C++ implementation file. *)
-let pp_struct s =
-  do_struct_with_decl_tracking
+(** Main entry point: render structure to C++ implementation file, in the
+    unit given. *)
+let pp_struct u s =
+  do_struct_with_decl_tracking u
     ~is_header:false
     (pp_structure_elem ~is_header:false impl_decls)
     s
 
-(** Main entry point: render structure to C++ header file. *)
-let pp_hstruct s =
-  do_struct_with_decl_tracking
+(** Main entry point: render structure to C++ header file, in the unit
+    given. *)
+let pp_hstruct u s =
+  do_struct_with_decl_tracking u
     ~is_header:true
     (pp_structure_elem ~is_header:true header_decls)
     s
@@ -3787,7 +3790,7 @@ let cpp_descr =
     (* A declaration printed on its own is written at the start of an
        implementation, where its module is the only one visible. *)
     pp_decl =
-      (fun ~module_ d ->
-        let ctx = {(file_start Common.Impl) with visibility = Some (toplevel_visibility [module_])} in
+      (fun u ~module_ d ->
+        let ctx = {(file_start u Common.Impl) with visibility = Some (toplevel_visibility [module_])} in
         Cpp_ast.to_pp (pp_decls ctx (impl_decls ctx ~module_ d).rendered) );
   }

@@ -32,7 +32,7 @@
 (** Language descriptor for C++. Provides the preamble, file suffix,
     pretty-printers, and other hooks that {!Extract_env} needs to drive a full
     extraction pass. *)
-val cpp_descr : Backend.t
+val cpp_descr : Unit_context.t Backend.t
 
 (** The methods registered for the inductives of a structure
     ({!Method_registry.create}), decided outside every module body. *)
@@ -68,14 +68,14 @@ val plan_callables :
 
 (** Generate every function the renders write, and every instance's struct,
     before either file is rendered, for both files
-    ({!Cpp_ind.generating_ahead}). *)
-val generate_ahead : Core.Program.t -> unit
+    ({!Cpp_ind.generating_ahead}), in the unit given. *)
+val generate_ahead : Unit_context.t -> Core.Program.t -> unit
 
 (** Generate what one declaration, an element of the module [module_], is
     written as, before it is rendered, and finish it into the unit's
     program: the walk {!generate_ahead} would make for a structure holding
-    only it. *)
-val generate_decl_ahead : module_:Names.ModPath.t -> Core.Decl.t -> unit
+    only it, in the unit given. *)
+val generate_decl_ahead : Unit_context.t -> module_:Names.ModPath.t -> Core.Decl.t -> unit
 
 (** The files the names of the unit [s] are written through, read off what
     {!generate_ahead} generated: what its files include. *)

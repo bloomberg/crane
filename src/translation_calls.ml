@@ -1385,7 +1385,8 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
              when Cpp_ir.Types.prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
              [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
                  (Scheme.Var.ordinal v)
-                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] (Cpp_pipeline.spell_type a))) ]
+                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type (Translation_state.unit_context ()) false []
+                    (Cpp_pipeline.spell_type a))) ]
            | _ -> [] )
          (Callable_abi.template_head abi) )
   in

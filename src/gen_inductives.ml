@@ -1002,7 +1002,7 @@ let gen_methods ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
   in
-  Control_to_cpp_ir.lower_struct_methods ~merged name vars
+  Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context ()) ~merged name vars
     (List.concat_map
        (fun c -> Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c))
        candidates )
@@ -1905,7 +1905,7 @@ let gen_ind_header_v2
              and <atomic>, which {!Cpp_demands} demands for the fence's text,
              is not included on its account. *)
           let unique_fence =
-            if Table.non_atomic_rc () then []
+            if Translation_state.non_atomic_rc () then []
             else [S.Foreign_text Cpp_demands.acquire_fence]
           in
           let is_sole p =
@@ -2884,7 +2884,7 @@ let gen_ind_header_v2
            for arena allocation, nor for coinductive or shared-variant types,
            whose cells are made differently. *)
         let child_field (_, storage_ty, _) ty =
-          Table.non_atomic_rc () && (not is_coinductive) && (not arena_runtime_ok)
+          Translation_state.non_atomic_rc () && (not is_coinductive) && (not arena_runtime_ok)
           && (not (Table.is_shared_variant name))
           && is_ref_to name vars ty
           && (match (storage_ty : Cpp_ir.Lowered.Type.t) with Shared_pointer _ -> true | _ -> false)
@@ -2970,7 +2970,7 @@ let gen_ind_header_v2
           else
           match token_field with
           | Some (tok_j, rec_inner)
-            when Table.reuse_anywhere () && Table.non_atomic_rc () && (not is_coinductive)
+            when Table.reuse_anywhere () && Translation_state.non_atomic_rc () && (not is_coinductive)
                  (* A shared variant's slot holds no cell to recycle. *)
                  && not (Table.is_shared_variant name) ->
               let tok_id = Id.of_string "_tok" in

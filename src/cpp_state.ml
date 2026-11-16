@@ -551,12 +551,15 @@ and render_ctx = {
   aliases : ctor_alias list ref option;
   (* How the type constructors written from here are written. *)
   tyctors : tyctor_plan;
+  (* The unit the file is of. *)
+  unit : Unit_context.t;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
     struct. *)
-let file_start file =
+let file_start unit file =
   {
+    unit;
     file;
     in_struct = false;
     concepts_hoisted = false;
@@ -862,8 +865,9 @@ let mk_std_names prefix =
       enable_from_this = p ^ "enable_shared_from_this" }
   | _ -> default_std_names
 
-(** Initialize standard library names based on Table.std_lib() setting. *)
-let init_std_names () =
+(** Initialize standard library names based on Table.std_lib() setting and
+    the configuration of the unit [u]. *)
+let init_std_names (u : Unit_context.t) =
   let base =
     if Table.std_lib () = "BDE" then mk_std_names "bsl::"
     else mk_std_names "std::"
@@ -897,11 +901,11 @@ let init_std_names () =
     (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
        counting one.  [enable_from_this] stays as it is: [shared_from_this ()]
        hands back a [std::shared_ptr], which a [counting_ptr] adopts. *)
-    if Table.count_rc () then
+    if Unit_context.count_rc u then
       { base with
         shared_ptr = Crane_rt.counting_ptr;
         make_shared = Crane_rt.make_counting }
-    else if Table.non_atomic_rc () then
+    else if Unit_context.non_atomic_rc u then
       { base with
         shared_ptr = Crane_rt.rc;
         make_shared = Crane_rt.make_rc;

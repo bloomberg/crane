@@ -185,7 +185,7 @@ let refinements mt =
   let rec go acc = function
     | Core.Module.Type.Refined {base = inner;
                                 refinement = Core.Module.Refinement.Type_equation {path = idl; definition = typ; _}} ->
-      go ((idl, ir_type (Cpp_erasure.instantiate_type (convert typ))) :: acc) inner
+      go ((idl, ir_type (Cpp_erasure.instantiate_type (Translation_state.unit_context ()) (convert typ))) :: acc) inner
     | Core.Module.Type.Refined {base = inner; refinement = Core.Module.Refinement.Module_equation _} -> go acc inner
     | _ -> acc
   in

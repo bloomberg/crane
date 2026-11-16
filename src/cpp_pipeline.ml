@@ -89,7 +89,8 @@ let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_m
 let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
 let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
 let qualifiers = Pipeline_trace.pass "qualifiers" Cpp_erasure.lower_qualifiers
-let pointer_slots = Pipeline_trace.pass "pointer_slots" Cpp_erasure.lower_pointer_slots
+(* The slots of the pointers of a declaration of the unit [u]. *)
+let pointer_slots u = Pipeline_trace.pass "pointer_slots" (Cpp_erasure.lower_pointer_slots u)
 let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
@@ -172,12 +173,13 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     names.  A pointer is written in the slot its pointee is held in.  Each
     match's computed scrutinee is declared, named, in front of it.  With
     every body final, what each lambda captures is written down; last, an
-    initialiser holding a lambda that captures is invoked in place. *)
-let instantiation_passes = [foreign; qualifiers; pointer_slots; scrutinees; captures; initialisers]
+    initialiser holding a lambda that captures is invoked in place.  [u] is
+    the unit the declaration is of. *)
+let instantiation_passes u = [foreign; qualifiers; pointer_slots u; scrutinees; captures; initialisers]
 
 let pass_names =
   Pipeline_trace.names lowered_passes @ [seam] @ Pipeline_trace.names settled_passes
-  @ Pipeline_trace.names instantiation_passes
+  @ Pipeline_trace.names (instantiation_passes Unit_context.detached)
 
 (** {2 What the printer is not owed}
 
@@ -215,7 +217,7 @@ let describe : obligation -> string = function
   | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
   | Uninstantiated_mapping -> "an uninstantiated mapping, owed by " ^ foreign.name
   | Unlowered_qualifier -> "a type qualifier in value position, owed by " ^ qualifiers.name
-  | Unslotted_pointer -> "a pointer's unchosen slot, owed by " ^ pointer_slots.name
+  | Unslotted_pointer -> "a pointer's unchosen slot, owed by " ^ (pointer_slots Unit_context.detached).name
   | Unnamed_scrutinee -> "a match's unnamed scrutinee, owed by " ^ scrutinees.name
   | Undecided_capture -> "an undecided lambda capture, owed by " ^ captures.name
   | Capture_outside_a_block -> "a capturing lambda in an initialiser, owed by " ^ initialisers.name
@@ -235,8 +237,8 @@ let mentions p (decl : Cpp_erasure.settled) =
 (** Whether [decl] still owes [o].  Every pass that discharges an obligation
     leaves nothing for a second run to do, so a declaration that has paid one
     is a fixed point of the pass that pays it -- a check that cannot drift
-    from what the pass decides. *)
-let owes (decl : Cpp_erasure.settled) (o : obligation) =
+    from what the pass decides.  [u] is the unit the declaration is of. *)
+let owes u (decl : Cpp_erasure.settled) (o : obligation) =
   let d = (decl :> Cpp_ir.Lowered.Decl.t) in
   let rewrites (p : Cpp_erasure.settled Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
   match o with
@@ -255,12 +257,12 @@ let owes (decl : Cpp_erasure.settled) (o : obligation) =
   | Undecided_constexpr -> rewrites constexpr
   | Uninstantiated_mapping -> rewrites foreign
   | Unlowered_qualifier -> rewrites qualifiers
-  | Unslotted_pointer -> rewrites pointer_slots
+  | Unslotted_pointer -> rewrites (pointer_slots u)
   | Unnamed_scrutinee -> rewrites scrutinees
   | Undecided_capture -> rewrites captures
   | Capture_outside_a_block -> rewrites initialisers
 
-(** [check_settled obligations decl] fails if [decl] still owes any of
+(** [check_settled u obligations decl] fails if [decl], of the unit [u], still owes any of
     [obligations]: called with those {!checked_before_instantiation} once the
     settled passes have run, and with the rest on what the printer is handed,
     so that between them [decl] owes the printer nothing.
@@ -273,8 +275,8 @@ let owes (decl : Cpp_erasure.settled) (o : obligation) =
     one a user's input can break.  The declaration is named as {!Table} names
     any global, since one a pass generated -- a lifted helper -- is not in the
     name table [Printer.pr_global] reads, and would fail the report itself. *)
-let check_settled obligations (decl : Cpp_erasure.settled) =
-  match List.filter (owes decl) obligations with
+let check_settled u obligations (decl : Cpp_erasure.settled) =
+  match List.filter (owes u decl) obligations with
   | [] -> ()
   | owed ->
     CErrors.user_err
@@ -322,7 +324,7 @@ let spell_type t =
    the instantiation passes ({!checked_before_instantiation}), and the
    instantiated declaration is checked for what it borrows and moves
    ({!Borrow_projection.check_decl}, {!Move_check.check_decl}). *)
-let finish decl =
+let finish u decl =
   let trace = traced decl in
   let steps = ref [] in
   let note name before after =
@@ -348,12 +350,12 @@ let finish decl =
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
   let decl = run inj settled_passes settled in
   let early, late = List.partition checked_before_instantiation obligations in
-  if checking then check_settled early decl;
-  let decl = run inj instantiation_passes decl in
+  if checking then check_settled u early decl;
+  let decl = run inj (instantiation_passes u) decl in
   if checking then begin
     Borrow_projection.check_decl (inj decl);
     Move_check.check_decl (inj decl);
-    check_settled late decl
+    check_settled u late decl
   end;
   Option.iter
     (fun name ->

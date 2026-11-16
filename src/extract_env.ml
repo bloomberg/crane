@@ -1636,9 +1636,12 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   in
   Accumulated_plan.bind earlier @@ fun () ->
   let facts, plan = analyze_and_plan struc in
-  Table.with_unit_config plan.config @@ fun () ->
+  let u = Unit_context.make ~config:plan.config in
   Translation_state.with_unit_facts
-    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
+    { higher_order_projections = facts.higher_order_projections;
+      effects = facts.effects;
+      elaborations = None;
+      context = u }
   @@ fun () ->
   Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
@@ -1663,18 +1666,18 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      same: rendering is a function of the frozen plan alone. *)
   let render_impl () =
     Pipeline_trace.event "emit" "render_impl";
-    d.pp_struct struc
+    d.pp_struct u struc
   in
   let render_intf () =
     Pipeline_trace.event "emit" "render_intf";
-    d.pp_hstruct struc
+    d.pp_hstruct u struc
   in
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
   (* Every function is generated before either render, reading the plans
      emission reads, and each pass is handed the position it plans for. *)
   end_planning ();
   Pipeline_trace.event "emit" "generate_ahead";
-  Cpp.generate_ahead struc;
+  Cpp.generate_ahead u struc;
   Common.plan_written_files (Cpp.files_named_ahead struc);
   Table.plan_written_customs (Cpp.customs_written_ahead ());
   Table.check_written_mapping_headers ();
@@ -2544,8 +2547,12 @@ let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
   let facts = Program_facts.analyze struc in
+  let u = Unit_context.detached in
   Translation_state.with_unit_facts
-    {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
+    { higher_order_projections = facts.higher_order_projections;
+      effects = facts.effects;
+      elaborations = None;
+      context = u }
   @@ fun () ->
   Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   plan_layout (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
@@ -2553,8 +2560,8 @@ let print_one_decl struc mp decl =
   elaborate_unit elaborations;
   end_planning ();
   let ans =
-    Cpp.generate_decl_ahead ~module_:mp decl;
-    d.pp_decl ~module_:mp decl
+    Cpp.generate_decl_ahead u ~module_:mp decl;
+    d.pp_decl u ~module_:mp decl
   in
   (* The one box the printers rely on: inside it every break is a newline,
      which is what turns {!Cpp_print.cut2} into the blank line between two

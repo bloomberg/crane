@@ -857,7 +857,7 @@ let lower_qualifiers (d : settled) : settled =
    that and the pointer [P].  What is left as a pointer is an ordinary
    pointer.  A slot already chosen is a fixed point: [shared_or_t]'s pointer
    argument is not chosen again.  Expressions a type holds are reached too. *)
-let pointer_slots () =
+let pointer_slots u () =
   let rec ft (t : ty) : ty =
     Types.rewrite
       (fun (t : ty) ->
@@ -888,16 +888,16 @@ let pointer_slots () =
       Type_member (External (Crane_rt.shared_box, [t]), Id.of_string "make")
     (* A unit of non-atomic pointers allocates in an arena through its own
        pointer's factory. *)
-    | Allocate (Arena_scoped, t) when Table.non_atomic_rc () ->
+    | Allocate (Arena_scoped, t) when Unit_context.non_atomic_rc u ->
       Type_member (External (Crane_rt.rc, [t]), Id.of_string "make")
     | e -> e
   and fs s = Map.stmt (rw ()) s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:ft () in
   rw
 
-let lower_pointer_slots (d : settled) : settled = Map.decl (pointer_slots () ()) d
+let lower_pointer_slots u (d : settled) : settled = Map.decl (pointer_slots u () ()) d
 
-let instantiate_type t = (pointer_slots () ()).type_ (instantiated_type ~boxing:true t)
+let instantiate_type u t = (pointer_slots u () ()).type_ (instantiated_type ~boxing:true t)
 
 (** {2 Naming scrutinees} *)
 

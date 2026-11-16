@@ -1054,7 +1054,10 @@ let finished_of ~what id d =
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
     let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
-    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Unit_program.finishes_as d f.finished)
+    if
+      (not ahead)
+      && Sys.getenv_opt "CRANE_CHECK_IR" <> None
+      && not (Unit_program.finishes_as (Translation_state.unit_context ()) d f.finished)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1287,7 +1290,7 @@ let planned_header_scope mp =
    module [mp] is written, as planned. *)
 let header_element_position mp =
   let {in_struct; concepts_hoisted} = planned_header_scope mp in
-  { (file_start Intf) with
+  { (file_start (Translation_state.unit_context ()) Intf) with
     in_struct = in_struct;
     concepts_hoisted = concepts_hoisted;
     in_template = Scope_plan.templated mp }
@@ -1338,14 +1341,15 @@ let spelling_position ~file spelling =
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> element mp (file_start Impl)
+  | Impl, Element_of mp -> element mp (file_start (Translation_state.unit_context ()) Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
-  | _, Template_in declared -> Cpp_leaf_plan.ctor_alias_render_ctx (file_start file) declared
+  | _, Template_in declared ->
+    Cpp_leaf_plan.ctor_alias_render_ctx (file_start (Translation_state.unit_context ()) file) declared
 
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)
@@ -1474,7 +1478,8 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
       List.map
         (fun (f : Core.Record.Field.t) ->
           Cpp_pipeline.resolve_type ~what:"a record field type"
-            (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) )
+            (Cpp_erasure.instantiate_type (Translation_state.unit_context ())
+               (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)

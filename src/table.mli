@@ -46,8 +46,6 @@
       [erased_type_consts], [value_dep_type_schemes], [erased_fix_groups].
       A phase result: its owner is the extracted program.
     - {b Plan facts bound for a dynamic extent}, not enrolled for a reset:
-      the unit's configuration ([current_unit_config], {!with_unit_config}),
-      and
       [instance_promoted_types] and [promoted_inductives], bound from the
       plans of the unit and the earlier units of its extraction
       ([Accumulated_plan]).  The plan's decided kinds are recorded in
@@ -945,29 +943,14 @@ val add_shared_variant : GlobRef.t -> unit
     [crane::variant] rather than [std::variant].  Never in the BDE flavor. *)
 val fast_variant : unit -> bool
 
-(** Whether non-atomic reference counting ([crane::rc]) is in effect for this
-    unit, swapping [std::shared_ptr]/[std::make_shared] for
-    [crane::rc]/[crane::make_rc].  This is the resolved answer, not the raw
-    [Set Crane NonAtomicRc] request: the request is a promise that the
-    extracted program is single-threaded, and it is withheld from a unit that
-    runs on several threads (see {!unit_is_concurrent}).  Only meaningful
-    inside the unit's configuration ({!with_unit_config}). *)
-val non_atomic_rc : unit -> bool
-
-(** The raw [Set Crane NonAtomicRc] request, before {!non_atomic_rc} withholds
+(** The raw [Set Crane NonAtomicRc] request, before {!non_atomic_rc_for} withholds
     it from a concurrent unit.  It is program-wide, so a decision that has to
     agree across the units of one extraction reads it rather than the per-unit
     answer: the parameter ownership {!Ownership} settles for the whole program
     in [Extract_env.freeze], before any unit's configuration is decided, and
     {!Escape.is_reuse_scrutinee}'s analysis runs before any unit's concurrency
-    is decided too.  Everything a unit generates reads {!non_atomic_rc}. *)
+    is decided too.  Everything a unit generates reads {!non_atomic_rc_for}. *)
 val non_atomic_rc_requested : unit -> bool
-
-(** Whether the runtime's block heap is one global ([Set Crane
-    SingleThreaded]): the request, a promise that Crane values are used from
-    one thread at a time, withheld from a unit that runs on several threads
-    like {!non_atomic_rc}. *)
-val single_threaded : unit -> bool
 
 (** A unit's configuration: what it decides, from the customs its program
     names, about the runtime it is written against.  [concurrent]: whether
@@ -982,27 +965,27 @@ type unit_config = {concurrent : bool}
     (the [used_customs] of {!Program_facts.t}). *)
 val unit_config : names:Ref.User.Set.t -> unit_config
 
-(** [with_unit_config c f] is [f ()] extracting a unit of configuration
-    [c]: what {!unit_is_concurrent}, {!non_atomic_rc}, {!single_threaded}
-    and the smart pointer's spelling answer.  [Extract_env] binds the
-    unit's planned configuration ({!Target_plan.t.config}) right after
-    planning it, for the rest of the unit.  Outside one, a unit is taken to
-    run on one thread. *)
-val with_unit_config : unit_config -> (unit -> 'a) -> 'a
-
-(** {!non_atomic_rc} in the unit configuration given, for a reader that
-    holds its unit's plan. *)
+(** Whether non-atomic reference counting ([crane::rc]) is in effect for a
+    unit of the configuration given, swapping
+    [std::shared_ptr]/[std::make_shared] for [crane::rc]/[crane::make_rc].
+    This is the resolved answer, not the raw [Set Crane NonAtomicRc]
+    request: the request is a promise that the extracted program is
+    single-threaded, and it is withheld from a unit that runs on several
+    threads. *)
 val non_atomic_rc_for : unit_config -> bool
 
-(** {!single_threaded} in the unit configuration given. *)
+(** Whether the runtime's block heap is one global ([Set Crane
+    SingleThreaded]) in a unit of the configuration given: the request, a
+    promise that Crane values are used from one thread at a time, withheld
+    from a unit that runs on several threads like {!non_atomic_rc_for}. *)
 val single_threaded_for : unit_config -> bool
 
-(** {!count_rc} in the unit configuration given. *)
+(** Whether [CRANE_COUNT_RC=1] is set and the unit of the configuration
+    given keeps [std::shared_ptr]: spell every shared pointer
+    [crane::counting_ptr] (count_rc.h) so the run reports its
+    reference-count traffic.  Measurement-only; never true in ordinary
+    extraction. *)
 val count_rc_for : unit_config -> bool
-
-(** Whether the unit being extracted runs on several threads, as its
-    configuration says ({!unit_config}). *)
-val unit_is_concurrent : unit -> bool
 
 (** Warn, once per unit, if [Set Crane NonAtomicRc] was requested but withheld
     because the unit, configured as given, is concurrent.  Call before any
@@ -1017,11 +1000,6 @@ val check_non_atomic_rc_request : unit_config -> unit
 val arena_enabled : unit -> bool
 
 
-val count_rc : unit -> bool
-(** Whether [CRANE_COUNT_RC=1] is set: spell every shared pointer
-    [crane::counting_ptr] (count_rc.h) so the run reports its reference-count
-    traffic. Measurement-only; never true in ordinary extraction. *)
-
 val stamp_build : unit -> bool
 (** Whether [CRANE_STAMP=1] is set: print a digest of the plugin binary as a
     comment at the top of every generated file, so the artifact witnesses which
@@ -1035,15 +1013,6 @@ val plugin_build_stamp : unit -> string
     or read it yields a marker string ([unavailable], [no-cmxs-found],
     [ambiguous-cmxs]) rather than an exception: a missing witness must not stop
     an extraction, and must not read as a present one. *)
-
-(** Resolved smart-pointer type/factory names for string-level codegen, honoring
-    [CRANE_COUNT_RC], [Crane NonAtomicRc] and the std/BDE flavor. *)
-val shared_ptr_name : unit -> string
-
-(** Name of the smart-pointer factory function to emit: [crane::make_rc] under
-    [Crane NonAtomicRc], [bsl::make_shared] for the BDE standard library, and
-    [std::make_shared] otherwise. Companion of [shared_ptr_name]. *)
-val make_shared_name : unit -> string
 
 (** Opt inductive types out of runtime arena allocation ([Crane NoArena <ind>]):
     the listed types never bump-allocate, even inside an open arena scope.

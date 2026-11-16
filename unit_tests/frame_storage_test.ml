@@ -132,19 +132,21 @@ let () =
     (p.entered = [(4, Storage.Frame)] && p.own = [Storage.Frame]);
 
   (* A local fixpoint's plan: what translation recorded of each function. *)
+  let u = Unit_context.detached in
+  let local_holdable = Frame_storage.local_holdable u in
   let o = Core.Occurrence.fresh () in
   let member = Loop.Member (o, 0) in
   let loop parameters = {Term.loop = member; parameters; body = Term.Return (Core.Expr.fresh_rel 1)} in
-  check "a function's loop has no local plan" (Frame_storage.local_holdable (machine (Core.Expr.fresh_rel 1)) 0 = None);
+  check "a function's loop has no local plan" (local_holdable (machine (Core.Expr.fresh_rel 1)) 0 = None);
   check "nor a member translation generated no lambda for"
-    (Frame_storage.local_holdable (loop [(id "t", tree)]) 0 = None);
+    (local_holdable (loop [(id "t", tree)]) 0 = None);
   Ownership_ir.Local_passing.record (o, 0) [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded];
   check "the plan is looked up by the member"
     (Ownership_ir.Local_passing.lookup (o, 0) = Some [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded]);
   check "of another function of the group nothing is recorded" (Ownership_ir.Local_passing.lookup (o, 1) = None);
   let l = loop [(id "p", nat); (id "t", tree); (id "k", nat)] in
-  check "a parameter of no runtime value is held by no pointer" (Frame_storage.local_holdable l 0 = Some false);
+  check "a parameter of no runtime value is held by no pointer" (local_holdable l 0 = Some false);
   check "a lent parameter of a type the program knows no inductive of is held by value"
-    (Frame_storage.local_holdable l 1 = Some false);
-  check "a forwarded parameter is held by value" (Frame_storage.local_holdable l 2 = Some false);
-  check "no value is held by pointer that is not lent" (not (Frame_storage.passed_holdable None tree))
+    (local_holdable l 1 = Some false);
+  check "a forwarded parameter is held by value" (local_holdable l 2 = Some false);
+  check "no value is held by pointer that is not lent" (not (Frame_storage.passed_holdable u None tree))

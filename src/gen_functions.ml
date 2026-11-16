@@ -2053,7 +2053,10 @@ let gen_dfuns_dual fds =
         collecting_lifted (fun () -> gen_dfun_def entity body type_))
       fds
   in
-  let lowered = Control_to_cpp_ir.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in
+  let lowered =
+    Control_to_cpp_ir.lower_group ~unit:(Translation_state.unit_context ())
+      (List.map (fun ((ds, _, _), _) -> ds) generated)
+  in
   List.map2
     (fun ds ((_, env, tvars), lifted) -> {entity = defined ds tvars; env = env; lifted = lifted})
     lowered generated

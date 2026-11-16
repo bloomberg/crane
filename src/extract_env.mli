@@ -26,8 +26,8 @@
     + {b Extraction} ([mono_environment], [optimize_struct]): Rocq terms to
       the Core structure, simplified.
     + {b Planning}, as values: the unit's {!Program_facts} and its
-      {!Target_plan} -- the unit's configuration, bound for the rest of the
-      unit ({!Table.with_unit_config}), the inductive kinds, recorded in the
+      {!Target_plan} -- the unit's configuration, which the unit's context
+      hands to every later stage ({!Unit_context}), the inductive kinds, recorded in the
       structure ({!Target_plan.record_kinds}), then, once the unit's
       preparation has run, the template-parameter kinds.
     + {b Layout} ([Common.Plan]): {!Cpp.prepare_structure} runs

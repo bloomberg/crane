@@ -944,7 +944,7 @@ and pp_cpp_expr ctx env args (t : expr) =
        non-atomic pointers has its pointer's factory instead, chosen at the
        seam ({!Cpp_erasure.lower_pointer_slots}). *)
     ( if Probe.checking () then
-        if Table.non_atomic_rc () then
+        if Unit_context.non_atomic_rc ctx.unit then
           CErrors.anomaly (Pp.str "pp_cpp_expr: an arena allocation of a non-atomic pointer reached the printer") );
     let inner = pp_cpp_type ctx false [] t in
     if Table.std_lib () = "BDE" then
@@ -3025,5 +3025,5 @@ let cut2 = Cpp_ast.cut2
 let pp_cpp_type_at ctx par vl t = pp_cpp_type ctx par vl t
 
 (* The type printer's entry for a type written outside every declaration of
-   the tree, at the start of the header. *)
-let pp_cpp_type ?lead par vl t = pp_cpp_type ?lead (file_start Common.Intf) par vl t
+   the tree, at the start of the header of the unit [u]. *)
+let pp_cpp_type ?lead u par vl t = pp_cpp_type ?lead (file_start u Common.Intf) par vl t
