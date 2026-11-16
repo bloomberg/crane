@@ -271,7 +271,7 @@ let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_
     body of the module whose element is being written
     ({!Module_frame.demoted_around}). *)
 let promoted_at (c : render_ctx) r =
-  is_promoted_inductive r
+  Unit_context.is_promoted_inductive c.unit r
   &&
   match c.module_ with
   | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around c.unit.scopes mp))

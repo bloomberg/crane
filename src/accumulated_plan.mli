@@ -9,8 +9,8 @@
     which wrapper struct holds it -- so the driver threads this value from
     unit to unit ([Extract_env.print_per_library]): a unit starts from what
     the earlier ones leave ({!for_next_unit}), and its planning extends it
-    one decision at a time, each extension bound ({!bind}) for the rest of
-    the unit. *)
+    one decision at a time, each extension held by the unit's context
+    ({!context}) for the rest of the unit. *)
 
 open Names
 
@@ -39,14 +39,8 @@ type t = {
 val start : accessors:Cpp_state.accessors -> t
 
 (** [context t u] is the unit's context [u] holding the facts of [t] its
-    readers read off it: the layout, the pointer fields, the unmerged
-    wrappers, the accessors and the nested structs. *)
+    readers read off it: every one. *)
 val context : t -> Unit_context.t -> Unit_context.t
-
-(** [bind t f] is [f ()] with each other fact of [t] the one its readers
-    answer from ({!Table.with_promoted_inductives},
-    {!Table.with_instance_promoted_types}). *)
-val bind : t -> (unit -> 'a) -> 'a
 
 (** What the next unit of the extraction starts from, once a unit planned
     [t]: [t] without the facts that belong to one unit, the per-unit

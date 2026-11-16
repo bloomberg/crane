@@ -31,10 +31,9 @@ let context t (u : Unit_context.t) =
     pointer_fields = t.pointer_fields;
     unmerged_wrappers = t.unmerged_wrappers;
     accessors = t.accessors;
-    nested_structs = t.nested_structs }
+    nested_structs = t.nested_structs;
+    promoted_inductives = t.promoted_inductives;
+    instance_promoted_types = t.instance_promoted_types }
 
-let bind t f =
-  Table.with_promoted_inductives t.promoted_inductives @@ fun () ->
-  Table.with_instance_promoted_types t.instance_promoted_types f
 
 let for_next_unit t = {t with modules = Module_plan.for_next_unit t.modules}

@@ -45,10 +45,8 @@
       [type_scheme_arities], [sigma_assertions], [cofixpoints],
       [erased_type_consts], [value_dep_type_schemes], [erased_fix_groups].
       A phase result: its owner is the extracted program.
-    - {b Plan facts bound for a dynamic extent}, not enrolled for a reset:
-      [instance_promoted_types] and [promoted_inductives], bound from the
-      plans of the unit and the earlier units of its extraction
-      ([Accumulated_plan]).  The plan's decided kinds are recorded in
+    - {b Plan facts}: none is kept here; a unit's are fields of its context
+      ([Unit_context]).  The plan's decided kinds are recorded in
       [inductive_kinds] ([Target_plan.record_kinds]).
     - {b Analysis results registered while a later phase runs}: [flat_inductives]
       and [enum_inductives] (registered by layout and generation, with a
@@ -626,18 +624,6 @@ val add_value_dep_type_scheme : GlobRef.t -> unit
 
 (** Check whether a reference is a value-dependent type scheme. *)
 val is_value_dep_type_scheme : GlobRef.t -> bool
-
-(** [with_instance_promoted_types m f] is [f ()] with [m] the concrete
-    types each instance gives its class's promoted variables: those of the
-    unit's instances, planned ([Cpp.plan_instance_promoted_types]), and of
-    every earlier unit's of a separate extraction. *)
-val with_instance_promoted_types :
-  (Names.Id.t * Core.Type.t) list GlobRef.Map.t -> (unit -> 'a) -> 'a
-
-(** The concrete types the instance gives its class's promoted variables,
-    as {!with_instance_promoted_types} binds them; none outside it. *)
-val get_instance_promoted_types :
-  GlobRef.t -> (Names.Id.t * Core.Type.t) list
 
 (** An applied instance, as the Rocq type writes it: a head and what it is
     applied to, recursively.  [Carg_unknown] is an argument whose head is not a
@@ -1437,17 +1423,6 @@ val reset_extraction_blacklist : unit -> unit
 (** Print current blacklist. *)
 val print_extraction_blacklist : unit -> Pp.t
 
-(** [with_promoted_inductives s f] is [f ()] with [s] the inductives
-    promoted into their own namespace struct (e.g. String.string →
-    [namespace String { struct String }]): the unit's, planned
-    ([Cpp.plan_promoted_inductives]), and every earlier unit's of a separate
-    extraction, since a promotion outlives the unit that decided it: every
-    later mention of the inductive spells it the promoted way.  Lives here
-    to break the Translation ↔ Cpp_state cycle. *)
-val with_promoted_inductives : Ref.User.Set.t -> (unit -> 'a) -> 'a
-
-(** Whether [r] is promoted, as {!with_promoted_inductives} binds them. *)
-val is_promoted_inductive : GlobRef.t -> bool
 
 (** {2 Local fixpoint groups recursing at a ground instance} *)
 

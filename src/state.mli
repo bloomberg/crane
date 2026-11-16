@@ -9,9 +9,10 @@
     an extraction and before each generated file.
 
     A cell holding a plan value is not enrolled: it is bound for the
-    dynamic extent the value is good for ({!bind}), as
-    {!Accumulated_plan.bind} binds what the earlier units of a separate
-    extraction decided for the whole of a unit. *)
+    dynamic extent the value is good for ({!bind}).  What a unit's plan
+    decides, and what the earlier units of a separate extraction decided,
+    is no cell: it is a field of the unit's context ({!Unit_context.t}),
+    handed to the stages that read it. *)
 
 (** How long a cell's contents are good for.
     - [Extraction]: one [Crane Extraction] command.

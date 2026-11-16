@@ -33,6 +33,17 @@ type t = {
       (** The constants written as accessor functions. *)
   nested_structs : Struct_plan.nested_structs;
       (** The structs written inside another struct, by name. *)
+  promoted_inductives : Ref.User.Set.t;
+      (** The inductives promoted into their own namespace struct (e.g.
+          String.string -> [namespace String { struct String }]): the
+          unit's, planned ([Cpp.plan_promoted_inductives]), and every
+          earlier unit's of a separate extraction, since a promotion
+          outlives the unit that decided it. *)
+  instance_promoted_types : (Names.Id.t * Core.Type.t) list Names.GlobRef.Map.t;
+      (** The concrete types each instance gives its class's promoted
+          variables: those of the unit's instances, planned
+          ([Cpp.plan_instance_promoted_types]), and of every earlier
+          unit's. *)
   scopes : Scope_plan.bound;
       (** How a definition written outside its struct's body names the
           struct, and the other facts of the unit's scope plan: none until
@@ -52,3 +63,11 @@ val non_atomic_rc : t -> bool
 
 (** {!Table.count_rc_for} the unit's configuration. *)
 val count_rc : t -> bool
+
+(** Whether the inductive is promoted in the unit
+    ({!t.promoted_inductives}). *)
+val is_promoted_inductive : t -> Names.GlobRef.t -> bool
+
+(** The concrete types the instance gives its class's promoted variables
+    in the unit ({!t.instance_promoted_types}); none where it gives none. *)
+val instance_promoted_types_of : t -> Names.GlobRef.t -> (Names.Id.t * Core.Type.t) list

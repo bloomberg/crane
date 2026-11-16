@@ -1183,7 +1183,9 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
                   (fun tc_arg ->
                     match tc_arg with
                     | Core.Expr.Global {callee = r; _} ->
-                      let bindings = Table.get_instance_promoted_types r in
+                      let bindings =
+                        Unit_context.instance_promoted_types_of (Translation_state.unit_context ()) r
+                      in
                       List.map
                         (fun (var_name, core_ty) ->
                           let cpp_ty =

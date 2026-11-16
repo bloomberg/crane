@@ -1225,25 +1225,6 @@ let (_, add_value_dep_type_scheme, is_value_dep_type_scheme)
   =
   make_refset_can_with_functor_fallback ~name:"value_dep_type_schemes" ()
 
-(* Promoted type bindings for typeclass instances. Maps an instance
-   ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
-   nat)], so that call sites can substitute promoted type variables with
-   concrete types during eta expansion.  Bound for a unit's extent
-   ({!with_instance_promoted_types}), not reset. *)
-let instance_promoted_types =
-  ref (GlobRef.Map.empty : (Names.Id.t * Core.Type.t) list GlobRef.Map.t)
-
-let () =
-  register_census "instance_promoted_types" (fun () ->
-      GlobRef.Map.cardinal !instance_promoted_types )
-
-let with_instance_promoted_types m f = State.bind instance_promoted_types m f
-
-let get_instance_promoted_types r =
-  match GlobRef.Map.find_opt r !instance_promoted_types with
-  | Some bindings -> bindings
-  | None -> []
-
 (* An applied instance, as the Rocq type writes it: a head and what it is
    applied to, recursively.  [Carg_unknown] is an argument whose head is not a
    constant -- a context variable, typically -- which the reader fills
@@ -2874,18 +2855,6 @@ let blacklist_table = Summary.ref Id.Set.empty ~name:"CraneExtrBlacklist"
 let modfile_ids = ref Id.Set.empty
 
 let modfile_mps = ref MPmap.empty
-
-(** Inductives that have been "promoted" into their own namespace struct
-    (e.g. [String.string] → [namespace String { struct String { ... }; }]).
-    Referenced by both [Translation] and the [Cpp_state]/[Cpp_print] pipeline
-    so it lives here to avoid a dependency cycle.  Bound for a unit's extent
-    ({!with_promoted_inductives}), not reset. *)
-let promoted_inductives = ref Ref.User.Set.empty
-
-let () = register_census "promoted_inductives" (fun () -> Ref.User.Set.cardinal !promoted_inductives)
-
-let with_promoted_inductives s f = State.bind promoted_inductives s f
-let is_promoted_inductive r = Ref.User.Set.mem r !promoted_inductives
 
 let reset_modfile () =
   modfile_ids := !blacklist_table;
