@@ -784,8 +784,8 @@ let setting cell v f =
       cell := v;
       f () )
 
-(** Resolved standard library names, computed once per extraction pass from
-    [Table.std_lib ()] and the runtime flags ({!init_std_names}). *)
+(** Resolved standard library names, a function of [Table.std_lib ()], the
+    runtime flags and the unit's configuration ({!sn}). *)
 type std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
@@ -825,10 +825,6 @@ let default_std_names =
     enable_from_this = "std::enable_shared_from_this";
   }
 
-(** The standard library names in effect, initialized by {!init_std_names}
-    and restored to {!default_std_names} between extractions. *)
-let std_names : std_names ref = owned_ref default_std_names
-
 let mk_std_names prefix =
   match prefix with
   | "bsl::" ->
@@ -845,9 +841,9 @@ let mk_std_names prefix =
       enable_from_this = p ^ "enable_shared_from_this" }
   | _ -> default_std_names
 
-(** Initialize standard library names based on Table.std_lib() setting and
-    the configuration of the unit [u]. *)
-let init_std_names (u : Unit_context.t) =
+let std_namespace () = if Table.std_lib () = "BDE" then "bsl" else "std"
+
+let sn (u : Unit_context.t) =
   let base =
     if Table.std_lib () = "BDE" then mk_std_names "bsl::"
     else mk_std_names "std::"
@@ -877,23 +873,19 @@ let init_std_names (u : Unit_context.t) =
         get = "crane::get" }
     else base
   in
-  std_names :=
-    (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
+  (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
        counting one.  [enable_from_this] stays as it is: [shared_from_this ()]
        hands back a [std::shared_ptr], which a [counting_ptr] adopts. *)
-    if Unit_context.count_rc u then
-      { base with
-        shared_ptr = Crane_rt.counting_ptr;
-        make_shared = Crane_rt.make_counting }
-    else if Unit_context.non_atomic_rc u then
-      { base with
-        shared_ptr = Crane_rt.rc;
-        make_shared = Crane_rt.make_rc;
-        enable_from_this = Crane_rt.enable_rc_from_this }
-    else base
-
-(** Short accessor for current standard library names. *)
-let sn () = !std_names
+  if Unit_context.count_rc u then
+    { base with
+      shared_ptr = Crane_rt.counting_ptr;
+      make_shared = Crane_rt.make_counting }
+  else if Unit_context.non_atomic_rc u then
+    { base with
+      shared_ptr = Crane_rt.rc;
+      make_shared = Crane_rt.make_rc;
+      enable_from_this = Crane_rt.enable_rc_from_this }
+  else base
 
 
 

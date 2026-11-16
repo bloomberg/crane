@@ -990,7 +990,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
             let vars = List.map Common.tparam_name (Option.default [] promoted_tparams) in
             let template = List.map (fun v -> Cpp_ast.Typename (Type_variable v)) vars in
             let base =
-              if this_promote_sft then Some (Cpp_ast.Of_itself {template = (sn ()).enable_from_this; type_args = vars})
+              if this_promote_sft then
+                Some (Cpp_ast.Of_itself {template = (sn ctx.unit).enable_from_this; type_args = vars})
               else None
             in
             let struct_def =
@@ -1707,9 +1708,7 @@ let convert_eponymous_record_fields ~module_ frame =
     generates it in, an inductive, an alias and a concept in the scope the
     header writes their module in.  What is generated is recorded for both
     files ({!Cpp_ind.generating_ahead}); the renders take it from there. *)
-let generating_ahead u f =
-  init_std_names u;
-  Cpp_ind.generating_ahead f
+let generating_ahead f = Cpp_ind.generating_ahead f
 
 (** What finishing [aheads] takes: what each generated, in the order
     generated, and then the helpers lifted out of them and what they handed
@@ -1743,7 +1742,7 @@ let finish_ahead u (aheads : Cpp_ind.ahead list) =
 
 (** Generate and finish the one declaration [d], an element of [module_]. *)
 let generate_decl_ahead u ~module_ d =
-  generating_ahead u @@ fun () -> finish_ahead u [Cpp_ind.generate_ahead ~module_ d]
+  generating_ahead @@ fun () -> finish_ahead u [Cpp_ind.generate_ahead ~module_ d]
 
 (** What the modules of the structure [s] name around their declarations,
     as {!pp_structure_elem} writes them: the concept constraining a functor's
@@ -1846,7 +1845,7 @@ let plan_function_reads () =
        Ref.Can.Set.empty (Unit_program.installed_finished ()))
 
 let generate_ahead u s =
-  generating_ahead u @@ fun () ->
+  generating_ahead @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A
      wrapper's functions are finished as one group, as {!file_views} finishes
      them. *)
@@ -3459,7 +3458,6 @@ let do_struct_with_decl_tracking u ~is_header f s =
   Cpp_print.start_ctor_alias_census ();
   Cpp_print.start_file_scope_census ();
   Cpp_ind.start_render ~file;
-  init_std_names u;
   (* [ppl] writes each module's elements in the visibility planned for it
      ({!Cpp_state.element_position}); what follows only assembles what was written
      there. *)

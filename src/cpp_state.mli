@@ -479,7 +479,7 @@ val setting : 'a ref -> 'a -> (unit -> 'b) -> 'b
 (** Configurable names for the [std::] symbols emitted by the extractor.
     Each is the [std::] or [bsl::] spelling of the field's name unless noted;
     [Crane NonAtomicRc], [Crane FastVariant], [Crane SharedVariant] and
-    [CRANE_COUNT_RC] substitute runtime names ({!init_std_names}). *)
+    [CRANE_COUNT_RC] substitute runtime names ({!sn}). *)
 type std_names = {
   shared_ptr : string;  (** the smart pointer for recursive fields *)
   make_shared : string;  (** its factory *)
@@ -502,25 +502,23 @@ type std_names = {
 (** The plain [std::] flavor of {!std_names}. *)
 val default_std_names : std_names
 
-(** The names in effect for the current extraction pass; initialized by
-    [init_std_names] and read through [sn]. *)
-val std_names : std_names ref
-
 (** Build a name set for a namespace prefix. ["bsl::"] yields the BDE flavor;
     any other prefix yields [default_std_names]. *)
 val mk_std_names : string -> std_names
 
-(** Set [std_names] from the current [Table] settings: the BDE flavor when
+(** The bare namespace of the standard library configured
+    ([Table.std_lib ()]): ["bsl"] for BDE, ["std"] otherwise; the [ns] of
+    every unit's {!sn}. *)
+val std_namespace : unit -> string
+
+(** The names a file of the unit [u] is written with: the BDE flavor when
     [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
     [Table.fast_variant ()] or [Table.shared_variant ()], the [crane::]
     variant accessors (and, for the former, [crane::variant]); then, under
     [Table.count_rc_for], the counting pointer, or else under
     [Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
-    [crane::enable_rc_from_this], in the configuration of the unit given. *)
-val init_std_names : Unit_context.t -> unit
-
-(** Shorthand for [!std_names]. *)
-val sn : unit -> std_names
+    [crane::enable_rc_from_this], in [u]'s configuration. *)
+val sn : Unit_context.t -> std_names
 
 (** {2 Wrapper and scope tables} *)
 

@@ -327,7 +327,7 @@ and rebind_applied_head (h : ty) (args : ty list) : ty =
     of the included libraries' namespaces: the identifier in front of each
     [::] is the qualifier. *)
 let text_names_into_a_struct text =
-  let libraries = ["std"; "crane"; (sn ()).ns] in
+  let libraries = ["std"; "crane"; std_namespace ()] in
   let n = String.length text in
   let is_ident c =
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c = '_'
@@ -378,7 +378,7 @@ let type_names_into_a_struct ctx (t : ty) =
   | Variable _ | Instance _ | Void | Carrier_parameter | Decltype_auto | Erased _ | Any -> Some false
   | Promoted_member _ -> Some (scopes_name_into_a_struct (Option.default [] (member_scopes ctx t)))
   | Named (_, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes ctx t)) ||? any args
-  | External (id_s, args) -> text_names_into_a_struct (external_type_name id_s) ||? any args
+  | External (id_s, args) -> text_names_into_a_struct (external_type_name ctx.unit id_s) ||? any args
   | Entity_application (r, tys, _) -> (
     match Cpp_names.inline_custom_text ctx r with
     | Some s -> text_names_into_a_struct s ||? any tys

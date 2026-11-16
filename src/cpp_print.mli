@@ -133,8 +133,8 @@ val inductive_head : Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> writte
     is written bare. *)
 val member_scopes : Cpp_state.render_ctx -> ty -> Cpp_name.scope list option
 
-(** The spelling of an external type's name. *)
-val external_type_name : string -> string
+(** The spelling of an external type's name in a file of the unit given. *)
+val external_type_name : Unit_context.t -> string -> string
 
 (** The primitive integer type, if registered: what a literal of it is
     written through. *)
