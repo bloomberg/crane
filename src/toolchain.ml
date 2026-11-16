@@ -177,7 +177,7 @@ let compile_ocaml
      PATH: otherwise a missing ocamlfind slips past this check and fails later
      with a raw error instead of the friendly [NoOcamloptFound] handled by
      callers. *)
-  let ocamlfind = Envars.ocamlfind () in
+  let ocamlfind = Option.default Coq_config.ocamlfind (Sys.getenv_opt "OCAMLFIND") in
   if not (Subprocess.executable_available ocamlfind) then
     raise NoOcamloptFound;
   let errfile =

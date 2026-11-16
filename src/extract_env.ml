@@ -12,6 +12,7 @@
 
 open Constr
 open Declarations
+open Mod_declarations
 open Names
 open ModPath
 open Libnames
@@ -43,7 +44,7 @@ let environment_until dir_opt =
       let meb =
         Modops.destr_nofunctor
           (MPfile d)
-          (Global.lookup_module (MPfile d)).mod_type
+          (mod_type (Global.lookup_module (MPfile d)))
       in
       ( match dir_opt with
       | Some d' when DirPath.equal d d' -> [(MPfile d, meb)]
@@ -239,7 +240,7 @@ let expand_mexpr env mp me =
   let mb, (_, cst), _ =
     Mod_typing.translate_module state vm_state env mp inl (MExpr ([], me, None))
   in
-  (mb.mod_type, mb.mod_delta)
+  (mod_type mb, mod_delta mb)
 
 (** Expands a module type algebraic expression into a full module type body. *)
 let expand_modtype env mp me =
@@ -260,10 +261,10 @@ let no_delta = Mod_subst.empty_delta_resolver
     expression. *)
 let flatten_modtype env mp me_alg struc_opt =
   match struc_opt with
-  | Some me -> (me, no_delta)
+  | Some me -> (me, no_delta mp)
   | None ->
     let mtb = expand_modtype env mp me_alg in
-    (mtb.mod_type, mtb.mod_delta)
+    (mod_type mtb, mod_delta mtb)
 
 (** Ad-hoc update of environment, inspired by [Mod_typing.check_with_aux_def].
 *)
@@ -316,11 +317,11 @@ let rec extract_structure_spec env mp reso = function
     specs
   | (l, SFBmodule mb) :: msig ->
     let specs = extract_structure_spec env mp reso msig in
-    let spec = extract_mbody_spec env mb.mod_mp mb in
+    let spec = extract_mbody_spec env (MPdot (mp, l)) mb in
     (l, Core.Module.Signature_item.Module spec) :: specs
   | (l, SFBmodtype mtb) :: msig ->
     let specs = extract_structure_spec env mp reso msig in
-    let spec = extract_mbody_spec env mtb.mod_mp mtb in
+    let spec = extract_mbody_spec env (MPdot (mp, l)) mtb in
     (l, Core.Module.Signature_item.Module_type spec) :: specs
 
 (* From [module_expression] to specifications *)
@@ -366,7 +367,7 @@ and extract_mexpression_spec env mp1 (me_struct, me_alg) =
       | _ -> assert false
     in
     let mp = MPbound mbid in
-    let env' = Modops.add_module_type mp mtb env in
+    let env' = Modops.add_module_parameter mbid mtb env in
     Core.Module.Type.Functor {parameter = mbid;
                               parameter_type = extract_mbody_spec env mp mtb;
                               result = extract_mexpression_spec env' mp1 (me_struct', me_alg')}
@@ -378,18 +379,18 @@ and extract_msignature_spec env mp1 reso = function
     Core.Module.Type.Signature {path = mp1; items = extract_structure_spec env' mp1 reso struc}
   | MoreFunctor (mbid, mtb, me) ->
     let mp = MPbound mbid in
-    let env' = Modops.add_module_type mp mtb env in
+    let env' = Modops.add_module_parameter mbid mtb env in
     Core.Module.Type.Functor {parameter = mbid;
                               parameter_type = extract_mbody_spec env mp mtb;
                               result = extract_msignature_spec env' mp1 reso me}
 
 and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
  fun env mp mb ->
-   match mb.mod_type_alg with
-   | Some ty -> extract_mexpression_spec env mp (mb.mod_type, ty)
+   match mod_type_alg mb with
+   | Some ty -> extract_mexpression_spec env mp (mod_type mb, ty)
    | None ->
      (* Fall back to expanding the signature *)
-     extract_msignature_spec env mp mb.mod_delta mb.mod_type
+     extract_msignature_spec env mp (mod_delta mb) (mod_type mb)
 
 (** Recursively extracts a module structure to Core declarations. When all=false,
     only extracts needed declarations based on dependency analysis. Evaluation
@@ -521,7 +522,7 @@ and extract_mexpression access env mp mty = function
       | NoFunctor _ -> assert false
     in
     let mp1 = MPbound mbid in
-    let env' = Modops.add_module_type mp1 mtb env in
+    let env' = Modops.add_module_parameter mbid mtb env in
     Core.Module.Expr.Functor {parameter = mbid;
                               parameter_type = extract_mbody_spec env mp1 mtb;
                               body = extract_mexpression access env' mp mty me}
@@ -532,7 +533,7 @@ and extract_msignature access env mp reso ~all = function
     Core.Module.Expr.Structure {path = mp; items = extract_structure access env' mp reso ~all struc}
   | MoreFunctor (mbid, mtb, me) ->
     let mp1 = MPbound mbid in
-    let env' = Modops.add_module_type mp1 mtb env in
+    let env' = Modops.add_module_parameter mbid mtb env in
     Core.Module.Expr.Functor {parameter = mbid;
                               parameter_type = extract_mbody_spec env mp1 mtb;
                               body = extract_msignature access env' mp reso ~all me}
@@ -546,26 +547,26 @@ and extract_module access env mp ~all mb =
      variables. But a Declare Module at toplevel seems legal (cf #2525). For the
      moment we don't support this situation. *)
   let impl =
-    match Declareops.mod_expr mb with
+    match mod_expr mb with
     | Abstract -> error_no_module_expr mp
-    | Algebraic me -> extract_mexpression access env mp mb.mod_type me
+    | Algebraic me -> extract_mexpression access env mp (mod_type mb) me
     | Struct sign ->
       (* This module has a signature, otherwise it would be FullStruct. We
          extract just the elements required by this signature. *)
-      let () = add_labels mp mb.mod_type in
-      let sign = Modops.annotate_struct_body sign mb.mod_type in
-      extract_msignature access env mp mb.mod_delta ~all:false sign
+      let () = add_labels mp (mod_type mb) in
+      let sign = Modops.annotate_struct_body sign (mod_type mb) in
+      extract_msignature access env mp (mod_delta mb) ~all:false sign
     | FullStruct ->
-      extract_msignature access env mp mb.mod_delta ~all mb.mod_type
+      extract_msignature access env mp (mod_delta mb) ~all (mod_type mb)
   in
   (* Slight optimization: for modules without explicit signatures ([FullStruct]
      case), we build the type out of the extracted implementation *)
   let typ =
-    match Declareops.mod_expr mb with
+    match mod_expr mb with
     | FullStruct ->
-      assert (Option.is_empty mb.mod_type_alg);
+      assert (Option.is_empty (mod_type_alg mb));
       mtyp_of_mexpr impl
-    | Algebraic fae when Option.is_empty mb.mod_type_alg ->
+    | Algebraic fae when Option.is_empty (mod_type_alg mb) ->
       (* For module applications without explicit type, try to infer from
          functor *)
       let inferred_alg_type =
@@ -595,7 +596,7 @@ and extract_module access env mp ~all mb =
                       in
                       Some (MENoFunctor (extract_base_from_with me))
                   in
-                  match func_mb.mod_type_alg with
+                  match mod_type_alg func_mb with
                   | Some alg -> get_functor_return_type alg
                   | None -> None
                 with _ -> None )
@@ -604,7 +605,7 @@ and extract_module access env mp ~all mb =
         | MEMoreFunctor _ -> None
       in
       ( match inferred_alg_type with
-      | Some alg_ty -> extract_mexpression_spec env mp (mb.mod_type, alg_ty)
+      | Some alg_ty -> extract_mexpression_spec env mp (mod_type mb, alg_ty)
       | None -> extract_mbody_spec env mp mb )
     | _ -> extract_mbody_spec env mp mb
   in
@@ -625,7 +626,7 @@ let mono_environment ~opaque_access refs mpl =
           opaque_access
           env
           mp
-          no_delta
+          (no_delta mp)
           ~all:(Visit.needed_mp_all mp)
           struc ) )
     l
@@ -2327,7 +2328,7 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
   Fun.protect ~finally:reset @@ fun () ->
   let dir_m =
     let q = qualid_of_ident m in
-    try Nametab.full_name_module q
+    try dirpath_of_path (Nametab.full_name_module q)
     with Not_found -> error_unknown_module ?loc q
   in
   Visit.add_mp_all (MPfile dir_m);
@@ -2335,7 +2336,7 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
   let l = List.rev (environment_until (Some dir_m)) in
   let select l (mp, struc) =
     if Visit.needed_mp mp then
-      (mp, extract_structure opaque_access env mp no_delta ~all:true struc) :: l
+      (mp, extract_structure opaque_access env mp (no_delta mp) ~all:true struc) :: l
     else
       l
   in
