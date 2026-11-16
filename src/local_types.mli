@@ -11,6 +11,18 @@
     no metavariable of the frozen program; lowering checks what it finds
     instead ({!check_minted}, {!check_let_lambda}). *)
 
+(** What the pass asks of lowering, which comes after it and so cannot be
+    named here: the Core type an application of a global yields, as the call
+    instantiates the callee's declared type
+    ({!Translation_calls.core_app_result_type_with}), at whichever phase the
+    program is in.  {!Translation_calls.local_types_lowering} builds it from a
+    translation context. *)
+type lowering = {
+  app_result_type :
+    'p. find:(Names.GlobRef.t -> 'p Core.Type.at option) -> 'p Core.Expr.at -> 'p Core.Expr.at list ->
+    'p Core.Type.at option;
+}
+
 (** [recover_fix_codomains ids funs] -- a recursive group's signatures and
     bodies, with each function's codomain recovered from its body where
     erasure lost it: a variable no parameter mentions, where a tail position
@@ -19,7 +31,7 @@
     was inlined into, [Fix_F] into each function defined by well-founded
     recursion. *)
 val recover_fix_codomains :
-  Translation_state.t -> (Names.Id.t * Core.Type.t) array ->
+  lowering -> (Names.Id.t * Core.Type.t) array ->
   Core.Expr.t array ->
   (Names.Id.t * Core.Type.t) array * Core.Expr.t array
 
@@ -48,4 +60,4 @@ val check_let_lambda : outer:int -> Core.Type.t -> Core.Expr.t -> unit
     are filled.  A let-bound lambda's, everything it contains included, are
     numbered past the variables of the declaration it is in, which name its
     head's. *)
-val structure : Translation_state.t -> Core.Program.extracted -> unit
+val structure : lowering -> Core.Program.extracted -> unit

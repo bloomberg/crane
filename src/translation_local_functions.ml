@@ -570,7 +570,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   ~let_occ : Cpp_ir.Lowered.Stmt.t list =
   (* Special case for let-fix: the let binding name is the fix function name *)
   Local_types.check_minted ids;
-  let ids, funs = Local_types.recover_fix_codomains cx ids funs in
+  let ids, funs = Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
   register_erased_members ~let_ty occ ids;
   (* Collect all Core.Type.Variable indices from the fixpoint types *)
   let fix_tvar_indices =
@@ -1166,7 +1166,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
   ~fix_term ~args :
   Cpp_ir.Lowered.Stmt.t list =
   Local_types.check_minted ids;
-  let ids, funs = Local_types.recover_fix_codomains cx ids funs in
+  let ids, funs = Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
   register_erased_members occ ids;
   (* Collect Tvars from bodies too *)
   let body_tvars = Array.fold_left Translation_lifting.collect_tvars_ast [] funs in
@@ -1385,7 +1385,7 @@ let gen_standalone_fix cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
      called in place), it will always escape.  Use the Y-combinator pattern:
      the generated wrapper lambda [fix_name] is already a plain callable. *)
   Local_types.check_minted ids;
-  let ids, funs = Local_types.recover_fix_codomains cx ids funs in
+  let ids, funs = Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
   let all_fix_ids_list = Array.to_list ids in
   let funs_compiled =
     Array.to_list

@@ -132,6 +132,10 @@ let core_app_result_type_with cx ~find (f : _ Core.Expr.at) (args : _ Core.Expr.
 let core_app_result_type cx (f : Core.Expr.t) (args : Core.Expr.t list) : Core.Type.t option =
   core_app_result_type_with cx ~find:find_type_opt f args
 
+(** What {!Local_types} asks of lowering, from the context [cx]. *)
+let local_types_lowering cx =
+  {Local_types.app_result_type = (fun ~find f args -> core_app_result_type_with cx ~find f args)}
+
 (** The variable {!Plan_templates.relax_tt_applied_return} takes out of [id]'s
     template head, if any: the higher-kinded head of an applied codomain that
     only a callback's result otherwise names -- [case_]'s [M] in [M X], which

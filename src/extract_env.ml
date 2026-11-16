@@ -1370,7 +1370,7 @@ let core_passes cx to_appear : Core.Program.extracted Pipeline_trace.pass list =
     pass "knot" Core_knot.structure;
     pass "fix_shape" Fix_shape.structure;
     pass "fresh_occurrences" Fresh_occurrences.structure;
-    effect_ "local_types" (Local_types.structure cx);
+    effect_ "local_types" (Local_types.structure (Translation_calls.local_types_lowering cx));
     effect_ "ir_check" Core_check.structure ]
 
 let core_pass_names =

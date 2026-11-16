@@ -91,6 +91,12 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     ({!Translation_calls.core_app_result_type}).  A recursive call, its head a
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
+type lowering = {
+  app_result_type :
+    'p. find:(Names.GlobRef.t -> 'p Core.Type.at option) -> 'p Core.Expr.at -> 'p Core.Expr.at list ->
+    'p Core.Type.at option;
+}
+
 let rec tail_result_type cx ~find = function
   | Core.Expr.Lambda {body = b; _}
   | Core.Expr.Let {body = b; _}
@@ -98,12 +104,15 @@ let rec tail_result_type cx ~find = function
   | Core.Expr.Boxed_value {value = b; _}
   | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type cx ~find b
   | Core.Expr.Construct {result_type = ty; _} -> Some ty
-  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_calls.core_app_result_type_with cx ~find f args
+  | Core.Expr.Apply {callee = f; arguments = args} -> cx.app_result_type ~find f args
   | Core.Expr.Match {branches = brs; _} ->
     Array.fold_left
       (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type cx ~find b)
       None brs
   | _ -> None
+
+(* The registered type of a global. *)
+let find_type r = try Some (Table.find_type r) with Not_found -> None
 
 (* The registered type of a global, as the extracted program reads it. *)
 let find_extracted r = try Some (Table.find_extracted_type r) with Not_found -> None
@@ -141,7 +150,7 @@ let recover_fix_codomains_with cx ~find ids funs =
   let settled = Array.map2 (recover_fix_codomain cx ~find) ids funs in
   (Array.map fst settled, Array.map snd settled)
 
-let recover_fix_codomains cx ids funs = recover_fix_codomains_with cx ~find:Core_query.find_type_opt ids funs
+let recover_fix_codomains cx ids funs = recover_fix_codomains_with cx ~find:find_type ids funs
 
 (* A codomain extraction left a hole is filled from the body the same way,
    by solving the hole: the cell is shared with every annotation the body
