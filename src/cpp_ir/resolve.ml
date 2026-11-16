@@ -17,11 +17,16 @@ type l = lowered
 (** The resolved phase index. *)
 type r = resolved
 
-(** The lowered-only form a value still holds. *)
-exception Owed of string
+(** The lowered-only form a value still holds, named, and the obligation
+    it is the whole of where there is one: a form that only stands for part
+    of an obligation's debt has none. *)
+exception Owed of string * Representation_obligation.t option
 
 (** [owed form] raises {!Owed} naming [form]. *)
-let owed form = raise_notrace (Owed form)
+let owed form = raise_notrace (Owed (form, None))
+
+(** [owed_as o form] raises {!Owed} naming [form], the whole of [o]. *)
+let owed_as o form = raise_notrace (Owed (form, Some o))
 
 (** [list f xs] is [List.map f xs]. *)
 let list = List.map
@@ -59,8 +64,8 @@ let rec type_ : l Type.t -> r Type.t = function
   | Type_of e -> Type_of (expr e)
   | Decltype_auto -> Decltype_auto
   | Foreign f -> Foreign (foreign f)
-  | Obligation Unresolved_type -> owed "an unresolved type"
-  | Obligation Opaque_type -> owed "an opaque type"
+  | Obligation Unresolved_type -> owed_as Representation_obligation.Unresolved_type "an unresolved type"
+  | Obligation Opaque_type -> owed_as Representation_obligation.Opaque_type "an opaque type"
   | Obligation _ -> owed "a type obligation"
 
 (** [foreign f] is the instantiated mapping [f] at the resolved phase. *)
@@ -82,8 +87,8 @@ and signature (s : l Call.signature) : r Call.signature =
     decided ({!Capture.Runs_in_place}, {!Capture.Stored}). *)
 and capture : l Capture.t -> r Capture.t = function
   | Written w -> Written w
-  | Runs_in_place -> owed "a capture that runs in place"
-  | Stored -> owed "a stored capture"
+  | Runs_in_place -> owed_as Representation_obligation.Undecided_capture "a capture that runs in place"
+  | Stored -> owed_as Representation_obligation.Undecided_capture "a stored capture"
 
 (** [lambda l] is [l] at the resolved phase. *)
 and lambda (l : l Lambda.t) : r Lambda.t =
@@ -269,7 +274,7 @@ let parameter_kind : l Parameter_kind.t -> r Parameter_kind.t = function
   | Typename -> Typename
   | Typename_default t -> Typename_default (type_ t)
   | Template n -> Template n
-  | Callable_declared _ -> owed "a callable parameter's declared constraint"
+  | Callable_declared _ -> owed_as Representation_obligation.Unsettled_callable "a callable parameter's declared constraint"
   | Invocable (is, t) ->
     Invocable
       (list
@@ -286,7 +291,7 @@ let parameters ps : r Template.parameters = list (fun (k, x) -> (parameter_kind 
 let constexpr : l Constexpr.t -> r Constexpr.t = function
   | Eligible -> Eligible
   | Ineligible -> Ineligible
-  | Undecided -> owed "an undecided constexpr"
+  | Undecided -> owed_as Representation_obligation.Undecided_constexpr "an undecided constexpr"
 
 (** [typed ps] restates the type of each [(name, type)] pair in [ps]. *)
 let typed ps = list (fun (x, t) -> (x, type_ t)) ps
