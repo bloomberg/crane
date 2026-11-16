@@ -29,7 +29,7 @@ PRINTER_FINISHING=${FINISHING/ Cpp_erasure/}
 CORE_PLANNING="core_query core_elaborate match_kind core_normalize numeral_literal elaborated_call instance_methods core/positional"
 CORE_FORBIDDEN="${TRANSLATION/ Method_registry/} $PRINTER $FINISHING Cpp_ir"
 
-CORE_FILES="core/occurrence core/open core/nonempty core/grammar core/erasure_reason core/binder_name core/type core/extracted core/expr core/global_use core/match core/pattern core/record core/recursion core/inductive core/signature core/decl core/module core/program core/interface core/positional core/fingerprint core/schema core/core"
+CORE_FILES="core/occurrence core/open core/nonempty core/grammar core/erasure_reason core/binder_name core/type core/extracted core/expr core/global_use core/match core/pattern core/record core/recursion core/inductive core/signature core/decl core/module core/program core/interface core/positional core/fingerprint core/schema core/phase core/retype core/widen core/freezer core/core"
 
 # layer modules : forbidden dependencies
 rules=(

@@ -10,7 +10,7 @@ let same = GlobRef.CanOrd.equal
 
 (** {1 Definitions} *)
 
-type def = Term of Core.Expr.t * Core.Type.t | Fix of Core.Recursion.Definition.t
+type def = Term of Core.Expr.extracted * Core.Type.extracted | Fix of Core.Recursion.Definition.extracted
 
 let definitions struc =
   let defs = ref Ref.User.Map.empty in
@@ -36,7 +36,7 @@ let definitions struc =
    lands.  [None] for a mapped global, whose text is what is emitted, and
    where the use did not write an argument for every variable its type
    mentions -- an open instantiation is declined, not guessed. *)
-let body_of defs (use : Core.Global_use.t) =
+let body_of defs (use : Core.Global_use.extracted) =
   let g = use.callee in
   if Table.is_custom g then None
   else
@@ -227,7 +227,7 @@ and push defs shrunk fuel use args =
 (** {1 Specialization} *)
 
 (* The parameters of [fd], outermost first, and its body under them. *)
-let params_of (fd : Core.Recursion.Definition.t) =
+let params_of (fd : Core.Recursion.Definition.extracted) =
   let ps, body = Core_util.collect_lams fd.body in
   (List.rev ps, body)
 
@@ -267,7 +267,7 @@ let rec domains n ty =
 (** [specialize f fd use args] is the call [f args] (at the type arguments
     [use] wrote) with [f] specialized to the lambda among [args] that it passes
     unchanged to itself: a local fixpoint applied to the other arguments. *)
-let specialize f (fd : Core.Recursion.Definition.t) use args =
+let specialize f (fd : Core.Recursion.Definition.extracted) use args =
   let ps, b0 = params_of fd in
   let k = List.length ps in
   let candidate j a = j < k && (match a with Core.Expr.Lambda _ -> true | _ -> false) && static_param f k j b0 in

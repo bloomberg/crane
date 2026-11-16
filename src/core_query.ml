@@ -688,9 +688,9 @@ let subst_dict_carrier ?(at = 1) carrier ty =
     sources end at a Core type headed by the carrier, and are consumed as one.
     A binder is read in [lex], the environment the call stands in, and the
     constraints of [caller], the declaration it stands in. *)
-let dict_carrier_core_type ~lex ~caller id args =
+let dict_carrier_core_type_with ~find ~lex ~caller id args =
   let ( let* ) = Option.bind in
-  let* core_ty = find_type_opt id in
+  let* core_ty = find id in
   (* The class parameter is quantified first, and an explicit argument list is
      positional, so only a leading carrier can be written.
 
@@ -785,7 +785,7 @@ let dict_carrier_core_type ~lex ~caller id args =
          at a site with no binder in scope it does not even name anything. *)
       let* cod = dict_core_type ~depth b in
       let params =
-        match Option.bind (head_glob tm) find_type_opt with
+        match Option.bind (head_glob tm) find with
         | Some ty -> class_params ty
         | None -> []
       in
@@ -799,7 +799,7 @@ let dict_carrier_core_type ~lex ~caller id args =
     | Core.Expr.Global {callee = r; _} ->
       (* The instance's method returns [T1] applied: [TFunctor_box]'s codomain
          is [box B]. *)
-      Option.map (fun t -> resolve_meta (core_codomain t)) (find_type_opt r)
+      Option.map (fun t -> resolve_meta (core_codomain t)) (find r)
     | Core.Expr.Bound_variable {index = i; _} ->
       let i = i - depth in
       let constraint_arg t =
@@ -807,7 +807,7 @@ let dict_carrier_core_type ~lex ~caller id args =
         | Some (Core.Type.Global_app {type_arguments = [_]; _} as t) -> Some (strip_class t)
         | _ -> None
       in
-      let recorded = constraint_arg (Lexenv.type_opt lex i) in
+      let recorded = constraint_arg (Option.map Core.Widen.type_ (Lexenv.type_opt lex i)) in
       ( match recorded with
       | Some _ -> recorded
       | None ->
@@ -819,7 +819,7 @@ let dict_carrier_core_type ~lex ~caller id args =
            lists are the same list read from opposite ends. *)
         let ( let* ) = Option.bind in
         let* r = caller in
-        let* decl_ty = find_type_opt r in
+        let* decl_ty = find r in
         let doms = core_domains decl_ty in
         let n = Lexenv.depth lex in
         (* [List.nth_opt] raises rather than answering [None] on a negative
@@ -837,10 +837,18 @@ let dict_carrier_core_type ~lex ~caller id args =
     every type as the carrier applied -- so the dictionary argument has to be
     read first, or a [bind]'s [m A] resolves to nothing: erased, where the
     type argument written for it is a dummy. *)
-let with_dict_carrier ~lex ~caller id value_args ty =
-  match dict_carrier_core_type ~lex ~caller id value_args with
+let dict_carrier_core_type ~lex ~caller id args =
+  dict_carrier_core_type_with ~find:find_type_opt ~lex ~caller id args
+
+(** {!with_dict_carrier} reading the types of globals with [find]: the
+    extracted program reads them before they are frozen. *)
+let with_dict_carrier_with ~find ~lex ~caller id value_args ty =
+  match dict_carrier_core_type_with ~find ~lex ~caller id value_args with
   | Some carrier -> subst_dict_carrier carrier ty
   | None -> ty
+
+let with_dict_carrier ~lex ~caller id value_args ty =
+  with_dict_carrier_with ~find:find_type_opt ~lex ~caller id value_args ty
 
 (** [ty], global [id]'s declared type, instantiated at the call's type
     arguments [tys] after {!with_dict_carrier} has substituted the carrier

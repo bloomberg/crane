@@ -70,7 +70,7 @@ let se_iter do_decl do_spec do_mp =
   in
   let rec se_iter = function
     | _, Core.Module.Structure_item.Declaration d -> do_decl d
-    | _, Core.Module.Structure_item.Module (m : Core.Module.t) ->
+    | _, Core.Module.Structure_item.Module (m : _ Core.Module.at) ->
       me_iter m.expr;
       mt_iter m.type_
     | _, Core.Module.Structure_item.Module_type m -> mt_iter m
@@ -100,7 +100,7 @@ let struct_functions struc =
           acc := (r, b, ty) :: !acc
         | Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds) ->
           Core.Nonempty.iter
-            (fun (fd : Core.Recursion.Definition.t) -> acc := (fd.entity, fd.body, fd.type_) :: !acc) fds
+            (fun (fd : _ Core.Recursion.Definition.at) -> acc := (fd.entity, fd.body, fd.type_) :: !acc) fds
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = l; _}; _} -> elems l
         | _ -> () )
       l
@@ -225,9 +225,9 @@ let decl_iter_references ?prune do_term do_cons do_type =
       ast_iter a;
       type_iter t
     | Core.Decl.Recursive_group fds ->
-      Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> do_term fd.entity) fds;
-      Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> ast_iter fd.body) fds;
-      Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> type_iter fd.type_) fds
+      Core.Nonempty.iter (fun (fd : _ Core.Recursion.Definition.at) -> do_term fd.entity) fds;
+      Core.Nonempty.iter (fun (fd : _ Core.Recursion.Definition.at) -> ast_iter fd.body) fds;
+      Core.Nonempty.iter (fun (fd : _ Core.Recursion.Definition.at) -> type_iter fd.type_) fds
 
 (** Iterate over all references in a Core specification. *)
 let spec_iter_references do_term do_cons do_type = function
@@ -252,7 +252,7 @@ let rec ast_search f a = if f a then raise Found else ast_iter (ast_search f) a
 let decl_ast_search f = function
   | Core.Decl.Value {body = a; _} -> ast_search f a
   | Core.Decl.Recursive_group fds ->
-    Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> ast_search f fd.body) fds
+    Core.Nonempty.iter (fun (fd : _ Core.Recursion.Definition.at) -> ast_search f fd.body) fds
   | _ -> ()
 
 (** Search for an AST node anywhere in a structure. *)
@@ -280,7 +280,7 @@ let decl_type_search f = function
       p
   | Core.Decl.Value {type_ = u; _} -> type_search f u
   | Core.Decl.Recursive_group fds ->
-    Core.Nonempty.iter (fun (fd : Core.Recursion.Definition.t) -> type_search f fd.type_) fds
+    Core.Nonempty.iter (fun (fd : _ Core.Recursion.Definition.at) -> type_search f fd.type_) fds
   | Core.Decl.Type_alias {body = u; _} -> type_search f u
 
 (** Search for a type in a specification. *)
@@ -317,13 +317,13 @@ let rec msig_of_ms = function
                                                                                  body = Some t})) :: msig_of_ms ms
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: ms ->
     List.map
-      (fun (fd : Core.Recursion.Definition.t) ->
+      (fun (fd : _ Core.Recursion.Definition.at) ->
         (l,
           Core.Module.Signature_item.Declaration
             (Core.Signature.Declaration.Value {entity = fd.entity; body = fd.body; type_ = fd.type_})))
       (Core.Nonempty.to_list fds)
     @ msig_of_ms ms
-  | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: ms ->
+  | (l, Core.Module.Structure_item.Module (m : _ Core.Module.at)) :: ms ->
     (l, Core.Module.Signature_item.Module m.type_) :: msig_of_ms ms
   | (l, Core.Module.Structure_item.Module_type m) :: ms ->
     (l, Core.Module.Signature_item.Module_type m) :: msig_of_ms ms
@@ -388,7 +388,7 @@ let get_decl_in_structure r struc =
     [Core.Expr.Fixpoint] term, for inlining. *)
 let fixpoint_of_group fds i =
   let fds = Core.Nonempty.to_list fds in
-  let rv = Array.of_list (List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) fds) in
+  let rv = Array.of_list (List.map (fun (fd : _ Core.Recursion.Definition.at) -> fd.entity) fds) in
   let rec make_subst n s =
     if n < 0 then
       s
@@ -404,9 +404,9 @@ let fixpoint_of_group fds i =
   in
   let ids =
     Array.of_list
-      (List.map (fun (fd : Core.Recursion.Definition.t) -> (Label.to_id (label_of_r fd.entity), fd.type_)) fds)
+      (List.map (fun (fd : _ Core.Recursion.Definition.at) -> (Label.to_id (label_of_r fd.entity), fd.type_)) fds)
   in
-  let c = Array.of_list (List.map (fun (fd : Core.Recursion.Definition.t) -> subst 0 fd.body) fds) in
+  let c = Array.of_list (List.map (fun (fd : _ Core.Recursion.Definition.at) -> subst 0 fd.body) fds) in
   Core.Expr.Fixpoint (Core.Recursion.Group.of_arrays ~selected:i ids c (Core.Occurrence.fresh ()))
 
 (* A let-fix promoted to its declaration ([local_length]'s inner [go]) keeps
@@ -472,13 +472,13 @@ let rec optim_se top to_appear s = function
            (Core.Occurrence.fresh ()))
     in
     List.iteri
-      (fun i (fd : Core.Recursion.Definition.t) ->
+      (fun i (fd : _ Core.Recursion.Definition.at) ->
         if inline fd.entity fake_body then
           s := Ref.User.Map.add fd.entity (fixpoint_of_group fds i) !s )
       (Core.Nonempty.to_list fds);
     let fds = Core.Nonempty.map (Core.Recursion.Definition.map_body dump_unused_vars) fds in
     (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: optim_se top to_appear s lse
-  | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: lse ->
+  | (l, Core.Module.Structure_item.Module (m : _ Core.Module.at)) :: lse ->
     let m = {m with Core.Module.expr = optim_me to_appear s m.expr} in
     (l, Core.Module.Structure_item.Module m) :: optim_se top to_appear s lse
   | se :: lse -> se :: optim_se top to_appear s lse
@@ -525,7 +525,7 @@ let declared_refs = function
   | Core.Decl.Type_alias {entity = r; _} -> [r]
   | Core.Decl.Value {entity = r; _} -> [r]
   | Core.Decl.Recursive_group fds ->
-    List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core.Nonempty.to_list fds)
+    List.map (fun (fd : _ Core.Recursion.Definition.at) -> fd.entity) (Core.Nonempty.to_list fds)
 
 (** Computes the dependencies of a declaration, except in case of custom
     extraction. *)
@@ -598,7 +598,7 @@ let check_for_remaining_implicits struc =
 
 (** Full optimization pipeline: normalize, inline, eliminate dead code. *)
 let optimize_struct to_appear struc =
-  let subst = ref (Ref.User.Map.empty : Core.Expr.t Ref.User.Map.t) in
+  let subst = ref (Ref.User.Map.empty : _ Core.Expr.at Ref.User.Map.t) in
   let opt_struc =
     List.map
       (fun (mp, lse) -> (mp, optim_se true (fst to_appear) subst lse))

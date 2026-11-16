@@ -131,7 +131,7 @@ val mono_environment :
   opaque_access:Global.indirect_accessor ->
   GlobRef.t list ->
   ModPath.t list ->
-  Core.Program.t
+  Core.Program.extracted
 
 (** Pretty-print a single declaration. Used by the Relation Extraction plugin.
     @param struc the full extraction structure (used for renaming context)

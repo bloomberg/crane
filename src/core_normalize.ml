@@ -32,7 +32,7 @@ let check s =
     Modutil.struct_iter
       (fun d ->
         List.iter
-          (fun (fd : Core.Recursion.Definition.t) ->
+          (fun (fd : _ Core.Recursion.Definition.at) ->
             if not (is_canonical fd.body) then
               Probe.violation "non-canonical application"
                 Pp.(str "a body of " ++ Printer.pr_global fd.entity ++ str " after normalization") )
@@ -41,11 +41,11 @@ let check s =
       (fun _ -> ())
       s
 
-let structure =
+let structure s =
   Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} -> Core.Decl.Value {entity = r; body = spine b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
-          (fun (fd : Core.Recursion.Definition.t) -> {fd with Core.Recursion.Definition.body = spine fd.body}) fds)
-    | d -> d )
+          (fun (fd : _ Core.Recursion.Definition.at) -> {fd with Core.Recursion.Definition.body = spine fd.body}) fds)
+    | d -> d ) s

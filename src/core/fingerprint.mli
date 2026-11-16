@@ -29,13 +29,13 @@
 type t
 
 (** The fingerprint of a whole structure. *)
-val structure : Program.t -> t
+val structure : 'p Program.at -> t
 
 (** The fingerprint of each top-level element of a structure, by label. *)
-val elements : Program.t -> (Names.Label.t * t) list
+val elements : 'p Program.at -> (Names.Label.t * t) list
 
 (** The fingerprint of one declaration. *)
-val decl : Decl.t -> t
+val decl : 'p Decl.at -> t
 
 (** Whether two fingerprints are of the same program. *)
 val equal : t -> t -> bool

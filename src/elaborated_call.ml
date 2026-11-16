@@ -56,7 +56,7 @@ let dictionary_filled c = Call_tyargs.resolved_from Call_tyargs.Argument_heads c
 type instantiated = {
   call : t;
   reading : Call_tyargs.t;
-  tys : Core_util.Var_types.t;
+  tys : Core.Phase.frozen Core_util.Var_types.t;
   callee_type_at_call : Core.Type.t;
   params : Param_pos.subst Param_pos.params;
   params_orig : Param_pos.orig Param_pos.params;

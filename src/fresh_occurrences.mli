@@ -19,8 +19,8 @@
     having planned the original, keeps its copy's. *)
 
 (** [term e]: [e], every occurrence in it fresh. *)
-val term : Core.Expr.t -> Core.Expr.t
+val term : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [structure s]: [s], every occurrence in the body of each term and
     fixpoint declaration fresh. *)
-val structure : Core.Program.t -> Core.Program.t
+val structure : 'p Core.Program.at -> 'p Core.Program.at

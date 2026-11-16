@@ -155,10 +155,12 @@ and Meta : sig
   type 'p t = private {
     id : int;
     mutable contents : 'p Type.at option;
+    phase : 'p Phase.is_extracted;  (** what makes a frozen cell impossible *)
   }
 
-  (** [make id contents] is the cell [id] holding [contents]. *)
-  val make : int -> 'p Type.at option -> 'p t
+  (** [make id contents] is the cell [id] holding [contents]: only an
+      extracted one, so that a frozen type holds none. *)
+  val make : int -> Phase.extracted Type.at option -> Phase.extracted t
 
   (** [set m t] solves [m] to [t]. *)
   val set : 'p t -> 'p Type.at -> unit
@@ -166,9 +168,10 @@ end = struct
   type 'p t = {
     id : int;
     mutable contents : 'p Type.at option;
+    phase : 'p Phase.is_extracted;
   }
 
-  let make id contents = {id; contents}
+  let make id contents = {id; contents; phase = Phase.Extracted}
   let set m t = m.contents <- Some t
 end
 

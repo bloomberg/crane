@@ -52,7 +52,7 @@ let let_fix_entries = ref (None : (EConstr.t * EConstr.t array list) option)
    with the recorded erased type.  So [nil] in the deque_action_mismatch test
    (meta stays None) is filled with [pair<any,any>], while sigma_types (the
    [cons] meta is resolved to [nat]) is left alone. *)
-let pending_cpp_meta_fills : (Core.Extracted.Meta.t * Core.Type.t) list ref = ref []
+let pending_cpp_meta_fills : (Core.Extracted.Meta.t * Core.Type.extracted) list ref = ref []
 
 (* NB: [type_of] and [sort_of] might raise
    [SingletonInductiveBecomesProp]. This exception is caught in late
@@ -647,7 +647,7 @@ let with_extracting mind f =
     @param j Next available Core type variable index; [0] means no new type vars are generated
     @param c The Rocq term to extract as a type (possibly a type-level function)
     @param args Arguments accumulated during [App] spine traversal *)
-let rec extract_type env sg db j c args = fst (extract_spine env sg db j c args)
+let rec extract_type env sg db j c args : Core.Type.extracted = fst (extract_spine env sg db j c args)
 
 (** {!extract_type}, together with the binders of the product spine it walked
     while [j > 0] -- the spine whose type binders it numbers as variables, one
@@ -1008,6 +1008,7 @@ and extract_really_ind env kn mib =
   (* Everything concerning parameters. *)
   (* We do that first, since they are common to all the [mib]. *)
   let mip0 = mib.mind_packets.(0) in
+  let freezer = Core.Freezer.create () in
   let ndecls = List.length mib.mind_params_ctxt in
   let npar = mib.mind_nparams in
   let epar = push_rel_context mib.mind_params_ctxt env in
@@ -1259,8 +1260,10 @@ and extract_really_ind env kn mib =
             orig_dbmap
         in
         let db = db_from_ind dbmap ndecls in
+        (* A constructor type is frozen as it is stored: an index argument is
+           a term, reconstructed here and solved as far as it can be. *)
         p.constructor_argument_types.(j) <-
-          extract_type_cons epar sg db dbmap (EConstr.of_constr t) (ndecls + 1);
+          List.map (Core.Freezer.type_ freezer) (extract_type_cons epar sg db dbmap (EConstr.of_constr t) (ndecls + 1));
         (* Populate constructor argument names from kernel binder names only.
            [mind_user_lc] has anonymous binders when constructors use [->]
            syntax.  [Arguments_renaming] names are applied later in
@@ -1479,19 +1482,26 @@ and type_constant_body env r =
         let body = get_body l_body in
         let s = type_sign env sg typ in
         let db = db_from_sign s in
-        let t = extract_type_scheme env sg db body (List.length s) in
+        let t = Core.Freezer.type_ (Core.Freezer.create ()) (extract_type_scheme env sg db body (List.length s)) in
         add_typedef kn cb t;
         Some t
       | _ -> None ) )
 
+(** {!type_constant_body} at any phase: the frozen body widened. *)
+and constant_body_at : 'p. Environ.env -> GlobRef.t -> 'p Core.Type.at option =
+ fun env r -> Option.map Core.Widen.type_ (type_constant_body env r)
+
 (** Expands a type alias using the environment. *)
-and expand env = type_expand (type_constant_body env)
+and expand : 'p. Environ.env -> 'p Core.Type.at -> 'p Core.Type.at =
+ fun env t -> type_expand (constant_body_at env) t
 
 (** Converts a Core type to a type signature (Keep/Kill list). *)
-and type2signature env = type_to_signature (type_constant_body env)
+and type2signature : 'p. Environ.env -> 'p Core.Type.at -> Core.Signature.t =
+ fun env t -> type_to_signature (constant_body_at env) t
 
 (** Converts a Core type to a simplified type signature (list of types). *)
-and type2sign env = type_to_sign (type_constant_body env)
+and type2sign : 'p. Environ.env -> 'p Core.Type.at -> Core.Signature.Argument.t =
+ fun env t -> type_to_sign (constant_body_at env) t
 
 (** {2 Extraction of the type of a constant} *)
 
@@ -1523,7 +1533,7 @@ and record_constant_type env sg kn opt_typ =
   in
   match lookup_cst_type kn cb with
   | Some schema ->
-    register (Core.Schema.body schema);
+    register (Core.Widen.type_ (Core.Schema.body schema));
     schema_view (GlobRef.ConstRef kn) schema
   | None ->
     let typ =
@@ -1545,7 +1555,10 @@ and record_constant_type env sg kn opt_typ =
       if EConstr.eq_constr sg unfolded typ then spine
       else snd (extract_spine env sg [] 1 unfolded [])
     in
-    let schema = Core.Schema.make (GlobRef.ConstRef kn) extracted_ty spine in
+    (* A scheme is frozen as it is made: its body is read by every later
+       declaration, extracted or frozen, and is never solved again. *)
+    let frozen_ty = Core.Freezer.type_ (Core.Freezer.create ()) extracted_ty in
+    let schema = Core.Schema.make (GlobRef.ConstRef kn) frozen_ty spine in
     List.iter
       (fun problem ->
         Probe.violation "schema"
@@ -1672,7 +1685,7 @@ and erased_fix_types env sg ~entries i (fi, ti, ci) =
     @param extracted_ty Expected Core type of [(c args)]; used to drive unification and insert magic coercions
     @param c The Rocq term being extracted (head of the application spine)
     @param args Arguments accumulated during [App] traversal (outermost first) *)
-and extract_term env sg type_env extracted_ty c args =
+and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
   match EConstr.kind sg c with
   | App (f, a) -> extract_term env sg type_env extracted_ty f (Array.to_list a @ args)
   | Lambda (n, t, d) ->
@@ -2098,8 +2111,8 @@ and extract_cst_app env sg type_env extracted_ty kn args =
              match Scheme.Var.of_tvar (Core.Schema.id schema) j with
              | Some v when not (rigid v) -> Some tvar_metas.(j - 1)
              | _ -> None )
-           (Core.Schema.body schema) )
-    else type_subst_vect tvar_metas (Core.Schema.body schema)
+           (Core.Widen.type_ (Core.Schema.body schema)) )
+    else type_subst_vect tvar_metas (Core.Widen.type_ (Core.Schema.body schema))
   in
   (* Then the expected type of this constant. *)
   let a = new_meta () in
@@ -2190,7 +2203,7 @@ and extract_cons_app env sg type_env extracted_ty ((((kn, i) as ip), j) as cp) a
      itself. Using signature avoids including them in the result type's type arg
      list, preventing mgu mismatches. *)
   let nb_tvars = List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) oi.signature)
-  and types = List.map (expand env) oi.constructor_argument_types.(j - 1) in
+  and types = List.map (fun t -> expand env (Core.Widen.type_ t)) oi.constructor_argument_types.(j - 1) in
   let list_tvar = List.map (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                          variable = i}) (List.interval 1 nb_tvars) in
   let type_cons =
@@ -2531,7 +2544,7 @@ and extract_case env sg type_env (((kn, i) as ip), c, br) extracted_ty =
       let extract_branch i =
         let r = GlobRef.ConstructRef (ip, i + 1) in
         (* The types of the arguments of the corresponding constructor. *)
-        let f t = type_subst_vect metas (expand env t) in
+        let f t = type_subst_vect metas (expand env (Core.Widen.type_ t)) in
         let l = List.map f oi.constructor_argument_types.(i) in
         (* the corresponding signature *)
         let s = List.map (type2sign env) oi.constructor_argument_types.(i) in
@@ -2625,10 +2638,10 @@ let add_tvars _n t =
   t (* if n <= 1 then t else Core.Type.Arrow (Core.Type.Variable (n-1), add_tvars (n-1) t) *)
 
 (** Removes erased type arguments from a type scheme. *)
-let type_expunge env = type_expunge (type_constant_body env)
+let type_expunge env t = type_expunge (constant_body_at env) t
 
 (** Removes erased arguments from a type using an explicit signature. *)
-and type_expunge_from_sign env = type_expunge_from_sign (type_constant_body env)
+and type_expunge_from_sign env s t = type_expunge_from_sign (constant_body_at env) s t
 
 (* Sigma type precondition detection. For functions taking {x : A | P x}, detect
    P and translate to C++ assertions. *)
@@ -2838,7 +2851,7 @@ let extract_std_constant env sg kn body typ =
   pending_cpp_meta_fills := [];
   (* The short type [t] (i.e. possibly with abbreviations). *)
   let schema = record_constant_type env sg kn (Some typ) in
-  let numtvars = Core.Schema.arity schema and t = Core.Schema.body schema in
+  let numtvars = Core.Schema.arity schema and t = Core.Widen.type_ (Core.Schema.body schema) in
   (* Detect sigma type preconditions and register assertions *)
   (try detect_sigma_assertions env sg kn typ with e when best_effort_failure e -> ());
   (* An instance of a singleton class keeps its class's type, but its body is
@@ -2940,7 +2953,7 @@ let extract_std_constant env sg kn body typ =
 let extract_axiom env sg kn typ =
   reset_meta_count ();
   (* The short type [t] (i.e. possibly with abbreviations). *)
-  let t = Core.Schema.body (record_constant_type env sg kn (Some typ)) in
+  let t = Core.Widen.type_ (Core.Schema.body (record_constant_type env sg kn (Some typ))) in
   (* The real type [t']: without head products, expanded, *)
   (* and with its own type variables made rigid (not instantiable). *)
   let l, _ = type_decomp (expand env (rigidify t)) in
@@ -3030,7 +3043,7 @@ let extract_constant access env kn cb =
       (* An alias body is where a type-level [Definition] under a [Context]
          writes its dependence on that context; see
          {!Table.add_type_alias_body}. *)
-      Table.add_type_alias_body r t;
+      Table.add_type_alias_body r (Core.Freezer.type_ (Core.Freezer.create ()) t);
       Core.Decl.Type_alias {entity = r; parameters = vl; body = t}
     end
   in
@@ -3207,7 +3220,7 @@ let extract_constant access env kn cb =
        the parameters that uncovers.  A call site reads the registered type to
        work out how many arguments the declaration takes, so when the two
        disagree on that count the unfolded type is the one to keep. *)
-    ( match Table.find_type r with
+    ( match Table.find_extracted_type r with
     | exception Not_found -> ()
     | short ->
       if
@@ -3311,7 +3324,7 @@ let extract_constant_spec env kn cb =
         | _ -> () );
         Core.Signature.Declaration.Type {entity = r; parameters = vl; body = Some t} )
     | Info, Default ->
-      let t = Core.Schema.body (record_constant_type env sg kn (Some typ)) in
+      let t = Core.Widen.type_ (Core.Schema.body (record_constant_type env sg kn (Some typ))) in
       let mk_spec c =
         let e, ty = extract_std_constant env sg kn c typ in
         Core.Signature.Declaration.Value {entity = r; body = e; type_ = ty}
@@ -3391,7 +3404,7 @@ let logical_decl = function
   | Core.Decl.Type_alias {body = Core.Type.Erased _; _} -> true
   | Core.Decl.Recursive_group fds ->
     Core.Nonempty.for_all
-      (fun (fd : Core.Recursion.Definition.t) -> is_erased_value fd.body && is_erased_type fd.type_) fds
+      (fun (fd : Core.Recursion.Definition.extracted) -> is_erased_value fd.body && is_erased_type fd.type_) fds
   | Core.Decl.Inductive {definition = (i : Core.Inductive.t); _} ->
     Array.for_all (fun (ip : Core.Inductive.Packet.t) -> ip.logical) i.packets
   | _ -> false

@@ -2,13 +2,13 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** What exists of Core only while types are reconstructed: the
-    metavariables extraction and the Core passes make and solve.  Freezing
+    metavariables extraction and the Core passes make and solve.  A cell is
+    made only at {!Phase.extracted}, so no frozen type holds one.  Freezing
     the program ({!Core_phase.freeze}) replaces each by its solution, or by a
     {!Core.Type.Open} where there is none, in the program and in the types its
     globals are registered at, and from then on none is made
-    ({!Core_util.new_meta} makes an open annotation instead) and none solved.
-    Under [CRANE_CHECK_IR] freezing checks that no metavariable is reachable,
-    and a solve after it is an anomaly. *)
+    ({!Core_util.new_meta} makes an open annotation instead) and none solved:
+    under [CRANE_CHECK_IR] a solve after it is an anomaly. *)
 
 module Meta : sig
   (** Making and solving metavariables.
@@ -23,15 +23,27 @@ module Meta : sig
   type 'p cell = 'p Grammar.Meta.t = private {
     id : int;
     mutable contents : 'p Type.at option;
+    phase : 'p Phase.is_extracted;  (** what makes a frozen cell impossible *)
   }
 
-  type t = Phase.frozen cell
+  (** A cell of the extracted program, the only phase that has one: a
+      [_ cell] value is evidence that its phase is [Phase.extracted]. *)
+  type t = Phase.extracted cell
 
   (** An unsolved cell numbered [id]. *)
-  val fresh : int -> 'p cell
+  val fresh : int -> t
+
+  (** [fresh_like m id] is an unsolved cell numbered [id] of [m]'s phase:
+      a cell exists only at [Phase.extracted], so a reader of a type of any
+      phase that meets one may make another for the same type. *)
+  val fresh_like : 'p cell -> int -> 'p cell
+
+  (** [cast m t] is the extracted type [t] at [m]'s phase, which is
+      [Phase.extracted] since [m] exists. *)
+  val cast : 'p cell -> Type.extracted -> 'p Type.at
 
   (** A cell numbered [id], already solved to [t]. *)
-  val solved : int -> 'p Type.at -> 'p cell
+  val solved : int -> Type.extracted -> t
 
   (** [solve m t] fills [m] with [t]; an anomaly under [CRANE_CHECK_IR]
       after {!freeze}. *)

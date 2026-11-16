@@ -68,9 +68,9 @@ module type VISIT = sig
 
   val add_kn : KerName.t -> unit
 
-  val add_decl_deps : Core.Decl.t -> unit
+  val add_decl_deps : 'p Core.Decl.at -> unit
 
-  val add_spec_deps : Core.Signature.Declaration.t -> unit
+  val add_spec_deps : 'p Core.Signature.Declaration.at -> unit
 
   (* Test functions: is a particular object a needed dependency for the current
      extraction ? *)
@@ -140,7 +140,7 @@ module Visit : VISIT = struct
       ~prune:Numeral_literal.converter_folds
       add_ref add_ref add_ref d
 
-  let add_spec_deps = spec_iter_references add_ref add_ref add_ref
+  let add_spec_deps s = spec_iter_references add_ref add_ref add_ref s
 end
 
 (** Computes which declarations are accessible from a module field. Adds
@@ -1334,7 +1334,7 @@ let report_body_generations fn =
     the knot of a well-founded recursion tied directly, every read of a
     local its own, and the open types of local definitions
     minted: the rewrites the program goes through before it is frozen. *)
-let core_passes to_appear : Core.Program.t Pipeline_trace.pass list =
+let core_passes to_appear : Core.Program.extracted Pipeline_trace.pass list =
   let open Pipeline_trace in
   [ pass "modutil" (Modutil.optimize_struct to_appear);
     (* Which inductives are shared variants is a property of their
@@ -2589,6 +2589,10 @@ let show_extraction ~pstate =
        that lowering the term reads are analysed from. *)
     freeze
       (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])]))
-      (fun frozen -> print_one_decl (Core_phase.structure frozen) mp decl)
+      (fun frozen ->
+        let struc = Core_phase.structure frozen in
+        match struc with
+        | [(_, [(_, Core.Module.Structure_item.Declaration decl)])] -> print_one_decl struc mp decl
+        | _ -> assert false )
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

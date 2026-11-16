@@ -277,7 +277,7 @@ val get_ind_nparams_opt : MutInd.t -> int option
 (** The type variable a type argument is, where it is one: a bare [Core.Type.Variable], or
     a higher-kinded variable applied at nothing but placeholders ([E _]), which
     is how Core writes one. *)
-val type_var_of_arg : Core.Type.t -> int option
+val type_var_of_arg : 'p Core.Type.at -> int option
 
 (** Get number of parameter variables for inductive if available. *)
 val get_ind_num_param_vars_opt : MutInd.t -> int option
@@ -307,7 +307,7 @@ val is_coinductive : GlobRef.t -> bool
 val has_any_coinductive : unit -> bool
 
 (** Check if a Core type is coinductive. *)
-val is_coinductive_type : Core.Type.t -> bool
+val is_coinductive_type : 'p Core.Type.at -> bool
 
 (** {2 Demands}
 
@@ -395,7 +395,7 @@ val needs_itree_header : unit -> bool
 val get_record_fields : GlobRef.t -> GlobRef.t option list
 
 (** Get record fields from a Core type. *)
-val record_fields_of_type : Core.Type.t -> GlobRef.t option list
+val record_fields_of_type : 'p Core.Type.at -> GlobRef.t option list
 
 (** The fields of a record or type class, each paired with its Core type.  Use
     this rather than zipping {!get_record_fields} against
@@ -403,7 +403,7 @@ val record_fields_of_type : Core.Type.t -> GlobRef.t option list
 val get_record_field_bindings : GlobRef.t -> Core.Record.Field.t list
 
 (** {!get_record_field_bindings} for a record named by a Core type. *)
-val record_field_bindings_of_type : Core.Type.t -> Core.Record.Field.t list
+val record_field_bindings_of_type : 'p Core.Type.at -> Core.Record.Field.t list
 
 (** Get types of record fields. *)
 val record_field_types : GlobRef.t -> Core.Type.t list
@@ -499,7 +499,7 @@ val singleton_instance_class : ?env:Environ.env -> GlobRef.t -> GlobRef.t option
 val builds_instance : ?env:Environ.env -> GlobRef.t -> bool
 
 (** Check if a Core type is a typeclass. *)
-val is_typeclass_type : Core.Type.t -> bool
+val is_typeclass_type : 'p Core.Type.at -> bool
 
 (** Mark inductive as flat (single-ctor, no variant wrapper). *)
 val add_flat_inductive : GlobRef.t -> unit
@@ -1161,14 +1161,14 @@ val escape_reserved_struct_name : string -> string
 val find_type_custom : GlobRef.t -> string list * string
 
 (** Check if branch array has custom match extraction. *)
-val is_custom_match : Core.Match.Branch.t array -> bool
+val is_custom_match : 'p Core.Match.Branch.at array -> bool
 
 (** The inductive a match's first branch belongs to.
     @raise Not_found when the branch has no constructor pattern. *)
-val indref_of_match : Core.Match.Branch.t array -> GlobRef.t
+val indref_of_match : 'p Core.Match.Branch.at array -> GlobRef.t
 
 (** Find custom match extraction code. *)
-val find_custom_match : Core.Match.Branch.t array -> string
+val find_custom_match : 'p Core.Match.Branch.at array -> string
 
 (** Look up the [Boxed Element] wrapper template (e.g. ["immer::box<%t0>"])
     for a custom container.  The wrapper is applied to the container's element
@@ -1234,19 +1234,37 @@ val is_any_custom : GlobRef.t -> bool
 (** Check if reference has any kind of inline custom extraction. *)
 val is_any_inline_custom : GlobRef.t -> bool
 
-(** Find type for reference. *)
+(** The frozen type registered for a reference; raises [Not_found] when
+    there is none, and is an anomaly before {!freeze_types} froze it. *)
 val find_type : GlobRef.t -> Core.Type.t
 
-(** [iter_types f] applies [f] to every type {!find_type} can answer. *)
-val iter_types : (Core.Type.t -> unit) -> unit
+(** The type registered for a reference, as the extracted program reads
+    it: one {!freeze_types} froze already is widened back
+    ({!Core.Widen}).  Raises [Not_found] when there is none. *)
+val find_extracted_type : GlobRef.t -> Core.Type.extracted
 
-(** [map_types f] makes {!find_type} answer [f t] wherever it answered [t]. *)
-val map_types : (Core.Type.t -> Core.Type.t) -> unit
+(** A reader of a registered type that answers alike at either phase. *)
+type 'a type_reader = { read : 'p. 'p Core.Type.at -> 'a }
 
-(** [add_type r ty] records [ty] as the type {!find_type} answers for [r],
-    in the current session only: the cache {!register_glob_def} fills,
-    without the library object that makes it persist. *)
-val add_type : GlobRef.t -> Core.Type.t -> unit
+(** [inspect_type r reader] is [reader.read] of the type registered for
+    [r], frozen or not: for a question whose answer does not depend on the
+    phase, asked before freezing and after.  Raises [Not_found] when there
+    is none. *)
+val inspect_type : GlobRef.t -> 'a type_reader -> 'a
+
+(** [add_frozen_type r ty] registers the frozen [ty] for [r]: for a reader
+    that builds the table a frozen program is read against. *)
+val add_frozen_type : GlobRef.t -> Core.Type.t -> unit
+
+(** [freeze_types f] freezes every type registered since the last call with
+    [f], which {!Core_phase.freeze} gives: from then on {!find_type}
+    answers it. *)
+val freeze_types : (Core.Type.extracted -> Core.Type.t) -> unit
+
+(** [add_type r ty] records [ty] as the type registered for [r], in the
+    current session only: the cache {!register_glob_def} fills, without the
+    library object that makes it persist. *)
+val add_type : GlobRef.t -> Core.Type.extracted -> unit
 
 (** {2 Extraction commands} *)
 
@@ -1414,7 +1432,7 @@ val extract_numeral : qualid -> string -> unit
     @param id the global reference of the definition being registered
     @param ty the Core type to associate with it, used for type-directed
               code generation at call sites *)
-val register_glob_def : GlobRef.t -> Core.Type.t -> unit
+val register_glob_def : GlobRef.t -> Core.Type.extracted -> unit
 
 (** Argument specifier for implicit extraction. *)
 type int_or_id =

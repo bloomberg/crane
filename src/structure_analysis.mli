@@ -185,7 +185,7 @@ val analyze : Method_registry.t -> Core.Program.t -> t
     ([Table.is_shared_variant_packet]), once the structure's declarations are
     final and before anything asks: the type's declaration, every slot holding
     it and the method registry must give one answer. *)
-val register_shared_variants : Core.Program.t -> unit
+val register_shared_variants : 'p Core.Program.at -> unit
 
 (** The definitions of [s] whose final bodies only raise: emitted as
     zero-argument functions, and called wherever they are named.  Pure;

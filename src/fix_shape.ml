@@ -68,7 +68,7 @@ let decl = function
   | Core.Decl.Recursive_group fds ->
     Core.Decl.Recursive_group
       (Core.Nonempty.map
-         (fun (fd : Core.Recursion.Definition.t) ->
+         (fun (fd : Core.Recursion.Definition.extracted) ->
            {fd with Core.Recursion.Definition.body = expr (float_lets_under_lams fd.body)} )
          fds )
   | d -> d

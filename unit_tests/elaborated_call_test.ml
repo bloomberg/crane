@@ -14,10 +14,13 @@ let check name cond =
     exit 1 )
 
 let r s = GlobRef.VarRef (Id.of_string s)
-let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []}
+
+(* A variable, so that the types built on it are of any phase. *)
+let nat_ref = r "nat"
+let nat = Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []}
 
 let declare s ty =
-  Table.add_type (r s) ty;
+  Table.add_frozen_type (r s) ty;
   Core.Expr.Global (Core.Global_use.monomorphic (r s))
 
 let binder ?(role = Lexenv.Value) s ty = {Lexenv.id = Id.of_string s; type_ = ty; role = role}
@@ -28,7 +31,7 @@ let elaborate ?(lex = Lexenv.empty) f args =
 let () =
   let a = declare "a" nat and b = declare "b" nat and c = declare "c" nat in
   let f = r "f" in
-  Table.add_type f (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
+  Table.add_frozen_type f (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let exact = elaborate f [a; b] in
   check "a call at the callee's arity passes every argument"
     (exact.primary = [a; b] && exact.excess = [] && exact.regular = [a; b]);
@@ -44,7 +47,7 @@ let () =
   let partial = elaborate f [a] in
   check "a partial application passes what it has" (partial.primary = [a] && partial.excess = []);
   let g = r "g" in
-  Table.add_type g (Core.Type.Arrow {parameter = nat;
+  Table.add_frozen_type g (Core.Type.Arrow {parameter = nat;
                                      result = Core.Type.Arrow
                                        {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = nat;
@@ -63,7 +66,8 @@ let () =
   Table.add_inductive_kind kn (Core.Inductive.Kind.Type_class []);
   let class_ty = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   let h = r "h" in
-  Table.add_type h (Core.Type.Arrow {parameter = class_ty; result = Core.Type.Arrow {parameter = nat; result = nat}});
+  Table.add_frozen_type h
+    (Core.Type.Arrow {parameter = class_ty; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let lex = Lexenv.push [binder "x" nat; binder ~role:Lexenv.Dictionary "inst" class_ty] Lexenv.empty in
   let call = elaborate ~lex h [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1] in
   check "a declaration's class-typed parameter is passed as its dictionary"
@@ -79,7 +83,7 @@ let () =
    translated: a polymorphic use is rebuilt by every rewrite of its types. *)
 let () =
   let f = r "pf" in
-  Table.add_type f (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+  Table.add_frozen_type f (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                                      variable = 1};
                                      result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                                   variable = 1}});
@@ -150,7 +154,7 @@ let () =
 let () =
   let f = r "pk" in
   let a1 = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1} in
-  Table.add_type f (Core.Type.Arrow {parameter = a1;
+  Table.add_frozen_type f (Core.Type.Arrow {parameter = a1;
                                      result = Core.Type.Arrow
                                        {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = a1;

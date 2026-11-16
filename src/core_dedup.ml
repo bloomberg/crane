@@ -84,7 +84,7 @@ let structure struc =
                                                                      body = forwarder body r';
                                                                      type_ = ty})) :: elems seen rest
       | None -> (l, Core.Module.Structure_item.Declaration d) :: elems ((key, r, ty) :: seen) rest )
-    | (l, Core.Module.Structure_item.Module (m : Core.Module.t)) :: rest ->
+    | (l, Core.Module.Structure_item.Module (m : Core.Module.extracted)) :: rest ->
       (l, Core.Module.Structure_item.Module {m with Core.Module.expr = module_expr m.expr}) :: elems seen rest
     | se :: rest -> se :: elems seen rest
   and module_expr = function

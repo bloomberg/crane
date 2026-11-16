@@ -76,7 +76,7 @@ let group_call group ~depth e =
       (* What it yields, or, where the fixpoint's type does not say, an open
          annotation of the temporary's own: the program is frozen. *)
       Some
-        (Option.default (Core_util.new_meta ())
+        (Option.default (Core_util.new_open ())
            (Type_util.core_codomain_after (List.length value_args) l.type_))
     | _ -> None )
   | _ -> None
@@ -115,11 +115,11 @@ let held group ~reading e ty =
   if not boxed_only then Some ty
   else
     match reading with
-    | Stored -> Some (Core_util.new_meta ())
+    | Stored -> Some (Core_util.new_open ())
     | Coerced into -> (
       match Core_util.type_simpl into with
       | Core.Type.Variable _ | Core.Type.Variable_app _ -> None
-      | _ -> Some (Core_util.new_meta ()) )
+      | _ -> Some (Core_util.new_open ()) )
     | Passed -> None
 
 (* Whether [e], at binder depth [depth], calls one of [group]'s functions
@@ -260,7 +260,7 @@ let rec scope ~group ~depth ?expected e =
            call into it. *)
         let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
         take e'
-          (Option.default (Core_util.new_meta ())
+          (Option.default (Core_util.new_open ())
              (Type_util.core_codomain_after (List.length value_args) (Core.Recursion.Group.selected_member g).type_))
       | _ -> e' )
     | Core.Expr.Construct {result_type = ty;

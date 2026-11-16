@@ -120,10 +120,10 @@ and expr w = function
     tag w "Expr.Persistent_array"; array w (expr w) xs; expr w d
   | Expr.Numeral {inductive = r; value = n} -> tag w "Expr.Numeral"; globref w r; str w (Z.to_string n)
 
-and fix w (g : Recursion.Group.t) =
+and fix w (g : _ Recursion.Group.at) =
   int w g.selected;
-  array w (fun (m : Recursion.Member.t) -> id w m.name; type_ w m.type_) g.members;
-  array w (fun (m : Recursion.Member.t) -> expr w m.body) g.members
+  array w (fun (m : _ Recursion.Member.at) -> id w m.name; type_ w m.type_) g.members;
+  array w (fun (m : _ Recursion.Member.at) -> expr w m.body) g.members
 
 and branch w {Match.Branch.binders; result_type; pattern = pat; body} =
   list w (fun (x, t) -> binder_name w x; type_ w t) binders;
@@ -144,7 +144,7 @@ and global_use w u =
     tag w "poly";
     scheme_id w (Scheme.Instantiation.scheme inst);
     Scheme.Instantiation.fold
-      (fun v (s : Type.t Scheme.slot) () ->
+      (fun v (s : _ Type.at Scheme.slot) () ->
         int w (Scheme.Var.ordinal v);
         ( match s.solution with
         | Identity -> tag w "identity"
@@ -184,7 +184,7 @@ let inductive w (ind : Inductive.t) =
   | Inductive.Equivalence.Equivalent_in_renamed_module s ->
     tag w "Equivalence.Equivalent_in_renamed_module"; str w s
 
-let definition w (d : Recursion.Definition.t) =
+let definition w (d : _ Recursion.Definition.at) =
   globref w d.entity; expr w d.body; type_ w d.type_
 
 let declaration w = function
@@ -245,14 +245,14 @@ let digest write x =
   write w x;
   Digest.string (Buffer.contents w.buf)
 
-let structure =
-  digest (fun w s -> list w (fun (mp, sel) -> modpath w mp; list w (structure_item w) sel) s)
+let structure p =
+  digest (fun w s -> list w (fun (mp, sel) -> modpath w mp; list w (structure_item w) sel) s) p
 
 let elements s =
   List.concat_map
     (fun (_, sel) -> List.map (fun ((l, _) as e) -> (l, digest structure_item e)) sel)
     s
 
-let decl = digest declaration
+let decl d = digest declaration d
 let equal = Digest.equal
 let to_hex = Digest.to_hex

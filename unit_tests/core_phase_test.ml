@@ -12,6 +12,9 @@ let check name cond =
     exit 1 )
 
 let r s = GlobRef.VarRef (Id.of_string s)
+
+(* A variable, so that the types built on it are of any phase. *)
+let nat_ref = r "nat"
 let mp s = ModPath.MPfile (DirPath.make [Id.of_string s])
 let term name body ty =
   (Label.make name, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r name; body; type_ = ty}))
@@ -24,7 +27,7 @@ let refused sel =
 
 let () =
   Unix.putenv "CRANE_CHECK_IR" "1";
-  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let nat = Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []} in
   let lam = Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
                               parameter_type = nat;
                               body = Core.Expr.fresh_rel 1} in
@@ -114,7 +117,7 @@ let () =
 (* Normalizing the frozen program checks that the result is a fixed point of
    the pass, and leaves the metavariable supply where the pass left it. *)
 let () =
-  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let nat = Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []} in
   let fine =
     [term "n"
       (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = nat; body = Core.Expr.fresh_rel 1})
@@ -159,7 +162,7 @@ let () =
 
 (* After freezing, nothing solves a metavariable. *)
 let () =
-  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let nat = Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []} in
   let m = Core.Extracted.Meta.fresh 7 and m' = Core.Extracted.Meta.fresh 8 in
   Core.Extracted.Meta.freeze ();
   check "a solve of the frozen program is refused"
@@ -173,7 +176,7 @@ let () =
    filled once, and the fill is carried to the terms that mention it. *)
 let () =
   let nat =
-    Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []}
+    Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []}
       and bool = Core.Type.Global_app {head = r "bool"; type_arguments = []; index_arguments = []} in
   let pair a b = Core.Type.Global_app {head = r "pair"; type_arguments = [a; b]; index_arguments = []} in
   let o = Core.Open.fresh 15 and other = Core.Open.fresh 15 in
@@ -202,7 +205,7 @@ let () =
    recursive group's from 1, a let-bound lambda's, its groups' included,
    past the variables of the declaration it is in. *)
 let () =
-  let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []} in
+  let nat = Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []} in
   let list t = Core.Type.Global_app {head = r "list"; type_arguments = [t]; index_arguments = []} in
   let go = Id.of_string "go" in
   let group m =

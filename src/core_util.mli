@@ -27,22 +27,22 @@ open Names
 module IntSet : Stdlib.Set.S with type elt = int and type t = Stdlib.Set.Make(Stdlib.Int).t
 
 (** [t] with every resolved meta at its root taken off. *)
-val core_resolve : Core.Type.t -> Core.Type.t
+val core_resolve : 'p Core.Type.at -> 'p Core.Type.at
 
 (** The immediate sub-types of an already resolved type. *)
-val core_type_children : Core.Type.t -> Core.Type.t list
+val core_type_children : 'p Core.Type.at -> 'p Core.Type.at list
 
 (** Whether some node of the type, the root included, satisfies [p]. *)
-val exists_core_type : (Core.Type.t -> bool) -> Core.Type.t -> bool
+val exists_core_type : ('p Core.Type.at -> bool) -> 'p Core.Type.at -> bool
 
 (** Pre-order: [f] sees a node before its children. *)
-val fold_core_type : ('a -> Core.Type.t -> 'a) -> 'a -> Core.Type.t -> 'a
+val fold_core_type : ('a -> 'p Core.Type.at -> 'a) -> 'a -> 'p Core.Type.at -> 'a
 
 (** Bottom-up: [f] sees a node after its children were mapped. *)
-val map_core_type : (Core.Type.t -> Core.Type.t) -> Core.Type.t -> Core.Type.t
+val map_core_type : ('p Core.Type.at -> 'p Core.Type.at) -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** The indices of every type variable in [t], an applied one included. *)
-val core_tvars : Core.Type.t -> IntSet.t
+val core_tvars : 'p Core.Type.at -> IntSet.t
 
 (** {2 Utility functions over Core types with meta} *)
 
@@ -55,26 +55,35 @@ val reset_meta_count : unit -> unit
     numbers the run it checks goes on to make. *)
 val preserving_meta_supply : (unit -> 'a) -> 'a
 
-(** Create a fresh meta variable. *)
-val new_meta : 'a -> Core.Type.t
+(** Create a fresh meta variable; once the program is frozen, an open
+    annotation instead. *)
+val new_meta : 'a -> Core.Type.extracted
+
+(** A fresh open annotation, at any phase: what {!new_meta} makes once the
+    program is frozen. *)
+val new_open : unit -> 'p Core.Type.at
+
+(** {!new_meta} at the phase of the cell given, which is extracted: for a
+    reader of a type of any phase that copies a metavariable it meets. *)
+val new_meta_like : 'p Core.Extracted.Meta.cell -> 'p Core.Type.at
 
 (** Apply a type to arguments, contracting the application when the head is
     known. A head that carries placeholders -- an eta-expanded constructor, or
     a type-level lambda whose binder extraction could not name -- has them
     filled rather than extended. *)
-val apply_core_type : Core.Type.t -> Core.Type.t list -> Core.Type.t
+val apply_core_type : 'p Core.Type.at -> 'p Core.Type.at list -> 'p Core.Type.at
 
 (** Substitute type variables using a list of types.
     @param l replacement types for [Core.Type.Variable 1], [Core.Type.Variable 2], ... in order
     @param t the Core type to substitute into *)
-val type_subst_list : Core.Type.t list -> Core.Type.t -> Core.Type.t
+val type_subst_list : 'p Core.Type.at list -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** [type_subst_fun f t] substitutes each [Core.Type.Variable j] for which [f j] answers,
     leaving the others unchanged. *)
-val type_subst_fun : (int -> Core.Type.t option) -> Core.Type.t -> Core.Type.t
+val type_subst_fun : (int -> 'p Core.Type.at option) -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** A one-line rendering of a Core type, for diagnostics. *)
-val debug_core_type : Core.Type.t -> string
+val debug_core_type : 'p Core.Type.at -> string
 
 (** The scheme extraction recorded for [r], with the source binders its
     variables come from; [None] for anything but an extracted constant. *)
@@ -90,15 +99,15 @@ val reference_scheme : GlobRef.t -> Scheme.Id.t option
     ({!Global_use.infer_all}) at [r]'s scheme -- the recorded one, or one
     of the arity [r]'s registered type has -- and monomorphic for a
     declaration quantifying nothing. *)
-val open_reference : GlobRef.t -> Core.Global_use.t
+val open_reference : GlobRef.t -> 'p Core.Global_use.at
 
 (** A declaration's reference to itself in its own body
     ({!Global_use.identity}). *)
-val self_reference : GlobRef.t -> Core.Global_use.t
+val self_reference : GlobRef.t -> 'p Core.Global_use.at
 
 (** A call to [target] written at the caller's own variables, in order: what
     a forwarder with [target]'s type writes. *)
-val forwarding_use : GlobRef.t -> Core.Global_use.t
+val forwarding_use : GlobRef.t -> 'p Core.Global_use.at
 
 (** Types for a callee's scheme variables, keyed by {!Scheme.Var.t}: what a
     use wrote, a call's reading of them, or what its arguments imply.  Every
@@ -109,36 +118,36 @@ val forwarding_use : GlobRef.t -> Core.Global_use.t
     argument or a template parameter. *)
 module Var_types : sig
   (** The types, by variable. *)
-  type t
+  type 'p t
 
   (** No variable spoken for. *)
-  val empty : t
+  val empty : 'p t
 
   (** Whether no variable is spoken for. *)
-  val is_empty : t -> bool
+  val is_empty : 'p t -> bool
 
   (** [through last f]: every variable of [last]'s scheme up to [last],
       variable [v] at [f v]; {!empty} for [None]. *)
-  val through : Scheme.Var.t option -> (Scheme.Var.t -> Core.Type.t) -> t
+  val through : Scheme.Var.t option -> (Scheme.Var.t -> 'p Core.Type.at) -> 'p t
 
   (** Variable [v]'s type, if it is spoken for; [Invalid_argument] for a
       variable of another scheme, which is a caller confusing two schemes. *)
-  val find : t -> Scheme.Var.t -> Core.Type.t option
+  val find : 'p t -> Scheme.Var.t -> 'p Core.Type.at option
 
   (** {!find} at the variable the callee's own type spells [Core.Type.Variable (_, i)]
       ({!Scheme.Var.of_tvar}): for a reader holding a variable it met in
       that type. *)
-  val find_tvar : t -> int -> Core.Type.t option
+  val find_tvar : 'p t -> int -> 'p Core.Type.at option
 
   (** Each variable spoken for, in ascending order, with its type. *)
-  val bindings : t -> (Scheme.Var.t * Core.Type.t) list
+  val bindings : 'p t -> (Scheme.Var.t * 'p Core.Type.at) list
 
   (** [apply t ty] instantiates [ty], a type in the callee's scheme
       variables: each variable spoken for is replaced, any other stays. *)
-  val apply : t -> Core.Type.t -> Core.Type.t
+  val apply : 'p t -> 'p Core.Type.at -> 'p Core.Type.at
 
   (** The same variables at equal types ({!eq_core_type}). *)
-  val equal : t -> t -> bool
+  val equal : 'p t -> 'p t -> bool
 end
 
 (** The greatest of [vars], all of one scheme; [None] for none. *)
@@ -146,25 +155,25 @@ val last_var : Scheme.Var.t list -> Scheme.Var.t option
 
 (** The arguments [use] wrote, for the scheme variables they are for, up to
     the last variable written. *)
-val written_type_args : Core.Global_use.t -> Var_types.t
+val written_type_args : 'p Core.Global_use.at -> 'p Var_types.t
 
 (** [subst_written_evidence use t] is [t], a type in [use]'s callee's
     scheme variables, with each variable the use wrote an argument for at
     that variable's own binder replaced by the argument.  A variable the use
     did not write is left unchanged, and an argument written at a binder with
     no variable replaces nothing. *)
-val subst_written_evidence : Core.Global_use.t -> Core.Type.t -> Core.Type.t
+val subst_written_evidence : 'p Core.Global_use.at -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** [instantiate_body ~reader use body] is a copy of [body], the callee's
     definition, at [use]: its types read at the arguments the use wrote
     ({!instantiate_written}), the uses inside it composed with that reading,
     and every hole they leave open renamed apart from the original's -- a
     copy is new uses, which do not share what they leave open. *)
-val instantiate_body : reader:string -> Core.Global_use.t -> Core.Expr.t -> Core.Expr.t
+val instantiate_body : reader:string -> 'p Core.Global_use.at -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Whether [use] wrote an argument for each of its callee's variables
     [1 .. n] at that variable's own binder. *)
-val written_covers : Core.Global_use.t -> int -> bool
+val written_covers : 'p Core.Global_use.at -> int -> bool
 
 (** {2 Frozen instantiations} *)
 
@@ -172,13 +181,13 @@ val written_covers : Core.Global_use.t -> int -> bool
     by its contents and every unsolved one by a {!Core.Type.Hole} -- one per
     metavariable, shared by the copies, and distinct from every hole minted
     before. *)
-val freeze_types : Core.Type.t list -> Core.Type.t list
+val freeze_types : 'p Core.Type.at list -> 'p Core.Type.at list
 
 (** A hole distinct from every other. *)
-val fresh_hole : unit -> Core.Type.t
+val fresh_hole : unit -> 'p Core.Type.at
 
 (** Whether the type mentions a metavariable, solved or not. *)
-val type_has_meta : Core.Type.t -> bool
+val type_has_meta : 'p Core.Type.at -> bool
 
 (** A callee's type at a use's frozen instantiation: every variable the
     instantiation solves is replaced, so the result may hold holes.  It is
@@ -186,52 +195,52 @@ val type_has_meta : Core.Type.t -> bool
     {!resolve} has filled its holes from other evidence. *)
 module Partial : sig
   (** A type that may hold holes. *)
-  type t = private Core.Type.t
+  type 'p t = private 'p Core.Type.at
 
   (** [instantiate inst ty] is [ty], in the callee's scheme variables, with
       each variable [inst] solves to a type replaced by that type, which may
       hold holes; a variable it leaves standing for itself
       ({!Scheme.Identity}) stays. *)
-  val instantiate : Core.Type.t Scheme.Instantiation.t -> Core.Type.t -> t
+  val instantiate : 'p Core.Type.at Scheme.Instantiation.t -> 'p Core.Type.at -> 'p t
 
   (** The holes, in order of first occurrence. *)
-  val holes : t -> int list
+  val holes : 'p t -> int list
 
   (** The type, when it holds no hole. *)
-  val close : t -> Core.Type.t option
+  val close : 'p t -> 'p Core.Type.at option
 
   (** Fills each hole [h] for which [f h] answers. *)
-  val resolve : (int -> Core.Type.t option) -> t -> t
+  val resolve : (int -> 'p Core.Type.at option) -> 'p t -> 'p t
 end
 
 (** {!subst_written_evidence}, the reading a substitution reader makes.
     Under [CRANE_PROBE] it is compared with the reading at the use's solved
     instantiation ([INSTW_same], [INSTW_differ], [INSTW_holes]). *)
-val instantiate_written : reader:string -> Core.Global_use.t -> Core.Type.t -> Core.Type.t
+val instantiate_written : reader:string -> 'p Core.Global_use.at -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** Substitute type variables using an array of types.
     @param v replacement types for [Core.Type.Variable 1], [Core.Type.Variable 2], ... (zero-indexed in the array)
     @param t the Core type to substitute into *)
-val type_subst_vect : Core.Type.t array -> Core.Type.t -> Core.Type.t
+val type_subst_vect : 'p Core.Type.at array -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** [instantiate_prenex n t] instantiates the prenex type [t], quantifying
     [Core.Type.Variable 1 .. Core.Type.Variable n], with fresh meta variables. *)
-val instantiate_prenex : int -> Core.Type.t -> Core.Type.t
+val instantiate_prenex : int -> Core.Type.extracted -> Core.Type.extracted
 
 (** Replace every [Core.Type.Unknown] with a fresh metavariable, so that an erased
     existential can unify with a concrete type at a use site. *)
-val instantiate_unknowns : Core.Type.t -> Core.Type.t
+val instantiate_unknowns : Core.Type.extracted -> Core.Type.extracted
 
 (** Attempt most general unification of two types.  Mutably updates
     metavariable bindings on success; silently does nothing on failure.
     @param t1 first type
     @param t2 second type *)
-val try_mgu : Core.Type.t -> Core.Type.t -> unit
+val try_mgu : 'p Core.Type.at -> 'p Core.Type.at -> unit
 
 (** Determine if a type coercion requires magic (unsafe cast).
     @param p a pair [(expected, actual)] of Core types to compare
     @return [true] if the types cannot be unified and [Core.Expr.Coerce] is needed *)
-val needs_magic : Core.Type.t * Core.Type.t -> bool
+val needs_magic : 'p Core.Type.at * 'p Core.Type.at -> bool
 
 (** Conditionally wrap a Core term in a coercion.  The two types are passed
     explicitly because {!needs_magic}'s pair is unordered ([mgu] is
@@ -241,19 +250,19 @@ val needs_magic : Core.Type.t * Core.Type.t -> bool
     @param b    when [true], wraps [a]
     @param a    the Core expression to (possibly) wrap *)
 val put_magic_if :
-  from:Core.Type.t -> into:Core.Type.t -> bool -> Core.Expr.t -> Core.Expr.t
+  from:'p Core.Type.at -> into:'p Core.Type.at -> bool -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Wrap a Core term in a coercion iff its own type fails to unify with the one
     its context requires.
     @param from the type the term itself has
     @param into the type the context requires
     @param a    the Core expression to (possibly) wrap *)
-val put_magic : from:Core.Type.t -> into:Core.Type.t -> Core.Expr.t -> Core.Expr.t
+val put_magic : from:'p Core.Type.at -> into:'p Core.Type.at -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Check if a Core term can be generalized at a let.  For C++ an
     application never is; anything else is, an approximation that well-typed
     Rocq never exercises. *)
-val generalizable : Core.Expr.t -> bool
+val generalizable : 'p Core.Expr.at -> bool
 
 (** {2 Core type environment} *)
 
@@ -269,22 +278,22 @@ module Type_env : sig
       @param type_env the type environment
       @param n 1-based index into the environment (1 = most recently pushed)
       @return a fresh instantiation of the n-th schema *)
-  val get : t -> int -> Core.Type.t
+  val get : t -> int -> Core.Type.extracted
 
   (** Add a type to the environment, after generalizing free meta variables.
       @param type_env the current environment
       @param t  the Core type to generalize and push *)
-  val push_gen : t -> Core.Type.t -> t
+  val push_gen : t -> Core.Type.extracted -> t
 
   (** Add a type with no [Core.Type.Variable] (no generalization needed).
       @param type_env the current environment
       @param t  the monomorphic Core type to push *)
-  val push_type : t -> Core.Type.t -> t
+  val push_type : t -> Core.Type.extracted -> t
 
   (** Add a type with no [Core.Type.Variable] nor [Core.Type.Meta] (no generalization, no free metas).
       @param type_env the current environment
       @param t  the ground Core type to push *)
-  val push_std_type : t -> Core.Type.t -> t
+  val push_std_type : t -> Core.Type.extracted -> t
 end
 
 (** {2 Utility functions over Core types without meta} *)
@@ -293,17 +302,17 @@ end
     @param kn the mutual inductive kernel name to search for
     @param t  the Core type to search in
     @return [true] if [kn] appears inside a [Core.Type.Global_app] node of [t] *)
-val type_mem_kn : MutInd.t -> Core.Type.t -> bool
+val type_mem_kn : MutInd.t -> 'p Core.Type.at -> bool
 
 (** Return the maximum type variable index in a type.
     @return the largest [i] such that [Core.Type.Variable (Schematic, i)] occurs in [t], or
             [0] if none does.  [Core.Type.Rigidity.Rigid] nodes are not considered. *)
-val type_maxvar : Core.Type.t -> int
+val type_maxvar : 'p Core.Type.at -> int
 
 (** Whether a type carries a [Core.Type.Unknown] hole -- the spelling extraction gives a
     type-level lambda, whose binder is where the hole is.  See
     {!fill_placeholders}. *)
-val type_has_hole : Core.Type.t -> bool
+val type_has_hole : 'p Core.Type.at -> bool
 
 (** Whether the arguments of an application carry a hole past their trailing
     run of placeholders.  That run is eta-expansion, which the next argument
@@ -314,7 +323,7 @@ val type_has_hole : Core.Type.t -> bool
     the argument's own placeholder (see {!fill_placeholders}), and so is a
     hole inside an argument at one of the [~constructors] positions, a type
     alias's parameter its definition applies ({!constructor_params}). *)
-val writes_binder : ?generated:bool -> ?constructors:int list -> Core.Type.t list -> bool
+val writes_binder : ?generated:bool -> ?constructors:int list -> 'p Core.Type.at list -> bool
 
 (** The 0-based positions of the parameters the type alias [r] applies in its
     definition, as far as that definition has been extracted; none for
@@ -323,73 +332,73 @@ val constructor_params : GlobRef.t -> int list
 
 (** [fill_type_hole a t] is [t] with its [Core.Type.Unknown] holes filled by [a]: the
     type-level lambda {!type_has_hole} recognises, applied to [a]. *)
-val fill_type_hole : Core.Type.t -> Core.Type.t -> Core.Type.t
+val fill_type_hole : 'p Core.Type.at -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** Decompose a Core type into a list of argument types and a result type.
     @return [(args, result)] where [args] are the curried parameter types
             and [result] is the final return type *)
-val type_decomp : Core.Type.t -> Core.Type.t list * Core.Type.t
+val type_decomp : 'p Core.Type.at -> 'p Core.Type.at list * 'p Core.Type.at
 
 (** Recompose a Core type from a list of argument types and a result type.
     @param args the list of argument types (left-to-right)
     @param result the final return type *)
-val type_recomp : Core.Type.t list * Core.Type.t -> Core.Type.t
+val type_recomp : 'p Core.Type.at list * 'p Core.Type.at -> 'p Core.Type.at
 
 (** Make every [Core.Type.Rigidity.Schematic] type variable [Core.Type.Rigidity.Rigid], so that it no longer
     unifies with the schematic variables of any other type scheme.  Applied to
     a constant's own type before its body is reconstructed. *)
-val rigidify : Core.Type.t -> Core.Type.t
+val rigidify : 'p Core.Type.at -> 'p Core.Type.at
 
 (** Abbreviation map type for looking up type aliases. *)
-type abbrev_map = GlobRef.t -> Core.Type.t option
+type 'p abbrev_map = GlobRef.t -> 'p Core.Type.at option
 
 (** Expand type abbreviations using the given map.
     @param env lookup function mapping global references to their type bodies;
                return [None] to leave a [Core.Type.Global_app] unexpanded
     @param t   the Core type to expand *)
-val type_expand : abbrev_map -> Core.Type.t -> Core.Type.t
+val type_expand : 'p abbrev_map -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** Simplify a Core type: {!type_expand} with no abbreviation, which only
     replaces solved metavariables by their contents (when type expansion is
     enabled). *)
-val type_simpl : Core.Type.t -> Core.Type.t
+val type_simpl : 'p Core.Type.at -> 'p Core.Type.at
 
 (** Convert a Core type to a signature element for its outermost position.
     @param env abbreviation map for expanding type aliases
     @param t   the Core type to classify
     @return [Core.Signature.Argument.Erased d] if the outermost type is [Core.Type.Erased d] (and not conservative),
             [Core.Signature.Argument.Runtime] otherwise *)
-val type_to_sign : abbrev_map -> Core.Type.t -> Core.Signature.Argument.t
+val type_to_sign : 'p abbrev_map -> 'p Core.Type.at -> Core.Signature.Argument.t
 
 (** Convert a Core type to a full argument signature by decomposing arrows.
     @param env abbreviation map for expanding type aliases
     @param t   the Core type to decompose
     @return a [Core.Signature.t] with one entry per curried argument position *)
-val type_to_signature : abbrev_map -> Core.Type.t -> Core.Signature.t
+val type_to_signature : 'p abbrev_map -> 'p Core.Type.at -> Core.Signature.t
 
 (** Expunge dummy arguments from a Core type using the abbreviation map.
     @param env abbreviation map for expanding type aliases
     @param t   the Core type from which to remove [Core.Type.Erased] arrows *)
-val type_expunge : abbrev_map -> Core.Type.t -> Core.Type.t
+val type_expunge : 'p abbrev_map -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** Expunge dummy arguments from a Core type guided by a pre-computed signature.
     @param env abbreviation map for expanding type aliases
     @param s   the signature indicating which arguments are [Core.Signature.Argument.Erased]
     @param t   the Core type from which to remove the killed arrow positions *)
-val type_expunge_from_sign : abbrev_map -> Core.Signature.t -> Core.Type.t -> Core.Type.t
+val type_expunge_from_sign : 'p abbrev_map -> Core.Signature.t -> 'p Core.Type.at -> 'p Core.Type.at
 
 (** Test equality of two Core types. *)
-val eq_core_type : Core.Type.t -> Core.Type.t -> bool
+val eq_core_type : 'p Core.Type.at -> 'q Core.Type.at -> bool
 
 (** Check if a type is Core.Type.Erased. *)
-val is_erased_type : Core.Type.t -> bool
+val is_erased_type : 'p Core.Type.at -> bool
 
 (** Check if a Core term is Core.Expr.Erased_value. *)
-val is_erased_value : Core.Expr.t -> bool
+val is_erased_value : 'p Core.Expr.at -> bool
 
 (** The term definitions a declaration makes: a [Core.Decl.Value]'s one, a [Core.Decl.Recursive_group]'s
     group, and none for anything else. *)
-val term_defs : Core.Decl.t -> Core.Recursion.Definition.t list
+val term_defs : 'p Core.Decl.at -> 'p Core.Recursion.Definition.at list
 
 (** Whether a signature entry is [Erased] (any reason). *)
 val isKill : Core.Signature.Argument.t -> bool
@@ -402,7 +411,10 @@ val isKill : Core.Signature.Argument.t -> bool
     @param e the Core expression (typically a match branch body) to process
     @return [(ids, body)] with the surviving binders and the stripped body *)
 val case_expunge :
-  ?types:Core.Type.t list -> Core.Signature.t -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
+  ?types:'p Core.Type.at list ->
+  Core.Signature.t ->
+  'p Core.Expr.at ->
+  (Core.Binder_name.t * 'p Core.Type.at) list * 'p Core.Expr.at
 
 (** Expunge dummy leading lambdas from a term according to a signature.
     Leaves one dummy lambda when all arguments are logical and the target
@@ -410,7 +422,7 @@ val case_expunge :
     @param s        the signature indicating which leading lambdas are [Core.Signature.Argument.Erased]ed
     @param ids_body a pair [(binders, body)] as returned by [collect_lams]
     @return the term with the erased lambdas removed *)
-val term_expunge : Core.Signature.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t -> Core.Expr.t
+val term_expunge : Core.Signature.t -> (Core.Binder_name.t * 'p Core.Type.at) list * 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** {2 Special identifiers}
 
@@ -453,7 +465,7 @@ val tmp_id : Core.Binder_name.t -> Core.Binder_name.t
     not change that: nothing gets to be bound, because the raise comes first.
     Such a definition is spelled as a zero-argument function, so that it
     throws when called rather than at static initialisation. *)
-val only_throws : Core.Expr.t -> bool
+val only_throws : 'p Core.Expr.at -> bool
 
 (** {2 Lambda collection}
 
@@ -461,32 +473,32 @@ val only_throws : Core.Expr.t -> bool
     and the term [t]. *)
 
 (** Collect all lambda abstractions from a term. *)
-val collect_lams : Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
+val collect_lams : 'p Core.Expr.at -> (Core.Binder_name.t * 'p Core.Type.at) list * 'p Core.Expr.at
 
 (** Collect exactly n lambda abstractions from a term.
     @param n the number of leading [Core.Expr.Lambda] nodes to collect; asserts if fewer exist
     @param t the term to peel
     @return [(binders, body)] where [binders] has exactly [n] entries
             (innermost first, as {!collect_lams} returns them) *)
-val collect_n_lams : int -> Core.Expr.t -> (Core.Binder_name.t * Core.Type.t) list * Core.Expr.t
+val collect_n_lams : int -> 'p Core.Expr.at -> (Core.Binder_name.t * 'p Core.Type.at) list * 'p Core.Expr.at
 
 (** Remove n lambda abstractions from a term.
     @param n the number of leading [Core.Expr.Lambda] nodes to drop; asserts if fewer exist *)
-val remove_n_lams : int -> Core.Expr.t -> Core.Expr.t
+val remove_n_lams : int -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Count the number of lambda abstractions at the head of a term. *)
-val nb_lams : Core.Expr.t -> int
+val nb_lams : 'p Core.Expr.at -> int
 
 (** Wrap a term in lambda abstractions with the given identifiers and types:
     the converse of {!collect_lams}.
     @param ids list of [(identifier, type)] pairs, innermost binder first
     @param a   the body to wrap *)
-val named_lams : (Core.Binder_name.t * Core.Type.t) list -> Core.Expr.t -> Core.Expr.t
+val named_lams : (Core.Binder_name.t * 'p Core.Type.at) list -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Wrap a term in n dummy lambda abstractions.
     @param a the body to wrap
     @param n the number of [Core.Expr.Lambda(Dummy,...)] layers to add *)
-val dummy_lams : Core.Expr.t -> int -> Core.Expr.t
+val dummy_lams : 'p Core.Expr.at -> int -> 'p Core.Expr.at
 
 (** Wrap a term in anonymous or dummy lambda abstractions based on the
     signature: a [Core.Signature.Argument.Runtime] entry becomes an anonymous lambda at its type among
@@ -495,42 +507,42 @@ val dummy_lams : Core.Expr.t -> int -> Core.Expr.t
     @param types one Core type per signature entry, matched positionally;
                  falls back to [Core.Type.Axiom] when the list runs out
     @param s     the signature driving the lambda structure *)
-val anonym_or_dummy_lams_typed : Core.Expr.t -> Core.Type.t list -> Core.Signature.t -> Core.Expr.t
+val anonym_or_dummy_lams_typed : 'p Core.Expr.at -> 'p Core.Type.at list -> Core.Signature.t -> 'p Core.Expr.at
 
 (** Generate eta-expanded argument list based on arity and signature.
     @param n the starting de Bruijn level (counts down)
     @param s the signature; [Core.Signature.Argument.Runtime] entries emit [Core.Expr.Bound_variable] arguments,
              [Core.Signature.Argument.Erased] entries are skipped
     @return the list of [Core.Expr.Bound_variable] arguments for the kept positions *)
-val eta_args_sign : int -> Core.Signature.t -> Core.Expr.t list
+val eta_args_sign : int -> Core.Signature.t -> 'p Core.Expr.at list
 
 (** {2 Utility functions over Core terms} *)
 
 (** Apply a Core term to a list of arguments. Returns [f] unchanged when [a] is empty. *)
-val apply_args : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
+val apply_args : 'p Core.Expr.at -> 'p Core.Expr.at list -> 'p Core.Expr.at
 
 (** Map a function over all immediate subterms.
     @param f the transformation to apply to each direct child
     @param t the Core node whose children are to be mapped *)
-val ast_map : (Core.Expr.t -> Core.Expr.t) -> Core.Expr.t -> Core.Expr.t
+val ast_map : ('p Core.Expr.at -> 'p Core.Expr.at) -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [ast_map_types f a] rewrites every [Core.Type.t] embedded in [a] with [f],
     recursing through the whole term. *)
-val ast_map_types : (Core.Type.t -> Core.Type.t) -> Core.Expr.t -> Core.Expr.t
+val ast_map_types : ('p Core.Type.at -> 'p Core.Type.at) -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [e] with each of its open metavariables replaced by a fresh one, the same
     one wherever [e] shares it: a pass that fills holes in the copy, as type
     recovery does, then leaves [e] itself as it was for the next pass. *)
-val freshen_metas : Core.Expr.t -> Core.Expr.t
+val freshen_metas : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [a] with the holes of its global uses renamed apart from every other, the
     same new hole wherever [a] shares one: a copy is new uses, which leave
     open what their originals did independently of them. *)
-val freshen_holes : Core.Expr.t -> Core.Expr.t
+val freshen_holes : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [has_unknown t]: whether [t] mentions [Core.Type.Unknown], the marker extraction
     leaves where a type was erased. *)
-val has_unknown : Core.Type.t -> bool
+val has_unknown : 'p Core.Type.at -> bool
 
 (** [recover_erased_types expected a] fills in the annotations extraction
     erased to [Core.Type.Unknown], using the type [a] is known to have. Only erased
@@ -547,45 +559,45 @@ val recover_erased_types :
     @param f   the transformation; receives the current depth and the child term
     @param n   the current binding depth (passed to [f] for each child)
     @param t   the Core node whose children are to be mapped *)
-val ast_map_lift : (int -> Core.Expr.t -> Core.Expr.t) -> int -> Core.Expr.t -> Core.Expr.t
+val ast_map_lift : (int -> 'p Core.Expr.at -> 'p Core.Expr.at) -> int -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Iterate a function over all immediate subterms.
     @param f the action to perform on each direct child
     @param t the Core node to iterate over *)
-val ast_iter : (Core.Expr.t -> unit) -> Core.Expr.t -> unit
+val ast_iter : ('p Core.Expr.at -> unit) -> 'p Core.Expr.at -> unit
 
 (** Check if a de Bruijn index occurs in a term.
     @param k the de Bruijn index to look for (1-based, relative to [t])
     @param t the term to search
     @return [true] if [Core.Expr.Bound_variable k] appears free in [t] *)
-val ast_occurs : int -> Core.Expr.t -> bool
+val ast_occurs : int -> 'p Core.Expr.at -> bool
 
 (** How many times [Core.Expr.Bound_variable 1] is read on the path through [a] that reads it
     most: a match counts its most-reading branch, not their sum. *)
-val nb_occur_match : Core.Expr.t -> int
+val nb_occur_match : 'p Core.Expr.at -> int
 
 (** Check if any de Bruijn index in the interval [[k, k']] occurs in a term.
     @param k  lower bound of the index range (inclusive)
     @param k' upper bound of the index range (inclusive)
     @param t  the term to search
     @return [true] if some [Core.Expr.Bound_variable i] with [k <= i <= k'] appears free in [t] *)
-val ast_occurs_itvl : int -> int -> Core.Expr.t -> bool
+val ast_occurs_itvl : int -> int -> 'p Core.Expr.at -> bool
 
 (** [ast_iter_rel_applied f t] calls [f n i args] on every [Core.Expr.Bound_variable i] in [t],
     with [n] the number of bindings crossed to reach it and [args] the
     arguments it is applied to there ([[]] where it is not applied). *)
-val ast_iter_rel_applied : (int -> int -> Core.Expr.t list -> unit) -> Core.Expr.t -> unit
+val ast_iter_rel_applied : (int -> int -> 'p Core.Expr.at list -> unit) -> 'p Core.Expr.at -> unit
 
 (** Lift de Bruijn indices in a term.
     @param k the amount to add to each free de Bruijn index in [t]
     @param t the term whose free indices are to be lifted *)
-val ast_lift : int -> Core.Expr.t -> Core.Expr.t
+val ast_lift : int -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Pop the outermost de Bruijn level (equivalent to [ast_lift (-1)]). *)
-val ast_pop : Core.Expr.t -> Core.Expr.t
+val ast_pop : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** The number of nodes of a term, each counted once. *)
-val ast_size : Core.Expr.t -> int
+val ast_size : 'p Core.Expr.at -> int
 
 (** [canonical_app f args], [f] and [args] canonical: the canonical form of
     [Core.Expr.Apply (f, args)], read whole: a global applied in stages is applied once
@@ -593,38 +605,38 @@ val ast_size : Core.Expr.t -> int
     one-branch match applies its branch.  No head of a canonical application
     is a global already applied, a coercion, or a match with one branch.
     See {!Core_normalize}. *)
-val canonical_app : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
+val canonical_app : 'p Core.Expr.at -> 'p Core.Expr.at list -> 'p Core.Expr.at
 
 (** [canonical e] is [e] with every application canonical
     ({!canonical_app}). *)
-val canonical : Core.Expr.t -> Core.Expr.t
+val canonical : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [permut_rels k k' c] exchanges two adjacent runs of binders: [Rel 1 ...
     Rel k] become [Rel (k'+1) ... Rel (k'+k)], and [Rel (k+1) ... Rel (k+k')]
     become [Rel 1 ... Rel k']. *)
-val permut_rels : int -> int -> Core.Expr.t -> Core.Expr.t
+val permut_rels : int -> int -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Substitute a term for de Bruijn index 1, adjusting other indices.
     @param e the term to substitute for [Rel 1]
     @param t the term in which the substitution is performed *)
-val ast_subst : Core.Expr.t -> Core.Expr.t -> Core.Expr.t
+val ast_subst : 'p Core.Expr.at -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [ast_subst_each make t] substitutes for each read of [Rel 1] in [t] a
     term of its own, [make ()], as {!ast_subst} substitutes one: a use of a
     global made for each read is an occurrence of its own, where one term
     copied to every read would make them all the same occurrence. *)
-val ast_subst_each : (unit -> Core.Expr.t) -> Core.Expr.t -> Core.Expr.t
+val ast_subst_each : (unit -> 'p Core.Expr.at) -> 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Substitute global references in a term using the given map.
     @param s a map from [GlobRef.t] to replacement [Core.Expr.t] bodies
     @param t the term in which to perform the substitution *)
-val ast_glob_subst : Core.Expr.t Ref.User.Map.t -> Core.Expr.t -> Core.Expr.t
+val ast_glob_subst : Core.Expr.extracted Ref.User.Map.t -> Core.Expr.extracted -> Core.Expr.extracted
 
 (** Remove unused variable bindings from a term. *)
-val dump_unused_vars : Core.Expr.t -> Core.Expr.t
+val dump_unused_vars : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Normalize a Core term by beta-reduction and simplification. *)
-val normalize : Core.Expr.t -> Core.Expr.t
+val normalize : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** [apply_eta_args f args] is [f] applied to [args], with the application
     placed where [f] produces its value rather than wrapped around [f] -- for
@@ -632,25 +644,25 @@ val normalize : Core.Expr.t -> Core.Expr.t
     such as eta-expansion to a declaration's arity.  The result is
     canonical ({!canonical}), as every term built after
     {!Core_normalize.structure} must be. *)
-val apply_eta_args : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
+val apply_eta_args : 'p Core.Expr.at -> 'p Core.Expr.at list -> 'p Core.Expr.at
 
 (** Optimize fixpoint expressions. *)
-val optimize_fix : Core.Expr.t -> Core.Expr.t
+val optimize_fix : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Determine if a global reference should be inlined in the given term.
     @param r the global reference of the constant to test
     @param t the current extracted body of [r]
     @return [true] if [r] should be inlined at call sites *)
-val inline : GlobRef.t -> Core.Expr.t -> bool
+val inline : GlobRef.t -> 'p Core.Expr.at -> bool
 
 (** Check if a pattern is a basic (non-nested) pattern. *)
 val is_basic_pattern : Core.Pattern.t -> bool
 
 (** Check if any branch has a deep (nested) pattern. *)
-val has_deep_pattern : Core.Match.Branch.t array -> bool
+val has_deep_pattern : 'p Core.Match.Branch.at array -> bool
 
 (** Check if a match is regular (all patterns are basic). *)
-val is_regular_match : Core.Match.Branch.t array -> bool
+val is_regular_match : 'p Core.Match.Branch.at array -> bool
 
 (** Exception raised when an operation is impossible. *)
 exception Impossible
@@ -679,4 +691,4 @@ val sign_no_final_keeps : Core.Signature.t -> Core.Signature.t
     @param f   a function from old type variable index to new index; applied to
                every [Core.Type.Variable] annotation occurring in the term
     @param t   Core in which to remap type variable indices *)
-val remap_tvars : (int -> int) -> Core.Expr.t -> Core.Expr.t
+val remap_tvars : (int -> int) -> 'p Core.Expr.at -> 'p Core.Expr.at

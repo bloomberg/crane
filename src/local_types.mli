@@ -48,4 +48,4 @@ val check_let_lambda : outer:int -> Core.Type.t -> Core.Expr.t -> unit
     are filled.  A let-bound lambda's, everything it contains included, are
     numbered past the variables of the declaration it is in, which name its
     head's. *)
-val structure : Core.Program.t -> unit
+val structure : Core.Program.extracted -> unit

@@ -361,19 +361,43 @@ let inductive_kind_of r =
    corpus, every definition registered under two names -- a module alias, an
    [Include] -- registers the same type under each, up to the names of the
    definitions it mentions. *)
-let glob_tys = Summary.ref Ref.Can.Map.empty ~name:"GlobalDefTypes"
+(* Registered while the program is extracted, a type may share cells with
+   the program's annotations; freezing the program freezes it with them. *)
+type registered =
+  | Extracted_type of Core.Type.extracted
+  | Frozen_type of Core.Type.t
+
+let glob_tys : registered Ref.Can.Map.t ref = Summary.ref Ref.Can.Map.empty ~name:"GlobalDefTypes"
 
 let init_glob_tys () = glob_tys := Ref.Can.Map.empty
 
 let () = on_reset init_glob_tys
 
-let add_type id ty = glob_tys := Ref.Can.Map.add id ty !glob_tys
+let add_type id ty = glob_tys := Ref.Can.Map.add id (Extracted_type ty) !glob_tys
 
-let find_type id = Ref.Can.Map.find id !glob_tys
+let find_type id =
+  match Ref.Can.Map.find id !glob_tys with
+  | Frozen_type t -> t
+  | Extracted_type _ ->
+    CErrors.anomaly
+      Pp.(str "Crane: the type of " ++ Printer.pr_global id ++ str " was read as frozen before it was frozen.")
 
-let iter_types f = Ref.Can.Map.iter (fun _ t -> f t) !glob_tys
+let find_extracted_type id =
+  match Ref.Can.Map.find id !glob_tys with
+  | Extracted_type t -> t
+  | Frozen_type t -> Core.Widen.type_ t
 
-let map_types f = glob_tys := Ref.Can.Map.map f !glob_tys
+type 'a type_reader = { read : 'p. 'p Core.Type.at -> 'a }
+
+let inspect_type id {read} =
+  match Ref.Can.Map.find id !glob_tys with
+  | Extracted_type t -> read t
+  | Frozen_type t -> read t
+
+let add_frozen_type id ty = glob_tys := Ref.Can.Map.add id (Frozen_type ty) !glob_tys
+
+let freeze_types f =
+  glob_tys := Ref.Can.Map.map (function Extracted_type t -> Frozen_type (f t) | r -> r) !glob_tys
 
 (* The custom extraction mappings, by global; declared here, ahead of their
    commands, because whether a class is kept depends on them.  A mapping is
@@ -415,7 +439,7 @@ let singleton_method_class m =
     | Core.Type.Meta {contents = Some t} -> first t
     | _ -> None
   in
-  match find_type m with exception Not_found -> None | ty -> first ty
+  match inspect_type m {read = first} with exception Not_found -> None | c -> c
 
 (* The singleton class [r] is an instance of, if it is one: read off [r]'s
    type, as for any instance, and not off the instance table -- an instance
@@ -3809,7 +3833,7 @@ let extract_inductive ?boxed ?drain r s l optstr imports =
       l
   | _ -> error_inductive ?loc:r.CAst.loc g
 
-let glob_def_registration : GlobRef.t * Core.Type.t -> obj =
+let glob_def_registration : GlobRef.t * Core.Type.extracted -> obj =
   declare_object
   @@ superglobal_object
        "Crane Global Def Type Registration"

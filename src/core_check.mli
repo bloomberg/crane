@@ -12,4 +12,4 @@
     one slot per variable by construction, holding no metavariable; and each
     hole held by one use, or by copies of that whole use.  A violation is an
     extraction error naming the callee and the invariant. *)
-val structure : Core.Program.t -> unit
+val structure : 'p Core.Program.at -> unit
