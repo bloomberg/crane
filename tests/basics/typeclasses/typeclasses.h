@@ -230,19 +230,17 @@ struct Typeclasses {
   static inline const uint64_t test_option_none =
       numOption<numNat, uint64_t>::to_nat(std::optional<uint64_t>());
   static inline const uint64_t test_list =
-      numList<numNat, uint64_t>::to_nat(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
+      numList<numNat, uint64_t>::to_nat(
+          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                   UINT64_C(2), List<uint64_t>::cons(
+                                       UINT64_C(3), List<uint64_t>::cons(
+                                           UINT64_C(4),
+                                           List<uint64_t>::nil())))));
   static inline const uint64_t test_sum =
-      numeric_sum<numNat, uint64_t>(List<uint64_t>::cons(
-          UINT64_C(10),
-          List<uint64_t>::cons(
-              UINT64_C(20),
-              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
+      numeric_sum<numNat, uint64_t>(
+          List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
+                                   UINT64_C(20), List<uint64_t>::cons(
+                                       UINT64_C(30), List<uint64_t>::nil()))));
   static inline const uint64_t test_double =
       numeric_double<numNat, uint64_t>(UINT64_C(7));
   static inline const std::pair<uint64_t, uint64_t> test_sort_pair =

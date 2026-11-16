@@ -14,7 +14,6 @@ struct ZAbsMin {
   /// Construct INT64_MIN = -2^63 via INT64_MAX + 1 negated.
   static inline const int64_t neg_max = static_cast<int64_t>(
       -static_cast<uint64_t>(INT64_C(9223372036854775807)));
-
   static inline const int64_t int64_min =
       static_cast<int64_t>(static_cast<uint64_t>(neg_max) - 1);
   /// In Rocq, this is 9223372036854775808 (positive).

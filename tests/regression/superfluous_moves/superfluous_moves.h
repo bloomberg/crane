@@ -96,6 +96,7 @@ struct SuperfluousMoves {
   struct position {
     uint64_t px;
   };
+
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { CHASE, FRIGHTENED };
 
@@ -139,8 +140,7 @@ struct SuperfluousMoves {
   static constexpr Mode forced_mode = Mode::CHASE;
   /// Concrete state that makes the game-over branch fire after lose_one_life.
   static inline const game_state sample_state = game_state{
-      position{UINT64_C(7)},
-      List<position>::cons(
+      position{UINT64_C(7)}, List<position>::cons(
           position{UINT64_C(1)},
           List<position>::cons(position{UINT64_C(2)}, List<position>::nil())),
       UINT64_C(1)};

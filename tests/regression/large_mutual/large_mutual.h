@@ -670,7 +670,7 @@ struct LargeMutual {
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+    std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const expr &e) {
     if (std::holds_alternative<typename expr::ENum>(e.v())) {
@@ -747,10 +747,9 @@ struct LargeMutual {
       bexpr::beq(expr::evar(UINT64_C(0)), expr::ENum_(UINT64_C(5))),
       bexpr::blt(expr::evar(UINT64_C(1)), expr::ENum_(UINT64_C(10))));
   static inline const stmt test_stmt = stmt::sseq(
-      stmt::sassign(UINT64_C(0), expr::ENum_(UINT64_C(42))),
-      stmt::sif(bexpr::beq(expr::evar(UINT64_C(0)), expr::ENum_(UINT64_C(42))),
-                stmt::sskip(),
-                stmt::sassign(UINT64_C(0), expr::ENum_(UINT64_C(0)))));
+      stmt::sassign(UINT64_C(0), expr::ENum_(UINT64_C(42))), stmt::sif(
+          bexpr::beq(expr::evar(UINT64_C(0)), expr::ENum_(UINT64_C(42))),
+          stmt::sskip(), stmt::sassign(UINT64_C(0), expr::ENum_(UINT64_C(0)))));
   static inline const uint64_t test_expr_size = expr_size(test_expr);
   static inline const uint64_t test_bexpr_size = bexpr_size(test_bexpr);
   static inline const uint64_t test_stmt_size = stmt_size(test_stmt);

@@ -2,8 +2,9 @@
 
 /// Check if two strings are equal using PrimString.compare.
 bool PingPong::string_eq(std::string s1, std::string s2) {
-  switch ((s1 == s2 ? Comparison::EQ
-                    : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
+  switch (
+      (s1 == s2 ? Comparison::EQ
+                : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
   case Comparison::EQ: {
     return true;
   }
@@ -21,13 +22,11 @@ void PingPong::run_game(uint64_t round) {
     std::getline(std::cin, response);
     if (string_eq(response, "pong")) {
       std::cout << std::string("  (round ") + std::to_string(_loop_round) +
-                       std::string(" complete)")
-                << '\n';
+                   std::string(" complete)") << '\n';
       _loop_round = (_loop_round + 1);
     } else {
       std::cout << std::string("You said '") + std::move(response) +
-                       std::string("' \342\200\224 game over!")
-                << '\n';
+                   std::string("' \342\200\224 game over!") << '\n';
       return;
     }
   }

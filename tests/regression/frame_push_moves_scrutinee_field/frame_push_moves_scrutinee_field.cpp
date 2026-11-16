@@ -5,11 +5,15 @@
 /// x, which what follows reads; the call passes s on whole, so the
 /// frame copies x.  It used to move it, leaving the s the call is
 /// given without its head.
-uint64_t FramePushMovesScrutineeField::weigh(
-    List<List<uint64_t>> s,
-    const List<uint64_t> &x0_) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+FramePushMovesScrutineeField::weigh(List<List<uint64_t>> s,
+                                    const List<uint64_t> &x0_) { /// CraneEnter:
+                                                                 /// captures
+                                                                 /// varying
+                                                                 /// parameters
+                                                                 /// for each
+                                                                 /// recursive
+                                                                 /// call.
   struct CraneEnter {
     List<uint64_t> x0_;
     List<List<uint64_t>> s;
@@ -54,8 +58,7 @@ uint64_t FramePushMovesScrutineeField::weigh(
       auto _f = std::move(std::get<CraneEnter_weigh1>(_frame));
       const List<uint64_t> &t = _f.t;
       List<List<uint64_t>> s = std::move(_f.s);
-      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-              s.v_mut())) {
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(s.v_mut())) {
         _result = UINT64_C(0);
       } else {
         auto &[a0, a1] =

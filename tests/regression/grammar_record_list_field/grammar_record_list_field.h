@@ -60,6 +60,7 @@ struct elt {
 struct rec {
   std::deque<elt> items;
 };
+
 enum class Nonterminal { DOC, ITEMS };
 
 struct Symbol {
@@ -102,76 +103,66 @@ using grammar_entry = SigT<production, production_semty>;
     [](auto _a0, auto _a1) {
       _a1.push_front(_a0);
       return _a1;
-    }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
-           std::pair<crane::obj, crane::obj>>::
-          existt(
-              std::make_pair(
-                  Nonterminal::DOC,
-                  [](auto _a0, auto _a1) {
-                    _a1.push_front(_a0);
-                    return _a1;
-                  }(Symbol::nt(Nonterminal::ITEMS), std::deque<Symbol>{})),
-              std::make_pair(
-                  crane::obj(crane_erase_fn([](const auto &tup) {
-                    const auto &[_x, _x0] =
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                    return true;
-                  })),
-                  crane::obj(crane_erase_fn([](const auto &tup) {
-                    const auto &[ts, _x] =
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                    return rec{crane_container_cast<std::deque<elt>>(
-                        crane::any_cast<std::deque<crane::obj>>(ts))};
-                  })))),
-      [](auto _a0, auto _a1) {
-        _a1.push_front(_a0);
-        return _a1;
-      }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
-             std::pair<crane::obj, crane::obj>>::
-            existt(std::make_pair(Nonterminal::ITEMS, std::deque<Symbol>{}),
-                   std::make_pair(crane::obj(crane_erase_fn(
-                                      [](const auto &) { return true; })),
-                                  crane::obj(crane_erase_fn([](const auto &) {
-                                    return std::deque<crane::obj>{};
-                                  })))),
+    }(
+    SigT<std::pair<Nonterminal, std::deque<Symbol>>,
+         std::pair<crane::obj, crane::obj>>::existt(
+        std::make_pair(Nonterminal::DOC, [](auto _a0, auto _a1) {
+          _a1.push_front(_a0);
+          return _a1;
+        }(Symbol::nt(Nonterminal::ITEMS), std::deque<Symbol>{})),
+        std::make_pair(
+            crane::obj(crane_erase_fn([](const auto &tup) {
+              const auto &[_x, _x0] =
+                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+              return true;
+            })),
+            crane::obj(crane_erase_fn([](const auto &tup) {
+              const auto &[ts, _x] =
+                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+              return rec{crane_container_cast<std::deque<elt>>(
+                             crane::any_cast<std::deque<crane::obj>>(ts))};
+            })))),
+    [](auto _a0, auto _a1) {
+      _a1.push_front(_a0);
+      return _a1;
+    }(
+        SigT<std::pair<Nonterminal, std::deque<Symbol>>,
+             std::pair<crane::obj, crane::obj>>::existt(
+            std::make_pair(Nonterminal::ITEMS, std::deque<Symbol>{}),
+            std::make_pair(crane::obj(crane_erase_fn([](const auto &) {
+              return true;
+            })), crane::obj(crane_erase_fn([](const auto &) {
+              return std::deque<crane::obj>{};
+            })))),
         [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
           return _a1;
-        }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
-               std::pair<crane::obj, crane::obj>>::
-              existt(
-                  std::
-                      make_pair(Nonterminal::ITEMS,
-                                [](auto _a0, auto _a1) {
-                                  _a1.push_front(_a0);
-                                  return _a1;
-                                }(Symbol::
-                                      t(),
-                                  [](auto _a0, auto _a1) {
-                                    _a1.push_front(_a0);
-                                    return _a1;
-                                  }(Symbol::nt(Nonterminal::ITEMS),
-                                    std::deque<Symbol>{}))),
-                  std::make_pair(
-                      crane::obj(
-                          crane_erase_fn([](const auto &) { return true; })),
-                      crane::obj(crane_erase_fn([](const auto &tup) {
-                        const auto &[n, y] =
-                            crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                tup);
-                        const auto &[ts, _x] =
-                            crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                y);
-                        return [](auto _a0, auto _a1) {
-                          _a1.push_front(_a0);
-                          return _a1;
-                        }(elt{crane::any_cast<uint64_t>(n),
-                               crane::any_cast<uint64_t>(n)},
-                               crane::any_cast<std::deque<crane::obj>>(ts));
-                      })))),
-          std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
-                          std::pair<crane::obj, crane::obj>>>{})));
-
+        }(
+            SigT<std::pair<Nonterminal, std::deque<Symbol>>,
+                 std::pair<crane::obj, crane::obj>>::existt(
+                std::make_pair(Nonterminal::ITEMS, [](auto _a0, auto _a1) {
+                  _a1.push_front(_a0);
+                  return _a1;
+                }(Symbol::t(), [](auto _a0, auto _a1) {
+                  _a1.push_front(_a0);
+                  return _a1;
+                }(Symbol::nt(Nonterminal::ITEMS), std::deque<Symbol>{}))),
+                std::make_pair(crane::obj(crane_erase_fn([](const auto &) {
+                  return true;
+                })), crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[n, y] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  const auto &[ts, _x] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y);
+                  return [](auto _a0, auto _a1) {
+                    _a1.push_front(_a0);
+                    return _a1;
+                  }(elt{crane::any_cast<uint64_t>(n),
+                        crane::any_cast<uint64_t>(n)},
+                    crane::any_cast<std::deque<crane::obj>>(ts));
+                })))),
+            std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
+                            std::pair<crane::obj, crane::obj>>>{})));
 uint64_t num_entries(std::monostate _x);
 
 #endif // INCLUDED_GRAMMAR_RECORD_LIST_FIELD

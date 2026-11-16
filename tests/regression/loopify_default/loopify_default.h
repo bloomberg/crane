@@ -106,6 +106,7 @@ public:
     }
   }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct LoopifyDefault {
@@ -114,17 +115,13 @@ struct LoopifyDefault {
   static uint64_t sum(const List<uint64_t> &l);
   static uint64_t len(const List<uint64_t> &l);
   static inline const List<uint64_t> merged = merge_steps(
-      UINT64_C(6),
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
+      UINT64_C(6), List<uint64_t>::cons(
+          UINT64_C(1), List<uint64_t>::cons(
               UINT64_C(3),
-              List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(4),
-              List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()))));
+              List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))), List<
+          uint64_t>::cons(UINT64_C(2), List<uint64_t>::cons(
+                              UINT64_C(4), List<uint64_t>::cons(
+                                  UINT64_C(6), List<uint64_t>::nil()))));
   static inline const uint64_t merged_len = len(merged);
   static inline const uint64_t merged_sum = sum(merged);
   static inline const uint64_t merged_head = merged.hd(UINT64_C(99));

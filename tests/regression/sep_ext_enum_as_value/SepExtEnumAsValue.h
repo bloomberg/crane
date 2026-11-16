@@ -7,27 +7,28 @@
 #include "Datatypes.h"
 
 namespace SepExtEnumAsValue {
-
 enum class Color;
 enum class Color { RED, GREEN, BLUE };
 template <typename M>
 concept ColorParam = requires {
-  requires(
-      requires {
-        { M::default_ } -> std::convertible_to<Color>;
-      } ||
-      requires {
-        { M::default_() } -> std::convertible_to<Color>;
-      });
+  requires (requires {
+    {
+      M::default_
+    }
+    -> std::convertible_to<Color>;
+  } || requires {
+    {
+      M::default_()
+    }
+    -> std::convertible_to<Color>;
+  });
 };
 
 template <ColorParam P> struct UseColor {
   static const Color &my_default() {
     static const Color v = [] {
-      if constexpr (requires { P::default_(); })
-        return P::default_();
-      else
-        return P::default_;
+      if constexpr (requires { P::default_(); }) return P::default_();
+      else return P::default_;
     }();
     return v;
   }
@@ -35,10 +36,8 @@ template <ColorParam P> struct UseColor {
   static const typename Datatypes::template List<Color> &color_list() {
     static const typename Datatypes::template List<Color> v =
         Datatypes::template List<Color>::cons(
-            Color::RED,
-            Datatypes::template List<Color>::cons(
-                Color::GREEN,
-                Datatypes::template List<Color>::cons(
+            Color::RED, Datatypes::template List<Color>::cons(
+                Color::GREEN, Datatypes::template List<Color>::cons(
                     Color::BLUE, Datatypes::template List<Color>::nil())));
     return v;
   }
@@ -54,7 +53,6 @@ template <ColorParam P> struct UseColor {
     }
   }
 };
-
 } // namespace SepExtEnumAsValue
 
 #endif // INCLUDED_SEPEXTENUMASVALUE

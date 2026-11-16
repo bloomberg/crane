@@ -1,9 +1,12 @@
 #include "loopify_advanced_patterns.h"
 
-uint64_t LoopifyAdvancedPatterns::len_impl(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyAdvancedPatterns::len_impl(const List<uint64_t> &l) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -68,10 +71,14 @@ List<uint64_t> LoopifyAdvancedPatterns::as_guard(const List<uint64_t> &l) {
   return std::move(*_root);
 }
 
-uint64_t LoopifyAdvancedPatterns::multi_guard(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyAdvancedPatterns::multi_guard(const List<uint64_t> &l) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -123,10 +130,13 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
   return _result;
 }
 
-uint64_t LoopifyAdvancedPatterns::four_elem(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyAdvancedPatterns::four_elem(const List<uint64_t> &l) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -168,8 +178,7 @@ uint64_t LoopifyAdvancedPatterns::four_elem(
             const auto &[a01, a11] =
                 std::get<typename List<uint64_t>::Cons>(_sv1.v());
             auto &&_sv2 = *a11;
-            if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                    _sv2.v())) {
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv2.v())) {
               _result = UINT64_C(3);
             } else {
               const auto &[a02, a12] =
@@ -193,10 +202,10 @@ uint64_t LoopifyAdvancedPatterns::four_elem(
 }
 
 uint64_t LoopifyAdvancedPatterns::nested_pattern(
-    const List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const List<std::pair<std::pair<uint64_t, uint64_t>,
+                         uint64_t>> &l) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     const List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> *l;
   };
@@ -220,13 +229,16 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> &l = *_f.l;
-      if (std::holds_alternative<typename List<
-              std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Nil>(
-              l.v())) {
+      if (std::holds_alternative<
+              typename List<std::pair<std::pair<uint64_t, uint64_t>,
+                                      uint64_t>>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] = std::get<typename List<
-            std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(l.v());
+        const auto &[a0, a1] =
+            std::get<
+                typename List<
+                    std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(
+                l.v());
         const auto &[p0, c] = a0;
         const auto &[a, b] = p0;
         _stack.emplace_back(CraneCont_a{c, a, b});
@@ -296,10 +308,9 @@ List<uint64_t> LoopifyAdvancedPatterns::cons_computed(uint64_t n,
         next_n = _loop_n;
       }
       auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
-      List<uint64_t> &_node =
-          (_write
-               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
+                                              List<uint64_t>>(std::move(_cell)))
+                                      : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       _loop_n = next_n;
@@ -329,10 +340,9 @@ uint64_t LoopifyAdvancedPatterns::extract_value(
 }
 
 uint64_t LoopifyAdvancedPatterns::sum_shapes(
-    const List<LoopifyAdvancedPatterns::shape>
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const List<LoopifyAdvancedPatterns::shape> &l) { /// CraneEnter: captures
+                                                     /// varying parameters for
+                                                     /// each recursive call.
   struct CraneEnter {
     const List<LoopifyAdvancedPatterns::shape> *l;
   };
@@ -358,9 +368,8 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
               typename List<LoopifyAdvancedPatterns::shape>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<LoopifyAdvancedPatterns::shape>::Cons>(
-                l.v());
+        const auto &[a0, a1] = std::get<
+            typename List<LoopifyAdvancedPatterns::shape>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -373,12 +382,11 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
   return _result;
 }
 
-std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
-LoopifyAdvancedPatterns::count_by_shape(
-    const List<LoopifyAdvancedPatterns::shape>
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+std::pair<std::pair<uint64_t, uint64_t>,
+          uint64_t> LoopifyAdvancedPatterns::count_by_shape(
+    const List<LoopifyAdvancedPatterns::shape> &l) { /// CraneEnter: captures
+                                                     /// varying parameters for
+                                                     /// each recursive call.
   struct CraneEnter {
     const List<LoopifyAdvancedPatterns::shape> *l;
   };
@@ -405,9 +413,8 @@ LoopifyAdvancedPatterns::count_by_shape(
         _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
                                  UINT64_C(0));
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<LoopifyAdvancedPatterns::shape>::Cons>(
-                l.v());
+        const auto &[a0, a1] = std::get<
+            typename List<LoopifyAdvancedPatterns::shape>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -422,9 +429,9 @@ LoopifyAdvancedPatterns::count_by_shape(
               typename LoopifyAdvancedPatterns::shape::Circle>(a0.v_mut())) {
         _result = std::make_pair(
             std::make_pair((circles + UINT64_C(1)), squares), triangles);
-      } else if (std::holds_alternative<
-                     typename LoopifyAdvancedPatterns::shape::Square>(
-                     a0.v_mut())) {
+      } else if (
+          std::holds_alternative<
+              typename LoopifyAdvancedPatterns::shape::Square>(a0.v_mut())) {
         _result = std::make_pair(
             std::make_pair(circles, (squares + UINT64_C(1))), triangles);
       } else {
@@ -453,9 +460,9 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_idx == UINT64_C(0)) {
         auto _value = List<uint64_t>::cons(value, *a1);
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -465,9 +472,10 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
-                          ? 0
-                          : (_loop_idx - UINT64_C(1))));
+        _loop_idx = (
+            ((_loop_idx - UINT64_C(1)) > _loop_idx ? 0
+                                                   : (_loop_idx -
+                                                      UINT64_C(1))));
         continue;
       }
     }

@@ -8,8 +8,7 @@ uint64_t HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
     const auto &[a0, a1, a2] =
         std::get<typename HofClosureEscape::tree::Node>(t.v());
     auto &&_sv0 = *a0;
-    if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
-            _sv0.v())) {
+    if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(_sv0.v())) {
       return (a1 + x);
     } else {
       const auto &[a00, a10, a20] =
@@ -33,8 +32,9 @@ uint64_t HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
 /// When hof_escape returns, captured t is destroyed.
 std::optional<crane::fn<uint64_t(uint64_t)>>
 HofClosureEscape::hof_escape(const HofClosureEscape::tree &t) {
-  return wrap_some(
-      [=](uint64_t _x0) -> uint64_t { return sum_values(t, _x0); });
+  return wrap_some([=](uint64_t _x0) -> uint64_t {
+    return sum_values(t, _x0);
+  });
 }
 
 uint64_t HofClosureEscape::apply_option(

@@ -19,14 +19,12 @@ uint64_t LoopifyShadowUpdateReadsBinding::apply_n(
     } else {
       uint64_t m = _loop_n - 1;
       if (std::holds_alternative<
-              typename List<crane::fn<uint64_t(uint64_t)>>::Nil>(
-              _loop_fs.v())) {
+              typename List<crane::fn<uint64_t(uint64_t)>>::Nil>(_loop_fs.v())) {
         _loop_fs = List<crane::fn<uint64_t(uint64_t)>>::nil();
         _loop_n = m;
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<crane::fn<uint64_t(uint64_t)>>::Cons>(
-                _loop_fs.v());
+        const auto &[a0, a1] = std::get<
+            typename List<crane::fn<uint64_t(uint64_t)>>::Cons>(_loop_fs.v());
         List<crane::fn<uint64_t(uint64_t)>> _next_fs =
             List<crane::fn<uint64_t(uint64_t)>>(*a1);
         _loop_v = a0(_loop_v);

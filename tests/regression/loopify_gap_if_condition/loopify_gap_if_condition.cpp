@@ -1,9 +1,9 @@
 #include "loopify_gap_if_condition.h"
 
-uint64_t LoopifyGapIfCondition::parity(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyGapIfCondition::parity(uint64_t n) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     uint64_t n;
   };

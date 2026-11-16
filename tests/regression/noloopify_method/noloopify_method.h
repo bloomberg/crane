@@ -192,7 +192,8 @@ struct NoloopifyMethod {
   static reader read_with(tree t);
   static inline const uint64_t result =
       read_with(
-          tree::node(tree::node(tree::leaf(), tree::leaf()), tree::leaf()))
+          tree::node(tree::node(tree::leaf(), tree::leaf()),
+                     tree::leaf()))
           .read(UINT64_C(0));
 };
 

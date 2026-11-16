@@ -10,9 +10,10 @@
 #include "ListDef.h"
 
 namespace SepExtProjectionLambda {
-
 template <typename M>
-concept Sig = requires { typename M::A; };
+concept Sig = requires {
+  typename M::A;
+};
 
 template <Sig S> struct Worker {
   struct item {
@@ -24,8 +25,9 @@ template <Sig S> struct Worker {
 
   static typename Datatypes::template List<uint64_t>
   all_labels(const typename Datatypes::template List<item> &xs) {
-    return ListDef::template map<item, uint64_t>(
-        [](const item &i) { return i.label; }, xs);
+    return ListDef::template map<item, uint64_t>([](const item &i) {
+      return i.label;
+    }, xs);
   }
 
   static std::optional<typename S::A>
@@ -45,7 +47,6 @@ template <Sig S> struct Worker {
     }
   }
 };
-
 } // namespace SepExtProjectionLambda
 
 #endif // INCLUDED_SEPEXTPROJECTIONLAMBDA

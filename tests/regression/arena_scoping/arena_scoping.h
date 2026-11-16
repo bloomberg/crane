@@ -147,9 +147,9 @@ public:
   static Tree<A> leaf() { return Tree<A>(Leaf{}); }
 
   static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree<A>(Node{crane::arena_make_shared<Tree<A>>(std::move(t1)),
-                        std::move(x),
-                        crane::arena_make_shared<Tree<A>>(std::move(t2))});
+    return Tree<A>(
+        Node{crane::arena_make_shared<Tree<A>>(std::move(t1)), std::move(x),
+             crane::arena_make_shared<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS

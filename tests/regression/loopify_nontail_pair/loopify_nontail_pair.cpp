@@ -9,15 +9,15 @@ LoopifyNontailPair::classify(const List<uint64_t> &l) {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     return std::make_pair(
         a0, std::make_optional<std::pair<uint64_t, List<uint64_t>>>(
-                std::make_pair(a0, *a1)));
+            std::make_pair(a0, *a1)));
   }
 }
 
 std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>>
-LoopifyNontailPair::countdown(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+LoopifyNontailPair::countdown(const List<uint64_t> &l) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     List<uint64_t> l;
   };

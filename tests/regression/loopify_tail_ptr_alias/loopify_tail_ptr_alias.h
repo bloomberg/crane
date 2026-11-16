@@ -24,9 +24,8 @@
 /// const auto &a0, a1 = std::get<Cons>(_loop_l.v());
 /// const lst *_next_acc = crane_raw(a1);                 // points INTO _loop_l
 /// _loop_s = _loop_s + hd(deref _loop_acc);
-/// _loop_l = lst::cons(0, lst::cons(m, lst::nil()));     // frees the old
-/// _loop_l _loop_acc = _next_acc;                                // now
-/// dangling
+/// _loop_l = lst::cons(0, lst::cons(m, lst::nil())); // frees the old _loop_l
+/// _loop_acc = _next_acc;                                // now dangling
 ///
 /// _next_acc aliases the tail cell owned by _loop_l. Overwriting
 /// _loop_l drops the last shared_ptr to that cell, so the pointer
@@ -99,7 +98,6 @@ struct LoopifyTailPtrAlias {
   static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const lst *l;
     };

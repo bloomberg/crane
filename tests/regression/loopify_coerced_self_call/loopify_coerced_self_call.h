@@ -10,9 +10,9 @@
 #include <utility>
 #include <variant>
 
-template <typename A> struct Sig;
+template <typename A>
+struct Sig; /// A recursive call made through a coercion of its callee is a recursive
 
-/// A recursive call made through a coercion of its callee is a recursive
 /// call.
 ///
 /// Nat.even_EvenT calls itself as (magic even_EvenT) n', the coercion
@@ -37,8 +37,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }

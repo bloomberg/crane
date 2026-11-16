@@ -7,17 +7,20 @@
 #include "Datatypes.h"
 
 namespace NestedTypeScope {
-
 template <typename M>
 concept HasTag = requires {
   typename M::Tag;
-  requires(
-      requires {
-        { M::defTag } -> std::convertible_to<typename M::Tag>;
-      } ||
-      requires {
-        { M::defTag() } -> std::convertible_to<typename M::Tag>;
-      });
+  requires (requires {
+    {
+      M::defTag
+    }
+    -> std::convertible_to<typename M::Tag>;
+  } || requires {
+    {
+      M::defTag()
+    }
+    -> std::convertible_to<typename M::Tag>;
+  });
 };
 
 template <HasTag T> struct RuleMod {
@@ -57,36 +60,38 @@ struct Tags {
 };
 
 using RM = RuleMod<Tags>;
-[[gnu::used]] inline const RM::Rule my_rule =
-    Datatypes::template Prod<Tags::Tag_, Datatypes::Nat>::pair(
-        Tags::Tag_::BAR,
-        Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-            Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                    Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                        Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                            Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                Datatypes::Nat::
-                                    s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                        Datatypes::Nat::
-                                            s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                Datatypes::Nat::
-                                                    s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                        Datatypes::Nat::
-                                                            s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                                Datatypes::Nat::
-                                                                    s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                                        Datatypes::Nat::
-                                                                            o())))))))))))))))))))))))))))))))))))))))))));
-const RM::Rule my_rule2 =
-    Datatypes::template Prod<Tags::Tag_, Datatypes::Nat>::pair(
-        Tags::Tag_::BAZ,
-        Datatypes::Nat::s(Datatypes::Nat::s(
-            Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o()))))))));
+[[gnu::used]] inline const RM::Rule my_rule = Datatypes::template Prod<
+    Tags::Tag_, Datatypes::Nat>::pair(
+    Tags::Tag_::BAR, Datatypes::Nat::s(
+        Datatypes::Nat::s(
+            Datatypes::Nat::s(
+                Datatypes::Nat::s(
+                    Datatypes::Nat::s(
+                        Datatypes::Nat::s(
+                            Datatypes::Nat::s(
+                                Datatypes::Nat::s(
+                                    Datatypes::Nat::s(
+                                        Datatypes::Nat::s(
+                                            Datatypes::Nat::s(
+                                                Datatypes::Nat::s(
+                                                    Datatypes::Nat::s(
+                                                        Datatypes::Nat::s(
+                                                            Datatypes::Nat::s(
+                                                                Datatypes::Nat::s(
+                                                                    Datatypes::Nat::s(
+                                                                        Datatypes::Nat::s(
+                                                                            Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())))))))))))))))))))))))))))))))))))))))))));
+const RM::Rule my_rule2 = Datatypes::template Prod<Tags::Tag_,
+                                                   Datatypes::Nat>::pair(
+    Tags::Tag_::BAZ, Datatypes::Nat::s(
+        Datatypes::Nat::s(
+            Datatypes::Nat::s(
+                Datatypes::Nat::s(
+                    Datatypes::Nat::s(
+                        Datatypes::Nat::s(
+                            Datatypes::Nat::s(Datatypes::Nat::o()))))))));
 Tags::Tag get_tag(const RM::Rule &x0_);
 const Tags::Tag test_tag = get_tag(my_rule);
-
 } // namespace NestedTypeScope
 
 #endif // INCLUDED_NESTEDTYPESCOPE

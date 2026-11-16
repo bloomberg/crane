@@ -20,10 +20,10 @@ ClosureRecursiveBuild::fn_list ClosureRecursiveBuild::build_adders(uint64_t n) {
         return (_self_adder(_self_adder, x_) + 1);
       }
     };
-    auto adder = [=,
-                  adder_impl = std::move(adder_impl)](uint64_t x) -> uint64_t {
-      return adder_impl(adder_impl, x);
-    };
+    auto adder =
+        [=, adder_impl = std::move(adder_impl)](uint64_t x) -> uint64_t {
+          return adder_impl(adder_impl, x);
+        };
     return fn_list::fcons(std::move(adder), build_adders(n_));
   }
 }

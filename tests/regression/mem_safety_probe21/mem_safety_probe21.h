@@ -99,7 +99,6 @@ struct MemSafetyProbe21 {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -213,11 +212,11 @@ struct MemSafetyProbe21 {
     }
   }
 
-  static inline const uint64_t test_cps_sum =
-      cps_sum(tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                         UINT64_C(2),
-                         tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-              [](uint64_t n) { return n; });
+  static inline const uint64_t test_cps_sum = cps_sum(
+      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                 UINT64_C(2),
+                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+      [](uint64_t n) { return n; });
   /// TEST 7: Mutually-referencing recursive call with tree
   /// construction at each level.
   static uint64_t weave(const tree &t1, const tree &t2, uint64_t n);

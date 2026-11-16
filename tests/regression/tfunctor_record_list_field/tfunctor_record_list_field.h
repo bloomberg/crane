@@ -298,8 +298,8 @@ struct TfunctorRecordListField {
         if constexpr (crane_convertible<CraneU, const T &>) {
           return crane_convert<CraneU>(t);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -338,28 +338,30 @@ struct TfunctorRecordListField {
     static bundle<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                  bundle<CraneA0> b) {
       return bundle<CraneA1>{
-          b.tag,
-          TFunctor_list_<TFunctor_operand>::template tfmap<CraneA0, CraneA1>(
+          b.tag, TFunctor_list_<TFunctor_operand>::template tfmap<CraneA0,
+                                                                  CraneA1>(
               std::move(f), b.ops)};
     }
   };
 
   static_assert(TFunctor<TFunctor_bundle>);
   static inline const bundle<Nat> b0 = bundle<Nat>{
-      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
-      List<operand<Nat>>::cons(
-          operand<Nat>::op(Nat::s(Nat::o())),
-          List<operand<Nat>>::cons(operand<Nat>::op(Nat::s(Nat::s(Nat::o()))),
-                                   List<operand<Nat>>::nil()))};
+      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))), List<
+          operand<Nat>>::cons(
+          operand<Nat>::op(Nat::s(Nat::o())), List<operand<Nat>>::cons(
+              operand<Nat>::op(Nat::s(Nat::s(Nat::o()))),
+              List<operand<Nat>>::nil()))};
   static inline const bundle<Nat> b1 =
-      TFunctor_bundle::template tfmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); }, b0);
-  static inline const Nat total = b1.ops.template fold_left<Nat>(
-      [](const Nat &acc, const operand<Nat> &o) {
-        const auto &[t] = o;
-        return acc.add(t);
-      },
-      Nat::o());
+      TFunctor_bundle::template tfmap<Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, b0);
+  static inline const Nat total =
+      b1.ops.template fold_left<Nat>(
+          [](const Nat &acc, const operand<Nat> &o) {
+            const auto &[t] = o;
+            return acc.add(t);
+          },
+          Nat::o());
   static inline const bool is_five =
       total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };

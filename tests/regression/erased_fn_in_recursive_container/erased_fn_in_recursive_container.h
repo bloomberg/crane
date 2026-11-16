@@ -143,18 +143,18 @@ struct ErasedFnInRecursiveContainer {
         : v_([&]() -> variant_t {
             const auto &[a0, a1] =
                 std::get<typename rose<CraneU>::Node>(_other.v());
-            return Node{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a0);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (a1 ? std::make_shared<List<rose<A>>>(
-                                  crane_convert<List<rose<A>>>(*a1))
-                            : nullptr)};
+            return Node{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a0);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (a1 ? std::make_shared<List<rose<A>>>(
+                        crane_convert<List<rose<A>>>(*a1))
+                    : nullptr)};
           }()) {}
 
     static rose<A> node(A a0, List<rose<A>> a1) {
@@ -170,8 +170,8 @@ struct ErasedFnInRecursiveContainer {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (std::holds_alternative<typename List<rose<A>>::Cons>(
-                _lp->v())) {
+            while (
+                std::holds_alternative<typename List<rose<A>>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose<A>>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose<A>>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -227,18 +227,43 @@ struct ErasedFnInRecursiveContainer {
             1);
   }
 
-  static inline const uint64_t run =
-      size<std::optional<crane::fn<uint64_t(uint64_t)>>>(
-          rose<std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
-              std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-                  [](uint64_t x) { return x; }),
-              List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::cons(
-                  rose<std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
-                      std::optional<crane::fn<uint64_t(uint64_t)>>(),
-                      List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::
-                          nil()),
-                  List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::
-                      nil())));
+  static inline const uint64_t run = size<
+      std::optional<crane::fn<uint64_t(uint64_t)>>>(rose<
+                                                        std::optional<
+                                                            crane::fn<
+                                                                uint64_t(
+                                                                    uint64_t)>>>::node(
+                                                        std::make_optional<
+                                                            crane::fn<
+                                                                uint64_t(
+                                                                    uint64_t)>>(
+                                                            [](uint64_t x) {
+                                                              return x;
+                                                            }),
+                                                        List<
+                                                            rose<
+                                                                std::optional<
+                                                                    crane::fn<
+                                                                        uint64_t(
+                                                                            uint64_t)>>>>::cons(
+                                                            rose<
+                                                                std::optional<
+                                                                    crane::fn<
+                                                                        uint64_t(
+                                                                            uint64_t)>>>::node(
+                                                                std::optional<
+                                                                    crane::fn<
+                                                                        uint64_t(
+                                                                            uint64_t)>>(),
+                                                                List<
+                                                                    rose<
+                                                                        std::optional<
+                                                                            crane::fn<uint64_t(uint64_t)>>>>::nil()),
+                                                            List<
+                                                                rose<
+                                                                    std::optional<
+                                                                        crane::fn<
+                                                                            uint64_t(uint64_t)>>>>::nil())));
 };
 
 #endif // INCLUDED_ERASED_FN_IN_RECURSIVE_CONTAINER

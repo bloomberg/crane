@@ -235,15 +235,15 @@ struct DepMatchWildcardUnitArm {
           const auto &[a0] = std::get<typename exp::ELit>(_sv.v());
           return std::move(a0);
         } else if (std::holds_alternative<typename exp::EB>(_sv.v())) {
-          throw std::logic_error(
-              "unreachable: impossible dependent match branch");
+          throw std::logic_error("unreachable: impossible dependent match "
+                                 "branch");
         } else {
           const auto &[t0, a1] = std::get<typename exp::EIf>(_sv.v());
           if (std::holds_alternative<typename ty::TNat>(t0.v())) {
             _loop_self = crane_raw(a1);
           } else {
-            throw std::logic_error(
-                "unreachable: impossible dependent match branch");
+            throw std::logic_error("unreachable: impossible dependent match "
+                                   "branch");
           }
         }
       }
@@ -252,7 +252,7 @@ struct DepMatchWildcardUnitArm {
 
   template <typename T1, typename F0, typename F1, typename F2>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const bool &>
+    std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 exp_rect(F0 &&f, F1 &&f0, F2 &&f1, const ty &, const exp &e) {
     if (std::holds_alternative<typename exp::ELit>(e.v())) {
       const auto &[a0] = std::get<typename exp::ELit>(e.v());

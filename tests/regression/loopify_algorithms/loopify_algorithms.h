@@ -12,9 +12,9 @@
 #include <utility>
 #include <variant>
 
-template <typename A> struct List;
+template <typename A>
+struct List; /// Consolidated UNIQUE list/sequence algorithms.
 
-/// Consolidated UNIQUE list/sequence algorithms.
 struct LoopifyAlgorithms {
   static uint64_t len_impl(const List<uint64_t> &l);
   /// sieve l Sieve of Eratosthenes - filters out multiples.

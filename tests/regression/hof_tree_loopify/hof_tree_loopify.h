@@ -41,8 +41,7 @@ struct HofTreeLoopify {
     template <typename CraneU>
     tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
-                    _other.v())) {
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(_other.v())) {
               return Leaf{};
             } else {
               const auto &[l, x, r] =
@@ -54,9 +53,9 @@ struct HofTreeLoopify {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(x);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (r ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*r))
@@ -120,7 +119,6 @@ struct HofTreeLoopify {
   tree_rect(T2 f, F1 &&f0,
             const tree<T1> &t) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -192,7 +190,6 @@ struct HofTreeLoopify {
   static tree<T2>
   tree_map(F0 &&f, const tree<T1> &t) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -234,8 +231,8 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Node_1{std::move(a1), std::move(_result)});
+        _stack.emplace_back(CraneCont_Node_1{std::move(a1),
+                                             std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -253,7 +250,6 @@ struct HofTreeLoopify {
   tree_fold(T2 base, F1 &&f,
             const tree<T1> &t) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -295,8 +291,8 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Node_1{std::move(a1), std::move(_result)});
+        _stack.emplace_back(CraneCont_Node_1{std::move(a1),
+                                             std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -313,7 +309,6 @@ struct HofTreeLoopify {
   tree_zip_with(F0 &&f, const tree<T1> &t1,
                 const tree<T2> &t2) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree<T2> *t2;
       const tree<T1> *t1;
@@ -370,8 +365,9 @@ struct HofTreeLoopify {
         const tree<T1> &a2 = *_f.a2;
         auto a10 = std::move(_f.a10);
         const tree<T2> &a20 = *_f.a20;
-        _stack.emplace_back(CraneCont_Node_1{std::move(a1), std::move(a10),
-                                             std::move(_result)});
+        _stack.emplace_back(
+            CraneCont_Node_1{std::move(a1), std::move(a10),
+                             std::move(_result)});
         _stack.emplace_back(CraneEnter{&a20, &a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -389,7 +385,6 @@ struct HofTreeLoopify {
   tree_map_accum(F0 &&f, const T3 &acc,
                  const tree<T1> &t) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
       T3 acc;
@@ -453,31 +448,31 @@ struct HofTreeLoopify {
   static inline const tree<uint64_t> small_tree = tree<uint64_t>::node(
       tree<uint64_t>::node(
           tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(1),
-                               tree<uint64_t>::leaf()),
-          UINT64_C(2),
-          tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(3),
-                               tree<uint64_t>::leaf())),
-      UINT64_C(4),
-      tree<uint64_t>::node(
+                               tree<uint64_t>::leaf()), UINT64_C(2), tree<
+              uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(3),
+                              tree<uint64_t>::leaf())), UINT64_C(4), tree<
+          uint64_t>::node(
           tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(5),
-                               tree<uint64_t>::leaf()),
-          UINT64_C(6),
-          tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(7),
-                               tree<uint64_t>::leaf())));
-  static inline const tree<uint64_t> mapped = tree_map<uint64_t, uint64_t>(
-      [](uint64_t x) { return (x * UINT64_C(2)); }, small_tree);
+                               tree<uint64_t>::leaf()), UINT64_C(6), tree<
+              uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(7),
+                              tree<uint64_t>::leaf())));
+  static inline const tree<uint64_t> mapped =
+      tree_map<uint64_t, uint64_t>([](uint64_t x) {
+        return (x * UINT64_C(2));
+      }, small_tree);
   static inline const uint64_t folded = tree_fold<uint64_t, uint64_t>(
-      UINT64_C(0),
-      [](uint64_t l, uint64_t x, uint64_t r) { return ((l + x) + r); },
+      UINT64_C(0), [](uint64_t l, uint64_t x, uint64_t r) {
+        return ((l + x) + r);
+      },
       small_tree);
-  static inline const tree<uint64_t> zipped =
-      tree_zip_with<uint64_t, uint64_t, uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          small_tree, small_tree);
+  static inline const tree<uint64_t> zipped = tree_zip_with<uint64_t, uint64_t,
+                                                            uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      small_tree, small_tree);
   static inline const std::pair<uint64_t, tree<uint64_t>> accum =
-      tree_map_accum<uint64_t, uint64_t, uint64_t>(
-          [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
-          UINT64_C(0), small_tree);
+      tree_map_accum<uint64_t, uint64_t, uint64_t>([](uint64_t s, uint64_t x) {
+        return std::make_pair((s + x), s);
+      }, UINT64_C(0), small_tree);
   static inline const tree<uint64_t> deep = depth_tree(UINT64_C(50000));
 };
 

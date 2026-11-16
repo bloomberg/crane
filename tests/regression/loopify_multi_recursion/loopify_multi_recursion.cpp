@@ -1,9 +1,10 @@
 #include "loopify_multi_recursion.h"
 
-uint64_t LoopifyMultiRecursion::mixed_arith_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel,
+                                        uint64_t n) { /// CraneEnter: captures
+                                                      /// varying parameters for
+                                                      /// each recursive call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -59,8 +60,9 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(
               _result = UINT64_C(1);
             } else {
               _stack.emplace_back(CraneCont1{n, fuel_});
-              _stack.emplace_back(CraneEnter{
-                  (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _stack.emplace_back(
+                  CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                             fuel_});
             }
           }
         }
@@ -91,11 +93,14 @@ uint64_t LoopifyMultiRecursion::mixed_arith(uint64_t n) {
   return mixed_arith_fuel((n * UINT64_C(3)), n);
 }
 
-bool LoopifyMultiRecursion::bool_or_chain_fuel(
-    uint64_t fuel, uint64_t n,
-    uint64_t target) { /// CraneEnter: captures varying parameters for each
-                       /// recursive call.
-
+bool
+LoopifyMultiRecursion::bool_or_chain_fuel(uint64_t fuel, uint64_t n,
+                                          uint64_t target) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -135,8 +140,9 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
           _result = false;
         } else {
           _stack.emplace_back(CraneCont1{n, fuel_});
-          _stack.emplace_back(CraneEnter{
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(
+              CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                         fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
@@ -163,10 +169,12 @@ uint64_t LoopifyMultiRecursion::bool_or_chain(uint64_t n, uint64_t target) {
   }
 }
 
-bool LoopifyMultiRecursion::bool_and_chain_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+bool
+LoopifyMultiRecursion::bool_and_chain_fuel(uint64_t fuel,
+                                           uint64_t n) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -205,8 +213,9 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
           _result = true;
         } else {
           _stack.emplace_back(CraneCont1{n, fuel_});
-          _stack.emplace_back(CraneEnter{
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(
+              CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                         fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
@@ -233,10 +242,9 @@ uint64_t LoopifyMultiRecursion::bool_and_chain(uint64_t n) {
 }
 
 uint64_t LoopifyMultiRecursion::quad_count_leaves(
-    const LoopifyMultiRecursion::quadtree
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyMultiRecursion::quadtree &t) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const LoopifyMultiRecursion::quadtree *t;
   };
@@ -325,10 +333,9 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
 }
 
 uint64_t LoopifyMultiRecursion::quad_depth(
-    const LoopifyMultiRecursion::quadtree
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyMultiRecursion::quadtree &t) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const LoopifyMultiRecursion::quadtree *t;
   };
@@ -418,10 +425,12 @@ uint64_t LoopifyMultiRecursion::quad_depth(
   return _result;
 }
 
-uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel,
+                                         uint64_t n) { /// CraneEnter: captures
+                                                       /// varying parameters
+                                                       /// for each recursive
+                                                       /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -484,8 +493,9 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
               _result = UINT64_C(1);
             } else {
               _stack.emplace_back(CraneCont1{n, fuel_});
-              _stack.emplace_back(CraneEnter{
-                  (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+              _stack.emplace_back(
+                  CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                             fuel_});
             }
           }
         }

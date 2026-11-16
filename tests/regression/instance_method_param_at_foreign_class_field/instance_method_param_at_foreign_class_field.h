@@ -19,30 +19,25 @@ struct Nat;
 template <typename A>struct EOU;
 struct EOU_monad;
 struct natIPtr;using iptr = crane::obj;
-using prov = crane::obj;template <typename
-I>concept Monad = requires {
-    typename I::template m<crane::obj>;
-    { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-    { I::template bind<crane::obj, crane::obj>(std::declval<typename I::template m<crane::obj>>(), std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-  };template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-    typename I::prov;
-    { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
-    { I::prov_nat(std::declval<typename I::prov>()) } -> std::convertible_to<Nat>;
-  };
-/// int_to_ptr returns EOU nat, not EOU ptr.  The carrier field is kept
+using prov = crane::obj;template <typename I>concept Monad = requires {
+                                               typename I::template m<crane::obj>;
+                                               { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+                                               { I::template bind<crane::obj, crane::obj>(std::declval<typename I::template m<crane::obj>>(), std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+                                             };template <typename I>concept IPtr = requires {
+                                                                      typename I::iptr;
+                                                                      typename I::prov;
+                                                                      { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
+                                                                      { I::prov_nat(std::declval<typename I::prov>()) } -> std::convertible_to<Nat>;
+                                                                    };/// int_to_ptr returns EOU nat, not EOU ptr.  The carrier field is kept
 /// -- the instance still builds it from iptr and prov -- but the method's
 /// result stays concrete, so that a definition typed by a class field
 /// projected through a known instance, which is a separate defect, is not on
 /// this reduction's path.  See
 /// instance_carrier_unqualified_at_known_instance.
-template <typename I, typename
-prov>concept ITOP = requires {
-       typename I::ptr;
-       { I::int_to_ptr(std::declval<Nat>(), std::declval<prov>()) } -> std::convertible_to<EOU<Nat>>;
-     };
-struct Nat {
+template <typename I, typename prov>concept ITOP = requires {
+                                      typename I::ptr;
+                                      { I::int_to_ptr(std::declval<Nat>(), std::declval<prov>()) } -> std::convertible_to<EOU<Nat>>;
+                                    };struct Nat {
   // TYPES
 struct O {
 
@@ -88,8 +83,7 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};template <typename
-A>struct EOU {
+};template <typename A>struct EOU {
   // TYPES
 struct Ok {
 A a0;
@@ -106,8 +100,7 @@ public:
 EOU() {}
 explicit EOU(Ok _v) : v_(std::move(_v)) {}
 explicit EOU(Err _v) : v_(std::move(_v)) {}
-template <typename
-CraneU>
+template <typename CraneU>
 EOU(const EOU<CraneU>& _other) : v_([&]() -> variant_t {
 if (std::holds_alternative<typename EOU<CraneU>::Ok>(_other.v())) {
 const auto& [a0] = std::get<typename EOU<CraneU>::Ok>(_other.v());
@@ -133,15 +126,12 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};
-struct EOU_monad {
+};struct EOU_monad {
 template <typename CraneA0> using m = EOU<CraneA0>;
-template <typename
-CraneA0>
+template <typename CraneA0>
 static EOU<CraneA0> ret(CraneA0 a) {
 return EOU<CraneA0>::ok(std::move(a));}
-template <typename CraneA0, typename
-CraneA1>
+template <typename CraneA0, typename CraneA1>
 static EOU<CraneA1> bind(EOU<CraneA0> m, crane::fn<EOU<CraneA1>(CraneA0)> k) {
 if (std::holds_alternative<typename EOU<CraneA0>::Ok>(m.v_mut())) {
 auto& [a0] = std::get<typename EOU<CraneA0>::Ok>(m.v_mut());
@@ -151,15 +141,12 @@ auto& [a0] = std::get<typename EOU<CraneA0>::Err>(m.v_mut());
 return EOU<CraneA1>::err(std::move(a0));
 }}
 };
-static_assert(Monad<EOU_monad>);template <IPtr
-_tcI0>struct PIV {
+static_assert(Monad<EOU_monad>);template <IPtr _tcI0>struct PIV {
 using iptr = typename _tcI0::iptr;
 using prov = typename _tcI0::prov;
 using ptr = std::pair<typename _tcI0::iptr, typename _tcI0::prov>;
 static EOU<Nat> int_to_ptr(Nat i, typename _tcI0::prov pr) {
-return EOU_monad::template bind<typename _tcI0::iptr,
-Nat>(_tcI0::from_Z(std::move(i)),
-[=, pr = std::move(pr)](typename _tcI0::iptr) {
+return EOU_monad::template bind<typename _tcI0::iptr, Nat>(_tcI0::from_Z(std::move(i)), [=, pr = std::move(pr)](typename _tcI0::iptr) {
 return EOU_monad::template ret<Nat>(_tcI0::prov_nat(pr));
 });}
 };

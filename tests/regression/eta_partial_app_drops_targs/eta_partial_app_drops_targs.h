@@ -23,8 +23,7 @@ concept Mon = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template mbind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -236,9 +235,9 @@ template <Mon _tcI0> struct Fun_Mon {
 
   static typename _tcI0::template m<crane::obj> fconst(crane::obj a,
                                                        crane::obj x) {
-    return liftM<_tcI0, crane::obj, crane::obj>(
-        [=](const auto &) { return a; },
-        crane_any_cast<typename _tcI0::template m<crane::obj>>(std::move(x)));
+    return liftM<_tcI0, crane::obj, crane::obj>([=](const auto &) {
+      return a;
+    }, crane_any_cast<typename _tcI0::template m<crane::obj>>(std::move(x)));
   }
 };
 

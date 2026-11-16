@@ -49,13 +49,13 @@ struct ClosureMapEscape {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -134,18 +134,16 @@ struct ClosureMapEscape {
   /// Bug: h=10 captured by &, dangling after match.
   static inline const uint64_t test1 = apply_first(
       map_to_adders(mylist<uint64_t>::mycons(
-          UINT64_C(10),
-          mylist<uint64_t>::mycons(
-              UINT64_C(20), mylist<uint64_t>::mycons(
+                        UINT64_C(10), mylist<uint64_t>::mycons(
+                            UINT64_C(20), mylist<uint64_t>::mycons(
                                 UINT64_C(30), mylist<uint64_t>::mynil())))),
       UINT64_C(5));
   /// test2: Sum of applying all adders to 0.
   /// (0+10) + (0+20) + (0+30) = 60.
   static inline const uint64_t test2 = sum_apply(
       map_to_adders(mylist<uint64_t>::mycons(
-          UINT64_C(10),
-          mylist<uint64_t>::mycons(
-              UINT64_C(20), mylist<uint64_t>::mycons(
+                        UINT64_C(10), mylist<uint64_t>::mycons(
+                            UINT64_C(20), mylist<uint64_t>::mycons(
                                 UINT64_C(30), mylist<uint64_t>::mynil())))),
       UINT64_C(0));
   /// test3: Build adders, noise, then apply.
@@ -153,8 +151,8 @@ struct ClosureMapEscape {
   static inline const uint64_t test3 = []() {
     mylist<crane::fn<uint64_t(uint64_t)>> fns =
         map_to_adders(mylist<uint64_t>::mycons(
-            UINT64_C(100), mylist<uint64_t>::mycons(
-                               UINT64_C(200), mylist<uint64_t>::mynil())));
+                          UINT64_C(100), mylist<uint64_t>::mycons(
+                              UINT64_C(200), mylist<uint64_t>::mynil())));
     return sum_apply(std::move(fns), UINT64_C(1));
   }();
 };

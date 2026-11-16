@@ -220,13 +220,17 @@ public:
 template <typename M>
 concept CONTAINER = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::empty } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::empty() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::empty
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::empty()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
   {
     M::push(std::declval<uint64_t>(), std::declval<typename M::t>())
   } -> std::same_as<typename M::t>;
@@ -298,36 +302,32 @@ struct FunctorComp {
   using QueueOps = ContainerOps<Queue>;
   static inline const List<uint64_t> test_stack =
       StackOps::to_list(StackOps::push_list(
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
-          Stack::empty));
+                            List<uint64_t>::cons(
+                                UINT64_C(1), List<uint64_t>::cons(
+                                    UINT64_C(2), List<uint64_t>::cons(
+                                        UINT64_C(3), List<uint64_t>::nil()))),
+                            Stack::empty));
   static inline const List<uint64_t> test_queue =
       QueueOps::to_list(QueueOps::push_list(
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
-          Queue::empty));
+                            List<uint64_t>::cons(
+                                UINT64_C(1), List<uint64_t>::cons(
+                                    UINT64_C(2), List<uint64_t>::cons(
+                                        UINT64_C(3), List<uint64_t>::nil()))),
+                            Queue::empty));
   static inline const uint64_t test_stack_size =
       Stack::size(StackOps::push_list(
-          List<uint64_t>::cons(
-              UINT64_C(10),
-              List<uint64_t>::cons(
-                  UINT64_C(20),
-                  List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
-          Stack::empty));
+                      List<uint64_t>::cons(
+                          UINT64_C(10), List<uint64_t>::cons(
+                              UINT64_C(20), List<uint64_t>::cons(
+                                  UINT64_C(30), List<uint64_t>::nil()))),
+                      Stack::empty));
   static inline const uint64_t test_queue_size =
       Queue::size(QueueOps::push_list(
-          List<uint64_t>::cons(
-              UINT64_C(10),
-              List<uint64_t>::cons(
-                  UINT64_C(20),
-                  List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
-          Queue::empty));
+                      List<uint64_t>::cons(
+                          UINT64_C(10), List<uint64_t>::cons(
+                              UINT64_C(20), List<uint64_t>::cons(
+                                  UINT64_C(30), List<uint64_t>::nil()))),
+                      Queue::empty));
 };
 
 #endif // INCLUDED_FUNCTOR_COMP

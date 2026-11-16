@@ -2,15 +2,18 @@
 
 AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
                                        const List<String> &k) {
-  static const auto k_1 = crane::immortal(String::string0(
-      Ascii::ascii0(true, true, false, true, false, true, false, false),
-      String::emptystring()));
-  static const auto k_2 = crane::immortal(String::string0(
-      Ascii::ascii0(true, false, false, true, false, true, false, false),
-      String::emptystring()));
-  static const auto k_3 = crane::immortal(String::string0(
-      Ascii::ascii0(false, false, false, true, false, true, false, false),
-      String::emptystring()));
+  static const auto k_1 =
+      crane::immortal(String::string0(Ascii::ascii0(true, true, false, true,
+                                                    false, true, false, false),
+                                      String::emptystring()));
+  static const auto k_2 =
+      crane::immortal(String::string0(Ascii::ascii0(true, false, false, true,
+                                                    false, true, false, false),
+                                      String::emptystring()));
+  static const auto k_3 =
+      crane::immortal(String::string0(Ascii::ascii0(false, false, false, true,
+                                                    false, true, false, false),
+                                      String::emptystring()));
 
   /// CraneEnter: captures varying parameters for each recursive call.
   struct CraneEnter {
@@ -71,9 +74,10 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
 /// tail of the cell before, a cell whose type is the alias.
 AliasSlot::parts AliasSlot::comma_parts(const List<String> &xs,
                                         List<String> k) {
-  static const auto k_1 = crane::immortal(String::string0(
-      Ascii::ascii0(false, false, true, true, false, true, false, false),
-      String::emptystring()));
+  static const auto k_1 =
+      crane::immortal(String::string0(Ascii::ascii0(false, false, true, true,
+                                                    false, true, false, false),
+                                      String::emptystring()));
   std::optional<AliasSlot::parts> _root{};
   crane::shared_box<AliasSlot::parts> *_write = nullptr;
   const List<String> *_loop_xs = &xs;
@@ -94,10 +98,10 @@ AliasSlot::parts AliasSlot::comma_parts(const List<String> &xs,
           (_write ? *(*_write = crane::shared_box<AliasSlot::parts>::make(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write = &crane::get<typename List<String>::Cons>(
-                    crane::get<typename List<String>::Cons>(_node.v_mut())
-                        .l->v_mut())
-                    .l;
+      _write =
+          &crane::get<typename List<String>::Cons>(
+              crane::get<typename List<String>::Cons>(_node.v_mut()).l->v_mut())
+              .l;
       _loop_xs = crane_raw(a1);
       continue;
     }

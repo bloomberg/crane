@@ -135,7 +135,6 @@ struct LoopifyAdvancedLists {
   flat_map(F0 &&f,
            const List<uint64_t> &l) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -179,7 +178,6 @@ struct LoopifyAdvancedLists {
   all_satisfy(F0 &&p,
               const List<uint64_t> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -223,7 +221,6 @@ struct LoopifyAdvancedLists {
   any_satisfy(F0 &&p,
               const List<uint64_t> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };

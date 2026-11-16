@@ -256,10 +256,9 @@ struct LoopifyHofs {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
           auto _cell = typename List<T1>::Cons(a0, nullptr);
-          List<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          List<T1> &_node = (
+              _write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
@@ -280,7 +279,6 @@ struct LoopifyHofs {
   static List<T2>
   flat_map(F0 &&f, const List<T1> &l) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<T1> *l;
     };
@@ -324,7 +322,6 @@ struct LoopifyHofs {
   all_pairs(const List<T1> &l1,
             const List<T2> &l2) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
     struct CraneEnter {
       const List<T1> *l1;
     };
@@ -346,44 +343,48 @@ struct LoopifyHofs {
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<T1> &l1 = *_f.l1;
-        auto pair_with = [&](const T1 &x,
-                             const List<T2> &l) -> List<std::pair<T1, T2>> {
-          /// CraneEnter: captures varying parameters for each recursive call.
-          struct CraneEnter {
-            const List<T2> *l;
-          };
-          /// CraneCont_Cons: saves [a0], resumes after recursive call, then
-          /// processes rest.
-          struct CraneCont_Cons {
-            T2 a0;
-          };
-          using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-          List<std::pair<T1, T2>> _result{};
-          crane::small_vector<CraneFrame> _stack;
-          _stack.emplace_back(CraneEnter{&l});
-          /// Loopified pair_with: CraneEnter -> CraneCont_Cons.
-          while (!_stack.empty()) {
-            CraneFrame _frame = std::move(_stack.back());
-            _stack.pop_back();
-            if (std::holds_alternative<CraneEnter>(_frame)) {
-              auto _f = std::move(std::get<CraneEnter>(_frame));
-              const List<T2> &l = *_f.l;
-              if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-                _result = List<std::pair<T1, T2>>::nil();
-              } else {
-                const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
-                _stack.emplace_back(CraneCont_Cons{a0});
-                _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        auto pair_with =
+            [&](const T1 &x, const List<T2> &l) -> List<std::pair<T1, T2>> {
+              /// CraneEnter: captures varying parameters for each recursive
+              /// call.
+              struct CraneEnter {
+                const List<T2> *l;
+              };
+
+              /// CraneCont_Cons: saves [a0], resumes after recursive call, then
+              /// processes rest.
+              struct CraneCont_Cons {
+                T2 a0;
+              };
+
+              using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+              List<std::pair<T1, T2>> _result{};
+              crane::small_vector<CraneFrame> _stack;
+              _stack.emplace_back(CraneEnter{&l});
+              /// Loopified pair_with: CraneEnter -> CraneCont_Cons.
+              while (!_stack.empty()) {
+                CraneFrame _frame = std::move(_stack.back());
+                _stack.pop_back();
+                if (std::holds_alternative<CraneEnter>(_frame)) {
+                  auto _f = std::move(std::get<CraneEnter>(_frame));
+                  const List<T2> &l = *_f.l;
+                  if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+                    _result = List<std::pair<T1, T2>>::nil();
+                  } else {
+                    const auto &[a0, a1] =
+                        std::get<typename List<T2>::Cons>(l.v());
+                    _stack.emplace_back(CraneCont_Cons{a0});
+                    _stack.emplace_back(CraneEnter{crane_raw(a1)});
+                  }
+                } else {
+                  auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+                  auto a0 = std::move(_f.a0);
+                  _result = List<std::pair<T1, T2>>::cons(
+                      std::make_pair(x, std::move(a0)), std::move(_result));
+                }
               }
-            } else {
-              auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-              auto a0 = std::move(_f.a0);
-              _result = List<std::pair<T1, T2>>::cons(
-                  std::make_pair(x, std::move(a0)), std::move(_result));
-            }
-          }
-          return _result;
-        };
+              return _result;
+            };
         if (std::holds_alternative<typename List<T1>::Nil>(l1.v())) {
           _result = List<std::pair<T1, T2>>::nil();
         } else {
@@ -394,44 +395,48 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a00 = std::move(_f.a00);
-        auto pair_with = [&](const T1 &x,
-                             const List<T2> &l) -> List<std::pair<T1, T2>> {
-          /// CraneEnter: captures varying parameters for each recursive call.
-          struct CraneEnter {
-            const List<T2> *l;
-          };
-          /// CraneCont_Cons: saves [a0], resumes after recursive call, then
-          /// processes rest.
-          struct CraneCont_Cons {
-            T2 a0;
-          };
-          using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-          List<std::pair<T1, T2>> _result{};
-          crane::small_vector<CraneFrame> _stack;
-          _stack.emplace_back(CraneEnter{&l});
-          /// Loopified pair_with: CraneEnter -> CraneCont_Cons.
-          while (!_stack.empty()) {
-            CraneFrame _frame = std::move(_stack.back());
-            _stack.pop_back();
-            if (std::holds_alternative<CraneEnter>(_frame)) {
-              auto _f = std::move(std::get<CraneEnter>(_frame));
-              const List<T2> &l = *_f.l;
-              if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-                _result = List<std::pair<T1, T2>>::nil();
-              } else {
-                const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
-                _stack.emplace_back(CraneCont_Cons{a0});
-                _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        auto pair_with =
+            [&](const T1 &x, const List<T2> &l) -> List<std::pair<T1, T2>> {
+              /// CraneEnter: captures varying parameters for each recursive
+              /// call.
+              struct CraneEnter {
+                const List<T2> *l;
+              };
+
+              /// CraneCont_Cons: saves [a0], resumes after recursive call, then
+              /// processes rest.
+              struct CraneCont_Cons {
+                T2 a0;
+              };
+
+              using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+              List<std::pair<T1, T2>> _result{};
+              crane::small_vector<CraneFrame> _stack;
+              _stack.emplace_back(CraneEnter{&l});
+              /// Loopified pair_with: CraneEnter -> CraneCont_Cons.
+              while (!_stack.empty()) {
+                CraneFrame _frame = std::move(_stack.back());
+                _stack.pop_back();
+                if (std::holds_alternative<CraneEnter>(_frame)) {
+                  auto _f = std::move(std::get<CraneEnter>(_frame));
+                  const List<T2> &l = *_f.l;
+                  if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+                    _result = List<std::pair<T1, T2>>::nil();
+                  } else {
+                    const auto &[a0, a1] =
+                        std::get<typename List<T2>::Cons>(l.v());
+                    _stack.emplace_back(CraneCont_Cons{a0});
+                    _stack.emplace_back(CraneEnter{crane_raw(a1)});
+                  }
+                } else {
+                  auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+                  auto a0 = std::move(_f.a0);
+                  _result = List<std::pair<T1, T2>>::cons(
+                      std::make_pair(x, std::move(a0)), std::move(_result));
+                }
               }
-            } else {
-              auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-              auto a0 = std::move(_f.a0);
-              _result = List<std::pair<T1, T2>>::cons(
-                  std::make_pair(x, std::move(a0)), std::move(_result));
-            }
-          }
-          return _result;
-        };
+              return _result;
+            };
         _result = pair_with(std::move(a00), l2).app(std::move(_result));
       }
     }
@@ -449,9 +454,9 @@ struct LoopifyHofs {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -491,9 +496,9 @@ struct LoopifyHofs {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -536,9 +541,9 @@ struct LoopifyHofs {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -568,9 +573,9 @@ struct LoopifyHofs {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = _loop_l;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t g = _loop_fuel - 1;
@@ -621,7 +626,6 @@ struct LoopifyHofs {
   foldr1(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -674,7 +678,6 @@ struct LoopifyHofs {
   scanr(F0 &&f, uint64_t acc,
         const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                    /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -721,7 +724,6 @@ struct LoopifyHofs {
   scanr1(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -773,7 +775,6 @@ struct LoopifyHofs {
   mapcat(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -818,7 +819,6 @@ struct LoopifyHofs {
   map_maybe(F0 &&f,
             const List<uint64_t> &l) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -870,7 +870,6 @@ struct LoopifyHofs {
   bool_all(F0 &&p,
            const List<uint64_t> &l) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -921,14 +920,13 @@ struct LoopifyHofs {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = *_loop_l1;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l1->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
           auto _value = *_loop_l2;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -988,12 +986,11 @@ struct LoopifyHofs {
   /// max_by f l finds element with maximum f value.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   max_by(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -1052,9 +1049,9 @@ struct LoopifyHofs {
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t m = _loop_n - 1;
@@ -1078,7 +1075,6 @@ struct LoopifyHofs {
   maximum_by(F0 &&cmp,
              const List<uint64_t> &l) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -1133,7 +1129,6 @@ struct LoopifyHofs {
   fold_right(F0 &&f, const List<uint64_t> &l,
              uint64_t acc) { /// CraneEnter: captures varying parameters for
                              /// each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -1177,7 +1172,6 @@ struct LoopifyHofs {
   partition(F0 &&p,
             const List<uint64_t> &l) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -1284,9 +1278,9 @@ struct LoopifyHofs {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -1315,7 +1309,6 @@ struct LoopifyHofs {
   span_split(F0 &&p,
              const List<uint64_t> &l) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -1363,11 +1356,11 @@ struct LoopifyHofs {
 
   /// group_by_eq eq l groups consecutive elements by equality function.
   template <typename F1>
-  static List<List<uint64_t>> group_by_eq_fuel(
-      uint64_t fuel, F1 &&eq,
-      const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+  static List<List<uint64_t>>
+  group_by_eq_fuel(uint64_t fuel, F1 &&eq,
+                   const List<uint64_t> &l) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
     struct CraneEnter {
       const List<uint64_t> *l;
       uint64_t fuel;
@@ -1407,8 +1400,7 @@ struct LoopifyHofs {
             const auto &[a0, a1] =
                 std::get<typename List<uint64_t>::Cons>(l.v());
             auto &&_sv0 = *a1;
-            if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                    _sv0.v())) {
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
               _result = List<List<uint64_t>>::cons(
                   List<uint64_t>::cons(a0, List<uint64_t>::nil()),
                   List<List<uint64_t>>::nil());
@@ -1461,11 +1453,10 @@ struct LoopifyHofs {
 
   /// map_accum_l f acc l maps with accumulator threading.
   template <typename F0>
-  static std::pair<uint64_t, List<uint64_t>>
-  map_accum_l(F0 &&f, uint64_t acc,
-              const List<uint64_t> &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+  static std::pair<uint64_t, List<uint64_t>> map_accum_l(
+      F0 &&f, uint64_t acc,
+      const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                                 /// each recursive call.
     struct CraneEnter {
       const List<uint64_t> *l;
       uint64_t acc;

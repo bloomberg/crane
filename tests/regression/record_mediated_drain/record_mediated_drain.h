@@ -19,13 +19,13 @@ struct RecordMediatedDrain {
     // ACCESSORS
     template <typename CraneU> operator cell<CraneU>() const {
       return {hd, [&]() -> CraneU {
-                if constexpr (crane_convertible<CraneU, const A &>) {
-                  return crane_convert<CraneU>(tl);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(tl);
+        } else {
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
+        }
+      }()};
     }
   };
 

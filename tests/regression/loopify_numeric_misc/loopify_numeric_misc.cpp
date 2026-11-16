@@ -1,9 +1,10 @@
 #include "loopify_numeric_misc.h"
 
-uint64_t LoopifyNumericMisc::sum_abs(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumericMisc::sum_abs(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                       /// varying parameters
+                                                       /// for each recursive
+                                                       /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -41,10 +42,10 @@ uint64_t LoopifyNumericMisc::sum_abs(
   return _result;
 }
 
-uint64_t LoopifyNumericMisc::alternating_ops(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNumericMisc::alternating_ops(uint64_t n) { /// CraneEnter: captures
+                                                  /// varying parameters for
+                                                  /// each recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -95,10 +96,12 @@ uint64_t LoopifyNumericMisc::alternating_ops(
   return _result;
 }
 
-uint64_t LoopifyNumericMisc::count_even(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumericMisc::count_even(const List<uint64_t> &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -136,10 +139,11 @@ uint64_t LoopifyNumericMisc::count_even(
   return _result;
 }
 
-uint64_t LoopifyNumericMisc::count_odd(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumericMisc::count_odd(const List<uint64_t> &l) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -177,10 +181,11 @@ uint64_t LoopifyNumericMisc::count_odd(
   return _result;
 }
 
-uint64_t LoopifyNumericMisc::product(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumericMisc::product(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                       /// varying parameters
+                                                       /// for each recursive
+                                                       /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -218,10 +223,13 @@ uint64_t LoopifyNumericMisc::product(
   return _result;
 }
 
-uint64_t LoopifyNumericMisc::sum_of_squares(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumericMisc::sum_of_squares(const List<uint64_t> &l) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -267,10 +275,11 @@ uint64_t LoopifyNumericMisc::max_two(uint64_t a, uint64_t b) {
   }
 }
 
-uint64_t LoopifyNumericMisc::list_max(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumericMisc::list_max(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                        /// varying parameters
+                                                        /// for each recursive
+                                                        /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -313,10 +322,11 @@ uint64_t LoopifyNumericMisc::list_max(
   return _result;
 }
 
-uint64_t LoopifyNumericMisc::list_min(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumericMisc::list_min(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                        /// varying parameters
+                                                        /// for each recursive
+                                                        /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };

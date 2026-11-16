@@ -156,7 +156,8 @@ struct SelfCallOtherInstance {
               return UINT64_C(20);
             }
           },
-          true, m);
+          true,
+          m);
     }
   }
 

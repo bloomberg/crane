@@ -8,8 +8,7 @@ uint64_t OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
     const auto &[a0, a1, a2] =
         std::get<typename OptionSomeEscape::tree::Node>(t.v());
     auto &&_sv0 = *a0;
-    if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(
-            _sv0.v())) {
+    if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(_sv0.v())) {
       return (a1 + x);
     } else {
       const auto &[a00, a10, a20] =

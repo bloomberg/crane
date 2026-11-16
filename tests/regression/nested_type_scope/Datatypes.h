@@ -10,7 +10,6 @@
 #include <variant>
 
 namespace Datatypes {
-
 struct Nat;
 template <typename A, typename B> struct Prod;
 
@@ -104,7 +103,6 @@ template <typename A, typename B> struct Prod {
     return a0;
   }
 };
-
 } // namespace Datatypes
 
 #endif // INCLUDED_DATATYPES

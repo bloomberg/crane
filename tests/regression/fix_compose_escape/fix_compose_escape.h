@@ -34,8 +34,10 @@ struct FixComposeEscape {
   static inline const uint64_t test1 =
       compose_add(UINT64_C(42), [](uint64_t x) { return x; }, UINT64_C(3));
   /// test2: compose_add 10 double 5 = 2 * (10 + 5) = 30
-  static inline const uint64_t test2 = compose_add(
-      UINT64_C(10), [](uint64_t x) { return (x * UINT64_C(2)); }, UINT64_C(5));
+  static inline const uint64_t test2 =
+      compose_add(UINT64_C(10), [](uint64_t x) {
+        return (x * UINT64_C(2));
+      }, UINT64_C(5));
   /// test3: Compose two different compositions.
   /// compose_add 100 (compose_add 50 id)
   /// = fun x => (compose_add 50 id) (100 + x)

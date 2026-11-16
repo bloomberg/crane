@@ -36,10 +36,14 @@ LoopifyReuseBoolQualified::build(uint64_t n,
 }
 
 uint64_t
-LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst
-                                   &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) { /// CraneEnter:
+                                                                          /// captures
+                                                                          /// varying
+                                                                          /// parameters
+                                                                          /// for
+                                                                          /// each
+                                                                          /// recursive
+                                                                          /// call.
   struct CraneEnter {
     const LoopifyReuseBoolQualified::lst *l;
   };
@@ -98,11 +102,12 @@ LoopifyReuseBoolQualified::incr(LoopifyReuseBoolQualified::lst l) {
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       auto _cell = crane::make_rc_reusing_unchecked(
           std::move(_rs.token), typename LoopifyReuseBoolQualified::lst::Cons(
-                                    (a0 + UINT64_C(1)), nullptr));
+              (a0 + UINT64_C(1)), nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename LoopifyReuseBoolQualified::lst::Cons>(
-                    (*_write)->v_mut())
-                    .a1;
+      _write =
+          &std::get<typename LoopifyReuseBoolQualified::lst::Cons>(
+              (*_write)->v_mut())
+              .a1;
       _own = std::move(_rs.next);
       _loop_l = _own.get();
       continue;

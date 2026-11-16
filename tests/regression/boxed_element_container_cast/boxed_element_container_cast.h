@@ -130,12 +130,10 @@ struct BoxedElementContainerCast {
 
     template <typename T1, typename F0, typename F1, typename F3>
       requires std::is_invocable_r_v<
-                   T1, F0 &,
-                   const crane::list<crane::box<std::pair<std::string, val>>>
-                       &> &&
-               std::is_invocable_r_v<T1, F1 &,
-                                     const crane::list<crane::box<val>> &> &&
-               std::is_invocable_r_v<T1, F3 &, const std::string &>
+          T1, F0 &,
+          const crane::list<crane::box<std::pair<std::string, val>>> &> &&
+      std::is_invocable_r_v<T1, F1 &, const crane::list<crane::box<val>> &> &&
+      std::is_invocable_r_v<T1, F3 &, const std::string &>
     T1 val_rect(F0 &&f, F1 &&f0, T1 f1, F3 &&f2) const {
       if (std::holds_alternative<typename val::VAssoc>(this->v())) {
         const auto &[a0] = std::get<typename val::VAssoc>(this->v());
@@ -168,6 +166,7 @@ struct BoxedElementContainerCast {
   template <typename T1> static T1 terminal_rec(T1 f) {
     return terminal_rect<T1>(std::move(f));
   }
+
   enum class Nonterminal { VALUE, OBJ };
 
   template <typename T1>
@@ -249,44 +248,39 @@ struct BoxedElementContainerCast {
   using grammar_entry = SigT<production, production_semty>;
   static inline const crane::list<grammar_entry> entries = crane::cons(
       SigT<std::pair<Nonterminal, crane::list<symbol>>,
-           std::pair<crane::obj, crane::obj>>::
-          existt(
-              std::make_pair(Nonterminal::VALUE,
-                             crane::cons(symbol::nt(Nonterminal::OBJ),
-                                         crane::list<symbol>{})),
-              std::make_pair(
-                  crane::obj(crane_erase_fn([](const auto &tup) {
-                    const auto &[prs, _x] =
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                    return nodupKeys<val>(
-                        crane_container_cast<
-                            crane::list<std::pair<std::string, val>>>(
-                            crane::any_cast<crane::list<crane::obj>>(prs)));
-                  })),
-                  crane::obj(crane_erase_fn([](const auto &tup) {
-                    const auto &[prs, _x] =
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                    return val::vassoc(
-                        crane_container_cast<crane::list<
-                            crane::box<std::pair<std::string, val>>>>(
-                            crane::any_cast<crane::list<crane::obj>>(prs)));
-                  })))),
+           std::pair<crane::obj, crane::obj>>::existt(
+          std::make_pair(
+              Nonterminal::VALUE,
+              crane::cons(symbol::nt(Nonterminal::OBJ), crane::list<symbol>{})),
+          std::make_pair(
+              crane::obj(crane_erase_fn([](const auto &tup) {
+                const auto &[prs, _x] =
+                    crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                return nodupKeys<val>(
+                    crane_container_cast<
+                        crane::list<std::pair<std::string, val>>>(
+                        crane::any_cast<crane::list<crane::obj>>(prs)));
+              })),
+              crane::obj(crane_erase_fn([](const auto &tup) {
+                const auto &[prs, _x] =
+                    crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                return val::vassoc(
+                    crane_container_cast<
+                        crane::list<crane::box<std::pair<std::string, val>>>>(
+                        crane::any_cast<crane::list<crane::obj>>(prs)));
+              })))),
       crane::cons(
           SigT<std::pair<Nonterminal, crane::list<symbol>>,
-               std::pair<crane::obj, crane::obj>>::
-              existt(
-                  std::make_pair(
-                      Nonterminal::VALUE,
-                      crane::cons(symbol::t(), crane::list<symbol>{})),
-                  std::make_pair(
-                      crane::obj(
-                          crane_erase_fn([](const auto &) { return true; })),
-                      crane::obj(crane_erase_fn([](const auto &tup) {
-                        const auto &[s, _x] =
-                            crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                tup);
-                        return val::vstr(crane::any_cast<std::string>(s));
-                      })))),
+               std::pair<crane::obj, crane::obj>>::existt(
+              std::make_pair(Nonterminal::VALUE,
+                             crane::cons(symbol::t(), crane::list<symbol>{})),
+              std::make_pair(crane::obj(crane_erase_fn([](const auto &) {
+                return true;
+              })), crane::obj(crane_erase_fn([](const auto &tup) {
+                const auto &[s, _x] =
+                    crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                return val::vstr(crane::any_cast<std::string>(s));
+              })))),
           crane::list<SigT<std::pair<Nonterminal, crane::list<symbol>>,
                            std::pair<crane::obj, crane::obj>>>{}));
   [[gnu::used]] static inline const t_semty sample_t = []() {

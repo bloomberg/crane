@@ -7,7 +7,6 @@
 #include "Datatypes.h"
 
 namespace SepExtAnyNestedMatch {
-
 using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
@@ -23,12 +22,10 @@ template <SymTypes Ty> struct Destruct {
              const typename Datatypes::template List<typename Ty::sym> &,
              symbols_semty vs) {
     return crane::any_cast<std::pair<crane::obj, crane::obj>>(
-               crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs))
-                   .second)
-        .first;
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs)).second)
+               .first;
   }
 };
-
 } // namespace SepExtAnyNestedMatch
 
 #endif // INCLUDED_SEPEXTANYNESTEDMATCH

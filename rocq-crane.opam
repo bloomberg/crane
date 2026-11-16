@@ -9,7 +9,6 @@ depends: [
   "coq" {>= "9.0.0" & < "9.1"}
   "rocq-runtime"
   "conf-clang"
-  "conf-clang-format"
   "coq-equations" {with-test}
   "coq-itree"
   "coq-paco"

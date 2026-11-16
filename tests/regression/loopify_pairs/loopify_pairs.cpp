@@ -2,11 +2,13 @@
 
 /// Consolidated UNIQUE pair/tuple operations.
 /// unzip l splits list of nat pairs into pair of lists.
-std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>
-LoopifyPairs::unzip(const LoopifyPairs::list<std::pair<uint64_t, uint64_t>>
-                        &l) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+std::pair<LoopifyPairs::list<uint64_t>,
+          LoopifyPairs::list<uint64_t>> LoopifyPairs::unzip(
+    const LoopifyPairs::list<std::pair<uint64_t,
+                                       uint64_t>> &l) { /// CraneEnter: captures
+                                                        /// varying parameters
+                                                        /// for each recursive
+                                                        /// call.
   struct CraneEnter {
     const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> *l;
   };
@@ -19,8 +21,8 @@ LoopifyPairs::unzip(const LoopifyPairs::list<std::pair<uint64_t, uint64_t>>
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_x>;
-  std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>
-      _result{};
+  std::pair<LoopifyPairs::list<uint64_t>,
+            LoopifyPairs::list<uint64_t>> _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&l});
   /// Loopified unzip: CraneEnter -> CraneCont_x.
@@ -56,12 +58,12 @@ LoopifyPairs::unzip(const LoopifyPairs::list<std::pair<uint64_t, uint64_t>>
 
 /// partition3 pivot l three-way partition around pivot.
 std::pair<LoopifyPairs::list<uint64_t>,
-          std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>>
-LoopifyPairs::partition3(uint64_t pivot,
-                         const LoopifyPairs::list<uint64_t>
-                             &l) { /// CraneEnter: captures varying parameters
-                                   /// for each recursive call.
-
+          std::pair<LoopifyPairs::list<uint64_t>,
+                    LoopifyPairs::list<uint64_t>>> LoopifyPairs::partition3(
+    uint64_t pivot,
+    const LoopifyPairs::list<uint64_t> &l) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyPairs::list<uint64_t> *l;
   };
@@ -73,10 +75,9 @@ LoopifyPairs::partition3(uint64_t pivot,
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-  std::pair<
-      LoopifyPairs::list<uint64_t>,
-      std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>>
-      _result{};
+  std::pair<LoopifyPairs::list<uint64_t>, std::pair<
+                LoopifyPairs::list<uint64_t>,
+                LoopifyPairs::list<uint64_t>>> _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&l});
   /// Loopified partition3: CraneEnter -> CraneCont_Cons.
@@ -108,14 +109,12 @@ LoopifyPairs::partition3(uint64_t pivot,
       } else {
         if (a0 == pivot) {
           _result = std::make_pair(
-              std::move(lt),
-              std::make_pair(list<uint64_t>::cons(a0, std::move(eq)),
-                             std::move(gt)));
+              std::move(lt), std::make_pair(
+                  list<uint64_t>::cons(a0, std::move(eq)), std::move(gt)));
         } else {
           _result = std::make_pair(
-              std::move(lt),
-              std::make_pair(std::move(eq),
-                             list<uint64_t>::cons(a0, std::move(gt))));
+              std::move(lt), std::make_pair(
+                  std::move(eq), list<uint64_t>::cons(a0, std::move(gt))));
         }
       }
     }
@@ -124,11 +123,10 @@ LoopifyPairs::partition3(uint64_t pivot,
 }
 
 /// min_max l finds both min and max in one pass.
-std::pair<uint64_t, uint64_t>
-LoopifyPairs::min_max(const LoopifyPairs::list<uint64_t>
-                          &l) { /// CraneEnter: captures varying parameters for
-                                /// each recursive call.
-
+std::pair<uint64_t, uint64_t> LoopifyPairs::min_max(
+    const LoopifyPairs::list<uint64_t> &l) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyPairs::list<uint64_t> *l;
   };
@@ -177,11 +175,10 @@ LoopifyPairs::min_max(const LoopifyPairs::list<uint64_t>
 }
 
 /// sum_and_count computes both in one pass.
-std::pair<uint64_t, uint64_t>
-LoopifyPairs::sum_and_count(const LoopifyPairs::list<uint64_t>
-                                &l) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+std::pair<uint64_t, uint64_t> LoopifyPairs::sum_and_count(
+    const LoopifyPairs::list<uint64_t> &l) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyPairs::list<uint64_t> *l;
   };
@@ -224,11 +221,10 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<uint64_t>
 }
 
 /// sum_prod_count triple accumulator.
-std::pair<uint64_t, std::pair<uint64_t, uint64_t>>
-LoopifyPairs::sum_prod_count(const LoopifyPairs::list<uint64_t>
-                                 &l) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+std::pair<uint64_t, std::pair<uint64_t, uint64_t>> LoopifyPairs::sum_prod_count(
+    const LoopifyPairs::list<uint64_t> &l) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyPairs::list<uint64_t> *l;
   };
@@ -296,13 +292,14 @@ LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
       if (k == key) {
         auto _cell = typename LoopifyPairs::list<uint64_t>::Cons(v, nullptr);
         LoopifyPairs::list<uint64_t> &_node =
-            (_write
-                 ? *(*_write = std::make_shared<LoopifyPairs::list<uint64_t>>(
-                         std::move(_cell)))
-                 : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename LoopifyPairs::list<uint64_t>::Cons>(
-                      _node.v_mut())
-                      .l;
+            (
+                _write ? *(*_write = std::make_shared<
+                               LoopifyPairs::list<uint64_t>>(std::move(_cell)))
+                       : _root.emplace(std::move(_cell)));
+        _write =
+            &std::get<typename LoopifyPairs::list<uint64_t>::Cons>(
+                _node.v_mut())
+                .l;
         _loop_l = crane_raw(a1);
         continue;
       } else {
@@ -344,9 +341,11 @@ LoopifyPairs::list<std::pair<uint64_t, uint64_t>> LoopifyPairs::swap_pairs(
                           LoopifyPairs::list<std::pair<uint64_t, uint64_t>>>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename LoopifyPairs::list<
-          std::pair<uint64_t, uint64_t>>::Cons>(_node.v_mut())
-                    .l;
+      _write =
+          &std::get<
+              typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Cons>(
+              _node.v_mut())
+              .l;
       _loop_l = crane_raw(a1);
       continue;
     }

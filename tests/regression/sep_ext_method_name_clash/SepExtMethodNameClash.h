@@ -10,7 +10,6 @@
 #include <variant>
 
 namespace SepExtMethodNameClash {
-
 struct Tree;
 
 struct Tree {
@@ -156,10 +155,8 @@ public:
 [[gnu::used]] inline const Tree sample =
     Tree::node(Tree::node(Tree::leaf(), UINT64_C(1), Tree::leaf()), UINT64_C(2),
                Tree::node(Tree::leaf(), UINT64_C(3), Tree::leaf()));
-
 const uint64_t total =
     ((sample.clone0() + sample.leaf0()) + Tree::leaf().leaf0());
-
 } // namespace SepExtMethodNameClash
 
 #endif // INCLUDED_SEPEXTMETHODNAMECLASH

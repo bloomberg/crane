@@ -51,13 +51,13 @@ struct DeepApp {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -102,7 +102,6 @@ struct DeepApp {
   mylist_rect(T2 f, F1 &&f0,
               const mylist<T1> &m) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const mylist<T1> *m;
     };
@@ -168,10 +167,9 @@ struct DeepApp {
         const auto &[a0, a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l1->v());
         auto _cell = typename mylist<T1>::Mycons(a0, nullptr);
-        mylist<T1> &_node =
-            (_write
-                 ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
-                 : _root.emplace(std::move(_cell)));
+        mylist<T1> &_node = (
+            _write ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write = &std::get<typename mylist<T1>::Mycons>(_node.v_mut()).a1;
         _loop_l1 = crane_raw(a1);
         continue;
@@ -197,10 +195,9 @@ struct DeepApp {
         const auto &[a0, a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l->v());
         auto _cell = typename mylist<T2>::Mycons(f(a0), nullptr);
-        mylist<T2> &_node =
-            (_write
-                 ? *(*_write = std::make_shared<mylist<T2>>(std::move(_cell)))
-                 : _root.emplace(std::move(_cell)));
+        mylist<T2> &_node = (
+            _write ? *(*_write = std::make_shared<mylist<T2>>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write = &std::get<typename mylist<T2>::Mycons>(_node.v_mut()).a1;
         _loop_l = crane_raw(a1);
         continue;
@@ -220,7 +217,6 @@ struct DeepApp {
   static uint64_t
   length(const mylist<T1> &l) { /// CraneEnter: captures varying parameters for
                                 /// each recursive call.
-
     struct CraneEnter {
       const mylist<T1> *l;
     };

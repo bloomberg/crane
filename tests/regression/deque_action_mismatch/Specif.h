@@ -7,7 +7,6 @@
 #include <utility>
 
 namespace Specif {
-
 template <typename A, typename P> struct SigT;
 
 template <typename A, typename P> struct SigT {
@@ -41,7 +40,6 @@ template <typename A, typename P> struct SigT {
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
-
 } // namespace Specif
 
 #endif // INCLUDED_SPECIF

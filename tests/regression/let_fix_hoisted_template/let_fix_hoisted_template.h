@@ -95,10 +95,9 @@ struct LetFixHoistedTemplate {
   static List<uint64_t> reverse_onto(const List<uint64_t> &l);
   static inline const List<uint64_t> test_rev =
       reverse_onto(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+                       UINT64_C(1), List<uint64_t>::cons(
+                           UINT64_C(2), List<uint64_t>::cons(
+                               UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_LET_FIX_HOISTED_TEMPLATE

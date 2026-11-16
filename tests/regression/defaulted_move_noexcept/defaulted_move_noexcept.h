@@ -105,9 +105,9 @@ struct DefaultedMoveNoexcept {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (s ? std::make_shared<seq<A>>(crane_convert<seq<A>>(*s))

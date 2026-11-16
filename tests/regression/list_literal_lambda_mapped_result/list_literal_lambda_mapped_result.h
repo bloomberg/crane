@@ -105,12 +105,13 @@ public:
 
 struct ListLiteralLambdaMappedResult {
   static inline const List<crane::fn<std::optional<uint64_t>(uint64_t)>> fs =
-      List<crane::fn<std::optional<uint64_t>(uint64_t)>>::cons(
-          [](uint64_t x) { return std::make_optional<uint64_t>(x); },
-          List<crane::fn<std::optional<uint64_t>(uint64_t)>>::nil());
+      List<crane::fn<std::optional<uint64_t>(uint64_t)>>::cons([](uint64_t x) {
+        return std::make_optional<uint64_t>(x);
+      }, List<crane::fn<std::optional<uint64_t>(uint64_t)>>::nil());
   static inline const uint64_t from_option = []() -> uint64_t {
-    static const auto hd_1 = crane::immortal(
-        fs.hd([](uint64_t) { return std::optional<uint64_t>(); }));
+    static const auto hd_1 = crane::immortal(fs.hd([](uint64_t) {
+      return std::optional<uint64_t>();
+    }));
     auto _cs = hd_1(UINT64_C(4));
     if (_cs.has_value()) {
       const uint64_t &x = *_cs;
@@ -119,12 +120,13 @@ struct ListLiteralLambdaMappedResult {
       return UINT64_C(0);
     }
   }();
-  static inline const List<crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)>>
-      gs = List<crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)>>::cons(
+  static inline const List<crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)>> gs =
+      List<crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)>>::cons(
           [](uint64_t x) { return std::make_pair(x, x); },
           List<crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)>>::nil());
-  static inline const uint64_t from_pair =
-      gs.hd([](uint64_t x) { return std::make_pair(x, x); })(UINT64_C(3)).first;
+  static inline const uint64_t from_pair = gs.hd([](uint64_t x) {
+    return std::make_pair(x, x);
+  })(UINT64_C(3)).first;
 };
 
 #endif // INCLUDED_LIST_LITERAL_LAMBDA_MAPPED_RESULT

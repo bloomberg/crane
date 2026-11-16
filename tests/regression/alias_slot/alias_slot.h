@@ -44,24 +44,23 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::shared_box<List<A>>::make(
-                                 crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::shared_box<List<A>>::make(
+                       crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -222,7 +221,6 @@ struct AliasSlot {
   static T1 expr_rect(F0 &&f, F1 &&f0,
                       const expr &e) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const expr *e;
     };
@@ -296,44 +294,42 @@ struct AliasSlot {
 
   static line line_of(const expr &e);
   static uint64_t count(const expr &e);
-  static inline const uint64_t sample = count(expr::eadd(
+  static inline const uint64_t sample = count(
       expr::eadd(
-          expr::elit(String::string0(Ascii::ascii0(true, false, false, false,
-                                                   false, true, true, false),
-                                     String::emptystring())),
-          expr::elit(String::string0(Ascii::ascii0(false, true, false, false,
-                                                   false, true, true, false),
-                                     String::emptystring()))),
-      expr::elit(String::string0(
-          Ascii::ascii0(true, true, false, false, false, true, true, false),
-          String::emptystring()))));
-
-  static inline const uint64_t commas =
-      comma_parts(
-          List<String>::cons(
-              String::string0(Ascii::ascii0(true, false, false, false, false,
-                                            true, true, false),
-                              String::emptystring()),
-              List<String>::cons(
+          expr::eadd(
+              expr::elit(
+                  String::string0(Ascii::ascii0(true, false, false, false,
+                                                false, true, true, false),
+                                  String::emptystring())), expr::elit(
                   String::string0(Ascii::ascii0(false, true, false, false,
                                                 false, true, true, false),
+                                  String::emptystring()))), expr::elit(
+              String::string0(Ascii::ascii0(true, true, false, false, false,
+                                            true, true, false),
+                              String::emptystring()))));
+  static inline const uint64_t commas =
+      comma_parts(List<String>::cons(
+                      String::string0(Ascii::ascii0(true, false, false, false,
+                                                    false, true, true, false),
+                                      String::emptystring()), List<String>::cons(
+                          String::string0(
+                              Ascii::ascii0(false, true, false, false, false,
+                                            true, true, false),
+                              String::emptystring()), List<String>::cons(
+                              String::string0(
+                                  Ascii::ascii0(true, true, false, false, false,
+                                                true, true, false),
                                   String::emptystring()),
-                  List<String>::cons(
-                      String::string0(Ascii::ascii0(true, true, false, false,
-                                                    false, true, true, false),
-                                      String::emptystring()),
-                      List<String>::nil()))),
-          List<String>::cons(
-              String::string0(
-                  Ascii::ascii0(true, false, true, false, false, true, true,
-                                false),
-                  String::string0(
-                      Ascii::ascii0(false, true, true, true, false, true, true,
-                                    false),
-                      String::string0(Ascii::ascii0(false, false, true, false,
-                                                    false, true, true, false),
-                                      String::emptystring()))),
-              List<String>::nil()))
+                              List<String>::nil()))), List<String>::cons(
+                      String::string0(
+                          Ascii::ascii0(true, false, true, false, false, true,
+                                        true, false), String::string0(
+                              Ascii::ascii0(false, true, true, true, false,
+                                            true, true, false), String::string0(
+                                  Ascii::ascii0(false, false, true, false,
+                                                false, true, true, false),
+                                  String::emptystring()))),
+                      List<String>::nil()))
           .length();
 };
 

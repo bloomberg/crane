@@ -7,13 +7,17 @@
 template <typename M>
 concept S = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::z } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::z() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::z
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::z()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 template <S X> struct F {

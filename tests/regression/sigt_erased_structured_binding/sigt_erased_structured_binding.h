@@ -248,13 +248,14 @@ struct SigtErasedStructuredBinding {
         std::make_pair(crane::obj(x), crane::obj(crane_erase_fn(f))));
   }
 
-  static Nat
-  score(const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &i);
+  static Nat score(const SigT<crane::obj,
+                              std::pair<crane::obj, crane::obj>> &i);
   static Nat
   total(const List<SigT<crane::obj, std::pair<crane::obj, crane::obj>>> &l);
-  static inline const List<item> ex = List<item>::cons(
-      mkitem<Nat>(Nat::s(Nat::s(Nat::s(Nat::o()))), [](Nat n) { return n; }),
-      List<item>::nil());
+  static inline const List<item> ex =
+      List<item>::cons(mkitem<Nat>(Nat::s(Nat::s(Nat::s(Nat::o()))), [](Nat n) {
+        return n;
+      }), List<item>::nil());
   static inline const Nat run = total(ex);
 };
 

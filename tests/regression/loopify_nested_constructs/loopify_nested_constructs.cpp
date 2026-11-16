@@ -1,9 +1,9 @@
 #include "loopify_nested_constructs.h"
 
-uint64_t LoopifyNestedConstructs::multi_let(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNestedConstructs::multi_let(uint64_t n) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -62,9 +62,10 @@ uint64_t LoopifyNestedConstructs::nested_if_fuel(uint64_t fuel, uint64_t n) {
               _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
               _loop_fuel = fuel_;
             } else {
-              _loop_n = (((_loop_n - UINT64_C(1)) > _loop_n
-                              ? 0
-                              : (_loop_n - UINT64_C(1))));
+              _loop_n = (
+                  ((_loop_n - UINT64_C(1)) > _loop_n ? 0
+                                                     : (_loop_n -
+                                                        UINT64_C(1))));
               _loop_fuel = fuel_;
             }
           } else {
@@ -83,10 +84,10 @@ uint64_t LoopifyNestedConstructs::nested_if(uint64_t n) {
   return nested_if_fuel(n, n);
 }
 
-uint64_t LoopifyNestedConstructs::deep_nest(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNestedConstructs::deep_nest(uint64_t n) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -122,10 +123,10 @@ uint64_t LoopifyNestedConstructs::deep_nest(
   return _result;
 }
 
-uint64_t LoopifyNestedConstructs::let_nested(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNestedConstructs::let_nested(uint64_t n) { /// CraneEnter: captures
+                                                  /// varying parameters for
+                                                  /// each recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -164,10 +165,12 @@ uint64_t LoopifyNestedConstructs::let_nested(
   return _result;
 }
 
-uint64_t LoopifyNestedConstructs::mod_pattern_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel,
+                                          uint64_t n) { /// CraneEnter: captures
+                                                        /// varying parameters
+                                                        /// for each recursive
+                                                        /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -198,8 +201,9 @@ uint64_t LoopifyNestedConstructs::mod_pattern_fuel(
           _result = UINT64_C(1);
         } else {
           _stack.emplace_back(CraneCont1{n});
-          _stack.emplace_back(CraneEnter{
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(
+              CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                         fuel_});
         }
       }
     } else {
@@ -217,10 +221,9 @@ uint64_t LoopifyNestedConstructs::mod_pattern(uint64_t n) {
 }
 
 std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
-LoopifyNestedConstructs::tuple_constr(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+LoopifyNestedConstructs::tuple_constr(uint64_t n) { /// CraneEnter: captures
+                                                    /// varying parameters for
+                                                    /// each recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -264,10 +267,11 @@ LoopifyNestedConstructs::tuple_constr(
   return _result;
 }
 
-uint64_t LoopifyNestedConstructs::alternating_ops(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNestedConstructs::alternating_ops(uint64_t n) { /// CraneEnter: captures
+                                                       /// varying parameters
+                                                       /// for each recursive
+                                                       /// call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -318,10 +322,12 @@ uint64_t LoopifyNestedConstructs::alternating_ops(
   return _result;
 }
 
-bool LoopifyNestedConstructs::chained_comp_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+bool
+LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel,
+                                           uint64_t n) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -360,8 +366,9 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
           _result = true;
         } else {
           _stack.emplace_back(CraneCont1{n, fuel_});
-          _stack.emplace_back(CraneEnter{
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(
+              CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                         fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
@@ -387,10 +394,11 @@ uint64_t LoopifyNestedConstructs::chained_comp(uint64_t n) {
   }
 }
 
-uint64_t LoopifyNestedConstructs::compute_with_lets(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNestedConstructs::compute_with_lets(uint64_t n) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -448,10 +456,10 @@ uint64_t LoopifyNestedConstructs::compute_with_lets(
   return _result;
 }
 
-uint64_t LoopifyNestedConstructs::nested_match(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNestedConstructs::nested_match(uint64_t n) { /// CraneEnter: captures
+                                                    /// varying parameters for
+                                                    /// each recursive call.
   struct CraneEnter {
     uint64_t n;
   };

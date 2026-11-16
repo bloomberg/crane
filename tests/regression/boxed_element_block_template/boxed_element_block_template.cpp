@@ -14,18 +14,19 @@ BoxedElementBlockTemplate::total(const BoxedElementBlockTemplate::rose &r) {
     auto go_impl =
         [](auto &_self_go,
            const crane::list<crane::box<BoxedElementBlockTemplate::rose>> &l)
-        -> uint64_t {
-      if (l.empty()) {
-        return UINT64_C(0);
-      } else {
-        const BoxedElementBlockTemplate::rose &k = l.front();
-        auto t = l.tail();
-        return (total(k) + _self_go(_self_go, t));
-      }
-    };
+             -> uint64_t {
+              if (l.empty()) {
+                return UINT64_C(0);
+              } else {
+                const BoxedElementBlockTemplate::rose &k = l.front();
+                auto t = l.tail();
+                return (total(k) + _self_go(_self_go, t));
+              }
+            };
     auto go =
-        [&](const crane::list<crane::box<BoxedElementBlockTemplate::rose>> &l)
-        -> uint64_t { return go_impl(go_impl, l); };
+        [&](const crane::list<crane::box<BoxedElementBlockTemplate::rose>> &l) -> uint64_t {
+          return go_impl(go_impl, l);
+        };
     return go(kids);
   }());
 }
@@ -38,13 +39,12 @@ BoxedElementBlockTemplate::leaves(const BoxedElementBlockTemplate::rose &r) {
     crane::list<uint64_t> _r;
     _r = crane::cons(
         n0, ListDef::template map<BoxedElementBlockTemplate::rose, uint64_t>(
-                [](const BoxedElementBlockTemplate::rose &k) {
-                  const auto &[n1, kids0] =
-                      std::get<typename BoxedElementBlockTemplate::rose::Node>(
-                          k.v());
-                  return n1;
-                },
-                kids));
+            [](const BoxedElementBlockTemplate::rose &k) {
+              const auto &[n1, kids0] = std::get<
+                  typename BoxedElementBlockTemplate::rose::Node>(k.v());
+              return n1;
+            },
+            kids));
     return _r;
   }();
 }

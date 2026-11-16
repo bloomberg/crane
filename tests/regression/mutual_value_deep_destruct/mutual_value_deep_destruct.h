@@ -12,8 +12,8 @@ struct MutualValueDeepDestruct {
   /// Same mutual-recursive ownership shape as the copy test, but this test does
   /// not copy the value.  It isolates destruction: dropping a deep alternating
   /// a/b value currently recurses through the default unique_ptr destructor
-  /// chain.  The generated classes do not get an iterative mutual destructor,
-  /// so leaving scope after building a deep value overflows the C++ stack.
+  /// chain. The generated classes do not get an iterative mutual destructor, so
+  /// leaving scope after building a deep value overflows the C++ stack.
   struct a;
   struct b;
 

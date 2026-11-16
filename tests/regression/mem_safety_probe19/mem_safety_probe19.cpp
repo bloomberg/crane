@@ -3,8 +3,8 @@
 uint64_t MemSafetyProbe19::option_fn(const MemSafetyProbe19::tree &t,
                                      const MemSafetyProbe19::myopt<uint64_t> &o,
                                      uint64_t n) {
-  if (std::holds_alternative<
-          typename MemSafetyProbe19::myopt<uint64_t>::Mynone>(o.v())) {
+  if (std::holds_alternative<typename MemSafetyProbe19::myopt<uint64_t>::Mynone>(
+          o.v())) {
     return n;
   } else {
     const auto &[a0] =

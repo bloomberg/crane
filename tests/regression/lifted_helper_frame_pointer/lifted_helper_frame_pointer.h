@@ -44,8 +44,7 @@ struct LiftedHelperFramePointer {
     template <typename CraneU>
     tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
-                    _other.v())) {
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(_other.v())) {
               return Leaf{};
             } else {
               const auto &[a0, a1, a2] =
@@ -57,9 +56,9 @@ struct LiftedHelperFramePointer {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a2 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a2))
@@ -70,9 +69,9 @@ struct LiftedHelperFramePointer {
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
     static tree<A> node(tree<A> a0, A a1, tree<A> a2) {
-      return tree<A>(Node{std::make_shared<tree<A>>(std::move(a0)),
-                          std::move(a1),
-                          std::make_shared<tree<A>>(std::move(a2))});
+      return tree<A>(
+          Node{std::make_shared<tree<A>>(std::move(a0)), std::move(a1),
+               std::make_shared<tree<A>>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -124,7 +123,6 @@ struct LiftedHelperFramePointer {
   tree_rect(T2 f, F1 &&f0,
             const tree<T1> &t) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -204,7 +202,6 @@ struct LiftedHelperFramePointer {
   zigzag_crane_go(const tree<T1> a,
                   const tree<T1> b) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree<T1> *b;
       const tree<T1> *a;
@@ -268,7 +265,6 @@ struct LiftedHelperFramePointer {
   go_ref(const tree<T1> &a,
          const tree<T1> &b) { /// CraneEnter: captures varying parameters for
                               /// each recursive call.
-
     struct CraneEnter {
       const tree<T1> *b;
       const tree<T1> *a;

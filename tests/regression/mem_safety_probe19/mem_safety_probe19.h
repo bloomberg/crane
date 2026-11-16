@@ -248,8 +248,8 @@ struct MemSafetyProbe19 {
   };
 
   static inline const uint64_t test_choose =
-      tree::node(tree::leaf(), UINT64_C(42), tree::leaf())
-          .choose_fn(true, UINT64_C(0));
+      tree::node(tree::leaf(), UINT64_C(42), tree::leaf()).choose_fn(
+          true, UINT64_C(0));
 
   /// TEST 2: Return closure from match on option.
   /// The match becomes a top-level Smatch.
@@ -350,10 +350,9 @@ struct MemSafetyProbe19 {
   }
 
   static uint64_t choice_fn(const tree &t, Choice c, uint64_t n);
-  static inline const uint64_t test_choice_left =
-      choice_fn(tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                           UINT64_C(7), tree::leaf()),
-                Choice::CLEFT, UINT64_C(0));
+  static inline const uint64_t test_choice_left = choice_fn(
+      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                 UINT64_C(7), tree::leaf()), Choice::CLEFT, UINT64_C(0));
   /// tree_sum = 3 + 7 = 10. f(0) = 10
   static inline const uint64_t test_choice_both =
       choice_fn(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
@@ -370,8 +369,9 @@ struct MemSafetyProbe19 {
     return []() {
       crane::fn<uint64_t(uint64_t)> f = []() {
         auto _pa0 = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
-        return
-            [=](uint64_t _x0) -> uint64_t { return _pa0.choose_fn(true, _x0); };
+        return [=](uint64_t _x0) -> uint64_t {
+          return _pa0.choose_fn(true, _x0);
+        };
       }();
       return (f(UINT64_C(1)) + f(UINT64_C(2)));
     }();
@@ -388,19 +388,20 @@ struct MemSafetyProbe19 {
     return []() {
       crane::fn<uint64_t(uint64_t)> f = []() {
         auto _pa0 = tree::node(tree::leaf(), UINT64_C(15), tree::leaf());
-        return
-            [=](uint64_t _x0) -> uint64_t { return _pa0.choose_fn(true, _x0); };
+        return [=](uint64_t _x0) -> uint64_t {
+          return _pa0.choose_fn(true, _x0);
+        };
       }();
       return apply_to(std::move(f), UINT64_C(10));
     }();
   }();
   static inline const uint64_t test_nested_match =
-      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
-          .nested_match_fn(true, true, UINT64_C(0));
+      tree::node(tree::leaf(), UINT64_C(4), tree::leaf()).nested_match_fn(
+          true, true, UINT64_C(0));
   /// f(0) = 4
   static inline const uint64_t test_nested_match2 =
-      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
-          .nested_match_fn(true, false, UINT64_C(0));
+      tree::node(tree::leaf(), UINT64_C(4), tree::leaf()).nested_match_fn(
+          true, false, UINT64_C(0));
   /// TEST 8: Closure from match, used across let-bindings.
   /// Maximum distance between closure creation and use.
   static inline const uint64_t test_delayed_use = []() {

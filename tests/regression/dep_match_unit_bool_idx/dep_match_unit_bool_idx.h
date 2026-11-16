@@ -45,7 +45,7 @@ struct DepMatchUnitBoolIdx {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const bool &>
+    std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 tagged_rect(F0 &&f, F1 &&f0, bool, const tagged &t) {
     if (std::holds_alternative<typename tagged::TA>(t.v())) {
       const auto &[a0] = std::get<typename tagged::TA>(t.v());

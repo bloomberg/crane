@@ -136,10 +136,11 @@ struct LoopifyAdoptedFixAliasResult {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-  static t<T3> map2_l(F0 &&f, const List<std::pair<uint64_t, T1>>
-                                  &m) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+  static t<T3>
+  map2_l(F0 &&f,
+         const List<std::pair<uint64_t,
+                              T1>> &m) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
     struct CraneEnter {
       const List<std::pair<uint64_t, T1>> *m;
     };
@@ -176,19 +177,20 @@ struct LoopifyAdoptedFixAliasResult {
         auto _f = std::move(std::get<CraneCont_k>(_frame));
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
-        _result = option_cons<T3>(
-            k, f(std::make_optional<T1>(e), std::optional<T2>()),
-            std::move(_result));
+        _result = option_cons<T3>(k, f(std::make_optional<T1>(e),
+                                       std::optional<T2>()),
+                                  std::move(_result));
       }
     }
     return _result;
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-  static t<T3> map2_r(F0 &&f, const List<std::pair<uint64_t, T2>>
-                                  &m) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+  static t<T3>
+  map2_r(F0 &&f,
+         const List<std::pair<uint64_t,
+                              T2>> &m) { /// CraneEnter: captures varying
+                                         /// parameters for each recursive call.
     struct CraneEnter {
       const List<std::pair<uint64_t, T2>> *m;
     };
@@ -237,7 +239,6 @@ struct LoopifyAdoptedFixAliasResult {
   static t<T3> map2(F0 &&f, List<std::pair<uint64_t, T1>> m,
                     const t<T2> &x0_) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
     struct CraneEnter {
       const t<T2> *x0_;
       List<std::pair<uint64_t, T1>> m;
@@ -336,9 +337,9 @@ struct LoopifyAdoptedFixAliasResult {
         std::decay_t<F0> f = std::move(_f.f);
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
-        _result = option_cons<T3>(
-            k, f(std::make_optional<T1>(e), std::optional<T2>()),
-            std::move(_result));
+        _result = option_cons<T3>(k, f(std::make_optional<T1>(e),
+                                       std::optional<T2>()),
+                                  std::move(_result));
       } else if (std::holds_alternative<CraneCont2>(_frame)) {
         auto _f = std::move(std::get<CraneCont2>(_frame));
         std::decay_t<F0> f = std::move(_f.f);

@@ -6,10 +6,13 @@
 /// is miscompiled: the generated names capture the user's, and the loop body
 /// reads the frame stack where it meant to read a constant.
 uint64_t
-LoopifyNameHygiene::depth(const LoopifyNameHygiene::Frame_
-                              &f) { /// CraneEnter: captures varying parameters
-                                    /// for each recursive call.
-
+LoopifyNameHygiene::depth(const LoopifyNameHygiene::Frame_ &f) { /// CraneEnter:
+                                                                 /// captures
+                                                                 /// varying
+                                                                 /// parameters
+                                                                 /// for each
+                                                                 /// recursive
+                                                                 /// call.
   struct CraneEnter {
     const LoopifyNameHygiene::Frame_ *f;
   };
@@ -65,9 +68,10 @@ LoopifyNameHygiene::Frame_ LoopifyNameHygiene::mk(uint64_t n) {
           (_write ? *(*_write = std::make_shared<LoopifyNameHygiene::Frame_>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename LoopifyNameHygiene::Frame_::Resume_Cons_>(
-                    _node.v_mut())
-                    .a0;
+      _write =
+          &std::get<typename LoopifyNameHygiene::Frame_::Resume_Cons_>(
+              _node.v_mut())
+              .a0;
       _loop_n = k;
       continue;
     }
@@ -78,7 +82,6 @@ LoopifyNameHygiene::Frame_ LoopifyNameHygiene::mk(uint64_t n) {
 uint64_t
 LoopifyNameHygiene::locals(uint64_t n) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };

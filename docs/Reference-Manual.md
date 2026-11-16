@@ -800,17 +800,19 @@ values are shared blocks already, or under [`Set Crane Arena`](#set-crane-arena-
 
 ## `Set Crane Format Style`
 
-Set the style passed to `clang-format` when formatting the generated C++.
+Choose whether Crane lays out the generated C++.
 
 ```coq
-Set Crane Format Style "{BasedOnStyle: LLVM, SeparateDefinitionBlocks: Always}".
-Set Crane Format Style "BDE".
+Set Crane Format Style "None".
 ```
 
-The default is the LLVM-based style shown above. The value `"BDE"` is special:
-it invokes `bde-format` rather than `clang-format`. Any other value is handed to
-`clang-format -style=` verbatim, so a `file` value picks up a `.clang-format`
-from the output directory.
+Crane lays out its output itself, in the LLVM style as clang-format applies it
+with `SeparateDefinitionBlocks: Always`: two-space indentation, lines broken at
+80 columns, short function bodies on one line, a blank line between
+definitions, sorted includes. No external formatter is run. The value `"None"`
+keeps the printer's text as written: valid C++, with no indentation and lines
+of any length. Any other value (the default is `"LLVM"`; the clang-format style
+strings earlier versions passed on are accepted) lays the output out.
 
 ---
 

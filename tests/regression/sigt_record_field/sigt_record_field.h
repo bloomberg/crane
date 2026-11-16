@@ -139,8 +139,7 @@ struct SigtRecordField {
             UINT64_C(1)};
   static inline const boxed b2 = boxed{
       SigT<crane::obj, crane::obj>::existt(
-          crane::obj(),
-          List<crane::obj>::cons(
+          crane::obj(), List<crane::obj>::cons(
               UINT64_C(1),
               List<crane::obj>::cons(UINT64_C(2), List<crane::obj>::nil()))),
       UINT64_C(2)};

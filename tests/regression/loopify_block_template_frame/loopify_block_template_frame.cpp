@@ -1,9 +1,9 @@
 #include "loopify_block_template_frame.h"
 
-List<uint64_t> LoopifyBlockTemplateFrame::doubles(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+List<uint64_t>
+LoopifyBlockTemplateFrame::doubles(uint64_t n) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };

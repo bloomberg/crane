@@ -30,19 +30,24 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
-template <typename
-I>concept Params = requires {
-    typename I::base;
-  } && (requires {
-    { I::base_default() } -> std::convertible_to<typename I::base>;
-  } || requires {
-    { I::base_default } -> std::convertible_to<typename I::base>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::base;
+} && (requires {
+  {
+    I::base_default()
+  }
+  -> std::convertible_to<typename I::base>;
+} || requires {
+  {
+    I::base_default
+  }
+  -> std::convertible_to<typename I::base>;
+});
 template <typename I, typename X>
 concept C1 = requires {
   { I::c1(std::declval<X>()) } -> std::convertible_to<X>;
@@ -234,7 +239,7 @@ public:
             const auto &[kids] =
                 std::get<typename Tree<CraneU>::Node>(_other.v());
             return Node{(kids ? std::make_shared<List<Tree<base>>>(
-                                    crane_convert<List<Tree<base>>>(*kids))
+                                  crane_convert<List<Tree<base>>>(*kids))
                               : nullptr)};
           }
         }()) {}
@@ -242,8 +247,7 @@ public:
   static Tree<base> leaf(base b) { return Tree<base>(Leaf{std::move(b)}); }
 
   static Tree<base> node(List<Tree<base>> kids) {
-    return Tree<base>(
-        Node{std::make_shared<List<Tree<base>>>(std::move(kids))});
+    return Tree<base>(Node{std::make_shared<List<Tree<base>>>(std::move(kids))});
   }
 
   // MANIPULATORS
@@ -261,8 +265,7 @@ struct Denote {
                                              F1 &&x0);
   template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<List<T3>> map_monad(
-      const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>>
-          &f,
+      const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
       const List<T2> &l);
   template <typename _tcI0, typename _tcI1, typename _tcI2, typename _tcI3,
             Params _tcI4, typename T1>
@@ -339,8 +342,7 @@ typename _tcI0::template m<T3> Denote::bind(typename _tcI0::template m<T2> x,
 
 template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<List<T3>> Denote::map_monad(
-    const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>>
-        &f,
+    const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
     const List<T2> &l) {
   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
     return _tcI0::template ret<List<T3>>(List<T3>::nil());
@@ -362,8 +364,7 @@ template <typename _tcI0, typename _tcI1, typename _tcI2, typename _tcI3,
   requires C4<_tcI0, T1> && C3<_tcI1, T1> && C2<_tcI2, T1> && C1<_tcI3, T1>
 std::optional<Tree<typename _tcI4::base>>
 Denote::freeze(const Tree<typename _tcI4::base> &t) {
-  if (std::holds_alternative<typename Tree<typename _tcI4::base>::Leaf>(
-          t.v())) {
+  if (std::holds_alternative<typename Tree<typename _tcI4::base>::Leaf>(t.v())) {
     const auto &[b0] =
         std::get<typename Tree<typename _tcI4::base>::Leaf>(t.v());
     return option_monad::template ret<Tree<typename _tcI4::base>>(

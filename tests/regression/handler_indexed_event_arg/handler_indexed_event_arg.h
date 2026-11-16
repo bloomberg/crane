@@ -118,8 +118,8 @@ template <typename T> struct MemM {
       if constexpr (crane_convertible<CraneU, const T &>) {
         return crane_convert<CraneU>(a0);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -150,9 +150,8 @@ Monads::template stateT<st, itree_tc_609e8855cd7ad294, T1>
 fused(const MemM<T1> &m) {
   return run<void, T1>(
       []() {
-        return
-            []<typename T2>(MemM<T2> _x0)
-                -> Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> {
+        return []<typename T2>(MemM<T2> _x0) -> Monads::template stateT<
+            st, itree_tc_609e8855cd7ad294, T2> {
               return base<_tcI0, void>(_x0);
             };
       }(),

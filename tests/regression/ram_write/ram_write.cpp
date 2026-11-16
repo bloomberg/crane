@@ -7,15 +7,13 @@ uint64_t RamWrite::get_main(const RamWrite::ram_reg &rg, uint64_t i) {
 RamWrite::ram_reg RamWrite::upd_main_in_reg(const RamWrite::ram_reg &rg,
                                             uint64_t i, uint64_t v) {
   return ram_reg{update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
-                                      rg.reg_main),
-                 rg.reg_status};
+                                      rg.reg_main), rg.reg_status};
 }
 
 RamWrite::ram_reg RamWrite::upd_stat_in_reg(const RamWrite::ram_reg &rg,
                                             uint64_t i, uint64_t v) {
-  return ram_reg{rg.reg_main,
-                 update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
-                                      rg.reg_status)};
+  return ram_reg{rg.reg_main, update_nth<uint64_t>(
+                     i, (UINT64_C(16) ? v % UINT64_C(16) : v), rg.reg_status)};
 }
 
 RamWrite::ram_reg RamWrite::get_regRAM(const RamWrite::ram_chip &ch,
@@ -23,9 +21,8 @@ RamWrite::ram_reg RamWrite::get_regRAM(const RamWrite::ram_chip &ch,
   return ListDef::template nth<RamWrite::ram_reg>(r, ch.chip_regs, empty_reg);
 }
 
-RamWrite::ram_chip RamWrite::upd_reg_in_chip(const RamWrite::ram_chip &ch,
-                                             uint64_t r,
-                                             const RamWrite::ram_reg &rg) {
+RamWrite::ram_chip RamWrite::upd_reg_in_chip(
+    const RamWrite::ram_chip &ch, uint64_t r, const RamWrite::ram_reg &rg) {
   return ram_chip{update_nth<RamWrite::ram_reg>(r, rg, ch.chip_regs),
                   ch.chip_port};
 }
@@ -36,9 +33,8 @@ RamWrite::ram_chip RamWrite::get_chip(const RamWrite::ram_bank &bk,
                                                    empty_chip);
 }
 
-RamWrite::ram_bank RamWrite::upd_chip_in_bank(const RamWrite::ram_bank &bk,
-                                              uint64_t c,
-                                              const RamWrite::ram_chip &ch) {
+RamWrite::ram_bank RamWrite::upd_chip_in_bank(
+    const RamWrite::ram_bank &bk, uint64_t c, const RamWrite::ram_chip &ch) {
   return ram_bank{update_nth<RamWrite::ram_chip>(c, ch, bk.bank_chips)};
 }
 

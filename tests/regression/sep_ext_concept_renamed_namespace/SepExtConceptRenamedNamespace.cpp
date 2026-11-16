@@ -4,5 +4,4 @@
 #include "Foo.h"
 
 namespace SepExtConceptRenamedNamespace {
-
 } // namespace SepExtConceptRenamedNamespace

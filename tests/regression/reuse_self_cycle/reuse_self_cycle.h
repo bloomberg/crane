@@ -101,9 +101,11 @@ struct ReuseSelfCycle {
   /// test1: prepend_self(1, 2, true) should produce 1, 1, 2.
   /// In Rocq: mycons 1 (mycons 1 (mycons 2 mynil)), length = 3.
   /// With reuse bug: mycons 1 -> itself (cycle), length = infinite loop.
-  static inline const uint64_t test1 = length(prepend_self(
-      mylist::mycons(UINT64_C(1), mylist::mycons(UINT64_C(2), mylist::mynil())),
-      true));
+  static inline const uint64_t test1 =
+      length(prepend_self(
+                 mylist::mycons(UINT64_C(1),
+                                mylist::mycons(UINT64_C(2), mylist::mynil())),
+                 true));
   /// test2: Even simpler - single element list.
   /// prepend_self(42, true) should produce 42, 42, length = 2.
   /// With bug: 42 -> itself, length = infinite.

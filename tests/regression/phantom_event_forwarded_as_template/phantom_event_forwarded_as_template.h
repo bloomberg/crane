@@ -17,15 +17,21 @@ struct Nat;
 template <typename A> struct List;
 struct FailE;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-    { I::width() } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+  { I::width() } -> std::convertible_to<Nat>;
+} && (requires {
+  {
+    I::zero_ptr()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero_ptr
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct Nat {
   // TYPES
@@ -187,14 +193,12 @@ semantic_function<typename _tcI0::ptr, T1> one() {
 template <Params _tcI0, typename T1>
 intrinsic_definitions<typename _tcI0::ptr, T1> defined_intrinsics() {
   return List<std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
-                                 List<typename _tcI0::ptr>,
-                                 std::optional<typename _tcI0::ptr>)>>>::
-      cons(
-          std::make_pair(Nat::o(), one<_tcI0, T1>()),
-          List<
-              std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
-                                 List<typename _tcI0::ptr>,
-                                 std::optional<typename _tcI0::ptr>)>>>::nil());
+                                           List<typename _tcI0::ptr>,
+                                           std::optional<typename _tcI0::ptr>)>>>::cons(
+      std::make_pair(Nat::o(), one<_tcI0, T1>()), List<
+          std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
+                                       List<typename _tcI0::ptr>,
+                                       std::optional<typename _tcI0::ptr>)>>>::nil());
 }
 
 struct PhantomEventForwardedAsTemplate {

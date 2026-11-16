@@ -1,12 +1,11 @@
 #include "name_clash_nested_deep.h"
 
 /// Four levels of nested matching.
-uint64_t NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,
-                                    const NameClashNestedDeep::mylist &b,
-                                    const NameClashNestedDeep::mylist &c,
-                                    const NameClashNestedDeep::mylist &d) {
-  if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
-          a.v())) {
+uint64_t NameClashNestedDeep::deep4(
+    const NameClashNestedDeep::mylist &a, const NameClashNestedDeep::mylist &b,
+    const NameClashNestedDeep::mylist &c,
+    const NameClashNestedDeep::mylist &d) {
+  if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(a.v())) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] =

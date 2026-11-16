@@ -1258,26 +1258,22 @@ let check_no_late_decisions ~planned ~generated =
 
 let buf = Buffer.create 1000
 
-(** Creates a [Format.formatter] for output. In dry-run mode, discards all
-    output. When no file is given, writes to [buf]. *)
-let formatter dry file =
+(** Creates a [Format.formatter] writing the printer's text to [b], or
+    discarding it in dry-run mode.  The margin is unbounded: where the
+    printer's boxes would break is not where the C++ breaks, which
+    {!laid_out} decides. *)
+let formatter dry b =
   let ft =
     if dry then
       Format.make_formatter (fun _ _ _ -> ()) (fun _ -> ())
     else
-      match file with
-      | Some f -> Format.formatter_of_out_channel f
-      | None -> Format.formatter_of_buffer buf
+      Format.formatter_of_buffer b
   in
   (* We never want to see ellipsis ... in extracted code *)
   Format.pp_set_max_boxes ft max_int;
-  (* Reuse the width from "Set Printing Width" if the user set one *)
-  ( match Topfmt.get_margin () with
-  | None -> ()
-  | Some i ->
-    Format.pp_set_margin ft i;
-    Format.pp_set_max_indent ft (i - 10) );
+  Format.pp_set_margin ft 1_000_000;
   (* note: max_indent should be < margin above, otherwise it's ignored *)
+  Format.pp_set_max_indent ft 999_990;
   ft
 
 (** Returns the user-set file comment, or [None] if empty. *)
@@ -1285,123 +1281,31 @@ let get_comment () =
   let s = file_comment () in
   if String.is_empty s then None else Some s
 
-(** Checks if an executable is available on the system PATH. Returns true if the
-    executable can be found. *)
-let executable_available exe =
-  Subprocess.executable_available exe
-
-let bde_format_available () = executable_available "bde-format"
-
-let clang_format_available () = executable_available "clang-format"
-
-(** How much processor time the formatter may take on [text] before Crane
-    keeps it as written.  Crane's output formats at about 2 ms a line, but
-    clang-format's line breaking can blow up on a long, fully qualified,
-    template-heavy expression -- a 4700-line separately extracted Vellvm
-    header ran for minutes and grew past 10 GB -- so a file taking ten times
-    the usual rate is abandoned, and none is given more than two minutes: a
-    whole-program header the size of Vellvm's would take most of an hour even
-    at the usual rate, and is better kept as written.
-
-    The budget is the formatter's own processor time, not wall time: on a
-    machine running many times as many processes as it has processors, a
-    file that formats in ten seconds alone (deep_arith_nesting: 12.6 s of
-    processor time over 86 s of wall time at load 165) ran out of a wall
-    budget and was kept unformatted, differing from a formatted copy in
-    whitespace only.  {!format_wall_ceiling} only catches a formatter that
-    stops making progress without using the processor. *)
-let format_budget text =
-  let lines = ref 0 in
-  String.iter (fun c -> if c = '\n' then incr lines) text;
-  Float.min 120. (30. +. (0.02 *. float_of_int !lines))
-
-(** Wall time after which a formatter is abandoned whatever its processor
-    time: far past any share of a processor a loaded machine leaves it. *)
-let format_wall_ceiling budget = 20. *. budget
-
-(** Whether the formatter was killed for running past {!format_budget}, in
-    which case [what] is reported as left unformatted. *)
-let format_timed_out ~budget what = function
-  | Unix.WSIGNALED s when s = Sys.sigkill ->
-    Feedback.msg_warning
-      Pp.(
-        str "the formatter ran out of time on" ++ spc () ++ str what
-        ++ spc ()
-        ++ str (Printf.sprintf "(%.0f s of processor time);" budget)
-        ++ spc () ++ str "leaving it unformatted" );
-    true
-  | _ -> false
-
-(** Formats a buffer using clang-format or bde-format. Returns the formatted
-    string, or the original buffer contents if formatting fails. *)
-let format_buffer_to_string (buf : Buffer.t) : string =
+(** The printer's text [raw], for the file [file] if any, laid out
+    ({!Cpp_layout.layout}), or kept as written under
+    [Set Crane Format Style "None"].  Text the layout fails on is kept as
+    written, with a warning: it is still the C++ the printer meant. *)
+let laid_out ?(file = "") raw =
   if Table.format_style () = "None" then
-    Buffer.contents buf
+    raw
   else
-    let use_bde = Table.format_style () = "BDE" in
-    let formatter, formatter_args, available =
-      if use_bde then
-        ("bde-format", [], bde_format_available ())
-      else
-        ( "clang-format",
-          ["-style=" ^ Table.format_style ()],
-          clang_format_available () )
-    in
-    if not available then (
+    match Cpp_layout.layout ~file raw with
+    | text -> text
+    | exception (Sys.Break as e) -> raise e
+    | exception e ->
       Feedback.msg_warning
         Pp.(
-          str (if use_bde then "bde-format" else "clang-format")
-          ++ spc ()
-          ++ str "not found: skipping formatting" );
-      Buffer.contents buf )
-    else
-      let raw_output = Buffer.contents buf in
-      let budget = format_budget raw_output in
-      match
-        Subprocess.filter ~cpu_limit:budget
-          ~timeout:(format_wall_ceiling budget) formatter formatter_args
-          raw_output
-      with
-      | exception _ -> raw_output
-      | {status = Unix.WEXITED 0; stdout; _} -> stdout
-      | {status; _} ->
-        ignore (format_timed_out ~budget "the generated code" status);
-        raw_output
+          str "could not lay out" ++ spc ()
+          ++ str (if file = "" then "the generated code" else file)
+          ++ str ":" ++ spc ()
+          ++ str (Printexc.to_string e)
+          ++ str ";" ++ spc () ++ str "leaving it as printed" );
+      raw
 
-(** Runs [clang-format -i] (or [bde-format]) on [filename] in place. No-op
-    if the formatter is unavailable or style is set to ["None"]. *)
-let format_file_inplace (filename : string) : unit =
-  let skip_format = Table.format_style () = "None" in
-  let use_bde = Table.format_style () = "BDE" || is_bde () in
-  let available =
-    if use_bde then
-      bde_format_available ()
-    else
-      clang_format_available ()
-  in
-  if not available then
-    Feedback.msg_warning
-      Pp.(
-        str (if use_bde then "bde-format" else "clang-format")
-        ++ spc ()
-        ++ str "not found: skipping formatting" )
-  else
-    let formatter, formatter_args =
-      if use_bde then
-        ("bde-format", ["-i"; filename])
-      else
-        ("clang-format", ["-i"; "-style=" ^ Table.format_style (); filename])
-    in
-    if skip_format then
-      ()
-    else
-      let budget =
-        format_budget (In_channel.with_open_bin filename In_channel.input_all)
-      in
-      ignore
-        (format_timed_out ~budget filename
-           (Subprocess.run ~cpu_limit:budget
-              ~timeout:(format_wall_ceiling budget) formatter formatter_args ) )
+(** Writes the printer's text in [b] to [file], laid out. *)
+let write_laid_out file b =
+  let text = laid_out ~file (Buffer.contents b) in
+  Out_channel.with_open_bin file (fun oc -> Out_channel.output_string oc text)
 
 (** Filter applied to [opened_libraries ()] in [print_structure_to_file] to
     prune back-edges in the inter-module include graph during separate
@@ -1839,8 +1743,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     | None -> mt ()
   in
   (* Print the implementation *)
-  let cout = if dry then None else Option.map open_out fn in
-  let ft = formatter dry cout in
+  let impl = Buffer.create 65536 in
+  let ft = formatter dry (if fn = None then buf else impl) in
   let comment = get_comment () in
   ( try
       (* The real printing of the implementation *)
@@ -1875,21 +1779,21 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
         in
         pp_with ft wrapper
       | None -> () );
-      Format.pp_print_flush ft ();
-      Option.iter close_out cout
+      Format.pp_print_flush ft ()
     with reraise ->
       Format.pp_print_flush ft ();
-      Option.iter close_out cout;
       raise reraise );
-  (* If not a dry run, format the output file with clang-format *)
-  if not dry then (
-    Option.iter format_file_inplace fn;
-    Option.iter info_file fn );
+  if not dry then
+    Option.iter
+      (fun f ->
+        write_laid_out f impl;
+        info_file f )
+      fn;
   (* Now, let's print the signature *)
   Option.iter
     (fun si ->
-      let cout = open_out si in
-      let ft = formatter false (Some cout) in
+      let sig_buf = Buffer.create 65536 in
+      let ft = formatter false sig_buf in
       ( try
           pp_with ft (spec_header ~unit_includes (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
@@ -1897,20 +1801,17 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
           pp_with ft body_hstruct;
           pp_with ft ns_close;
           pp_with ft (spec_footer (Some si) ());
-          Format.pp_print_flush ft ();
-          close_out cout
+          Format.pp_print_flush ft ()
         with reraise ->
           Format.pp_print_flush ft ();
-          close_out cout;
           raise reraise );
-      (* Format the signature file with clang-format *)
-      format_file_inplace si;
+      write_laid_out si sig_buf;
       info_file si )
     (if dry then None else si);
   (* When extracting to the response window (no files), also print the signature
      part so users can see both .h and .cpp outputs. *)
   if (not dry) && fn = None && si = None then (
-    let ft = formatter false None in
+    let ft = formatter false buf in
     try
       pp_with ft (fnl2 () ++ str "/* Signature (.h) */" ++ fnl ());
       pp_with ft (spec_header ~unit_includes None ());
@@ -1924,8 +1825,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       raise reraise );
   (* Print the buffer content via Rocq standard formatter (ok with rocqide). *)
   if not (Int.equal (Buffer.length buf) 0) then (
-    let formatted_output = format_buffer_to_string buf in
-    Feedback.msg_notice (str formatted_output);
+    Feedback.msg_notice (str (laid_out (Buffer.contents buf)));
     Buffer.reset buf );
   (* Loopify records an outcome per recursive function but reports nothing as
      it goes: a function may be lowered more than once per unit, or lowered
@@ -2540,7 +2440,6 @@ let extract_and_compile ~opaque_access file l =
       false
   in
   if extraction_ok then (
-    format_file_inplace filename;
     (* Phase 2: Compile the generated C++ code with clang *)
     let compilation_ok =
       try
@@ -2670,7 +2569,7 @@ let print_one_decl struc mp decl =
   in
   (* The one box the printers rely on: inside it every break is a newline,
      which is what turns {!Cpp_print.cut2} into the blank line between two
-     declaration groups.  Everything else is clang-format's to lay out. *)
+     declaration groups.  Everything else is {!Cpp_layout}'s to lay out. *)
   v 0 ans
 
 (* Show the extraction of the current ongoing proof *)

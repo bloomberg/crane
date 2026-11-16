@@ -20,10 +20,9 @@ struct LoopifyStrings {
   static List<uint64_t> repeat_string(const List<uint64_t> &s, uint64_t n);
   static List<uint64_t> repeat_with_sep(List<uint64_t> s,
                                         const List<uint64_t> &sep, uint64_t n);
-  static List<uint64_t> string_chain_fuel(uint64_t fuel,
-                                          const List<uint64_t> &s, uint64_t n,
-                                          const List<uint64_t> &sep,
-                                          List<uint64_t> end_marker);
+  static List<uint64_t>
+  string_chain_fuel(uint64_t fuel, const List<uint64_t> &s, uint64_t n,
+                    const List<uint64_t> &sep, List<uint64_t> end_marker);
   static List<uint64_t> string_chain(const List<uint64_t> &s, uint64_t n,
                                      const List<uint64_t> &sep,
                                      List<uint64_t> end_marker);

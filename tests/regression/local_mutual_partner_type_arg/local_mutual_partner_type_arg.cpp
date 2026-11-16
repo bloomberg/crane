@@ -13,24 +13,26 @@ uint64_t LocalMutualPartnerTypeArg::run(uint64_t, uint64_t n) {
       return UINT64_C(1);
     } else {
       uint64_t m = n0 - 1;
-      return _self_g(
-          _self_f, _self_g, [](uint64_t x) { return (x + UINT64_C(1)); }, m, m);
+      return _self_g(_self_f, _self_g, [](uint64_t x) {
+        return (x + UINT64_C(1));
+      }, m, m);
     }
   };
-  auto g_impl = [](auto &_self_f, auto &_self_g,
-                   const crane::fn<uint64_t(uint64_t)> &h, uint64_t x,
-                   uint64_t n0) -> uint64_t {
-    if (n0 <= 0) {
-      return h(x);
-    } else {
-      uint64_t m = n0 - 1;
-      return (_self_f(_self_f, _self_g, m) + UINT64_C(1));
-    }
-  };
+  auto g_impl =
+      [](auto &_self_f, auto &_self_g, const crane::fn<uint64_t(uint64_t)> &h,
+         uint64_t x, uint64_t n0)
+           -> uint64_t {
+            if (n0 <= 0) {
+              return h(x);
+            } else {
+              uint64_t m = n0 - 1;
+              return (_self_f(_self_f, _self_g, m) + UINT64_C(1));
+            }
+          };
   auto f = [&](uint64_t n0) -> uint64_t { return f_impl(f_impl, g_impl, n0); };
-  auto g = [&](const crane::fn<uint64_t(uint64_t)> &h, uint64_t x,
-               uint64_t n0) -> uint64_t {
-    return g_impl(f_impl, g_impl, h, x, n0);
-  };
+  auto g =
+      [&](const crane::fn<uint64_t(uint64_t)> &h, uint64_t x,
+          uint64_t n0)
+           -> uint64_t { return g_impl(f_impl, g_impl, h, x, n0); };
   return f(n);
 }

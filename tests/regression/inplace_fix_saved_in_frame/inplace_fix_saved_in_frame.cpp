@@ -4,7 +4,6 @@ List<List<uint64_t>> InplaceFixSavedInFrame::insert_shift(
     uint64_t x,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -41,11 +40,13 @@ List<List<uint64_t>> InplaceFixSavedInFrame::insert_shift(
           struct CraneEnter {
             List<List<uint64_t>> lsts;
           };
+
           /// CraneCont_Cons: saves [a00], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_Cons {
             List<uint64_t> a00;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
           List<List<uint64_t>> _result{};
           crane::small_vector<CraneFrame> _stack;

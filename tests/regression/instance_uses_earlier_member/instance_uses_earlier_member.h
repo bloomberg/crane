@@ -18,23 +18,35 @@ template <typename ptr> struct St;
 struct natParams;
 using ptr = crane::obj;
 using state = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::ptr>;
-  });
-template <typename
-I>concept MemState = requires {
-    typename I::state;
-    { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::initial_state() } -> std::convertible_to<typename I::state>;
-  } || requires {
-    { I::initial_state } -> std::convertible_to<typename I::state>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
+template <typename I>
+concept MemState = requires {
+  typename I::state;
+  { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
+} && (requires {
+  {
+    I::initial_state()
+  }
+  -> std::convertible_to<typename I::state>;
+} || requires {
+  {
+    I::initial_state
+  }
+  -> std::convertible_to<typename I::state>;
+});
 
 struct Nat {
   // TYPES
@@ -224,6 +236,7 @@ using memM = crane::fn<std::pair<state, a>(state)>;
 template <typename ptr> struct St {
   List<ptr> mem;
 };
+
 template <Params _tcI0> struct StateV;
 
 struct IuMemImpl {
@@ -263,8 +276,9 @@ struct InstanceUsesEarlierMember {
 };
 
 template <Params _tcI0> St<typename _tcI0::ptr> IuMemImpl::empty_st() {
-  return St<typename _tcI0::ptr>{List<typename _tcI0::ptr>::cons(
-      _tcI0::zero(), List<typename _tcI0::ptr>::nil())};
+  return St<typename _tcI0::ptr>{
+      List<typename _tcI0::ptr>::cons(_tcI0::zero(),
+                                      List<typename _tcI0::ptr>::nil())};
 }
 
 template <Params _tcI0>

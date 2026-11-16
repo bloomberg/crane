@@ -16,15 +16,21 @@ struct Nat;
 template <typename A> struct List;
 template <typename I> struct VLike;
 using iptr = crane::obj;
-template <typename
-I>concept Ptr = requires {
-    typename I::iptr;
-    { I::VLike_iptr() } -> std::convertible_to<VLike<typename I::iptr>>;
-  } && (requires {
-    { I::one_iptr() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::one_iptr } -> std::convertible_to<typename I::iptr>;
-  });
+template <typename I>
+concept Ptr = requires {
+  typename I::iptr;
+  { I::VLike_iptr() } -> std::convertible_to<VLike<typename I::iptr>>;
+} && (requires {
+  {
+    I::one_iptr()
+  }
+  -> std::convertible_to<typename I::iptr>;
+} || requires {
+  {
+    I::one_iptr
+  }
+  -> std::convertible_to<typename I::iptr>;
+});
 
 struct Nat {
   // TYPES
@@ -212,8 +218,9 @@ template <typename T1, typename F1> VLike<T1> mk_vlike(const T1 &z, F1 &&f) {
 }
 
 const List<VLike<Nat>> dicts = List<VLike<Nat>>::cons(
-    mk_vlike<Nat>(Nat::o(),
-                  [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); }),
+    mk_vlike<Nat>(Nat::o(), [](const Nat &_x0, const Nat &_x1) {
+      return _x0.add(_x1);
+    }),
     List<VLike<Nat>>::nil());
 
 struct ValuePositionClassPromoted {

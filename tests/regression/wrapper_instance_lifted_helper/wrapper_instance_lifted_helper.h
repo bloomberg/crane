@@ -124,10 +124,10 @@ static_assert(Sized<sized_pair, std::pair<List<uint64_t>, List<bool>>>);
 struct WrapperInstanceLiftedHelper {
   static inline const uint64_t use =
       (sized_pair::size(std::make_pair(
-           List<uint64_t>::cons(
-               UINT64_C(1),
-               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-           List<bool>::cons(true, List<bool>::nil()))) +
+                            List<uint64_t>::cons(
+                                UINT64_C(1), List<uint64_t>::cons(
+                                    UINT64_C(2), List<uint64_t>::nil())),
+                            List<bool>::cons(true, List<bool>::nil()))) +
        Sizes::twice(UINT64_C(1)));
 };
 

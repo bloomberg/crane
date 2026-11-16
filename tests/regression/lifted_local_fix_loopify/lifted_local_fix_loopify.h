@@ -183,10 +183,11 @@ struct LiftedLocalFixLoopify {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, T1 &>
-  static uint64_t weighted_crane_sum_all(
-      F0 &&w, const List<T1> xs) { /// CraneEnter: captures varying parameters
-                                   /// for each recursive call.
-
+  static uint64_t
+  weighted_crane_sum_all(F0 &&w,
+                         const List<T1> xs) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
     struct CraneEnter {
       const List<T1> *xs;
     };

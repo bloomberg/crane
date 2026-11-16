@@ -7,9 +7,10 @@
 #include "Specif.h"
 
 namespace SepExtSigtAny {
-
 template <typename M>
-concept S = requires { typename M::t; };
+concept S = requires {
+  typename M::t;
+};
 
 template <S X> struct MyMod {
   static const typename Specif::template SigT<crane::obj, crane::obj> &ex() {
@@ -19,7 +20,6 @@ template <S X> struct MyMod {
     return v;
   }
 };
-
 } // namespace SepExtSigtAny
 
 #endif // INCLUDED_SEPEXTSIGTANY

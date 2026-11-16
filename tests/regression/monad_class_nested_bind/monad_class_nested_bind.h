@@ -213,8 +213,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template M<crane::obj>>(), std::declval<
             crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
@@ -276,8 +275,9 @@ struct MonadClassNestedBind {
           return _tcI0::template bind<uint64_t, List<uint64_t>>(
               _tcI0::template ret<uint64_t>((n + UINT64_C(1))),
               [=](uint64_t m) {
-                return _tcI0::template ret<List<uint64_t>>(List<uint64_t>::cons(
-                    n, List<uint64_t>::cons(m, List<uint64_t>::nil())));
+                return _tcI0::template ret<List<uint64_t>>(
+                    List<uint64_t>::cons(
+                        n, List<uint64_t>::cons(m, List<uint64_t>::nil())));
               });
         });
   }

@@ -2,8 +2,8 @@
 
 AssocPairList::t AssocPairList::wrap(uint64_t k, const AssocPairList::t &acc) {
   return t::node(List<std::pair<uint64_t, AssocPairList::t>>::cons(
-      std::make_pair(k, acc),
-      List<std::pair<uint64_t, AssocPairList::t>>::nil()));
+                     std::make_pair(k, acc),
+                     List<std::pair<uint64_t, AssocPairList::t>>::nil()));
 }
 
 uint64_t AssocPairList::count(const AssocPairList::t &x) {

@@ -16,8 +16,8 @@ struct ClosureNestedEscape {
   /// Difference from fix_escape_capture: returns TWO fixpoints that both
   /// capture the SAME variable. This tests whether both closures
   /// independently read garbage from the same dangling reference.
-  static std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
-  make_pair_fix(uint64_t n);
+  static std::pair<crane::fn<uint64_t(uint64_t)>,
+                   crane::fn<uint64_t(uint64_t)>> make_pair_fix(uint64_t n);
   /// test1: make_pair_fix(5) returns (add, mul).
   /// add(3) = 5 + 3 = 8, mul(3) = 5 * 3 = 15.
   /// Expected: 8 + 15 = 23.

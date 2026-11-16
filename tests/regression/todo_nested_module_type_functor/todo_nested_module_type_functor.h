@@ -6,17 +6,23 @@
 template <typename M>
 concept INNER = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::zero } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::zero() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::zero
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::zero()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 template <typename M>
-concept OUTER = requires { requires INNER<typename M::X>; };
+concept OUTER = requires {
+  requires INNER<typename M::X>;
+};
 
 struct TodoNestedModuleTypeFunctor {
   template <OUTER Y> struct Use {

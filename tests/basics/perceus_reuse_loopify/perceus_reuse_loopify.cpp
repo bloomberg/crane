@@ -18,7 +18,6 @@ R::lst R::rev1(const R::lst &l) { return rev_append1(l, lst::nil()); }
 
 uint64_t R::sum1(const R::lst &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
   struct CraneEnter {
     const R::lst *l;
   };

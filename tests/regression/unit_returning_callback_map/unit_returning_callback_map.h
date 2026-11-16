@@ -166,28 +166,28 @@ struct UnitReturningCallbackMap {
   /// map was instantiated with.
   static void noop(uint64_t _x);
   static inline const List<std::monostate> units =
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
+      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                               UINT64_C(2), List<uint64_t>::cons(
+                                   UINT64_C(3),
+                                   List<uint64_t>::nil())))
           .template map<std::monostate>([](const uint64_t &_wa0) {
             noop(_wa0);
             return std::monostate{};
           });
-  static inline const List<crane::fn<void(uint64_t)>> callbacks =
-      List<crane::fn<void(uint64_t)>>::cons(
-          noop, List<crane::fn<void(uint64_t)>>::cons(
-                    [](uint64_t) { return std::monostate{}; },
-                    List<crane::fn<void(uint64_t)>>::nil()));
-  static inline const uint64_t run =
-      (units.length() + callbacks
-                            .template map<std::monostate>(
-                                [](const crane::fn<void(uint64_t)> &f) {
-                                  f(UINT64_C(0));
-                                  return std::monostate{};
-                                })
-                            .length());
+  static inline const List<crane::fn<void(uint64_t)>> callbacks = List<
+      crane::fn<void(uint64_t)>>::cons(
+      noop, List<crane::fn<void(uint64_t)>>::cons([](uint64_t) {
+        return std::monostate{};
+      }, List<crane::fn<void(uint64_t)>>::nil()));
+  static inline const uint64_t run = (units.length() + callbacks.template map<
+                                          std::monostate>([](const crane::fn<
+                                                                 void(uint64_t)> &f) {
+                                                                   f(
+                                                                       UINT64_C(
+                                                                           0));
+                                                                   return std::monostate{};
+                                                                 })
+                                                           .length());
 
   struct sink {
     crane::fn<void(uint64_t)> emit;
@@ -196,11 +196,10 @@ struct UnitReturningCallbackMap {
 
   static inline const sink s = sink{noop, std::monostate{}};
   static inline const uint64_t total = ((run + []() -> uint64_t {
-                                          {
-                                            return UINT64_C(1);
-                                          }
-                                        }()) +
-                                            []() -> uint64_t {
+    {
+      return UINT64_C(1);
+    }
+  }()) + []() -> uint64_t {
     {
       return UINT64_C(1);
     }

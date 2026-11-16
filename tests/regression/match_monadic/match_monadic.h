@@ -15,8 +15,7 @@
 #include <variant>
 
 enum class Color;
-template <typename A> struct Tree;
-/// A simple custom inductive for testing
+template <typename A> struct Tree; /// A simple custom inductive for testing
 enum class Color { RED, GREEN, BLUE };
 
 /// A parameterized inductive

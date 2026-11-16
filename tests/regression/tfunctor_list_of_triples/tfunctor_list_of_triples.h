@@ -281,8 +281,8 @@ struct TfunctorListOfTriples {
         if constexpr (crane_convertible<CraneU, const T &>) {
           return crane_convert<CraneU>(t);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -314,8 +314,8 @@ struct TfunctorListOfTriples {
         if constexpr (crane_convertible<CraneU, const T &>) {
           return crane_convert<CraneU>(t);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -340,9 +340,8 @@ struct TfunctorListOfTriples {
 
     // ACCESSORS
     template <typename CraneU> operator block<CraneU>() const {
-      return {crane_convert<
-          List<std::pair<std::pair<Nat, phi<CraneU>>, List<metadata<CraneU>>>>>(
-          blk_phis)};
+      return {crane_convert<List<std::pair<std::pair<Nat, phi<CraneU>>,
+                                           List<metadata<CraneU>>>>>(blk_phis)};
     }
   };
 
@@ -378,44 +377,57 @@ struct TfunctorListOfTriples {
     static block<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                 block<CraneA0> b) {
       return block<CraneA1>{TFunctor_list::template tfmap<
-          std::pair<std::pair<Nat, phi<CraneA0>>, List<metadata<CraneA0>>>,
-          std::pair<std::pair<Nat, phi<CraneA1>>, List<metadata<CraneA1>>>>(
-          [=, f = std::move(f)](const std::pair<std::pair<Nat, phi<CraneA0>>,
-                                                List<metadata<CraneA0>>> &pat) {
-            const auto &[y, md] = pat;
-            const auto &[id, p] = y;
-            return std::make_pair(
-                std::make_pair(
-                    id, TFunctor_phi::template tfmap<CraneA0, CraneA1>(f, p)),
-                TFunctor_list_<TFunctor_md>::template tfmap<CraneA0, CraneA1>(
-                    f, md));
-          },
-          std::move(b).blk_phis)};
+                                std::pair<std::pair<Nat, phi<CraneA0>>,
+                                          List<metadata<CraneA0>>>, std::pair<
+                                    std::pair<Nat, phi<CraneA1>>,
+                                    List<metadata<CraneA1>>>>(
+                                [=, f = std::move(f)](
+                                    const std::pair<
+                                        std::pair<Nat, phi<CraneA0>>,
+                                        List<metadata<CraneA0>>> &pat) {
+                                          const auto &[y, md] = pat;
+                                          const auto &[id, p] = y;
+                                          return std::make_pair(
+                                              std::make_pair(
+                                                  id,
+                                                  TFunctor_phi::template tfmap<
+                                                      CraneA0, CraneA1>(f, p)),
+                                              TFunctor_list_<TFunctor_md>::template tfmap<
+                                                  CraneA0, CraneA1>(f, md));
+                                        },
+                                std::move(b).blk_phis)};
     }
   };
 
   static_assert(TFunctor<TFunctor_block>);
-  static inline const block<Nat> b0 = block<
-      Nat>{List<std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::cons(
-      std::make_pair(std::make_pair(Nat::s(Nat::o()),
-                                    phi<Nat>::phi0(Nat::s(Nat::s(Nat::o())))),
-                     List<metadata<Nat>>::cons(
-                         metadata<Nat>::md(
-                             Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                         List<metadata<Nat>>::nil())),
-      List<std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::nil())};
-  static inline const block<Nat> b1 = TFunctor_block::template tfmap<Nat, Nat>(
-      [](const Nat &x) { return Nat::s(x); }, b0);
+  static inline const block<Nat> b0 =
+      block<Nat>{
+          List<std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::cons(
+              std::make_pair(
+                  std::make_pair(Nat::s(Nat::o()),
+                                 phi<Nat>::phi0(Nat::s(Nat::s(Nat::o())))),
+                  List<metadata<Nat>>::cons(
+                      metadata<Nat>::md(
+                          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                      List<metadata<Nat>>::nil())), List<
+                  std::pair<std::pair<Nat, phi<Nat>>,
+                            List<metadata<Nat>>>>::nil())};
+  static inline const block<Nat> b1 =
+      TFunctor_block::template tfmap<Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, b0);
   static inline const Nat total = []() {
     auto &&_sv = b1.blk_phis;
-    if (std::holds_alternative<typename List<
-            std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::Nil>(
+    if (std::holds_alternative<
+            typename List<
+                std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::Nil>(
             _sv.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1] = std::get<typename List<
-          std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::Cons>(
-          _sv.v());
+      const auto &[a0, a1] =
+          std::get<typename List<
+                       std::pair<std::pair<Nat, phi<Nat>>,
+                                 List<metadata<Nat>>>>::Cons>(_sv.v());
       const auto &[p0, _x0] = a0;
       const auto &[id, p1] = p0;
       const auto &[t0] = p1;

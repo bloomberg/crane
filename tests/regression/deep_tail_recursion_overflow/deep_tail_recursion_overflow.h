@@ -76,10 +76,10 @@ struct DeepTailRecursionOverflow {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-  static T1 chain_rect(F0 &&f, F1 &&f0,
-                       const chain &c) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+  static T1
+  chain_rect(F0 &&f, F1 &&f0,
+             const chain &c) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
     struct CraneEnter {
       const chain *c;
     };

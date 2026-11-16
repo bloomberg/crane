@@ -25,8 +25,8 @@ struct PolyInductive {
         if constexpr (crane_convertible<CraneU, const A &>) {
           return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -239,9 +239,9 @@ struct PolyInductive {
                   std::get<typename ptree<CraneU>::PNode>(_other.v());
               return PNode{
                   (a0 ? std::make_shared<ptree<A>>(crane_convert<ptree<A>>(*a0))
-                      : nullptr),
-                  (a1 ? std::make_shared<ptree<A>>(crane_convert<ptree<A>>(*a1))
-                      : nullptr)};
+                      : nullptr), (a1 ? std::make_shared<ptree<A>>(
+                                          crane_convert<ptree<A>>(*a1))
+                                      : nullptr)};
             }
           }()) {}
 
@@ -430,14 +430,14 @@ struct PolyInductive {
   static inline const uint64_t test_pnothing =
       pmaybe<uint64_t>::pnothing().pmaybe_default(UINT64_C(0));
   static inline const uint64_t test_pmap =
-      pmaybe<uint64_t>::pjust(UINT64_C(5))
-          .template pmaybe_map<uint64_t>([](uint64_t x) { return (x + 1); })
+      pmaybe<uint64_t>::pjust(UINT64_C(5)).template pmaybe_map<uint64_t>(
+          [](uint64_t x) { return (x + 1); })
           .pmaybe_default(UINT64_C(0));
   static inline const uint64_t test_ptree =
       ptree<uint64_t>::pnode(
-          ptree<uint64_t>::pleaf(UINT64_C(1)),
-          ptree<uint64_t>::pnode(ptree<uint64_t>::pleaf(UINT64_C(2)),
-                                 ptree<uint64_t>::pleaf(UINT64_C(3))))
+          ptree<uint64_t>::pleaf(UINT64_C(1)), ptree<uint64_t>::pnode(
+              ptree<uint64_t>::pleaf(UINT64_C(2)),
+              ptree<uint64_t>::pleaf(UINT64_C(3))))
           .ptree_size();
 };
 

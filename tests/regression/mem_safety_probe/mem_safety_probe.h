@@ -161,8 +161,8 @@ struct MemSafetyProbe {
     /// ---- TEST 3: Closure in pair construction ----
     /// Tests whether pair/tuple construction with closures handles
     /// capture correctly.
-    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
-    pair_of_closures() const {
+    std::pair<crane::fn<uint64_t(uint64_t)>,
+              crane::fn<uint64_t(uint64_t)>> pair_of_closures() const {
       tree _self_val = *this;
       return std::make_pair(
           [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
@@ -332,13 +332,13 @@ struct MemSafetyProbe {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -432,7 +432,7 @@ struct MemSafetyProbe {
   /// it twice, the second call would use a moved-from value.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
-             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t apply_twice(F0 &&f, uint64_t x) {
     return f(f(x));
   }
@@ -444,8 +444,8 @@ struct MemSafetyProbe {
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
       crane::fn<uint64_t(uint64_t)> f =
           [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
-        return t.sum_values(_x0);
-      };
+            return t.sum_values(_x0);
+          };
       return apply_twice(std::move(f), UINT64_C(0));
     }();
   }();
@@ -462,10 +462,9 @@ struct MemSafetyProbe {
     tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
     mylist<crane::fn<uint64_t(uint64_t)>> fns =
         build_adders(mylist<tree>::mycons(
-            std::move(t1),
-            mylist<tree>::mycons(
-                std::move(t2),
-                mylist<tree>::mycons(std::move(t3), mylist<tree>::mynil()))));
+                         std::move(t1), mylist<tree>::mycons(
+                             std::move(t2), mylist<tree>::mycons(
+                                 std::move(t3), mylist<tree>::mynil()))));
     return apply_all(std::move(fns), UINT64_C(5));
   }();
   static inline const uint64_t test_pair_closures = []() {
@@ -484,8 +483,7 @@ struct MemSafetyProbe {
     crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
     const mylist<tree> *_loop_trees = &trees;
     while (true) {
-      if (std::holds_alternative<typename mylist<tree>::Mynil>(
-              _loop_trees->v())) {
+      if (std::holds_alternative<typename mylist<tree>::Mynil>(_loop_trees->v())) {
         return _loop_acc(x0_);
       } else {
         const auto &[a0, a1] =
@@ -501,18 +499,19 @@ struct MemSafetyProbe {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
     return fold_compose(
-        mylist<tree>::mycons(
-            std::move(t1),
-            mylist<tree>::mycons(std::move(t2), mylist<tree>::mynil())),
+        mylist<tree>::mycons(std::move(t1), mylist<tree>::mycons(
+                                 std::move(t2), mylist<tree>::mynil())),
         [](uint64_t n) { return n; }, UINT64_C(5));
   }();
   /// ---- TEST 5: Partial application + match scrutinee reuse ----
   /// f captures t by partial application, then t is used as a match
   /// scrutinee. The escape analysis must handle this correctly.
   static uint64_t match_partial(tree t);
-  static inline const uint64_t test_match_partial = match_partial(tree::node(
-      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
-      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+  static inline const uint64_t test_match_partial =
+      match_partial(
+          tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                     UINT64_C(20),
+                     tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// ---- TEST 6: Deep currying chain ----
   /// Multi-level partial application where each level binds a new value.
   static uint64_t add3(uint64_t a, uint64_t b, uint64_t c);

@@ -10,10 +10,11 @@
 #include <variant>
 
 namespace SepExtUptrCloneQual {
-
 template <typename A> struct MyList;
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 
 template <typename A> struct MyList {
   // TYPES
@@ -41,8 +42,7 @@ public:
   template <typename CraneU>
   MyList(const MyList<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename MyList<CraneU>::Mynil>(
-                  _other.v())) {
+          if (std::holds_alternative<typename MyList<CraneU>::Mynil>(_other.v())) {
             return Mynil{};
           } else {
             const auto &[a0, a1] =
@@ -104,14 +104,12 @@ template <OrderedType X> struct FMap {
             typename MyList<std::pair<typename X::t, T1>>::Mynil>(l.v())) {
       return MyList<std::pair<typename X::t, T1>>::mynil();
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MyList<std::pair<typename X::t, T1>>::Mycons>(
-              l.v());
+      const auto &[a0, a1] = std::get<
+          typename MyList<std::pair<typename X::t, T1>>::Mycons>(l.v());
       return *a1;
     }
   }
 };
-
 } // namespace SepExtUptrCloneQual
 
 #endif // INCLUDED_SEPEXTUPTRCLONEQUAL

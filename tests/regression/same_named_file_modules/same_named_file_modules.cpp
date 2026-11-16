@@ -487,15 +487,15 @@ std::pair<Positive, Coq_Pos::mask> Coq_Pos::sqrtrem(const Positive &p) {
     if (std::holds_alternative<typename Positive::XI>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XI>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xi(x); },
-                          [](const Positive &x) { return Positive::xi(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step([](const Positive &x) {
+        return Positive::xi(x);
+      }, [](const Positive &x) { return Positive::xi(x); }, sqrtrem(a00_value));
     } else if (std::holds_alternative<typename Positive::XO>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xo(x); },
-                          [](const Positive &x) { return Positive::xi(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step([](const Positive &x) {
+        return Positive::xo(x);
+      }, [](const Positive &x) { return Positive::xi(x); }, sqrtrem(a00_value));
     } else {
       return std::make_pair(Positive::xh(),
                             mask::ispos(Positive::xo(Positive::xh())));
@@ -506,15 +506,15 @@ std::pair<Positive, Coq_Pos::mask> Coq_Pos::sqrtrem(const Positive &p) {
     if (std::holds_alternative<typename Positive::XI>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XI>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xi(x); },
-                          [](const Positive &x) { return Positive::xo(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step([](const Positive &x) {
+        return Positive::xi(x);
+      }, [](const Positive &x) { return Positive::xo(x); }, sqrtrem(a00_value));
     } else if (std::holds_alternative<typename Positive::XO>(a0_value.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(a0_value.v());
       const Positive &a00_value = *a00;
-      return sqrtrem_step([](const Positive &x) { return Positive::xo(x); },
-                          [](const Positive &x) { return Positive::xo(x); },
-                          sqrtrem(a00_value));
+      return sqrtrem_step([](const Positive &x) {
+        return Positive::xo(x);
+      }, [](const Positive &x) { return Positive::xo(x); }, sqrtrem(a00_value));
     } else {
       return std::make_pair(Positive::xh(), mask::ispos(Positive::xh()));
     }
@@ -677,9 +677,9 @@ N Coq_Pos::lxor(const Positive &p, const Positive &q) {
 }
 
 uint64_t Coq_Pos::to_nat(const Positive &x) {
-  return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
-      UINT64_C(1));
+  return iter_op<uint64_t>([](uint64_t _x0, uint64_t _x1) -> uint64_t {
+    return (_x0 + _x1);
+  }, x, UINT64_C(1));
 }
 
 Positive Coq_Pos::of_succ_nat(uint64_t n) {
@@ -704,8 +704,9 @@ Positive Coq_Pos::pred(const Positive &x) {
 }
 
 Positive Coq_Pos::pow(const Positive &x, const Positive &x0_) {
-  return iter<Positive>([=](Positive _x0) -> Positive { return mul(x, _x0); },
-                        Positive::xh(), x0_);
+  return iter<Positive>([=](Positive _x0) -> Positive {
+    return mul(x, _x0);
+  }, Positive::xh(), x0_);
 }
 
 Positive Coq_Pos::square(const Positive &p) {
@@ -843,17 +844,15 @@ Coq_Pos::ggcdn(uint64_t n, const Positive &a, const Positive &b) {
         case Comparison::LT: {
           auto [g, p] = ggcdn(n0, sub(*a00, *a0), a);
           auto [ba, aa] = std::move(p);
-          return std::make_pair(
-              std::move(g),
-              std::make_pair(aa, add(aa, Positive::xo(std::move(ba)))));
+          return std::make_pair(std::move(g), std::make_pair(
+                                    aa, add(aa, Positive::xo(std::move(ba)))));
           break;
         }
         case Comparison::GT: {
           auto [g, p] = ggcdn(n0, sub(*a0, *a00), b);
           auto [ab, bb] = std::move(p);
-          return std::make_pair(
-              std::move(g),
-              std::make_pair(add(bb, Positive::xo(std::move(ab))), bb));
+          return std::make_pair(std::move(g), std::make_pair(
+                                    add(bb, Positive::xo(std::move(ab))), bb));
           break;
         }
         default:
@@ -863,9 +862,8 @@ Coq_Pos::ggcdn(uint64_t n, const Positive &a, const Positive &b) {
         const auto &[a00] = std::get<typename Positive::XO>(b.v());
         auto [g, p] = ggcdn(n0, a, *a00);
         auto [aa, bb] = std::move(p);
-        return std::make_pair(
-            std::move(g),
-            std::make_pair(std::move(aa), Positive::xo(std::move(bb))));
+        return std::make_pair(std::move(g), std::make_pair(
+                                  std::move(aa), Positive::xo(std::move(bb))));
       } else {
         return std::make_pair(Positive::xh(),
                               std::make_pair(a, Positive::xh()));
@@ -875,9 +873,8 @@ Coq_Pos::ggcdn(uint64_t n, const Positive &a, const Positive &b) {
       if (std::holds_alternative<typename Positive::XI>(b.v())) {
         auto [g, p] = ggcdn(n0, *a1, b);
         auto [aa, bb] = std::move(p);
-        return std::make_pair(
-            std::move(g),
-            std::make_pair(Positive::xo(std::move(aa)), std::move(bb)));
+        return std::make_pair(std::move(g), std::make_pair(
+                                  Positive::xo(std::move(aa)), std::move(bb)));
       } else if (std::holds_alternative<typename Positive::XO>(b.v())) {
         const auto &[a00] = std::get<typename Positive::XO>(b.v());
         auto [g, p] = ggcdn(n0, *a1, *a00);
@@ -920,8 +917,9 @@ Positive Coq_Pos::shiftl(Positive p, const N &n) {
     return p;
   } else {
     const auto &[a0] = std::get<typename N::Npos>(n.v());
-    return iter<Positive>([](const Positive &x) { return Positive::xo(x); },
-                          std::move(p), a0);
+    return iter<Positive>([](const Positive &x) {
+      return Positive::xo(x);
+    }, std::move(p), a0);
   }
 }
 
@@ -1012,56 +1010,56 @@ Positive Coq_Pos::of_uint_acc(const Uint &d, Positive acc) {
   } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D1>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xh(),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xh(), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D2>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xo(Positive::xh()),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xo(Positive::xh()), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D3>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xi(Positive::xh()),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xi(Positive::xh()), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D4>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xo(Positive::xo(Positive::xh())),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xo(Positive::xo(Positive::xh())), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D5>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xi(Positive::xo(Positive::xh())),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xi(Positive::xo(Positive::xh())), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D6>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xo(Positive::xi(Positive::xh())),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xo(Positive::xi(Positive::xh())), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D7>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xi(Positive::xi(Positive::xh())),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xi(Positive::xi(Positive::xh())), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D8>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xo(Positive::xo(Positive::xo(Positive::xh()))),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xo(Positive::xo(Positive::xo(Positive::xh()))), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   } else {
     const auto &[a0] = std::get<typename Uint::D9>(d.v());
     return of_uint_acc(
-        *a0, add(Positive::xi(Positive::xo(Positive::xo(Positive::xh()))),
-                 mul(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
+        *a0, add(Positive::xi(Positive::xo(Positive::xo(Positive::xh()))), mul(
+                     Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
                      std::move(acc))));
   }
 }
@@ -1083,28 +1081,30 @@ N Coq_Pos::of_uint(const Uint &d) {
     return N::npos(of_uint_acc(*a0, Positive::xi(Positive::xh())));
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D4>(d.v());
-    return N::npos(
-        of_uint_acc(*a0, Positive::xo(Positive::xo(Positive::xh()))));
+    return N::npos(of_uint_acc(*a0,
+                               Positive::xo(Positive::xo(Positive::xh()))));
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D5>(d.v());
-    return N::npos(
-        of_uint_acc(*a0, Positive::xi(Positive::xo(Positive::xh()))));
+    return N::npos(of_uint_acc(*a0,
+                               Positive::xi(Positive::xo(Positive::xh()))));
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D6>(d.v());
-    return N::npos(
-        of_uint_acc(*a0, Positive::xo(Positive::xi(Positive::xh()))));
+    return N::npos(of_uint_acc(*a0,
+                               Positive::xo(Positive::xi(Positive::xh()))));
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D7>(d.v());
-    return N::npos(
-        of_uint_acc(*a0, Positive::xi(Positive::xi(Positive::xh()))));
+    return N::npos(of_uint_acc(*a0,
+                               Positive::xi(Positive::xi(Positive::xh()))));
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D8>(d.v());
-    return N::npos(of_uint_acc(
-        *a0, Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
+    return N::npos(
+        of_uint_acc(*a0,
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
   } else {
     const auto &[a0] = std::get<typename Uint::D9>(d.v());
-    return N::npos(of_uint_acc(
-        *a0, Positive::xi(Positive::xo(Positive::xo(Positive::xh())))));
+    return N::npos(
+        of_uint_acc(*a0,
+                    Positive::xi(Positive::xo(Positive::xo(Positive::xh())))));
   }
 }
 
@@ -1113,107 +1113,130 @@ Positive Coq_Pos::of_hex_uint_acc(const Uint0 &d, Positive acc) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D10>(d.v());
-    return of_hex_uint_acc(*a0, mul(Positive::xo(Positive::xo(Positive::xo(
-                                        Positive::xo(Positive::xh())))),
-                                    std::move(acc)));
+    return of_hex_uint_acc(
+        *a0, mul(Positive::xo(
+                     Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                 std::move(acc)));
   } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D11>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xh(), mul(Positive::xo(Positive::xo(Positive::xo(
-                                         Positive::xo(Positive::xh())))),
-                                     std::move(acc))));
+        *a0, add(
+            Positive::xh(), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return of_hex_uint_acc(*a0, add(Positive::xo(Positive::xh()),
-                                    mul(Positive::xo(Positive::xo(Positive::xo(
-                                            Positive::xo(Positive::xh())))),
-                                        std::move(acc))));
+    return of_hex_uint_acc(
+        *a0, add(
+            Positive::xo(Positive::xh()), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
-    return of_hex_uint_acc(*a0, add(Positive::xi(Positive::xh()),
-                                    mul(Positive::xo(Positive::xo(Positive::xo(
-                                            Positive::xo(Positive::xh())))),
-                                        std::move(acc))));
+    return of_hex_uint_acc(
+        *a0, add(
+            Positive::xi(Positive::xh()), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return of_hex_uint_acc(*a0, add(Positive::xo(Positive::xo(Positive::xh())),
-                                    mul(Positive::xo(Positive::xo(Positive::xo(
-                                            Positive::xo(Positive::xh())))),
-                                        std::move(acc))));
+    return of_hex_uint_acc(
+        *a0, add(
+            Positive::xo(Positive::xo(Positive::xh())), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return of_hex_uint_acc(*a0, add(Positive::xi(Positive::xo(Positive::xh())),
-                                    mul(Positive::xo(Positive::xo(Positive::xo(
-                                            Positive::xo(Positive::xh())))),
-                                        std::move(acc))));
+    return of_hex_uint_acc(
+        *a0, add(
+            Positive::xi(Positive::xo(Positive::xh())), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
-    return of_hex_uint_acc(*a0, add(Positive::xo(Positive::xi(Positive::xh())),
-                                    mul(Positive::xo(Positive::xo(Positive::xo(
-                                            Positive::xo(Positive::xh())))),
-                                        std::move(acc))));
+    return of_hex_uint_acc(
+        *a0, add(
+            Positive::xo(Positive::xi(Positive::xh())), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return of_hex_uint_acc(*a0, add(Positive::xi(Positive::xi(Positive::xh())),
-                                    mul(Positive::xo(Positive::xo(Positive::xo(
-                                            Positive::xo(Positive::xh())))),
-                                        std::move(acc))));
+    return of_hex_uint_acc(
+        *a0, add(
+            Positive::xi(Positive::xi(Positive::xh())), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xo(Positive::xo(Positive::xo(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xo(Positive::xo(Positive::xo(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xi(Positive::xo(Positive::xo(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xi(Positive::xo(Positive::xo(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xo(Positive::xi(Positive::xo(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xi(Positive::xi(Positive::xo(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xi(Positive::xi(Positive::xo(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xo(Positive::xo(Positive::xi(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xi(Positive::xo(Positive::xi(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xi(Positive::xo(Positive::xi(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::De>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xo(Positive::xi(Positive::xi(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xo(Positive::xi(Positive::xi(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   } else {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
     return of_hex_uint_acc(
-        *a0, add(Positive::xi(Positive::xi(Positive::xi(Positive::xh()))),
-                 mul(Positive::xo(Positive::xo(
-                         Positive::xo(Positive::xo(Positive::xh())))),
-                     std::move(acc))));
+        *a0, add(
+            Positive::xi(Positive::xi(Positive::xi(Positive::xh()))), mul(
+                Positive::xo(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))),
+                std::move(acc))));
   }
 }
 
@@ -1250,36 +1273,44 @@ N Coq_Pos::of_hex_uint(const Uint0 &d) {
         of_hex_uint_acc(*a0, Positive::xi(Positive::xi(Positive::xh()))));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xi(Positive::xo(Positive::xo(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xi(Positive::xo(Positive::xo(Positive::xh())))));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xi(Positive::xi(Positive::xo(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xi(Positive::xi(Positive::xo(Positive::xh())))));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xo(Positive::xo(Positive::xi(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xo(Positive::xo(Positive::xi(Positive::xh())))));
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xi(Positive::xo(Positive::xi(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xi(Positive::xo(Positive::xi(Positive::xh())))));
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::De>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xo(Positive::xi(Positive::xi(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xo(Positive::xi(Positive::xi(Positive::xh())))));
   } else {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
-    return N::npos(of_hex_uint_acc(
-        *a0, Positive::xi(Positive::xi(Positive::xi(Positive::xh())))));
+    return N::npos(
+        of_hex_uint_acc(
+            *a0, Positive::xi(Positive::xi(Positive::xi(Positive::xh())))));
   }
 }
 
@@ -1463,7 +1494,8 @@ Reflect Coq_Pos::ltb_spec0(const Positive &x, const Positive &y) {
 
 bool Coq_Pos::Private_Dec::max_dec(Positive n, Positive m0) {
   return max_case<bool>(
-      std::move(n), std::move(m0),
+      std::move(n),
+      std::move(m0),
       [](Positive, Positive, bool h0) -> bool {
         if (h0) {
           return true;
@@ -1471,12 +1503,14 @@ bool Coq_Pos::Private_Dec::max_dec(Positive n, Positive m0) {
           return false;
         }
       },
-      true, false);
+      true,
+      false);
 }
 
 bool Coq_Pos::Private_Dec::min_dec(Positive n, Positive m0) {
   return min_case<bool>(
-      std::move(n), std::move(m0),
+      std::move(n),
+      std::move(m0),
       [](Positive, Positive, bool h0) -> bool {
         if (h0) {
           return true;
@@ -1484,7 +1518,8 @@ bool Coq_Pos::Private_Dec::min_dec(Positive n, Positive m0) {
           return false;
         }
       },
-      true, false);
+      true,
+      false);
 }
 
 bool Coq_Pos::max_dec(Positive x0_, Positive x1_) {

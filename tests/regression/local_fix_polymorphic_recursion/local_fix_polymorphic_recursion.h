@@ -12,9 +12,9 @@
 #include <utility>
 #include <variant>
 
-template <typename A> struct List;
+template <typename A>
+struct List; /// A local fixpoint that calls itself at bool, not at the list nat it
 
-/// A local fixpoint that calls itself at bool, not at the list nat it
 /// is entered at: polymorphic recursion.  Extraction types a local
 /// fixpoint's body at one instance, which the call at bool would pin, so
 /// the entry's list would reach a bool loop variable.  Instead the

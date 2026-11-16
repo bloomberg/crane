@@ -10,7 +10,6 @@
 #include "Specif.h"
 
 namespace SepExtAnyFunCall {
-
 using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
@@ -37,7 +36,6 @@ template <SymTypes Ty> struct Actions {
     return x0_.projT2()(std::move(x1_));
   }
 };
-
 } // namespace SepExtAnyFunCall
 
 #endif // INCLUDED_SEPEXTANYFUNCALL

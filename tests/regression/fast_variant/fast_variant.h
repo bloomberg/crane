@@ -43,8 +43,7 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
@@ -518,8 +517,7 @@ struct FastVariant {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &,
-                                     const uint64_t &>
+      std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
     T1 shape_rect(F0 &&f, F1 &&f0, T1 f1) const {
       if (crane::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = crane::get<typename shape::Circle>(this->v());
@@ -558,8 +556,9 @@ struct FastVariant {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(uint64_t a0, stream a1) {
-      return stream(crane::lazy<variant_t>(
-          std::in_place, std::in_place_index<0>, a0, std::move(a1)));
+      return stream(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>, a0,
+                                 std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -576,22 +575,18 @@ struct FastVariant {
 
   static stream from(uint64_t n);
   static List<uint64_t> take(uint64_t n, const stream &s);
-  static inline const tree sample = build(List<uint64_t>::cons(
-      UINT64_C(5),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(8),
-              List<uint64_t>::cons(
-                  UINT64_C(1),
-                  List<uint64_t>::cons(
-                      UINT64_C(9),
-                      List<uint64_t>::cons(UINT64_C(3),
-                                           List<uint64_t>::nil())))))));
+  static inline const tree sample =
+      build(List<uint64_t>::cons(
+                UINT64_C(5), List<uint64_t>::cons(
+                    UINT64_C(2), List<uint64_t>::cons(
+                        UINT64_C(8), List<uint64_t>::cons(
+                            UINT64_C(1), List<uint64_t>::cons(
+                                UINT64_C(9), List<uint64_t>::cons(
+                                    UINT64_C(3), List<uint64_t>::nil())))))));
   static inline const List<shape> shapes = List<shape>::cons(
-      shape::circle(UINT64_C(2)),
-      List<shape>::cons(shape::rect(UINT64_C(3), UINT64_C(4)),
-                        List<shape>::cons(shape::empty(), List<shape>::nil())));
+      shape::circle(UINT64_C(2)), List<shape>::cons(
+          shape::rect(UINT64_C(3), UINT64_C(4)),
+          List<shape>::cons(shape::empty(), List<shape>::nil())));
   static inline const List<uint64_t> first_three =
       take(UINT64_C(3), from(UINT64_C(10)));
 };

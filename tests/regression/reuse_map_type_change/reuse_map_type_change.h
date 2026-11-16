@@ -70,9 +70,9 @@ struct ReuseMapTypeChange {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? crane::make_rc<lst<A>>(crane_convert<lst<A>>(*a1))
@@ -87,8 +87,9 @@ struct ReuseMapTypeChange {
     }
 
     static lst<A> cons_crane_reuse(crane::rc<lst<A>> _tok, A a0, lst<A> a1) {
-      return lst<A>(Cons{std::move(a0), crane::make_rc_reusing<lst<A>>(
-                                            std::move(_tok), std::move(a1))});
+      return lst<A>(
+          Cons{std::move(a0),
+               crane::make_rc_reusing<lst<A>>(std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS

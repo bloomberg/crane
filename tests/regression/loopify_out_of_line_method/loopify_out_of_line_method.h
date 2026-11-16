@@ -11,8 +11,7 @@
 #include <variant>
 
 struct Tree;
-struct Forest;
-/// A method its struct only declares, defined after the struct, is
+struct Forest; /// A method its struct only declares, defined after the struct, is
 /// loopified as one defined inside it.
 /// tree and forest are a mutual group at the top level, so a member
 /// naming a struct of the group is written after the whole group: depth,

@@ -108,25 +108,22 @@ struct SrcUsesPairValue {
   static uint64_t get_reg(const state &s, uint64_t r);
   static uint64_t get_reg_pair(const state &s, uint64_t r);
   static state execute_src(const state &s, uint64_t r);
-  static inline const state sample =
-      state{List<uint64_t>::cons(
-                UINT64_C(0),
-                List<uint64_t>::cons(
-                    UINT64_C(0),
-                    List<uint64_t>::cons(
-                        UINT64_C(1),
-                        List<uint64_t>::cons(
-                            UINT64_C(11),
-                            List<uint64_t>::cons(
-                                UINT64_C(0),
-                                List<uint64_t>::cons(
-                                    UINT64_C(0), List<uint64_t>::nil())))))),
-            UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
+  static inline const state sample = state{
+      List<uint64_t>::cons(
+          UINT64_C(0), List<uint64_t>::cons(
+              UINT64_C(0), List<uint64_t>::cons(
+                  UINT64_C(1), List<uint64_t>::cons(
+                      UINT64_C(11), List<uint64_t>::cons(
+                          UINT64_C(0), List<uint64_t>::cons(
+                              UINT64_C(0), List<uint64_t>::nil())))))),
+      UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state after = execute_src(sample, UINT64_C(3));
-  static inline const bool t =
-      (after.sel_rom == UINT64_C(1) &&
-       (after.sel_chip == UINT64_C(0) &&
-        (after.sel_reg == UINT64_C(1) && after.sel_char == UINT64_C(11))));
+  static inline const bool t = (after.sel_rom == UINT64_C(1) && (after.sel_chip ==
+                                                                 UINT64_C(0) &&
+                                                                 (after.sel_reg ==
+                                                                  UINT64_C(1) &&
+                                                                  after.sel_char ==
+                                                                  UINT64_C(11))));
 };
 
 template <typename T1>

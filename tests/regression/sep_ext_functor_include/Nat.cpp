@@ -3,7 +3,6 @@
 #include "Datatypes.h"
 
 namespace Nat {
-
 bool leb(const Datatypes::Nat &n, const Datatypes::Nat &m) {
   if (std::holds_alternative<typename Datatypes::Nat::O>(n.v())) {
     return true;
@@ -17,5 +16,4 @@ bool leb(const Datatypes::Nat &n, const Datatypes::Nat &m) {
     }
   }
 }
-
 } // namespace Nat

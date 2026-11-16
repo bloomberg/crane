@@ -1,8 +1,9 @@
 #include "effect_poly.h"
 
 uint64_t EffectPoly::test_map_result() {
-  return map_result<uint64_t, uint64_t>([](uint64_t x) { return (x + 1); },
-                                        UINT64_C(41));
+  return map_result<uint64_t, uint64_t>([](uint64_t x) {
+    return (x + 1);
+  }, UINT64_C(41));
 }
 
 uint64_t EffectPoly::test_lift_nat() {
@@ -90,10 +91,8 @@ uint64_t EffectPoly::sum_with_logging(uint64_t acc, uint64_t n) {
 
 uint64_t EffectPoly::test_fold() {
   return fold_m<uint64_t, uint64_t>(
-      sum_with_logging, UINT64_C(0),
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
+      sum_with_logging, UINT64_C(0), List<uint64_t>::cons(
+          UINT64_C(1), List<uint64_t>::cons(
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 }

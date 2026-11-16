@@ -8,9 +8,10 @@
 #include <utility>
 
 /// A typeclass parameterised by a type constructor (`Container (F : Type ->
-/// Type)`). The higher-kinded parameter is demoted to a promoted associated
-/// type holding the element-erased carrier, so the concept, the instance and
-/// the method wrappers all agree.
+/// Type)`).
+/// The higher-kinded parameter is demoted to a promoted associated type holding
+/// the element-erased carrier, so the concept, the instance and the method
+/// wrappers all agree.
 
 template <typename I>
 concept Container = requires {
@@ -60,10 +61,10 @@ struct ClassTypeConstructorParam {
   };
 
   static_assert(Container<IdC>);
-  static inline const uint64_t go =
-      IdC::template cout<uint64_t>(IdC::template cmap<uint64_t, uint64_t>(
-          [](uint64_t n) { return (n + UINT64_C(1)); },
-          IdC::template cwrap<uint64_t>(UINT64_C(4))));
+  static inline const uint64_t go = IdC::template cout<uint64_t>(
+      IdC::template cmap<uint64_t, uint64_t>([](uint64_t n) {
+        return (n + UINT64_C(1));
+      }, IdC::template cwrap<uint64_t>(UINT64_C(4))));
 };
 
 #endif // INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM

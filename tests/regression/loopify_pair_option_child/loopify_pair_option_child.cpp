@@ -1,10 +1,14 @@
 #include "loopify_pair_option_child.h"
 
 uint64_t
-LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree
-                                &t) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree &t) { /// CraneEnter:
+                                                                     /// captures
+                                                                     /// varying
+                                                                     /// parameters
+                                                                     /// for
+                                                                     /// each
+                                                                     /// recursive
+                                                                     /// call.
   struct CraneEnter {
     LoopifyPairOptionChild::tree t;
   };

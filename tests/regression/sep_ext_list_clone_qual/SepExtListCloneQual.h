@@ -13,7 +13,6 @@
 #include "Datatypes.h"
 
 namespace SepExtListCloneQual {
-
 template <typename A> struct Forest;
 
 template <typename A> struct Forest {
@@ -42,8 +41,7 @@ public:
   template <typename CraneU>
   Forest(const Forest<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Forest<CraneU>::Leaf>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Forest<CraneU>::Leaf>(_other.v())) {
             return Leaf{};
           } else {
             const auto &[a0, a1] =
@@ -58,10 +56,9 @@ public:
                   }
                 }(),
                 (a1 ? std::make_shared<
-                          typename Datatypes::template List<Forest<A>>>(
-                          crane_convert<
-                              typename Datatypes::template List<Forest<A>>>(
-                              *a1))
+                        typename Datatypes::template List<Forest<A>>>(
+                        crane_convert<
+                            typename Datatypes::template List<Forest<A>>>(*a1))
                     : nullptr)};
           }
         }()) {}
@@ -70,9 +67,8 @@ public:
 
   static Forest<A> node(A a0, typename Datatypes::template List<Forest<A>> a1) {
     return Forest<A>(
-        Node{std::move(a0),
-             std::make_shared<typename Datatypes::template List<Forest<A>>>(
-                 std::move(a1))});
+        Node{std::move(a0), std::make_shared<
+                 typename Datatypes::template List<Forest<A>>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -86,9 +82,9 @@ public:
         if (_alt->a1 && _alt->a1.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           auto _lp = _alt->a1.get();
-          while (std::holds_alternative<
-                 typename Datatypes::template List<Forest<A>>::Cons>(
-              _lp->v())) {
+          while (
+              std::holds_alternative<
+                  typename Datatypes::template List<Forest<A>>::Cons>(_lp->v())) {
             auto &_lc =
                 std::get<typename Datatypes::template List<Forest<A>>::Cons>(
                     _lp->v_mut());
@@ -125,7 +121,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
 } // namespace SepExtListCloneQual
 
 #endif // INCLUDED_SEPEXTLISTCLONEQUAL

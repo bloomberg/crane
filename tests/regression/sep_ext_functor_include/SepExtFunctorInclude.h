@@ -8,7 +8,6 @@
 #include "Ord.h"
 
 namespace SepExtFunctorInclude {
-
 template <Ord::Ordered O> struct Tac {
   using F = Ord::template Full<O>;
 
@@ -26,7 +25,6 @@ using T = Tac<NatOrd>;
 const bool gt_two_one =
     T::gtb(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())),
            Datatypes::Nat::s(Datatypes::Nat::o()));
-
 } // namespace SepExtFunctorInclude
 
 #endif // INCLUDED_SEPEXTFUNCTORINCLUDE

@@ -47,10 +47,10 @@ FixEscapeMatch::make_fn_from_pair(const List<uint64_t> &l) {
           return (_self_combine(_self_combine, x_) + 1);
         }
       };
-      auto combine = [=, combine_impl =
-                             std::move(combine_impl)](uint64_t x) -> uint64_t {
-        return combine_impl(combine_impl, x);
-      };
+      auto combine =
+          [=, combine_impl = std::move(combine_impl)](uint64_t x) -> uint64_t {
+            return combine_impl(combine_impl, x);
+          };
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
           std::move(combine));
     }

@@ -95,13 +95,17 @@ public:
 template <typename M>
 concept HasElements = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::elements } -> std::convertible_to<List<typename M::t>>;
-      } ||
-      requires {
-        { M::elements() } -> std::convertible_to<List<typename M::t>>;
-      });
+  requires (requires {
+    {
+      M::elements
+    }
+    -> std::convertible_to<List<typename M::t>>;
+  } || requires {
+    {
+      M::elements()
+    }
+    -> std::convertible_to<List<typename M::t>>;
+  });
   { M::head_or(std::declval<typename M::t>()) } -> std::same_as<typename M::t>;
 };
 
@@ -115,11 +119,9 @@ struct ConceptQualifyArgs {
   struct NatElems {
     using t = uint64_t;
     [[gnu::used]] static inline const List<uint64_t> elements =
-        List<uint64_t>::cons(
-            UINT64_C(1),
-            List<uint64_t>::cons(
-                UINT64_C(2),
-                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
+        List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                 UINT64_C(2), List<uint64_t>::cons(
+                                     UINT64_C(3), List<uint64_t>::nil())));
     static uint64_t head_or(uint64_t d);
   };
 

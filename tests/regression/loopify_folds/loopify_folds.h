@@ -156,7 +156,6 @@ struct LoopifyFolds {
   fold_right(F0 &&f, const List<uint64_t> &l,
              uint64_t acc) { /// CraneEnter: captures varying parameters for
                              /// each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -204,9 +203,9 @@ struct LoopifyFolds {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::cons(_loop_acc, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -231,7 +230,6 @@ struct LoopifyFolds {
   scanr(F0 &&f, uint64_t acc,
         const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                    /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -264,8 +262,7 @@ struct LoopifyFolds {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         List<uint64_t> _tmp1 = std::move(_result);
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _tmp1.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_tmp1.v_mut())) {
           _result = List<uint64_t>::cons(acc, List<uint64_t>::nil());
         } else {
           auto &[a00, a10] =
@@ -316,7 +313,6 @@ struct LoopifyFolds {
   foldr1(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -364,7 +360,6 @@ struct LoopifyFolds {
   map_accum(F0 &&f, uint64_t acc,
             const List<uint64_t> &l) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
       uint64_t acc;
@@ -416,9 +411,9 @@ struct LoopifyFolds {
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n_ = _loop_n - 1;
@@ -445,9 +440,9 @@ struct LoopifyFolds {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t fuel_ = _loop_fuel - 1;

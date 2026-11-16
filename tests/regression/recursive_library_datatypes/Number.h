@@ -8,7 +8,6 @@
 #include "Hexadecimal.h"
 
 namespace Number {
-
 struct Uint;
 struct Signed_int;
 struct Number;
@@ -239,7 +238,6 @@ public:
     }
   }
 };
-
 } // namespace Number
 
 #endif // INCLUDED_NUMBER

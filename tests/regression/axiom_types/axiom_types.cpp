@@ -7,9 +7,9 @@ AxiomTypes::MysteryType AxiomTypes::mystery_value() {
 }
 
 AxiomTypes::MysteryType AxiomTypes::mystery_function(AxiomTypes::MysteryType) {
-  throw std::logic_error("unrealized axiom: "
-                         "CraneTestsRegression.axiom_types.AxiomTypes."
-                         "AxiomTypes.mystery_function");
+  throw std::logic_error(
+      "unrealized axiom: "
+      "CraneTestsRegression.axiom_types.AxiomTypes.AxiomTypes.mystery_function");
 }
 
 AxiomTypes::MysteryType AxiomTypes::use_axiom(std::monostate) {
@@ -41,8 +41,8 @@ AxiomTypes::list<AxiomTypes::MysteryType>
 AxiomTypes::axiom_list(std::monostate) {
   return list<AxiomTypes::MysteryType>::cons(
       mystery_value(), list<AxiomTypes::MysteryType>::cons(
-                           mystery_function(mystery_value()),
-                           list<AxiomTypes::MysteryType>::nil()));
+          mystery_function(mystery_value()),
+          list<AxiomTypes::MysteryType>::nil()));
 }
 
 AxiomTypes::MysteryType AxiomTypes::use_poly_axiom(std::monostate) {

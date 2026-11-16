@@ -3,8 +3,8 @@
 ReusePerFunctionOn::lst
 ReusePerFunctionOn::incr_reused(ReusePerFunctionOn::lst l) {
   if (l.v().index() == 1) {
-    if (std::get<typename ReusePerFunctionOn::lst::Cons>(l.v_mut())
-            .a1.use_count() == 1) {
+    if (std::get<typename ReusePerFunctionOn::lst::Cons>(l.v_mut()).a1.use_count() ==
+        1) {
       uint64_t x = std::move(
           std::get<typename ReusePerFunctionOn::lst::Cons>(l.v_mut()).a0);
       ReusePerFunctionOn::lst xs = std::move(
@@ -24,8 +24,7 @@ ReusePerFunctionOn::incr_reused(ReusePerFunctionOn::lst l) {
       }
     }
   } else {
-    if (std::holds_alternative<typename ReusePerFunctionOn::lst::Nil>(
-            l.v_mut())) {
+    if (std::holds_alternative<typename ReusePerFunctionOn::lst::Nil>(l.v_mut())) {
       return lst::nil();
     } else {
       auto &[a0, a1] =

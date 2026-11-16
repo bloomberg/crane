@@ -18,23 +18,34 @@ template <typename X> struct EOU;
 struct EOU_monad;
 using iptr = crane::obj;
 using ptr = crane::obj;
-template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-  } && (requires {
-    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-  });
-template <typename
-I>concept Ptr = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-  });
-/// Both fields are themselves instances, as Params is in Vellvm.
+template <typename I>
+concept IPtr = requires {
+  typename I::iptr;
+} && (requires {
+  {
+    I::zero_iptr()
+  }
+  -> std::convertible_to<typename I::iptr>;
+} || requires {
+  {
+    I::zero_iptr
+  }
+  -> std::convertible_to<typename I::iptr>;
+});
+template <typename I>
+concept Ptr = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero_ptr()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero_ptr
+  }
+  -> std::convertible_to<typename I::ptr>;
+}); /// Both fields are themselves instances, as Params is in Vellvm.
 ///
 /// {b An earlier version of this comment said IPTR "is the one Crane writes;
 /// it is the last field, and that is worth keeping in view".}  That was
@@ -54,8 +65,7 @@ template <typename I>
 concept Params = requires {
   typename I::PTR;
   typename I::IPTR;
-};
-/// A monad class, as Vellvm reaches ret through ExtLib's.
+}; /// A monad class, as Vellvm reaches ret through ExtLib's.
 template <typename I>
 concept MyMonad = requires {
   typename I::template M<crane::obj>;
@@ -64,8 +74,7 @@ concept MyMonad = requires {
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
     I::template mbind<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template M<crane::obj>>(), std::declval<
             crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
@@ -239,8 +248,7 @@ public:
   template <typename CraneU>
   EOU(const EOU<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename EOU<CraneU>::Eou_err>(
-                  _other.v())) {
+          if (std::holds_alternative<typename EOU<CraneU>::Eou_err>(_other.v())) {
             return Eou_err{};
           } else {
             const auto &[a0] =
@@ -291,94 +299,126 @@ template <typename ptr, typename iptr> using dv = std::pair<ptr, iptr>;
 
 template <Params _tcI0>
 EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
-    const Nat &n,
-    const List<std::pair<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
-        &xs) {
+    const Nat &n, const List<
+        std::pair<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> &xs) {
   crane::fn<EOU<List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
-      std::optional<Nat>, Nat,
-      List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>)>
-      go_all = [](std::optional<Nat> pad, const Nat &x,
-                  const List<dv<typename _tcI0::PTR::ptr,
-                                typename _tcI0::IPTR::iptr>> &x0) {
-        auto go_impl = [&](auto &_self_go, const Nat &m,
-                           const List<dv<typename _tcI0::PTR::ptr,
-                                         typename _tcI0::IPTR::iptr>> &ys)
-            -> EOU<List<
-                dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>> {
-          if (std::holds_alternative<typename List<dv<
-                  typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Nil>(
-                  ys.v())) {
-            return EOU_monad::template mret<
-                List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
+                std::optional<Nat>, Nat,
                 List<dv<typename _tcI0::PTR::ptr,
-                        typename _tcI0::IPTR::iptr>>::nil());
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename List<dv<typename _tcI0::PTR::ptr,
-                                          typename _tcI0::IPTR::iptr>>::Cons>(
-                    ys.v());
-            const List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
-                &a1_value = *a1;
-            return EOU_monad::template mbind<
-                List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>,
-                List<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
-                _self_go(_self_go, m, a1_value),
-                [=](const List<std::pair<typename _tcI0::PTR::ptr,
-                                         typename _tcI0::IPTR::iptr>> &rest)
-                    -> EOU<List<dv<typename _tcI0::PTR::ptr,
-                                   typename _tcI0::IPTR::iptr>>> {
-                  if (pad.has_value()) {
-                    const Nat &_x = *pad;
-                    return EOU_monad::template mret<List<dv<
-                        typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
-                        List<dv<typename _tcI0::PTR::ptr,
-                                typename _tcI0::IPTR::iptr>>::cons(a0, rest));
-                  } else {
-                    return EOU_monad::template mret<List<dv<
-                        typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>(
-                        rest);
-                  }
-                });
-          }
-        };
-        auto go = [&](const Nat &m,
-                      const List<dv<typename _tcI0::PTR::ptr,
-                                    typename _tcI0::IPTR::iptr>> &ys)
-            -> EOU<List<
-                dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>> {
-          return go_impl(go_impl, m, ys);
-        };
-        return go(x, x0);
-      };
-  if (std::holds_alternative<typename List<std::pair<
-          typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Nil>(
-          xs.v())) {
-    return EOU<
-        dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::eou_err();
+                        typename _tcI0::IPTR::iptr>>)> go_all =
+      [](std::optional<Nat> pad, const Nat &x, const List<
+             dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> &x0) {
+               auto go_impl =
+                   [&](auto &_self_go, const Nat &m, const List<
+                           dv<typename _tcI0::PTR::ptr,
+                              typename _tcI0::IPTR::iptr>> &ys)
+                        -> EOU<List<dv<typename _tcI0::PTR::ptr,
+                                       typename _tcI0::IPTR::iptr>>> {
+                                         if (std::holds_alternative<
+                                                 typename List<
+                                                     dv<typename _tcI0::PTR::ptr,
+                                                        typename _tcI0::IPTR::iptr>>::Nil>(
+                                                 ys.v())) {
+                                           return EOU_monad::template mret<
+                                               List<
+                                                   dv<typename _tcI0::PTR::ptr,
+                                                      typename _tcI0::IPTR::iptr>>>(
+                                               List<
+                                                   dv<typename _tcI0::PTR::ptr,
+                                                      typename _tcI0::IPTR::iptr>>::nil());
+                                         } else {
+                                           const auto &[a0, a1] =
+                                               std::get<
+                                                   typename List<
+                                                       dv<typename _tcI0::PTR::ptr,
+                                                          typename _tcI0::IPTR::iptr>>::Cons>(
+                                                   ys.v());
+                                           const List<
+                                               dv<typename _tcI0::PTR::ptr,
+                                                  typename _tcI0::IPTR::iptr>> &a1_value =
+                                               *a1;
+                                           return EOU_monad::template mbind<
+                                               List<
+                                                   dv<typename _tcI0::PTR::ptr,
+                                                      typename _tcI0::IPTR::iptr>>,
+                                               List<
+                                                   dv<typename _tcI0::PTR::ptr,
+                                                      typename _tcI0::IPTR::iptr>>>(
+                                               _self_go(_self_go, m, a1_value),
+                                               [=](const List<
+                                                       std::pair<
+                                                           typename _tcI0::PTR::ptr,
+                                                           typename _tcI0::IPTR::iptr>> &rest)
+                                                    -> EOU<
+                                                   List<
+                                                       dv<typename _tcI0::PTR::ptr,
+                                                          typename _tcI0::IPTR::iptr>>> {
+                                                            if (pad.has_value()) {
+                                                              const Nat &_x =
+                                                                  *pad;
+                                                              return EOU_monad::template mret<
+                                                                  List<
+                                                                      dv<typename _tcI0::PTR::ptr,
+                                                                         typename _tcI0::IPTR::iptr>>>(
+                                                                  List<
+                                                                      dv<typename _tcI0::PTR::ptr,
+                                                                         typename _tcI0::IPTR::iptr>>::cons(
+                                                                      a0,
+                                                                      rest));
+                                                            } else {
+                                                              return EOU_monad::template mret<
+                                                                  List<
+                                                                      dv<typename _tcI0::PTR::ptr,
+                                                                         typename _tcI0::IPTR::iptr>>>(
+                                                                  rest);
+                                                            }
+                                                          });
+                                         }
+                                       };
+               auto go =
+                   [&](const Nat &m, const List<dv<typename _tcI0::PTR::ptr,
+                                                   typename _tcI0::IPTR::iptr>> &ys)
+                        -> EOU<List<dv<typename _tcI0::PTR::ptr,
+                                       typename _tcI0::IPTR::iptr>>> {
+                                         return go_impl(go_impl, m, ys);
+                                       };
+               return go(x, x0);
+             };
+  if (std::holds_alternative<
+          typename List<
+              std::pair<typename _tcI0::PTR::ptr,
+                        typename _tcI0::IPTR::iptr>>::Nil>(xs.v())) {
+    return EOU<dv<typename _tcI0::PTR::ptr,
+                  typename _tcI0::IPTR::iptr>>::eou_err();
   } else {
-    const auto &[a0, a1] = std::get<typename List<
-        std::pair<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Cons>(
-        xs.v());
+    const auto &[a0, a1] =
+        std::get<typename List<std::pair<typename _tcI0::PTR::ptr,
+                                         typename _tcI0::IPTR::iptr>>::Cons>(
+            xs.v());
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       auto &&_sv1 = go_all(std::optional<Nat>(), n, xs);
-      if (std::holds_alternative<typename EOU<List<dv<
-              typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>::Eou_err>(
+      if (std::holds_alternative<
+              typename EOU<List<dv<typename _tcI0::PTR::ptr,
+                                   typename _tcI0::IPTR::iptr>>>::Eou_err>(
               _sv1.v())) {
         return EOU_monad::template mret<
             dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a0);
       } else {
-        const auto &[a01] = std::get<typename EOU<List<dv<
-            typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>>::Eou_ret>(
-            _sv1.v());
-        if (std::holds_alternative<typename List<
-                dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Nil>(
-                a01.v())) {
+        const auto &[a01] =
+            std::get<
+                typename EOU<List<dv<typename _tcI0::PTR::ptr,
+                                     typename _tcI0::IPTR::iptr>>>::Eou_ret>(
+                _sv1.v());
+        if (std::holds_alternative<
+                typename List<
+                    dv<typename _tcI0::PTR::ptr,
+                       typename _tcI0::IPTR::iptr>>::Nil>(a01.v())) {
           return EOU_monad::template mret<
               dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a0);
         } else {
-          const auto &[a02, a12] = std::get<typename List<
-              dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Cons>(
-              a01.v());
+          const auto &[a02, a12] =
+              std::get<typename List<dv<typename _tcI0::PTR::ptr,
+                                        typename _tcI0::IPTR::iptr>>::Cons>(
+                  a01.v());
           return EOU_monad::template mret<
               dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a02);
         }
@@ -395,10 +435,12 @@ struct InnerFixCodomainFromClass {
   static EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
   use(const dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr> &x) {
     return collect<_tcI0>(
-        Nat::o(),
-        List<std::pair<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::
-            cons(x, List<std::pair<typename _tcI0::PTR::ptr,
-                                   typename _tcI0::IPTR::iptr>>::nil()));
+        Nat::o(), List<
+            std::pair<typename _tcI0::PTR::ptr,
+                      typename _tcI0::IPTR::iptr>>::cons(
+            x, List<
+                std::pair<typename _tcI0::PTR::ptr,
+                          typename _tcI0::IPTR::iptr>>::nil()));
   }
 };
 

@@ -26,8 +26,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -155,17 +154,17 @@ struct Monads {
     static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>
     ret(CraneA0 a) {
       return [=, a = std::move(a)](const T1 &s) {
-        return _tcI0::template ret<std::pair<T1, CraneA0>>(
-            std::make_pair(s, a));
+        return _tcI0::template ret<std::pair<T1, CraneA0>>(std::make_pair(s,
+                                                                          a));
       };
     }
 
     template <typename CraneA0, typename CraneA1>
     static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>
     bind(crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)> t,
-         crane::fn<crane::fn<
-             typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)>
-             k) {
+         crane::fn<
+             crane::fn<typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(
+                 CraneA0)> k) {
       return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
         return _tcI0::template bind<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
@@ -187,6 +186,7 @@ struct FailE {
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
 };
+
 enum class Ev { EV0 };
 using env = Nat;
 template <typename CraneTcArg>
@@ -216,14 +216,16 @@ Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> handle(Ev) {
 
 template <Params _tcI0, typename T1, typename T2>
 Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> twice(Ev e) {
-  return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
-      T2, T2>(handle<T1, T2>(e), [](const T2 &res) {
-    return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
-        Nat, T2>(step<_tcI0, T1>(Nat::s(Nat::o())), [=](Nat) {
-      return Monads::template Monad_stateT<Monad_itree<T1>,
-                                           env>::template ret<T2>(res);
-    });
-  });
+  return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<T2,
+                                                                            T2>(
+      handle<T1, T2>(e), [](const T2 &res) {
+        return Monads::template Monad_stateT<Monad_itree<T1>,
+                                             env>::template bind<Nat, T2>(
+            step<_tcI0, T1>(Nat::s(Nat::o())), [=](Nat) {
+              return Monads::template Monad_stateT<Monad_itree<T1>,
+                                                   env>::template ret<T2>(res);
+            });
+      });
 }
 
 struct Qf {

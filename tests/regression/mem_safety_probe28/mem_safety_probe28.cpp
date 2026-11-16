@@ -1,9 +1,12 @@
 #include "mem_safety_probe28.h"
 
-uint64_t MemSafetyProbe28::tree_sum(
-    const MemSafetyProbe28::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe28::tree_sum(const MemSafetyProbe28::tree &t) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const MemSafetyProbe28::tree *t;
   };
@@ -33,8 +36,7 @@ uint64_t MemSafetyProbe28::tree_sum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe28::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
@@ -57,10 +59,14 @@ uint64_t MemSafetyProbe28::tree_sum(
   return _result;
 }
 
-uint64_t MemSafetyProbe28::tree_depth(
-    const MemSafetyProbe28::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe28::tree_depth(const MemSafetyProbe28::tree &t) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const MemSafetyProbe28::tree *t;
   };
@@ -88,8 +94,7 @@ uint64_t MemSafetyProbe28::tree_depth(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe28::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
@@ -115,11 +120,15 @@ uint64_t MemSafetyProbe28::tree_depth(
 /// In the Node/Node branch, t2's children are used for recursion AND
 /// tree_sum t2 uses the whole tree. If the optimization moves *(l2),
 /// tree_sum t2 might see corrupted data.
-uint64_t MemSafetyProbe28::zip_trees(
-    const MemSafetyProbe28::tree &t1,
-    const MemSafetyProbe28::tree &t2) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe28::zip_trees(const MemSafetyProbe28::tree &t1,
+                            const MemSafetyProbe28::tree &t2) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     MemSafetyProbe28::tree t2;
     const MemSafetyProbe28::tree *t1;
@@ -172,8 +181,7 @@ uint64_t MemSafetyProbe28::zip_trees(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe28::tree &t2 = _f.t2;
       const MemSafetyProbe28::tree &t1 = *_f.t1;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t1.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t1.v())) {
         _result = tree_sum(t2);
       } else {
         const auto &[a0, a1, a2] =
@@ -222,11 +230,15 @@ uint64_t MemSafetyProbe28::zip_trees(
 
 /// TEST 2: zip_depth - Similar but uses tree_depth on t2.
 /// Tests a different tree traversal on the non-pointer-safe param.
-uint64_t MemSafetyProbe28::zip_depth(
-    const MemSafetyProbe28::tree &t1,
-    const MemSafetyProbe28::tree &t2) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe28::zip_depth(const MemSafetyProbe28::tree &t1,
+                            const MemSafetyProbe28::tree &t2) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     MemSafetyProbe28::tree t2;
     const MemSafetyProbe28::tree *t1;
@@ -275,8 +287,7 @@ uint64_t MemSafetyProbe28::zip_depth(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe28::tree &t2 = _f.t2;
       const MemSafetyProbe28::tree &t1 = *_f.t1;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t1.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t1.v())) {
         _result = tree_depth(t2);
       } else {
         const auto &[a0, a1, a2] =
@@ -320,11 +331,15 @@ uint64_t MemSafetyProbe28::zip_depth(
 
 /// TEST 3: zip_and_build - Recurse and also construct using t2's children.
 /// t2's left child is used for recursion AND returned as part of result.
-uint64_t MemSafetyProbe28::zip_and_sum(
-    const MemSafetyProbe28::tree &t1,
-    const MemSafetyProbe28::tree &t2) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe28::zip_and_sum(const MemSafetyProbe28::tree &t1,
+                              const MemSafetyProbe28::tree &t2) { /// CraneEnter:
+                                                                  /// captures
+                                                                  /// varying
+                                                                  /// parameters
+                                                                  /// for each
+                                                                  /// recursive
+                                                                  /// call.
   struct CraneEnter {
     MemSafetyProbe28::tree t2;
     const MemSafetyProbe28::tree *t1;
@@ -376,8 +391,7 @@ uint64_t MemSafetyProbe28::zip_and_sum(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe28::tree &t2 = _f.t2;
       const MemSafetyProbe28::tree &t1 = *_f.t1;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t1.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t1.v())) {
         _result = tree_sum(t2);
       } else {
         const auto &[a0, a1, a2] =
@@ -426,11 +440,15 @@ uint64_t MemSafetyProbe28::zip_and_sum(
 
 /// TEST 4: double_zip - Both t1 and t2 are trees, but t2 is used
 /// in a different way for each call. Makes t2 non-pointer-safe.
-uint64_t MemSafetyProbe28::double_zip(
-    const MemSafetyProbe28::tree &t1,
-    const MemSafetyProbe28::tree &t2) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe28::double_zip(const MemSafetyProbe28::tree &t1,
+                             const MemSafetyProbe28::tree &t2) { /// CraneEnter:
+                                                                 /// captures
+                                                                 /// varying
+                                                                 /// parameters
+                                                                 /// for each
+                                                                 /// recursive
+                                                                 /// call.
   struct CraneEnter {
     const MemSafetyProbe28::tree *t2;
     const MemSafetyProbe28::tree *t1;
@@ -482,8 +500,7 @@ uint64_t MemSafetyProbe28::double_zip(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe28::tree &t2 = *_f.t2;
       const MemSafetyProbe28::tree &t1 = *_f.t1;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t1.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t1.v())) {
         _result = tree_sum(t2);
       } else {
         const auto &[a0, a1, a2] =
@@ -532,11 +549,12 @@ uint64_t MemSafetyProbe28::double_zip(
 
 /// TEST 5: zip with list accumulator. t2 is tree, acc is list.
 /// t2 non-pointer-safe due to Leaf in some calls.
-List<uint64_t> MemSafetyProbe28::zip_collect(
-    const MemSafetyProbe28::tree &t1, const MemSafetyProbe28::tree &t2,
-    List<uint64_t> acc) { /// CraneEnter: captures varying parameters for each
-                          /// recursive call.
-
+List<uint64_t>
+MemSafetyProbe28::zip_collect(const MemSafetyProbe28::tree &t1,
+                              const MemSafetyProbe28::tree &t2,
+                              List<uint64_t> acc) { /// CraneEnter: captures
+                                                    /// varying parameters for
+                                                    /// each recursive call.
   struct CraneEnter {
     List<uint64_t> acc;
     MemSafetyProbe28::tree t2;
@@ -572,8 +590,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
       List<uint64_t> acc = std::move(_f.acc);
       const MemSafetyProbe28::tree &t2 = _f.t2;
       const MemSafetyProbe28::tree &t1 = *_f.t1;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t1.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t1.v())) {
         _result = std::move(acc);
       } else {
         const auto &[a0, a1, a2] =
@@ -594,8 +611,9 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
       auto _f = std::move(std::get<CraneCont_Leaf>(_frame));
       const MemSafetyProbe28::tree &a0 = *_f.a0;
       uint64_t a1 = _f.a1;
-      _stack.emplace_back(CraneEnter{
-          List<uint64_t>::cons(a1, std::move(_result)), tree::leaf(), &a0});
+      _stack.emplace_back(
+          CraneEnter{List<uint64_t>::cons(a1, std::move(_result)), tree::leaf(),
+                     &a0});
     } else {
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       const MemSafetyProbe28::tree &a0 = *_f.a0;
@@ -611,10 +629,10 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
   return _result;
 }
 
-uint64_t MemSafetyProbe28::list_sum(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+MemSafetyProbe28::list_sum(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                      /// varying parameters for
+                                                      /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -657,7 +675,6 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
     const MemSafetyProbe28::tree &t1,
     const MemSafetyProbe28::tree &t2) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     MemSafetyProbe28::tree t2;
     const MemSafetyProbe28::tree *t1;
@@ -708,8 +725,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       MemSafetyProbe28::tree t2 = std::move(_f.t2);
       const MemSafetyProbe28::tree &t1 = *_f.t1;
-      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
-              t1.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t1.v())) {
         _result = std::move(t2);
       } else {
         const auto &[a0, a1, a2] =
@@ -754,10 +770,10 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
 }
 
 /// TEST 7: Deep trees to stress the optimization.
-MemSafetyProbe28::tree MemSafetyProbe28::build_balanced(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+MemSafetyProbe28::tree
+MemSafetyProbe28::build_balanced(uint64_t n) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     uint64_t n;
   };

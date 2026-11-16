@@ -137,9 +137,9 @@ struct ConstrainedPoly {
   static inline const uint64_t test_fst = test_pair.ufst;
   static inline const bool test_snd = test_pair.usnd;
   static inline const UOption<uint64_t> test_umap =
-      uoption_map<uint64_t, uint64_t>(
-          [](uint64_t n) { return (n + UINT64_C(1)); },
-          UOption<uint64_t>::usome(UINT64_C(9)));
+      uoption_map<uint64_t, uint64_t>([](uint64_t n) {
+        return (n + UINT64_C(1));
+      }, UOption<uint64_t>::usome(UINT64_C(9)));
 };
 
 #endif // INCLUDED_CONSTRAINED_POLY

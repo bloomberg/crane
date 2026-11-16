@@ -14,8 +14,8 @@
 struct Nat;
 template <typename A> struct List;
 using allocationId = crane::obj;
-using prov = crane::obj;
-/// A class with several Type-valued fields, reached through a second class
+using prov =
+    crane::obj; /// A class with several Type-valued fields, reached through a second class
 /// that holds it as a promoted dictionary field.  Each associated type must
 /// keep its own name at a use site; they all collapse onto the last one.
 template <typename I>

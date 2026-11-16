@@ -42,9 +42,9 @@ ClosureLetEscape::make_fn_multi(uint64_t n) {
       return (_self_helper(_self_helper, x_) + 1);
     }
   };
-  auto helper = [=,
-                 helper_impl = std::move(helper_impl)](uint64_t x) -> uint64_t {
-    return helper_impl(helper_impl, x);
-  };
+  auto helper =
+      [=, helper_impl = std::move(helper_impl)](uint64_t x) -> uint64_t {
+        return helper_impl(helper_impl, x);
+      };
   return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(helper));
 }

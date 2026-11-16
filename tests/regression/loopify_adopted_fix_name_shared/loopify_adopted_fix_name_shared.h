@@ -279,8 +279,7 @@ struct LoopifyAdoptedFixNameShared {
           if (_alt->ts && _alt->ts.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->ts.get();
-            while (
-                std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<tree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<tree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -297,8 +296,7 @@ struct LoopifyAdoptedFixNameShared {
           if (_alt->ts && _alt->ts.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->ts.get();
-            while (
-                std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<tree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<tree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -357,18 +355,24 @@ struct LoopifyAdoptedFixNameShared {
   static std::optional<Nat> f(const tree &t, Nat i);
   /// The struct loop skips Leaf 1 (4 >= 3), enters the array at 1, and
   /// the array loop reaches Leaf 7 at 1.
-  static inline const std::optional<Nat> r1 =
-      f(tree::node(List<tree>::cons(
-            tree::leaf(Nat::s(Nat::o())),
-            List<tree>::cons(
-                tree::arr(List<tree>::cons(
-                    tree::leaf(Nat::s(Nat::s(
-                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
-                    List<tree>::cons(tree::leaf(Nat::s(Nat::s(
-                                         Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                                     List<tree>::nil()))),
-                List<tree>::nil()))),
-        Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
+  static inline const std::optional<Nat> r1 = f(
+      tree::node(
+          List<tree>::cons(
+              tree::leaf(Nat::s(Nat::o())), List<tree>::cons(
+                  tree::arr(
+                      List<tree>::cons(
+                          tree::leaf(
+                              Nat::s(
+                                  Nat::s(
+                                      Nat::s(
+                                          Nat::s(
+                                              Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+                          List<tree>::cons(
+                              tree::leaf(
+                                  Nat::s(
+                                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                              List<tree>::nil()))), List<tree>::nil()))),
+      Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
 
 #endif // INCLUDED_LOOPIFY_ADOPTED_FIX_NAME_SHARED

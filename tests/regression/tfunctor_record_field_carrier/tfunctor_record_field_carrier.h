@@ -242,8 +242,7 @@ public:
   template <typename CraneU>
   Exp(const Exp<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(_other.v())) {
             const auto &[a0] =
                 std::get<typename Exp<CraneU>::E_leaf>(_other.v());
             return E_leaf{[&]() -> t {
@@ -259,9 +258,9 @@ public:
                 std::get<typename Exp<CraneU>::E_node>(_other.v());
             return E_node{
                 (a0 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a0))
-                    : nullptr),
-                (a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
-                    : nullptr)};
+                    : nullptr), (
+                    a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
+                       : nullptr)};
           }
         }()) {}
 
@@ -458,10 +457,10 @@ struct TFunctor_glob {
   template <typename CraneA0, typename CraneA1>
   static glob<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, glob<CraneA0> g) {
     return glob<CraneA1>{
-        f(g.g_name),
-        TFunctor_option<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
-            f, g.g_exp),
-        TFunctor_list<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+        f(g.g_name), TFunctor_option<TFunctor_exp>::template tfmap<CraneA0,
+                                                                   CraneA1>(
+            f, g.g_exp), TFunctor_list<TFunctor_exp>::template tfmap<CraneA0,
+                                                                     CraneA1>(
             f, g.g_anns)};
   }
 };

@@ -237,7 +237,6 @@ struct LoopifySpecialRecursion {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -316,7 +315,6 @@ struct LoopifySpecialRecursion {
   nest_apply(uint64_t n, F1 &&f,
              uint64_t x) { /// CraneEnter: captures varying parameters for each
                            /// recursive call.
-
     struct CraneEnter {
       uint64_t n;
     };
@@ -356,7 +354,6 @@ struct LoopifySpecialRecursion {
   static uint64_t categorize_by(uint64_t k, const List<uint64_t> &l);
   static List<uint64_t> between(uint64_t lo, uint64_t hi,
                                 const List<uint64_t> &l);
-
   static List<uint64_t> merge_levels(const List<List<uint64_t>> &ll);
 };
 

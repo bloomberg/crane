@@ -139,8 +139,7 @@ struct PropBinderBeforeTypeBinder {
     template <typename CraneU>
     guarded(const guarded<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename guarded<CraneU>::G>(
-                    _other.v())) {
+            if (std::holds_alternative<typename guarded<CraneU>::G>(_other.v())) {
               const auto &[a0] =
                   std::get<typename guarded<CraneU>::G>(_other.v());
               return G{[&]() -> A {
@@ -205,9 +204,9 @@ struct PropBinderBeforeTypeBinder {
     }
   }
 
-  static inline const uint64_t selected =
-      sel<uint64_t>([](uint64_t n) { return Nat::eq_dec(n, UINT64_C(2)); },
-                    UINT64_C(0), UINT64_C(2), UINT64_C(6));
+  static inline const uint64_t selected = sel<uint64_t>([](uint64_t n) {
+    return Nat::eq_dec(n, UINT64_C(2));
+  }, UINT64_C(0), UINT64_C(2), UINT64_C(6));
 };
 
 #endif // INCLUDED_PROP_BINDER_BEFORE_TYPE_BINDER

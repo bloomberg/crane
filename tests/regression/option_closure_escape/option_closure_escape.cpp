@@ -32,11 +32,9 @@ uint64_t OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
 /// When pair_escape returns, t is destroyed → dangling.
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 OptionClosureEscape::pair_escape(OptionClosureEscape::tree t) {
-  return std::make_pair(
-      [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
-        return sum_values(std::move(t), _x0);
-      },
-      UINT64_C(42));
+  return std::make_pair([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+    return sum_values(std::move(t), _x0);
+  }, UINT64_C(42));
 }
 
 /// BUG: match_pair — & captures _args from visit scope.
@@ -48,8 +46,8 @@ OptionClosureEscape::match_pair(const OptionClosureEscape::tree &t) {
     const auto &[a0, a1, a2] =
         std::get<typename OptionClosureEscape::tree::Node>(t.v());
     const OptionClosureEscape::tree &a0_value = *a0;
-    return std::make_pair(
-        [=](uint64_t _x0) -> uint64_t { return sum_values(a0_value, _x0); },
-        a1);
+    return std::make_pair([=](uint64_t _x0) -> uint64_t {
+      return sum_values(a0_value, _x0);
+    }, a1);
   }
 }

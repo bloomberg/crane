@@ -5,9 +5,10 @@
 #include <utility>
 
 namespace SepExtAliasClash {
-
 template <typename M>
-concept Sig = requires { typename M::t; };
+concept Sig = requires {
+  typename M::t;
+};
 
 template <Sig S> struct ImplFn {
   static typename S::t foo(typename S::t x) { return x; }
@@ -27,7 +28,6 @@ struct MySig {
 
 using Impl = ImplFn<MySig>;
 using Lemmas = LemmasFn<MySig>;
-
 } // namespace SepExtAliasClash
 
 #endif // INCLUDED_SEPEXTALIASCLASH

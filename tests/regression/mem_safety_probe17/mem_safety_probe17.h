@@ -177,8 +177,7 @@ struct MemSafetyProbe17 {
                 std::get<typename qtree::QNode>(_sv.v());
             uint64_t local_weight =
                 ((((a0->qtree_sum() + (UINT64_C(2) * a1->qtree_sum())) +
-                   (UINT64_C(3) * a2)) +
-                  (UINT64_C(4) * a3->qtree_sum())) +
+                   (UINT64_C(3) * a2)) + (UINT64_C(4) * a3->qtree_sum())) +
                  (UINT64_C(5) * a4->qtree_sum()));
             _stack.emplace_back(CraneCont_QNode{crane_raw(a1), crane_raw(a3),
                                                 crane_raw(a4), local_weight});
@@ -300,9 +299,10 @@ struct MemSafetyProbe17 {
             } else {
               const auto &[a00, a10, a20, a30, a40] =
                   std::get<typename qtree::QNode>(t2.v());
-              _stack.emplace_back(CraneCont_QNode{
-                  crane_raw(a2), a3, crane_raw(a4), crane_raw(a5),
-                  crane_raw(a10), a20, crane_raw(a30), crane_raw(a40)});
+              _stack.emplace_back(
+                  CraneCont_QNode{crane_raw(a2), a3, crane_raw(a4),
+                                  crane_raw(a5), crane_raw(a10), a20,
+                                  crane_raw(a30), crane_raw(a40)});
               _stack.emplace_back(CraneEnter{crane_raw(a0), crane_raw(a00)});
             }
           }
@@ -327,8 +327,9 @@ struct MemSafetyProbe17 {
           uint64_t a20 = _f.a20;
           const qtree &a30 = *_f.a30;
           const qtree &a40 = *_f.a40;
-          _stack.emplace_back(CraneCont_QNode_2{
-              a3, &a5, a20, &a40, std::move(_f._tmp4), std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_QNode_2{a3, &a5, a20, &a40, std::move(_f._tmp4),
+                                std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a4, &a30});
         } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
@@ -336,9 +337,9 @@ struct MemSafetyProbe17 {
           const qtree &a5 = *_f.a5;
           uint64_t a20 = _f.a20;
           const qtree &a40 = *_f.a40;
-          _stack.emplace_back(CraneCont_QNode_3{a3, a20, std::move(_f._tmp4),
-                                                std::move(_f._tmp3),
-                                                std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_QNode_3{a3, a20, std::move(_f._tmp4),
+                                std::move(_f._tmp3), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a5, &a40});
         } else {
           auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
@@ -442,9 +443,9 @@ struct MemSafetyProbe17 {
           auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
           const qtree &a0 = *_f.a0;
           uint64_t a2 = _f.a2;
-          _stack.emplace_back(CraneCont_QNode_3{a2, std::move(_f._tmp4),
-                                                std::move(_f._tmp3),
-                                                std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_QNode_3{a2, std::move(_f._tmp4), std::move(_f._tmp3),
+                                std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a0});
         } else {
           auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
@@ -862,9 +863,9 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
-          _stack.emplace_back(CraneCont_QNode_2{std::move(a0), &a1, a2, &a3,
-                                                &a4, std::move(_f._tmp4),
-                                                std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_QNode_2{std::move(a0), &a1, a2, &a3, &a4,
+                                std::move(_f._tmp4), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
@@ -873,9 +874,10 @@ struct MemSafetyProbe17 {
           uint64_t a2 = _f.a2;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
-          _stack.emplace_back(CraneCont_QNode_3{
-              std::move(a0), &a1, a2, &a3, &a4, std::move(_f._tmp4),
-              std::move(_f._tmp3), std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_QNode_3{std::move(a0), &a1, a2, &a3, &a4,
+                                std::move(_f._tmp4), std::move(_f._tmp3),
+                                std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a4});
         } else {
           auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
@@ -894,36 +896,35 @@ struct MemSafetyProbe17 {
 
   /// TEST 1: Sum of a 4-ary tree. Basic correctness.
   static inline const uint64_t test_qtree_sum = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(10),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()));
+    qtree t = qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(1), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                               qtree::qleaf(), qtree::qleaf()), UINT64_C(10),
+                           qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(3), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                               qtree::qleaf(), qtree::qleaf()));
     return t.qtree_sum();
   }();
   /// TEST 2: Depth of a deep 4-ary tree.
   static inline const uint64_t test_qtree_depth = []() {
     qtree inner = qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
                                qtree::qleaf(), qtree::qleaf());
-    qtree t = qtree::qnode(inner,
-                           qtree::qnode(inner, qtree::qleaf(), UINT64_C(2),
-                                        qtree::qleaf(), qtree::qleaf()),
-                           UINT64_C(3), qtree::qleaf(), qtree::qleaf());
+    qtree t = qtree::qnode(
+        inner, qtree::qnode(inner, qtree::qleaf(), UINT64_C(2), qtree::qleaf(),
+                            qtree::qleaf()), UINT64_C(3), qtree::qleaf(),
+        qtree::qleaf());
     return t.qtree_depth();
   }();
   static inline const uint64_t test_qtree_mirror = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qleaf(), UINT64_C(10),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qleaf());
+    qtree t = qtree::qnode(
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                     qtree::qleaf(), qtree::qleaf()), qtree::qleaf(),
+        UINT64_C(10), qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
+                                   qtree::qleaf(), qtree::qleaf()),
+        qtree::qleaf());
     return t.qtree_mirror().qtree_sum();
   }();
 
@@ -966,13 +967,13 @@ struct MemSafetyProbe17 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -1025,10 +1026,9 @@ struct MemSafetyProbe17 {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -1090,16 +1090,16 @@ struct MemSafetyProbe17 {
   static uint64_t sum_list(const mylist<uint64_t> &l);
   static mylist<uint64_t> qtree_flatten(const qtree &t);
   static inline const uint64_t test_qtree_flatten = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(5),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()));
+    qtree t = qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(1), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                               qtree::qleaf(), qtree::qleaf()), UINT64_C(5),
+                           qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(3), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                               qtree::qleaf(), qtree::qleaf()));
     return sum_list(qtree_flatten(std::move(t)));
   }();
   static inline const uint64_t test_qtree_zip = []() {
@@ -1110,16 +1110,16 @@ struct MemSafetyProbe17 {
     return t1.qtree_zip(std::move(t2)).qtree_sum();
   }();
   static inline const uint64_t test_weighted = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(3),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(5),
-                                  qtree::qleaf(), qtree::qleaf()));
+    qtree t = qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(1), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                               qtree::qleaf(), qtree::qleaf()), UINT64_C(3),
+                           qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(4), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(5),
+                               qtree::qleaf(), qtree::qleaf()));
     return t.weighted_sum();
   }();
   /// TEST 7: Build a 4-ary tree programmatically and check.
@@ -1128,16 +1128,16 @@ struct MemSafetyProbe17 {
       make_qtree(UINT64_C(4)).qtree_sum();
   /// TEST 8: Two-pass on a 4-ary tree: flatten then sum vs direct sum.
   static inline const uint64_t test_two_pass_qtree = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(5),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()));
+    qtree t = qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(1), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                               qtree::qleaf(), qtree::qleaf()), UINT64_C(5),
+                           qtree::qnode(qtree::qleaf(), qtree::qleaf(),
+                                        UINT64_C(3), qtree::qleaf(),
+                                        qtree::qleaf()), qtree::qnode(
+                               qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                               qtree::qleaf(), qtree::qleaf()));
     return (sum_list(qtree_flatten(t)) + t.qtree_sum());
   }();
 };

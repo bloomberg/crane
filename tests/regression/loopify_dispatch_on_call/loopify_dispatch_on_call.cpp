@@ -1,10 +1,14 @@
 #include "loopify_dispatch_on_call.h"
 
-bool LoopifyDispatchOnCall::parity(
-    const LoopifyDispatchOnCall::tree
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+bool
+LoopifyDispatchOnCall::parity(const LoopifyDispatchOnCall::tree &t) { /// CraneEnter:
+                                                                      /// captures
+                                                                      /// varying
+                                                                      /// parameters
+                                                                      /// for
+                                                                      /// each
+                                                                      /// recursive
+                                                                      /// call.
   struct CraneEnter {
     const LoopifyDispatchOnCall::tree *t;
   };
@@ -55,11 +59,10 @@ bool LoopifyDispatchOnCall::parity(
   return _result;
 }
 
-LoopifyDispatchOnCall::tree
-LoopifyDispatchOnCall::graft(const LoopifyDispatchOnCall::tree
-                                 &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+LoopifyDispatchOnCall::tree LoopifyDispatchOnCall::graft(
+    const LoopifyDispatchOnCall::tree &t) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     const LoopifyDispatchOnCall::tree *t;
   };
@@ -130,10 +133,13 @@ LoopifyDispatchOnCall::graft(const LoopifyDispatchOnCall::tree
 }
 
 uint64_t
-LoopifyDispatchOnCall::size(const LoopifyDispatchOnCall::tree
-                                &t) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+LoopifyDispatchOnCall::size(const LoopifyDispatchOnCall::tree &t) { /// CraneEnter:
+                                                                    /// captures
+                                                                    /// varying
+                                                                    /// parameters
+                                                                    /// for each
+                                                                    /// recursive
+                                                                    /// call.
   struct CraneEnter {
     const LoopifyDispatchOnCall::tree *t;
   };
@@ -183,10 +189,10 @@ LoopifyDispatchOnCall::size(const LoopifyDispatchOnCall::tree
   return _result;
 }
 
-LoopifyDispatchOnCall::tree LoopifyDispatchOnCall::comb(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+LoopifyDispatchOnCall::tree
+LoopifyDispatchOnCall::comb(uint64_t n) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     uint64_t n;
   };

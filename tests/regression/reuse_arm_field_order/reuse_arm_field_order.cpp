@@ -3,8 +3,8 @@
 ReuseArmFieldOrder::lst
 ReuseArmFieldOrder::zero_heads(ReuseArmFieldOrder::lst l) {
   if (l.v().index() == 1) {
-    if (std::get<typename ReuseArmFieldOrder::lst::Cons>(l.v_mut())
-            .a1.use_count() == 1) {
+    if (std::get<typename ReuseArmFieldOrder::lst::Cons>(l.v_mut()).a1.use_count() ==
+        1) {
       ReuseArmFieldOrder::lst xs = std::move(
           *std::get<typename ReuseArmFieldOrder::lst::Cons>(l.v_mut()).a1);
       return lst::cons_crane_reuse(
@@ -22,8 +22,7 @@ ReuseArmFieldOrder::zero_heads(ReuseArmFieldOrder::lst l) {
       }
     }
   } else {
-    if (std::holds_alternative<typename ReuseArmFieldOrder::lst::Nil>(
-            l.v_mut())) {
+    if (std::holds_alternative<typename ReuseArmFieldOrder::lst::Nil>(l.v_mut())) {
       return lst::nil();
     } else {
       auto &[a0, a1] =
@@ -35,8 +34,7 @@ ReuseArmFieldOrder::zero_heads(ReuseArmFieldOrder::lst l) {
 
 ReuseArmFieldOrder::lst
 ReuseArmFieldOrder::keep_head(ReuseArmFieldOrder::lst l) {
-  if (std::holds_alternative<typename ReuseArmFieldOrder::lst::Nil>(
-          l.v_mut())) {
+  if (std::holds_alternative<typename ReuseArmFieldOrder::lst::Nil>(l.v_mut())) {
     return lst::nil();
   } else {
     auto &[a0, a1] =

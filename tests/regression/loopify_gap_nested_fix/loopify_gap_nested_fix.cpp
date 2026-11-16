@@ -1,10 +1,13 @@
 #include "loopify_gap_nested_fix.h"
 
 uint64_t
-LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose
-                                  &r) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose &r) { /// CraneEnter:
+                                                                    /// captures
+                                                                    /// varying
+                                                                    /// parameters
+                                                                    /// for each
+                                                                    /// recursive
+                                                                    /// call.
   struct CraneEnter {
     const LoopifyGapNestedFix::rose *r;
   };

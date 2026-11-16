@@ -177,10 +177,8 @@ struct InductiveLetinParams {
   };
 
   static inline const tri<uint64_t, bool> sample = tri<uint64_t, bool>::tri0(
-      UINT64_C(7), true,
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
+      UINT64_C(7), true, List<uint64_t>::cons(
+          UINT64_C(1), List<uint64_t>::cons(
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
   static inline const uint64_t sample_sum =
@@ -219,13 +217,12 @@ struct InductiveLetinParams {
                     _other.v())) {
               return Tnil{};
             } else {
-              const auto &[a0, a1] =
-                  std::get<typename tagged<CraneU0, CraneU1>::Tcons>(
-                      _other.v());
-              return Tcons{std::pair<A, B>(a0),
-                           (a1 ? std::make_shared<tagged<A, B>>(
-                                     crane_convert<tagged<A, B>>(*a1))
-                               : nullptr)};
+              const auto &[a0, a1] = std::get<
+                  typename tagged<CraneU0, CraneU1>::Tcons>(_other.v());
+              return Tcons{
+                  std::pair<A, B>(a0), (a1 ? std::make_shared<tagged<A, B>>(
+                                               crane_convert<tagged<A, B>>(*a1))
+                                           : nullptr)};
             }
           }()) {}
 
@@ -367,9 +364,9 @@ struct InductiveLetinParams {
 
   static inline const tagged<uint64_t, bool> sample_tagged =
       tagged<uint64_t, bool>::tcons(
-          std::make_pair(UINT64_C(1), true),
-          tagged<uint64_t, bool>::tcons(std::make_pair(UINT64_C(2), false),
-                                        tagged<uint64_t, bool>::tnil()));
+          std::make_pair(UINT64_C(1), true), tagged<uint64_t, bool>::tcons(
+              std::make_pair(UINT64_C(2), false),
+              tagged<uint64_t, bool>::tnil()));
 
   /// A let-in parameter before an index the constructor binds: the field
   /// x : T reads its type through the binder of T, found by de Bruijn

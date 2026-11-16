@@ -164,11 +164,11 @@ struct LoopifySequences {
 
   /// intercalate sep lists inserts sep between lists and flattens.
   template <typename T1>
-  static List<T1> intercalate(
-      const List<T1> &sep,
-      const List<List<T1>> &lists) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-
+  static List<T1>
+  intercalate(const List<T1> &sep,
+              const List<List<T1>> &lists) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
     struct CraneEnter {
       const List<List<T1>> *lists;
     };
@@ -223,11 +223,13 @@ struct LoopifySequences {
         struct CraneEnter {
           const List<T1> *rest;
         };
+
         /// CraneCont_Cons: saves [a00], resumes after recursive call, then
         /// processes rest.
         struct CraneCont_Cons {
           T1 a00;
         };
+
         using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
         List<T1> _result{};
         crane::small_vector<CraneFrame> _stack;
@@ -271,9 +273,9 @@ struct LoopifySequences {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<List<T1>>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<List<T1>>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<List<T1>>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
@@ -306,11 +308,13 @@ struct LoopifySequences {
             struct CraneEnter {
               const List<List<T1>> *l;
             };
+
             /// CraneCont_Cons: saves [a01], resumes after recursive call, then
             /// processes rest.
             struct CraneCont_Cons {
               T1 a01;
             };
+
             using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
             List<T1> _result{};
             crane::small_vector<CraneFrame> _stack;
@@ -322,8 +326,7 @@ struct LoopifySequences {
               if (std::holds_alternative<CraneEnter>(_frame)) {
                 auto _f = std::move(std::get<CraneEnter>(_frame));
                 const List<List<T1>> &l = *_f.l;
-                if (std::holds_alternative<typename List<List<T1>>::Nil>(
-                        l.v())) {
+                if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
                   _result = List<T1>::nil();
                 } else {
                   const auto &[a00, a10] =
@@ -350,11 +353,13 @@ struct LoopifySequences {
             struct CraneEnter {
               const List<List<T1>> *l;
             };
+
             /// CraneCont_Cons: saves [a12], resumes after recursive call, then
             /// processes rest.
             struct CraneCont_Cons {
               std::shared_ptr<List<T1>> a12;
             };
+
             using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
             List<List<T1>> _result{};
             crane::small_vector<CraneFrame> _stack;
@@ -366,8 +371,7 @@ struct LoopifySequences {
               if (std::holds_alternative<CraneEnter>(_frame)) {
                 auto _f = std::move(std::get<CraneEnter>(_frame));
                 const List<List<T1>> &l = *_f.l;
-                if (std::holds_alternative<typename List<List<T1>>::Nil>(
-                        l.v())) {
+                if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
                   _result = List<List<T1>>::nil();
                 } else {
                   const auto &[a01, a11] =
@@ -430,9 +434,9 @@ struct LoopifySequences {
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t m = _loop_n - 1;
@@ -458,10 +462,9 @@ struct LoopifySequences {
   static List<uint64_t> repeat_with_sep(List<uint64_t> s,
                                         const List<uint64_t> &sep, uint64_t n);
   /// string_chain s n recursive string chain: s-chain(s, n-1)-end.
-  static List<uint64_t> string_chain_fuel(uint64_t fuel,
-                                          const List<uint64_t> &s, uint64_t n,
-                                          const List<uint64_t> &sep,
-                                          List<uint64_t> end_marker);
+  static List<uint64_t>
+  string_chain_fuel(uint64_t fuel, const List<uint64_t> &s, uint64_t n,
+                    const List<uint64_t> &sep, List<uint64_t> end_marker);
   static List<uint64_t> string_chain(const List<uint64_t> &s, uint64_t n,
                                      const List<uint64_t> &sep,
                                      List<uint64_t> end_marker);
@@ -507,9 +510,9 @@ struct LoopifySequences {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -577,7 +580,6 @@ struct LoopifySequences {
   bool_all(F0 &&p,
            const List<uint64_t> &l) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -618,7 +620,6 @@ struct LoopifySequences {
   /// run_length_encode l encodes consecutive runs: 1,1,2,2,2 -> (1,2),(2,3).
   static List<std::pair<uint64_t, uint64_t>>
   run_length_encode_fuel(uint64_t fuel, const List<uint64_t> &l);
-
   static List<std::pair<uint64_t, uint64_t>>
   run_length_encode(const List<uint64_t> &l);
   /// between lo hi l filters elements in range lo, hi.

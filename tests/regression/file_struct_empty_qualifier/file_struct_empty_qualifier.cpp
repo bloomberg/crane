@@ -26,6 +26,7 @@ N FileStructEmptyQualifier::a(const List<Nat> &x0_) {
 }
 
 std::optional<List<Nat>> FileStructEmptyQualifier::b(const List<Nat> &l) {
-  return Helpers::template map_monad<Monad_option, Nat, Nat>(
-      [](const Nat &x) { return std::make_optional<Nat>(Nat::s(x)); }, l);
+  return Helpers::template map_monad<Monad_option, Nat, Nat>([](const Nat &x) {
+    return std::make_optional<Nat>(Nat::s(x));
+  }, l);
 }

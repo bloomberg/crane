@@ -11,7 +11,8 @@ uint64_t AnyCastNestedPair::apply_pred(AnyCastNestedPair::symbols_semty input) {
 
 uint64_t AnyCastNestedPair::test_pred(uint64_t a, uint64_t b) {
   return apply_pred(
-      std::make_pair(crane::obj(crane::obj(a)),
-                     crane::obj(std::make_pair(crane::obj(crane::obj(b)),
-                                               crane::obj(std::monostate{})))));
+      std::make_pair(
+          crane::obj(crane::obj(a)), crane::obj(
+              std::make_pair(crane::obj(crane::obj(b)),
+                             crane::obj(std::monostate{})))));
 }

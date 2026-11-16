@@ -431,8 +431,9 @@ struct LoopifyStructures {
         } else if (std::holds_alternative<CraneCont_Quad_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Quad_2>(_frame));
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(CraneCont_Quad_3{
-              std::move(_f._tmp4), std::move(_f._tmp3), std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Quad_3{std::move(_f._tmp4), std::move(_f._tmp3),
+                               std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else {
           auto _f = std::move(std::get<CraneCont_Quad_3>(_frame));
@@ -730,8 +731,9 @@ struct LoopifyStructures {
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
-            _stack.emplace_back(CraneCont_Quad{a0, crane_raw(a1), crane_raw(a2),
-                                               crane_raw(a3)});
+            _stack.emplace_back(
+                CraneCont_Quad{a0, crane_raw(a1), crane_raw(a2),
+                               crane_raw(a3)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else if (std::holds_alternative<CraneCont_Quad>(_frame)) {
@@ -749,9 +751,9 @@ struct LoopifyStructures {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(CraneCont_Quad_2{std::move(a0), &a1, &a2, &a3,
-                                               std::move(_f._tmp4),
-                                               std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Quad_2{std::move(a0), &a1, &a2, &a3,
+                               std::move(_f._tmp4), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Quad_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Quad_2>(_frame));
@@ -759,9 +761,10 @@ struct LoopifyStructures {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(CraneCont_Quad_3{
-              std::move(a0), &a1, &a2, &a3, std::move(_f._tmp4),
-              std::move(_f._tmp3), std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Quad_3{std::move(a0), &a1, &a2, &a3,
+                               std::move(_f._tmp4), std::move(_f._tmp3),
+                               std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else {
           auto _f = std::move(std::get<CraneCont_Quad_3>(_frame));
@@ -807,9 +810,9 @@ struct LoopifyStructures {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -843,9 +846,9 @@ struct LoopifyStructures {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =

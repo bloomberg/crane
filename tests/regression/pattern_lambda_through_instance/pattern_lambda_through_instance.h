@@ -190,8 +190,8 @@ struct PatternLambdaThroughInstance {
         if constexpr (crane_convertible<CraneU, const T &>) {
           return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -271,14 +271,13 @@ struct PatternLambdaThroughInstance {
     static phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, phi<CraneA0> pat) {
       auto &[a0, a1] = pat;
       return phi<CraneA1>::phi0(
-          f(std::move(a0)),
-          TFunctor_list::template tfmap<std::pair<uint64_t, exp<CraneA0>>,
-                                        std::pair<uint64_t, exp<CraneA1>>>(
+          f(std::move(a0)), TFunctor_list::template tfmap<
+              std::pair<uint64_t, exp<CraneA0>>,
+              std::pair<uint64_t, exp<CraneA1>>>(
               [=](const std::pair<uint64_t, exp<CraneA0>> &pat0) {
                 const auto &[id, e] = pat0;
-                return std::make_pair(
-                    _tcI0::endo(id),
-                    _tcI1::template tfmap<CraneA0, CraneA1>(f, e));
+                return std::make_pair(_tcI0::endo(id), _tcI1::template tfmap<
+                                          CraneA0, CraneA1>(f, e));
               },
               std::move(a1)));
     }
@@ -290,20 +289,18 @@ struct PatternLambdaThroughInstance {
 
   static_assert(Endo<Endo_nat, uint64_t>);
   static inline const phi<uint64_t> p0 = phi<uint64_t>::phi0(
-      UINT64_C(1),
-      List<std::pair<uint64_t, exp<uint64_t>>>::cons(
-          std::make_pair(UINT64_C(2), exp<uint64_t>::lit(UINT64_C(3))),
-          List<std::pair<uint64_t, exp<uint64_t>>>::cons(
+      UINT64_C(1), List<std::pair<uint64_t, exp<uint64_t>>>::cons(
+          std::make_pair(UINT64_C(2), exp<uint64_t>::lit(UINT64_C(3))), List<
+              std::pair<uint64_t, exp<uint64_t>>>::cons(
               std::make_pair(UINT64_C(4), exp<uint64_t>::lit(UINT64_C(5))),
               List<std::pair<uint64_t, exp<uint64_t>>>::nil())));
-  static inline const phi<bool> p1 =
-      TFunctor_phi<Endo_nat, TFunctor_exp>::template tfmap<uint64_t, bool>(
-          [](uint64_t n) { return n == UINT64_C(3); }, p0);
+  static inline const phi<bool> p1 = TFunctor_phi<Endo_nat,
+                                                  TFunctor_exp>::template tfmap<
+      uint64_t, bool>([](uint64_t n) { return n == UINT64_C(3); }, p0);
   static inline const uint64_t result = []() {
     const auto &_sv = p1;
     const auto &[a0, a1] = _sv;
-    return ((a0 ? UINT64_C(100) : UINT64_C(0)) +
-            a1.template fold_left<uint64_t>(
+    return ((a0 ? UINT64_C(100) : UINT64_C(0)) + a1.template fold_left<uint64_t>(
                 [](uint64_t acc, const std::pair<uint64_t, exp<bool>> &pat) {
                   const auto &[id, e] = pat;
                   const auto &[a2] = e;

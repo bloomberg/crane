@@ -3,8 +3,7 @@
 SharedVariantBasic::tree
 SharedVariantBasic::insert(uint64_t k, uint64_t v,
                            const SharedVariantBasic::tree &t) {
-  if (crane::holds_alternative<typename SharedVariantBasic::tree::Leaf>(
-          t.v())) {
+  if (crane::holds_alternative<typename SharedVariantBasic::tree::Leaf>(t.v())) {
     return tree::node(tree::leaf(), k, v, tree::leaf());
   } else {
     const auto &[a0, a1, a2, a3] =
@@ -23,8 +22,7 @@ SharedVariantBasic::insert(uint64_t k, uint64_t v,
 
 std::optional<uint64_t>
 SharedVariantBasic::find(uint64_t k, const SharedVariantBasic::tree &t) {
-  if (crane::holds_alternative<typename SharedVariantBasic::tree::Leaf>(
-          t.v())) {
+  if (crane::holds_alternative<typename SharedVariantBasic::tree::Leaf>(t.v())) {
     return std::optional<uint64_t>();
   } else {
     const auto &[a0, a1, a2, a3] =
@@ -42,8 +40,7 @@ SharedVariantBasic::find(uint64_t k, const SharedVariantBasic::tree &t) {
 }
 
 uint64_t SharedVariantBasic::size(const SharedVariantBasic::tree &t) {
-  if (crane::holds_alternative<typename SharedVariantBasic::tree::Leaf>(
-          t.v())) {
+  if (crane::holds_alternative<typename SharedVariantBasic::tree::Leaf>(t.v())) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1, a2, a3] =

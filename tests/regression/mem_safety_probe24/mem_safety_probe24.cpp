@@ -1,10 +1,14 @@
 #include "mem_safety_probe24.h"
 
 uint64_t
-MemSafetyProbe24::sum_list(const MemSafetyProbe24::mylist<uint64_t>
-                               &l) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-
+MemSafetyProbe24::sum_list(const MemSafetyProbe24::mylist<uint64_t> &l) { /// CraneEnter:
+                                                                          /// captures
+                                                                          /// varying
+                                                                          /// parameters
+                                                                          /// for
+                                                                          /// each
+                                                                          /// recursive
+                                                                          /// call.
   struct CraneEnter {
     const MemSafetyProbe24::mylist<uint64_t> *l;
   };
@@ -30,9 +34,8 @@ MemSafetyProbe24::sum_list(const MemSafetyProbe24::mylist<uint64_t>
               typename MemSafetyProbe24::mylist<uint64_t>::Mynil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(
-                l.v());
+        const auto &[a0, a1] = std::get<
+            typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -48,7 +51,6 @@ MemSafetyProbe24::sum_list(const MemSafetyProbe24::mylist<uint64_t>
 MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
     const MemSafetyProbe24::tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe24::tree *t;
   };
@@ -78,8 +80,7 @@ MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe24::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(t.v())) {
         _result = mylist<uint64_t>::mynil();
       } else {
         const auto &[a0, a1, a2] =
@@ -114,9 +115,8 @@ MemSafetyProbe24::list_to_tree(const MemSafetyProbe24::mylist<uint64_t> &l,
             typename MemSafetyProbe24::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       return _loop_acc;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(
-              _loop_l->v());
+      const auto &[a0, a1] = std::get<
+          typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(_loop_l->v());
       _loop_acc = tree::node(std::move(_loop_acc), a0, tree::leaf());
       _loop_l = crane_raw(a1);
     }
@@ -125,12 +125,11 @@ MemSafetyProbe24::list_to_tree(const MemSafetyProbe24::mylist<uint64_t> &l,
 
 /// TEST 8: Zip two trees, producing a list of pairs.
 /// Both trees are destructured simultaneously.
-MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>>
-MemSafetyProbe24::zip_trees(
+MemSafetyProbe24::mylist<std::pair<uint64_t,
+                                   uint64_t>> MemSafetyProbe24::zip_trees(
     const MemSafetyProbe24::tree &t1,
     const MemSafetyProbe24::tree &t2) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe24::tree *t2;
     const MemSafetyProbe24::tree *t1;
@@ -165,8 +164,7 @@ MemSafetyProbe24::zip_trees(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe24::tree &t2 = *_f.t2;
       const MemSafetyProbe24::tree &t1 = *_f.t1;
-      if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(
-              t1.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(t1.v())) {
         _result = mylist<std::pair<uint64_t, uint64_t>>::mynil();
       } else {
         const auto &[a0, a1, a2] =
@@ -195,7 +193,7 @@ MemSafetyProbe24::zip_trees(
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
       _result = _f._tmp2.app(mylist<std::pair<uint64_t, uint64_t>>::mycons(
-          std::make_pair(a1, a10), std::move(_result)));
+                                 std::make_pair(a1, a10), std::move(_result)));
     }
   }
   return _result;

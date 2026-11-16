@@ -263,8 +263,7 @@ struct LoopifyFixCapturesClassParam {
           if (_alt->ts && _alt->ts.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->ts.get();
-            while (
-                std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<tree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<tree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -321,7 +320,6 @@ struct LoopifyFixCapturesClassParam {
   static std::optional<Nat> f(const tree &t,
                               Nat i) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       Nat i;
       const tree *t;
@@ -363,8 +361,9 @@ struct LoopifyFixCapturesClassParam {
           if (k.ltb(_tcI0::size(Nat::s(Nat::s(Nat::o()))))) {
             _stack.emplace_back(CraneEnter{std::move(k), &a0});
           } else {
-            _stack.emplace_back(CraneEnter_loop{
-                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), crane_raw(a1)});
+            _stack.emplace_back(
+                CraneEnter_loop{k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))),
+                                crane_raw(a1)});
           }
         }
       }
@@ -378,13 +377,14 @@ struct LoopifyFixCapturesClassParam {
 
   static_assert(Sized<id_size>);
   static inline const std::optional<Nat> result = f<id_size>(
-      tree::node(List<tree>::cons(
-          tree::leaf(Nat::s(Nat::o())),
+      tree::node(
           List<tree>::cons(
-              tree::node(List<tree>::cons(
-                  tree::leaf(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                  List<tree>::nil())),
-              List<tree>::nil()))),
+              tree::leaf(Nat::s(Nat::o())), List<tree>::cons(
+                  tree::node(
+                      List<tree>::cons(
+                          tree::leaf(
+                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                          List<tree>::nil())), List<tree>::nil()))),
       Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
 

@@ -250,33 +250,38 @@ struct NestedConcatMap {
   using cube = List<List<List<uint64_t>>>;
   static inline const cube sample = List<List<List<uint64_t>>>::cons(
       List<List<uint64_t>>::cons(
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-          List<List<uint64_t>>::cons(
+          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                   UINT64_C(2), List<uint64_t>::nil())), List<
+              List<uint64_t>>::cons(
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
-              List<List<uint64_t>>::nil())),
-      List<List<List<uint64_t>>>::cons(
-          List<List<uint64_t>>::nil(),
-          List<List<List<uint64_t>>>::cons(
+              List<List<uint64_t>>::nil())), List<List<List<uint64_t>>>::cons(
+          List<List<uint64_t>>::nil(), List<List<List<uint64_t>>>::cons(
               List<List<uint64_t>>::cons(
                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()),
                   List<List<uint64_t>>::cons(
                       List<uint64_t>::cons(
                           UINT64_C(5), List<uint64_t>::cons(
-                                           UINT64_C(6), List<uint64_t>::nil())),
-                      List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                                 List<List<uint64_t>>::nil()))),
+                              UINT64_C(6), List<uint64_t>::nil())), List<
+                          List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                                List<List<uint64_t>>::nil()))),
               List<List<List<uint64_t>>>::nil())));
   static List<uint64_t> flatten(const List<List<List<uint64_t>>> &c);
   static List<List<uint64_t>> regroup(const List<List<List<uint64_t>>> &c);
-  static inline const uint64_t total =
-      (flatten(sample).template fold_left<uint64_t>(
-           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-           UINT64_C(0)) +
-       regroup(sample).template fold_left<uint64_t>(
-           [](uint64_t a, const List<uint64_t> &l) { return (a + l.length()); },
-           UINT64_C(0)));
+  static inline const uint64_t total = (flatten(sample).template fold_left<
+                                            uint64_t>(
+                                            [](uint64_t _x0,
+                                               uint64_t _x1)
+                                                 -> uint64_t {
+                                                  return (_x0 + _x1);
+                                                },
+                                            UINT64_C(0)) +
+                                        regroup(sample).template fold_left<
+                                            uint64_t>(
+                                            [](uint64_t a,
+                                               const List<uint64_t> &l) {
+                                                 return (a + l.length());
+                                               },
+                                            UINT64_C(0)));
 };
 
 #endif // INCLUDED_NESTED_CONCAT_MAP

@@ -141,8 +141,8 @@ struct AssocPairList {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            crane::small_vector<std::shared_ptr<List<std::pair<uint64_t, t>>>>
-                _hw1;
+            crane::small_vector<std::shared_ptr<List<std::pair<uint64_t,
+                                                               t>>>> _hw1;
             if (auto *_ha5 =
                     std::get_if<typename List<std::pair<uint64_t, t>>::Cons>(
                         &(*_alt->a0).v_mut())) {
@@ -160,8 +160,7 @@ struct AssocPairList {
               if (auto *_ha3 =
                       std::get_if<typename List<std::pair<uint64_t, t>>::Cons>(
                           &_hw1e.v_mut())) {
-                _stack.push_back(
-                    std::make_shared<t>(std::move(_ha3->a.second)));
+                _stack.push_back(std::make_shared<t>(std::move(_ha3->a.second)));
                 _hw1.push_back(std::move(_ha3->l));
               }
             }

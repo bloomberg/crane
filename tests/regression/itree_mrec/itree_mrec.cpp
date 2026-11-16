@@ -2,11 +2,10 @@
 
 Itree<ItreeMrec::noE, Nat> ItreeMrec::sum_to(const Nat &n) {
   return Recursion::template mrec<ItreeMrec::callE, ItreeMrec::noE, Nat>(
-      [](const ItreeMrec::callE &a0)
-          -> Itree<Sum1<ItreeMrec::callE, ItreeMrec::noE, crane::obj>,
-                   crane::obj> {
-        return body<crane::obj>(crane_convert<ItreeMrec::callE>(a0));
-      },
+      [](const ItreeMrec::callE &a0) -> Itree<
+          Sum1<ItreeMrec::callE, ItreeMrec::noE, crane::obj>, crane::obj> {
+            return body<crane::obj>(crane_convert<ItreeMrec::callE>(a0));
+          },
       callE::call(n));
 }
 
@@ -17,15 +16,16 @@ std::optional<Nat> ItreeMrec::run(const Nat &fuel,
   } else {
     const auto &[a0] = std::get<typename Nat::S>(fuel.v());
     auto &&_sv0 = t.observe();
-    if (std::holds_alternative<typename ItreeF<
-            ItreeMrec::noE, Nat, Itree<ItreeMrec::noE, Nat>>::RetF>(_sv0.v())) {
+    if (std::holds_alternative<
+            typename ItreeF<ItreeMrec::noE, Nat,
+                            Itree<ItreeMrec::noE, Nat>>::RetF>(_sv0.v())) {
       const auto &[r0] =
           std::get<typename ItreeF<ItreeMrec::noE, Nat,
                                    Itree<ItreeMrec::noE, Nat>>::RetF>(_sv0.v());
       return std::make_optional<Nat>(r0);
-    } else if (std::holds_alternative<typename ItreeF<
-                   ItreeMrec::noE, Nat, Itree<ItreeMrec::noE, Nat>>::TauF>(
-                   _sv0.v())) {
+    } else if (std::holds_alternative<
+                   typename ItreeF<ItreeMrec::noE, Nat,
+                                   Itree<ItreeMrec::noE, Nat>>::TauF>(_sv0.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<ItreeMrec::noE, Nat,
                                    Itree<ItreeMrec::noE, Nat>>::TauF>(_sv0.v());

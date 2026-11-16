@@ -34,11 +34,11 @@ std::optional<Nat> ImmediateMatchOwnedScrutinee::pred_count(List<Nat> l) {
 }
 
 bool ImmediateMatchOwnedScrutinee::check(std::monostate) {
-  auto _cs = pred_count(List<Nat>::cons(
-      Nat::s(Nat::o()),
-      List<Nat>::cons(Nat::s(Nat::s(Nat::o())),
-                      List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
-                                      List<Nat>::nil()))));
+  auto _cs = pred_count(
+      List<Nat>::cons(
+          Nat::s(Nat::o()), List<Nat>::cons(
+              Nat::s(Nat::s(Nat::o())), List<Nat>::cons(
+                  Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil()))));
   if (_cs.has_value()) {
     const Nat &n = *_cs;
     if (std::holds_alternative<typename Nat::O>(n.v())) {

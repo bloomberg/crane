@@ -72,6 +72,7 @@ struct Monads {
   template <typename s, template <typename> class m, typename a>
   using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 };
+
 enum class AE { A0 };
 
 struct FailE {
@@ -96,23 +97,21 @@ struct M {
   }
 
   template <typename T1, typename T2>
-  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
-  run(std::type_identity_t<crane::fn<Monads::template stateT<
-          st, itree_tc_609e8855cd7ad294, crane::obj>(AE)>>
-          h,
-      AE e) {
-    return
-        [=, h = std::move(h)](const Nat &s) { return crane::apply2(h, e, s); };
+  static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> run(
+      std::type_identity_t<
+          crane::fn<Monads::template stateT<st, itree_tc_609e8855cd7ad294,
+                                            crane::obj>(AE)>> h, AE e) {
+    return [=, h = std::move(h)](const Nat &s) {
+      return crane::apply2(h, e, s);
+    };
   }
 
   template <typename T1, typename T2>
   static Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2>
   fused(AE e) {
-    return run<T1, T2>(
-        [](const AE &a0) -> decltype(auto) {
-          return base<T1>(std::forward<decltype(a0)>(a0));
-        },
-        e);
+    return run<T1, T2>([](const AE &a0) -> decltype(auto) {
+      return base<T1>(std::forward<decltype(a0)>(a0));
+    }, e);
   }
 
   static std::shared_ptr<ITree<std::pair<Nat, Nat>>> use(const Nat &n);

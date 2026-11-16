@@ -46,7 +46,7 @@ struct EffectHofVoid {
   /// 5. Chain two void callbacks
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<void, F0 &, std::string &> &&
-             std::is_invocable_r_v<void, F1 &, std::string &&>
+    std::is_invocable_r_v<void, F1 &, std::string &&>
   static void chain_void(F0 &&f, F1 &&g, std::string x) {
     f(x);
     g(std::move(x));

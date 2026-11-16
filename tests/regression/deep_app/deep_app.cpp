@@ -30,8 +30,7 @@ DeepApp::append_lists(const DeepApp::mylist<uint64_t> &x0_,
 }
 
 uint64_t DeepApp::head_or_zero(const DeepApp::mylist<uint64_t> &l) {
-  if (std::holds_alternative<typename DeepApp::mylist<uint64_t>::Mynil>(
-          l.v())) {
+  if (std::holds_alternative<typename DeepApp::mylist<uint64_t>::Mynil>(l.v())) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] =

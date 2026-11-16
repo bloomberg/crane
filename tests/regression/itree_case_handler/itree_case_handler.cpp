@@ -19,8 +19,7 @@ ItreeCaseHandler::run(const Nat &fuel,
     auto &&_sv0 = t.observe();
     if (std::holds_alternative<
             typename ItreeF<ItreeCaseHandler::noE, Nat,
-                            Itree<ItreeCaseHandler::noE, Nat>>::RetF>(
-            _sv0.v())) {
+                            Itree<ItreeCaseHandler::noE, Nat>>::RetF>(_sv0.v())) {
       const auto &[r0] =
           std::get<typename ItreeF<ItreeCaseHandler::noE, Nat,
                                    Itree<ItreeCaseHandler::noE, Nat>>::RetF>(

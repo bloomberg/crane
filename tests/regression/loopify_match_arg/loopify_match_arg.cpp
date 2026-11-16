@@ -3,10 +3,14 @@
 /// Count the number of Dot cells in a list.
 /// The match on c inside the Cons branch triggers bug 2.
 uint64_t
-LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell>
-                                &xs) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) { /// CraneEnter:
+                                                                     /// captures
+                                                                     /// varying
+                                                                     /// parameters
+                                                                     /// for
+                                                                     /// each
+                                                                     /// recursive
+                                                                     /// call.
   struct CraneEnter {
     const List<LoopifyMatchArg::Cell> *xs;
   };
@@ -53,10 +57,13 @@ LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell>
 /// A plain recursive length — triggers bug 1 (missing <vector>)
 /// when loopify converts it to an explicit-stack loop.
 uint64_t
-LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell>
-                               &xs) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) { /// CraneEnter:
+                                                                    /// captures
+                                                                    /// varying
+                                                                    /// parameters
+                                                                    /// for each
+                                                                    /// recursive
+                                                                    /// call.
   struct CraneEnter {
     const List<LoopifyMatchArg::Cell> *xs;
   };

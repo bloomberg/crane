@@ -14,14 +14,20 @@ template <typename iptr> struct Dval;
 template <typename iptr> struct TopE;
 struct natIPtr;
 using iptr = crane::obj;
-template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-  } && (requires {
-    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-  });
+template <typename I>
+concept IPtr = requires {
+  typename I::iptr;
+} && (requires {
+  {
+    I::zero_iptr()
+  }
+  -> std::convertible_to<typename I::iptr>;
+} || requires {
+  {
+    I::zero_iptr
+  }
+  -> std::convertible_to<typename I::iptr>;
+});
 
 struct Nat {
   // TYPES
@@ -119,8 +125,8 @@ struct natIPtr {
 static_assert(IPtr<natIPtr>);
 
 struct PartialAppAliasValueSlot {
-  static inline const Top<typename natIPtr::iptr, Dval<typename natIPtr::iptr>>
-      go = seed<natIPtr>();
+  static inline const Top<typename natIPtr::iptr,
+                          Dval<typename natIPtr::iptr>> go = seed<natIPtr>();
 };
 
 #endif // INCLUDED_PARTIAL_APP_ALIAS_VALUE_SLOT

@@ -1,10 +1,14 @@
 #include "mem_safety_probe17.h"
 
 uint64_t
-MemSafetyProbe17::sum_list(const MemSafetyProbe17::mylist<uint64_t>
-                               &l) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-
+MemSafetyProbe17::sum_list(const MemSafetyProbe17::mylist<uint64_t> &l) { /// CraneEnter:
+                                                                          /// captures
+                                                                          /// varying
+                                                                          /// parameters
+                                                                          /// for
+                                                                          /// each
+                                                                          /// recursive
+                                                                          /// call.
   struct CraneEnter {
     const MemSafetyProbe17::mylist<uint64_t> *l;
   };
@@ -30,9 +34,8 @@ MemSafetyProbe17::sum_list(const MemSafetyProbe17::mylist<uint64_t>
               typename MemSafetyProbe17::mylist<uint64_t>::Mynil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe17::mylist<uint64_t>::Mycons>(
-                l.v());
+        const auto &[a0, a1] = std::get<
+            typename MemSafetyProbe17::mylist<uint64_t>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -48,7 +51,6 @@ MemSafetyProbe17::sum_list(const MemSafetyProbe17::mylist<uint64_t>
 MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
     const MemSafetyProbe17::qtree &t) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe17::qtree *t;
   };
@@ -103,8 +105,7 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe17::qtree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe17::qtree::QLeaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe17::qtree::QLeaf>(t.v())) {
         _result = mylist<uint64_t>::mynil();
       } else {
         const auto &[a0, a1, a2, a3, a4] =
@@ -133,24 +134,27 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
       auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
       uint64_t a2 = _f.a2;
       const MemSafetyProbe17::qtree &a4 = *_f.a4;
-      _stack.emplace_back(CraneCont_QNode_3{
-          a2, std::move(_f._tmp4), std::move(_f._tmp3), std::move(_result)});
+      _stack.emplace_back(
+          CraneCont_QNode_3{a2, std::move(_f._tmp4), std::move(_f._tmp3),
+                            std::move(_result)});
       _stack.emplace_back(CraneEnter{&a4});
     } else {
       auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
       uint64_t a2 = _f.a2;
-      _result = _f._tmp4.myapp(_f._tmp3.myapp(
-          mylist<uint64_t>::mycons(a2, _f._tmp2.myapp(std::move(_result)))));
+      _result = _f._tmp4.myapp(
+          _f._tmp3.myapp(
+              mylist<uint64_t>::mycons(a2,
+                                       _f._tmp2.myapp(std::move(_result)))));
     }
   }
   return _result;
 }
 
 /// TEST 7: Build a 4-ary tree programmatically and check.
-MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+MemSafetyProbe17::qtree
+MemSafetyProbe17::make_qtree(uint64_t n) { /// CraneEnter: captures varying
+                                           /// parameters for each recursive
+                                           /// call.
   struct CraneEnter {
     uint64_t n;
   };

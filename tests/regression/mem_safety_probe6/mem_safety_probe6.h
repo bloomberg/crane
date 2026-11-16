@@ -60,13 +60,13 @@ struct MemSafetyProbe6 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -124,9 +124,9 @@ struct MemSafetyProbe6 {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<T1>::Mycons(f(a0), nullptr);
           mylist<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+              (_write ? *(*_write =
+                              std::make_shared<mylist<T1>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<T1>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -248,8 +248,7 @@ struct MemSafetyProbe6 {
 
   static inline const uint64_t test_tail_adder = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(1),
-        mylist<uint64_t>::mycons(
+        UINT64_C(1), mylist<uint64_t>::mycons(
             UINT64_C(2),
             mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
     return l.tail_adder(UINT64_C(0), UINT64_C(100));
@@ -261,8 +260,8 @@ struct MemSafetyProbe6 {
           mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mynil()));
       crane::fn<mylist<uint64_t>(uint64_t)> f =
           [&](uint64_t _x0) -> mylist<uint64_t> {
-        return l.head_and_tail(UINT64_C(0), UINT64_C(0), _x0);
-      };
+            return l.head_and_tail(UINT64_C(0), UINT64_C(0), _x0);
+          };
       mylist<uint64_t> l2 = f(UINT64_C(99));
       return l2.length();
     }();
@@ -497,15 +496,15 @@ struct MemSafetyProbe6 {
 
   static inline const uint64_t test_tail_mapper = []() {
     return []() {
-      mylist<uint64_t> l = mylist<uint64_t>::mycons(
-          UINT64_C(1),
+      mylist<uint64_t> l =
           mylist<uint64_t>::mycons(
-              UINT64_C(2), mylist<uint64_t>::mycons(
-                               UINT64_C(3), mylist<uint64_t>::mynil())));
+              UINT64_C(1), mylist<uint64_t>::mycons(
+                  UINT64_C(2), mylist<uint64_t>::mycons(
+                      UINT64_C(3), mylist<uint64_t>::mynil())));
       crane::fn<mylist<uint64_t>(crane::fn<uint64_t(uint64_t)>)> f =
           [&](crane::fn<uint64_t(uint64_t)> _x0) -> mylist<uint64_t> {
-        return tail_mapper(UINT64_C(0), std::move(l), _x0);
-      };
+            return tail_mapper(UINT64_C(0), std::move(l), _x0);
+          };
       mylist<uint64_t> l2 = f([](uint64_t n) { return (n * UINT64_C(10)); });
       return l2.length();
     }();
@@ -528,8 +527,7 @@ struct MemSafetyProbe6 {
                               uint64_t x);
   static inline const uint64_t test_chain = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
+        UINT64_C(10), mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_chain(std::move(l));
@@ -538,13 +536,11 @@ struct MemSafetyProbe6 {
   /// TEST 6: Closure captures tail, then tail is used again
   /// after the closure is created — tests double use.
   static uint64_t capture_and_reuse(uint64_t _x, const mylist<uint64_t> &l);
-  static inline const uint64_t test_capture_reuse = capture_and_reuse(
-      UINT64_C(0),
-      mylist<uint64_t>::mycons(
-          UINT64_C(5),
-          mylist<uint64_t>::mycons(
-              UINT64_C(1), mylist<uint64_t>::mycons(
-                               UINT64_C(2), mylist<uint64_t>::mynil()))));
+  static inline const uint64_t test_capture_reuse =
+      capture_and_reuse(UINT64_C(0), mylist<uint64_t>::mycons(
+                            UINT64_C(5), mylist<uint64_t>::mycons(
+                                UINT64_C(1), mylist<uint64_t>::mycons(
+                                    UINT64_C(2), mylist<uint64_t>::mynil()))));
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE6

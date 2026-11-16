@@ -48,24 +48,23 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::shared_box<List<A>>::make(
-                                 crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::shared_box<List<A>>::make(
+                       crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -109,9 +108,9 @@ public:
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
         auto _value = List<T1>::nil();
-        (_write
-             ? *(*_write = crane::shared_box<List<T1>>::make(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        crane::shared_box<List<T1>>::make(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
@@ -228,24 +227,17 @@ struct SharedVariantBasic {
   static uint64_t size(const tree &t);
   static inline const tree t0 =
       List<uint64_t>::cons(
-          UINT64_C(5),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(8),
-                  List<uint64_t>::cons(
-                      UINT64_C(1),
-                      List<uint64_t>::cons(
-                          UINT64_C(4),
-                          List<uint64_t>::cons(
-                              UINT64_C(7),
-                              List<uint64_t>::cons(UINT64_C(9),
-                                                   List<uint64_t>::nil())))))))
-          .template fold_left<tree>(
-              [](const tree &t, uint64_t k) {
-                return insert(k, (k * UINT64_C(10)), t);
-              },
-              tree::leaf());
+          UINT64_C(5), List<uint64_t>::cons(
+              UINT64_C(3), List<uint64_t>::cons(
+                  UINT64_C(8), List<uint64_t>::cons(
+                      UINT64_C(1), List<uint64_t>::cons(
+                          UINT64_C(4), List<uint64_t>::cons(
+                              UINT64_C(7), List<uint64_t>::cons(
+                                  UINT64_C(9),
+                                  List<uint64_t>::nil())))))))
+          .template fold_left<tree>([](const tree &t, uint64_t k) {
+            return insert(k, (k * UINT64_C(10)), t);
+          }, tree::leaf());
   static inline const tree t1 = insert(UINT64_C(4), UINT64_C(44), t0);
   static inline const uint64_t tree_result = []() -> uint64_t {
     auto _cs = find(UINT64_C(4), t0);
@@ -270,16 +262,13 @@ struct SharedVariantBasic {
   }();
   static List<uint64_t> bump(const List<uint64_t> &l);
   static inline const uint64_t list_result =
-      bump(List<uint64_t>::cons(
-               UINT64_C(1),
-               List<uint64_t>::cons(
-                   UINT64_C(2),
-                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))
+      bump(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                    UINT64_C(2), List<uint64_t>::cons(
+                                        UINT64_C(3),
+                                        List<uint64_t>::nil()))))
           .template fold_left<uint64_t>(
-              [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                return (_x0 + _x1);
-              },
-              UINT64_C(0));
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          UINT64_C(0));
   static uint64_t long_result(uint64_t n);
 };
 

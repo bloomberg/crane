@@ -15,13 +15,17 @@
 template <typename M>
 concept Monoid = requires {
   typename M::T;
-  requires(
-      requires {
-        { M::empty } -> std::convertible_to<typename M::T>;
-      } ||
-      requires {
-        { M::empty() } -> std::convertible_to<typename M::T>;
-      });
+  requires (requires {
+    {
+      M::empty
+    }
+    -> std::convertible_to<typename M::T>;
+  } || requires {
+    {
+      M::empty()
+    }
+    -> std::convertible_to<typename M::T>;
+  });
   {
     M::append(std::declval<typename M::T>(), std::declval<typename M::T>())
   } -> std::same_as<typename M::T>;
@@ -35,7 +39,7 @@ struct TypeApp {
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T2> &&
-             std::is_invocable_r_v<T2, F1 &, const T1 &>
+    std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
@@ -70,8 +74,7 @@ struct TypeApp {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
@@ -81,9 +84,9 @@ struct TypeApp {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<list<A>>(crane_convert<list<A>>(*a1))
@@ -152,28 +155,25 @@ struct TypeApp {
     }
   }
 
-  static inline const list<uint64_t> test_map = map<uint64_t, uint64_t>(
-      [](uint64_t x) { return (x + UINT64_C(1)); },
-      list<uint64_t>::cons(
-          UINT64_C(1),
-          list<uint64_t>::cons(
-              UINT64_C(2),
-              list<uint64_t>::cons(UINT64_C(3), list<uint64_t>::nil()))));
+  static inline const list<uint64_t> test_map =
+      map<uint64_t, uint64_t>([](uint64_t x) {
+        return (x + UINT64_C(1));
+      }, list<uint64_t>::cons(UINT64_C(1), list<uint64_t>::cons(UINT64_C(2), list<uint64_t>::cons(UINT64_C(3), list<uint64_t>::nil()))));
   static list<uint64_t> map_succ(const list<uint64_t> &x0_);
   static inline const list<uint64_t> test_map_succ =
-      map_succ(list<uint64_t>::cons(
-          UINT64_C(5),
-          list<uint64_t>::cons(UINT64_C(6), list<uint64_t>::nil())));
+      map_succ(list<uint64_t>::cons(UINT64_C(5), list<uint64_t>::cons(
+                                        UINT64_C(6), list<uint64_t>::nil())));
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1> &&
-             std::is_invocable_r_v<T1, F0 &, const T1 &>
+    std::is_invocable_r_v<T1, F0 &, const T1 &>
   static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }
 
-  static inline const uint64_t test_twice = twice<uint64_t>(
-      [](uint64_t x) { return (x + UINT64_C(1)); }, UINT64_C(10));
+  static inline const uint64_t test_twice = twice<uint64_t>([](uint64_t x) {
+    return (x + UINT64_C(1));
+  }, UINT64_C(10));
 
   struct NatMonoid {
     using T = uint64_t;

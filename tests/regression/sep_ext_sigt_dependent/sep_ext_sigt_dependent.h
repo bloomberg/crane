@@ -48,6 +48,7 @@ template <typename A, typename P> struct SigT {
     return x0;
   }
 };
+
 enum class Tag { TAGA, TAGB, TAGC };
 
 struct Packer {

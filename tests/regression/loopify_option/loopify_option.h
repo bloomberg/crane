@@ -40,8 +40,7 @@ struct LoopifyOption {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
@@ -51,9 +50,9 @@ struct LoopifyOption {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
@@ -101,7 +100,6 @@ struct LoopifyOption {
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -196,8 +194,9 @@ struct LoopifyOption {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n = ((
-              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+          _loop_n =
+              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
+                                                  : (_loop_n - UINT64_C(1))));
         }
       }
     }
@@ -226,10 +225,9 @@ struct LoopifyOption {
         if (_cs.has_value()) {
           const T2 &y = *_cs;
           auto _cell = typename list<T2>::Cons(y, nullptr);
-          list<T2> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<list<T2>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          list<T2> &_node = (
+              _write ? *(*_write = std::make_shared<list<T2>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename list<T2>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;

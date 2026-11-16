@@ -354,8 +354,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   static bool mfi_config_valid(const MFIThresholdConfig &cfg);
   static inline const MFIThresholdConfig example_luminex_thresholds =
-      MFIThresholdConfig{UINT64_C(1000),  UINT64_C(3000), UINT64_C(8000),
-                         UINT64_C(12000), UINT64_C(1),    true};
+      MFIThresholdConfig{UINT64_C(1000), UINT64_C(3000), UINT64_C(8000),
+                         UINT64_C(12000), UINT64_C(1), true};
 
   struct ValidatedMFIConfig {
     MFIThresholdConfig vmc_config;
@@ -515,6 +515,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     return TestConfidence_rect<T1>(std::move(f), std::move(f0), std::move(f1),
                                    t);
   }
+
   enum class CrossmatchResult {
     XM_COMPATIBLE,
     XM_INCOMPATIBLE,
@@ -572,32 +573,37 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                  uint64_t current_time);
   static bool transfusion_order_authorized(const SafeTransfusionOrder &order,
                                            uint64_t current_time);
-  static std::optional<SafeTransfusionOrder> create_safe_transfusion_order(
+  static std::optional<SafeTransfusionOrder>
+  create_safe_transfusion_order(
       uint64_t recipient_id, uint64_t product_id, bool compat_result,
       const CrossmatchWithUncertainty &xm, uint64_t sample_time,
       uint64_t current_time, uint64_t authorizer, bool is_emergency);
-  static inline const HLATyping donor_hla = HLATyping{List<HLAAllele>::cons(
-      HLAAllele{HLALocus::LOCUS_A, UINT64_C(2)},
-      List<HLAAllele>::cons(
-          HLAAllele{HLALocus::LOCUS_A, UINT64_C(3)},
-          List<HLAAllele>::cons(
-              HLAAllele{HLALocus::LOCUS_B, UINT64_C(7)},
-              List<HLAAllele>::cons(HLAAllele{HLALocus::LOCUS_DR, UINT64_C(4)},
-                                    List<HLAAllele>::nil()))))};
-  static inline const VirtualXMProfile weak_profile =
-      VirtualXMProfile{List<EpitopeAntibody>::cons(
-                           EpitopeAntibody{eplet_65QIA, UINT64_C(2500), false},
-                           List<EpitopeAntibody>::cons(
-                               EpitopeAntibody{eplet_77N, UINT64_C(800), false},
-                               List<EpitopeAntibody>::nil())),
-                       UINT64_C(32), UINT64_C(40), UINT64_C(2)};
+  static inline const HLATyping donor_hla =
+      HLATyping{List<HLAAllele>::cons(HLAAllele{HLALocus::LOCUS_A, UINT64_C(2)},
+                                      List<HLAAllele>::cons(
+                                          HLAAllele{HLALocus::LOCUS_A,
+                                                    UINT64_C(3)}, List<
+                                              HLAAllele>::cons(
+                                              HLAAllele{HLALocus::LOCUS_B,
+                                                        UINT64_C(7)}, List<
+                                                  HLAAllele>::cons(
+                                                  HLAAllele{HLALocus::LOCUS_DR,
+                                                            UINT64_C(4)},
+                                                  List<HLAAllele>::nil()))))};
+  static inline const VirtualXMProfile weak_profile = VirtualXMProfile{
+      List<EpitopeAntibody>::cons(
+          EpitopeAntibody{eplet_65QIA, UINT64_C(2500), false}, List<
+              EpitopeAntibody>::cons(
+              EpitopeAntibody{eplet_77N, UINT64_C(800), false},
+              List<EpitopeAntibody>::nil())), UINT64_C(32), UINT64_C(40),
+      UINT64_C(2)};
   static inline const VirtualXMProfile strong_profile = VirtualXMProfile{
       List<EpitopeAntibody>::cons(
-          EpitopeAntibody{eplet_65QIA, UINT64_C(9000), true},
-          List<EpitopeAntibody>::cons(
+          EpitopeAntibody{eplet_65QIA, UINT64_C(9000), true}, List<
+              EpitopeAntibody>::cons(
               EpitopeAntibody{eplet_142T, UINT64_C(6000), false},
-              List<EpitopeAntibody>::nil())),
-      UINT64_C(95), UINT64_C(98), UINT64_C(5)};
+              List<EpitopeAntibody>::nil())), UINT64_C(95), UINT64_C(98),
+      UINT64_C(5)};
   static inline const CrossmatchWithUncertainty good_crossmatch =
       CrossmatchWithUncertainty{CrossmatchResult::XM_COMPATIBLE, UINT64_C(1),
                                 TestConfidence::CONFIDENCE_HIGH};
@@ -647,10 +653,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
       validated_luminex.vmc_config.mfi_cfg_lab_id;
   static inline const bool sample_order_created = []() -> bool {
     auto _cs = create_safe_transfusion_order(
-        UINT64_C(100), UINT64_C(200),
-        risk_acceptable(full_virtual_crossmatch_safe(validated_luminex,
-                                                     weak_profile, donor_hla)),
-        good_crossmatch, UINT64_C(0), UINT64_C(1000), UINT64_C(77), false);
+        UINT64_C(100), UINT64_C(200), risk_acceptable(
+            full_virtual_crossmatch_safe(validated_luminex, weak_profile,
+                                         donor_hla)), good_crossmatch,
+        UINT64_C(0), UINT64_C(1000), UINT64_C(77), false);
     if (_cs.has_value()) {
       const SafeTransfusionOrder &_x = *_cs;
       return true;
@@ -660,10 +666,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const bool sample_order_blocked = []() -> bool {
     auto _cs = create_safe_transfusion_order(
-        UINT64_C(100), UINT64_C(201),
-        risk_acceptable(full_virtual_crossmatch_safe(
-            validated_luminex, strong_profile, donor_hla)),
-        bad_crossmatch, UINT64_C(0), UINT64_C(1000), UINT64_C(77), false);
+        UINT64_C(100), UINT64_C(201), risk_acceptable(
+            full_virtual_crossmatch_safe(validated_luminex, strong_profile,
+                                         donor_hla)), bad_crossmatch,
+        UINT64_C(0), UINT64_C(1000), UINT64_C(77), false);
     if (_cs.has_value()) {
       const SafeTransfusionOrder &_x = *_cs;
       return false;
@@ -673,16 +679,17 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const bool sample_authorized_order_stays_authorized =
       []() -> bool {
-    auto _cs = create_safe_transfusion_order(
-        UINT64_C(100), UINT64_C(202), true, good_crossmatch, UINT64_C(100),
-        UINT64_C(200), UINT64_C(88), false);
-    if (_cs.has_value()) {
-      const SafeTransfusionOrder &order = *_cs;
-      return transfusion_order_authorized(order, UINT64_C(200));
-    } else {
-      return false;
-    }
-  }();
+        auto _cs =
+            create_safe_transfusion_order(UINT64_C(100), UINT64_C(202), true,
+                                          good_crossmatch, UINT64_C(100),
+                                          UINT64_C(200), UINT64_C(88), false);
+        if (_cs.has_value()) {
+          const SafeTransfusionOrder &order = *_cs;
+          return transfusion_order_authorized(order, UINT64_C(200));
+        } else {
+          return false;
+        }
+      }();
 };
 
 #endif // INCLUDED_VALIDATED_VIRTUAL_CROSSMATCH_TRACE

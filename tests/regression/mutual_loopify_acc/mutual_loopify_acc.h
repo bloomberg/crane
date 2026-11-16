@@ -193,7 +193,6 @@ struct MutualLoopifyAcc {
   forest_rect(T1 f, F1 &&f0,
               const forest &f1) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
     struct CraneEnter {
       const forest *f1;
     };

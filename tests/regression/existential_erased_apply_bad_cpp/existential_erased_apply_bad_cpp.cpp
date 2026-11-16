@@ -9,34 +9,35 @@ uint64_t ExistentialErasedApplyBadCpp::force(
 List<ExistentialErasedApplyBadCpp::dyn>
 ExistentialErasedApplyBadCpp::mk(uint64_t n) {
   return List<ExistentialErasedApplyBadCpp::dyn>::cons(
-      dyn::dyn0(n, crane::fn<uint64_t(crane::obj)>(
-                       [](const crane::obj &k) -> uint64_t {
-                         return crane::any_cast<uint64_t>(k);
-                       })),
+      dyn::dyn0(
+          n,
+          crane::fn<uint64_t(crane::obj)>([](const crane::obj &k) -> uint64_t {
+            return crane::any_cast<uint64_t>(k);
+          })),
       List<ExistentialErasedApplyBadCpp::dyn>::cons(
           dyn::dyn0(
-              std::make_pair(crane::obj(n), crane::obj((n + 1))),
-              crane::fn<uint64_t(crane::obj)>([](const crane::obj &p)
-                                                  -> uint64_t {
-                return (
-                    crane::any_cast<uint64_t>(
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(p)
-                            .first) +
-                    crane::any_cast<uint64_t>(
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(p)
-                            .second));
-              })),
+              std::make_pair(crane::obj(n), crane::obj((n + 1))), crane::fn<
+                  uint64_t(crane::obj)>([](const crane::obj &p) -> uint64_t {
+                    return (
+                        crane::any_cast<uint64_t>(
+                            crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                                p)
+                                .first) + crane::any_cast<uint64_t>(
+                            crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                                p)
+                                .second));
+                  })),
           List<ExistentialErasedApplyBadCpp::dyn>::cons(
-              dyn::dyn0(List<crane::obj>::cons(
-                            n, List<crane::obj>::cons(
-                                   n, List<crane::obj>::cons(
-                                          n, List<crane::obj>::nil()))),
-                        crane::fn<uint64_t(crane::obj)>(
-                            [](const crane::obj &l) -> uint64_t {
-                              return List<uint64_t>(
-                                         crane::any_cast<List<crane::obj>>(l))
-                                  .length();
-                            })),
+              dyn::dyn0(
+                  List<crane::obj>::cons(n, List<crane::obj>::cons(
+                                             n, List<crane::obj>::cons(
+                                                 n, List<crane::obj>::nil()))),
+                  crane::fn<uint64_t(crane::obj)>(
+                      [](const crane::obj &l) -> uint64_t {
+                        return List<uint64_t>(
+                            crane::any_cast<List<crane::obj>>(l))
+                                   .length();
+                      })),
               List<ExistentialErasedApplyBadCpp::dyn>::nil())));
 }
 

@@ -230,23 +230,25 @@ struct MapPartialApp {
   /// f = wrap t
   /// map (fun v => tree_sum (f v)) 1; 2; 3
   /// = tree_sum(Node(t,1,Leaf)); tree_sum(Node(t,2,Leaf));
-  /// tree_sum(Node(t,3,Leaf)) = 10+1; 10+2; 10+3 = 11; 12; 13 sum_list 11; 12;
-  /// 13 = 36
+  /// tree_sum(Node(t,3,Leaf))
+  /// = 10+1; 10+2; 10+3
+  /// = 11; 12; 13
+  /// sum_list 11; 12; 13 = 36
   static inline const uint64_t map_partial_bug = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<tree(uint64_t)> f = [=,
-                                     t = std::move(t)](uint64_t _x0) -> tree {
-        return wrap(std::move(t), _x0);
-      };
+      crane::fn<tree(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> tree {
+            return wrap(std::move(t), _x0);
+          };
       List<uint64_t> results =
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
-              .template map<uint64_t>(
-                  [=, f = std::move(f)](uint64_t v) { return tree_sum(f(v)); });
+          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                   UINT64_C(2), List<uint64_t>::cons(
+                                       UINT64_C(3),
+                                       List<uint64_t>::nil())))
+              .template map<uint64_t>([=, f = std::move(f)](uint64_t v) {
+                return tree_sum(f(v));
+              });
       return sum_list(std::move(results));
     }();
   }();
@@ -255,18 +257,17 @@ struct MapPartialApp {
   static inline const uint64_t map_partial_pair = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<tree(uint64_t)> f = [=,
-                                     t = std::move(t)](uint64_t _x0) -> tree {
-        return wrap(std::move(t), _x0);
-      };
+      crane::fn<tree(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> tree {
+            return wrap(std::move(t), _x0);
+          };
       std::pair<crane::fn<tree(uint64_t)>, uint64_t> p =
           std::make_pair(std::move(f), UINT64_C(0));
       List<uint64_t> results =
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
+          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                   UINT64_C(2), List<uint64_t>::cons(
+                                       UINT64_C(3),
+                                       List<uint64_t>::nil())))
               .template map<uint64_t>([=, p = std::move(p)](uint64_t v) {
                 return tree_sum(p.first(v));
               });
@@ -280,23 +281,23 @@ struct MapPartialApp {
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
       crane::fn<tree(uint64_t)> f1 =
           [=, t1 = std::move(t1)](uint64_t _x0) -> tree {
-        return wrap(std::move(t1), _x0);
-      };
+            return wrap(std::move(t1), _x0);
+          };
       crane::fn<tree(uint64_t)> f2 =
           [=, t2 = std::move(t2)](uint64_t _x0) -> tree {
-        return wrap(std::move(t2), _x0);
-      };
+            return wrap(std::move(t2), _x0);
+          };
       List<uint64_t> r1 =
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                   UINT64_C(2),
+                                   List<uint64_t>::nil()))
               .template map<uint64_t>([=, f1 = std::move(f1)](uint64_t v) {
                 return tree_sum(f1(v));
               });
       List<uint64_t> r2 =
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))
+          List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::cons(
+                                   UINT64_C(4),
+                                   List<uint64_t>::nil()))
               .template map<uint64_t>([=, f2 = std::move(f2)](uint64_t v) {
                 return tree_sum(f2(v));
               });

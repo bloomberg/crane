@@ -16,9 +16,9 @@ List<uint64_t> LoopifySorting::insert(uint64_t x, const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
         auto _value = List<uint64_t>::cons(x, *_loop_l);
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -35,10 +35,12 @@ List<uint64_t> LoopifySorting::insert(uint64_t x, const List<uint64_t> &l) {
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySorting::insertion_sort(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifySorting::insertion_sort(const List<uint64_t> &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -76,9 +78,8 @@ List<uint64_t> LoopifySorting::insertion_sort(
   return _result;
 }
 
-List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel,
-                                          const List<uint64_t> &l1,
-                                          const List<uint64_t> &l2) {
+List<uint64_t> LoopifySorting::merge_fuel(
+    uint64_t fuel, const List<uint64_t> &l1, const List<uint64_t> &l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -94,15 +95,14 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel,
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = *_loop_l2;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
           auto _value = *_loop_l1;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -146,11 +146,13 @@ List<uint64_t> LoopifySorting::merge(const List<uint64_t> &l1,
   return merge_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), l1, l2);
 }
 
-List<uint64_t> LoopifySorting::merge_sort_fuel(
-    uint64_t fuel,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifySorting::merge_sort_fuel(uint64_t fuel,
+                                const List<uint64_t> &l) { /// CraneEnter:
+                                                           /// captures varying
+                                                           /// parameters for
+                                                           /// each recursive
+                                                           /// call.
   struct CraneEnter {
     List<uint64_t> l;
     uint64_t fuel;
@@ -221,7 +223,6 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
     uint64_t pivot,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -266,11 +267,13 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
   return _result;
 }
 
-List<uint64_t> LoopifySorting::quicksort_fuel(
-    uint64_t fuel,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifySorting::quicksort_fuel(uint64_t fuel,
+                               const List<uint64_t> &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     List<uint64_t> l;
     uint64_t fuel;
@@ -381,9 +384,9 @@ List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =

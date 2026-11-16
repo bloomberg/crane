@@ -3,11 +3,15 @@
 /// TEST 1: Non-method tree traversal with double recursion.
 /// dummy ensures tree is NOT the first arg (avoiding methodification).
 /// tree is the second arg — should be owned if it doesn't escape.
-uint64_t MemSafetyProbe8::tree_sum_ext(
-    uint64_t _x,
-    const MemSafetyProbe8::tree &t) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe8::tree_sum_ext(uint64_t _x,
+                              const MemSafetyProbe8::tree &t) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const MemSafetyProbe8::tree *t;
     uint64_t _x;
@@ -64,11 +68,11 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
 
 /// TEST 2: Same but with a more complex computation to prevent
 /// the optimizer from simplifying.
-uint64_t MemSafetyProbe8::tree_weighted(
-    uint64_t _x, const MemSafetyProbe8::tree &t,
-    uint64_t depth) { /// CraneEnter: captures varying parameters for each
-                      /// recursive call.
-
+uint64_t
+MemSafetyProbe8::tree_weighted(uint64_t _x, const MemSafetyProbe8::tree &t,
+                               uint64_t depth) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     uint64_t depth;
     const MemSafetyProbe8::tree *t;
@@ -163,11 +167,15 @@ MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(uint64_t n) {
 /// TEST 4: Tree traversal where both recursive calls use
 /// different subtrees — _After frame must hold one while
 /// processing the other.
-uint64_t MemSafetyProbe8::tree_collect(
-    uint64_t _x,
-    const MemSafetyProbe8::tree &t) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe8::tree_collect(uint64_t _x,
+                              const MemSafetyProbe8::tree &t) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const MemSafetyProbe8::tree *t;
     uint64_t _x;
@@ -227,11 +235,15 @@ uint64_t MemSafetyProbe8::tree_collect(
 
 /// TEST 5: Tree function where the tree is consumed (not
 /// used after recursive calls) — maximally owned.
-uint64_t MemSafetyProbe8::tree_flatten(
-    uint64_t _x,
-    const MemSafetyProbe8::tree &t) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe8::tree_flatten(uint64_t _x,
+                              const MemSafetyProbe8::tree &t) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const MemSafetyProbe8::tree *t;
     uint64_t _x;

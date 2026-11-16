@@ -43,17 +43,17 @@ uint64_t ReuseMapTypeChange::suml(const ReuseMapTypeChange::lst<uint64_t> &l) {
 }
 
 uint64_t ReuseMapTypeChange::go1(uint64_t n) {
-  return suml(
-      mapl<uint64_t, uint64_t>([](uint64_t x) { return (x + UINT64_C(1)); },
-                               build(n, lst<uint64_t>::nil())));
+  return suml(mapl<uint64_t, uint64_t>([](uint64_t x) {
+    return (x + UINT64_C(1));
+  }, build(n, lst<uint64_t>::nil())));
 }
 
 uint64_t ReuseMapTypeChange::go2(uint64_t n) {
   return suml(mapl<ReuseMapTypeChange::lst<uint64_t>, uint64_t>(
-      suml, mapl<uint64_t, ReuseMapTypeChange::lst<uint64_t>>(
-                [](uint64_t x) {
-                  return lst<uint64_t>::cons(
-                      x, lst<uint64_t>::cons(x, lst<uint64_t>::nil()));
-                },
-                build(n, lst<uint64_t>::nil()))));
+                  suml, mapl<uint64_t, ReuseMapTypeChange::lst<uint64_t>>(
+                      [](uint64_t x) {
+                        return lst<uint64_t>::cons(
+                            x, lst<uint64_t>::cons(x, lst<uint64_t>::nil()));
+                      },
+                      build(n, lst<uint64_t>::nil()))));
 }

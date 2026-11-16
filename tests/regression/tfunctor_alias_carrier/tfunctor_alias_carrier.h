@@ -280,11 +280,11 @@ struct TfunctorAliasCarrier {
     template <typename CraneA0, typename CraneA1>
     static cmpxchg<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                   cmpxchg<CraneA0> c) {
-      return cmpxchg<CraneA1>{
-          TFunctor_texp<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
-              f, c.c_ptr),
-          TFunctor_texp<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
-              f, c.c_new)};
+      return cmpxchg<CraneA1>{TFunctor_texp<TFunctor_exp>::template tfmap<
+                                  CraneA0, CraneA1>(f, c.c_ptr), TFunctor_texp<
+                                  TFunctor_exp>::template tfmap<CraneA0,
+                                                                CraneA1>(
+                                  f, c.c_new)};
     }
   };
 
@@ -294,11 +294,12 @@ struct TfunctorAliasCarrier {
       std::make_pair(Nat::s(Nat::s(Nat::o())),
                      exp<Nat>::neg(exp<Nat>::lit(Nat::s(Nat::s(Nat::o())))))};
   static inline const cmpxchg<Nat> c1 =
-      TFunctor_cmpxchg::template tfmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); }, c0);
+      TFunctor_cmpxchg::template tfmap<Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, c0);
   static inline const bool is_five =
-      c1.c_ptr.first.add(c1.c_new.first)
-          .eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
+      c1.c_ptr.first.add(c1.c_new.first).eqb(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
 
 #endif // INCLUDED_TFUNCTOR_ALIAS_CARRIER

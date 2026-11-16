@@ -43,24 +43,23 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::shared_box<List<A>>::make(
-                                 crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::shared_box<List<A>>::make(
+                       crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -102,9 +101,9 @@ public:
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
         auto _value = std::move(m);
-        (_write
-             ? *(*_write = crane::shared_box<List<A>>::make(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        crane::shared_box<List<A>>::make(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
@@ -263,7 +262,8 @@ struct LoopifyOwnedChildPointer {
   static reader read_with(t x);
   static inline const uint64_t size =
       read_with(t::n(UINT64_C(2),
-                     std::make_pair(leaf(UINT64_C(3)), leaf(UINT64_C(4)))))
+                     std::make_pair(leaf(UINT64_C(3)),
+                                    leaf(UINT64_C(4)))))
           .read(UINT64_C(0));
 
   struct tree {
@@ -360,9 +360,9 @@ struct LoopifyOwnedChildPointer {
           auto _f = std::move(crane::get<CraneCont_Node_1>(_frame));
           crane::shared_box<tree> a0 = std::move(_f.a0);
           const tree &a0_value = *a0;
-          _result = List<crane::fn<uint64_t(uint64_t)>>::cons(
-              [=](uint64_t y) { return (y + a0_value.sum()); },
-              _f._tmp2.app(std::move(_result)));
+          _result = List<crane::fn<uint64_t(uint64_t)>>::cons([=](uint64_t y) {
+            return (y + a0_value.sum());
+          }, _f._tmp2.app(std::move(_result)));
         }
       }
       return _result;
@@ -498,13 +498,10 @@ struct LoopifyOwnedChildPointer {
       tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
       tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                  UINT64_C(4), tree::leaf()));
-
-  static inline const uint64_t left_sums =
-      t0.subs().template fold_left<uint64_t>(
-          [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) {
-            return (a + f(UINT64_C(0)));
-          },
-          UINT64_C(0));
+  static inline const uint64_t left_sums = t0.subs().template fold_left<
+      uint64_t>([](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) {
+        return (a + f(UINT64_C(0)));
+      }, UINT64_C(0));
 };
 
 #endif // INCLUDED_LOOPIFY_OWNED_CHILD_POINTER

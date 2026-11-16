@@ -276,7 +276,7 @@ struct DirectedGraph {
 
   static Directed<T1> add_edge(Directed<T1> g, DirectedEdge<T1> e) {
     return Directed<T1>{g.directed_nodes, List<DirectedEdge<T1>>::cons(
-                                              std::move(e), g.directed_edges)};
+                            std::move(e), g.directed_edges)};
   }
 
   static List<T1> nodes(Directed<T1> g) { return std::move(g).directed_nodes; }
@@ -348,9 +348,8 @@ struct UndirectedGraph {
   }
 
   static Undirected<T1> add_edge(Undirected<T1> g, UndirectedEdge<T1> e) {
-    return Undirected<T1>{
-        g.undirected_nodes,
-        List<UndirectedEdge<T1>>::cons(std::move(e), g.undirected_edges)};
+    return Undirected<T1>{g.undirected_nodes, List<UndirectedEdge<T1>>::cons(
+                              std::move(e), g.undirected_edges)};
   }
 
   static List<T1> nodes(Undirected<T1> g) {

@@ -42,8 +42,9 @@ struct R {
     }
 
     static lst cons_crane_reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
-      return lst(Cons{
-          a0, crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
+      return lst(
+          Cons{a0,
+               crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS
@@ -77,7 +78,6 @@ struct R {
   static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const lst *l;
     };

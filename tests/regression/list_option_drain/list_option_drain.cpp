@@ -3,6 +3,6 @@
 ListOptionDrain::t ListOptionDrain::wrap(uint64_t k,
                                          const ListOptionDrain::t &acc) {
   return t::node(k, List<std::optional<ListOptionDrain::t>>::cons(
-                        std::make_optional<ListOptionDrain::t>(acc),
-                        List<std::optional<ListOptionDrain::t>>::nil()));
+                     std::make_optional<ListOptionDrain::t>(acc),
+                     List<std::optional<ListOptionDrain::t>>::nil()));
 }

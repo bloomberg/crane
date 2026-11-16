@@ -74,12 +74,11 @@ struct BoxedElementConcept {
 
   struct Forest {
     static inline const crane::list<crane::box<rose>> forest = crane::cons(
-        rose::node(UINT64_C(1), crane::list<crane::box<rose>>{}),
-        crane::cons(
-            rose::node(UINT64_C(2),
-                       crane::cons(rose::node(UINT64_C(3),
-                                              crane::list<crane::box<rose>>{}),
-                                   crane::list<crane::box<rose>>{})),
+        rose::node(UINT64_C(1), crane::list<crane::box<rose>>{}), crane::cons(
+            rose::node(
+                UINT64_C(2), crane::cons(
+                    rose::node(UINT64_C(3), crane::list<crane::box<rose>>{}),
+                    crane::list<crane::box<rose>>{})),
             crane::list<crane::box<rose>>{}));
     static uint64_t count(const crane::list<crane::box<rose>> &l);
     static crane::list<crane::box<rose>> children(const rose &r);
@@ -88,8 +87,8 @@ struct BoxedElementConcept {
   template <typename F> struct Measure {
     static const uint64_t &total() {
       static const uint64_t v =
-          (F::count(F::forest) + F::count(List::template flat_map<rose, rose>(
-                                     F::children, F::forest)));
+          (F::count(F::forest) + F::count(
+               List::template flat_map<rose, rose>(F::children, F::forest)));
       return v;
     }
   };
@@ -100,19 +99,17 @@ struct BoxedElementConcept {
 
 template <typename M>
 concept FOREST = requires {
-  requires(
-      requires {
-        {
-          M::forest
-        } -> std::convertible_to<
-            crane::list<crane::box<BoxedElementConcept::rose>>>;
-      } ||
-      requires {
-        {
-          M::forest()
-        } -> std::convertible_to<
-            crane::list<crane::box<BoxedElementConcept::rose>>>;
-      });
+  requires (requires {
+    {
+      M::forest
+    }
+    -> std::convertible_to<crane::list<crane::box<BoxedElementConcept::rose>>>;
+  } || requires {
+    {
+      M::forest()
+    }
+    -> std::convertible_to<crane::list<crane::box<BoxedElementConcept::rose>>>;
+  });
   {
     M::count(std::declval<crane::list<crane::box<BoxedElementConcept::rose>>>())
   } -> std::same_as<uint64_t>;

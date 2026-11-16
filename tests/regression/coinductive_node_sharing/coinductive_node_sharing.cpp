@@ -11,21 +11,28 @@ Itree<CoinductiveNodeSharing::voidE, uint64_t>
 CoinductiveNodeSharing::count_to(uint64_t k) {
   return ITree::template iter<CoinductiveNodeSharing::voidE, uint64_t,
                               uint64_t>(
-      [=](uint64_t i)
-          -> Itree<CoinductiveNodeSharing::voidE, Sum<uint64_t, uint64_t>> {
-        if (k <= i) {
-          return Itree<CoinductiveNodeSharing::voidE, Sum<uint64_t, uint64_t>>::
-              go(ItreeF<CoinductiveNodeSharing::voidE, Sum<uint64_t, uint64_t>,
-                        Itree<CoinductiveNodeSharing::voidE,
-                              Sum<uint64_t, uint64_t>>>::
-                     retf(Sum<uint64_t, uint64_t>::inr(i)));
-        } else {
-          return Itree<CoinductiveNodeSharing::voidE, Sum<uint64_t, uint64_t>>::
-              go(ItreeF<CoinductiveNodeSharing::voidE, Sum<uint64_t, uint64_t>,
-                        Itree<CoinductiveNodeSharing::voidE,
-                              Sum<uint64_t, uint64_t>>>::
-                     retf(Sum<uint64_t, uint64_t>::inl((i + 1))));
-        }
-      },
+      [=](uint64_t i) -> Itree<CoinductiveNodeSharing::voidE,
+                               Sum<uint64_t, uint64_t>> {
+                                 if (k <= i) {
+                                   return Itree<CoinductiveNodeSharing::voidE,
+                                                Sum<uint64_t, uint64_t>>::go(
+                                       ItreeF<CoinductiveNodeSharing::voidE,
+                                              Sum<uint64_t, uint64_t>, Itree<
+                                                  CoinductiveNodeSharing::voidE,
+                                                  Sum<uint64_t,
+                                                      uint64_t>>>::retf(
+                                           Sum<uint64_t, uint64_t>::inr(i)));
+                                 } else {
+                                   return Itree<CoinductiveNodeSharing::voidE,
+                                                Sum<uint64_t, uint64_t>>::go(
+                                       ItreeF<CoinductiveNodeSharing::voidE,
+                                              Sum<uint64_t, uint64_t>, Itree<
+                                                  CoinductiveNodeSharing::voidE,
+                                                  Sum<uint64_t,
+                                                      uint64_t>>>::retf(
+                                           Sum<uint64_t, uint64_t>::inl((i +
+                                                                         1))));
+                                 }
+                               },
       UINT64_C(0));
 }

@@ -10,10 +10,14 @@ LoopifyInnerFixSelfCall::node(const LoopifyInnerFixSelfCall::tree &l,
 }
 
 uint64_t
-LoopifyInnerFixSelfCall::size(const LoopifyInnerFixSelfCall::tree
-                                  &t) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+LoopifyInnerFixSelfCall::size(const LoopifyInnerFixSelfCall::tree &t) { /// CraneEnter:
+                                                                        /// captures
+                                                                        /// varying
+                                                                        /// parameters
+                                                                        /// for
+                                                                        /// each
+                                                                        /// recursive
+                                                                        /// call.
   struct CraneEnter {
     const LoopifyInnerFixSelfCall::tree *t;
   };
@@ -71,12 +75,11 @@ LoopifyInnerFixSelfCall::add(uint64_t x,
 
 /// As FMapAVL.join: each branch is a function of the remaining
 /// arguments, and the Node branch is the inner fixpoint itself.
-LoopifyInnerFixSelfCall::tree
-LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
-                              const LoopifyInnerFixSelfCall::tree &
-                                  x1_) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+LoopifyInnerFixSelfCall::tree LoopifyInnerFixSelfCall::join(
+    LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
+    const LoopifyInnerFixSelfCall::tree &x1_) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const LoopifyInnerFixSelfCall::tree *x1_;
     LoopifyInnerFixSelfCall::tree l;

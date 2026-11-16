@@ -158,8 +158,10 @@ struct TyargFamilyBinderShift {
     return f(a);
   }
 
-  static inline const uint64_t applied = proof_then_type<uint64_t, uint64_t>(
-      UINT64_C(4), [](uint64_t x) { return (x + 1); });
+  static inline const uint64_t applied =
+      proof_then_type<uint64_t, uint64_t>(UINT64_C(4), [](uint64_t x) {
+        return (x + 1);
+      });
   static uint64_t count_down(uint64_t x);
   static inline const uint64_t counted = count_down(UINT64_C(5));
 };

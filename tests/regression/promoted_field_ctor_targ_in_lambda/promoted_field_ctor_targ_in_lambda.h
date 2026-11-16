@@ -22,8 +22,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -218,23 +217,35 @@ struct Monad0 {
                                              F1 &&x0);
 };
 
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::ptr>;
-  });
-template <typename
-I>concept MemState = requires {
-    typename I::state;
-    { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::initial_state() } -> std::convertible_to<typename I::state>;
-  } || requires {
-    { I::initial_state } -> std::convertible_to<typename I::state>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
+template <typename I>
+concept MemState = requires {
+  typename I::state;
+  { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
+} && (requires {
+  {
+    I::initial_state()
+  }
+  -> std::convertible_to<typename I::state>;
+} || requires {
+  {
+    I::initial_state
+  }
+  -> std::convertible_to<typename I::state>;
+});
 
 struct PromotedFieldCtorTargInLambda {
   using ptr = crane::obj;
@@ -374,8 +385,9 @@ struct PromotedFieldCtorTargInLambda {
   };
 
   template <typename T1> static const memS<T1, T1> &get() {
-    static const memS<T1, T1> v =
-        memS<T1, T1>::mget([](const auto &s) { return memS<T1, T1>::mret(s); });
+    static const memS<T1, T1> v = memS<T1, T1>::mget([](const auto &s) {
+      return memS<T1, T1>::mret(s);
+    });
     return v;
   }
 
@@ -402,17 +414,16 @@ struct PromotedFieldCtorTargInLambda {
   static memM<typename StateV<_tcI0>::state, Nat> read_size(const Nat &msg) {
     return memS_mon<St<typename _tcI0::ptr>>::template bind<
         St<typename _tcI0::ptr>, Nat>(
-        get<St<typename _tcI0::ptr>>(),
-        [=](const St<typename _tcI0::ptr> &s)
-            -> memS<typename StateV<_tcI0>::state, Nat> {
-          auto &&_sv = StateV<_tcI0>::size_of(s);
-          if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-            return memS<typename StateV<_tcI0>::state, Nat>::mub(msg);
-          } else {
-            const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-            return memS_mon<St<typename _tcI0::ptr>>::template ret<Nat>(*a0);
-          }
-        });
+        get<St<typename _tcI0::ptr>>(), [=](const St<typename _tcI0::ptr> &s) -> memS<
+            typename StateV<_tcI0>::state, Nat> {
+              auto &&_sv = StateV<_tcI0>::size_of(s);
+              if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+                return memS<typename StateV<_tcI0>::state, Nat>::mub(msg);
+              } else {
+                const auto &[a0] = std::get<typename Nat::S>(_sv.v());
+                return memS_mon<St<typename _tcI0::ptr>>::template ret<Nat>(*a0);
+              }
+            });
   }
 
   template <Params _tcI0>
@@ -432,9 +443,8 @@ struct PromotedFieldCtorTargInLambda {
       auto &&_sv0 = a0(s);
       if (std::holds_alternative<
               typename memS<St<typename _tcI0::ptr>, Nat>::Mret>(_sv0.v())) {
-        const auto &[a00] =
-            std::get<typename memS<St<typename _tcI0::ptr>, Nat>::Mret>(
-                _sv0.v());
+        const auto &[a00] = std::get<
+            typename memS<St<typename _tcI0::ptr>, Nat>::Mret>(_sv0.v());
         return std::make_optional<Nat>(a00);
       } else {
         return std::optional<Nat>();

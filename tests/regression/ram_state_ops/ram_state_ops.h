@@ -164,54 +164,32 @@ struct RamStateOps {
       ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state init_state =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(0),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(0), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_wrong_reg_count =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(15)),
-            UINT64_C(0),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(0), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_acc_overflow =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(16),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(16), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_pc_overflow =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(0),
-            false,
-            UINT64_C(4096),
-            List<uint64_t>::nil(),
-            empty_ram,
-            default_sel,
+            UINT64_C(0), false, UINT64_C(4096), List<uint64_t>::nil(),
+            empty_ram, default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_stack_overflow = state{
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-      UINT64_C(0),
-      false,
-      UINT64_C(0),
-      List<uint64_t>::cons(
-          UINT64_C(0),
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
+      UINT64_C(0), false, UINT64_C(0), List<uint64_t>::cons(
+          UINT64_C(0), List<uint64_t>::cons(
+              UINT64_C(1), List<uint64_t>::cons(
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
-      empty_ram,
-      default_sel,
+      empty_ram, default_sel,
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static state reset_state(const state &s);
   static uint64_t get_main(const ram_reg &rg, uint64_t i);
@@ -238,26 +216,18 @@ struct RamStateOps {
   static std::pair<std::optional<uint64_t>, state> pop_stack(const state &s);
   static inline const state stack_state = state{
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-      UINT64_C(0),
-      false,
-      UINT64_C(0),
-      List<uint64_t>::cons(
-          UINT64_C(17),
-          List<uint64_t>::cons(
+      UINT64_C(0), false, UINT64_C(0), List<uint64_t>::cons(
+          UINT64_C(17), List<uint64_t>::cons(
               UINT64_C(255),
               List<uint64_t>::cons(UINT64_C(4095), List<uint64_t>::nil()))),
-      empty_ram,
-      default_sel,
+      empty_ram, default_sel,
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
-  static inline const state cleared_state =
-      state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(7),
-            true,
-            UINT64_C(99),
-            List<uint64_t>::cons(UINT64_C(300), List<uint64_t>::nil()),
-            empty_ram,
-            ram_sel{UINT64_C(3), UINT64_C(2), UINT64_C(1), UINT64_C(7)},
-            ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
+  static inline const state cleared_state = state{
+      ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+      UINT64_C(7), true, UINT64_C(99),
+      List<uint64_t>::cons(UINT64_C(300), List<uint64_t>::nil()), empty_ram,
+      ram_sel{UINT64_C(3), UINT64_C(2), UINT64_C(1), UINT64_C(7)},
+      ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const ram_reg patched_reg =
       upd_main_in_reg(empty_reg, UINT64_C(0), UINT64_C(13));
   static inline const ram_chip patched_chip =

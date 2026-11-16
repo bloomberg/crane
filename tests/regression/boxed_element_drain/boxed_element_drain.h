@@ -86,15 +86,11 @@ struct BoxedElementDrain {
   static uint64_t total(const rose &r);
   static rose spine(uint64_t d);
   static inline const rose sample = rose::node(
-      UINT64_C(2),
-      crane::cons(
-          rose::node(UINT64_C(3), crane::list<rose>{}),
-          crane::cons(rose::node(UINT64_C(4),
-                                 crane::cons(rose::node(UINT64_C(5),
-                                                        crane::list<rose>{}),
-                                             crane::list<rose>{})),
-                      crane::list<rose>{})));
-
+      UINT64_C(2), crane::cons(
+          rose::node(UINT64_C(3), crane::list<rose>{}), crane::cons(
+              rose::node(UINT64_C(4), crane::cons(
+                             rose::node(UINT64_C(5), crane::list<rose>{}),
+                             crane::list<rose>{})), crane::list<rose>{})));
   static inline const uint64_t sample_total = total(sample);
 };
 

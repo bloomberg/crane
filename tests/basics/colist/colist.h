@@ -175,27 +175,37 @@ public:
 
   template <typename CraneU>
   Colist(const Colist<CraneU> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              if (std::holds_alternative<typename Colist<CraneU>::Conil>(
-                      _other.v())) {
-                return Conil{};
-              } else {
-                const auto &[x, xs] =
-                    std::get<typename Colist<CraneU>::Cocons>(_other.v());
-                return Cocons{
-                    [&]() -> A {
-                      if constexpr (crane_convertible<A, const CraneU &>) {
-                        return crane_convert<A>(x);
-                      } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
-                      }
-                    }(),
-                    crane_convert<Colist<A>>(xs)};
-              }
-            })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                       [=]() -> variant_t {
+                                                         if (std::holds_alternative<
+                                                                 typename Colist<
+                                                                     CraneU>::Conil>(
+                                                                 _other.v())) {
+                                                           return Conil{};
+                                                         } else {
+                                                           const auto &[x, xs] =
+                                                               std::get<
+                                                                   typename Colist<
+                                                                       CraneU>::Cocons>(
+                                                                   _other.v());
+                                                           return Cocons{
+                                                               [&]() -> A {
+                                                                 if constexpr (
+                                                                     crane_convertible<
+                                                                         A,
+                                                                         const CraneU &>) {
+                                                                   return crane_convert<
+                                                                       A>(x);
+                                                                 } else {
+                                                                   throw std::logic_error(
+                                                                       "unreachable: inactive constructor field at this instantiation");
+                                                                 }
+                                                               }(),
+                                                               crane_convert<
+                                                                   Colist<A>>(
+                                                                   xs)};
+                                                         }
+                                                       })) {}
 
   explicit Colist(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -206,8 +216,9 @@ public:
   }
 
   static Colist<A> cocons(A x, Colist<A> xs) {
-    return Colist<A>(crane::lazy<variant_t>(
-        std::in_place, std::in_place_index<1>, std::move(x), std::move(xs)));
+    return Colist<A>(
+        crane::lazy<variant_t>(std::in_place, std::in_place_index<1>,
+                               std::move(x), std::move(xs)));
   }
 
   explicit Colist(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -248,8 +259,9 @@ public:
   }
 
   static Colist<Nat> nats(const Nat &n) {
-    return Colist<Nat>::lazy_(
-        [=]() -> typename Colist<Nat>::Cocons { return {n, nats(Nat::s(n))}; });
+    return Colist<Nat>::lazy_([=]() -> typename Colist<Nat>::Cocons {
+      return {n, nats(Nat::s(n))};
+    });
   }
 
   static const List<Nat> &first_three() {

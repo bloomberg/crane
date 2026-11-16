@@ -6,6 +6,7 @@ LoopifyOwnedChildPointer::t LoopifyOwnedChildPointer::leaf(uint64_t n) {
 
 LoopifyOwnedChildPointer::reader
 LoopifyOwnedChildPointer::read_with(LoopifyOwnedChildPointer::t x) {
-  return reader::reader0(
-      [=, x = std::move(x)](uint64_t k) { return (k + x.sz()); });
+  return reader::reader0([=, x = std::move(x)](uint64_t k) {
+    return (k + x.sz());
+  });
 }

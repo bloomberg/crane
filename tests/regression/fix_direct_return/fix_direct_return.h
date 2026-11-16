@@ -42,12 +42,12 @@ struct FixDirectReturn {
     return []() {
       crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb1 =
           [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
-        return make_callback(UINT64_C(5), _x0);
-      };
+            return make_callback(UINT64_C(5), _x0);
+          };
       crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb2 =
           [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
-        return make_callback(UINT64_C(100), _x0);
-      };
+            return make_callback(UINT64_C(100), _x0);
+          };
       return cb1([=, cb2 = std::move(cb2)](uint64_t) {
         return cb2([](uint64_t x) { return x; });
       });

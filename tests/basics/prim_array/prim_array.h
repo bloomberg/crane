@@ -14,8 +14,8 @@ struct PrimArray {
   static inline const uint64_t get_modified = arr5_modified.get(INT64_C(2));
   static inline const uint64_t get_original = arr5.get(INT64_C(2));
   static inline const persistent_array<uint64_t> arr_chain =
-      ((arr5.set(INT64_C(0), UINT64_C(10))).set(INT64_C(1), UINT64_C(20)))
-          .set(INT64_C(2), UINT64_C(30));
+      ((arr5.set(INT64_C(0), UINT64_C(10))).set(INT64_C(1), UINT64_C(20))).set(
+          INT64_C(2), UINT64_C(30));
   static inline const uint64_t chain_0 = arr_chain.get(INT64_C(0));
   static inline const uint64_t chain_1 = arr_chain.get(INT64_C(1));
   static inline const uint64_t chain_2 = arr_chain.get(INT64_C(2));

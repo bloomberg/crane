@@ -40,8 +40,7 @@ struct DeepMap {
     template <typename CraneU>
     tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
-                    _other.v())) {
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(_other.v())) {
               return Leaf{};
             } else {
               const auto &[a0, a1, a2] =
@@ -53,9 +52,9 @@ struct DeepMap {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a2 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a2))
@@ -66,9 +65,9 @@ struct DeepMap {
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
     static tree<A> node(tree<A> a0, A a1, tree<A> a2) {
-      return tree<A>(Node{std::make_shared<tree<A>>(std::move(a0)),
-                          std::move(a1),
-                          std::make_shared<tree<A>>(std::move(a2))});
+      return tree<A>(
+          Node{std::make_shared<tree<A>>(std::move(a0)), std::move(a1),
+               std::make_shared<tree<A>>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -120,7 +119,6 @@ struct DeepMap {
   tree_rect(T2 f, F1 &&f0,
             const tree<T1> &t) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -195,7 +193,6 @@ struct DeepMap {
   static tree<T2>
   tmap(F0 &&f, const tree<T1> &t) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -237,8 +234,8 @@ struct DeepMap {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Node_1{std::move(a1), std::move(_result)});
+        _stack.emplace_back(CraneCont_Node_1{std::move(a1),
+                                             std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

@@ -1281,9 +1281,9 @@ struct MemSafetyProbe29 {
           const tree3 &a1 = *_f.a1;
           const tree3 &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
-          _stack.emplace_back(CraneCont_T3Node_2{std::move(a0), &a1, &a2, a3,
-                                                 std::move(_f._tmp3),
-                                                 std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_T3Node_2{std::move(a0), &a1, &a2, a3,
+                                 std::move(_f._tmp3), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_T3Node_2>(_frame));
@@ -1305,10 +1305,10 @@ struct MemSafetyProbe29 {
     outer o = outer::onode(
         outer::onode(outer::oleaf(),
                      inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
-                     outer::oleaf()),
-        inner::inode(inner::inode(inner::ileaf(), UINT64_C(1), inner::ileaf()),
-                     UINT64_C(2),
-                     inner::inode(inner::ileaf(), UINT64_C(3), inner::ileaf())),
+                     outer::oleaf()), inner::inode(
+            inner::inode(inner::ileaf(), UINT64_C(1), inner::ileaf()),
+            UINT64_C(2),
+            inner::inode(inner::ileaf(), UINT64_C(3), inner::ileaf())),
         outer::onode(outer::oleaf(),
                      inner::inode(inner::ileaf(), UINT64_C(20), inner::ileaf()),
                      outer::oleaf()));
@@ -1325,10 +1325,10 @@ struct MemSafetyProbe29 {
   static inline const uint64_t test_transform = []() {
     outer o = outer::onode(
         outer::oleaf(),
-        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()),
-        outer::onode(outer::oleaf(),
-                     inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
-                     outer::oleaf()));
+        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()), outer::onode(
+            outer::oleaf(),
+            inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
+            outer::oleaf()));
     return o.transform_outer().outer_sum();
   }();
   /// TEST 4: Build and evaluate a complex expression tree.
@@ -1353,9 +1353,9 @@ struct MemSafetyProbe29 {
   }();
   static inline const uint64_t test_double_expr =
       expr::add(expr::lit(UINT64_C(5)),
-                expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))))
-          .double_expr()
-          .eval_expr();
+                expr::mul(expr::lit(UINT64_C(3)),
+                          expr::lit(UINT64_C(7))))
+          .double_expr().eval_expr();
   static inline const uint64_t test_cross_type = []() {
     expr e =
         expr::add(expr::lit(UINT64_C(5)),

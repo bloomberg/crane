@@ -16,8 +16,7 @@ uint64_t PartialAppMove::sum_values(const PartialAppMove::tree &t, uint64_t x) {
       const auto &[a00, a10, a20] =
           std::get<typename PartialAppMove::tree::Node>(_sv0.v());
       auto &&_sv1 = *a2;
-      if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(
-              _sv1.v())) {
+      if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(_sv1.v())) {
         return (a10 + x);
       } else {
         const auto &[a01, a11, a21] =

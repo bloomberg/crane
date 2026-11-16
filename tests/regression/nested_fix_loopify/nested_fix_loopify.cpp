@@ -1,9 +1,11 @@
 #include "nested_fix_loopify.h"
 
-uint64_t NestedFixLoopify::outer(
-    const NestedFixLoopify::lst &l) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+uint64_t
+NestedFixLoopify::outer(const NestedFixLoopify::lst &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     const NestedFixLoopify::lst *l;
   };
@@ -39,22 +41,22 @@ uint64_t NestedFixLoopify::outer(
       uint64_t a0 = _f.a0;
       std::shared_ptr<NestedFixLoopify::lst> a1 = std::move(_f.a1);
       _result = ([&]() {
-        auto inner = [&](const NestedFixLoopify::lst &m,
-                         uint64_t a) -> uint64_t {
-          uint64_t _loop_a = a;
-          const NestedFixLoopify::lst *_loop_m = &m;
-          while (true) {
-            if (std::holds_alternative<typename NestedFixLoopify::lst::Nil>(
-                    _loop_m->v())) {
-              return _loop_a;
-            } else {
-              const auto &[a2, a3] =
-                  std::get<typename NestedFixLoopify::lst::Cons>(_loop_m->v());
-              _loop_a = (_loop_a + (a2 * a0));
-              _loop_m = crane_raw(a3);
-            }
-          }
-        };
+        auto inner =
+            [&](const NestedFixLoopify::lst &m, uint64_t a) -> uint64_t {
+              uint64_t _loop_a = a;
+              const NestedFixLoopify::lst *_loop_m = &m;
+              while (true) {
+                if (std::holds_alternative<typename NestedFixLoopify::lst::Nil>(
+                        _loop_m->v())) {
+                  return _loop_a;
+                } else {
+                  const auto &[a2, a3] = std::get<
+                      typename NestedFixLoopify::lst::Cons>(_loop_m->v());
+                  _loop_a = (_loop_a + (a2 * a0));
+                  _loop_m = crane_raw(a3);
+                }
+              }
+            };
         return inner(*a1, UINT64_C(0));
       }() + std::move(_result));
     }

@@ -148,8 +148,7 @@ struct LoopifyTrees {
     template <typename CraneU>
     tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
-                    _other.v())) {
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(_other.v())) {
               return Leaf{};
             } else {
               const auto &[l, x, r] =
@@ -161,9 +160,9 @@ struct LoopifyTrees {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(x);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (r ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*r))
@@ -336,8 +335,8 @@ struct LoopifyTrees {
             } else {
               const auto &[a00, a10, a20] =
                   std::get<typename tree<A>::Node>(t2.v());
-              _stack.emplace_back(
-                  CraneCont_Node{crane_raw(a2), crane_raw(a00)});
+              _stack.emplace_back(CraneCont_Node{crane_raw(a2),
+                                                 crane_raw(a00)});
               _stack.emplace_back(CraneEnter{crane_raw(a0), crane_raw(a20)});
             }
           }
@@ -554,8 +553,8 @@ struct LoopifyTrees {
             } else {
               const auto &[a00, a10, a20] =
                   std::get<typename tree<T1>::Node>(t2.v());
-              _stack.emplace_back(
-                  CraneCont_Node{crane_raw(a2), crane_raw(a20)});
+              _stack.emplace_back(CraneCont_Node{crane_raw(a2),
+                                                 crane_raw(a20)});
               _stack.emplace_back(CraneEnter{crane_raw(a0), crane_raw(a00)});
             }
           }
@@ -1149,9 +1148,9 @@ struct LoopifyTrees {
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
-          _stack.emplace_back(CraneCont_TNode_2{std::move(a0), &a1, &a2, a3,
-                                                std::move(_f._tmp3),
-                                                std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_TNode_2{std::move(a0), &a1, &a2, a3,
+                                std::move(_f._tmp3), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_TNode_2>(_frame));
@@ -1199,8 +1198,7 @@ struct LoopifyTrees {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (
-                std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -1279,11 +1277,11 @@ struct LoopifyTrees {
   /// Helper: map function over all values in a list of rose trees.
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
-  static List<rose> map_rose_list_fuel(
-      uint64_t fuel, F1 &&f,
-      const List<rose> &cs) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+  static List<rose>
+  map_rose_list_fuel(uint64_t fuel, F1 &&f,
+                     const List<rose> &cs) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
     struct CraneEnter {
       const List<rose> *cs;
       uint64_t fuel;
@@ -1388,7 +1386,6 @@ struct LoopifyTrees {
   or_search(F0 &&p,
             const tree<uint64_t> &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree<uint64_t> *t;
     };
@@ -1794,8 +1791,9 @@ struct LoopifyTrees {
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
-            _stack.emplace_back(CraneCont_Quad{a0, crane_raw(a1), crane_raw(a2),
-                                               crane_raw(a3)});
+            _stack.emplace_back(
+                CraneCont_Quad{a0, crane_raw(a1), crane_raw(a2),
+                               crane_raw(a3)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
         } else if (std::holds_alternative<CraneCont_Quad>(_frame)) {
@@ -1813,9 +1811,9 @@ struct LoopifyTrees {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(CraneCont_Quad_2{std::move(a0), &a1, &a2, &a3,
-                                               std::move(_f._tmp4),
-                                               std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Quad_2{std::move(a0), &a1, &a2, &a3,
+                               std::move(_f._tmp4), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Quad_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Quad_2>(_frame));
@@ -1823,9 +1821,10 @@ struct LoopifyTrees {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(CraneCont_Quad_3{
-              std::move(a0), &a1, &a2, &a3, std::move(_f._tmp4),
-              std::move(_f._tmp3), std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Quad_3{std::move(a0), &a1, &a2, &a3,
+                               std::move(_f._tmp4), std::move(_f._tmp3),
+                               std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else {
           auto _f = std::move(std::get<CraneCont_Quad_3>(_frame));
@@ -1970,9 +1969,10 @@ struct LoopifyTrees {
               _result = UINT64_C(0);
             } else {
               _stack.emplace_back(CraneCont1{n, crane_raw(a1)});
-              _stack.emplace_back(CraneEnter{
-                  crane_raw(a0),
-                  (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+              _stack.emplace_back(
+                  CraneEnter{crane_raw(a0),
+                             (((n - UINT64_C(1)) > n ? 0
+                                                     : (n - UINT64_C(1))))});
             }
           }
         } else if (std::holds_alternative<CraneCont1>(_frame)) {
@@ -1980,8 +1980,9 @@ struct LoopifyTrees {
           uint64_t n = _f.n;
           const simple_tree &a1 = *_f.a1;
           _stack.emplace_back(CraneCont2{std::move(_result)});
-          _stack.emplace_back(CraneEnter{
-              _f.a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+          _stack.emplace_back(
+              CraneEnter{_f.a1,
+                         (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
         } else {
           auto _f = std::move(std::get<CraneCont2>(_frame));
           _result = (_f._tmp2 + std::move(_result));

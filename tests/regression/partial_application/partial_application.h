@@ -139,13 +139,13 @@ template <typename T> struct Box {
 
   template <typename CraneU> operator Box<CraneU>() const {
     return {tag, [&]() -> CraneU {
-              if constexpr (crane_convertible<CraneU, const T &>) {
-                return crane_convert<CraneU>(t);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }()};
+      if constexpr (crane_convertible<CraneU, const T &>) {
+        return crane_convert<CraneU>(t);
+      } else {
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
+      }
+    }()};
   }
 
   // CREATORS

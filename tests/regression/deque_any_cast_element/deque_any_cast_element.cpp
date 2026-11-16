@@ -7,20 +7,16 @@ apply_entry(const SigT<Tag, crane::fn<crane::obj(crane::obj)>> &e) {
   case Tag::TAGA: {
     return SigT<Tag, output_ty>::existt(
         Tag::TAGA, a1(std::make_pair(
-                       crane::obj(UINT64_C(10)),
-                       crane::obj(std::make_pair(
-                           crane::obj([](auto _a0, auto _a1) {
-                             _a1.push_front(_a0);
-                             return _a1;
-                           }(std::make_pair(crane::obj(UINT64_C(1)),
-                                            crane::obj(UINT64_C(2))),
-                                      [](auto _a0, auto _a1) {
-                                        _a1.push_front(_a0);
-                                        return _a1;
-                                      }(std::make_pair(crane::obj(UINT64_C(3)),
-                                                       crane::obj(UINT64_C(4))),
-                                        std::deque<crane::obj>{}))),
-                           crane::obj(UINT64_C(20)))))));
+                          crane::obj(UINT64_C(10)), crane::obj(
+                              std::make_pair(
+                                  crane::obj([](auto _a0, auto _a1) {
+                                    _a1.push_front(_a0);
+                                    return _a1;
+                                  }(std::make_pair(crane::obj(UINT64_C(1)), crane::obj(UINT64_C(2))), [](auto _a0, auto _a1) {
+                                    _a1.push_front(_a0);
+                                    return _a1;
+                                  }(std::make_pair(crane::obj(UINT64_C(3)), crane::obj(UINT64_C(4))), std::deque<crane::obj>{}))),
+                                  crane::obj(UINT64_C(20)))))));
   }
   case Tag::TAGB: {
     return SigT<Tag, output_ty>::existt(Tag::TAGB, a1(UINT64_C(5)));

@@ -163,6 +163,7 @@ struct LoopifyMutualPartialApp {
   static T1 endo(const T1 &x0_) {
     return _tcI0::endo(x0_);
   }
+
   template <typename U> struct e;
   template <typename U> struct md;
 
@@ -221,15 +222,14 @@ struct LoopifyMutualPartialApp {
                   }
                 }()};
               } else {
-                if (std::holds_alternative<typename e<CraneU>::Add>(
-                        _other.v())) {
+                if (std::holds_alternative<typename e<CraneU>::Add>(_other.v())) {
                   const auto &[a, b] =
                       std::get<typename e<CraneU>::Add>(_other.v());
                   return Add{
                       (a ? std::make_shared<e<U>>(crane_convert<e<U>>(*a))
-                         : nullptr),
-                      (b ? std::make_shared<e<U>>(crane_convert<e<U>>(*b))
-                         : nullptr)};
+                         : nullptr), (
+                          b ? std::make_shared<e<U>>(crane_convert<e<U>>(*b))
+                            : nullptr)};
                 } else {
                   const auto &[m] =
                       std::get<typename e<CraneU>::Meta>(_other.v());
@@ -354,8 +354,7 @@ struct LoopifyMutualPartialApp {
     template <typename CraneU>
     md(const md<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename md<CraneU>::MNull>(
-                    _other.v())) {
+            if (std::holds_alternative<typename md<CraneU>::MNull>(_other.v())) {
               return MNull{};
             } else {
               if (std::holds_alternative<typename md<CraneU>::MConst>(
@@ -367,9 +366,9 @@ struct LoopifyMutualPartialApp {
                       if constexpr (crane_convertible<U, const CraneU &>) {
                         return crane_convert<U>(u);
                       } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
+                        throw std::logic_error("unreachable: inactive "
+                                               "constructor field at this "
+                                               "instantiation");
                       }
                     }(),
                     (x ? std::make_shared<e<U>>(crane_convert<e<U>>(*x))
@@ -380,16 +379,16 @@ struct LoopifyMutualPartialApp {
                   const auto &[l] =
                       std::get<typename md<CraneU>::MNode>(_other.v());
                   return MNode{(l ? std::make_shared<List<md<U>>>(
-                                        crane_convert<List<md<U>>>(*l))
+                                      crane_convert<List<md<U>>>(*l))
                                   : nullptr)};
                 } else {
                   const auto &[a, b] =
                       std::get<typename md<CraneU>::MPair>(_other.v());
                   return MPair{
                       (a ? std::make_shared<md<U>>(crane_convert<md<U>>(*a))
-                         : nullptr),
-                      (b ? std::make_shared<md<U>>(crane_convert<md<U>>(*b))
-                         : nullptr)};
+                         : nullptr), (
+                          b ? std::make_shared<md<U>>(crane_convert<md<U>>(*b))
+                            : nullptr)};
                 }
               }
             }
@@ -423,8 +422,7 @@ struct LoopifyMutualPartialApp {
           if (_alt->l && _alt->l.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->l.get();
-            while (
-                std::holds_alternative<typename List<md<U>>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<md<U>>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<md<U>>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<md<U>>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -492,11 +490,10 @@ struct LoopifyMutualPartialApp {
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
             typename F3>
     requires std::is_invocable_r_v<T2, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T2, F1 &, const T1 &>
+    std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T2 e_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2,
                    const e<T1> &e0) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const e<T1> *e0;
     };
@@ -568,7 +565,6 @@ struct LoopifyMutualPartialApp {
   static T2 md_rect(T2 f, F1 &&f0, F2 &&f1, F3 &&f2,
                     const md<T1> &m) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const md<T1> *m;
     };
@@ -637,12 +633,11 @@ struct LoopifyMutualPartialApp {
 
   template <typename _tcI0, typename T1, typename T2, typename F0>
     requires Endo<_tcI0, uint64_t> &&
-             std::is_invocable_r_v<T2, F0 &, const T1 &> &&
-             std::is_invocable_r_v<T2, F0 &, T1 &>
+    std::is_invocable_r_v<T2, F0 &, const T1 &> &&
+    std::is_invocable_r_v<T2, F0 &, T1 &>
   static e<T2> ft_e(F0 &&f,
                     const e<T1> &x) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const e<T1> *x;
     };
@@ -693,20 +688,21 @@ struct LoopifyMutualPartialApp {
           const md<T1> &m0_value = *m0;
           if (std::holds_alternative<typename md<T1>::MNull>(m0_value.v())) {
             _result = e<T2>::meta(md<T2>::mnull());
-          } else if (std::holds_alternative<typename md<T1>::MConst>(
-                         m0_value.v())) {
+          } else if (
+              std::holds_alternative<typename md<T1>::MConst>(m0_value.v())) {
             const auto &[u0, x1] =
                 std::get<typename md<T1>::MConst>(m0_value.v());
             _stack.emplace_back(CraneCont_MConst{u0});
             _stack.emplace_back(CraneEnter{crane_raw(x1)});
-          } else if (std::holds_alternative<typename md<T1>::MNode>(
-                         m0_value.v())) {
+          } else if (
+              std::holds_alternative<typename md<T1>::MNode>(m0_value.v())) {
             const auto &[l0] = std::get<typename md<T1>::MNode>(m0_value.v());
             const List<md<T1>> &l0_value = *l0;
-            _result = e<T2>::meta(md<T2>::mnode(
-                l0_value.template map<md<T2>>([=](md<T1> _x0) -> md<T2> {
-                  return ft_md<_tcI0, T1, T2>(f, _x0);
-                })));
+            _result = e<T2>::meta(md<T2>::mnode(l0_value.template map<md<T2>>(
+                                                    [=](md<T1> _x0) -> md<T2> {
+                                                      return ft_md<_tcI0, T1,
+                                                                   T2>(f, _x0);
+                                                    })));
           } else {
             const auto &[a0, b0] =
                 std::get<typename md<T1>::MPair>(m0_value.v());
@@ -733,12 +729,11 @@ struct LoopifyMutualPartialApp {
 
   template <typename _tcI0, typename T1, typename T2, typename F0>
     requires Endo<_tcI0, uint64_t> &&
-             std::is_invocable_r_v<T2, F0 &, const T1 &> &&
-             std::is_invocable_r_v<T2, F0 &, T1 &>
-  static md<T2> ft_md(F0 &&f,
-                      const md<T1> &m) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+    std::is_invocable_r_v<T2, F0 &, const T1 &> &&
+    std::is_invocable_r_v<T2, F0 &, T1 &>
+  static md<T2>
+  ft_md(F0 &&f, const md<T1> &m) { /// CraneEnter: captures varying parameters
+                                   /// for each recursive call.
     struct CraneEnter {
       const md<T1> *m;
     };
@@ -787,9 +782,9 @@ struct LoopifyMutualPartialApp {
             _result = md<T2>::mconst(f(u0), e<T2>::tag(f(u2)));
           } else if (std::holds_alternative<typename e<T1>::Add>(_sv0.v())) {
             const auto &[a0, b0] = std::get<typename e<T1>::Add>(_sv0.v());
-            _result =
-                md<T2>::mconst(f(u0), e<T2>::add(ft_e<_tcI0, T1, T2>(f, *a0),
-                                                 ft_e<_tcI0, T1, T2>(f, *b0)));
+            _result = md<T2>::mconst(
+                f(u0), e<T2>::add(ft_e<_tcI0, T1, T2>(f, *a0),
+                                  ft_e<_tcI0, T1, T2>(f, *b0)));
           } else {
             const auto &[m1] = std::get<typename e<T1>::Meta>(_sv0.v());
             _stack.emplace_back(CraneCont_Meta{u0});
@@ -833,17 +828,17 @@ struct LoopifyMutualPartialApp {
 
   static_assert(Endo<endo_double, uint64_t>);
   [[gnu::used]] static inline const e<uint64_t> sample = e<uint64_t>::add(
-      e<uint64_t>::leaf(UINT64_C(1)),
-      e<uint64_t>::meta(md<uint64_t>::mpair(
-          md<uint64_t>::mconst(UINT64_C(5),
-                               e<uint64_t>::add(e<uint64_t>::leaf(UINT64_C(2)),
+      e<uint64_t>::leaf(UINT64_C(1)), e<uint64_t>::meta(
+          md<uint64_t>::mpair(
+              md<uint64_t>::mconst(
+                  UINT64_C(5), e<uint64_t>::add(e<uint64_t>::leaf(UINT64_C(2)),
                                                 e<uint64_t>::tag(UINT64_C(7)))),
-          md<uint64_t>::mnode(List<md<uint64_t>>::cons(
-              md<uint64_t>::mnull(),
-              List<md<uint64_t>>::cons(
-                  md<uint64_t>::mconst(UINT64_C(1),
-                                       e<uint64_t>::leaf(UINT64_C(4))),
-                  List<md<uint64_t>>::nil()))))));
+              md<uint64_t>::mnode(
+                  List<md<uint64_t>>::cons(
+                      md<uint64_t>::mnull(), List<md<uint64_t>>::cons(
+                          md<uint64_t>::mconst(UINT64_C(1),
+                                               e<uint64_t>::leaf(UINT64_C(4))),
+                          List<md<uint64_t>>::nil()))))));
   /// leaves doubled: 2*(1+2+4) = 14; tags and consts +100 each: 107 + 105 + 101
   /// = 313
   static bool check(std::monostate _x);

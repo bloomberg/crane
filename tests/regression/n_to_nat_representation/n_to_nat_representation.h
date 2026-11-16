@@ -150,15 +150,14 @@ struct NToNatRepresentation {
       std::min(UINT64_C(7), static_cast<uint64_t>(n));
   static inline const uint64_t mapped =
       List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))
+          1u,
+          List<unsigned int>::cons(2u, List<unsigned int>::nil()))
           .template map<uint64_t>([](unsigned int _x0) -> uint64_t {
             return static_cast<uint64_t>(_x0);
           })
           .template fold_left<uint64_t>(
-              [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                return (_x0 + _x1);
-              },
-              UINT64_C(0));
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          UINT64_C(0));
 };
 
 #endif // INCLUDED_N_TO_NAT_REPRESENTATION

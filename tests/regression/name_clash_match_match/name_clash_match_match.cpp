@@ -26,8 +26,7 @@ uint64_t
 NameClashMatchMatch::subtree_value(NameClashMatchMatch::Dir d,
                                    const NameClashMatchMatch::tree &t) {
   auto &&_sv = choose_subtree(d, t);
-  if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(
-          _sv.v())) {
+  if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(_sv.v())) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1, a2] =
@@ -52,8 +51,7 @@ NameClashMatchMatch::inline_match_match(NameClashMatchMatch::Dir d,
       std::unreachable();
     }
   }();
-  if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(
-          _sv.v())) {
+  if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(_sv.v())) {
     return UINT64_C(100);
   } else {
     const auto &[a0, a1, a2] =
@@ -65,8 +63,7 @@ NameClashMatchMatch::inline_match_match(NameClashMatchMatch::Dir d,
 /// Two matches on the same scrutinee.
 uint64_t NameClashMatchMatch::double_match(const NameClashMatchMatch::tree &t) {
   uint64_t a = [&]() {
-    if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(
-            t.v())) {
+    if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(t.v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1, a2] =
@@ -75,8 +72,7 @@ uint64_t NameClashMatchMatch::double_match(const NameClashMatchMatch::tree &t) {
     }
   }();
   uint64_t b = [&]() {
-    if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(
-            t.v())) {
+    if (std::holds_alternative<typename NameClashMatchMatch::tree::Leaf>(t.v())) {
       return UINT64_C(1);
     } else {
       const auto &[a00, a10, a20] =

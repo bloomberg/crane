@@ -183,7 +183,7 @@ struct IndexedFamilyDeepDestructor {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3, typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const bool &>
+    std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       const expr &e) {
     if (std::holds_alternative<typename expr::Lit>(e.v())) {
@@ -203,9 +203,9 @@ struct IndexedFamilyDeepDestructor {
              expr_rect<T1>(f, f0, f1, f2, f3, f4, *a2)));
     } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
       const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return crane_any_cast<T1>(f3(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a),
-                                   *b,
-                                   expr_rect<T1>(f, f0, f1, f2, f3, f4, *b)));
+      return crane_any_cast<T1>(
+          f3(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a), *b,
+             expr_rect<T1>(f, f0, f1, f2, f3, f4, *b)));
     } else {
       const auto &[a] = std::get<typename expr::FstE>(e.v());
       return crane_any_cast<T1>(
@@ -216,7 +216,7 @@ struct IndexedFamilyDeepDestructor {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3, typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const bool &>
+    std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                      const expr &e) {
     if (std::holds_alternative<typename expr::Lit>(e.v())) {
@@ -241,8 +241,8 @@ struct IndexedFamilyDeepDestructor {
                                    expr_rec<T1>(f, f0, f1, f2, f3, f4, *b)));
     } else {
       const auto &[a] = std::get<typename expr::FstE>(e.v());
-      return crane_any_cast<T1>(
-          f4(*a, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a)));
+      return crane_any_cast<T1>(f4(*a,
+                                   expr_rec<T1>(f, f0, f1, f2, f3, f4, *a)));
     }
   }
 

@@ -4,10 +4,10 @@
 /// Helper: sum all elements in a list of nested structures.
 /// Handles both tree and list levels in one function for full loopification.
 uint64_t LoopifyStructures::sum_nested_list_fuel(
-    uint64_t fuel, const List<LoopifyStructures::nested>
-                       &l) { /// CraneEnter: captures varying parameters for
-                             /// each recursive call.
-
+    uint64_t fuel,
+    const List<LoopifyStructures::nested> &l) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const List<LoopifyStructures::nested> *l;
     uint64_t fuel;
@@ -90,10 +90,10 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
 
 /// Helper: compute max depth among a list of nested structures.
 uint64_t LoopifyStructures::depth_nested_list_fuel(
-    uint64_t fuel, const List<LoopifyStructures::nested>
-                       &l) { /// CraneEnter: captures varying parameters for
-                             /// each recursive call.
-
+    uint64_t fuel,
+    const List<LoopifyStructures::nested> &l) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const List<LoopifyStructures::nested> *l;
     uint64_t fuel;
@@ -182,10 +182,10 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
 
 /// Helper: flatten a list of nested structures to a flat list of nats.
 List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
-    uint64_t fuel, const List<LoopifyStructures::nested>
-                       &l) { /// CraneEnter: captures varying parameters for
-                             /// each recursive call.
-
+    uint64_t fuel,
+    const List<LoopifyStructures::nested> &l) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const List<LoopifyStructures::nested> *l;
     uint64_t fuel;

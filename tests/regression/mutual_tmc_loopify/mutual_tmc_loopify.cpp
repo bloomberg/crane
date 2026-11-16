@@ -3,7 +3,6 @@
 MutualTmcLoopify::mylist
 MutualTmcLoopify::evens(const Nat &n) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     const Nat *n;
   };

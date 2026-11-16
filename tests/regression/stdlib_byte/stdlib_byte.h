@@ -7,12 +7,9 @@ enum class Byte;
 
 struct Byte0 {
   static std::pair<
-      bool,
-      std::pair<
-          bool,
-          std::pair<
-              bool,
-              std::pair<
+      bool, std::pair<
+          bool, std::pair<
+              bool, std::pair<
                   bool,
                   std::pair<bool, std::pair<bool, std::pair<bool, bool>>>>>>>
   to_bits(Byte b0);
@@ -25,6 +22,7 @@ struct Bool {
 struct Byte1 {
   static bool eqb0(Byte a, Byte b0);
 };
+
 enum class Byte {
   X00,
   X01,

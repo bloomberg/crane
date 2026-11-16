@@ -6,7 +6,6 @@
 #include <utility>
 
 namespace ParamsDef {
-
 using ptr = crane::obj;
 template <typename I, typename prov>
 concept Pointer = requires {
@@ -18,7 +17,6 @@ concept Params = requires {
   typename I::PROV;
   typename I::PTR;
 };
-
 } // namespace ParamsDef
 
 #endif // INCLUDED_PARAMSDEF

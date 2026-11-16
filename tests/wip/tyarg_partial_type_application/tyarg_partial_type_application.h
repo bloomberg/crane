@@ -130,8 +130,7 @@ concept Mon = requires {
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
     I::template bnd<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template M<crane::obj>>(), std::declval<
             crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
@@ -206,8 +205,9 @@ struct TyargPartialTypeApplication {
   }
 
   static inline const std::optional<uint64_t> lifted =
-      lift_opt<uint64_t, uint64_t>([](uint64_t x) { return (x + 1); },
-                                   std::make_optional<uint64_t>(UINT64_C(4)));
+      lift_opt<uint64_t, uint64_t>([](uint64_t x) {
+        return (x + 1);
+      }, std::make_optional<uint64_t>(UINT64_C(4)));
 
   template <typename T1> static std::pair<T1, T1> twice(const T1 &x) {
     return std::make_pair(x, x);
@@ -215,9 +215,10 @@ struct TyargPartialTypeApplication {
 
   static inline const List<std::pair<uint64_t, uint64_t>> doubled =
       List<uint64_t>::cons(
-          UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2),
+                               List<uint64_t>::nil()))
           .template map<std::pair<uint64_t, uint64_t>>(twice<uint64_t>);
-
   static inline const uint64_t first_of_doubled = []() {
     auto &&_sv = doubled;
     if (std::holds_alternative<

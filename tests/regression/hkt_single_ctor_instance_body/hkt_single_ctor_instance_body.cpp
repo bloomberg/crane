@@ -2,6 +2,5 @@
 
 HktSingleCtorInstanceBody::box<Nat>
 HktSingleCtorInstanceBody::run(const Nat &n) {
-  return liftme<HktSingleCtorInstanceBody::PB, HktSingleCtorInstanceBody::FB>(
-      n);
+  return liftme<HktSingleCtorInstanceBody::PB, HktSingleCtorInstanceBody::FB>(n);
 }

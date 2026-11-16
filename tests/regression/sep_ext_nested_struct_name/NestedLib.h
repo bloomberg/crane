@@ -9,7 +9,6 @@
 #include <variant>
 
 namespace NestedLib {
-
 struct Sub {
   struct Tree {
     // TYPES
@@ -88,7 +87,6 @@ struct Sub {
 
   static uint64_t size(const Tree &t);
 };
-
 } // namespace NestedLib
 
 #endif // INCLUDED_NESTEDLIB

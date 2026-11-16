@@ -130,8 +130,7 @@ struct RoseSharedSuffixDrain {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (
-                std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {

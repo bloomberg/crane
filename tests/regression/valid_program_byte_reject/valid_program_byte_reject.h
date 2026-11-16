@@ -177,8 +177,10 @@ public:
 
 struct ValidProgramByteReject {
   static bool valid_program(const List<uint64_t> &bytes);
-  static inline const bool t = valid_program(List<uint64_t>::cons(
-      UINT64_C(0), List<uint64_t>::cons(UINT64_C(256), List<uint64_t>::nil())));
+  static inline const bool t =
+      valid_program(
+          List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::cons(
+                                   UINT64_C(256), List<uint64_t>::nil())));
 };
 
 #endif // INCLUDED_VALID_PROGRAM_BYTE_REJECT

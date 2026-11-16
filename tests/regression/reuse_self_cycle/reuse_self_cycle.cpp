@@ -28,8 +28,7 @@ uint64_t ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
 ReuseSelfCycle::mylist
 ReuseSelfCycle::prepend_self(const ReuseSelfCycle::mylist &l, bool b) {
   if (b) {
-    if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
-            l.v())) {
+    if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
       const auto &[a0, a1] =
           std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
       return mylist::mycons(a0, l);

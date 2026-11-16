@@ -23,8 +23,8 @@ struct BlockTemplateHygiene {
   static std::string shadow_internal_name();
   /// Test 4: Multiple different block templates in the same scope.
   /// Uses get_line (block template) interleaved with print (expression
-  /// template) to verify that block templates don't interfere with expression
-  /// templates.
+  /// template)
+  /// to verify that block templates don't interfere with expression templates.
   static std::string interleaved_templates();
   /// Test 5: Block template with %a0 argument alongside %result.
   /// Uses our custom read_trimmed which has both %result and %a0.

@@ -38,9 +38,8 @@ struct LoopifyPairOptionChild {
 
     static tree node(tree a0, std::pair<uint64_t, std::optional<tree>> a1) {
       return tree(
-          Node{std::make_shared<tree>(std::move(a0)),
-               std::make_shared<std::pair<uint64_t, std::optional<tree>>>(
-                   std::move(a1))});
+          Node{std::make_shared<tree>(std::move(a0)), std::make_shared<
+                   std::pair<uint64_t, std::optional<tree>>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -90,7 +89,6 @@ struct LoopifyPairOptionChild {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -137,13 +135,12 @@ struct LoopifyPairOptionChild {
   }
 
   static uint64_t sum(const tree &t);
-  static inline const uint64_t result = sum(tree::node(
-      tree::leaf(),
-      std::make_pair(
-          UINT64_C(1),
-          std::make_optional<tree>(tree::node(
-              tree::leaf(),
-              std::make_pair(UINT64_C(2), std::optional<tree>()))))));
+  static inline const uint64_t result =
+      sum(tree::node(
+              tree::leaf(), std::make_pair(
+                  UINT64_C(1), std::make_optional<tree>(
+                      tree::node(tree::leaf(), std::make_pair(
+                                     UINT64_C(2), std::optional<tree>()))))));
 };
 
 #endif // INCLUDED_LOOPIFY_PAIR_OPTION_CHILD

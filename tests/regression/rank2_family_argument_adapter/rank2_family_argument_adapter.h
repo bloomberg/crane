@@ -103,15 +103,16 @@ struct Rank2FamilyArgumentAdapter {
   }
 
   template <typename T1> static uint64_t len2(const List<T1> &l) {
-    return grect2<uint64_t, T1>(
-        []() { return UINT64_C(0); }(),
-        [](const auto &, const auto &, uint64_t k) { return (k + 1); }, l);
+    return grect2<uint64_t, T1>([]() {
+      return UINT64_C(0);
+    }(), [](const auto &, const auto &, uint64_t k) { return (k + 1); }, l);
   }
 
-  static inline const uint64_t result = len2<uint64_t>(List<uint64_t>::cons(
-      UINT64_C(1), List<uint64_t>::cons(
-                       UINT64_C(2), List<uint64_t>::cons(
-                                        UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const uint64_t result =
+      len2<uint64_t>(List<uint64_t>::cons(
+                         UINT64_C(1), List<uint64_t>::cons(
+                             UINT64_C(2), List<uint64_t>::cons(
+                                 UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_RANK2_FAMILY_ARGUMENT_ADAPTER

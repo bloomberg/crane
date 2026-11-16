@@ -25,8 +25,8 @@ bool DeliftedBinaryFixpoint::same(const Positive &a, const Positive &b) {
         } else {
           return false;
         }
-      } else if (std::holds_alternative<typename Positive::XO>(
-                     _lc1_loop_p->v())) {
+      } else if (
+          std::holds_alternative<typename Positive::XO>(_lc1_loop_p->v())) {
         const auto &[a0] = std::get<typename Positive::XO>(_lc1_loop_p->v());
         if (std::holds_alternative<typename Positive::XO>(_lc1_loop_x->v())) {
           const auto &[a00] = std::get<typename Positive::XO>(_lc1_loop_x->v());

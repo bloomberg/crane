@@ -42,24 +42,23 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::shared_box<List<A>>::make(
-                                 crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::shared_box<List<A>>::make(
+                       crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -103,9 +102,9 @@ public:
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
         auto _value = List<T1>::nil();
-        (_write
-             ? *(*_write = crane::shared_box<List<T1>>::make(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        crane::shared_box<List<T1>>::make(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
@@ -144,8 +143,8 @@ struct SharedVariantNested {
     explicit rose(RNode _v) : v_(std::move(_v)) {}
 
     static rose rnode(uint64_t a0, List<rose> a1) {
-      return rose(
-          RNode{a0, crane::shared_box<List<rose>>::make(std::move(a1))});
+      return rose(RNode{a0,
+                        crane::shared_box<List<rose>>::make(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -165,10 +164,10 @@ struct SharedVariantNested {
       const auto &[a0, a1] = crane::get<typename rose::RNode>(this->v());
       const List<rose> &a1_value = *a1;
       return (a0 + a1_value.template fold_left<uint64_t>(
-                       [](uint64_t acc, const rose &t0) {
-                         return (acc + t0.rsum());
-                       },
-                       UINT64_C(0)));
+                  [](uint64_t acc, const rose &t0) {
+                    return (acc + t0.rsum());
+                  },
+                  UINT64_C(0)));
     }
 
     template <typename T1, typename F0> T1 rose_rec(F0 &&f) const {
@@ -182,15 +181,11 @@ struct SharedVariantNested {
   };
 
   static inline const rose r0 = rose::rnode(
-      UINT64_C(1),
-      List<rose>::cons(
-          rose::rnode(UINT64_C(2), List<rose>::nil()),
-          List<rose>::cons(
-              rose::rnode(
-                  UINT64_C(3),
-                  List<rose>::cons(rose::rnode(UINT64_C(4), List<rose>::nil()),
-                                   List<rose>::nil())),
-              List<rose>::nil())));
+      UINT64_C(1), List<rose>::cons(
+          rose::rnode(UINT64_C(2), List<rose>::nil()), List<rose>::cons(
+              rose::rnode(UINT64_C(3), List<rose>::cons(
+                              rose::rnode(UINT64_C(4), List<rose>::nil()),
+                              List<rose>::nil())), List<rose>::nil())));
   static inline const rose r1 = r0.rbump();
 
   struct chain {
@@ -272,11 +267,15 @@ struct SharedVariantNested {
     }
   };
 
-  static inline const chain c0 =
-      chain::link(UINT64_C(1),
-                  std::make_optional<chain>(chain::link(
-                      UINT64_C(2), std::make_optional<chain>(chain::link(
-                                       UINT64_C(3), std::optional<chain>())))));
+  static inline const chain c0 = chain::link(UINT64_C(1), std::make_optional<
+                                                 chain>(chain::link(
+                                                            UINT64_C(2),
+                                                            std::make_optional<
+                                                                chain>(
+                                                                chain::link(
+                                                                    UINT64_C(3),
+                                                                    std::optional<
+                                                                        chain>())))));
   struct stmt;
   struct expr;
 
@@ -422,9 +421,9 @@ struct SharedVariantNested {
   static uint64_t ssize(const stmt &s);
   static uint64_t esize(const expr &e);
   static inline const stmt s0 = stmt::seq(
-      stmt::assign(UINT64_C(1), expr::add(expr::num(UINT64_C(2)),
-                                          expr::block(stmt::skip(),
-                                                      expr::num(UINT64_C(3))))),
+      stmt::assign(UINT64_C(1), expr::add(
+                       expr::num(UINT64_C(2)),
+                       expr::block(stmt::skip(), expr::num(UINT64_C(3))))),
       stmt::skip());
 
   /// Not recursive, but large: a value is one word all the same.
@@ -491,17 +490,17 @@ struct SharedVariantNested {
   };
 
   static inline const List<shape> shapes = List<shape>::cons(
-      shape::box3(UINT64_C(2), UINT64_C(3), UINT64_C(4)),
-      List<shape>::cons(
-          shape::point(),
-          List<shape>::cons(shape::box3(UINT64_C(1), UINT64_C(1), UINT64_C(1)),
-                            List<shape>::nil())));
-
-  static inline const uint64_t result =
-      ((((r0.rsum() + r1.rsum()) + c0.clen()) + ssize(s0)) +
-       shapes.template fold_left<uint64_t>(
-           [](uint64_t n, const shape &s) { return (n + s.volume()); },
-           UINT64_C(0)));
+      shape::box3(UINT64_C(2), UINT64_C(3), UINT64_C(4)), List<shape>::cons(
+          shape::point(), List<shape>::cons(
+              shape::box3(UINT64_C(1), UINT64_C(1), UINT64_C(1)),
+              List<shape>::nil())));
+  static inline const uint64_t result = ((((r0.rsum() + r1.rsum()) +
+                                           c0.clen()) + ssize(s0)) +
+                                         shapes.template fold_left<uint64_t>(
+                                             [](uint64_t n, const shape &s) {
+                                               return (n + s.volume());
+                                             },
+                                             UINT64_C(0)));
 };
 
 #endif // INCLUDED_SHARED_VARIANT_NESTED

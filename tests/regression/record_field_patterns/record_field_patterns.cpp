@@ -104,8 +104,9 @@ RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
 
 List<uint64_t>
 RecordFieldPatterns::map_py(const List<RecordFieldPatterns::Point> &points) {
-  return points.template map<uint64_t>(
-      [](const RecordFieldPatterns::Point &p) { return p.py; });
+  return points.template map<uint64_t>([](const RecordFieldPatterns::Point &p) {
+    return p.py;
+  });
 }
 
 RecordFieldPatterns::Point

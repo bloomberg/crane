@@ -5,10 +5,13 @@
 /// recursive call in the loopified version.
 /// f(sum_through(xs)) requires f to be stored in a continuation frame.
 uint64_t MemSafetyProbe4::sum_through(
-    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree>
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l) { /// CraneEnter:
+                                                               /// captures
+                                                               /// varying
+                                                               /// parameters
+                                                               /// for each
+                                                               /// recursive
+                                                               /// call.
   struct CraneEnter {
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };
@@ -53,10 +56,13 @@ uint64_t MemSafetyProbe4::sum_through(
 /// TEST 2: Recursive result + partial app result.
 /// add_through(xs) + f(0): f might be pre-evaluated or stored in frame.
 uint64_t MemSafetyProbe4::add_through(
-    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree>
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l) { /// CraneEnter:
+                                                               /// captures
+                                                               /// varying
+                                                               /// parameters
+                                                               /// for each
+                                                               /// recursive
+                                                               /// call.
   struct CraneEnter {
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };
@@ -103,10 +109,13 @@ uint64_t MemSafetyProbe4::add_through(
 
 /// TEST 3: Two partial apps from same tree, used around recursive call.
 uint64_t MemSafetyProbe4::double_partial(
-    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree>
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l) { /// CraneEnter:
+                                                               /// captures
+                                                               /// varying
+                                                               /// parameters
+                                                               /// for each
+                                                               /// recursive
+                                                               /// call.
   struct CraneEnter {
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };
@@ -161,7 +170,6 @@ uint64_t MemSafetyProbe4::weighted_sum(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l,
     uint64_t w) { /// CraneEnter: captures varying parameters for each recursive
                   /// call.
-
   struct CraneEnter {
     uint64_t w;
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
@@ -236,13 +244,13 @@ MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
       auto _cell = typename MemSafetyProbe4::mylist<uint64_t>::Mycons(
           f(UINT64_C(0)), nullptr);
       MemSafetyProbe4::mylist<uint64_t> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<MemSafetyProbe4::mylist<uint64_t>>(
-                              std::move(_cell)))
+          (_write ? *(*_write = std::make_shared<
+                          MemSafetyProbe4::mylist<uint64_t>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename MemSafetyProbe4::mylist<uint64_t>::Mycons>(
-                    _node.v_mut())
-                    .a1;
+      _write =
+          &std::get<typename MemSafetyProbe4::mylist<uint64_t>::Mycons>(
+              _node.v_mut())
+              .a1;
       _loop_l = crane_raw(a1);
       continue;
     }
@@ -250,10 +258,15 @@ MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
   return std::move(*_root);
 }
 
-uint64_t MemSafetyProbe4::mysum(const MemSafetyProbe4::mylist<uint64_t> &
-                                    l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe4::mysum(const MemSafetyProbe4::mylist<uint64_t> &l) { /// CraneEnter:
+                                                                     /// captures
+                                                                     /// varying
+                                                                     /// parameters
+                                                                     /// for
+                                                                     /// each
+                                                                     /// recursive
+                                                                     /// call.
   struct CraneEnter {
     const MemSafetyProbe4::mylist<uint64_t> *l;
   };
@@ -294,10 +307,13 @@ uint64_t MemSafetyProbe4::mysum(const MemSafetyProbe4::mylist<uint64_t> &
 }
 
 uint64_t MemSafetyProbe4::process_list(
-    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree>
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l) { /// CraneEnter:
+                                                               /// captures
+                                                               /// varying
+                                                               /// parameters
+                                                               /// for each
+                                                               /// recursive
+                                                               /// call.
   struct CraneEnter {
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };

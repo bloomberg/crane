@@ -293,7 +293,6 @@ struct CollisionStructConceptNamesStruct {
       CollisionStructConceptNamesStruct::shaped_nat::shape_of(
           Nat::s(Nat::s(Nat::s(Nat::o()))))
           .size();
-
   static Nat head_or_zero(const List<Nat> &x0_);
 };
 

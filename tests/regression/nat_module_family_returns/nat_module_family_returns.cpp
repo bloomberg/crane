@@ -187,23 +187,16 @@ uint64_t Nat::of_uint_acc(const Uint &d, uint64_t acc) {
         *a0, ((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D7>(d.v());
-    return of_uint_acc(
-        *a0,
-        (((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+    return of_uint_acc(*a0, (((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) +
+                                1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D8>(d.v());
-    return of_uint_acc(
-        *a0,
-        ((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-         1));
+    return of_uint_acc(*a0, ((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) +
+                                 1) + 1) + 1) + 1) + 1));
   } else {
     const auto &[a0] = std::get<typename Uint::D9>(d.v());
-    return of_uint_acc(
-        *a0,
-        (((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1) +
-          1) +
-         1));
+    return of_uint_acc(*a0, (((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) +
+                                   1) + 1) + 1) + 1) + 1) + 1) + 1));
   }
 }
 
@@ -238,94 +231,46 @@ uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
         *a0, ((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return of_hex_uint_acc(
-        *a0,
-        (((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+    return of_hex_uint_acc(*a0, (((((((tail_mul(UINT64_C(16), acc) + 1) + 1) +
+                                     1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return of_hex_uint_acc(
-        *a0,
-        ((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-         1));
+    return of_hex_uint_acc(*a0, ((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) +
+                                      1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
-    return of_hex_uint_acc(
-        *a0,
-        (((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1) +
-          1) +
-         1));
+    return of_hex_uint_acc(*a0, (((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) +
+                                       1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
     return of_hex_uint_acc(
-        *a0,
-        ((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-            1) +
-           1) +
-          1) +
-         1));
+        *a0, ((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                  1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
     return of_hex_uint_acc(
-        *a0,
-        (((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1));
+        *a0, (((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                   1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
     return of_hex_uint_acc(
-        *a0,
-        ((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1));
+        *a0, ((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                    1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
     return of_hex_uint_acc(
-        *a0,
-        (((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1));
+        *a0, (((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                     1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::De>(d.v());
     return of_hex_uint_acc(
-        *a0,
-        ((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1));
+        *a0, ((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+                       1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
     return of_hex_uint_acc(
-        *a0,
-        (((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1));
+        *a0, (((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+                        1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   }
 }
 
@@ -521,13 +466,15 @@ uint64_t Nat::shiftr(uint64_t a, uint64_t n) {
 }
 
 uint64_t Nat::land(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 && _x1); }, a, a,
-                 b);
+  return bitwise([](bool _x0, bool _x1) -> bool {
+    return (_x0 && _x1);
+  }, a, a, b);
 }
 
 uint64_t Nat::lor(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 || _x1); },
-                 std::max(a, b), a, b);
+  return bitwise([](bool _x0, bool _x1) -> bool {
+    return (_x0 || _x1);
+  }, std::max(a, b), a, b);
 }
 
 uint64_t Nat::ldiff(uint64_t a, uint64_t b) {
@@ -580,7 +527,8 @@ Reflect Nat::ltb_spec0(uint64_t x, uint64_t y) {
 
 bool Nat::Private_Dec::max_dec(uint64_t n, uint64_t m) {
   return max_case<bool>(
-      n, m,
+      n,
+      m,
       [](uint64_t, uint64_t, bool h0) -> bool {
         if (h0) {
           return true;
@@ -588,12 +536,14 @@ bool Nat::Private_Dec::max_dec(uint64_t n, uint64_t m) {
           return false;
         }
       },
-      true, false);
+      true,
+      false);
 }
 
 bool Nat::Private_Dec::min_dec(uint64_t n, uint64_t m) {
   return min_case<bool>(
-      n, m,
+      n,
+      m,
       [](uint64_t, uint64_t, bool h0) -> bool {
         if (h0) {
           return true;
@@ -601,7 +551,8 @@ bool Nat::Private_Dec::min_dec(uint64_t n, uint64_t m) {
           return false;
         }
       },
-      true, false);
+      true,
+      false);
 }
 
 bool Nat::max_dec(uint64_t x0_, uint64_t x1_) {
@@ -709,8 +660,10 @@ Nat::EvenT_S_OddT(uint64_t,
   }
 }
 
-Nat::EvenT Nat::OddT_S_EvenT(
-    uint64_t, const Sig<uint64_t> &h) { // Precondition: (S n) == (2 * m + 1)
+Nat::EvenT
+Nat::OddT_S_EvenT(uint64_t,
+                  const Sig<uint64_t> &h) { // Precondition: (S n) == (2 * m +
+                                            // 1)
   const auto &[x0] = h;
   return Sig<uint64_t>::exist(x0);
 }

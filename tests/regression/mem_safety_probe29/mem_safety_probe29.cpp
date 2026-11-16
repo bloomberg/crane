@@ -8,10 +8,10 @@ MemSafetyProbe29::dup_inner(const MemSafetyProbe29::inner &i) {
 }
 
 /// TEST 5: Deep 3-child tree to stress clone/destructor.
-MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+MemSafetyProbe29::tree3
+MemSafetyProbe29::build_tree3(uint64_t n) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     uint64_t n;
   };

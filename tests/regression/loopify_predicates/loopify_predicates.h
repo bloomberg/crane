@@ -103,9 +103,9 @@ struct LoopifyPredicates {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -154,7 +154,6 @@ struct LoopifyPredicates {
   span(F0 &&p,
        const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -204,7 +203,6 @@ struct LoopifyPredicates {
   break_at(F0 &&p,
            const List<uint64_t> &l) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -257,9 +255,9 @@ struct LoopifyPredicates {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -290,9 +288,9 @@ struct LoopifyPredicates {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -321,7 +319,6 @@ struct LoopifyPredicates {
   forall_pred(F0 &&p,
               const List<uint64_t> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -365,7 +362,6 @@ struct LoopifyPredicates {
   exists_pred(F0 &&p,
               const List<uint64_t> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -439,9 +435,9 @@ struct LoopifyPredicates {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -480,9 +476,9 @@ struct LoopifyPredicates {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =

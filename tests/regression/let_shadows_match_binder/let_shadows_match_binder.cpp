@@ -6,8 +6,7 @@ Nat LetShadowsMatchBinder::two(const std::optional<Nat> &o) {
     const Nat &x0 = *o;
     x = x0;
   } else {
-    x = Nat::s(
-        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+    x = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
   }
   return Nat::s(std::move(x));
 }

@@ -198,30 +198,29 @@ struct SigtErasedFnParam {
 
   static uint64_t
   unpack(const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &p);
-  static inline const List<packed> items = List<packed>::cons(
-      pack<uint64_t>(UINT64_C(5), [](uint64_t n) { return n; }),
-      List<packed>::cons(
-          pack<bool>(true,
-                     [](bool b) -> uint64_t {
-                       if (b) {
-                         return UINT64_C(1);
-                       } else {
-                         return UINT64_C(0);
-                       }
-                     }),
+  static inline const List<packed> items =
+      List<packed>::cons(pack<uint64_t>(UINT64_C(5), [](uint64_t n) {
+        return n;
+      }), List<packed>::cons(
+          pack<bool>(true, [](bool b) -> uint64_t {
+            if (b) {
+              return UINT64_C(1);
+            } else {
+              return UINT64_C(0);
+            }
+          }),
           List<packed>::cons(
               pack<List<uint64_t>>(
                   List<uint64_t>::cons(
-                      UINT64_C(1),
-                      List<uint64_t>::cons(
-                          UINT64_C(2),
-                          List<uint64_t>::cons(UINT64_C(3),
-                                               List<uint64_t>::nil()))),
+                      UINT64_C(1), List<uint64_t>::cons(
+                          UINT64_C(2), List<uint64_t>::cons(
+                              UINT64_C(3), List<uint64_t>::nil()))),
                   [](const List<uint64_t> &_x) { return _x.length(); }),
               List<packed>::nil())));
-  static inline const uint64_t total = items.template fold_left<uint64_t>(
-      [](uint64_t acc, const auto &p) { return (acc + unpack(p)); },
-      UINT64_C(0));
+  static inline const uint64_t total =
+      items.template fold_left<uint64_t>([](uint64_t acc, const auto &p) {
+        return (acc + unpack(p));
+      }, UINT64_C(0));
 };
 
 #endif // INCLUDED_SIGT_ERASED_FN_PARAM

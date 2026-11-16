@@ -38,8 +38,7 @@ struct ListOfProdDeep {
     template <typename CraneU>
     lst(const lst<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename lst<CraneU>::Lnil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename lst<CraneU>::Lnil>(_other.v())) {
               return Lnil{};
             } else {
               const auto &[a0, a1] =
@@ -49,9 +48,9 @@ struct ListOfProdDeep {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<lst<A>>(crane_convert<lst<A>>(*a1))
@@ -172,8 +171,8 @@ struct ListOfProdDeep {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            crane::small_vector<std::shared_ptr<lst<std::pair<t, uint64_t>>>>
-                _hw1;
+            crane::small_vector<std::shared_ptr<lst<std::pair<t,
+                                                              uint64_t>>>> _hw1;
             if (auto *_ha5 =
                     std::get_if<typename lst<std::pair<t, uint64_t>>::Lcons>(
                         &(*_alt->a0).v_mut())) {
@@ -191,8 +190,7 @@ struct ListOfProdDeep {
               if (auto *_ha3 =
                       std::get_if<typename lst<std::pair<t, uint64_t>>::Lcons>(
                           &_hw1e.v_mut())) {
-                _stack.push_back(
-                    std::make_shared<t>(std::move(_ha3->a0.first)));
+                _stack.push_back(std::make_shared<t>(std::move(_ha3->a0.first)));
                 _hw1.push_back(std::move(_ha3->a1));
               }
             }
@@ -222,8 +220,9 @@ struct ListOfProdDeep {
     const variant_t &v() const { return v_; }
 
     t wrap(uint64_t k) const {
-      return t::node(lst<std::pair<t, uint64_t>>::lcons(
-          std::make_pair(*this, k), lst<std::pair<t, uint64_t>>::lnil()));
+      return t::node(
+          lst<std::pair<t, uint64_t>>::lcons(
+              std::make_pair(*this, k), lst<std::pair<t, uint64_t>>::lnil()));
     }
 
     template <typename T1, typename F0> T1 t_rec(F0 &&f) const {

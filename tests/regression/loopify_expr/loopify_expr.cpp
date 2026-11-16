@@ -2,10 +2,13 @@
 
 /// sum_shapes l sums values from shapes using unified pattern.
 /// Tests or-pattern style matching in Coq.
-uint64_t LoopifyExpr::sum_shapes(
-    const List<LoopifyExpr::shape> &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t
+LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     const List<LoopifyExpr::shape> *l;
   };
@@ -27,8 +30,7 @@ uint64_t LoopifyExpr::sum_shapes(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<LoopifyExpr::shape> &l = *_f.l;
-      if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
-              l.v())) {
+      if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
@@ -39,8 +41,9 @@ uint64_t LoopifyExpr::sum_shapes(
             const auto &[a00] =
                 std::get<typename LoopifyExpr::shape::Circle>(a0.v());
             return a00;
-          } else if (std::holds_alternative<
-                         typename LoopifyExpr::shape::Square>(a0.v())) {
+          } else if (
+              std::holds_alternative<typename LoopifyExpr::shape::Square>(
+                  a0.v())) {
             const auto &[a00] =
                 std::get<typename LoopifyExpr::shape::Square>(a0.v());
             return a00;
@@ -66,7 +69,6 @@ uint64_t LoopifyExpr::sum_shapes(
 std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
     const List<LoopifyExpr::shape> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
   struct CraneEnter {
     const List<LoopifyExpr::shape> *l;
   };
@@ -88,8 +90,7 @@ std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<LoopifyExpr::shape> &l = *_f.l;
-      if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
-              l.v())) {
+      if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(l.v())) {
         _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
                                  UINT64_C(0));
       } else {

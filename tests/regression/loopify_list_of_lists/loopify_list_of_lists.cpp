@@ -1,10 +1,14 @@
 #include "loopify_list_of_lists.h"
 
-List<uint64_t> LoopifyListOfLists::intercalate(
-    const List<uint64_t> &sep,
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+List<uint64_t>
+LoopifyListOfLists::intercalate(const List<uint64_t> &sep,
+                                const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                                  /// captures
+                                                                  /// varying
+                                                                  /// parameters
+                                                                  /// for each
+                                                                  /// recursive
+                                                                  /// call.
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
@@ -32,8 +36,7 @@ List<uint64_t> LoopifyListOfLists::intercalate(
         const auto &[a0, a1] =
             std::get<typename List<List<uint64_t>>::Cons>(ll.v());
         auto &&_sv = *a1;
-        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-                _sv.v())) {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
           _stack.emplace_back(CraneCont_Cons{a0});
@@ -199,10 +202,11 @@ LoopifyListOfLists::transpose_fuel(uint64_t fuel,
   return std::move(*_root);
 }
 
-uint64_t LoopifyListOfLists::list_len(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyListOfLists::list_len(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                        /// varying parameters
+                                                        /// for each recursive
+                                                        /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -236,10 +240,14 @@ uint64_t LoopifyListOfLists::list_len(
   return _result;
 }
 
-uint64_t LoopifyListOfLists::total_length(
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+uint64_t
+LoopifyListOfLists::total_length(const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                                   /// captures
+                                                                   /// varying
+                                                                   /// parameters
+                                                                   /// for each
+                                                                   /// recursive
+                                                                   /// call.
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
@@ -283,10 +291,13 @@ LoopifyListOfLists::transpose(const List<List<uint64_t>> &ll) {
   return transpose_fuel(total_length(ll), ll);
 }
 
-List<uint64_t> LoopifyListOfLists::flatten(
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+List<uint64_t>
+LoopifyListOfLists::flatten(const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
@@ -376,9 +387,11 @@ LoopifyListOfLists::zip_lists(const List<List<uint64_t>> &ll1,
                             List<std::pair<List<uint64_t>, List<uint64_t>>>>(
                             std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename List<
-            std::pair<List<uint64_t>, List<uint64_t>>>::Cons>(_node.v_mut())
-                      .l;
+        _write =
+            &std::get<
+                typename List<std::pair<List<uint64_t>, List<uint64_t>>>::Cons>(
+                _node.v_mut())
+                .l;
         _loop_ll2 = crane_raw(a10);
         _loop_ll1 = crane_raw(a1);
         continue;
@@ -388,10 +401,14 @@ LoopifyListOfLists::zip_lists(const List<List<uint64_t>> &ll1,
   return std::move(*_root);
 }
 
-uint64_t LoopifyListOfLists::max_length(
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+uint64_t
+LoopifyListOfLists::max_length(const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                                 /// captures
+                                                                 /// varying
+                                                                 /// parameters
+                                                                 /// for each
+                                                                 /// recursive
+                                                                 /// call.
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };

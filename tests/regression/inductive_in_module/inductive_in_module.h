@@ -77,9 +77,9 @@ struct InductiveInModule {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }()};
                 }
@@ -123,10 +123,9 @@ struct InductiveInModule {
       }
     };
 
-    static inline const uint64_t test_option =
-        Middle::template get_or_default<uint64_t>(
-            UINT64_C(42),
-            Middle::template option<uint64_t>::some(UINT64_C(99)));
+    static inline const uint64_t test_option = Middle::template get_or_default<
+        uint64_t>(UINT64_C(42),
+                  Middle::template option<uint64_t>::some(UINT64_C(99)));
   };
 
   static inline const uint64_t final_test = Outer::test_option;

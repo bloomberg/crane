@@ -145,8 +145,7 @@ public:
               }
             }()};
           } else {
-            if (std::holds_alternative<typename Exp0<CraneU>::ESELF>(
-                    _other.v())) {
+            if (std::holds_alternative<typename Exp0<CraneU>::ESELF>(_other.v())) {
               const auto &[a0] =
                   std::get<typename Exp0<CraneU>::ESELF>(_other.v());
               return ESELF{
@@ -156,7 +155,7 @@ public:
               const auto &[a0] =
                   std::get<typename Exp0<CraneU>::ENEG>(_other.v());
               return ENEG{(a0 ? std::make_shared<std::pair<T, Exp0<T>>>(
-                                    crane_convert<std::pair<T, Exp0<T>>>(*a0))
+                                  crane_convert<std::pair<T, Exp0<T>>>(*a0))
                               : nullptr)};
             }
           }
@@ -169,8 +168,7 @@ public:
   }
 
   static Exp0<T> eneg(std::pair<T, Exp0<T>> a0) {
-    return Exp0<T>(
-        ENEG{std::make_shared<std::pair<T, Exp0<T>>>(std::move(a0))});
+    return Exp0<T>(ENEG{std::make_shared<std::pair<T, Exp0<T>>>(std::move(a0))});
   }
 
   // MANIPULATORS

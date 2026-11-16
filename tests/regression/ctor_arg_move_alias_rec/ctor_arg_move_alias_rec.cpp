@@ -26,11 +26,12 @@
 uint64_t CtorArgMoveAliasRec::osum(
     const CtorArgMoveAliasRec::mylist<CtorArgMoveAliasRec::inner> &o) {
   if (std::holds_alternative<typename CtorArgMoveAliasRec::mylist<
-          CtorArgMoveAliasRec::inner>::Mynil>(o.v())) {
+                                 CtorArgMoveAliasRec::inner>::Mynil>(o.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename CtorArgMoveAliasRec::mylist<
-        CtorArgMoveAliasRec::inner>::Mycons>(o.v());
+    const auto &[a0, a1] =
+        std::get<typename CtorArgMoveAliasRec::mylist<
+                     CtorArgMoveAliasRec::inner>::Mycons>(o.v());
     return (a0.isum() + osum(*a1));
   }
 }
@@ -41,14 +42,15 @@ CtorArgMoveAliasRec::mylist<CtorArgMoveAliasRec::inner>
 CtorArgMoveAliasRec::annotate(
     const CtorArgMoveAliasRec::mylist<CtorArgMoveAliasRec::inner> &o) {
   if (std::holds_alternative<typename CtorArgMoveAliasRec::mylist<
-          CtorArgMoveAliasRec::inner>::Mynil>(o.v())) {
+                                 CtorArgMoveAliasRec::inner>::Mynil>(o.v())) {
     return o;
   } else {
-    const auto &[a0, a1] = std::get<typename CtorArgMoveAliasRec::mylist<
-        CtorArgMoveAliasRec::inner>::Mycons>(o.v());
+    const auto &[a0, a1] =
+        std::get<typename CtorArgMoveAliasRec::mylist<
+                     CtorArgMoveAliasRec::inner>::Mycons>(o.v());
     return mylist<CtorArgMoveAliasRec::inner>::mycons(
         a0, mylist<CtorArgMoveAliasRec::inner>::mycons(
-                inner::icons(osum(o), inner::inil()), annotate(*a1)));
+            inner::icons(osum(o), inner::inil()), annotate(*a1)));
   }
 }
 
@@ -56,8 +58,8 @@ CtorArgMoveAliasRec::annotate(
 /// annotate yields [I 1; I 3; I 2; I 2] and run 1 = 1+3+2+2 = 8.
 uint64_t CtorArgMoveAliasRec::run(uint64_t n) {
   return osum(annotate(mylist<CtorArgMoveAliasRec::inner>::mycons(
-      inner::icons(n, inner::inil()),
-      mylist<CtorArgMoveAliasRec::inner>::mycons(
-          inner::icons((n + 1), inner::inil()),
-          mylist<CtorArgMoveAliasRec::inner>::mynil()))));
+                           inner::icons(n, inner::inil()), mylist<
+                               CtorArgMoveAliasRec::inner>::mycons(
+                               inner::icons((n + 1), inner::inil()),
+                               mylist<CtorArgMoveAliasRec::inner>::mynil()))));
 }

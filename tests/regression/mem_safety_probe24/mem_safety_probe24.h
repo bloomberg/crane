@@ -420,13 +420,13 @@ struct MemSafetyProbe24 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -518,10 +518,9 @@ struct MemSafetyProbe24 {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -582,14 +581,15 @@ struct MemSafetyProbe24 {
 
   static uint64_t sum_list(const mylist<uint64_t> &l);
   static inline const uint64_t test_self_annotate =
-      tree::node(tree::leaf(), UINT64_C(5), tree::leaf())
-          .self_annotate()
-          .tree_sum();
+      tree::node(tree::leaf(), UINT64_C(5),
+                 tree::leaf())
+          .self_annotate().tree_sum();
   static inline const uint64_t test_pair_self = []() {
     std::pair<tree, uint64_t> p =
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                    UINT64_C(7),
-                   tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
+                   tree::node(tree::leaf(), UINT64_C(11),
+                              tree::leaf()))
             .pair_self();
     return (std::move(p).first.tree_sum() + std::move(p).second);
   }();
@@ -603,7 +603,8 @@ struct MemSafetyProbe24 {
     std::pair<tree, uint64_t> p =
         tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
                    UINT64_C(5),
-                   tree::node(tree::leaf(), UINT64_C(8), tree::leaf()))
+                   tree::node(tree::leaf(), UINT64_C(8),
+                              tree::leaf()))
             .tag_tree();
     return (std::move(p).first.tree_sum() + std::move(p).second);
   }();
@@ -619,25 +620,23 @@ struct MemSafetyProbe24 {
   static inline const uint64_t test_clone_and_transform =
       tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                  UINT64_C(2),
-                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(3),
+                            tree::leaf()))
           .clone_and_transform();
   /// TEST 7: Build a tree from a list, using accumulated state.
   /// Tests interaction between list recursion and tree construction.
   static tree list_to_tree(const mylist<uint64_t> &l, tree acc);
   static inline const uint64_t test_list_to_tree =
-      list_to_tree(
-          mylist<uint64_t>::mycons(
-              UINT64_C(1),
-              mylist<uint64_t>::mycons(
-                  UINT64_C(2), mylist<uint64_t>::mycons(
-                                   UINT64_C(3), mylist<uint64_t>::mynil()))),
-          tree::leaf())
+      list_to_tree(mylist<uint64_t>::mycons(
+                       UINT64_C(1), mylist<uint64_t>::mycons(
+                           UINT64_C(2), mylist<uint64_t>::mycons(
+                               UINT64_C(3), mylist<uint64_t>::mynil()))),
+                   tree::leaf())
           .tree_sum();
   /// TEST 8: Zip two trees, producing a list of pairs.
   /// Both trees are destructured simultaneously.
   static mylist<std::pair<uint64_t, uint64_t>> zip_trees(const tree &t1,
                                                          const tree &t2);
-
   static inline const uint64_t test_zip_trees = sum_list([]() {
     mylist<std::pair<uint64_t, uint64_t>> pairs = zip_trees(
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
@@ -660,32 +659,25 @@ struct MemSafetyProbe24 {
               pairs.v_mut());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<
-              typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
-              _sv0.v())) {
+              typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(_sv0.v())) {
         return mylist<uint64_t>::mycons(add_pair(std::move(a0)),
                                         mylist<uint64_t>::mynil());
       } else {
-        const auto &[a00, a10] =
-            std::get<typename mylist<std::pair<uint64_t, uint64_t>>::Mycons>(
-                _sv0.v());
+        const auto &[a00, a10] = std::get<
+            typename mylist<std::pair<uint64_t, uint64_t>>::Mycons>(_sv0.v());
         auto &&_sv1 = *a10;
         if (std::holds_alternative<
-                typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
-                _sv1.v())) {
+                typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(_sv1.v())) {
           return mylist<uint64_t>::mycons(
-              add_pair(std::move(a0)),
-              mylist<uint64_t>::mycons(add_pair(a00),
-                                       mylist<uint64_t>::mynil()));
+              add_pair(std::move(a0)), mylist<uint64_t>::mycons(
+                  add_pair(a00), mylist<uint64_t>::mynil()));
         } else {
-          const auto &[a01, a11] =
-              std::get<typename mylist<std::pair<uint64_t, uint64_t>>::Mycons>(
-                  _sv1.v());
+          const auto &[a01, a11] = std::get<
+              typename mylist<std::pair<uint64_t, uint64_t>>::Mycons>(_sv1.v());
           return mylist<uint64_t>::mycons(
-              add_pair(std::move(a0)),
-              mylist<uint64_t>::mycons(
-                  add_pair(a00),
-                  mylist<uint64_t>::mycons(add_pair(a01),
-                                           mylist<uint64_t>::mynil())));
+              add_pair(std::move(a0)), mylist<uint64_t>::mycons(
+                  add_pair(a00), mylist<uint64_t>::mycons(
+                      add_pair(a01), mylist<uint64_t>::mynil())));
         }
       }
     }

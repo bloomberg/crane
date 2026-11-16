@@ -16,10 +16,11 @@ LentAliasByReference::big_bag_size(const LentAliasByReference::big_bag &x0_) {
 
 /// Not tail recursive: a frame machine, whose frames point at the cells of
 /// the lent bag rather than copying them.
-uint64_t LentAliasByReference::bag_sum(
-    const List<uint64_t> &b) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LentAliasByReference::bag_sum(const List<uint64_t> &b) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     const List<uint64_t> *b;
   };
@@ -58,11 +59,11 @@ uint64_t LentAliasByReference::bag_sum(
 }
 
 /// Two lent abbreviation-typed parameters, walked in step.
-uint64_t LentAliasByReference::dot(
-    const List<uint64_t> &a,
-    const List<uint64_t> &b) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LentAliasByReference::dot(const List<uint64_t> &a,
+                          const List<uint64_t> &b) { /// CraneEnter: captures
+                                                     /// varying parameters for
+                                                     /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *b;
     const List<uint64_t> *a;

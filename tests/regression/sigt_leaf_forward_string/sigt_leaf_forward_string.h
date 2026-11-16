@@ -181,15 +181,14 @@ template <SEM S> struct Make {
 
   template <typename F1>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
-                             std::pair<crane::obj, crane::obj>> &e,
-                  F1 &&arg) {
+                             std::pair<crane::obj, crane::obj>> &e, F1 &&arg) {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
     const auto &[f, _x0] = a1;
-    if (crane::any_cast<bool>(
-            crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(
-                std::make_pair(crane::obj(arg(a)),
-                               crane::obj(std::monostate{}))))) {
+    if (crane::any_cast<bool>(crane::any_cast<crane::fn<crane::obj(crane::obj)>>(
+                                  f)(
+                                  std::make_pair(crane::obj(arg(a)),
+                                                 crane::obj(std::monostate{}))))) {
       return true;
     } else {
       return false;
@@ -205,8 +204,9 @@ struct Inst {
 using M = Make<Inst>;
 [[gnu::used]] inline const M::entry my_entry = M::mk_entry(
     std::monostate{},
-    crane_erase_fn<bool>(
-        [](std::string _x0, std::string _x1) -> bool { return (_x0 == _x1); }));
+    crane_erase_fn<bool>([](std::string _x0, std::string _x1) -> bool {
+      return (_x0 == _x1);
+    }));
 Inst::sem my_arg(std::monostate _x);
 bool check(std::monostate _x);
 

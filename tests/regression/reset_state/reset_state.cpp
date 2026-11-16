@@ -2,8 +2,8 @@
 
 ResetState::state_full
 ResetState::reset_state_full(const ResetState::state_full &s) {
-  return state_full{UINT64_C(0),           s.regs_full, false, UINT64_C(0),
-                    List<uint64_t>::nil(), s.ram_sys,   s.rom};
+  return state_full{UINT64_C(0), s.regs_full, false, UINT64_C(0),
+                    List<uint64_t>::nil(), s.ram_sys, s.rom};
 }
 
 ResetState::state_minimal

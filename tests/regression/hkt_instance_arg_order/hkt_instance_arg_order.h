@@ -231,18 +231,15 @@ struct HktInstanceArgOrder {
               typename _tcI1::template F<typename _tcI0::template F<T3>> x) {
     return _tcI1::template fm<typename _tcI0::template F<T3>,
                               typename _tcI0::template F<T4>>(
-        [=](typename _tcI0::template F<T3> _x0) ->
-        typename _tcI0::template F<T4> {
-          return _tcI0::template fm<T3, T4>(f, _x0);
-        },
+        [=](typename _tcI0::template F<T3> _x0) -> typename _tcI0::template F<
+            T4> { return _tcI0::template fm<T3, T4>(f, _x0); },
         std::move(x));
   }
 
   static inline const std::optional<List<Nat>> ex =
-      compose_map<lstf, optf, Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); },
-          std::make_optional<List<Nat>>(
-              List<Nat>::cons(Nat::s(Nat::o()), List<Nat>::nil())));
+      compose_map<lstf, optf, Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, std::make_optional<List<Nat>>(List<Nat>::cons(Nat::s(Nat::o()), List<Nat>::nil())));
 };
 
 #endif // INCLUDED_HKT_INSTANCE_ARG_ORDER

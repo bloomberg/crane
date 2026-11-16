@@ -1,10 +1,9 @@
 #include "loopify_operand_match_call.h"
 
 uint64_t LoopifyOperandMatchCall::depthish(
-    const LoopifyOperandMatchCall::tree
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyOperandMatchCall::tree &t) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     const LoopifyOperandMatchCall::tree *t;
   };
@@ -44,8 +43,8 @@ uint64_t LoopifyOperandMatchCall::depthish(
         const auto &[l0, r0] =
             std::get<typename LoopifyOperandMatchCall::tree::Node>(t.v());
         auto &&_sv = *l0;
-        if (std::holds_alternative<
-                typename LoopifyOperandMatchCall::tree::Leaf>(_sv.v())) {
+        if (std::holds_alternative<typename LoopifyOperandMatchCall::tree::Leaf>(
+                _sv.v())) {
           _stack.emplace_back(CraneCont_Leaf{});
           _stack.emplace_back(CraneEnter{crane_raw(r0)});
         } else {
@@ -69,11 +68,10 @@ uint64_t LoopifyOperandMatchCall::depthish(
   return _result;
 }
 
-LoopifyOperandMatchCall::tree
-LoopifyOperandMatchCall::mirror(const LoopifyOperandMatchCall::tree &
-                                    t) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+LoopifyOperandMatchCall::tree LoopifyOperandMatchCall::mirror(
+    const LoopifyOperandMatchCall::tree &t) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     const LoopifyOperandMatchCall::tree *t;
   };
@@ -122,8 +120,8 @@ LoopifyOperandMatchCall::mirror(const LoopifyOperandMatchCall::tree &
         const auto &[l0, r0] =
             std::get<typename LoopifyOperandMatchCall::tree::Node>(t.v());
         auto &&_sv = *r0;
-        if (std::holds_alternative<
-                typename LoopifyOperandMatchCall::tree::Leaf>(_sv.v())) {
+        if (std::holds_alternative<typename LoopifyOperandMatchCall::tree::Leaf>(
+                _sv.v())) {
           _stack.emplace_back(CraneCont_Leaf{crane_raw(l0)});
           _stack.emplace_back(CraneEnter{crane_raw(l0)});
         } else {
@@ -153,10 +151,14 @@ LoopifyOperandMatchCall::mirror(const LoopifyOperandMatchCall::tree &
 }
 
 uint64_t
-LoopifyOperandMatchCall::size(const LoopifyOperandMatchCall::tree
-                                  &t) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+LoopifyOperandMatchCall::size(const LoopifyOperandMatchCall::tree &t) { /// CraneEnter:
+                                                                        /// captures
+                                                                        /// varying
+                                                                        /// parameters
+                                                                        /// for
+                                                                        /// each
+                                                                        /// recursive
+                                                                        /// call.
   struct CraneEnter {
     const LoopifyOperandMatchCall::tree *t;
   };
@@ -206,10 +208,10 @@ LoopifyOperandMatchCall::size(const LoopifyOperandMatchCall::tree
   return _result;
 }
 
-LoopifyOperandMatchCall::tree LoopifyOperandMatchCall::comb(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+LoopifyOperandMatchCall::tree
+LoopifyOperandMatchCall::comb(uint64_t n) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     uint64_t n;
   };

@@ -117,36 +117,45 @@ struct CoindGuard {
 
     template <typename CraneU>
     Stream(const Stream<CraneU> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(
-              _other.lazy_cell(), [=]() -> variant_t {
-                const auto &[a0, a1] =
-                    std::get<typename Stream<CraneU>::Cons>(_other.v());
-                return Cons{
-                    [&]() -> A {
-                      if constexpr (crane_convertible<A, const CraneU &>) {
-                        return crane_convert<A>(a0);
-                      } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
-                      }
-                    }(),
-                    crane_convert<Stream<A>>(a1)};
-              })) {}
+        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                         [=]() -> variant_t {
+                                                           const auto &[a0,
+                                                                        a1] =
+                                                               std::get<
+                                                                   typename Stream<
+                                                                       CraneU>::Cons>(
+                                                                   _other.v());
+                                                           return Cons{
+                                                               [&]() -> A {
+                                                                 if constexpr (
+                                                                     crane_convertible<
+                                                                         A,
+                                                                         const CraneU &>) {
+                                                                   return crane_convert<
+                                                                       A>(a0);
+                                                                 } else {
+                                                                   throw std::logic_error(
+                                                                       "unreachable: inactive constructor field at this instantiation");
+                                                                 }
+                                                               }(),
+                                                               crane_convert<
+                                                                   Stream<A>>(
+                                                                   a1)};
+                                                         })) {}
 
     explicit Stream(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static Stream<A> cons(A a0, Stream<A> a1) {
-      return Stream<A>(crane::lazy<variant_t>(
-          std::in_place, std::in_place_index<0>, std::move(a0), std::move(a1)));
+      return Stream<A>(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
+                                 std::move(a0), std::move(a1)));
     }
 
     explicit Stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
     template <typename F> static Stream<A> lazy_(F &&thunk) {
-      return Stream<A>(
-          crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+      return Stream<A>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS
@@ -196,11 +205,11 @@ struct CoindGuard {
   unfold(const std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> &f,
          const T2 &seed) {
     auto [a, s_] = f(seed);
-    return Stream<T1>::lazy_([=, a = std::move(a), s_ = std::move(s_)]() ->
-                             typename Stream<T1>::Cons {
-                               return {std::move(a),
-                                       unfold<T1, T2>(f, std::move(s_))};
-                             });
+    return Stream<T1>::lazy_([=, a = std::move(a),
+                              s_ = std::move(s_)]() -> typename Stream<T1>::Cons {
+                                return {std::move(a),
+                                        unfold<T1, T2>(f, std::move(s_))};
+                              });
   }
 
   template <typename T1> static List<T1> take(uint64_t n, const Stream<T1> &s) {
@@ -212,21 +221,24 @@ struct CoindGuard {
     }
   }
 
-  static inline const Stream<uint64_t> nats =
-      iterate<uint64_t>([](uint64_t x) { return (x + 1); }, UINT64_C(0));
-  static inline const Stream<uint64_t> evens = smap<uint64_t, uint64_t>(
-      [](uint64_t n) { return (n * UINT64_C(2)); }, nats);
-  static inline const Stream<uint64_t> fibs =
-      unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
-          [](std::pair<uint64_t, uint64_t> pat) {
-            const auto &[a, b] = pat;
-            return std::make_pair(a, std::make_pair(b, (a + b)));
-          },
-          std::make_pair(UINT64_C(0), UINT64_C(1)));
-  static inline const Stream<uint64_t> sum_stream =
-      zipWith<uint64_t, uint64_t, uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          nats, evens);
+  static inline const Stream<uint64_t> nats = iterate<uint64_t>([](uint64_t x) {
+    return (x + 1);
+  }, UINT64_C(0));
+  static inline const Stream<uint64_t> evens =
+      smap<uint64_t, uint64_t>([](uint64_t n) {
+        return (n * UINT64_C(2));
+      }, nats);
+  static inline const Stream<uint64_t> fibs = unfold<
+      uint64_t, std::pair<uint64_t, uint64_t>>(
+      [](std::pair<uint64_t, uint64_t> pat) {
+        const auto &[a, b] = pat;
+        return std::make_pair(a, std::make_pair(b, (a + b)));
+      },
+      std::make_pair(UINT64_C(0), UINT64_C(1)));
+  static inline const Stream<uint64_t> sum_stream = zipWith<uint64_t, uint64_t,
+                                                            uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, nats,
+      evens);
   static inline const List<uint64_t> test_nats_5 =
       take<uint64_t>(UINT64_C(5), nats);
   static inline const List<uint64_t> test_evens_5 =

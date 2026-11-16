@@ -1,7 +1,7 @@
 #include "match_ref_after_move.h"
 
-MatchRefAfterMove::mypair<uint64_t, uint64_t>
-MatchRefAfterMove::head_and_tail_length(
+MatchRefAfterMove::mypair<uint64_t,
+                          uint64_t> MatchRefAfterMove::head_and_tail_length(
     const MatchRefAfterMove::mylist<uint64_t> &l) {
   if (std::holds_alternative<
           typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
@@ -34,9 +34,8 @@ uint64_t MatchRefAfterMove::nested_match_probe(
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(_sv0.v())) {
       return a0;
     } else {
-      const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
-              _sv0.v());
+      const auto &[a00, a10] = std::get<
+          typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(_sv0.v());
       return ((a0 + a00) + a10->mylist_length());
     }
   }
@@ -46,8 +45,7 @@ uint64_t MatchRefAfterMove::nested_match_probe(
 /// and the other is a function of the matched value.
 /// Tests evaluation order in pair construction.
 MatchRefAfterMove::mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>
-MatchRefAfterMove::match_into_pair(
-    const MatchRefAfterMove::mylist<uint64_t> &l) {
+MatchRefAfterMove::match_into_pair(const MatchRefAfterMove::mylist<uint64_t> &l) {
   if (std::holds_alternative<
           typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
     return mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>::mkpair(
@@ -101,35 +99,37 @@ MatchRefAfterMove::mylist_sum(const MatchRefAfterMove::mylist<uint64_t> &l) {
   }
 }
 
-uint64_t MatchRefAfterMove::complex_match(
+uint64_t
+MatchRefAfterMove::complex_match(
     const MatchRefAfterMove::either<MatchRefAfterMove::mylist<uint64_t>,
                                     MatchRefAfterMove::mylist<uint64_t>> &e) {
   if (std::holds_alternative<typename MatchRefAfterMove::either<
-          MatchRefAfterMove::mylist<uint64_t>,
-          MatchRefAfterMove::mylist<uint64_t>>::Left>(e.v())) {
-    const auto &[a0] = std::get<typename MatchRefAfterMove::either<
-        MatchRefAfterMove::mylist<uint64_t>,
-        MatchRefAfterMove::mylist<uint64_t>>::Left>(e.v());
+                                 MatchRefAfterMove::mylist<uint64_t>,
+                                 MatchRefAfterMove::mylist<uint64_t>>::Left>(
+          e.v())) {
+    const auto &[a0] =
+        std::get<typename MatchRefAfterMove::either<
+                     MatchRefAfterMove::mylist<uint64_t>,
+                     MatchRefAfterMove::mylist<uint64_t>>::Left>(e.v());
     if (std::holds_alternative<
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(a0.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
-              a0.v());
+      const auto &[a00, a10] = std::get<
+          typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(a0.v());
       return a00;
     }
   } else {
-    const auto &[a0] = std::get<typename MatchRefAfterMove::either<
-        MatchRefAfterMove::mylist<uint64_t>,
-        MatchRefAfterMove::mylist<uint64_t>>::Right>(e.v());
+    const auto &[a0] =
+        std::get<typename MatchRefAfterMove::either<
+                     MatchRefAfterMove::mylist<uint64_t>,
+                     MatchRefAfterMove::mylist<uint64_t>>::Right>(e.v());
     if (std::holds_alternative<
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(a0.v())) {
       return UINT64_C(999);
     } else {
-      const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
-              a0.v());
+      const auto &[a00, a10] = std::get<
+          typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(a0.v());
       return (a00 + a10->mylist_length());
     }
   }

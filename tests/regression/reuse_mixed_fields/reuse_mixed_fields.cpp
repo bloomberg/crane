@@ -7,8 +7,7 @@ ReuseMixedFields::payload
 ReuseMixedFields::swap_tag_or_id(const ReuseMixedFields::payload &p,
                                  bool do_swap) {
   if (do_swap) {
-    if (std::holds_alternative<typename ReuseMixedFields::payload::AsNat>(
-            p.v())) {
+    if (std::holds_alternative<typename ReuseMixedFields::payload::AsNat>(p.v())) {
       const auto &[a0, a1] =
           std::get<typename ReuseMixedFields::payload::AsNat>(p.v());
       return payload::aspair(a1, a0);

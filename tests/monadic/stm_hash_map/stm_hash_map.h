@@ -125,9 +125,8 @@ template <typename K, typename V> struct CHT {
   std::monostate stm_put(const K &k, const V &v) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
-    List<std::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
-                                                              v, std::move(xs));
+    List<std::pair<K, V>> xs_ = CHT<int, int>::template assoc_insert_or_replace<
+        K, V>(this->cht_eqb, k, v, std::move(xs));
     stm::writeTVar(std::move(b), std::move(xs_));
     return std::monostate{};
   }
@@ -156,9 +155,8 @@ template <typename K, typename V> struct CHT {
     std::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
     V v = f(std::move(ov));
-    List<std::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
-                                                              v, std::move(xs));
+    List<std::pair<K, V>> xs_ = CHT<int, int>::template assoc_insert_or_replace<
+        K, V>(this->cht_eqb, k, v, std::move(xs));
     stm::writeTVar(std::move(b), std::move(xs_));
     return v;
   }
@@ -230,9 +228,9 @@ template <typename K, typename V> struct CHT {
         return List<std::pair<T1, T2>>::cons(std::make_pair(k, v), *a1);
       } else {
         return List<std::pair<T1, T2>>::cons(
-            std::make_pair(k_, v_),
-            CHT<int, int>::template assoc_insert_or_replace<T1, T2>(eqb, k, v,
-                                                                    *a1));
+            std::make_pair(k_, v_), CHT<int,
+                                        int>::template assoc_insert_or_replace<
+                T1, T2>(eqb, k, v, *a1));
       }
     }
   }
@@ -251,8 +249,7 @@ template <typename K, typename V> struct CHT {
       } else {
         std::pair<std::optional<T2>, List<std::pair<T1, T2>>> q =
             CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, *a1);
-        return std::make_pair(std::move(q).first,
-                              List<std::pair<T1, T2>>::cons(
+        return std::make_pair(std::move(q).first, List<std::pair<T1, T2>>::cons(
                                   std::make_pair(k_, v_), std::move(q).second));
       }
     }

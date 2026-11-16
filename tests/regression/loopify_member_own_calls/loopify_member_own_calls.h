@@ -12,9 +12,9 @@
 #include <utility>
 #include <variant>
 
-template <typename A> struct List;
+template <typename A>
+struct List; /// A member of a mutual group recurses by the calls of itself it makes once
 
-/// A member of a mutual group recurses by the calls of itself it makes once
 /// Loopify has inlined its partners into it, not by every call between the
 /// group's members.
 ///

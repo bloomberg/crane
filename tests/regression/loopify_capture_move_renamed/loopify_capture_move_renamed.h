@@ -157,15 +157,16 @@ struct LoopifyCaptureMoveRenamed {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         const List<uint64_t> &a1_value = *a1;
-        _loop_k = [=, _loop_k = std::move(_loop_k)](
-                      const List<uint64_t> &yes,
-                      const List<uint64_t> &no) -> uint64_t {
-          if (p(a0)) {
-            return _loop_k(List<uint64_t>::cons(a0, yes), no);
-          } else {
-            return _loop_k(yes, List<uint64_t>::cons(a0, no));
-          }
-        };
+        _loop_k =
+            [=, _loop_k = std::move(_loop_k)](const List<uint64_t> &yes,
+                                              const List<uint64_t> &no)
+                 -> uint64_t {
+                  if (p(a0)) {
+                    return _loop_k(List<uint64_t>::cons(a0, yes), no);
+                  } else {
+                    return _loop_k(yes, List<uint64_t>::cons(a0, no));
+                  }
+                };
         _loop_l = &a1_value;
       }
     }

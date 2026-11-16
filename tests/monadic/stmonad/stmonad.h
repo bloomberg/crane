@@ -237,8 +237,8 @@ template <typename Err> struct ExceptE {
       if constexpr (crane_convertible<CraneU, const Err &>) {
         return crane_convert<CraneU>(a0);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -328,8 +328,8 @@ struct STMonadTests {
 
   static_assert(STRefClass<nat_stref, uint64_t>);
   static uint64_t array_simp_fixed_init();
-  static std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-  array_simp_list();
+  static std::pair<std::pair<uint64_t, uint64_t>,
+                   List<uint64_t>> array_simp_list();
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
@@ -341,23 +341,24 @@ struct STMonadTests {
       x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
       std::shared_ptr<uint64_t> y;
       y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
-      auto fib_loop = [](uint64_t k, std::shared_ptr<uint64_t> x0,
-                         std::shared_ptr<uint64_t> y0, uint64_t,
-                         uint64_t) -> uint64_t {
-        uint64_t _loop_k = k;
-        while (true) {
-          if (_loop_k <= 0) {
-            return *x0;
-          } else {
-            uint64_t k_ = _loop_k - 1;
-            uint64_t x_ = *x0;
-            uint64_t y_ = *y0;
-            *x0 = y_;
-            *y0 = (x_ + y_);
-            _loop_k = k_;
-          }
-        }
-      };
+      auto fib_loop =
+          [](uint64_t k, std::shared_ptr<uint64_t> x0,
+             std::shared_ptr<uint64_t> y0, uint64_t, uint64_t)
+               -> uint64_t {
+                uint64_t _loop_k = k;
+                while (true) {
+                  if (_loop_k <= 0) {
+                    return *x0;
+                  } else {
+                    uint64_t k_ = _loop_k - 1;
+                    uint64_t x_ = *x0;
+                    uint64_t y_ = *y0;
+                    *x0 = y_;
+                    *y0 = (x_ + y_);
+                    _loop_k = k_;
+                  }
+                }
+              };
       return fib_loop(n, std::move(x), std::move(y), _tcI1::zero(),
                       _tcI1::suc(_tcI1::zero()));
     }
@@ -422,24 +423,15 @@ struct STMonadTests {
   static List<uint64_t> rep_list_nat(List<uint64_t> l, uint64_t n);
   [[gnu::used]] static inline const List<uint64_t> input_lst1 =
       List<uint64_t>::cons(
-          UINT64_C(212498),
-          List<uint64_t>::cons(
-              UINT64_C(127),
-              List<uint64_t>::cons(
-                  UINT64_C(5981),
-                  List<uint64_t>::cons(
-                      UINT64_C(2749812),
-                      List<uint64_t>::cons(
-                          UINT64_C(74879),
-                          List<uint64_t>::cons(
-                              UINT64_C(126),
-                              List<uint64_t>::cons(
-                                  UINT64_C(4),
-                                  List<uint64_t>::cons(
-                                      UINT64_C(51),
-                                      List<uint64_t>::cons(
-                                          UINT64_C(2412),
-                                          List<uint64_t>::cons(
+          UINT64_C(212498), List<uint64_t>::cons(
+              UINT64_C(127), List<uint64_t>::cons(
+                  UINT64_C(5981), List<uint64_t>::cons(
+                      UINT64_C(2749812), List<uint64_t>::cons(
+                          UINT64_C(74879), List<uint64_t>::cons(
+                              UINT64_C(126), List<uint64_t>::cons(
+                                  UINT64_C(4), List<uint64_t>::cons(
+                                      UINT64_C(51), List<uint64_t>::cons(
+                                          UINT64_C(2412), List<uint64_t>::cons(
                                               UINT64_C(10645),
                                               List<uint64_t>::nil()))))))))));
   static std::string test_quicksort_ST(std::monostate _x);
@@ -456,10 +448,13 @@ STMonadExamples::quicksort_fun_functional(const List<uint64_t> &l,
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     const List<uint64_t> &a1_value = *a1;
-    return quicksort_fun0(a1_value.filter([=](uint64_t x) { return x < a0; }))
-        .app(List<uint64_t>::cons(a0, List<uint64_t>::nil())
-                 .app(quicksort_fun0(
-                     a1_value.filter([=](uint64_t x) { return a0 <= x; }))));
+    return quicksort_fun0(a1_value.filter([=](uint64_t x) {
+      return x < a0;
+    }))
+               .app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
+                        quicksort_fun0(a1_value.filter([=](uint64_t x) {
+                          return a0 <= x;
+                        }))));
   }
 }
 

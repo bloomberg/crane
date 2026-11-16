@@ -1,9 +1,10 @@
 #include "loopify_advanced_lists.h"
 
-uint64_t LoopifyAdvancedLists::product(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyAdvancedLists::product(const List<uint64_t> &l) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -57,9 +58,9 @@ List<uint64_t> LoopifyAdvancedLists::compress(const List<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =
@@ -99,9 +100,9 @@ List<uint64_t> LoopifyAdvancedLists::pairwise_sum(const List<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =
@@ -128,10 +129,9 @@ LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write
-           ? *(*_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                   std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write = std::make_shared<
+                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
@@ -139,9 +139,8 @@ LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-        (_write ? *(*_write =
-                        std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                            std::move(_value)))
+        (_write ? *(*_write = std::make_shared<
+                        List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
@@ -150,14 +149,14 @@ LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
         auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
             std::make_pair(a0, a00), nullptr);
         List<std::pair<uint64_t, uint64_t>> &_node =
-            (_write
-                 ? *(*_write =
-                         std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                             std::move(_cell)))
-                 : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                      _node.v_mut())
-                      .l;
+            (_write ? *(*_write = std::make_shared<
+                            List<std::pair<uint64_t, uint64_t>>>(
+                            std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write =
+            &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+                _node.v_mut())
+                .l;
         _loop_l = crane_raw(a10);
         continue;
       }
@@ -183,9 +182,9 @@ List<uint64_t> LoopifyAdvancedLists::interleave(const List<uint64_t> &l1,
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
         auto _value = *_loop_l1;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =
@@ -197,10 +196,10 @@ List<uint64_t> LoopifyAdvancedLists::interleave(const List<uint64_t> &l1,
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename List<uint64_t>::Cons>(
-                      std::get<typename List<uint64_t>::Cons>(_node.v_mut())
-                          .l->v_mut())
-                      .l;
+        _write =
+            &std::get<typename List<uint64_t>::Cons>(
+                std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
         _loop_l2 = crane_raw(a10);
         _loop_l1 = crane_raw(a1);
         continue;
@@ -213,7 +212,6 @@ List<uint64_t> LoopifyAdvancedLists::interleave(const List<uint64_t> &l1,
 List<uint64_t> LoopifyAdvancedLists::concat_lists(
     const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };

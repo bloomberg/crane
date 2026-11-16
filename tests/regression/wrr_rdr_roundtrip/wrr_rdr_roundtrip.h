@@ -126,12 +126,9 @@ struct WrrRdrRoundtrip {
   static state execute_wrr(const state &s);
   static state execute_rdr(const state &s);
   static inline const state sample = state{
-      UINT64_C(13),
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
+      UINT64_C(13), List<uint64_t>::cons(
+          UINT64_C(1), List<uint64_t>::cons(
+              UINT64_C(2), List<uint64_t>::cons(
                   UINT64_C(7),
                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))),
       UINT64_C(2)};

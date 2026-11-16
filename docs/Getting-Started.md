@@ -14,7 +14,7 @@ To install OCaml (at least 4.14.0) and Rocq (at least 9.0.0, and below 9.1). You
 make build && make install
 ```
 
-You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated code is C++26, `-std=c++2c`) to run the tests, and [clang-format](https://clang.llvm.org/docs/ClangFormat.html) for standard formatting.
+You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated code is C++26, `-std=c++2c`) to run the tests.
 
 To run the tests, use:
 

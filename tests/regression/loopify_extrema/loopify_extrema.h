@@ -101,12 +101,11 @@ struct LoopifyExtrema {
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   max_by(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -157,12 +156,11 @@ struct LoopifyExtrema {
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   min_by(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -217,7 +215,6 @@ struct LoopifyExtrema {
   argmax(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };
@@ -273,7 +270,6 @@ struct LoopifyExtrema {
   argmin(F0 &&f,
          const List<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<uint64_t> *l;
     };

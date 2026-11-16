@@ -163,9 +163,9 @@ Comparison Pos::compare(const Positive &x0_, const Positive &x1_) {
 }
 
 uint64_t Pos::to_nat(const Positive &x) {
-  return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
-      UINT64_C(1));
+  return iter_op<uint64_t>([](uint64_t _x0, uint64_t _x1) -> uint64_t {
+    return (_x0 + _x1);
+  }, x, UINT64_C(1));
 }
 
 N BinNat::succ_double(N x) {
@@ -388,8 +388,7 @@ List<uint64_t> ReuseListShapes::ins(uint64_t k, List<uint64_t> s) {
 ReuseListShapes::frames
 ReuseListShapes::add_to_frame(const ReuseListShapes::mem &m, uint64_t k) {
   const ReuseListShapes::frames &s = m.stack;
-  if (crane::holds_alternative<typename ReuseListShapes::frames::Single>(
-          s.v())) {
+  if (crane::holds_alternative<typename ReuseListShapes::frames::Single>(s.v())) {
     const auto &[a0] =
         crane::get<typename ReuseListShapes::frames::Single>(s.v());
     return frames::single(List<uint64_t>::cons(k, crane::child(a0)));
@@ -405,8 +404,7 @@ ReuseListShapes::frames
 ReuseListShapes::add_to_frame_(const ReuseListShapes::mem &m, uint64_t k) {
   const ReuseListShapes::frames &s = m.stack;
   const crane::obj &_x = m.top;
-  if (crane::holds_alternative<typename ReuseListShapes::frames::Single>(
-          s.v())) {
+  if (crane::holds_alternative<typename ReuseListShapes::frames::Single>(s.v())) {
     const auto &[a0] =
         crane::get<typename ReuseListShapes::frames::Single>(s.v());
     return frames::single(List<uint64_t>::cons(k, crane::child(a0)));

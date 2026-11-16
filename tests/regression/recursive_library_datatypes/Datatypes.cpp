@@ -1,7 +1,6 @@
 #include "Datatypes.h"
 
 namespace Datatypes {
-
 bool implb(bool b1, bool b2) {
   if (b1) {
     return b2;
@@ -55,5 +54,4 @@ CompareSpecT CompareSpec2Type(Comparison c) {
 }
 
 crane::obj id(crane::obj x) { return x; }
-
 } // namespace Datatypes

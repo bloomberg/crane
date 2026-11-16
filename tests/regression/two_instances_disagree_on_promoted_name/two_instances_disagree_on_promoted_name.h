@@ -18,16 +18,14 @@
 struct Nat;
 template <typename iptr>struct Dval;
 struct natIPtr;
-struct boolIPtr;using iptr = crane::obj;template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-    { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-  });
-struct Nat {
+struct boolIPtr;using iptr = crane::obj;template <typename I>concept IPtr = requires {
+                                                               typename I::iptr;
+                                                               { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
+                                                             } && (requires {
+                                                               { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+                                                             } || requires {
+                                                               { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+                                                             });struct Nat {
   // TYPES
 struct O {
 
@@ -93,8 +91,7 @@ continue;
 }
 }
 return std::move(*_root);}
-};template <typename
-iptr>struct Dval {
+};template <typename iptr>struct Dval {
   // TYPES
 struct DIptr {
 iptr i;
@@ -111,8 +108,7 @@ public:
 Dval() {}
 explicit Dval(DIptr _v) : v_(std::move(_v)) {}
 explicit Dval(DNat _v) : v_(std::move(_v)) {}
-template <typename
-CraneU>
+template <typename CraneU>
 Dval(const Dval<CraneU>& _other) : v_([&]() -> variant_t {
 if (std::holds_alternative<typename Dval<CraneU>::DIptr>(_other.v())) {
 const auto& [i] = std::get<typename Dval<CraneU>::DIptr>(_other.v());
@@ -138,8 +134,7 @@ return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-template <IPtr
-_tcI0>
+template <IPtr _tcI0>
 Nat to_nat() const {
 if (std::holds_alternative<typename Dval<iptr>::DIptr>(this->v())) {
 const auto& [i0] = std::get<typename Dval<iptr>::DIptr>(this->v());
@@ -148,27 +143,22 @@ return _tcI0::to_Z(i0);
 const auto& [n0] = std::get<typename Dval<iptr>::DNat>(this->v());
 return n0;
 }}
-};template <IPtr
-_tcI0>Dval<typename _tcI0::iptr> inner(){return Dval<typename _tcI0::iptr>::diptr(_tcI0::zero_iptr());}
-struct natIPtr {
+};template <IPtr _tcI0>Dval<typename _tcI0::iptr> inner(){return Dval<typename _tcI0::iptr>::diptr(_tcI0::zero_iptr());}struct natIPtr {
 using iptr = Nat;
 static Nat zero_iptr() {
 return Nat::o();}
 static Nat to_Z(Nat n) {
 return n;}
 };
-static_assert(IPtr<natIPtr>);
-struct boolIPtr {
+static_assert(IPtr<natIPtr>);struct boolIPtr {
 using iptr = bool;
 constexpr static bool zero_iptr() {
 return false;}
 static Nat to_Z(bool b) {
 if (b) { return Nat::s(Nat::o()); } else { return Nat::o(); }}
 };
-static_assert(IPtr<boolIPtr>);
-struct TwoInstancesDisagreeOnPromotedName {
-static inline const Dval<typename natIPtr::iptr> a0 = inner<natIPtr>();
-static inline const Dval<typename boolIPtr::iptr> b0 = inner<boolIPtr>();
+static_assert(IPtr<boolIPtr>);struct TwoInstancesDisagreeOnPromotedName {
+static inline const Dval<typename natIPtr::iptr> a0 = inner<natIPtr>();static inline const Dval<typename boolIPtr::iptr> b0 = inner<boolIPtr>();
 static inline const Nat run = []() {
 auto x = inner<natIPtr>();
 auto y = inner<boolIPtr>();

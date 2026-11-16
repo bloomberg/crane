@@ -8,10 +8,10 @@
 std::optional<crane::fn<uint64_t(uint64_t)>>
 ListErasureCtorTypename::pick(uint64_t n) {
   return List::template nth_error<crane::fn<uint64_t(uint64_t)>>(
-      List::template list<crane::fn<uint64_t(uint64_t)>>::cons(
-          [](uint64_t k) { return (k + UINT64_C(1)); },
-          List::template list<crane::fn<uint64_t(uint64_t)>>::cons(
-              [](uint64_t k) { return (k * UINT64_C(2)); },
-              List::template list<crane::fn<uint64_t(uint64_t)>>::nil())),
+      List::template list<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t k) {
+        return (k + UINT64_C(1));
+      }, List::template list<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t k) {
+        return (k * UINT64_C(2));
+      }, List::template list<crane::fn<uint64_t(uint64_t)>>::nil())),
       n);
 }

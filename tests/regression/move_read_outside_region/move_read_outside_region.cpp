@@ -47,11 +47,11 @@ uint64_t MoveReadOutsideRegion::if_beside(List<uint64_t> l, bool b) {
 /// A match beside a read in the same call.
 uint64_t MoveReadOutsideRegion::match_beside(List<uint64_t> l) {
   List<uint64_t> s = l.app(l);
-  return (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())
-              ? List<uint64_t>::nil()
-              : grow(s))
-      .app(s)
-      .length();
+  return (
+      std::holds_alternative<typename List<uint64_t>::Nil>(l.v()) ? List<
+                                                                      uint64_t>::nil()
+                                                                  : grow(s))
+             .app(s).length();
 }
 
 /// A polymorphic local helper closing over n, used twice.

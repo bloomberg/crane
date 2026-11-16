@@ -13,7 +13,6 @@ uint64_t LiftedHelperFramePointer::zigzag(
 LiftedHelperFramePointer::tree<bool> LiftedHelperFramePointer::full_bool(
     uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
                   /// call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -71,18 +70,16 @@ LiftedHelperFramePointer::spine(uint64_t n) {
   while (true) {
     if (_loop_n <= 0) {
       auto _value = tree<uint64_t>::leaf();
-      (_write
-           ? *(*_write =
-                   std::make_shared<LiftedHelperFramePointer::tree<uint64_t>>(
-                       std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write = std::make_shared<
+                      LiftedHelperFramePointer::tree<uint64_t>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t k = _loop_n - 1;
       auto _cell = typename LiftedHelperFramePointer::tree<uint64_t>::Node(
           std::make_shared<LiftedHelperFramePointer::tree<uint64_t>>(
-              tree<uint64_t>::leaf()),
-          k, nullptr);
+              tree<uint64_t>::leaf()), k, nullptr);
       LiftedHelperFramePointer::tree<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<
                           LiftedHelperFramePointer::tree<uint64_t>>(
@@ -90,8 +87,8 @@ LiftedHelperFramePointer::spine(uint64_t n) {
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename LiftedHelperFramePointer::tree<uint64_t>::Node>(
-               _node.v_mut())
-               .a2;
+              _node.v_mut())
+              .a2;
       _loop_n = k;
       continue;
     }
@@ -102,7 +99,6 @@ LiftedHelperFramePointer::spine(uint64_t n) {
 LiftedHelperFramePointer::tree<uint64_t> LiftedHelperFramePointer::full(
     uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
                   /// call.
-
   struct CraneEnter {
     uint64_t n;
   };

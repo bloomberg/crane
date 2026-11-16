@@ -299,13 +299,13 @@ struct MemSafetyProbe18 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -361,9 +361,9 @@ struct MemSafetyProbe18 {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<T1>::Mycons(f(a0), nullptr);
           mylist<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+              (_write ? *(*_write =
+                              std::make_shared<mylist<T1>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<T1>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -386,10 +386,9 @@ struct MemSafetyProbe18 {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -456,14 +455,15 @@ struct MemSafetyProbe18 {
   static inline const uint64_t test_let_reuse =
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                  UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(15),
+                            tree::leaf()))
           .let_reuse();
 
   /// TEST 3: Apply a higher-order function multiple times
   /// to a closure that captures a tree.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
-             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t apply_twice(F0 &&f, uint64_t x) {
     return f(f(x));
   }
@@ -485,8 +485,7 @@ struct MemSafetyProbe18 {
   static tree fold_left_tree(const mylist<uint64_t> &l, tree acc);
   static inline const uint64_t test_fold_tree = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(1),
-        mylist<uint64_t>::mycons(
+        UINT64_C(1), mylist<uint64_t>::mycons(
             UINT64_C(2),
             mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
     return fold_left_tree(std::move(l), tree::leaf()).tree_sum();
@@ -494,10 +493,10 @@ struct MemSafetyProbe18 {
 
   /// TEST 6: Concat two lists, using both in the result.
   template <typename T1>
-  static mylist<T1> concat_flat(
-      const mylist<mylist<T1>> &ls) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+  static mylist<T1>
+  concat_flat(const mylist<mylist<T1>> &ls) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
     struct CraneEnter {
       const mylist<mylist<T1>> *ls;
     };
@@ -519,8 +518,7 @@ struct MemSafetyProbe18 {
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         const mylist<mylist<T1>> &ls = *_f.ls;
-        if (std::holds_alternative<typename mylist<mylist<T1>>::Mynil>(
-                ls.v())) {
+        if (std::holds_alternative<typename mylist<mylist<T1>>::Mynil>(ls.v())) {
           _result = mylist<T1>::mynil();
         } else {
           const auto &[a0, a1] =
@@ -548,10 +546,8 @@ struct MemSafetyProbe18 {
         UINT64_C(5),
         mylist<uint64_t>::mycons(UINT64_C(6), mylist<uint64_t>::mynil()));
     mylist<mylist<uint64_t>> ls = mylist<mylist<uint64_t>>::mycons(
-        std::move(l1),
-        mylist<mylist<uint64_t>>::mycons(
-            std::move(l2),
-            mylist<mylist<uint64_t>>::mycons(
+        std::move(l1), mylist<mylist<uint64_t>>::mycons(
+            std::move(l2), mylist<mylist<uint64_t>>::mycons(
                 std::move(l3), mylist<mylist<uint64_t>>::mynil())));
     return sum_list(concat_flat<uint64_t>(std::move(ls)));
   }();

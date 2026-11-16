@@ -65,8 +65,8 @@ public:
 struct CtorCaseCollision {
   /// Constructors are emitted as PascalCase nested structs, so two constructors
   /// of the same inductive that differ only in the case of their first letter
-  /// compete for one C++ name.  Sibling reservation is done on that spelling,
-  /// so the second one is renamed:
+  /// compete for one C++ name. Sibling reservation is done on that spelling, so
+  /// the second one is renamed:
   ///
   /// using variant_t = std::variant<Foo, Foo0>;
   struct c {

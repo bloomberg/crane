@@ -265,8 +265,8 @@ public:
         return;
       }
     }
-    crane::small_vector<std::shared_ptr<PromotedModuleStaticFnUndefined>>
-        _stack = {};
+    crane::small_vector<std::shared_ptr<PromotedModuleStaticFnUndefined>> _stack =
+        {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Node>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -290,11 +290,11 @@ public:
 
   PromotedModuleStaticFnUndefined(const PromotedModuleStaticFnUndefined &) =
       default;
-  PromotedModuleStaticFnUndefined &
-  operator=(const PromotedModuleStaticFnUndefined &) = default;
+  PromotedModuleStaticFnUndefined &operator=(
+      const PromotedModuleStaticFnUndefined &) = default;
   PromotedModuleStaticFnUndefined(PromotedModuleStaticFnUndefined &&) = default;
-  PromotedModuleStaticFnUndefined &
-  operator=(PromotedModuleStaticFnUndefined &&) = default;
+  PromotedModuleStaticFnUndefined &operator=(PromotedModuleStaticFnUndefined &&) =
+      default;
 
   inline variant_t &v_mut() { return v_; }
 

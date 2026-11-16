@@ -205,8 +205,6 @@ loopify-compile-census: build
 
 # Format source code
 format:
-	@echo "Formatting C++ test files..."
-	@find tests -name '*.t.cpp' -exec clang-format -i {} +
 	@echo "Formatting OCaml files..."
 	@failed=""; \
 	for f in $$(find src bin -name '*.ml' -o -name '*.mli'); do \

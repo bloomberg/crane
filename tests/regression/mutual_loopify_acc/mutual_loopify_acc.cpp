@@ -1,10 +1,12 @@
 #include "mutual_loopify_acc.h"
 
-uint64_t MutualLoopifyAcc::tsum(
-    uint64_t acc,
-    const MutualLoopifyAcc::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+uint64_t
+MutualLoopifyAcc::tsum(uint64_t acc,
+                       const MutualLoopifyAcc::tree &t) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     const MutualLoopifyAcc::tree *t;
   };
@@ -26,8 +28,7 @@ uint64_t MutualLoopifyAcc::tsum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MutualLoopifyAcc::tree &t = *_f.t;
-      if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Leaf>(t.v());
         _result = (acc + a0);
@@ -54,11 +55,13 @@ uint64_t MutualLoopifyAcc::tsum(
   return _result;
 }
 
-uint64_t MutualLoopifyAcc::fsum(
-    uint64_t acc,
-    const MutualLoopifyAcc::forest &f) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t
+MutualLoopifyAcc::fsum(uint64_t acc,
+                       const MutualLoopifyAcc::forest &f) { /// CraneEnter:
+                                                            /// captures varying
+                                                            /// parameters for
+                                                            /// each recursive
+                                                            /// call.
   struct CraneEnter {
     const MutualLoopifyAcc::forest *f;
     uint64_t acc;
@@ -90,8 +93,7 @@ uint64_t MutualLoopifyAcc::fsum(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MutualLoopifyAcc::forest &f = *_f.f;
       uint64_t acc = _f.acc;
-      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-              f.v())) {
+      if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(f.v())) {
         _result = std::move(acc);
       } else {
         const auto &[a00, a10] =
@@ -103,8 +105,7 @@ uint64_t MutualLoopifyAcc::fsum(
       auto _f = std::move(std::get<CraneEnter_tsum_entry>(_frame));
       const MutualLoopifyAcc::tree &t = *_f.t;
       uint64_t acc0 = _f.acc0;
-      if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Leaf>(t.v());
         _result = (acc0 + a0);
@@ -131,9 +132,10 @@ MutualLoopifyAcc::tree MutualLoopifyAcc::chain(uint64_t n,
       return _loop_acc;
     } else {
       uint64_t m = _loop_n - 1;
-      _loop_acc = tree::node(forest::fcons(
-          std::move(_loop_acc),
-          forest::fcons(tree::leaf(UINT64_C(1)), forest::fnil())));
+      _loop_acc = tree::node(
+          forest::fcons(std::move(_loop_acc),
+                        forest::fcons(tree::leaf(UINT64_C(1)),
+                                      forest::fnil())));
       _loop_n = m;
     }
   }

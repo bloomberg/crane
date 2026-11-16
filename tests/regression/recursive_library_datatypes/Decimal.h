@@ -10,7 +10,6 @@
 #include <variant>
 
 namespace Decimal {
-
 struct Uint;
 struct Signed_int;
 struct Decimal;
@@ -765,16 +764,16 @@ public:
   Uint app(Uint d_) const { return this->rev().revapp(std::move(d_)); }
 
   std::pair<Uint, uint64_t> nztail() const {
-    auto aux_impl = [](auto &_self_aux,
-                       const Uint &d_rev) -> std::pair<Uint, uint64_t> {
-      if (std::holds_alternative<typename Uint::D0>(d_rev.v())) {
-        const auto &[a0] = std::get<typename Uint::D0>(d_rev.v());
-        auto [r, n] = _self_aux(_self_aux, *a0);
-        return std::make_pair(std::move(r), (n + 1));
-      } else {
-        return std::make_pair(d_rev, UINT64_C(0));
-      }
-    };
+    auto aux_impl =
+        [](auto &_self_aux, const Uint &d_rev) -> std::pair<Uint, uint64_t> {
+          if (std::holds_alternative<typename Uint::D0>(d_rev.v())) {
+            const auto &[a0] = std::get<typename Uint::D0>(d_rev.v());
+            auto [r, n] = _self_aux(_self_aux, *a0);
+            return std::make_pair(std::move(r), (n + 1));
+          } else {
+            return std::make_pair(d_rev, UINT64_C(0));
+          }
+        };
     auto aux = [&](const Uint &d_rev) -> std::pair<Uint, uint64_t> {
       return aux_impl(aux_impl, d_rev);
     };
@@ -1099,7 +1098,6 @@ public:
     }
   }
 };
-
 } // namespace Decimal
 
 #endif // INCLUDED_DECIMAL

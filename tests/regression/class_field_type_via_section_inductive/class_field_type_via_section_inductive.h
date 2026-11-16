@@ -16,20 +16,32 @@ struct natParams;
 struct natToBase;
 using ptr = crane::obj;
 using iptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-    typename I::iptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+  typename I::iptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+}) &&
+  (requires {
+    {
+      I::zeroi()
+    }
+    -> std::convertible_to<typename I::iptr>;
   } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  }) && (requires {
-    { I::zeroi() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zeroi } -> std::convertible_to<typename I::iptr>;
-  });
-/// Takes only I.  Its field's type is the section inductive, so its
+    {
+      I::zeroi
+    }
+    -> std::convertible_to<typename I::iptr>;
+  }); /// Takes only I.  Its field's type is the section inductive, so its
 /// dependence on Params is never written down.
 template <typename CraneInst, typename I, typename ptr, typename iptr>
 concept ToDvalueBase = requires {
@@ -195,8 +207,8 @@ static_assert(ToDvalueBase<natToBase, Nat, typename natParams::ptr,
 
 struct ClassFieldTypeViaSectionInductive {
   static inline const Dvalue_base<typename natParams::ptr,
-                                  typename natParams::iptr>
-      run = to_base<natToBase, natParams, natParams, Nat>(
+                                  typename natParams::iptr> run =
+      to_base<natToBase, natParams, natParams, Nat>(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
 

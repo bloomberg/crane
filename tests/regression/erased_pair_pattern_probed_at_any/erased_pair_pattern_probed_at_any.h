@@ -242,8 +242,8 @@ template <typename T> struct box {
       if constexpr (crane_convertible<CraneU, const T &>) {
         return crane_convert<CraneU>(b_payload);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }

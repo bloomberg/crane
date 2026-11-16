@@ -1,7 +1,7 @@
 #include "dependent_elim_stdexcept_probe.h"
 
-void DependentElimStdexceptProbe::get_present(
-    DependentElimStdexceptProbe::Avail a) {
+void
+DependentElimStdexceptProbe::get_present(DependentElimStdexceptProbe::Avail a) {
   {
     [&]() -> void {
       switch (a) {

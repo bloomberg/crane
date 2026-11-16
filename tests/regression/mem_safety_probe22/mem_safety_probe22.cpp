@@ -1,9 +1,12 @@
 #include "mem_safety_probe22.h"
 
-uint64_t MemSafetyProbe22::tree_sum(
-    const MemSafetyProbe22::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe22::tree_sum(const MemSafetyProbe22::tree &t) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const MemSafetyProbe22::tree *t;
   };
@@ -33,8 +36,7 @@ uint64_t MemSafetyProbe22::tree_sum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe22::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
@@ -62,7 +64,6 @@ uint64_t MemSafetyProbe22::tree_sum(
 std::pair<MemSafetyProbe22::tree, uint64_t> MemSafetyProbe22::sum_and_rebuild(
     const MemSafetyProbe22::tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe22::tree *t;
   };
@@ -93,8 +94,7 @@ std::pair<MemSafetyProbe22::tree, uint64_t> MemSafetyProbe22::sum_and_rebuild(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe22::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
         _result = std::make_pair(tree::leaf(), UINT64_C(0));
       } else {
         const auto &[a0, a1, a2] =
@@ -127,7 +127,6 @@ std::pair<MemSafetyProbe22::tree, uint64_t> MemSafetyProbe22::sum_and_rebuild(
 MemSafetyProbe22::tree MemSafetyProbe22::double_tree(
     const MemSafetyProbe22::tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe22::tree *t;
   };
@@ -157,8 +156,7 @@ MemSafetyProbe22::tree MemSafetyProbe22::double_tree(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe22::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
         _result = tree::leaf();
       } else {
         const auto &[a0, a1, a2] =
@@ -183,11 +181,11 @@ MemSafetyProbe22::tree MemSafetyProbe22::double_tree(
 }
 
 /// TEST 3: Two recursive calls with child + value in result.
-uint64_t MemSafetyProbe22::weighted_sum(
-    const MemSafetyProbe22::tree &t,
-    uint64_t w) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+MemSafetyProbe22::weighted_sum(const MemSafetyProbe22::tree &t,
+                               uint64_t w) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     uint64_t w;
     const MemSafetyProbe22::tree *t;
@@ -221,8 +219,7 @@ uint64_t MemSafetyProbe22::weighted_sum(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t w = _f.w;
       const MemSafetyProbe22::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
@@ -248,11 +245,11 @@ uint64_t MemSafetyProbe22::weighted_sum(
 }
 
 /// TEST 4: Function with constructed-tree recursive calls.
-uint64_t MemSafetyProbe22::split_sum(
-    const MemSafetyProbe22::tree &t,
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+MemSafetyProbe22::split_sum(const MemSafetyProbe22::tree &t,
+                            uint64_t n) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     uint64_t n;
     MemSafetyProbe22::tree t;
@@ -288,15 +285,15 @@ uint64_t MemSafetyProbe22::split_sum(
         _result = tree_sum(t);
       } else {
         uint64_t n_ = n - 1;
-        if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-                t.v())) {
+        if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1, a2] =
               std::get<typename MemSafetyProbe22::tree::Node>(t.v());
           _stack.emplace_back(CraneCont_Node{n_, a1, a2});
-          _stack.emplace_back(CraneEnter{
-              n_, tree::node(*a0, (a1 + UINT64_C(1)), tree::leaf())});
+          _stack.emplace_back(
+              CraneEnter{n_,
+                         tree::node(*a0, (a1 + UINT64_C(1)), tree::leaf())});
         }
       }
     } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
@@ -316,10 +313,12 @@ uint64_t MemSafetyProbe22::split_sum(
 }
 
 /// TEST 6: Mirror tree (swap children). Two recursive calls.
-MemSafetyProbe22::tree MemSafetyProbe22::mirror(
-    const MemSafetyProbe22::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+MemSafetyProbe22::tree
+MemSafetyProbe22::mirror(const MemSafetyProbe22::tree &t) { /// CraneEnter:
+                                                            /// captures varying
+                                                            /// parameters for
+                                                            /// each recursive
+                                                            /// call.
   struct CraneEnter {
     const MemSafetyProbe22::tree *t;
   };
@@ -349,8 +348,7 @@ MemSafetyProbe22::tree MemSafetyProbe22::mirror(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe22::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
         _result = tree::leaf();
       } else {
         const auto &[a0, a1, a2] =
@@ -379,7 +377,6 @@ MemSafetyProbe22::tree
 MemSafetyProbe22::insert(const MemSafetyProbe22::tree &t,
                          uint64_t x) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe22::tree *t;
   };
@@ -409,8 +406,7 @@ MemSafetyProbe22::insert(const MemSafetyProbe22::tree &t,
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe22::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
         _result = tree::node(tree::leaf(), x, tree::leaf());
       } else {
         const auto &[a0, a1, a2] =
@@ -459,7 +455,6 @@ MemSafetyProbe22::tree MemSafetyProbe22::label_depth(
     const MemSafetyProbe22::tree &t,
     uint64_t d) { /// CraneEnter: captures varying parameters for each recursive
                   /// call.
-
   struct CraneEnter {
     uint64_t d;
     const MemSafetyProbe22::tree *t;
@@ -493,8 +488,7 @@ MemSafetyProbe22::tree MemSafetyProbe22::label_depth(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t d = _f.d;
       const MemSafetyProbe22::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe22::tree::Leaf>(t.v())) {
         _result = tree::leaf();
       } else {
         const auto &[a0, a1, a2] =

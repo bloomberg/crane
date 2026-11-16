@@ -414,20 +414,17 @@ struct LoopifyExpr {
               _stack.emplace_back(CraneCont_n0{std::move(s1)});
               _stack.emplace_back(CraneEnter{_f.a1});
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp7.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp7.v_mut())) {
             auto &[a00] = std::get<typename expr::Succ>(_tmp7.v_mut());
             expr s1 = expr::succ(*a00);
             _stack.emplace_back(CraneCont_Succ_1{std::move(s1)});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp7.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp7.v_mut())) {
             auto &[a00, a10] = std::get<typename expr::Add>(_tmp7.v_mut());
             expr s1 = expr::add(*a00, *a10);
             _stack.emplace_back(CraneCont_Add_1{std::move(s1)});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp7.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp7.v_mut())) {
             auto &[a00, a10] = std::get<typename expr::Mul>(_tmp7.v_mut());
             expr s1 = expr::mul(*a00, *a10);
             _stack.emplace_back(CraneCont_Mul{std::move(s1)});
@@ -451,16 +448,13 @@ struct LoopifyExpr {
               uint64_t n0 = a01 - 1;
               _result = expr::add(std::move(s1), expr::val((n0 + 1)));
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp4.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp4.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp4.v_mut());
             _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp4.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp4.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp4.v_mut());
             _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp4.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp4.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp4.v_mut());
             _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -484,16 +478,14 @@ struct LoopifyExpr {
                 _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
               }
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp10.v_mut())) {
+          } else if (
+              std::holds_alternative<typename expr::Succ>(_tmp10.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp10.v_mut());
             _result = expr::mul(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp10.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp10.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp10.v_mut());
             _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp10.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp10.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp10.v_mut());
             _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -513,16 +505,13 @@ struct LoopifyExpr {
               uint64_t n0 = a01 - 1;
               _result = expr::add(std::move(s1), expr::val((n0 + 1)));
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp6.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp6.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp6.v_mut());
             _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp6.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp6.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp6.v_mut());
             _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp6.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp6.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp6.v_mut());
             _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -546,16 +535,14 @@ struct LoopifyExpr {
                 _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
               }
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp12.v_mut())) {
+          } else if (
+              std::holds_alternative<typename expr::Succ>(_tmp12.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp12.v_mut());
             _result = expr::mul(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp12.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp12.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp12.v_mut());
             _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp12.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp12.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp12.v_mut());
             _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -591,16 +578,13 @@ struct LoopifyExpr {
               uint64_t n0 = a01 - 1;
               _result = expr::add(std::move(s1), expr::val((n0 + 1)));
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp5.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp5.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp5.v_mut());
             _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp5.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp5.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp5.v_mut());
             _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp5.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp5.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp5.v_mut());
             _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -621,20 +605,18 @@ struct LoopifyExpr {
               _stack.emplace_back(CraneCont_px{a00});
               _stack.emplace_back(CraneEnter{_f.a1});
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp13.v_mut())) {
+          } else if (
+              std::holds_alternative<typename expr::Succ>(_tmp13.v_mut())) {
             auto &[a00] = std::get<typename expr::Succ>(_tmp13.v_mut());
             expr s1 = expr::succ(*a00);
             _stack.emplace_back(CraneCont_Succ_2{std::move(s1)});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp13.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp13.v_mut())) {
             auto &[a00, a10] = std::get<typename expr::Add>(_tmp13.v_mut());
             expr s1 = expr::add(*a00, *a10);
             _stack.emplace_back(CraneCont_Add_2{std::move(s1)});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp13.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp13.v_mut())) {
             auto &[a00, a10] = std::get<typename expr::Mul>(_tmp13.v_mut());
             expr s1 = expr::mul(*a00, *a10);
             _stack.emplace_back(CraneCont_Mul_2{std::move(s1)});
@@ -662,16 +644,14 @@ struct LoopifyExpr {
                 _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
               }
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp11.v_mut())) {
+          } else if (
+              std::holds_alternative<typename expr::Succ>(_tmp11.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp11.v_mut());
             _result = expr::mul(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp11.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp11.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp11.v_mut());
             _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp11.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp11.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp11.v_mut());
             _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -694,16 +674,13 @@ struct LoopifyExpr {
               uint64_t n0 = a01 - 1;
               _result = expr::add(std::move(s1), expr::val((n0 + 1)));
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp3.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp3.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp3.v_mut());
             _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp3.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp3.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp3.v_mut());
             _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp3.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp3.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp3.v_mut());
             _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -727,16 +704,13 @@ struct LoopifyExpr {
                 _result = expr::mul(std::move(s1), expr::val(std::move(a01)));
               }
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp9.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp9.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp9.v_mut());
             _result = expr::mul(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp9.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp9.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp9.v_mut());
             _result = expr::mul(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp9.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp9.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp9.v_mut());
             _result = expr::mul(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -756,16 +730,13 @@ struct LoopifyExpr {
               uint64_t n2 = a01 - 1;
               _result = expr::add(std::move(s1), expr::val((n2 + 1)));
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp2.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp2.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp2.v_mut());
             _result = expr::add(std::move(s1), expr::succ(*a01));
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp2.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp2.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp2.v_mut());
             _result = expr::add(std::move(s1), expr::add(*a01, *a11));
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp2.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp2.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp2.v_mut());
             _result = expr::add(std::move(s1), expr::mul(*a01, *a11));
           } else {
@@ -790,8 +761,7 @@ struct LoopifyExpr {
                 _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
               }
             }
-          } else if (std::holds_alternative<typename expr::Succ>(
-                         _tmp8.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Succ>(_tmp8.v_mut())) {
             auto &[a01] = std::get<typename expr::Succ>(_tmp8.v_mut());
             expr s2 = expr::succ(*a01);
             if (a00 == UINT64_C(1)) {
@@ -799,8 +769,7 @@ struct LoopifyExpr {
             } else {
               _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
             }
-          } else if (std::holds_alternative<typename expr::Add>(
-                         _tmp8.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Add>(_tmp8.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Add>(_tmp8.v_mut());
             expr s2 = expr::add(*a01, *a11);
             if (a00 == UINT64_C(1)) {
@@ -808,8 +777,7 @@ struct LoopifyExpr {
             } else {
               _result = expr::mul(expr::val(std::move(a00)), std::move(s2));
             }
-          } else if (std::holds_alternative<typename expr::Mul>(
-                         _tmp8.v_mut())) {
+          } else if (std::holds_alternative<typename expr::Mul>(_tmp8.v_mut())) {
             auto &[a01, a11] = std::get<typename expr::Mul>(_tmp8.v_mut());
             expr s2 = expr::mul(*a01, *a11);
             if (a00 == UINT64_C(1)) {
@@ -1474,9 +1442,9 @@ struct LoopifyExpr {
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_2{std::move(a0), &a1, &a2,
-                                               std::move(_f._tmp8),
-                                               std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Cond_2{std::move(a0), &a1, &a2, std::move(_f._tmp8),
+                               std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Cond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
@@ -1675,8 +1643,8 @@ struct LoopifyExpr {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_expr::Lit>(_sv.v())) {
             _result = UINT64_C(0);
-          } else if (std::holds_alternative<typename simple_expr::Plus>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename simple_expr::Plus>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename simple_expr::Plus>(_sv.v());
             _stack.emplace_back(CraneCont_Plus{crane_raw(a1)});
@@ -1760,8 +1728,8 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename simple_expr::Lit>(_sv.v())) {
             const auto &[a0] = std::get<typename simple_expr::Lit>(_sv.v());
             _result = std::move(a0);
-          } else if (std::holds_alternative<typename simple_expr::Plus>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename simple_expr::Plus>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename simple_expr::Plus>(_sv.v());
             _stack.emplace_back(CraneCont_Plus{crane_raw(a1)});
@@ -1870,8 +1838,8 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename simple_expr::Lit>(_sv.v())) {
             const auto &[a0] = std::get<typename simple_expr::Lit>(_sv.v());
             _result = f(a0);
-          } else if (std::holds_alternative<typename simple_expr::Plus>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename simple_expr::Plus>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename simple_expr::Plus>(_sv.v());
             _stack.emplace_back(CraneCont_Plus{a0, crane_raw(a1)});
@@ -1896,9 +1864,9 @@ struct LoopifyExpr {
           std::shared_ptr<simple_expr> a0 = std::move(_f.a0);
           const simple_expr &a1 = *_f.a1;
           const simple_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_IfPos_2{std::move(a0), &a1, &a2,
-                                                std::move(_f._tmp5),
-                                                std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_IfPos_2{std::move(a0), &a1, &a2, std::move(_f._tmp5),
+                                std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_IfPos_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_IfPos_2>(_frame));
@@ -1975,8 +1943,8 @@ struct LoopifyExpr {
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, const uint64_t &>
+      std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+      std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
@@ -2167,8 +2135,7 @@ struct LoopifyExpr {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::CLit>(_sv.v())) {
             _result = UINT64_C(0);
-          } else if (std::holds_alternative<typename cond_expr::CPlus>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename cond_expr::CPlus>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename cond_expr::CPlus>(_sv.v());
             _stack.emplace_back(CraneCont_CPlus{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -2251,8 +2218,7 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename cond_expr::CLit>(_sv.v())) {
             const auto &[a0] = std::get<typename cond_expr::CLit>(_sv.v());
             _result = std::move(a0);
-          } else if (std::holds_alternative<typename cond_expr::CPlus>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename cond_expr::CPlus>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename cond_expr::CPlus>(_sv.v());
             _stack.emplace_back(CraneCont_CPlus{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -2360,8 +2326,7 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename cond_expr::CLit>(_sv.v())) {
             const auto &[a0] = std::get<typename cond_expr::CLit>(_sv.v());
             _result = f(a0);
-          } else if (std::holds_alternative<typename cond_expr::CPlus>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename cond_expr::CPlus>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename cond_expr::CPlus>(_sv.v());
             _stack.emplace_back(CraneCont_CPlus{a0, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -2385,9 +2350,9 @@ struct LoopifyExpr {
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_CCond_2{std::move(a0), &a1, &a2,
-                                                std::move(_f._tmp5),
-                                                std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_CCond_2{std::move(a0), &a1, &a2, std::move(_f._tmp5),
+                                std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_CCond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_CCond_2>(_frame));

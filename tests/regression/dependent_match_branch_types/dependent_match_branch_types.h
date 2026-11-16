@@ -147,12 +147,11 @@ struct DependentMatchBranchTypes {
   }
 
   static Nat hd(const Nat &_x, const vec &v);
-  static inline const Nat run =
-      hd(Nat::o(),
-         vec::vcons(
-             Nat::o(),
-             Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
-             vec::vnil()));
+  static inline const Nat run = hd(
+      Nat::o(), vec::vcons(
+          Nat::o(),
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
+          vec::vnil()));
 };
 
 #endif // INCLUDED_DEPENDENT_MATCH_BRANCH_TYPES

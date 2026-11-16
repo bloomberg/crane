@@ -3,7 +3,7 @@
 DoubleOptionNest::t DoubleOptionNest::wrap(uint64_t k,
                                            const DoubleOptionNest::t &acc) {
   return t::node(k, std::make_optional<std::optional<DoubleOptionNest::t>>(
-                        std::make_optional<DoubleOptionNest::t>(acc)));
+                     std::make_optional<DoubleOptionNest::t>(acc)));
 }
 
 uint64_t DoubleOptionNest::peek(const DoubleOptionNest::t &x) {

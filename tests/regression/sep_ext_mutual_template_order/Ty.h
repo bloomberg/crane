@@ -11,7 +11,6 @@
 #include <variant>
 
 namespace Ty {
-
 template <typename A> struct Tree;
 template <typename A> struct Forest;
 template <typename A> struct tree;
@@ -94,17 +93,16 @@ public:
   template <typename CraneU>
   Forest(const Forest<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Forest<CraneU>::Nil>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Forest<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a0, a1] =
                 std::get<typename Forest<CraneU>::Cons>(_other.v());
             return Cons{
                 (a0 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a0))
-                    : nullptr),
-                (a1 ? std::make_shared<Forest<A>>(crane_convert<Forest<A>>(*a1))
-                    : nullptr)};
+                    : nullptr), (a1 ? std::make_shared<Forest<A>>(
+                                        crane_convert<Forest<A>>(*a1))
+                                    : nullptr)};
           }
         }()) {}
 
@@ -206,7 +204,6 @@ template <typename A> Forest<A>::~Forest() {
     }
   }
 }
-
 } // namespace Ty
 
 #endif // INCLUDED_TY

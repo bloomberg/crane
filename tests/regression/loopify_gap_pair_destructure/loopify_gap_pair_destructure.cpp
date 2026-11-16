@@ -1,9 +1,9 @@
 #include "loopify_gap_pair_destructure.h"
 
-std::pair<uint64_t, uint64_t> LoopifyGapPairDestructure::swap_pair(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+std::pair<uint64_t, uint64_t>
+LoopifyGapPairDestructure::swap_pair(uint64_t n) { /// CraneEnter: captures
+                                                   /// varying parameters for
+                                                   /// each recursive call.
   struct CraneEnter {
     uint64_t n;
   };

@@ -17,11 +17,13 @@ LoopifyLocalFixInnerCallback::ack(const std::pair<uint64_t, uint64_t> &p) {
       struct CraneEnter {
         uint64_t n0;
       };
+
       /// CraneCont_pn: saves [pm], resumes after recursive call, then processes
       /// rest.
       struct CraneCont_pn {
         uint64_t pm;
       };
+
       using CraneFrame = std::variant<CraneEnter, CraneCont_pn>;
       uint64_t _result{};
       crane::small_vector<CraneFrame> _stack;

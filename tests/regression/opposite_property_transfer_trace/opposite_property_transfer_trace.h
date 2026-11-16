@@ -73,7 +73,8 @@ struct OppositePropertyTransferTraceCase {
     requires std::is_invocable_r_v<
         std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
         PreStableCategory>
-  static T2 theorem_doubling_principle_correct(
+  static T2
+  theorem_doubling_principle_correct(
       F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
     std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>> e =
@@ -83,16 +84,15 @@ struct OppositePropertyTransferTraceCase {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-  static T2 theorem_doubling_principle_final(F0 &&h_dual, F1 &&h_theorem,
-                                             const PreStableCategory &pS,
-                                             const RightStableWitness &h_right,
-                                             const Triangle2Witness &h_tri2) {
+  static T2 theorem_doubling_principle_final(
+      F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
+      const RightStableWitness &h_right, const Triangle2Witness &h_tri2) {
     return theorem_doubling_principle_correct<T1, T2>(
         h_dual, h_theorem, pS, right_stable_gives_opposite_left(pS, h_right),
         [&]() {
           std::pair<crane::fn<satisfies_triangle_2(satisfies_triangle_1)>,
-                    crane::fn<satisfies_triangle_1(satisfies_triangle_2)>>
-              e = triangle_identity_duality(opposite_prestable_category(pS));
+                    crane::fn<satisfies_triangle_1(satisfies_triangle_2)>> e =
+              triangle_identity_duality(opposite_prestable_category(pS));
           auto [_x, s] = std::move(e);
           satisfies_triangle_2 h_tri2_ = h_tri2;
           return s(std::move(h_tri2_));
@@ -100,12 +100,11 @@ struct OppositePropertyTransferTraceCase {
   }
 
   static inline const PreStableCategory sample_category =
-      PreStableCategory{UINT64_C(7),
-                        UINT64_C(4),
-                        [](uint64_t x) { return (x + UINT64_C(10)); },
-                        [](uint64_t x) { return (x + UINT64_C(3)); },
-                        [](uint64_t x) { return (x + UINT64_C(20)); },
-                        [](uint64_t x) { return (x + UINT64_C(5)); }};
+      PreStableCategory{UINT64_C(7), UINT64_C(4), [](uint64_t x) {
+        return (x + UINT64_C(10));
+      }, [](uint64_t x) { return (x + UINT64_C(3)); }, [](uint64_t x) {
+        return (x + UINT64_C(20));
+      }, [](uint64_t x) { return (x + UINT64_C(5)); }};
   static inline const is_right_semi_stable sample_right_stable =
       RightStableWitness{UINT64_C(6), UINT64_C(11)};
   static inline const satisfies_triangle_2 sample_triangle2 =
@@ -125,9 +124,7 @@ struct OppositePropertyTransferTraceCase {
   static inline const uint64_t sample_result_tag = sample_right_property.rp_tag;
   static inline const uint64_t sample_checksum =
       ((((sample_opposite_tag + sample_opposite_loop_value) +
-         sample_result_seed) +
-        sample_result_value) +
-       sample_result_tag);
+         sample_result_seed) + sample_result_value) + sample_result_tag);
 };
 
 #endif // INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE

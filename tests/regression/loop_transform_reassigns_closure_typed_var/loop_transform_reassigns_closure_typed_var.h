@@ -172,7 +172,8 @@ public:
   const variant_t &v() const { return v_; }
 
   /// The callable takes a membership proof, so the recursive call cannot pass
-  /// it through unchanged.
+  /// it
+  /// through unchanged.
   template <typename T1> Lst<T1> map_In(crane::fn<T1(A)> f) const {
     std::optional<Lst<T1>> _root{};
     std::shared_ptr<Lst<T1>> *_write = nullptr;
@@ -202,8 +203,9 @@ public:
   }
 
   Lst<Nat> go(Nat n) const {
-    return this->template map_In<Nat>(
-        [=, n = std::move(n)](const Nat &x) { return x.add(n); });
+    return this->template map_In<Nat>([=, n = std::move(n)](const Nat &x) {
+      return x.add(n);
+    });
   }
 };
 

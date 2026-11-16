@@ -68,6 +68,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class AE { A0 };
 enum class BE { B0 };
 

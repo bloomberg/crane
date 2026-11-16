@@ -140,12 +140,11 @@ struct FamilyWithTypeBinderAtFunction {
     return crane_any_cast<T1>(f(n));
   }
 
-  static inline const List<uint64_t> use1 = app2<List<uint64_t>>(
-      [](uint64_t n) {
+  static inline const List<uint64_t> use1 =
+      app2<List<uint64_t>>([](uint64_t n) {
         return List<uint64_t>::cons(
             n, List<uint64_t>::cons(n, List<uint64_t>::nil()));
-      },
-      UINT64_C(3));
+      }, UINT64_C(3));
   static uint64_t use2(uint64_t x0_);
 
   template <typename T1, typename T2, typename F1>
@@ -160,11 +159,10 @@ struct FamilyWithTypeBinderAtFunction {
 
   static uint64_t clos(const List<uint64_t> &l, uint64_t x0_);
   static inline const uint64_t result =
-      ((use1.length() + use2(UINT64_C(1))) +
-       clos(List<uint64_t>::cons(
-                UINT64_C(1),
-                List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-            UINT64_C(1)));
+      ((use1.length() + use2(UINT64_C(1))) + clos(
+           List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                    UINT64_C(2), List<uint64_t>::nil())),
+           UINT64_C(1)));
 };
 
 #endif // INCLUDED_FAMILY_WITH_TYPE_BINDER_AT_FUNCTION

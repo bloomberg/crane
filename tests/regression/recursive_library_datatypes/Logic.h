@@ -6,7 +6,6 @@
 #include <utility>
 
 namespace Logic {
-
 struct EqNotations {};
 
 template <typename T1> T1 True_rect(T1 f) { return f; }
@@ -17,8 +16,9 @@ template <typename T1> T1 False_rect() {
   throw std::logic_error("absurd case");
 }
 
-template <typename T1>
-const T1 False_rec = [](crane::obj) { return False_rect<T1>(); };
+template <typename T1> const T1 False_rec = [](crane::obj) {
+  return False_rect<T1>();
+};
 
 template <typename T1> T1 and_rect(const T1 &f) { return f; }
 
@@ -102,7 +102,6 @@ template <typename T1> T1 eq_ex2_rect_uncurried(T1 f) {
 template <typename T1> T1 eq_ex2_rec_uncurried(T1 x0_) {
   return eq_ex2_rect_uncurried<T1>(std::move(x0_));
 }
-
 } // namespace Logic
 
 #endif // INCLUDED_LOGIC

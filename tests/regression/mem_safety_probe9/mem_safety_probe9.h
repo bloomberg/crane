@@ -296,13 +296,13 @@ struct MemSafetyProbe9 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -452,8 +452,8 @@ struct MemSafetyProbe9 {
   static inline const uint64_t test_left_sums = []() {
     tree t = tree::node(
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                   UINT64_C(7), tree::leaf()),
-        UINT64_C(10), tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
+                   UINT64_C(7), tree::leaf()), UINT64_C(10),
+        tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = collect_left_sums(
         std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return sum_fns(std::move(fns));
@@ -465,8 +465,7 @@ struct MemSafetyProbe9 {
                       mylist<crane::fn<uint64_t(uint64_t)>> acc);
   static inline const uint64_t test_list_accum = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
+        UINT64_C(10), mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = list_accum_closures(
@@ -476,12 +475,14 @@ struct MemSafetyProbe9 {
   static inline const uint64_t test_triple =
       tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                  UINT64_C(20),
-                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(30),
+                            tree::leaf()))
           .triple_capture();
   static inline const uint64_t test_cross =
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                  UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(15),
+                            tree::leaf()))
           .cross_capture();
   /// TEST 6: Stress test — large tree, many closures.
   static tree make_balanced(uint64_t n);

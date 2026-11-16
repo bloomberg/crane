@@ -123,7 +123,9 @@ public:
 /// application of the functor: G.S is the functor's concept F_S over
 /// the application's argument, not a member of G.
 template <typename M>
-concept Base = requires { typename M::t; };
+concept Base = requires {
+  typename M::t;
+};
 
 struct FunctorModtypeViaApplication {
   template <Base X> struct F {

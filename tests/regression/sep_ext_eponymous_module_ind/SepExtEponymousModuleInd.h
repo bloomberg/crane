@@ -12,7 +12,6 @@
 #include "Datatypes.h"
 
 namespace SepExtEponymousModuleInd {
-
 template <typename A> struct Trie {
   // TYPES
   struct Leaf {};
@@ -46,20 +45,20 @@ public:
             const auto &[t, t0, t1] =
                 std::get<typename Trie<CraneU>::Branch>(_other.v());
             return Branch{
-                std::optional<A>(t),
-                (t0 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t0))
-                    : nullptr),
-                (t1 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t1))
-                    : nullptr)};
+                std::optional<A>(t), (
+                    t0 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t0))
+                       : nullptr), (
+                    t1 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t1))
+                       : nullptr)};
           }
         }()) {}
 
   static Trie<A> leaf() { return Trie<A>(Leaf{}); }
 
   static Trie<A> branch(std::optional<A> t, Trie<A> t0, Trie<A> t1) {
-    return Trie<A>(Branch{std::move(t),
-                          std::make_shared<Trie<A>>(std::move(t0)),
-                          std::make_shared<Trie<A>>(std::move(t1))});
+    return Trie<A>(
+        Branch{std::move(t), std::make_shared<Trie<A>>(std::move(t0)),
+               std::make_shared<Trie<A>>(std::move(t1))});
   }
 
   // MANIPULATORS
@@ -109,7 +108,6 @@ public:
 struct UseTrie {
   using memo = Trie<std::optional<Datatypes::Nat>>;
 };
-
 } // namespace SepExtEponymousModuleInd
 
 #endif // INCLUDED_SEPEXTEPONYMOUSMODULEIND

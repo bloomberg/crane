@@ -81,7 +81,6 @@ struct LoopifyMutualTmcTemporary {
   static T1 num_rect(T1 f, F1 &&f0,
                      const num &n) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const num *n;
     };
@@ -123,6 +122,7 @@ struct LoopifyMutualTmcTemporary {
   static T1 num_rec(T1 f, F1 &&f0, const num &n) {
     return num_rect<T1>(std::move(f), f0, n);
   }
+
   enum class Color { RED, GREEN, BLUE };
 
   template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {

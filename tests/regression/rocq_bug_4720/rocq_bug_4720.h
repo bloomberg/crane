@@ -63,11 +63,15 @@ public:
 };
 
 template <typename M>
-concept A = requires { typename M::t; };
+concept A = requires {
+  typename M::t;
+};
 template <typename M>
 concept B = true;
 template <typename M>
-concept C = requires { requires A<typename M::a>; };
+concept C = requires {
+  requires A<typename M::a>;
+};
 
 struct RocqBug4720 {
   struct A_instance {

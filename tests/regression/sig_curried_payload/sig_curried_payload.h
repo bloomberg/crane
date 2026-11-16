@@ -23,8 +23,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -34,9 +34,9 @@ template <typename A> struct Sig {
 };
 
 struct SigCurriedPayload {
-  static inline const Sig<crane::fn<uint64_t(uint64_t, uint64_t)>> mk =
-      Sig<crane::fn<uint64_t(uint64_t, uint64_t)>>::exist(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
+  static inline const Sig<crane::fn<uint64_t(uint64_t, uint64_t)>> mk = Sig<
+      crane::fn<uint64_t(uint64_t, uint64_t)>>::exist(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
   static inline const uint64_t go = []() {
     const auto &_sv = mk;
     const auto &[x] = _sv;

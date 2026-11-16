@@ -3,7 +3,6 @@
 List<std::pair<uint64_t, uint64_t>> LoopifyListTransforms::run_length_encode(
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -44,24 +43,22 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListTransforms::run_length_encode(
       uint64_t a0 = _f.a0;
       List<std::pair<uint64_t, uint64_t>> _tmp1 = std::move(_result);
       if (std::holds_alternative<
-              typename List<std::pair<uint64_t, uint64_t>>::Nil>(
-              _tmp1.v_mut())) {
+              typename List<std::pair<uint64_t, uint64_t>>::Nil>(_tmp1.v_mut())) {
         _result = List<std::pair<uint64_t, uint64_t>>::cons(
             std::make_pair(a0, UINT64_C(1)),
             List<std::pair<uint64_t, uint64_t>>::nil());
       } else {
-        auto &[a01, a11] =
-            std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                _tmp1.v_mut());
+        auto &[a01, a11] = std::get<
+            typename List<std::pair<uint64_t, uint64_t>>::Cons>(_tmp1.v_mut());
         auto [y, n] = std::move(a01);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(y, (n + UINT64_C(1))), *a11);
         } else {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(a0, UINT64_C(1)),
-              List<std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
-                                                        *a11));
+              std::make_pair(a0, UINT64_C(1)), List<
+                  std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
+                                                       *a11));
         }
       }
     }
@@ -85,10 +82,9 @@ List<uint64_t> LoopifyListTransforms::prefix_sums(uint64_t acc,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
-      List<uint64_t> &_node =
-          (_write
-               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
+                                              List<uint64_t>>(std::move(_cell)))
+                                      : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       _loop_acc = (_loop_acc + a0);
@@ -108,18 +104,16 @@ LoopifyListTransforms::sliding_pairs_fuel(uint64_t fuel,
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write
-           ? *(*_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                   std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write = std::make_shared<
+                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-        (_write ? *(*_write =
-                        std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                            std::move(_value)))
+        (_write ? *(*_write = std::make_shared<
+                        List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
@@ -145,8 +139,8 @@ LoopifyListTransforms::sliding_pairs_fuel(uint64_t fuel,
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                   _node.v_mut())
-                   .l;
+                  _node.v_mut())
+                  .l;
           _loop_l = crane_raw(a1);
           _loop_fuel = fuel_;
           continue;
@@ -188,9 +182,9 @@ LoopifyListTransforms::differences_fuel(uint64_t fuel,
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -243,9 +237,9 @@ List<uint64_t> LoopifyListTransforms::take(uint64_t n,
       uint64_t n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -362,8 +356,9 @@ LoopifyListTransforms::rotate_left_fuel(uint64_t fuel, uint64_t n,
           List<uint64_t> rotated =
               a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
           _loop_l = std::move(rotated);
-          _loop_n = ((
-              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+          _loop_n =
+              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
+                                                  : (_loop_n - UINT64_C(1))));
           _loop_fuel = fuel_;
         }
       }
@@ -393,9 +388,9 @@ LoopifyListTransforms::uniq_sorted_fuel(uint64_t fuel,
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -437,10 +432,12 @@ List<uint64_t> LoopifyListTransforms::uniq_sorted(const List<uint64_t> &l) {
   return uniq_sorted_fuel(len, l);
 }
 
-uint64_t LoopifyListTransforms::step_sum(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyListTransforms::step_sum(const List<uint64_t> &l) { /// CraneEnter:
+                                                           /// captures varying
+                                                           /// parameters for
+                                                           /// each recursive
+                                                           /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };

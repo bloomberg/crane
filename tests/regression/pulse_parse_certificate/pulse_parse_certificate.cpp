@@ -123,24 +123,20 @@ bool PulseParseCertificateCase::pulse_class_list_eqb(
   if (std::holds_alternative<
           typename List<PulseParseCertificateCase::PulseClass>::Nil>(xs.v())) {
     if (std::holds_alternative<
-            typename List<PulseParseCertificateCase::PulseClass>::Nil>(
-            ys.v())) {
+            typename List<PulseParseCertificateCase::PulseClass>::Nil>(ys.v())) {
       return true;
     } else {
       return false;
     }
   } else {
-    const auto &[a0, a1] =
-        std::get<typename List<PulseParseCertificateCase::PulseClass>::Cons>(
-            xs.v());
+    const auto &[a0, a1] = std::get<
+        typename List<PulseParseCertificateCase::PulseClass>::Cons>(xs.v());
     if (std::holds_alternative<
-            typename List<PulseParseCertificateCase::PulseClass>::Nil>(
-            ys.v())) {
+            typename List<PulseParseCertificateCase::PulseClass>::Nil>(ys.v())) {
       return false;
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<PulseParseCertificateCase::PulseClass>::Cons>(
-              ys.v());
+      const auto &[a00, a10] = std::get<
+          typename List<PulseParseCertificateCase::PulseClass>::Cons>(ys.v());
       return (pulse_class_eqb(a0, a00) && pulse_class_list_eqb(*a1, *a10));
     }
   }
@@ -148,12 +144,12 @@ bool PulseParseCertificateCase::pulse_class_list_eqb(
 
 bool PulseParseCertificateCase::pulse_parse_certificate_self_consistent(
     const PulseParseCertificateCase::PulseCertificate &cert) {
-  return (
-      (cert.certificate_base == pulse_base_from_runs(cert.certificate_runs) &&
-       cert.certificate_classes.length() == cert.certificate_runs.length()) &&
-      pulse_class_list_eqb(cert.certificate_classes,
-                           classify_runs_with_base(cert.certificate_base,
-                                                   cert.certificate_runs)));
+  return ((cert.certificate_base ==
+           pulse_base_from_runs(cert.certificate_runs) &&
+           cert.certificate_classes.length() ==
+           cert.certificate_runs.length()) && pulse_class_list_eqb(
+              cert.certificate_classes, classify_runs_with_base(
+                  cert.certificate_base, cert.certificate_runs)));
 }
 
 PulseParseCertificateCase::PulseCertificate

@@ -9,6 +9,7 @@ enum class Bool0;
 struct Datatypes {
   static Bool0 negb(Bool0 b);
 };
+
 enum class Bool0 { TRUE_, FALSE_ };
 template <typename I, typename A>
 concept HasEndo = requires {

@@ -59,7 +59,9 @@ concept DefsT = requires {
   } -> std::same_as<bool>;
 };
 template <typename M>
-concept T = requires { requires SymbolTypes<typename M::SymTy>; };
+concept T = requires {
+  requires SymbolTypes<typename M::SymTy>;
+};
 
 struct FunctorParamSignatureType {
   template <SymbolTypes Ty> struct DefsFn {

@@ -20,14 +20,20 @@ enum class CE;
 template <typename ptr> struct FailE;
 struct natParams;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct Nat {
   // TYPES
@@ -134,6 +140,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class AE { A0 };
 enum class BE { B0 };
 enum class CE { C0 };
@@ -158,25 +165,26 @@ using CFGEtop =
 template <Params _tcI0, typename T1>
 std::optional<Dvalue<typename _tcI0::ptr>>
 exc_of_event(const CFGEtop<typename _tcI0::ptr, T1> &e) {
-  if (std::holds_alternative<typename Sum1<
-          AE,
-          Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-               crane::obj>,
-          T1>::Inl1>(e.v())) {
+  if (std::holds_alternative<
+          typename Sum1<
+              AE, Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
+                       crane::obj>, T1>::Inl1>(e.v())) {
     return std::optional<Dvalue<typename _tcI0::ptr>>();
   } else {
-    const auto &[a0] = std::get<typename Sum1<
-        AE,
-        Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>, crane::obj>,
-        T1>::Inr1>(e.v());
+    const auto &[a0] =
+        std::get<
+            typename Sum1<
+                AE, Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
+                         crane::obj>, T1>::Inr1>(e.v());
     if (std::holds_alternative<
             typename Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
                           crane::obj>::Inl1>(a0.v())) {
       return std::optional<Dvalue<typename _tcI0::ptr>>();
     } else {
-      const auto &[a00] = std::get<
-          typename Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-                        crane::obj>::Inr1>(a0.v());
+      const auto &[a00] =
+          std::get<typename Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>,
+                                          crane::obj>, crane::obj>::Inr1>(
+              a0.v());
       if (std::holds_alternative<
               typename Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>::Inl1>(
               a00.v())) {

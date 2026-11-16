@@ -5,7 +5,6 @@
 uint64_t
 LoopifyNumbers::factorial(uint64_t n) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -45,7 +44,6 @@ LoopifyNumbers::factorial(uint64_t n) { /// CraneEnter: captures varying
 uint64_t
 LoopifyNumbers::fib(uint64_t n) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -97,10 +95,11 @@ LoopifyNumbers::fib(uint64_t n) { /// CraneEnter: captures varying parameters
   return _result;
 }
 
-uint64_t LoopifyNumbers::tribonacci_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyNumbers::tribonacci_fuel(uint64_t fuel,
+                                uint64_t n) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -219,7 +218,6 @@ uint64_t
 LoopifyNumbers::binomial(uint64_t n,
                          uint64_t k) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t k;
     uint64_t n;
@@ -285,7 +283,6 @@ uint64_t
 LoopifyNumbers::pascal(uint64_t row,
                        uint64_t col) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t col;
     uint64_t row;
@@ -342,11 +339,11 @@ LoopifyNumbers::pascal(uint64_t row,
   return _result;
 }
 
-uint64_t LoopifyNumbers::ackermann_fuel(
-    uint64_t fuel, uint64_t m,
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNumbers::ackermann_fuel(uint64_t fuel, uint64_t m,
+                               uint64_t n) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t m;
@@ -404,10 +401,11 @@ uint64_t LoopifyNumbers::ack(uint64_t m, uint64_t n) {
   return ackermann_fuel(UINT64_C(1000), m, n);
 }
 
-uint64_t LoopifyNumbers::collatz_length_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyNumbers::collatz_length_fuel(uint64_t fuel,
+                                    uint64_t n) { /// CraneEnter: captures
+                                                  /// varying parameters for
+                                                  /// each recursive call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -464,10 +462,11 @@ uint64_t LoopifyNumbers::collatz_length(uint64_t n) {
   return collatz_length_fuel(UINT64_C(1000), n);
 }
 
-uint64_t LoopifyNumbers::digitsum_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyNumbers::digitsum_fuel(uint64_t fuel,
+                              uint64_t n) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -517,10 +516,11 @@ uint64_t LoopifyNumbers::digitsum(uint64_t n) {
   return digitsum_fuel(UINT64_C(100), n);
 }
 
-uint64_t LoopifyNumbers::dec_to_bin_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyNumbers::dec_to_bin_fuel(uint64_t fuel,
+                                uint64_t n) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -575,7 +575,6 @@ uint64_t LoopifyNumbers::dec_to_bin(uint64_t n) {
 uint64_t
 LoopifyNumbers::sum_to(uint64_t n) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -612,10 +611,10 @@ LoopifyNumbers::sum_to(uint64_t n) { /// CraneEnter: captures varying parameters
   return _result;
 }
 
-uint64_t LoopifyNumbers::sum_squares(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNumbers::sum_squares(uint64_t n) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -675,10 +674,11 @@ uint64_t LoopifyNumbers::alternating_sum(bool sign, uint64_t acc, uint64_t n) {
   }
 }
 
-uint64_t LoopifyNumbers::staircase_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyNumbers::staircase_fuel(uint64_t fuel,
+                               uint64_t n) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -788,11 +788,11 @@ uint64_t LoopifyNumbers::sum_while_positive(uint64_t n) { return sum_to(n); }
 
 /// count_down_by k n counts down from n by steps of k.
 /// Tests recursion with non-standard step size.
-uint64_t LoopifyNumbers::count_down_by_fuel(
-    uint64_t fuel, uint64_t k,
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNumbers::count_down_by_fuel(uint64_t fuel, uint64_t k,
+                                   uint64_t n) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -842,10 +842,11 @@ uint64_t LoopifyNumbers::count_down_by(uint64_t k, uint64_t n) {
 }
 
 /// mixed_arith n combines multiplication and addition in recursion.
-uint64_t LoopifyNumbers::mixed_arith_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifyNumbers::mixed_arith_fuel(uint64_t fuel,
+                                 uint64_t n) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -1009,7 +1010,6 @@ uint64_t
 LoopifyNumbers::power(uint64_t b,
                       uint64_t e) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
   struct CraneEnter {
     uint64_t e;
   };
@@ -1044,11 +1044,11 @@ LoopifyNumbers::power(uint64_t b,
 }
 
 /// power_mod b e m computes (b^e) mod m efficiently.
-uint64_t LoopifyNumbers::power_mod_fuel(
-    uint64_t fuel, uint64_t b, uint64_t e,
-    uint64_t m) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyNumbers::power_mod_fuel(uint64_t fuel, uint64_t b, uint64_t e,
+                               uint64_t m) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     uint64_t e;
     uint64_t fuel;
@@ -1110,10 +1110,11 @@ uint64_t LoopifyNumbers::power_mod(uint64_t b, uint64_t e, uint64_t m) {
 }
 
 /// sum_divisors n sums all divisors of n (excluding n itself).
-uint64_t LoopifyNumbers::sum_divisors_aux(
-    uint64_t n, uint64_t k) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+uint64_t
+LoopifyNumbers::sum_divisors_aux(uint64_t n,
+                                 uint64_t k) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     uint64_t k;
   };
@@ -1178,11 +1179,15 @@ uint64_t LoopifyNumbers::sum_divisors(uint64_t n) {
 /// sum_odd_indices adds elements at odd positions (0, 2, 4...).
 /// sum_even_indices processes even positions (1, 3, 5...) by calling
 /// sum_odd_indices.
-uint64_t LoopifyNumbers::sum_odd_indices_fuel(
-    uint64_t fuel,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
+                                     const List<uint64_t> &l) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
     uint64_t fuel;
@@ -1229,8 +1234,8 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
               CraneEnter_sum_even_indices_fuel_entry{crane_raw(a10), f});
         }
       }
-    } else if (std::holds_alternative<CraneEnter_sum_even_indices_fuel_entry>(
-                   _frame)) {
+    } else if (
+        std::holds_alternative<CraneEnter_sum_even_indices_fuel_entry>(_frame)) {
       auto _f =
           std::move(std::get<CraneEnter_sum_even_indices_fuel_entry>(_frame));
       const List<uint64_t> &l0 = *_f.l0;
@@ -1256,11 +1261,15 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
   return _result;
 }
 
-uint64_t LoopifyNumbers::sum_even_indices_fuel(
-    uint64_t fuel,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyNumbers::sum_even_indices_fuel(uint64_t fuel,
+                                      const List<uint64_t> &l) { /// CraneEnter:
+                                                                 /// captures
+                                                                 /// varying
+                                                                 /// parameters
+                                                                 /// for each
+                                                                 /// recursive
+                                                                 /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
     uint64_t fuel;
@@ -1297,8 +1306,7 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
           } else {
             uint64_t f0 = f - 1;
             auto &&_sv0 = *a1;
-            if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                    _sv0.v())) {
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
               _result = UINT64_C(0);
             } else {
               const auto &[a00, a10] =
@@ -1342,9 +1350,9 @@ List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
       uint64_t f = _loop_fuel - 1;
       if (_loop_n == UINT64_C(1)) {
         auto _value = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
@@ -1391,10 +1399,11 @@ List<uint64_t> LoopifyNumbers::collatz_list(uint64_t n) {
 }
 
 /// sum_divisible_by k n sums all numbers from 1 to n divisible by k.
-uint64_t LoopifyNumbers::sum_divisible_by(
-    uint64_t k, uint64_t n) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+uint64_t
+LoopifyNumbers::sum_divisible_by(uint64_t k,
+                                 uint64_t n) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     uint64_t n;
   };

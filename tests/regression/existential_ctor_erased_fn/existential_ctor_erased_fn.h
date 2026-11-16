@@ -179,34 +179,35 @@ struct ExistentialCtorErasedFn {
 
   static uint64_t read(const dynamic &d);
   static inline const List<dynamic> items = List<dynamic>::cons(
-      dynamic::dyn(UINT64_C(7), crane::fn<uint64_t(crane::obj)>(
-                                    [](const crane::obj &n) -> uint64_t {
-                                      return crane::any_cast<uint64_t>(n);
-                                    })),
+      dynamic::dyn(
+          UINT64_C(7),
+          crane::fn<uint64_t(crane::obj)>([](const crane::obj &n) -> uint64_t {
+            return crane::any_cast<uint64_t>(n);
+          })),
       List<dynamic>::cons(
-          dynamic::dyn(true, crane::fn<uint64_t(crane::obj)>(
-                                 [](const crane::obj &b) -> uint64_t {
-                                   if (crane::any_cast<bool>(b)) {
-                                     return UINT64_C(1);
-                                   } else {
-                                     return UINT64_C(0);
-                                   }
-                                 })),
+          dynamic::dyn(
+              true, crane::fn<uint64_t(crane::obj)>(
+                  [](const crane::obj &b) -> uint64_t {
+                    if (crane::any_cast<bool>(b)) {
+                      return UINT64_C(1);
+                    } else {
+                      return UINT64_C(0);
+                    }
+                  })),
           List<dynamic>::cons(
               dynamic::dyn(
                   List<crane::obj>::cons(
-                      UINT64_C(1),
-                      List<crane::obj>::cons(
-                          UINT64_C(2),
-                          List<crane::obj>::cons(UINT64_C(3),
-                                                 List<crane::obj>::nil()))),
-                  crane_erase_fn<uint64_t>(
-                      [](const List<crane::obj> &_x) { return _x.length(); })),
+                      UINT64_C(1), List<crane::obj>::cons(
+                          UINT64_C(2), List<crane::obj>::cons(
+                              UINT64_C(3), List<crane::obj>::nil()))),
+                  crane_erase_fn<uint64_t>([](const List<crane::obj> &_x) {
+                    return _x.length();
+                  })),
               List<dynamic>::nil())));
-
-  static inline const uint64_t total = items.template fold_left<uint64_t>(
-      [](uint64_t acc, const dynamic &d) { return (acc + read(d)); },
-      UINT64_C(0));
+  static inline const uint64_t total =
+      items.template fold_left<uint64_t>([](uint64_t acc, const dynamic &d) {
+        return (acc + read(d));
+      }, UINT64_C(0));
 };
 
 #endif // INCLUDED_EXISTENTIAL_CTOR_ERASED_FN

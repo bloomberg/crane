@@ -40,8 +40,7 @@ struct LoopifyFilterFnRef {
     template <typename CraneU>
     tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
-                    _other.v())) {
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(_other.v())) {
               return Leaf{};
             } else {
               const auto &[a0, a1, a2] =
@@ -53,9 +52,9 @@ struct LoopifyFilterFnRef {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a2 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a2))
@@ -66,9 +65,9 @@ struct LoopifyFilterFnRef {
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
     static tree<A> node(tree<A> a0, A a1, tree<A> a2) {
-      return tree<A>(Node{std::make_shared<tree<A>>(std::move(a0)),
-                          std::move(a1),
-                          std::make_shared<tree<A>>(std::move(a2))});
+      return tree<A>(
+          Node{std::make_shared<tree<A>>(std::move(a0)), std::move(a1),
+               std::make_shared<tree<A>>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -120,7 +119,6 @@ struct LoopifyFilterFnRef {
   tree_rect(T2 f, F1 &&f0,
             const tree<T1> &t) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -194,7 +192,6 @@ struct LoopifyFilterFnRef {
   static tree<T1>
   filter(F0 &&f, const tree<T1> &t) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree<T1> *t;
     };
@@ -259,11 +256,10 @@ struct LoopifyFilterFnRef {
   /// Entry point that calls filter with a named function.
   static inline const tree<uint64_t> test_filter = filter<uint64_t>(
       is_positive, tree<uint64_t>::node(
-                       tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(0),
-                                            tree<uint64_t>::leaf()),
-                       UINT64_C(1),
-                       tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(2),
-                                            tree<uint64_t>::leaf())));
+          tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(0),
+                               tree<uint64_t>::leaf()), UINT64_C(1), tree<
+              uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(2),
+                              tree<uint64_t>::leaf())));
 };
 
 #endif // INCLUDED_LOOPIFY_FILTER_FN_REF

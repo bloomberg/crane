@@ -4,7 +4,9 @@
 #include <cstdint>
 
 template <typename M>
-concept T = requires { typename M::pt; };
+concept T = requires {
+  typename M::pt;
+};
 
 struct ModuleTypeRecordConcept {
   struct Impl {

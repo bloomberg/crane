@@ -108,8 +108,8 @@ struct PartialAppCarrier {
         if constexpr (crane_convertible<CraneU1, const A &>) {
           return crane_convert<CraneU1>(a);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -140,19 +140,17 @@ struct PartialAppCarrier {
 
   template <typename T1>
   static const stateT<Nat, crane_carrier_tch_6096434c9c343c6d<T1>::template c,
-                      Nat> &
-  get_st() {
+                      Nat> &get_st() {
     static const stateT<Nat, crane_carrier_tch_6096434c9c343c6d<T1>::template c,
-                        Nat>
-        v = [](const Nat &s) {
-          return box<T1, std::pair<Nat, Nat>>::box0(std::make_pair(s, s));
-        };
+                        Nat> v = [](const Nat &s) {
+                          return box<T1, std::pair<Nat, Nat>>::box0(
+                              std::make_pair(s, s));
+                        };
     return v;
   }
 
   static inline const box<noE, std::pair<Nat, Nat>> r =
       get_st<noE>()(Nat::s(Nat::s(Nat::s(Nat::o()))));
-
   static inline const bool is_three = []() {
     const auto &_sv = r;
     const auto &[a] = _sv;

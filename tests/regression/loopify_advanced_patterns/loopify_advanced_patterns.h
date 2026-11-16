@@ -149,8 +149,8 @@ struct LoopifyAdvancedPatterns {
 
   template <typename T1, typename F0, typename F1, typename F2>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, const uint64_t &>
+    std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+    std::is_invocable_r_v<T1, F2 &, const uint64_t &>
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -173,7 +173,6 @@ struct LoopifyAdvancedPatterns {
   static uint64_t sum_shapes(const List<shape> &l);
   static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
   count_by_shape(const List<shape> &l);
-
   static List<uint64_t> replace_at(uint64_t idx, uint64_t value,
                                    const List<uint64_t> &l);
 };

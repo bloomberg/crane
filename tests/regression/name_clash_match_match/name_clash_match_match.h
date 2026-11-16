@@ -102,6 +102,7 @@ struct NameClashMatchMatch {
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     return tree_rect<T1>(std::move(f), f0, t);
   }
+
   /// Returns a subtree based on a direction.
   enum class Dir { GOLEFT, GORIGHT };
 

@@ -22,8 +22,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -107,24 +106,21 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
   }
 
   template <typename CraneA0, typename CraneA1>
-  static stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>
-  bind(stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0> c1,
-       crane::fn<
-           stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>(CraneA0)>
-           c2) {
+  static stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1> bind(
+      stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0> c1, crane::fn<
+          stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>(CraneA0)> c2) {
     return stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>{
         [=, c1 = std::move(c1), c2 = std::move(c2)](const auto &s) {
           return _tcI0::template bind<std::pair<CraneA0, T1>,
                                       std::pair<CraneA1, T1>>(
               crane_container_cast<
                   typename _tcI0::template m<std::pair<CraneA0, T1>>>(
-                  c1.runStateT(s)),
-              [=](const std::pair<CraneA0, T1> &vs) {
-                const auto &[v, s0] = vs;
-                return crane_container_cast<
-                    typename _tcI0::template m<std::pair<CraneA1, T1>>>(
-                    c2(v).runStateT(s0));
-              });
+                  c1.runStateT(s)), [=](const std::pair<CraneA0, T1> &vs) {
+                    const auto &[v, s0] = vs;
+                    return crane_container_cast<
+                        typename _tcI0::template m<std::pair<CraneA1, T1>>>(
+                        c2(v).runStateT(s0));
+                  });
         }};
   }
 };
@@ -154,11 +150,12 @@ template <typename T1 = void>
 stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> twice(Nat n) {
   return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<Nat, Nat>(
       step<crane::obj>(std::move(n)), [](Nat a) {
-        return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<
-            Nat, Nat>(step<crane::obj>(std::move(a)), [](const Nat &b) {
-          return Monad_stateT<Monad_itree<crane::obj>, env>::template ret<Nat>(
-              b);
-        });
+        return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<Nat,
+                                                                         Nat>(
+            step<crane::obj>(std::move(a)), [](const Nat &b) {
+              return Monad_stateT<Monad_itree<crane::obj>, env>::template ret<
+                  Nat>(b);
+            });
       });
 }
 

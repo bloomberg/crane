@@ -2,10 +2,10 @@
 
 /// Minimal trigger: fold over a list with a conditional per-element
 /// contribution.
-uint64_t LoopifyDecltype::count_true(
-    const List<bool> &xs) { /// CraneEnter: captures varying parameters for each
-                            /// recursive call.
-
+uint64_t
+LoopifyDecltype::count_true(const List<bool> &xs) { /// CraneEnter: captures
+                                                    /// varying parameters for
+                                                    /// each recursive call.
   struct CraneEnter {
     const List<bool> *xs;
   };
@@ -44,10 +44,14 @@ uint64_t LoopifyDecltype::count_true(
 }
 
 uint64_t
-LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item>
-                                 &xs) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) { /// CraneEnter:
+                                                                      /// captures
+                                                                      /// varying
+                                                                      /// parameters
+                                                                      /// for
+                                                                      /// each
+                                                                      /// recursive
+                                                                      /// call.
   struct CraneEnter {
     const List<LoopifyDecltype::item> *xs;
   };

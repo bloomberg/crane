@@ -18,15 +18,20 @@ struct MonId;
 using iptr = crane::obj;
 using prov = List<Nat>;
 template <typename a> using Id = a;
-template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-  } && (requires {
-    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-  });
-/// Stands in for EOU_monad: the callback is handed to a {e dictionary}
+template <typename I>
+concept IPtr = requires {
+  typename I::iptr;
+} && (requires {
+  {
+    I::zero_iptr()
+  }
+  -> std::convertible_to<typename I::iptr>;
+} || requires {
+  {
+    I::zero_iptr
+  }
+  -> std::convertible_to<typename I::iptr>;
+}); /// Stands in for EOU_monad: the callback is handed to a {e dictionary}
 /// method, not to a plain polymorphic function.  A plain one does not
 /// reproduce -- see the header.
 template <typename I>
@@ -37,8 +42,7 @@ concept Mon = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind0<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };

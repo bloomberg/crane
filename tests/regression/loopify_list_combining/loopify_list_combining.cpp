@@ -15,10 +15,9 @@ List<uint64_t> LoopifyListCombining::append(const List<uint64_t> &a,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_a->v());
       auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
-      List<uint64_t> &_node =
-          (_write
-               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
+                                              List<uint64_t>>(std::move(_cell)))
+                                      : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_a = crane_raw(a1);
       continue;
@@ -44,9 +43,9 @@ List<uint64_t> LoopifyListCombining::intersperse(uint64_t sep,
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
         auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _cell1 = std::make_shared<List<uint64_t>>(
@@ -56,10 +55,10 @@ List<uint64_t> LoopifyListCombining::intersperse(uint64_t sep,
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename List<uint64_t>::Cons>(
-                      std::get<typename List<uint64_t>::Cons>(_node.v_mut())
-                          .l->v_mut())
-                      .l;
+        _write =
+            &std::get<typename List<uint64_t>::Cons>(
+                std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
         _loop_l = crane_raw(a1);
         continue;
       }
@@ -68,11 +67,15 @@ List<uint64_t> LoopifyListCombining::intersperse(uint64_t sep,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListCombining::intercalate(
-    const List<uint64_t> &sep,
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+List<uint64_t>
+LoopifyListCombining::intercalate(const List<uint64_t> &sep,
+                                  const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                                    /// captures
+                                                                    /// varying
+                                                                    /// parameters
+                                                                    /// for each
+                                                                    /// recursive
+                                                                    /// call.
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
@@ -100,8 +103,7 @@ List<uint64_t> LoopifyListCombining::intercalate(
         const auto &[a0, a1] =
             std::get<typename List<List<uint64_t>>::Cons>(ll.v());
         auto &&_sv = *a1;
-        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-                _sv.v())) {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
           _stack.emplace_back(CraneCont_Cons{a0});
@@ -117,10 +119,14 @@ List<uint64_t> LoopifyListCombining::intercalate(
   return _result;
 }
 
-List<uint64_t> LoopifyListCombining::concat(
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+List<uint64_t>
+LoopifyListCombining::concat(const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                               /// captures
+                                                               /// varying
+                                                               /// parameters
+                                                               /// for each
+                                                               /// recursive
+                                                               /// call.
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
@@ -159,10 +165,11 @@ List<uint64_t> LoopifyListCombining::concat(
   return _result;
 }
 
-List<uint64_t> LoopifyListCombining::mapcat(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifyListCombining::mapcat(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                        /// varying parameters
+                                                        /// for each recursive
+                                                        /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -219,9 +226,9 @@ List<uint64_t> LoopifyListCombining::interleave_two(const List<uint64_t> &l1,
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
         auto _value = *_loop_l1;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =
@@ -233,10 +240,10 @@ List<uint64_t> LoopifyListCombining::interleave_two(const List<uint64_t> &l1,
             (_write ? *(*_write =
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename List<uint64_t>::Cons>(
-                      std::get<typename List<uint64_t>::Cons>(_node.v_mut())
-                          .l->v_mut())
-                      .l;
+        _write =
+            &std::get<typename List<uint64_t>::Cons>(
+                std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
         _loop_l2 = crane_raw(a10);
         _loop_l1 = crane_raw(a1);
         continue;
@@ -246,11 +253,15 @@ List<uint64_t> LoopifyListCombining::interleave_two(const List<uint64_t> &l1,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListCombining::concat_sep(
-    uint64_t sep,
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-
+List<uint64_t>
+LoopifyListCombining::concat_sep(uint64_t sep,
+                                 const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                                   /// captures
+                                                                   /// varying
+                                                                   /// parameters
+                                                                   /// for each
+                                                                   /// recursive
+                                                                   /// call.
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
@@ -278,8 +289,7 @@ List<uint64_t> LoopifyListCombining::concat_sep(
         const auto &[a0, a1] =
             std::get<typename List<List<uint64_t>>::Cons>(ll.v());
         auto &&_sv = *a1;
-        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-                _sv.v())) {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
           _stack.emplace_back(CraneCont_Cons{a0});

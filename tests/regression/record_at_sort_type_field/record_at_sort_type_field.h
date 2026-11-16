@@ -19,8 +19,8 @@ struct RecordAtSortTypeField {
         if constexpr (crane_convertible<CraneU, const A &>) {
           return crane_convert<CraneU>(unwrap);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -103,7 +103,6 @@ struct RecordAtSortTypeField {
 
   static inline const pr<crane::obj, uint64_t> p =
       pr<crane::obj, uint64_t>::p(crane::obj(), UINT64_C(3));
-
   static inline const uint64_t result = []() {
     const auto &_sv = p;
     const auto &[a0, a1] = _sv;

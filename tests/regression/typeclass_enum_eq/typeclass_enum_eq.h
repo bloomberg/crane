@@ -53,7 +53,6 @@ struct TypeclassEnumEq {
 
   static inline const bool test_same =
       is_equal<ColorEq, Color>(Color::RED, Color::RED);
-
   static inline const bool test_diff =
       is_equal<ColorEq, Color>(Color::RED, Color::BLUE);
 };

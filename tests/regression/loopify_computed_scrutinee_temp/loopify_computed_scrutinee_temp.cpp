@@ -40,10 +40,10 @@ LoopifyComputedScrutineeTemp::wrap(uint64_t m,
 }
 
 uint64_t LoopifyComputedScrutineeTemp::walk(
-    uint64_t n, const LoopifyComputedScrutineeTemp::lst
-                    &l) { /// CraneEnter: captures varying parameters for each
-                          /// recursive call.
-
+    uint64_t n,
+    const LoopifyComputedScrutineeTemp::lst &l) { /// CraneEnter: captures
+                                                  /// varying parameters for
+                                                  /// each recursive call.
   struct CraneEnter {
     LoopifyComputedScrutineeTemp::lst l;
     uint64_t n;
@@ -77,9 +77,8 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
                 typename LoopifyComputedScrutineeTemp::lst::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(
-                  _sv.v());
+          const auto &[a0, a1] = std::get<
+              typename LoopifyComputedScrutineeTemp::lst::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{l, a0});
           _stack.emplace_back(CraneEnter{*a1, m});
         }

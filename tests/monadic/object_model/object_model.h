@@ -148,8 +148,8 @@ template <typename Err> struct ExceptE {
       if constexpr (crane_convertible<CraneU, const Err &>) {
         return crane_convert<CraneU>(a0);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -250,10 +250,9 @@ template <typename S> struct Account {
 
   // ACCESSORS
   template <typename CraneU> operator Account<CraneU>() const {
-    return {
-        crane_convert<crane::fn<int64_t(std::monostate)>>(getBalance),
-        crane_convert<crane::fn<int64_t(uint64_t)>>(deposit),
-        crane_convert<crane::fn<std::optional<int64_t>(int64_t)>>(withdraw)};
+    return {crane_convert<crane::fn<int64_t(std::monostate)>>(getBalance),
+            crane_convert<crane::fn<int64_t(uint64_t)>>(deposit),
+            crane_convert<crane::fn<std::optional<int64_t>(int64_t)>>(withdraw)};
   }
 };
 
@@ -269,14 +268,14 @@ template <typename S> struct BankAccountCollection {
 };
 
 std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext();
-std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>, int64_t>
-testtoST2_ext();
-std::pair<std::pair<std::pair<int64_t, int64_t>, bool>, int64_t>
-acc_test1_ext();
-std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
-acc_test2_ext();
-std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
-bankacc_test1_ext();
+std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>,
+          int64_t> testtoST2_ext();
+std::pair<std::pair<std::pair<int64_t, int64_t>, bool>,
+          int64_t> acc_test1_ext();
+std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
+          int64_t> acc_test2_ext();
+std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
+          int64_t> bankacc_test1_ext();
 
 inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;

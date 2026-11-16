@@ -101,7 +101,7 @@ public:
 struct IfBranchFunctionParams {
   template <typename F1, typename F2>
     requires std::is_invocable_r_v<Nat, F1 &, const Nat &> &&
-             std::is_invocable_r_v<Nat, F2 &, const Nat &>
+    std::is_invocable_r_v<Nat, F2 &, const Nat &>
   static Nat h(Bool0 b, F1 &&f, F2 &&g, const Nat &x0_) {
     switch (b) {
     case Bool0::TRUE_: {
@@ -115,10 +115,11 @@ struct IfBranchFunctionParams {
     }
   }
 
-  static inline const Nat run = h(
-      Bool0::FALSE_, [](const Nat &x) { return Nat::s(x); },
-      [](const Nat &x) { return x.add(Nat::s(Nat::s(Nat::o()))); },
-      Nat::s(Nat::o()));
+  static inline const Nat run = h(Bool0::FALSE_, [](const Nat &x) {
+    return Nat::s(x);
+  }, [](const Nat &x) {
+    return x.add(Nat::s(Nat::s(Nat::o())));
+  }, Nat::s(Nat::o()));
 };
 
 #endif // INCLUDED_IF_BRANCH_FUNCTION_PARAMS

@@ -9,6 +9,7 @@ enum class Comparison;
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
+
 enum class Comparison { EQ, LT, GT };
 
 /// A user inductive called Comparison and the standard library's

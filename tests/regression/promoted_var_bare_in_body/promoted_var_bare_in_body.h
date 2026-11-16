@@ -17,18 +17,31 @@ template <typename ptr, typename iptr, typename I> struct ToDvalueBase;
 struct natParams;
 using ptr = crane::obj;
 using iptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-    typename I::iptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+  typename I::iptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+}) &&
+  (requires {
+    {
+      I::zeroi()
+    }
+    -> std::convertible_to<typename I::iptr>;
   } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  }) && (requires {
-    { I::zeroi() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zeroi } -> std::convertible_to<typename I::iptr>;
+    {
+      I::zeroi
+    }
+    -> std::convertible_to<typename I::iptr>;
   });
 
 struct Nat {
@@ -169,13 +182,13 @@ template <typename ptr, typename iptr, typename I> struct ToDvalueBase {
 /// rather than an instance; its body builds a dvalue_base and binds an
 /// iptr.
 template <Params _tcI0>
-ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, typename _tcI0::iptr>
-to_iptr(const typename _tcI0::iptr &) {
+ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr,
+             typename _tcI0::iptr> to_iptr(const typename _tcI0::iptr &) {
   return ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr,
                       typename _tcI0::iptr>{[](const typename _tcI0::iptr &x) {
-    return Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr>::dvalue_iptr(
-        x);
-  }};
+                        return Dvalue_base<typename _tcI0::ptr,
+                                           typename _tcI0::iptr>::dvalue_iptr(x);
+                      }};
 }
 
 struct natParams {
@@ -191,8 +204,8 @@ static_assert(Params<natParams>);
 
 struct PromotedVarBareInBody {
   static inline const Dvalue_base<typename natParams::ptr,
-                                  typename natParams::iptr>
-      run = to_iptr<natParams>(Nat::o()).tdb(
+                                  typename natParams::iptr> run =
+      to_iptr<natParams>(Nat::o()).tdb(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
 

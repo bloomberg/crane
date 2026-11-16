@@ -25,7 +25,7 @@ struct FunctorParamCustomList {
         return true;
       } else {
         const auto &x = s.front();
-        std::deque<typename R::Sigma> xs(s.begin() + 1, s.end());
+        std::deque<typename R::Sigma> xs(s.begin()+1, s.end());
         return (R::ok(x) && all_ok(xs));
       }
     }

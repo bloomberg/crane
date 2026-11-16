@@ -14,7 +14,6 @@
 #include "Number.h"
 
 namespace Nat {
-
 using t = uint64_t;
 inline constexpr uint64_t zero = UINT64_C(0);
 inline constexpr uint64_t one = UINT64_C(1);
@@ -72,7 +71,6 @@ uint64_t land(uint64_t a, uint64_t b);
 uint64_t lor(uint64_t a, uint64_t b);
 uint64_t ldiff(uint64_t a, uint64_t b);
 uint64_t lxor(uint64_t a, uint64_t b);
-
 } // namespace Nat
 
 #endif // INCLUDED_NAT

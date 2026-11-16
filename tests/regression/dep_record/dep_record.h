@@ -100,15 +100,24 @@ concept Magma = requires {
           std::declval<typename I::carrier>())
   } -> std::convertible_to<typename I::carrier>;
 };
-template <typename
-I>concept Monoid = requires {
-    typename I::m_carrier;
-    { I::m_op(std::declval<typename I::m_carrier>(), std::declval<typename I::m_carrier>()) } -> std::convertible_to<typename I::m_carrier>;
-  } && (requires {
-    { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
-  } || requires {
-    { I::m_id } -> std::convertible_to<typename I::m_carrier>;
-  });
+template <typename I>
+concept Monoid = requires {
+  typename I::m_carrier;
+  {
+    I::m_op(std::declval<typename I::m_carrier>(),
+            std::declval<typename I::m_carrier>())
+  } -> std::convertible_to<typename I::m_carrier>;
+} && (requires {
+  {
+    I::m_id()
+  }
+  -> std::convertible_to<typename I::m_carrier>;
+} || requires {
+  {
+    I::m_id
+  }
+  -> std::convertible_to<typename I::m_carrier>;
+});
 
 struct DepRecord {
   using carrier = crane::obj;
@@ -168,19 +177,20 @@ struct DepRecord {
   }
 
   static inline const uint64_t test_fold_add =
-      crane::any_cast<uint64_t>(mfold<nat_monoid>(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
+      crane::any_cast<uint64_t>(
+          mfold<nat_monoid>(
               List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))))));
+                  UINT64_C(1), List<uint64_t>::cons(
+                      UINT64_C(2), List<uint64_t>::cons(
+                          UINT64_C(3), List<uint64_t>::cons(
+                              UINT64_C(4), List<uint64_t>::nil()))))));
   static inline const uint64_t test_fold_mul =
-      crane::any_cast<uint64_t>(mfold<nat_mul_monoid>(List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
+      crane::any_cast<uint64_t>(
+          mfold<nat_mul_monoid>(List<uint64_t>::cons(
+                                    UINT64_C(2), List<uint64_t>::cons(
+                                        UINT64_C(3), List<uint64_t>::cons(
+                                            UINT64_C(4),
+                                            List<uint64_t>::nil())))));
   enum class Tag { TNAT, TBOOL };
 
   template <typename T1> static T1 tag_rect(T1 f, T1 f0, Tag t) {

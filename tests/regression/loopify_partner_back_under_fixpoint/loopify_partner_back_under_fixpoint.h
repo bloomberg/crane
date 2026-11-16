@@ -155,7 +155,7 @@ struct LoopifyPartnerBackUnderFixpoint {
                   std::atomic_thread_fence(std::memory_order_acquire);
                   auto _lp = _alt->ts.get();
                   while (std::holds_alternative<typename List<tree>::Cons>(
-                      _lp->v())) {
+                             _lp->v())) {
                     auto &_lc =
                         std::get<typename List<tree>::Cons>(_lp->v_mut());
                     _stack.push_back(std::make_shared<tree>(std::move(_lc.a)));

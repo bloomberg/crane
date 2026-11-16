@@ -2,7 +2,6 @@
 #define INCLUDED_ASCII
 
 namespace Ascii {
-
 struct Ascii;
 
 struct Ascii {
@@ -25,7 +24,6 @@ struct Ascii {
     return {a0, a1, a2, a3, a4, a5, a6, a7};
   }
 };
-
 } // namespace Ascii
 
 #endif // INCLUDED_ASCII

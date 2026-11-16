@@ -133,8 +133,7 @@ struct LoopifyTopLevelCallBinding {
           if (_alt->kids && _alt->kids.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->kids.get();
-            while (
-                std::holds_alternative<typename List<cell>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<cell>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<cell>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<cell>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -187,15 +186,11 @@ struct LoopifyTopLevelCallBinding {
   /// A chain n cells deep, each holding k.
   static cell chain(uint64_t n, uint64_t k);
   static inline const cell wide = cell::mkcell(
-      UINT64_C(1),
-      List<cell>::cons(
-          cell::mkcell(UINT64_C(2), List<cell>::nil()),
-          List<cell>::cons(
-              cell::mkcell(
-                  UINT64_C(3),
-                  List<cell>::cons(cell::mkcell(UINT64_C(4), List<cell>::nil()),
-                                   List<cell>::nil())),
-              List<cell>::nil())));
+      UINT64_C(1), List<cell>::cons(
+          cell::mkcell(UINT64_C(2), List<cell>::nil()), List<cell>::cons(
+              cell::mkcell(UINT64_C(3), List<cell>::cons(
+                               cell::mkcell(UINT64_C(4), List<cell>::nil()),
+                               List<cell>::nil())), List<cell>::nil())));
 };
 
 #endif // INCLUDED_LOOPIFY_TOP_LEVEL_CALL_BINDING

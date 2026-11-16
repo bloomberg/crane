@@ -124,7 +124,6 @@ struct LoopifyPolymorphic {
   static uint64_t
   poly_length(const List<T1> &l) { /// CraneEnter: captures varying parameters
                                    /// for each recursive call.
-
     struct CraneEnter {
       const List<T1> *l;
     };
@@ -162,7 +161,6 @@ struct LoopifyPolymorphic {
   static List<T1>
   poly_reverse(const List<T1> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const List<T1> *l;
     };
@@ -265,10 +263,9 @@ struct LoopifyPolymorphic {
           const auto &[a0, a1] =
               std::get<typename List<T1>::Cons>(_loop_l->v());
           auto _cell = typename List<T1>::Cons(a0, nullptr);
-          List<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          List<T1> &_node = (
+              _write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           _loop_n = n_;
@@ -313,8 +310,9 @@ struct LoopifyPolymorphic {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n = ((
-              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+          _loop_n =
+              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
+                                                  : (_loop_n - UINT64_C(1))));
         }
       }
     }
@@ -335,10 +333,9 @@ struct LoopifyPolymorphic {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
           auto _cell = typename List<T1>::Cons(a0, nullptr);
-          List<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          List<T1> &_node = (
+              _write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
@@ -409,8 +406,7 @@ struct LoopifyPolymorphic {
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
-              &std::get<typename List<std::pair<T1, T2>>::Cons>(_node.v_mut())
-                   .l;
+              &std::get<typename List<std::pair<T1, T2>>::Cons>(_node.v_mut()).l;
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);
           continue;
@@ -421,11 +417,10 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename T2>
-  static std::pair<List<T1>, List<T2>>
-  poly_unzip(const List<std::pair<T1, T2>>
-                 &l) { /// CraneEnter: captures varying parameters for each
-                       /// recursive call.
-
+  static std::pair<List<T1>, List<T2>> poly_unzip(
+      const List<std::pair<T1,
+                           T2>> &l) { /// CraneEnter: captures varying
+                                      /// parameters for each recursive call.
     struct CraneEnter {
       const List<std::pair<T1, T2>> *l;
     };
@@ -448,8 +443,7 @@ struct LoopifyPolymorphic {
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<std::pair<T1, T2>> &l = *_f.l;
-        if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
-                l.v())) {
+        if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T2>::nil());
         } else {
           const auto &[a0, a1] =
@@ -475,7 +469,6 @@ struct LoopifyPolymorphic {
   poly_partition(F0 &&p,
                  const List<T1> &l) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const List<T1> *l;
     };

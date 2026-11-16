@@ -94,8 +94,7 @@ public:
   template <typename CraneU>
   Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<CraneU>::Some>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Option<CraneU>::Some>(_other.v())) {
             const auto &[a] =
                 std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
@@ -142,8 +141,8 @@ template <typename X> struct ReqA {
       if constexpr (crane_convertible<CraneU, const X &>) {
         return crane_convert<CraneU>(a0);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -155,8 +154,9 @@ template <typename X> struct ReqA {
 /// Rank 2: applies its handler at two types, so a monomorphic argument could
 /// not stand in for it.
 template <typename F0> Option<Nat> useTwice(F0 &&f) {
-  auto &&_sv = f(ReqA<Nat>::mka(
-      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))));
+  auto &&_sv =
+      f(ReqA<Nat>::mka(
+            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))));
   if (std::holds_alternative<typename Option<Nat>::Some>(_sv.v())) {
     const auto &[a0] = std::get<typename Option<Nat>::Some>(_sv.v());
     auto &&_sv0 = f(ReqA<Bool0>::mka(Bool0::TRUE_));

@@ -18,10 +18,9 @@ DeepTailRecursionOverflow::build(uint64_t n,
 }
 
 uint64_t DeepTailRecursionOverflow::total_of(
-    const DeepTailRecursionOverflow::chain
-        &c) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const DeepTailRecursionOverflow::chain &c) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     const DeepTailRecursionOverflow::chain *c;
   };

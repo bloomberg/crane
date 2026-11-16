@@ -241,9 +241,9 @@ struct F {
 
 struct PromotedAliasOutOfLine {
   static inline const Nat use =
-      Other::size0(F::size(Nat::o()))
-          .add(F::template lst<std::monostate>(std::monostate{},
-                                               List<Dval<iptr>>::nil()));
+      Other::size0(F::size(Nat::o())).add(
+          F::template lst<std::monostate>(std::monostate{},
+                                          List<Dval<iptr>>::nil()));
 };
 
 template <typename T1> Nat F::lst(const T1 &, const List<Dval<iptr>> &l) {

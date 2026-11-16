@@ -288,13 +288,13 @@ struct MemSafetyProbe13 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -347,10 +347,9 @@ struct MemSafetyProbe13 {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -376,9 +375,9 @@ struct MemSafetyProbe13 {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<T1>::Mycons(f(a0), nullptr);
           mylist<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+              (_write ? *(*_write =
+                              std::make_shared<mylist<T1>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<T1>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -490,7 +489,9 @@ struct MemSafetyProbe13 {
     auto [vals, fns] = tree_vals_and_fns(std::move(t));
     uint64_t val_sum = sum_list(std::move(vals));
     uint64_t fn_sum = sum_list(fns.template map_list<uint64_t>(
-        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
+                                   [](const crane::fn<uint64_t(uint64_t)> &f) {
+                                     return f(UINT64_C(0));
+                                   }));
     return (val_sum + fn_sum);
   }();
   static inline const uint64_t test_double_match = []() {
@@ -512,7 +513,9 @@ struct MemSafetyProbe13 {
     mylist<crane::fn<uint64_t(uint64_t)>> fns =
         depth_fns(std::move(t), UINT64_C(0));
     return sum_list(fns.template map_list<uint64_t>(
-        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
+                        [](const crane::fn<uint64_t(uint64_t)> &f) {
+                          return f(UINT64_C(0));
+                        }));
   }();
 
   /// TEST 5: Transform a tree by replacing each value with a
@@ -738,7 +741,9 @@ struct MemSafetyProbe13 {
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = flatten_tree_fns(std::move(t));
     return sum_list(fns.template map_list<uint64_t>(
-        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(1)); }));
+                        [](const crane::fn<uint64_t(uint64_t)> &f) {
+                          return f(UINT64_C(1));
+                        }));
   }();
 };
 

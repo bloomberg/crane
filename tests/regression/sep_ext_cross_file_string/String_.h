@@ -11,7 +11,6 @@
 #include "Ascii.h"
 
 namespace String {
-
 struct String;
 
 struct String {
@@ -96,7 +95,6 @@ public:
     return std::move(*_root);
   }
 };
-
 } // namespace String
 
 #endif // INCLUDED_STRING_

@@ -6,14 +6,14 @@
 ///
 /// Nat SiblingModuleSameInductive::A::get(
 /// const SiblingModuleSameInductive::A::t &x)
-Nat SiblingModuleSameInductive::A::get(
-    const SiblingModuleSameInductive::A::t &x) {
+Nat
+SiblingModuleSameInductive::A::get(const SiblingModuleSameInductive::A::t &x) {
   const auto &[a0] = x;
   return a0;
 }
 
-bool SiblingModuleSameInductive::B::get(
-    const SiblingModuleSameInductive::B::t &x) {
+bool
+SiblingModuleSameInductive::B::get(const SiblingModuleSameInductive::B::t &x) {
   const auto &[a0] = x;
   return a0;
 }

@@ -104,9 +104,8 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
-            const auto &[e] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
-                    _other.v());
+            const auto &[e] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v());
             return Inl1{[&]() -> E {
               if constexpr (crane_convertible<E, const CraneU0 &>) {
                 return crane_convert<E>(e);
@@ -116,9 +115,8 @@ public:
               }
             }()};
           } else {
-            const auto &[f] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
-                    _other.v());
+            const auto &[f] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(_other.v());
             return Inr1{[&]() -> F {
               if constexpr (crane_convertible<F, const CraneU1 &>) {
                 return crane_convert<F>(f);
@@ -163,8 +161,8 @@ template <typename X> struct ReqA {
       if constexpr (crane_convertible<CraneU, const X &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -185,8 +183,8 @@ template <typename X> struct ReqB {
       if constexpr (crane_convertible<CraneU, const X &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }

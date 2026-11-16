@@ -95,12 +95,13 @@ struct UnitFieldCallAsValue {
   };
 
   [[gnu::used]] static inline const debug_globals globals_object =
-      debug_globals{[](const Nat &) { return std::monostate{}; },
-                    [](std::monostate) { return Nat::o(); }};
+      debug_globals{[](const Nat &) {
+        return std::monostate{};
+      }, [](std::monostate) { return Nat::o(); }};
   static std::pair<Nat, std::monostate> update(const Nat &gs);
   static inline const bool is_three =
-      update(Nat::s(Nat::s(Nat::s(Nat::o()))))
-          .first.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+      update(Nat::s(Nat::s(Nat::s(Nat::o())))).first.eqb(
+          Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
 
 #endif // INCLUDED_UNIT_FIELD_CALL_AS_VALUE
