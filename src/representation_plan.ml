@@ -42,9 +42,9 @@ let at_binding ty =
 (* [scope] under the binders [ids], innermost first, each planned at the
    conversion of its Core type. *)
 let push kind ids scope =
-  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_binder_name x;
-                                                 eb_type = ty;
-                                                 eb_role = Lexenv.Value}) ids) scope.lex;
+  { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.id = Core_util.id_of_binder_name x;
+                                                 type_ = ty;
+                                                 role = Lexenv.Value}) ids) scope.lex;
     planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
     kinds = List.map (fun _ -> kind) ids @ scope.kinds }
 
@@ -170,7 +170,7 @@ let pattern_binders scope ~typ ~scrut cname ids =
    what the branch pins down, then every field a box that is not a list where
    the scrutinee is a boxed custom list. *)
 let custom_pattern_binders scope ~(cs : Translation_match_types.custom_scrutinee) ~ty ~scrut cname ids =
-  let fix_a_fired = cs.Translation_match_types.cs_pair_any_cast in
+  let fix_a_fired = cs.Translation_match_types.pair_any_cast in
   let scrut_core_typ =
     match Option.bind (scrutinee_binder scope.lex scrut) (Lexenv.type_opt scope.lex) with
     | Some t when not (core_type_contains_erased t) -> t
@@ -184,7 +184,7 @@ let custom_pattern_binders scope ~(cs : Translation_match_types.custom_scrutinee
   let planned = if fix_a_fired then List.map (fun p -> pin p Any) planned else planned in
   let planned = pinned_fields scope ~typ:ty ~scrut cname planned in
   let elems_are_any =
-    (cs.Translation_match_types.cs_wrapped || cs.Translation_match_types.cs_magic)
+    (cs.Translation_match_types.wrapped || cs.Translation_match_types.magic)
     && match ty with Core.Type.Global_app {head = g;
                                            type_arguments = _ :: _; _} -> Type_util.is_custom_list_global g | _ -> false
   in
@@ -250,7 +250,7 @@ let region ~outer body =
        after a custom match, before any other) declares its fields at the
        types they are bound at, pinned by nothing: as statements, with a
        dependent parameter's field retyped as erased; in an expression, not
-       ([pr_bound_boxed]).  The body is planned at the statement form's. *)
+       ([bound_boxed]).  The body is planned at the statement form's. *)
     | Core.Expr.Match {scrutinee_type = ty;
                        scrutinee = scrut;
                        branches = ([|{Core.Match.Branch.binders = ids; body = body; _}|] as branches);
@@ -262,7 +262,7 @@ let region ~outer body =
       List.iteri
         (fun i (r, b) ->
           found :=
-            (Core_binder.Branch (occ, 0), i, {pr_boxed = boxed r; pr_bound_boxed = boxed b})
+            (Core_binder.Branch (occ, 0), i, {boxed = boxed r; bound_boxed = boxed b})
             :: !found )
         (List.combine retyped bound);
       let inner = push Binder_kind.Pattern (List.rev ids) scope in
@@ -293,11 +293,11 @@ let region ~outer body =
               let field_planned = fields r ids in
               List.iteri
                 (fun i p ->
-                  let pr_bound_boxed =
+                  let bound_boxed =
                     match List.nth_opt ids i with Some (_, t) -> boxed (at_binding t) | None -> false
                   in
                   found :=
-                    (Core_binder.Branch (occ, bi), i, {pr_boxed = boxed p; pr_bound_boxed})
+                    (Core_binder.Branch (occ, bi), i, {boxed = boxed p; bound_boxed})
                     :: !found )
                 field_planned;
               {inner with planned = List.rev field_planned @ scope.planned}
@@ -517,10 +517,10 @@ let region ~outer body =
       else Array.iter (walk scope) defs
     (* A read: whatever its binder is planned. *)
     | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
-      let rd_kind = Option.default Binder_kind.Outer (List.nth_opt scope.kinds (i - 1)) in
-      reads := (occ, {rd_boxed = boxed (planned scope i);
-                      rd_kind;
-                      rd_type = Option.map fst (planned scope i)}) :: !reads
+      let kind = Option.default Binder_kind.Outer (List.nth_opt scope.kinds (i - 1)) in
+      reads := (occ, {boxed = boxed (planned scope i);
+                      Translation_state.Planned_read.kind;
+                      type_ = Option.map fst (planned scope i)}) :: !reads
     | e -> Core_util.ast_iter (walk scope) e
   in
   let depth = Lexenv.depth outer in
@@ -564,7 +564,7 @@ let check ?(as_bound = false) ~site ~field ~live () =
   in
   match List.find_opt (fun (s, f, _) -> Int.equal f field && Core_binder.equal_site s site)
     (!tctx).lexical.representation with
-  | Some (_, _, {pr_boxed; pr_bound_boxed}) ->
+  | Some (_, _, {boxed = pr_boxed; bound_boxed = pr_bound_boxed}) ->
     let pr_boxed = if as_bound then pr_bound_boxed else pr_boxed in
     let agrees = pr_boxed = live in
     Probe.hit "repr-plan" (fun () ->

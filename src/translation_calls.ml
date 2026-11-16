@@ -22,30 +22,30 @@ module IntSet = Escape.IntSet
     as Core elaborated it, and what planning its C++ added; see
     {!plan_call}. *)
 type call_plan = {
-  cp_instantiated : Elaborated_call.instantiated;
+  instantiated : Elaborated_call.instantiated;
       (** The call's semantic half, decided before any of the C++ below. *)
-  cp_expected_result : Cpp_ir.Lowered.Type.t option;
+  expected_result : Cpp_ir.Lowered.Type.t option;
       (** The C++ type the call is expected to produce: the position's, with
           a family it erased refined from what the arguments state, or, where
           the position states none, the arguments' or the enclosing
           function's return type. *)
-  cp_instance_type_args : Cpp_ir.Lowered.Type.t option list;
+  instance_type_args : Cpp_ir.Lowered.Type.t option list;
       (** The template argument each class-instance argument is passed as. *)
-  cp_instance_families : (Cpp_ir.Lowered.Type.t * Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) list;
+  instance_families : (Cpp_ir.Lowered.Type.t * Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) list;
       (** The families the call's instances were found to have
           ({!instance_family_binding}); the slots their
           arguments are generated against erase them the same way. *)
-  cp_tvars : Id.t list;
+  tvars : Id.t list;
       (** The enclosing declaration's type variable names. *)
-  cp_concrete_tvar_type : Cpp_ir.Lowered.Type.t option;
+  concrete_tvar_type : Cpp_ir.Lowered.Type.t option;
       (** For a call with no written type arguments and excess value
           arguments, the concrete type of its polymorphic result: the excess
           arguments' types to the enclosing function's return type. *)
-  cp_instance_promoted : (Id.t * Cpp_ir.Lowered.Type.t) list;
+  instance_promoted : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** Promoted variables bound to concrete C++ types by the concrete
           instances the call passes, so that constructors in its arguments
           use those types instead of [std::any]. *)
-  cp_result_tvar_map : (Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) Lazy.t;
+  result_tvar_map : (Id.t list * (Id.t * Cpp_ir.Lowered.Type.t) list) Lazy.t;
       (** The callee's variables as the call's expected result instantiates
           them, read for a parameter the substitution left erased. *)
 }
@@ -746,13 +746,13 @@ let written_at_variables id (by_var : (int * Cpp_ir.Lowered.Type.t) list) =
     template application planned against it, and each scheme variable's
     written C++ type. *)
 type lowered_call = {
-  lc_callee : GlobRef.t;
-  lc_plan : call_plan;
-  lc_callee_type : Cpp_ir.Lowered.Type.t;
-  lc_written : Core_util.Var_types.t;
-  lc_abi : Callable_abi.t;
-  lc_application : Template_application.t;
-  lc_written_by_var : (Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
+  callee : GlobRef.t;
+  plan : call_plan;
+  callee_type : Cpp_ir.Lowered.Type.t;
+  written : Core_util.Var_types.t;
+  abi : Callable_abi.t;
+  application : Template_application.t;
+  written_by_var : (Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
 }
 
 (** [call_type_args ~caller ?expected_ty env id plan args] -- the type
@@ -766,7 +766,7 @@ type lowered_call = {
 let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
-    cp_instantiated =
+    instantiated =
       {
         Elaborated_call.call =
           {Elaborated_call.primary = primary_core_args; regular = regular_core_args; _} as call;
@@ -777,10 +777,10 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
         subst_index_of_orig;
         _
       };
-    cp_instance_type_args = typeclass_type_args;
-    cp_tvars = tvars;
-    cp_concrete_tvar_type = concrete_tvar_type;
-    cp_result_tvar_map = result_tvar_map;
+    instance_type_args = typeclass_type_args;
+    tvars = tvars;
+    concrete_tvar_type = concrete_tvar_type;
+    result_tvar_map = result_tvar_map;
     _
   } = plan in
   let leading_params = Elaborated_call.leading_params call in
@@ -1403,13 +1403,13 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
     @ by_parameter
   in
   {
-    lc_callee = id;
-    lc_plan = plan;
-    lc_callee_type = ty;
-    lc_written = tys;
-    lc_abi = abi;
-    lc_application = application;
-    lc_written_by_var = written_tvar_args;
+    callee = id;
+    plan = plan;
+    callee_type = ty;
+    written = tys;
+    abi = abi;
+    application = application;
+    written_by_var = written_tvar_args;
   }
 
 (** The callee [id]'s type variables as the type [expected] that its result
@@ -1923,30 +1923,30 @@ let plan_call ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Ela
              | None -> current_cpp_return_type () ) ) )
   in
   {
-    cp_instantiated = inst;
-    cp_expected_result = expected_result;
-    cp_instance_type_args = typeclass_type_args;
-    cp_instance_families = instance_families;
-    cp_tvars = tvars;
-    cp_concrete_tvar_type = concrete_tvar_type;
-    cp_instance_promoted = instance_promoted_map;
-    cp_result_tvar_map = result_tvar_map
+    instantiated = inst;
+    expected_result = expected_result;
+    instance_type_args = typeclass_type_args;
+    instance_families = instance_families;
+    tvars = tvars;
+    concrete_tvar_type = concrete_tvar_type;
+    instance_promoted = instance_promoted_map;
+    result_tvar_map = result_tvar_map
   }
 
 (** Where the [i]th regular argument of a call is generated: the parameter
-    it is passed at ([ap_index] of the unsubstituted list, [ap_param] its
+    it is passed at ([index] of the unsubstituted list, [param] its
     substituted Core type), the C++ type it is generated against
-    ([ap_expected]), and the return type in force while it is ([ap_ret]),
+    ([expected]), and the return type in force while it is ([ret]),
     with what {!gen_call_args} reads of these afterwards. *)
 type argument_position = {
-  ap_index : Param_pos.orig Param_pos.pos;
-  ap_param : Core.Type.t option;
-  ap_expected : Cpp_ir.Lowered.Type.t option;
-  ap_ret : Cpp_ir.Lowered.Type.t option;
-  ap_tvar_erased : bool;
-  ap_written_by_call : bool;
-  ap_deduced_callable : bool;
-  ap_expected_subst : Cpp_ir.Lowered.Type.t option;
+  index : Param_pos.orig Param_pos.pos;
+  param : Core.Type.t option;
+  expected : Cpp_ir.Lowered.Type.t option;
+  ret : Cpp_ir.Lowered.Type.t option;
+  tvar_erased : bool;
+  written_by_call : bool;
+  deduced_callable : bool;
+  expected_subst : Cpp_ir.Lowered.Type.t option;
 }
 
 (** Whether the variable [j], read at [occ], holds a function, by the C++
@@ -1969,7 +1969,7 @@ let local_callable env j occ =
     occ] says whether the variable [j] read at [occ] holds a function. *)
 let argument_position ~local_callable env id plan i core_arg =
   let {
-    cp_instantiated =
+    instantiated =
       {
         Elaborated_call.call = {Elaborated_call.callee_type = fn_core_ty; _} as call;
         tys;
@@ -1978,8 +1978,8 @@ let argument_position ~local_callable env id plan i core_arg =
         subst_index_of_orig;
         _
       };
-    cp_instance_families = instance_families;
-    cp_result_tvar_map = result_tvar_map;
+    instance_families = instance_families;
+    result_tvar_map = result_tvar_map;
     _
   } = plan in
   let leading_params = Elaborated_call.leading_params call in
@@ -2265,14 +2265,14 @@ let argument_position ~local_callable env id plan i core_arg =
         current_cpp_return_type ()
       | t -> t
   in
-  { ap_index = param_index;
-    ap_param = param_core_ty;
-    ap_expected = arg_expected_ty;
-    ap_ret = ret;
-    ap_tvar_erased = param_tvar_erased;
-    ap_written_by_call = param_written_by_call;
-    ap_deduced_callable = deduced_callable;
-    ap_expected_subst = param_expected_subst () }
+  { index = param_index;
+    param = param_core_ty;
+    expected = arg_expected_ty;
+    ret = ret;
+    tvar_erased = param_tvar_erased;
+    written_by_call = param_written_by_call;
+    deduced_callable = deduced_callable;
+    expected_subst = param_expected_subst () }
 
 (** [lower_call ~caller ~slot ?expected_ty env use args]: the call [use]
     [args] in the declaration [caller], lowered against its callee before any

@@ -20,7 +20,7 @@ let declare s ty =
   Table.add_type (r s) ty;
   Core.Expr.Global (Core.Global_use.monomorphic (r s))
 
-let binder ?(role = Lexenv.Value) s ty = {Lexenv.eb_id = Id.of_string s; eb_type = ty; eb_role = role}
+let binder ?(role = Lexenv.Value) s ty = {Lexenv.id = Id.of_string s; type_ = ty; role = role}
 
 let elaborate ?(lex = Lexenv.empty) f args =
   Core_elaborate.elaborate_arguments ~lex (Core.Global_use.monomorphic f) args

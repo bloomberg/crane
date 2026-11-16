@@ -170,8 +170,8 @@ let () =
     (Core_elaborate.roles t closed 3 = Some [Elaborated_call.Dictionary; Regular; Excess]);
   let lex =
     Lexenv.push
-      [ {Lexenv.eb_id = Id.of_string "y"; eb_type = nat; eb_role = Lexenv.Value};
-        {eb_id = Id.of_string "inst"; eb_type = cls; eb_role = Dictionary} ]
+      [ {Lexenv.id = Id.of_string "y"; type_ = nat; role = Lexenv.Value};
+        {id = Id.of_string "inst"; type_ = cls; role = Dictionary} ]
       Lexenv.empty
   in
   let args_closed = [inst (); c; y ()] and args_open = [inst (); y (); y ()] in

@@ -42,11 +42,11 @@ let collect_typeclass_param_ids ty =
   match ty with Core.Type.Arrow _ -> aux [] 0 ty | _ -> []
 
 (** A type variable that really denotes an associated type of a type-class
-    instance parameter: [htp_tvar] stands for [typename <htp_instance>::<htp_field>]. *)
+    instance parameter: [tvar] stands for [typename <instance>::<field>]. *)
 type hkt_tvar_position = {
-  htp_tvar : int;  (** the Core type variable's index *)
-  htp_instance : Cpp_ir.Lowered.Type.t;  (** always an {!Cpp_ir.Type.Instance} *)
-  htp_field : Id.t;  (** the class's type parameter the variable fills *)
+  tvar : int;  (** the Core type variable's index *)
+  instance : Cpp_ir.Lowered.Type.t;  (** always an {!Cpp_ir.Type.Instance} *)
+  field : Id.t;  (** the class's type parameter the variable fills *)
 }
 
 (** The type variables of a Core arrow type that stand for a higher-kinded
@@ -75,10 +75,10 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
             match (List.nth_opt type_args pos, List.nth_opt ip_vars pos) with
             | ( Some (Core.Type.Variable {variable = j; _} | Core.Type.Variable_app {head = j; _}),
                 Some var_name ) ->
-              { htp_tvar = j;
-                htp_instance =
+              { tvar = j;
+                instance =
                   Cpp_ir.Type.Instance (tc_instance_id (number i), class_ref);
-                htp_field = var_name }
+                field = var_name }
               :: acc
             | _ -> acc )
           acc
@@ -103,7 +103,7 @@ let type_arg_omission r =
   match find_type_opt r with
   | None -> fun _ -> None
   | Some ty -> (
-    match List.map (fun p -> p.htp_tvar) (hkt_tvar_positions_of_type ty) with
+    match List.map (fun p -> p.tvar) (hkt_tvar_positions_of_type ty) with
     | [] -> fun _ -> None
     | hkt ->
       let occurring = collect_tvars_set IntSet.empty ty in

@@ -1042,11 +1042,11 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
     Translation_match_types.custom_match_scrutinee env typ t pv ~var_boxed:Translation_binders.read_is_boxed
       ~var_type:get_env_type_opt
   in
-  let scrut_is_wrapped = cs.Translation_match_types.cs_wrapped in
-  let scrut_is_cpp_erased = cs.Translation_match_types.cs_cpp_erased in
-  let scrut_is_magic = cs.Translation_match_types.cs_magic in
-  let typ = cs.Translation_match_types.cs_typ in
-  let concrete_match_type = cs.Translation_match_types.cs_concrete in
+  let scrut_is_wrapped = cs.Translation_match_types.wrapped in
+  let scrut_is_cpp_erased = cs.Translation_match_types.cpp_erased in
+  let scrut_is_magic = cs.Translation_match_types.magic in
+  let typ = cs.Translation_match_types.typ in
+  let concrete_match_type = cs.Translation_match_types.concrete in
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
      (%scrut.has_value()) { ... *%scrut; ... }"). Each occurrence re-prints the
      scrutinee C++ expression: a variable is then read in place (the plan has
@@ -1088,7 +1088,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
     set_lexical (fun l -> { l with current_cpp_return_type = saved_ret });
     t
   in
-  let pair_g_opt = cs.Translation_match_types.cs_pair in
+  let pair_g_opt = cs.Translation_match_types.pair in
   (* Insert [any_cast] on the scrutinee when the runtime value is [std::any]
      but the template needs a typed expression.
 
@@ -1102,7 +1102,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
 
      Otherwise: no cast needed; the scrutinee already has the correct type. *)
   let t, fix_a_fired, cast_to =
-    let needs_pair_any_cast = cs.Translation_match_types.cs_pair_any_cast in
+    let needs_pair_any_cast = cs.Translation_match_types.pair_any_cast in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
       (Cpp_erasure.unbox (Entity_application (g, [Any; Any], [])) t, true, None)

@@ -634,8 +634,8 @@ let with_body_resolutions r b f =
     positions come from {!Translation_tvars.hkt_tvar_positions_of_type}. *)
 let hkt_tvar_resolutions_of_type ?source_order ty : (int * Cpp_ir.Lowered.Type.t) list =
   List.map
-    (fun { Translation_tvars.htp_tvar; htp_instance; htp_field } ->
-      (htp_tvar, Cpp_ir.Type.Member (htp_instance, htp_field)) )
+    (fun { Translation_tvars.tvar; instance; field } ->
+      (tvar, Cpp_ir.Type.Member (instance, field)) )
     (Translation_tvars.hkt_tvar_positions_of_type ?source_order ty)
 
 (** Rewrite the type variables listed in [resolutions] (see

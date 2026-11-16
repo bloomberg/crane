@@ -107,7 +107,7 @@ let read_is_boxed i occ =
       ++ str " its binder, the plan " ++ str planned)
   in
   match List.assq_opt occ (!tctx).lexical.planned_reads with
-  | Some {rd_boxed; rd_kind} ->
+  | Some {boxed = rd_boxed; kind = rd_kind} ->
     ( if Probe.checking () then
         let live = live () in
         let agrees = rd_boxed = live in
@@ -161,12 +161,12 @@ let rec type_shape : Cpp_ir.Lowered.Type.t -> string = function
 let planned_binder_type ~use ~agree i occ =
   let show = function Some t -> type_shape t | None -> "none" in
   match List.assq_opt occ (!tctx).lexical.planned_reads with
-  | Some {rd_type; rd_kind; _} ->
+  | Some {type_; kind; _} ->
     ( if Probe.checking () then
         let live = binder_cpp_type i in
-        let agrees = agree rd_type live in
+        let agrees = agree type_ live in
         Probe.hit "repr-type" (fun () ->
-            use ^ (if agrees then " agree " else " disagree ") ^ binder_kind_name rd_kind ^ " plan " ^ show rd_type
+            use ^ (if agrees then " agree " else " disagree ") ^ binder_kind_name kind ^ " plan " ^ show type_
             ^ " live " ^ show live
             ^
               (match (!tctx).input.body_owner with Some r -> " in "
@@ -177,8 +177,8 @@ let planned_binder_type ~use ~agree i occ =
               str "a read for " ++ str use
               ++ (match (!tctx).input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
               ++ str ": lowering's binder is " ++ str (show live) ++ str ", the plan's "
-              ++ str (show rd_type)) );
-    rd_type
+              ++ str (show type_)) );
+    type_
   | None ->
     CErrors.anomaly
       Pp.(
