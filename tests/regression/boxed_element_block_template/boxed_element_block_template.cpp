@@ -40,7 +40,7 @@ BoxedElementBlockTemplate::leaves(const BoxedElementBlockTemplate::rose &r) {
     _r = crane::cons(
         n0, ListDef::template map<BoxedElementBlockTemplate::rose, uint64_t>(
                 [](const BoxedElementBlockTemplate::rose &k) {
-                  const auto &[n1, kids0] =
+                  const auto &[n1, _] =
                       std::get<typename BoxedElementBlockTemplate::rose::Node>(
                           k.v());
                   return n1;

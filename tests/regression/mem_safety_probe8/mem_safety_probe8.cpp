@@ -339,7 +339,7 @@ uint64_t MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
                 _lc1_t0.v())) {
           _lc1_result = UINT64_C(0);
         } else {
-          const auto &[a0, a1, a2] =
+          const auto &[a0, _, a2] =
               std::get<typename MemSafetyProbe8::tree::Node>(_lc1_t0.v());
           _lc1_stack.emplace_back(CraneCont_Node{crane_raw(a2)});
           _lc1_stack.emplace_back(CraneEnter{crane_raw(a0), UINT64_C(0)});

@@ -9,7 +9,7 @@ uint64_t
 CountLoopTestTarget::target_of(const CountLoopTestTarget::instruction &i) {
   if (std::holds_alternative<typename CountLoopTestTarget::instruction::ISZ>(
           i.v())) {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename CountLoopTestTarget::instruction::ISZ>(i.v());
     return a1;
   } else {

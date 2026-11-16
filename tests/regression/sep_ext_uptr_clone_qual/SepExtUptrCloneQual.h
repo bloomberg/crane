@@ -104,7 +104,7 @@ template <OrderedType X> struct FMap {
             typename MyList<std::pair<typename X::t, T1>>::Mynil>(l.v())) {
       return MyList<std::pair<typename X::t, T1>>::mynil();
     } else {
-      const auto &[a0, a1] = std::get<
+      const auto &[_, a1] = std::get<
           typename MyList<std::pair<typename X::t, T1>>::Mycons>(l.v());
       return *a1;
     }

@@ -10,7 +10,7 @@ GeneratedLazyFieldNameClash::true_stream() {
 
 bool GeneratedLazyFieldNameClash::head(
     const GeneratedLazyFieldNameClash::d_lazyV_ &s) {
-  const auto &[a0, a1] =
+  const auto &[a0, _] =
       std::get<typename GeneratedLazyFieldNameClash::d_lazyV_::Cons>(s.v());
   return a0;
 }

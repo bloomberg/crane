@@ -66,8 +66,7 @@ FramePushMovesScrutineeField::weigh(List<List<uint64_t>> s,
         if (std::holds_alternative<typename List<uint64_t>::Nil>(t.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(t.v());
+          const auto &[_, a10] = std::get<typename List<uint64_t>::Cons>(t.v());
           _stack.emplace_back(CraneCont_Cons{t, a0, a1});
           _stack.emplace_back(CraneEnter_weigh1{*a10, std::move(s)});
         }

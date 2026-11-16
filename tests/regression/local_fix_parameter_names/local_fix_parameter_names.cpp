@@ -6,7 +6,7 @@ uint64_t LocalFixParameterNames::walk2(uint64_t f, const List<uint64_t> &x0_) {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           return f;
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           return _self_g(_self_f0, _self_g, *a1);
         }
       };
@@ -15,7 +15,7 @@ uint64_t LocalFixParameterNames::walk2(uint64_t f, const List<uint64_t> &x0_) {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(f1.v())) {
           return (f + UINT64_C(1));
         } else {
-          const auto &[a00, a10] =
+          const auto &[_, a10] =
               std::get<typename List<uint64_t>::Cons>(f1.v());
           return _self_f0(_self_f0, _self_g, *a10);
         }

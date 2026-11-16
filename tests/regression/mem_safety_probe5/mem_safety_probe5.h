@@ -129,7 +129,7 @@ struct MemSafetyProbe5 {
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            const auto &[a0, _, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
@@ -158,7 +158,7 @@ struct MemSafetyProbe5 {
         if (std::holds_alternative<typename tree::Leaf>(this->v())) {
           return UINT64_C(0);
         } else {
-          const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+          const auto &[_, a1, _] = std::get<typename tree::Node>(this->v());
           return a1;
         }
       }();
@@ -171,12 +171,12 @@ struct MemSafetyProbe5 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return default0;
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, _, _] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return default0;
         } else {
-          const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
+          const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           return a10;
         }
       }

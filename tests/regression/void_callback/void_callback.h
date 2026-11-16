@@ -102,7 +102,7 @@ struct VoidCallback {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return;
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+      const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       for_each(f, *a1);
       return;
     }
@@ -142,7 +142,7 @@ struct VoidCallback {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+      const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       return (ignore_and_count(f, *a1) + 1);
     }
   }

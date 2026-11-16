@@ -30,7 +30,7 @@ uint64_t LoopifyFramePtrEscape::hd(const LoopifyFramePtrEscape::lst &l) {
   if (std::holds_alternative<typename LoopifyFramePtrEscape::lst::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename LoopifyFramePtrEscape::lst::Cons>(l.v());
     return a0;
   }

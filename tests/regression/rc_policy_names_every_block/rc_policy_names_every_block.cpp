@@ -8,7 +8,7 @@ RcPolicyNamesEveryBlock::stream RcPolicyNamesEveryBlock::from(uint64_t n) {
 }
 
 uint64_t RcPolicyNamesEveryBlock::hd(const RcPolicyNamesEveryBlock::stream &s) {
-  const auto &[a0, a1] =
+  const auto &[a0, _] =
       std::get<typename RcPolicyNamesEveryBlock::stream::SCons>(s.v());
   return a0;
 }

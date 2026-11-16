@@ -129,7 +129,7 @@ std::optional<T1> List::nth_error(const List::list<T1> &l, uint64_t n) {
     if (std::holds_alternative<typename List::list<T1>::Nil>(l.v())) {
       return std::optional<T1>();
     } else {
-      const auto &[a0, a1] = std::get<typename List::list<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List::list<T1>::Cons>(l.v());
       return std::make_optional<T1>(a0);
     }
   } else {
@@ -137,7 +137,7 @@ std::optional<T1> List::nth_error(const List::list<T1> &l, uint64_t n) {
     if (std::holds_alternative<typename List::list<T1>::Nil>(l.v())) {
       return std::optional<T1>();
     } else {
-      const auto &[a00, a10] = std::get<typename List::list<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List::list<T1>::Cons>(l.v());
       return List::template nth_error<T1>(*a10, n0);
     }
   }

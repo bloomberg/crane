@@ -223,7 +223,7 @@ struct TyargPartialTypeApplication {
             typename List<std::pair<uint64_t, uint64_t>>::Nil>(_sv.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(_sv.v());
       const auto &[a, _x0] = a0;
       return a;

@@ -105,7 +105,7 @@ struct RecordAtSortTypeField {
       pr<crane::obj, uint64_t>::p(crane::obj(), UINT64_C(3));
   static inline const uint64_t result = []() {
     const auto &_sv = p;
-    const auto &[a0, a1] = _sv;
+    const auto &[_, a1] = _sv;
     return a1;
   }();
 };

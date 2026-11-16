@@ -168,7 +168,7 @@ struct DefaultedMoveNoexcept {
     if (std::holds_alternative<typename seq<T1>::Nil>(s.v())) {
       return Nat::o();
     } else {
-      const auto &[a, s0] = std::get<typename seq<T1>::Cons>(s.v());
+      const auto &[_, s0] = std::get<typename seq<T1>::Cons>(s.v());
       return Nat::s(len<T1>(*s0));
     }
   }

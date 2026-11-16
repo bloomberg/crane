@@ -226,22 +226,22 @@ struct MutualCoind {
   };
 
   template <typename T1> static T1 headA(const streamA<T1> &s) {
-    const auto &[a0, a1] = std::get<typename streamA<T1>::ConsA>(s.v());
+    const auto &[a0, _] = std::get<typename streamA<T1>::ConsA>(s.v());
     return a0;
   }
 
   template <typename T1> static streamB<T1> tailA(const streamA<T1> &s) {
-    const auto &[a0, a1] = std::get<typename streamA<T1>::ConsA>(s.v());
+    const auto &[_, a1] = std::get<typename streamA<T1>::ConsA>(s.v());
     return a1;
   }
 
   template <typename T1> static T1 headB(const streamB<T1> &s) {
-    const auto &[a0, a1] = std::get<typename streamB<T1>::ConsB>(s.v());
+    const auto &[a0, _] = std::get<typename streamB<T1>::ConsB>(s.v());
     return a0;
   }
 
   template <typename T1> static streamA<T1> tailB(const streamB<T1> &s) {
-    const auto &[a0, a1] = std::get<typename streamB<T1>::ConsB>(s.v());
+    const auto &[_, a1] = std::get<typename streamB<T1>::ConsB>(s.v());
     return a1;
   }
 

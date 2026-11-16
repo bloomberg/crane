@@ -119,7 +119,7 @@ public:
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
@@ -1405,7 +1405,7 @@ struct LoopifyHofs {
                   List<uint64_t>::cons(a0, List<uint64_t>::nil()),
                   List<List<uint64_t>>::nil());
             } else {
-              const auto &[a00, a10] =
+              const auto &[a00, _] =
                   std::get<typename List<uint64_t>::Cons>(_sv0.v());
               if (eq(a0, a00)) {
                 _stack.emplace_back(CraneCont1{a0});

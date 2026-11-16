@@ -230,7 +230,7 @@ struct ReuseTwoChildren {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1, a2, a3] = std::get<typename tree<T1>::Node>(t.v());
+      const auto &[a0, _, _, a3] = std::get<typename tree<T1>::Node>(t.v());
       return ((UINT64_C(1) + size<T1>(*a0)) + size<T1>(*a3));
     }
   }

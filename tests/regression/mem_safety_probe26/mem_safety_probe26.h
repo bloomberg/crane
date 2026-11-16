@@ -123,7 +123,7 @@ struct MemSafetyProbe26 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return std::make_pair([](uint64_t x) { return x; }, tree::leaf());
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, _, _] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         return std::make_pair(
             [=](uint64_t x) { return (x + a0_value.tree_sum()); }, a0_value);
@@ -137,7 +137,7 @@ struct MemSafetyProbe26 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return std::make_pair([](uint64_t x) { return x; }, UINT64_C(0));
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, a1, _] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         if (std::holds_alternative<typename tree::Leaf>(a0_value.v())) {
           return std::make_pair([=](uint64_t x) { return (x + a1); },

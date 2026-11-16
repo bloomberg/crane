@@ -4,7 +4,7 @@ uint64_t LetFixByrefListParam::count_elements(const List<uint64_t> &xs) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+    const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
     return (UINT64_C(1) + count_elements(*a1));
   }
 }

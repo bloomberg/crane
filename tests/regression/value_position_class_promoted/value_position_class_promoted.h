@@ -232,7 +232,7 @@ struct ValuePositionClassPromoted {
     if (std::holds_alternative<typename List<VLike<Nat>>::Nil>(_sv.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1] = std::get<typename List<VLike<Nat>>::Cons>(_sv.v());
+      const auto &[a0, _] = std::get<typename List<VLike<Nat>>::Cons>(_sv.v());
       return a0.vzero;
     }
   }();

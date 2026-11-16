@@ -13,12 +13,12 @@ Coinductive::stream Coinductive::count_from(uint64_t n) {
 }
 
 uint64_t Coinductive::hd(const Coinductive::stream &s) {
-  const auto &[a0, a1] = std::get<typename Coinductive::stream::Cons>(s.v());
+  const auto &[a0, _] = std::get<typename Coinductive::stream::Cons>(s.v());
   return a0;
 }
 
 Coinductive::stream Coinductive::tl(const Coinductive::stream &s) {
-  const auto &[a0, a1] = std::get<typename Coinductive::stream::Cons>(s.v());
+  const auto &[_, a1] = std::get<typename Coinductive::stream::Cons>(s.v());
   return a1;
 }
 

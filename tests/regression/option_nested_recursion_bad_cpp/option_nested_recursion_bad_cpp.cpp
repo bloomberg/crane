@@ -14,7 +14,7 @@ OptionNestedRecursionBadCpp::build(uint64_t n) {
 
 uint64_t OptionNestedRecursionBadCpp::depth(
     const OptionNestedRecursionBadCpp::chain &c) {
-  const auto &[a0, a1] =
+  const auto &[_, a1] =
       std::get<typename OptionNestedRecursionBadCpp::chain::Link>(c.v());
   if ((*a1).has_value()) {
     const OptionNestedRecursionBadCpp::chain &c_ = *(*a1);

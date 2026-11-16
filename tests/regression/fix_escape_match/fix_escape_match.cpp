@@ -10,7 +10,7 @@ FixEscapeMatch::make_fn_from_head(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return std::optional<crane::fn<uint64_t(uint64_t)>>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     auto add_impl = [=](auto &_self_add, uint64_t x) -> uint64_t {
       if (x <= 0) {
         return a0;
@@ -38,7 +38,7 @@ FixEscapeMatch::make_fn_from_pair(const List<uint64_t> &l) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(a1_value.v())) {
       return std::optional<crane::fn<uint64_t(uint64_t)>>();
     } else {
-      const auto &[a00, a10] =
+      const auto &[a00, _] =
           std::get<typename List<uint64_t>::Cons>(a1_value.v());
       auto combine_impl = [=](auto &_self_combine, uint64_t x) -> uint64_t {
         if (x <= 0) {

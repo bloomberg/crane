@@ -32,7 +32,7 @@ ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
 /// Direct capture of pattern fields (no intermediate let binding).
 std::optional<crane::fn<uint64_t(uint64_t)>>
 ValueTypeMatchFix::make_field_adder(const ValueTypeMatchFix::triple &t) {
-  const auto &[a0, a1, a2] = t;
+  const auto &[a0, _, _] = t;
   auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
     if (x <= 0) {
       return a0;

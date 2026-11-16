@@ -1866,7 +1866,7 @@ struct LoopifyExprVariants {
           const list_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LCons>(_sv.v())) {
-            const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
+            const auto &[_, a1] = std::get<typename list_expr::LCons>(_sv.v());
             _stack.emplace_back(CraneCont_LCons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           } else if (

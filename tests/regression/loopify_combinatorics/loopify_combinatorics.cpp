@@ -203,7 +203,7 @@ LoopifyCombinatorics::len_list(const List<uint64_t> &l) { /// CraneEnter:
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }

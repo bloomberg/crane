@@ -12,7 +12,7 @@ uint64_t DoubleOptionNest::peek(const DoubleOptionNest::t &x) {
     const std::optional<DoubleOptionNest::t> &i = *(*a1);
     if (i.has_value()) {
       const DoubleOptionNest::t &u = *i;
-      const auto &[a00, a10] =
+      const auto &[a00, _] =
           std::get<typename DoubleOptionNest::t::Node>(u.v());
       return (a0 + a00);
     } else {

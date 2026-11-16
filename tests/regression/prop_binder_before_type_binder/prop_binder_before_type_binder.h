@@ -101,7 +101,7 @@ struct PropBinderBeforeTypeBinder {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return d;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   }

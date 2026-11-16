@@ -224,7 +224,7 @@ template <Elem E> struct MutualTree {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       return UINT64_C(1);
     } else {
-      const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
+      const auto &[_, a1] = std::get<typename tree::Node>(t0.v());
       return (UINT64_C(1) + forest_size(*a1));
     }
   }

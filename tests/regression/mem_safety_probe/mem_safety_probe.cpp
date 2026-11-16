@@ -97,8 +97,7 @@ uint64_t MemSafetyProbe::match_partial(MemSafetyProbe::tree t) {
   if (std::holds_alternative<typename MemSafetyProbe::tree::Leaf>(t.v_mut())) {
     return f(UINT64_C(0));
   } else {
-    auto &[a0, a1, a2] =
-        std::get<typename MemSafetyProbe::tree::Node>(t.v_mut());
+    auto &[_, a1, _] = std::get<typename MemSafetyProbe::tree::Node>(t.v_mut());
     return f(std::move(a1));
   }
 }
@@ -126,7 +125,7 @@ MemSafetyProbe::box_from_match(const MemSafetyProbe::tree &t) {
   if (std::holds_alternative<typename MemSafetyProbe::tree::Leaf>(t.v())) {
     return fn_box::box([](uint64_t n) { return n; });
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, _] =
         std::get<typename MemSafetyProbe::tree::Node>(t.v());
     const MemSafetyProbe::tree &a0_value = *a0;
     return fn_box::box(

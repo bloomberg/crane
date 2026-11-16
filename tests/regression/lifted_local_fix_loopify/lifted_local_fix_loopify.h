@@ -172,7 +172,7 @@ struct LiftedLocalFixLoopify {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_xs->v())) {
         return _loop_acc;
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_xs->v());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(_loop_xs->v());
         _loop_acc = (_loop_acc + 1);
         _loop_xs = crane_raw(a1);
       }

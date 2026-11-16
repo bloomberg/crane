@@ -21,7 +21,7 @@ List<uint64_t> LoopifySearchOpt::lis(const List<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 < a00) {
           auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -72,7 +72,7 @@ LoopifySearchOpt::longest_run_fuel(uint64_t fuel, const List<uint64_t> &current,
           _loop_current = List<uint64_t>::cons(a0, List<uint64_t>::nil());
           _loop_fuel = fuel_;
         } else {
-          const auto &[a00, a10] =
+          const auto &[a00, _] =
               std::get<typename List<uint64_t>::Cons>(_loop_current.v());
           if (a0 == a00) {
             _loop_l = crane_raw(a1);
@@ -361,7 +361,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                         _loop_xs->v())) {
                   return UINT64_C(0);
                 } else {
-                  const auto &[a01, a11] =
+                  const auto &[a01, _] =
                       std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
                   return std::move(a01);
                 }
@@ -371,7 +371,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                         _loop_xs->v())) {
                   return UINT64_C(0);
                 } else {
-                  const auto &[a02, a12] =
+                  const auto &[_, a12] =
                       std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
                   _loop_xs = crane_raw(a12);
                   _loop_n = n_;
@@ -445,7 +445,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                             _loop_xs->v())) {
                       return List<uint64_t>::nil();
                     } else {
-                      const auto &[a04, a14] = std::get<
+                      const auto &[_, a14] = std::get<
                           typename List<uint64_t>::Cons>(_loop_xs->v());
                       _loop_xs = crane_raw(a14);
                       _loop_n = n_;

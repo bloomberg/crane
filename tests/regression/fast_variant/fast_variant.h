@@ -251,7 +251,7 @@ struct FastVariant {
           if (crane::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2] = crane::get<typename tree::Node>(_sv.v());
+            const auto &[a0, _, a2] = crane::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }

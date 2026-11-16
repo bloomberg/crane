@@ -77,7 +77,7 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
                   _loop_xs->v())) {
             return List<uint64_t>::nil();
           } else {
-            const auto &[a0, a1] =
+            const auto &[_, a1] =
                 std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
             _loop_xs = crane_raw(a1);
             _loop_n = n_;
@@ -130,7 +130,7 @@ bool LoopifyListRelations::is_infix_of_aux(const List<uint64_t> &needle,
         return false;
       }
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_haystack->v());
       if (is_prefix_of(needle, *_loop_haystack)) {
         return true;
@@ -161,7 +161,7 @@ List<uint64_t> LoopifyListRelations::find_sublists_aux(
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_haystack->v());
       if (is_prefix_of(needle, *_loop_haystack)) {
         auto _cell = typename List<uint64_t>::Cons(_loop_idx, nullptr);

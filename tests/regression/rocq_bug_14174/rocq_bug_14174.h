@@ -164,12 +164,12 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    const auto &[a0, a1] = *this;
+    const auto &[a0, _] = *this;
     return a0;
   }
 
   B snd() const {
-    const auto &[a0, a1] = *this;
+    const auto &[_, a1] = *this;
     return a1;
   }
 };
@@ -557,12 +557,12 @@ struct RocqBug14174 {
       }
 
       P projT2() const {
-        const auto &[x0, a1] = *this;
+        const auto &[_, a1] = *this;
         return a1;
       }
 
       A projT1() const {
-        const auto &[x0, a1] = *this;
+        const auto &[x0, _] = *this;
         return x0;
       }
 
@@ -656,18 +656,18 @@ struct RocqBug14174 {
       }
 
       Q projT3() const {
-        const auto &[x, a1, a2] = *this;
+        const auto &[_, _, a2] = *this;
         return a2;
       }
 
       sigT<A, P> sigT_of_sigT2() const {
         return sigT<A, P>::existt(
             [&]() {
-              const auto &[x0, a1, a2] = *this;
+              const auto &[x0, _, _] = *this;
               return x0;
             }(),
             [&]() {
-              const auto &[x0, a10, a20] = *this;
+              const auto &[_, a10, _] = *this;
               return a10;
             }());
       }
@@ -843,7 +843,7 @@ struct RocqBug14174 {
       return sigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>::existt(
           [=](const T1 &z) { return h(z).projT1(); }, [=](const T1 &z) {
             sigT<T2, T3> s = h(z);
-            auto &[x, a1] = s;
+            auto &[_, a1] = s;
             return std::move(a1);
           });
     }

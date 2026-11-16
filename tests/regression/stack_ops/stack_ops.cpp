@@ -53,8 +53,7 @@ StackOps::state_basic StackOps::push_stack(const StackOps::state_basic &s,
       return state_basic{List<uint64_t>::cons(
           addr, List<uint64_t>::cons(a0, List<uint64_t>::nil()))};
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(_sv0.v());
       return state_basic{List<uint64_t>::cons(
           addr, List<uint64_t>::cons(
                     a0, List<uint64_t>::cons(a00, List<uint64_t>::nil())))};
@@ -67,7 +66,7 @@ uint64_t StackOps::top_or_zero(const StackOps::state_basic &s) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(_sv.v());
     return a0;
   }
 }
@@ -85,7 +84,7 @@ StackOps::state_basic StackOps::push_stack_cap(const StackOps::state_basic &s,
         return List<uint64_t>::cons(
             addr, List<uint64_t>::cons(a0, List<uint64_t>::nil()));
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         return List<uint64_t>::cons(
             addr, List<uint64_t>::cons(

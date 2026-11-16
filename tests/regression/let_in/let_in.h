@@ -73,7 +73,7 @@ struct LetIn {
   static inline const uint64_t let_destruct = []() {
     pair<uint64_t, uint64_t> p =
         pair<uint64_t, uint64_t>::pair0(UINT64_C(3), UINT64_C(4));
-    auto &[a0, a1] = p;
+    auto &[a0, _] = p;
     return std::move(a0);
   }();
   static inline const uint64_t multi_let = []() {

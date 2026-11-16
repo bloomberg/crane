@@ -53,8 +53,7 @@ PageOps::disassemble(const List<uint64_t> &rom, uint64_t addr) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
       return std::optional<std::pair<PageOps::instruction, uint64_t>>();
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(_sv0.v());
       return std::make_optional<std::pair<PageOps::instruction, uint64_t>>(
           std::make_pair(decode(a0, a00), (addr + UINT64_C(2))));
     }

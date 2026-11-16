@@ -1246,8 +1246,7 @@ LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l0.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<uint64_t>::Cons>(l0.v());
+          const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l0.v());
           _stack.emplace_back(CraneEnter{crane_raw(a1), f});
         }
       }
@@ -1299,7 +1298,7 @@ LoopifyNumbers::sum_even_indices_fuel(uint64_t fuel,
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           if (f <= 0) {
             _result = UINT64_C(0);
           } else {

@@ -6,7 +6,7 @@
 /// any_cast<pair<any,any>> and applies the callable.
 uint64_t SigtPairFnPayload::score(
     const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &it) {
-  const auto &[x, a1] = it;
+  const auto &[_, a1] = it;
   const auto &[a, f] = a1;
   return crane::any_cast<uint64_t>(
       crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(a));

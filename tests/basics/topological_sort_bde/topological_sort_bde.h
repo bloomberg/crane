@@ -342,8 +342,7 @@ public:
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] =
-              bsl::get<typename List<t_A>::Cons>(_sv.v());
+          const auto &[_, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(d_a1)});
         }
@@ -561,7 +560,7 @@ struct TopologicalSort {
         if (bsl::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
           return elem;
         } else {
-          auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v_mut());
+          auto &[d_a0, _] = bsl::get<typename List<T1>::Cons>(l.v_mut());
           return cycle_entry_aux<T1>(eqb_node, graph0,
                                      List<T1>::cons(bsl::move(elem), seens),
                                      bsl::move(d_a0), c);
@@ -577,7 +576,7 @@ struct TopologicalSort {
             graph0.v())) {
       return bsl::optional<T1>();
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[d_a0, _] =
           bsl::get<typename List<bsl::pair<T1, List<T1>>>::Cons>(graph0.v());
       auto [e, _x0] = d_a0;
       return bsl::make_optional<T1>(cycle_entry_aux<T1>(

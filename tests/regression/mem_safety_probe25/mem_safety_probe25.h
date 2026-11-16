@@ -127,7 +127,7 @@ struct MemSafetyProbe25 {
             if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
               return x;
             } else {
-              const auto &[a0, a1, a2] =
+              const auto &[a0, a1, _] =
                   std::get<typename tree::Node>(_self_val.v());
               return ((x + a0->tree_sum()) + a1);
             }
@@ -141,12 +141,12 @@ struct MemSafetyProbe25 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, a1, _] = std::get<typename tree::Node>(this->v());
         auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (x + a1);
         } else {
-          const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
+          const auto &[a00, a10, _] = std::get<typename tree::Node>(_sv0.v());
           return (((x + a00->tree_sum()) + a10) + a1);
         }
       }
@@ -158,11 +158,11 @@ struct MemSafetyProbe25 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, a1, _] = std::get<typename tree::Node>(this->v());
         if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
           return (x + a1);
         } else {
-          const auto &[a00, a10, a20] = std::get<typename tree::Node>(t2.v());
+          const auto &[_, a10, a20] = std::get<typename tree::Node>(t2.v());
           return (((x + a0->tree_sum()) + a10) + a20->tree_sum());
         }
       }
@@ -176,7 +176,7 @@ struct MemSafetyProbe25 {
         return std::make_pair([](uint64_t x) { return x; },
                               [](uint64_t x) { return x; });
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return std::make_pair(

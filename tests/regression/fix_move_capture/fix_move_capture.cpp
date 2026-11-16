@@ -4,7 +4,7 @@ uint64_t FixMoveCapture::length(const FixMoveCapture::mylist &l) {
   if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
     return (UINT64_C(1) + length(*a1));
   }
@@ -27,7 +27,7 @@ FixMoveCapture::dup_head(const FixMoveCapture::mylist &l) {
   if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return mylist::mynil();
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
     return mylist::mycons(a0, l);
   }

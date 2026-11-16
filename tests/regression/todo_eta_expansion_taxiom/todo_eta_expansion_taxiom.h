@@ -64,7 +64,7 @@ struct TodoEtaExpansionTaxiom {
 
   template <typename T1, typename T2>
   static T1 fst_pair(const Pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
+    const auto &[a0, _] = p;
     return a0;
   }
 

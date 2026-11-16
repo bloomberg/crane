@@ -242,7 +242,7 @@ struct SharedVariantNested {
           auto _f = std::move(crane::get<CraneEnter>(_frame));
           const chain *_self = _f._self;
           auto &&_sv = *_self;
-          const auto &[a0, a1] = crane::get<typename chain::Link>(_sv.v());
+          const auto &[_, a1] = crane::get<typename chain::Link>(_sv.v());
           if ((*a1).has_value()) {
             const chain &c_ = *(*a1);
             _stack.emplace_back(CraneCont_c_{});

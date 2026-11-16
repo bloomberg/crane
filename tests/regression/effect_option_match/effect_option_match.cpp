@@ -53,7 +53,7 @@ std::string EffectOptionMatch::get_first_set(const List<std::string> &names) {
       if (std::holds_alternative<typename List<std::string>::Nil>(_sv0.v())) {
         return "none";
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<std::string>::Cons>(_sv0.v());
         std::optional<std::string> mv2 = [&]() -> std::optional<std::string> {
           auto *v = std::getenv(a00.c_str());

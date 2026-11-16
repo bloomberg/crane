@@ -238,7 +238,7 @@ struct DeepApp {
         if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+          const auto &[_, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
           _stack.emplace_back(CraneCont_Mycons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }

@@ -447,7 +447,7 @@ struct LoopifyLists {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        const auto &[_, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         auto _cell = typename list<list<T1>>::Cons(*_loop_l, nullptr);
         list<list<T1>> &_node =
             (_write ? *(*_write =
@@ -701,7 +701,7 @@ struct LoopifyLists {
               if (std::holds_alternative<typename list<T1>::Nil>(_loop_lst->v())) {
                 return list<T1>::nil();
               } else {
-                const auto &[a00, a10] =
+                const auto &[_, a10] =
                     std::get<typename list<T1>::Cons>(_loop_lst->v());
                 _loop_lst = crane_raw(a10);
                 _loop_k = m;
@@ -766,7 +766,7 @@ struct LoopifyLists {
           if (std::holds_alternative<typename list<T1>::Nil>(l0.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l0.v());
+            const auto &[_, a1] = std::get<typename list<T1>::Cons>(l0.v());
             _stack.emplace_back(CraneCont_Cons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
@@ -988,7 +988,7 @@ struct LoopifyLists {
           if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+            const auto &[_, a1] = std::get<typename list<T1>::Cons>(l.v());
             _stack.emplace_back(CraneCont_Cons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
@@ -1026,7 +1026,7 @@ struct LoopifyLists {
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a00, a10] = std::get<typename list<T1>::Cons>(_sv0.v());
+          const auto &[a00, _] = std::get<typename list<T1>::Cons>(_sv0.v());
           auto _cell = typename list<std::pair<T1, T1>>::Cons(
               std::make_pair(a0, a00), nullptr);
           list<std::pair<T1, T1>> &_node =
@@ -1152,7 +1152,7 @@ struct LoopifyLists {
                 if (std::holds_alternative<typename list<T1>::Nil>(a0.v())) {
                   _result = list<T1>::nil();
                 } else {
-                  const auto &[a00, a10] =
+                  const auto &[a00, _] =
                       std::get<typename list<T1>::Cons>(a0.v());
                   _stack.emplace_back(CraneCont_Cons{a00});
                   _stack.emplace_back(CraneEnter{crane_raw(a1)});
@@ -1197,7 +1197,7 @@ struct LoopifyLists {
                 if (std::holds_alternative<typename list<T1>::Nil>(a00.v())) {
                   _result = list<list<T1>>::nil();
                 } else {
-                  const auto &[a01, a11] =
+                  const auto &[_, a11] =
                       std::get<typename list<T1>::Cons>(a00.v());
                   _stack.emplace_back(CraneCont_Cons{a11});
                   _stack.emplace_back(CraneEnter{crane_raw(a10)});
@@ -1218,7 +1218,7 @@ struct LoopifyLists {
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a01, a11] =
+          const auto &[a01, _] =
               std::get<typename list<list<T1>>::Cons>(_loop_m.v());
           if (std::holds_alternative<typename list<T1>::Nil>(a01.v())) {
             auto _value = list<list<T1>>::nil();

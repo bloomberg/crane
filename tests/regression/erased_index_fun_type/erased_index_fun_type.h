@@ -172,7 +172,7 @@ struct ErasedIndexFunType {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return Nat::o();
     } else {
-      const auto &[a, b0] = std::get<typename ty::TF>(t.v());
+      const auto &[_, b0] = std::get<typename ty::TF>(t.v());
       return crane_erase_fn([=](const auto &) {
         return dflt<crane::obj>(*b0);
       });

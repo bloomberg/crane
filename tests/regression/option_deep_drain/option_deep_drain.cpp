@@ -21,7 +21,7 @@ OptionDeepDrain::chain OptionDeepDrain::build(uint64_t n,
 uint64_t OptionDeepDrain::go(uint64_t n) {
   auto &&_sv = build(
       n, chain::link(UINT64_C(0), std::optional<OptionDeepDrain::chain>()));
-  const auto &[a0, a1] =
+  const auto &[a0, _] =
       std::get<typename OptionDeepDrain::chain::Link>(_sv.v());
   return a0;
 }

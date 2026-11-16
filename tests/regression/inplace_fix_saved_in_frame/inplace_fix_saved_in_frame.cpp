@@ -99,7 +99,7 @@ uint64_t InplaceFixSavedInFrame::sum_heads(const List<List<uint64_t>> &ls) {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           return acc;
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
           return (acc + a0);
         }
       },

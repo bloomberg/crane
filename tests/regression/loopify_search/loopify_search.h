@@ -147,7 +147,7 @@ struct LoopifySearch {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+          const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }

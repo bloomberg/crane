@@ -7,7 +7,7 @@
 /// left moved-from for the next reader.
 uint64_t
 RoseSharedSuffixDrainSize::rsize(const RoseSharedSuffixDrainSize::rose &t) {
-  const auto &[a0, a1] =
+  const auto &[_, a1] =
       std::get<typename RoseSharedSuffixDrainSize::rose::Node>(t.v());
   return ([&]() {
     auto go_impl =

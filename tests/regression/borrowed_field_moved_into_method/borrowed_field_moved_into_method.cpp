@@ -681,7 +681,7 @@ N BorrowedFieldMovedIntoMethod::sz(const BfmTypes::ty &t) {
   } else if (std::holds_alternative<typename BfmTypes::ty::TS>(t.v())) {
     return N::n0();
   } else {
-    const auto &[vector, sz0, t1] = std::get<typename BfmTypes::ty::TA>(t.v());
+    const auto &[_, sz0, t1] = std::get<typename BfmTypes::ty::TA>(t.v());
     return BinNat::mul(sz0, sz(*t1));
   }
 }

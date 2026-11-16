@@ -578,7 +578,7 @@ LoopifyTrees::depth_rose_list_fuel(uint64_t fuel,
         } else {
           const auto &[a0, a1] =
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
-          const auto &[a00, a10] =
+          const auto &[_, a10] =
               std::get<typename LoopifyTrees::rose::RNode>(a0.v());
           _stack.emplace_back(CraneCont_RNode{f, crane_raw(a1)});
           _stack.emplace_back(CraneEnter{crane_raw(a10), f});
@@ -710,7 +710,7 @@ List<uint64_t> LoopifyTrees::extract_tree_values(
         _loop_ts = crane_raw(a1);
         continue;
       } else {
-        const auto &[a00, a10, a20] =
+        const auto &[_, a10, _] =
             std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
         auto _cell = typename List<uint64_t>::Cons(a10, nullptr);
         List<uint64_t> &_node =
@@ -751,7 +751,7 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
         _loop_ts = crane_raw(a1);
         continue;
       } else {
-        const auto &[a00, a10, a20] =
+        const auto &[a00, _, a20] =
             std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
         auto _cell1 = std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
             typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a20, nullptr));

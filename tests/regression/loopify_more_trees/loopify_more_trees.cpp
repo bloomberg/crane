@@ -105,13 +105,13 @@ LoopifyMoreTrees::same_shape(const LoopifyMoreTrees::tree &t1,
           _result = false;
         }
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename LoopifyMoreTrees::tree::Node>(t1.v());
         if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
                 t2.v())) {
           _result = false;
         } else {
-          const auto &[a00, a10, a20] =
+          const auto &[a00, _, a20] =
               std::get<typename LoopifyMoreTrees::tree::Node>(t2.v());
           _stack.emplace_back(CraneCont_Node{crane_raw(a2), crane_raw(a20)});
           _stack.emplace_back(CraneEnter{crane_raw(a00), crane_raw(a0)});
@@ -235,7 +235,7 @@ LoopifyMoreTrees::count_nodes(const LoopifyMoreTrees::tree &t) { /// CraneEnter:
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
         _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
         _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -597,7 +597,7 @@ LoopifyMoreTrees::tree_children(const LoopifyMoreTrees::tree &t) {
   if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(t.v())) {
     return List<LoopifyMoreTrees::tree>::nil();
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
     return List<LoopifyMoreTrees::tree>::cons(
         *a0, List<LoopifyMoreTrees::tree>::cons(

@@ -31,7 +31,7 @@ uint64_t LoopifyTailPtrAlias::hd(const LoopifyTailPtrAlias::lst &l) {
   if (std::holds_alternative<typename LoopifyTailPtrAlias::lst::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename LoopifyTailPtrAlias::lst::Cons>(l.v());
     return a0;
   }

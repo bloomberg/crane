@@ -1,7 +1,7 @@
 #include "option_recursive_match.h"
 
 Nat OptionRecursiveMatch::len(const OptionRecursiveMatch::chain &c) {
-  const auto &[a0, a1] =
+  const auto &[_, a1] =
       std::get<typename OptionRecursiveMatch::chain::C>(c.v());
   auto &&_sv0 = *a1;
   if (std::holds_alternative<typename Option<OptionRecursiveMatch::chain>::Some>(

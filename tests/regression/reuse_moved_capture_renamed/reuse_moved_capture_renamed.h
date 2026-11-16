@@ -99,7 +99,7 @@ struct ReuseMovedCaptureRenamed {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[_, a1, _] = std::get<typename tree::Node>(this->v());
         return (a1 + x);
       }
     }

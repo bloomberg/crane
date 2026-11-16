@@ -115,7 +115,7 @@ struct ReuseUseAfterMove {
                        mylist::mycons(UINT64_C(3), mylist::mynil()))),
                               true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
-      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      const auto &[a0, _] = std::get<typename mylist::Mycons>(_sv.v());
       return a0;
     } else {
       return UINT64_C(999);
@@ -130,7 +130,7 @@ struct ReuseUseAfterMove {
                        mylist::mycons(UINT64_C(30), mylist::mynil()))),
                                   true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
-      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      const auto &[a0, _] = std::get<typename mylist::Mycons>(_sv.v());
       return a0;
     } else {
       return UINT64_C(999);

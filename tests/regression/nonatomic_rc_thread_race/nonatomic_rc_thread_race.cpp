@@ -13,7 +13,7 @@ uint64_t NonatomicRcThreadRace::len(const NonatomicRcThreadRace::lst &l) {
   if (std::holds_alternative<typename NonatomicRcThreadRace::lst::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename NonatomicRcThreadRace::lst::Cons>(l.v());
     return (len(*a1) + 1);
   }

@@ -187,7 +187,7 @@ MemSafetyProbe13::depth_fns(const MemSafetyProbe13::tree &t,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1, a2] =
+      const auto &[a0, a1, _] =
           std::get<typename MemSafetyProbe13::tree::Node>(_loop_t->v());
       const MemSafetyProbe13::tree &a0_value = *a0;
       crane::fn<uint64_t(uint64_t)> f =

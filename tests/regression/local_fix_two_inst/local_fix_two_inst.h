@@ -176,7 +176,7 @@ struct LocalFixTwoInst {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
       return Nat::s(run_crane_len<T1>(*a1));
     }
   }

@@ -97,7 +97,7 @@ MemSafetyProbe28::tree_depth(const MemSafetyProbe28::tree &t) { /// CraneEnter:
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename MemSafetyProbe28::tree::Node>(t.v());
         _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
         _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -297,7 +297,7 @@ MemSafetyProbe28::zip_depth(const MemSafetyProbe28::tree &t1,
           _stack.emplace_back(CraneCont_Leaf{a1, crane_raw(a2)});
           _stack.emplace_back(CraneEnter{tree::leaf(), crane_raw(a0)});
         } else {
-          const auto &[a00, a10, a20] =
+          const auto &[a00, _, a20] =
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(CraneCont_Node{t2, crane_raw(a2), a20});
           _stack.emplace_back(CraneEnter{*a00, crane_raw(a0)});

@@ -79,7 +79,7 @@ Nat MutualTmcLoopify::len(const MutualTmcLoopify::mylist &l) {
   if (std::holds_alternative<typename MutualTmcLoopify::mylist::Mnil>(l.v())) {
     return Nat::o();
   } else {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename MutualTmcLoopify::mylist::Mcons>(l.v());
     return Nat::s(len(*a1));
   }

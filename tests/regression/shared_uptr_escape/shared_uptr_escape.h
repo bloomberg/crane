@@ -91,7 +91,7 @@ struct SharedUptrEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::leaf();
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
         if (which <= 0) {
           return *a0;
         } else {

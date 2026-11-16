@@ -99,7 +99,7 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    const auto &[a0, a1] = *this;
+    const auto &[a0, _] = *this;
     return a0;
   }
 };

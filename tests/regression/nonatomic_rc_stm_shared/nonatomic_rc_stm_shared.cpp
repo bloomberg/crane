@@ -4,7 +4,7 @@ uint64_t NonatomicRcStmShared::len(const NonatomicRcStmShared::lst &l) {
   if (std::holds_alternative<typename NonatomicRcStmShared::lst::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename NonatomicRcStmShared::lst::Cons>(l.v());
     return (len(*a1) + 1);
   }

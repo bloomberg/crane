@@ -152,7 +152,7 @@ struct MemSafetyProbe6 {
       if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
         return n;
       } else {
-        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        const auto &[_, a1] = std::get<typename mylist<A>::Mycons>(this->v());
         return (a1->length() + n);
       }
     }
@@ -183,8 +183,7 @@ struct MemSafetyProbe6 {
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
+            const auto &[_, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
             _stack.emplace_back(CraneCont_Mycons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
@@ -349,7 +348,7 @@ struct MemSafetyProbe6 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::leaf();
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
         if (x) {
           return *a0;
         } else {

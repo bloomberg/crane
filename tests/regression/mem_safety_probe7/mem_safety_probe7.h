@@ -126,8 +126,7 @@ struct MemSafetyProbe7 {
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
+            const auto &[_, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
             _stack.emplace_back(CraneCont_Mycons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
@@ -306,7 +305,7 @@ struct MemSafetyProbe7 {
         return std::make_pair([](std::monostate) { return UINT64_C(0); },
                               [](std::monostate) { return UINT64_C(0); });
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return std::make_pair(
@@ -321,7 +320,7 @@ struct MemSafetyProbe7 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return mylist<crane::fn<uint64_t(std::monostate)>>::mynil();
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return mylist<crane::fn<uint64_t(std::monostate)>>::mycons(

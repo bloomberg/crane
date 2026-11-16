@@ -38,7 +38,7 @@ uint64_t LoopifyAccumulatorReadElsewhere::size(
               typename LoopifyAccumulatorReadElsewhere::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename LoopifyAccumulatorReadElsewhere::tree::Node>(
                 t.v());
         _stack.emplace_back(CraneCont_Node{crane_raw(a2)});

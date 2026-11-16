@@ -117,7 +117,7 @@ BinomialHeap::priqueue BinomialHeap::join(const List<BinomialHeap::tree> &p,
 BinomialHeap::priqueue
 BinomialHeap::heap_delete_max(const BinomialHeap::tree &t) {
   if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v())) {
-    const auto &[a0, a1, a2] =
+    const auto &[_, a1, a2] =
         std::get<typename BinomialHeap::tree::Node>(t.v());
     const BinomialHeap::tree &a1_value = *a1;
     const BinomialHeap::tree &a2_value = *a2;
@@ -140,7 +140,7 @@ BinomialHeap::find_max_helper(uint64_t current,
     const auto &[a0, a1] =
         std::get<typename List<BinomialHeap::tree>::Cons>(q.v());
     if (std::holds_alternative<typename BinomialHeap::tree::Node>(a0.v())) {
-      const auto &[a00, a10, a20] =
+      const auto &[a00, _, _] =
           std::get<typename BinomialHeap::tree::Node>(a0.v());
       return find_max_helper((current < a00 ? a00 : current), *a1);
     } else {
@@ -157,7 +157,7 @@ BinomialHeap::find_max(const List<BinomialHeap::tree> &q) {
     const auto &[a0, a1] =
         std::get<typename List<BinomialHeap::tree>::Cons>(q.v());
     if (std::holds_alternative<typename BinomialHeap::tree::Node>(a0.v())) {
-      const auto &[a00, a10, a20] =
+      const auto &[a00, _, _] =
           std::get<typename BinomialHeap::tree::Node>(a0.v());
       return std::make_optional<uint64_t>(find_max_helper(a00, *a1));
     } else {

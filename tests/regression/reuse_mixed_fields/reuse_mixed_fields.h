@@ -80,10 +80,10 @@ struct ReuseMixedFields {
     auto &&_sv =
         swap_tag_or_id(payload::asnat(UINT64_C(10), UINT64_C(20)), true);
     if (std::holds_alternative<typename payload::AsNat>(_sv.v())) {
-      const auto &[a0, a1] = std::get<typename payload::AsNat>(_sv.v());
+      const auto &[a0, _] = std::get<typename payload::AsNat>(_sv.v());
       return (a0 + UINT64_C(1000));
     } else {
-      const auto &[a0, a1] = std::get<typename payload::AsPair>(_sv.v());
+      const auto &[a0, _] = std::get<typename payload::AsPair>(_sv.v());
       return a0;
     }
   }();

@@ -514,7 +514,7 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2, a3, a4] =
+            const auto &[a0, a1, _, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             _stack.emplace_back(
                 CraneCont_QNode{crane_raw(a1), crane_raw(a3), crane_raw(a4)});
@@ -607,7 +607,7 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2, a3, a4] =
+            const auto &[a0, a1, _, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             _stack.emplace_back(
                 CraneCont_QNode{crane_raw(a1), crane_raw(a3), crane_raw(a4)});

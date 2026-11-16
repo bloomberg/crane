@@ -146,7 +146,7 @@ public:
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
@@ -205,7 +205,7 @@ struct MoveCaptureReuse {
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv0.v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
         return (a0.length() + a00.length());
       }

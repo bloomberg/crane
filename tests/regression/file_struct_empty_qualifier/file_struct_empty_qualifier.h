@@ -316,7 +316,7 @@ struct Helpers {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return N::n0();
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
       return BinNat::succ(Helpers::template length<T1>(*a1));
     }
   }

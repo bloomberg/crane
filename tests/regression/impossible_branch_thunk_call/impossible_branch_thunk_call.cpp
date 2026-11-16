@@ -8,8 +8,6 @@ ImpossibleBranchThunkCall::val(const ImpossibleBranchThunkCall::tagged &t) {
         std::get<typename ImpossibleBranchThunkCall::tagged::TN>(t.v());
     return a0;
   } else {
-    const auto &[a0] =
-        std::get<typename ImpossibleBranchThunkCall::tagged::TL>(t.v());
     throw std::logic_error("unreachable");
   }
 }
@@ -18,8 +16,6 @@ uint64_t
 ImpossibleBranchThunkCall::len(const ImpossibleBranchThunkCall::tagged &t) {
   if (std::holds_alternative<typename ImpossibleBranchThunkCall::tagged::TN>(
           t.v())) {
-    const auto &[a0] =
-        std::get<typename ImpossibleBranchThunkCall::tagged::TN>(t.v());
     throw std::logic_error("unreachable");
   } else {
     const auto &[a0] =

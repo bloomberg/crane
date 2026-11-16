@@ -2,7 +2,7 @@
 
 uint64_t
 LocalCofixWithoutParameters::hd(const LocalCofixWithoutParameters::stream &s) {
-  const auto &[a0, a1] =
+  const auto &[a0, _] =
       std::get<typename LocalCofixWithoutParameters::stream::Cons>(s.v());
   return a0;
 }

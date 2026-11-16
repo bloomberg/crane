@@ -181,7 +181,7 @@ struct InstructionCycles {
 
     uint64_t cycles_jcn(const state1 &s) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
-        const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
+        const auto &[a0, _] = std::get<typename instruction1::JCN1>(this->v());
         uint64_t c1 = (UINT64_C(8) ? a0 / UINT64_C(8) : 0);
         auto &&_once1 = (UINT64_C(4) ? a0 / UINT64_C(4) : 0);
         uint64_t c2 = (UINT64_C(2) ? _once1 % UINT64_C(2) : _once1);

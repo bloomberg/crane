@@ -220,7 +220,7 @@ collect(const Nat &n, const List<std::pair<typename _tcI0::PTR::ptr,
                     List<dv<typename _tcI0::PTR::ptr,
                             typename _tcI0::IPTR::iptr>>::nil());
               } else {
-                const auto &[a0, a1] =
+                const auto &[_, a1] =
                     std::get<
                         typename List<dv<typename _tcI0::PTR::ptr,
                                          typename _tcI0::IPTR::iptr>>::Cons>(
@@ -280,7 +280,7 @@ collect(const Nat &n, const List<std::pair<typename _tcI0::PTR::ptr,
           return eou_ret<
               dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a0);
         } else {
-          const auto &[a01, a11] = std::get<typename List<
+          const auto &[a01, _] = std::get<typename List<
               dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Cons>(
               l.v());
           return eou_ret<

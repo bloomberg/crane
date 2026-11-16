@@ -59,7 +59,7 @@ PulseParseCertificateCase::pulse_base_from_runs(const List<uint64_t> &rs) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(rs.v())) {
     return UINT64_C(1);
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(rs.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(rs.v());
     return a0;
   }
 }

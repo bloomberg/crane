@@ -117,7 +117,7 @@ public:
       if (std::holds_alternative<typename List<A>::Nil>(l.v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<A>::Cons>(l.v());
         return (_self_length0(_self_length0, *a1) + 1);
       }
     };

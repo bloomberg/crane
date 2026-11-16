@@ -115,7 +115,7 @@ struct ClosureEscapeMatch {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+      const auto &[_, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       return (length<T1>(*a1) + 1);
     }
   }

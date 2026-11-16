@@ -512,7 +512,7 @@ bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
           history.v())) {
     return false;
   } else {
-    const auto &[a0, a1] = std::get<
+    const auto &[a0, _] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         history.v());
     if (now < a0.be_time_minutes) {
@@ -659,7 +659,7 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
           r.v())) {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<
             typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
             r.v());
@@ -729,7 +729,7 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
           result.v())) {
-    const auto &[a0, a1] = std::get<
+    const auto &[a0, _] = std::get<
         typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
         result.v());
     return std::make_optional<uint64_t>(apply_rounding(mode, a0));

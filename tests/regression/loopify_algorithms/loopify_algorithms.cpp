@@ -27,7 +27,7 @@ LoopifyAlgorithms::len_impl(const List<uint64_t> &l) { /// CraneEnter: captures
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -242,7 +242,7 @@ List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         auto _cell = typename List<uint64_t>::Cons(
             (((a00 - a0) > a00 ? 0 : (a00 - a0))), nullptr);
@@ -498,7 +498,7 @@ LoopifyAlgorithms::windows_aux(uint64_t n, const List<uint64_t> &l,
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (len_impl(*_loop_l) < n) {
           auto _value = List<List<uint64_t>>::nil();
@@ -556,7 +556,7 @@ LoopifyAlgorithms::sliding_pairs(const List<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
             std::make_pair(a0, a00), nullptr);
@@ -735,7 +735,7 @@ uint64_t LoopifyAlgorithms::head_nat(uint64_t d, const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return d;
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     return a0;
   }
 }

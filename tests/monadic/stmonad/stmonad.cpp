@@ -110,7 +110,7 @@ uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return default0;
       } else {
-        const auto &[a0, a1] =
+        const auto &[a0, _] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         return std::move(a0);
       }
@@ -119,7 +119,7 @@ uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return default0;
       } else {
-        const auto &[a00, a10] =
+        const auto &[_, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a10);
         _loop_n = m;

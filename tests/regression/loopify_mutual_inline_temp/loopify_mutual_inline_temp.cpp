@@ -45,7 +45,7 @@ uint64_t LoopifyMutualInlineTemp::hd(const LoopifyMutualInlineTemp::lst &l) {
   if (std::holds_alternative<typename LoopifyMutualInlineTemp::lst::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename LoopifyMutualInlineTemp::lst::Cons>(l.v());
     return a0;
   }

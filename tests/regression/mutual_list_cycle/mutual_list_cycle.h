@@ -331,7 +331,7 @@ inline Branch::~Branch() {
 }
 
 inline Nat Branch::branch_size() const {
-  const auto &[a0, a1] = std::get<typename Branch::Branch0>(this->v());
+  const auto &[_, a1] = std::get<typename Branch::Branch0>(this->v());
   return Nat::s(a1->tree_size());
 }
 

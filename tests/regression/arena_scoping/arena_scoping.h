@@ -213,7 +213,7 @@ public:
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      const auto &[a0, _, a2] = std::get<typename Tree<A>::Node>(this->v());
       return Nat::s(Nat::o()).add(a0->size()).add(a2->size());
     }
   }

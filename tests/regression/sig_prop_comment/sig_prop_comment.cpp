@@ -12,7 +12,7 @@ SigSubset::head(const Sig<SigSubset::lst> &p) { // Precondition: match l with
   if (std::holds_alternative<typename SigSubset::lst::Nil>(_sv.v())) {
     throw std::logic_error("absurd case");
   } else {
-    const auto &[a0, a1] = std::get<typename SigSubset::lst::Cons>(_sv.v());
+    const auto &[a0, _] = std::get<typename SigSubset::lst::Cons>(_sv.v());
     return a0;
   }
 }

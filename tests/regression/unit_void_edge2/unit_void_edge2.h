@@ -106,7 +106,7 @@ struct UnitVoidEdge2 {
   static pair<uint64_t, std::monostate> make_nat_unit_pair(uint64_t n);
 
   template <typename T1, typename T2> static T1 get_fst(const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
+    const auto &[a0, _] = p;
     return a0;
   }
 

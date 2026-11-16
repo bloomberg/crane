@@ -97,7 +97,7 @@ std::optional<uint64_t> LoopifyOptionMaybe::safe_head(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return std::optional<uint64_t>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     return std::make_optional<uint64_t>(a0);
   }
 }
@@ -107,7 +107,7 @@ LoopifyOptionMaybe::safe_tail(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return std::optional<List<uint64_t>>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     return std::make_optional<List<uint64_t>>(*a1);
   }
 }

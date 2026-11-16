@@ -145,7 +145,7 @@ FrameKeptConsumedBeforeCall::again(uint64_t fuel,
             _result = List<List<uint64_t>>::cons(std::move(a0),
                                                  List<List<uint64_t>>::nil());
           } else {
-            const auto &[a00, a10] =
+            const auto &[_, a10] =
                 std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
             List<uint64_t> y = snoc(a0);
             _stack.emplace_back(CraneCont_Cons{a0, std::move(y)});

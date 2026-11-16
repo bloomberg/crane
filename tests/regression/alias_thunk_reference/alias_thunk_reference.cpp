@@ -31,7 +31,7 @@ AliasThunkReference::A::stream AliasThunkReference::A::ones() {
 }
 
 uint64_t AliasThunkReference::A::hd(const AliasThunkReference::A::stream &s) {
-  const auto &[a0, a1] =
+  const auto &[a0, _] =
       std::get<typename AliasThunkReference::A::stream::Cons>(s.v());
   return a0;
 }

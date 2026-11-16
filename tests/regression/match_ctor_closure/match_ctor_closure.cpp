@@ -9,7 +9,7 @@ MatchCtorClosure::match_and_box(const MatchCtorClosure::tree &t) {
   if (std::holds_alternative<typename MatchCtorClosure::tree::Leaf>(t.v())) {
     return fn_box::box([](uint64_t x) { return x; });
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, _] =
         std::get<typename MatchCtorClosure::tree::Node>(t.v());
     const MatchCtorClosure::tree &a0_value = *a0;
     return fn_box::box(

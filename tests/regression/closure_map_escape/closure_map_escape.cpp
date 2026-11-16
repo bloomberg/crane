@@ -46,7 +46,7 @@ uint64_t ClosureMapEscape::apply_first(
           crane::fn<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
+    const auto &[a0, _] = std::get<typename ClosureMapEscape::mylist<
         crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
     return a0(arg);
   }

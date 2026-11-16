@@ -695,7 +695,7 @@ struct ResumIdEtaLambda {
             Itree<Sum1<aE<typename natParams::ptr>, Sum1<BE, CE, crane::obj>,
                        crane::obj>,
                   std::pair<Nat, Nat>>>::VisF>(_sv.v())) {
-      const auto &[x, e0] = std::get<typename ItreeF<
+      const auto &[x, _] = std::get<typename ItreeF<
           Sum1<aE<typename natParams::ptr>, Sum1<BE, CE, crane::obj>,
                crane::obj>,
           std::pair<Nat, Nat>, Itree<Sum1<aE<typename natParams::ptr>,

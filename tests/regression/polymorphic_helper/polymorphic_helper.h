@@ -183,7 +183,7 @@ public:
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
         auto _cell = typename Nat::S(nullptr);
         Nat &_node =
             (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))

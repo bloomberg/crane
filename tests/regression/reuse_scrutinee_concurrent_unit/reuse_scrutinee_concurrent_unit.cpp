@@ -16,7 +16,7 @@ ReuseScrutineeConcurrentUnit::len(const ReuseScrutineeConcurrentUnit::lst &l) {
           l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename ReuseScrutineeConcurrentUnit::lst::Cons>(l.v());
     return (len(*a1) + 1);
   }

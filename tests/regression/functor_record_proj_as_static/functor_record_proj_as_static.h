@@ -1160,8 +1160,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return I::_0;
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
-          std::get<typename tree<T1>::Node>(m.v());
+      const auto &[_, _, _, _, a4] = std::get<typename tree<T1>::Node>(m.v());
       return a4;
     }
   }
@@ -1170,8 +1169,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
-          std::get<typename tree<T1>::Node>(m.v());
+      const auto &[a0, _, _, a3, _] = std::get<typename tree<T1>::Node>(m.v());
       return Nat::s(cardinal<T1>(*a0).add(cardinal<T1>(*a3)));
     }
   }
@@ -1193,8 +1191,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return false;
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
-          std::get<typename tree<T1>::Node>(m.v());
+      const auto &[a0, a1, _, a3, _] = std::get<typename tree<T1>::Node>(m.v());
       auto &&_sv = X::compare(x, a1);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(_sv.v())) {
         return mem<T1>(std::move(x), *a0);
@@ -1212,7 +1209,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return std::optional<T1>();
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m.v());
       auto &&_sv = X::compare(x, a1);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(_sv.v())) {
@@ -1248,7 +1245,7 @@ template <Int I, OrderedType X> struct Raw {
       if (std::holds_alternative<typename tree<T1>::Leaf>(l.v())) {
         return assert_false<T1>(l, std::move(x), d, r);
       } else {
-        const auto &[a0, a1, a2, a3, a4] =
+        const auto &[a0, a1, a2, a3, _] =
             std::get<typename tree<T1>::Node>(l.v());
         if (I::ge_lt_dec(height<T1>(*a0), height<T1>(*a3))) {
           return create<T1>(*a0, a1, a2, create<T1>(*a3, std::move(x), d, r));
@@ -1257,7 +1254,7 @@ template <Int I, OrderedType X> struct Raw {
           if (std::holds_alternative<typename tree<T1>::Leaf>(_sv0.v())) {
             return assert_false<T1>(l, std::move(x), d, r);
           } else {
-            const auto &[a00, a10, a20, a30, a40] =
+            const auto &[a00, a10, a20, a30, _] =
                 std::get<typename tree<T1>::Node>(_sv0.v());
             return create<T1>(create<T1>(*a0, a1, a2, *a00), a10, a20,
                               create<T1>(*a30, std::move(x), d, r));
@@ -1269,7 +1266,7 @@ template <Int I, OrderedType X> struct Raw {
         if (std::holds_alternative<typename tree<T1>::Leaf>(r.v())) {
           return assert_false<T1>(l, std::move(x), d, r);
         } else {
-          const auto &[a00, a10, a20, a30, a40] =
+          const auto &[a00, a10, a20, a30, _] =
               std::get<typename tree<T1>::Node>(r.v());
           if (I::ge_lt_dec(height<T1>(*a30), height<T1>(*a00))) {
             return create<T1>(create<T1>(l, std::move(x), d, *a00), a10, a20,
@@ -1279,7 +1276,7 @@ template <Int I, OrderedType X> struct Raw {
             if (std::holds_alternative<typename tree<T1>::Leaf>(_sv1.v())) {
               return assert_false<T1>(l, std::move(x), d, r);
             } else {
-              const auto &[a01, a11, a21, a31, a41] =
+              const auto &[a01, a11, a21, a31, _] =
                   std::get<typename tree<T1>::Node>(_sv1.v());
               return create<T1>(create<T1>(l, std::move(x), d, *a01), a11, a21,
                                 create<T1>(*a31, a10, a20, *a30));
@@ -1319,7 +1316,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(l.v())) {
       return std::make_pair(r, std::make_pair(std::move(x), d));
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(l.v());
       auto [l_, m] = remove_min<T1>(*a0, a1, a2, *a3);
       return std::make_pair(bal<T1>(std::move(l_), std::move(x), d, r),
@@ -1335,7 +1332,7 @@ template <Int I, OrderedType X> struct Raw {
       if (std::holds_alternative<typename tree<T1>::Leaf>(s2.v())) {
         return s1;
       } else {
-        const auto &[a00, a10, a20, a30, a40] =
+        const auto &[a00, a10, a20, a30, _] =
             std::get<typename tree<T1>::Node>(s2.v());
         auto [s2_, p] = remove_min<T1>(*a00, a10, a20, *a30);
         auto [x, d] = std::move(p);
@@ -1349,7 +1346,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return tree<T1>::leaf();
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m.v());
       auto &&_sv = X::compare(x, a1);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(_sv.v())) {
@@ -1414,7 +1411,7 @@ template <Int I, OrderedType X> struct Raw {
       return triple<T1>{tree<T1>::leaf(), std::optional<T1>(),
                         tree<T1>::leaf()};
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m.v());
       auto &&_sv = X::compare(x, a1);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(_sv.v())) {
@@ -1446,7 +1443,7 @@ template <Int I, OrderedType X> struct Raw {
       if (std::holds_alternative<typename tree<T1>::Leaf>(m2.v())) {
         return m1;
       } else {
-        const auto &[a00, a10, a20, a30, a40] =
+        const auto &[a00, a10, a20, a30, _] =
             std::get<typename tree<T1>::Node>(m2.v());
         auto [m2_, xd] = remove_min<T1>(*a00, a10, a20, *a30);
         return join<T1>(m1, std::move(xd).first, std::move(xd).second,
@@ -1461,7 +1458,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return acc;
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m.v());
       return elements_aux<T1>(List<std::pair<typename X::t, T1>>::cons(
           std::make_pair(a1, a2), elements_aux<T1>(std::move(acc), *a3)),
@@ -1481,7 +1478,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return a;
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m.v());
       return fold<T1, T2>(f, *a3,
                           f(a1, a2, fold<T1, T2>(f, *a0, std::move(a))));
@@ -1599,7 +1596,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return e;
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m.v());
       return cons<T1>(*a0, enumeration<T1>::more(a1, a2, *a3, std::move(e)));
     }
@@ -1634,7 +1631,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
       return cont(e2);
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m1.v());
       const tree<T1> &a0_value = *a0;
       const tree<T1> &a3_value = *a3;
@@ -1697,7 +1694,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m.v())) {
       return tree<T2>::leaf();
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m.v());
       auto _cs = f(a1, a2);
       if (_cs.has_value()) {
@@ -1718,7 +1715,7 @@ template <Int I, OrderedType X> struct Raw {
     if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
       return mapr(m2);
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
+      const auto &[a0, a1, a2, a3, _] =
           std::get<typename tree<T1>::Node>(m1.v());
       if (std::holds_alternative<typename tree<T2>::Leaf>(m2.v())) {
         return mapl(m1);

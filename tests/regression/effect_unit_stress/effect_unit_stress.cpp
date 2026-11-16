@@ -103,7 +103,7 @@ std::optional<uint64_t> EffectUnitStress::safe_head(const List<uint64_t> &xs) {
     std::cout << std::string("empty!") << '\n';
     return std::optional<uint64_t>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(xs.v());
     return std::make_optional<uint64_t>(a0);
   }
 }

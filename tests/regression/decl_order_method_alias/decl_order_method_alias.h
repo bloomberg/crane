@@ -147,12 +147,12 @@ const uint64_t written_second = []() -> uint64_t {
     if (std::holds_alternative<typename List<Rv>::Nil>(r.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<Rv>::Cons>(r.v());
+      const auto &[_, a1] = std::get<typename List<Rv>::Cons>(r.v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<Rv>::Nil>(_sv0.v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a00, a10] = std::get<typename List<Rv>::Cons>(_sv0.v());
+        const auto &[a00, _] = std::get<typename List<Rv>::Cons>(_sv0.v());
         if (std::holds_alternative<typename Rv::RU>(a00.v())) {
           return UINT64_C(0);
         } else {

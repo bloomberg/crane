@@ -6,7 +6,7 @@ uint64_t FixPartialApp::count_nodes(const FixPartialApp::tree &t,
   if (std::holds_alternative<typename FixPartialApp::tree::Leaf>(t.v())) {
     return base;
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         std::get<typename FixPartialApp::tree::Node>(t.v());
     return count_nodes(*a0, count_nodes(*a2, (base + UINT64_C(1))));
   }

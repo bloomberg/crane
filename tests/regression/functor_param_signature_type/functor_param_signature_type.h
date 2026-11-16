@@ -81,7 +81,7 @@ struct FunctorParamSignatureType {
   template <T D> struct UseFn {
     static bool same(const SigT<typename D::SymTy::terminal, crane::obj> &t0,
                      typename D::SymTy::terminal a) {
-      const auto &[x, a1] = t0;
+      const auto &[x, _] = t0;
       if (D::Defs::t_eq_dec(crane::any_cast<typename D::Defs::TA::t>(x),
                             std::move(a))) {
         return true;

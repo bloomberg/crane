@@ -2,7 +2,7 @@
 
 uint64_t ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
   if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
     return (UINT64_C(1) + length(*a1));
   } else {
@@ -29,7 +29,7 @@ ReuseSelfCycle::mylist
 ReuseSelfCycle::prepend_self(const ReuseSelfCycle::mylist &l, bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
       return mylist::mycons(a0, l);
     } else {

@@ -182,7 +182,7 @@ uint64_t MemSafetyProbe16::nested_match_closure(
             typename MemSafetyProbe16::mylist<uint64_t>::Mynil>(l.v())) {
       return (a1 + n);
     } else {
-      const auto &[a00, a10] =
+      const auto &[a00, _] =
           std::get<typename MemSafetyProbe16::mylist<uint64_t>::Mycons>(l.v());
       return ((((a0->tree_sum() + a2->tree_sum()) + a1) + a00) + n);
     }

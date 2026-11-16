@@ -88,12 +88,12 @@ struct Dim10TowerProofChainCase {
       make_graded_goodwillie_tower(UINT64_C(10));
   static inline const SigT<uint64_t, crane::obj> dim10_layers_stabilize = []() {
     auto s = graded_goodwillie_layers_stabilize(UINT64_C(10));
-    auto &[x0, a1] = s;
+    auto &[x0, _] = s;
     return SigT<uint64_t, crane::obj>::existt(std::move(x0), crane::obj());
   }();
   static inline const SigT<uint64_t, crane::obj> dim10_P_stabilizes = []() {
     auto s = graded_goodwillie_P_stabilizes(UINT64_C(10));
-    auto &[x0, a1] = s;
+    auto &[x0, _] = s;
     return SigT<uint64_t, crane::obj>::existt(std::move(x0), crane::obj());
   }();
   static std::pair<std::pair<std::pair<IsIntegerValued, EventuallyZero>,
@@ -142,12 +142,12 @@ struct Dim10TowerProofChainCase {
       dim10_bundle.dt_tower.ggt_D(UINT64_C(10)).go_dim;
   static inline const uint64_t dim10_layers_cutoff = []() {
     const auto &_sv = dim10_bundle.dt_chain.gc_layers_stabilize;
-    const auto &[x, a1] = _sv;
+    const auto &[x, _] = _sv;
     return x;
   }();
   static inline const uint64_t dim10_P_cutoff = []() {
     const auto &_sv = dim10_bundle.dt_chain.gc_P_stabilize;
-    const auto &[x, a1] = _sv;
+    const auto &[x, _] = _sv;
     return x;
   }();
   static inline const bool dim10_layers_cutoff_matches =

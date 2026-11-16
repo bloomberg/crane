@@ -404,7 +404,7 @@ struct BareSelfMethodValue {
                   _sv.v())) {
             _result = Nat::o();
           } else {
-            const auto &[a0, a1, a2] =
+            const auto &[a0, _, a2] =
                 std::get<typename bareSelfMethodValue::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});

@@ -174,7 +174,7 @@ MemSafetyProbe5::collect_left_vals(
               t.v_mut())) {
         _result = std::move(acc);
       } else {
-        auto &[a0, a1, a2] =
+        auto &[a0, _, a2] =
             std::get<typename MemSafetyProbe5::tree::Node>(t.v_mut());
         const MemSafetyProbe5::tree &a0_value = *a0;
         const MemSafetyProbe5::tree &a2_value = *a2;

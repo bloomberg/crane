@@ -119,7 +119,7 @@ public:
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
@@ -334,7 +334,7 @@ struct LoopifySequences {
                   if (std::holds_alternative<typename List<T1>::Nil>(a00.v())) {
                     _stack.emplace_back(CraneEnter{crane_raw(a10)});
                   } else {
-                    const auto &[a01, a11] =
+                    const auto &[a01, _] =
                         std::get<typename List<T1>::Cons>(a00.v());
                     _stack.emplace_back(CraneCont_Cons{a01});
                     _stack.emplace_back(CraneEnter{crane_raw(a10)});
@@ -379,7 +379,7 @@ struct LoopifySequences {
                   if (std::holds_alternative<typename List<T1>::Nil>(a01.v())) {
                     _stack.emplace_back(CraneEnter{crane_raw(a11)});
                   } else {
-                    const auto &[a02, a12] =
+                    const auto &[_, a12] =
                         std::get<typename List<T1>::Cons>(a01.v());
                     _stack.emplace_back(CraneCont_Cons{a12});
                     _stack.emplace_back(CraneEnter{crane_raw(a11)});

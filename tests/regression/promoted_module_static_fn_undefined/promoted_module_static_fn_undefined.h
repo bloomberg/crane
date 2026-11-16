@@ -326,7 +326,7 @@ public:
             this->v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1, a2] =
+      const auto &[a0, _, a2] =
           std::get<typename PromotedModuleStaticFnUndefined::Node>(this->v());
       return Nat::s(a0->size().add(a2->size()));
     }

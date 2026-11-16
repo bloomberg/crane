@@ -164,7 +164,7 @@ template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {
   if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
     throw std::logic_error("absurd case");
   } else {
-    const auto &[h, n, a2] = std::get<typename T0<T1>::Cons>(v0.v());
+    const auto &[h, _, a2] = std::get<typename T0<T1>::Cons>(v0.v());
     if (std::holds_alternative<typename T::F1>(p.v())) {
       return h;
     } else {

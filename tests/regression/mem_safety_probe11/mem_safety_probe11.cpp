@@ -24,7 +24,7 @@ MemSafetyProbe11::collect_dual_captures(
   if (std::holds_alternative<typename MemSafetyProbe11::tree::Leaf>(t.v())) {
     return acc;
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
     const MemSafetyProbe11::tree &a0_value = *a0;
     const MemSafetyProbe11::tree &a2_value = *a2;
@@ -70,7 +70,7 @@ MemSafetyProbe11::triple_use_tree(
   if (std::holds_alternative<typename MemSafetyProbe11::tree::Leaf>(t.v())) {
     return acc;
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
     const MemSafetyProbe11::tree &a0_value = *a0;
     const MemSafetyProbe11::tree &a2_value = *a2;

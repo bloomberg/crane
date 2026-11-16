@@ -86,7 +86,7 @@ LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) { /// CraneEnt
               xs.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});

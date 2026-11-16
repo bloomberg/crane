@@ -42,7 +42,7 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
   P projT2() const {
-    const auto &[x0, a1] = *this;
+    const auto &[_, a1] = *this;
     return a1;
   }
 };

@@ -156,12 +156,12 @@ struct CoindGuard {
   };
 
   template <typename T1> static T1 hd(const Stream<T1> &s) {
-    const auto &[a0, a1] = std::get<typename Stream<T1>::Cons>(s.v());
+    const auto &[a0, _] = std::get<typename Stream<T1>::Cons>(s.v());
     return a0;
   }
 
   template <typename T1> static Stream<T1> tl(const Stream<T1> &s) {
-    const auto &[a0, a1] = std::get<typename Stream<T1>::Cons>(s.v());
+    const auto &[_, a1] = std::get<typename Stream<T1>::Cons>(s.v());
     return a1;
   }
 

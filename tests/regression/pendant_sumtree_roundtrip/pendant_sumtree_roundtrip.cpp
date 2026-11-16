@@ -184,7 +184,7 @@ PendantSumtreeRoundtripCase::sumtree_top(
         typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(st.v());
     return a0;
   } else {
-    const auto &[a0, a1] = std::get<
+    const auto &[a0, _] = std::get<
         typename PendantSumtreeRoundtripCase::SumTree::SumNode>(st.v());
     return a0;
   }
@@ -200,7 +200,7 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
     return List<PendantSumtreeRoundtripCase::CertifiedPendant>::cons(
         a0, List<PendantSumtreeRoundtripCase::CertifiedPendant>::nil());
   } else {
-    const auto &[a0, a1] = std::get<
+    const auto &[_, a1] = std::get<
         typename PendantSumtreeRoundtripCase::SumTree::SumNode>(st.v());
     const List<PendantSumtreeRoundtripCase::SumTree> &a1_value = *a1;
     return a1_value.template map<
@@ -219,7 +219,7 @@ uint64_t PendantSumtreeRoundtripCase::sumtree_depth(
           typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(st.v())) {
     return UINT64_C(1);
   } else {
-    const auto &[a0, a1] = std::get<
+    const auto &[_, a1] = std::get<
         typename PendantSumtreeRoundtripCase::SumTree::SumNode>(st.v());
     const List<PendantSumtreeRoundtripCase::SumTree> &a1_value = *a1;
     return (a1_value.template map<uint64_t>(

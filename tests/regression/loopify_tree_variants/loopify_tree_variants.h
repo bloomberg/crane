@@ -137,7 +137,7 @@ struct LoopifyTreeVariants {
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2, a3] =
+            const auto &[a0, _, a2, a3] =
                 std::get<typename ternary::TNode>(_sv.v());
             _stack.emplace_back(CraneCont_TNode{crane_raw(a2), crane_raw(a3)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});

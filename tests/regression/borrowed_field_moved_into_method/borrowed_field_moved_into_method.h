@@ -530,8 +530,7 @@ struct BorrowedFieldMovedIntoMethod {
       const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(vs.v());
       Z k = BinInt::of_nat(a0);
       if (std::holds_alternative<typename BfmTypes::ty::TA>(t.v())) {
-        const auto &[vector0, sz0, t0] =
-            std::get<typename BfmTypes::ty::TA>(t.v());
+        const auto &[_, _, t0] = std::get<typename BfmTypes::ty::TA>(t.v());
         return walk<_tcI0>(
             *t0,
             BinInt::add(off, BinInt::mul(std::move(k),

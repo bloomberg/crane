@@ -237,7 +237,7 @@ struct LiftedHelperFramePointer {
         if (std::holds_alternative<typename tree<T1>::Leaf>(a.v())) {
           _result = depth_at<T1>(b);
         } else {
-          const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(a.v());
+          const auto &[a0, _, a2] = std::get<typename tree<T1>::Node>(a.v());
           _stack.emplace_back(CraneCont_Node{crane_raw(a0), crane_raw(a2)});
           _stack.emplace_back(CraneEnter{&b, crane_raw(a0)});
         }
@@ -299,7 +299,7 @@ struct LiftedHelperFramePointer {
         if (std::holds_alternative<typename tree<T1>::Leaf>(a.v())) {
           _result = depth_at<T1>(b);
         } else {
-          const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(a.v());
+          const auto &[a0, _, a2] = std::get<typename tree<T1>::Node>(a.v());
           _stack.emplace_back(CraneCont_Node{crane_raw(a0), crane_raw(a2)});
           _stack.emplace_back(CraneEnter{&b, crane_raw(a0)});
         }

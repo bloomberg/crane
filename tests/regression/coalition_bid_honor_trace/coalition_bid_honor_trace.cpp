@@ -511,7 +511,7 @@ CoalitionBidHonorTraceCase::coalition_lead_commander(
           c.v())) {
     return std::optional<CoalitionBidHonorTraceCase::Commander>();
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<
             typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
             c.v());
