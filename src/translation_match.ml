@@ -33,10 +33,10 @@ let moved_out (base : Cpp_ir.Lowered.Expr.t) = match base with Move _ -> true | 
 
 (** Whether a match taking the record [t] apart, a class instance's fields
    unless [is_typeclass], takes its value, as the plan says
-   ({!Ownership_ir.takes_record}); under [CRANE_CHECK_IR], the code reading
+   ({!Ownership_ir.Region.takes_record}); under [CRANE_CHECK_IR], the code reading
    it from [base] must agree. *)
 let record_taken cx ~is_typeclass t base =
-  let taken = (not is_typeclass) && Ownership_ir.takes_record ~throws:(is_throwing_value cx)
+  let taken = (not is_typeclass) && Ownership_ir.Region.takes_record ~throws:(is_throwing_value cx)
     cx.ctx.lexical.move_plan t in
   if Base.Probe.checking () && taken <> moved_out base then
     Base.Probe.violation "ownership plan"
@@ -50,7 +50,7 @@ let record_taken cx ~is_typeclass t base =
    moved out of the record into a local of its own is the body's.  A field
    copied out of a record still held is not: it may be read in place. *)
 let with_fields_plan cx case asgns f =
-  with_plan cx (Ownership_ir.fields_by_value cx.ctx.lexical.move_plan ~case ~by_value:(List.map snd asgns)) f
+  with_plan cx (Ownership_ir.Region.fields_by_value cx.ctx.lexical.move_plan ~case ~by_value:(List.map snd asgns)) f
 
 (** Generate a single branch of a [Match] statement's if/else-if chain.
 
@@ -639,7 +639,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
           else "_m" ^ string_of_int (match_i - 1) )
     in
     (* The scrutinee is referenced across all branches, so the plan has a
-       read of it as one in place, never moved ({!Ownership_ir.Inspected}). *)
+       read of it as one in place, never moved ({!Ownership_ir.Region.Inspected}). *)
     let scrut_expr = gen_expr cx env t in
     let scrut_expr =
       Translation_match_types.recover_erased_scrutinee cx env ~is_magic:scrut_is_wrapped_case typ scrut_expr
@@ -653,7 +653,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
     (* Whether this match may consume the scrutinee.  A shared value is
        matched by borrowing all the same -- its fields are count bumps away --
        and is consumed only by block reuse below. *)
-    let scrut_consumable = Ownership_ir.owns_scrutinee cx.ctx.lexical.move_plan t in
+    let scrut_consumable = Ownership_ir.Region.owns_scrutinee cx.ctx.lexical.move_plan t in
     let scrut_is_owned = scrut_consumable && not scrut_is_shared in
     (* Build variant accessor.  All inductives (including coinductives)
        are value types and use [scrut.v()] (dot access).  Exception:
@@ -933,7 +933,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
             let body_stmts =
               with_reuse_token cx (Some tok) (fun () ->
                   with_plan cx
-                    (Ownership_ir.reuse_arm cx.ctx.lexical.move_plan ~scrutinee:t ~branch:branch_idx
+                    (Ownership_ir.Region.reuse_arm cx.ctx.lexical.move_plan ~scrutinee:t ~branch:branch_idx
                        ~constructor:tail_ctor)
                     (fun () -> gen_stmts cx env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) )
             in
@@ -1051,7 +1051,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
      (%scrut.has_value()) { ... *%scrut; ... }"). Each occurrence re-prints the
      scrutinee C++ expression: a variable is then read in place (the plan has
-     no move of it, {!Ownership_ir.Inspected}), and anything else is bound
+     no move of it, {!Ownership_ir.Region.Inspected}), and anything else is bound
      once to a temporary below. *)
   let cmatch = find_custom_match pv in
   let scrut_uses =
@@ -1060,7 +1060,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
   in
   (* Whether the match binds the pair's components by value, moving them out:
      asked while [t] is still the Core scrutinee. *)
-  let pair_by_value = Ownership_ir.pair_by_value cx.ctx.lexical.move_plan t pv in
+  let pair_by_value = Ownership_ir.Region.pair_by_value cx.ctx.lexical.move_plan t pv in
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)

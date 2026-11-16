@@ -20,16 +20,16 @@ let rec declared_by_reference : Cpp_ir.Lowered.Type.t -> bool = function
 
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type worth moving.  That is one
-    {!Ownership_ir.worth_moving} accepts as reading [ty]; but an erased Core
+    {!Ownership_ir.Region.worth_moving} accepts as reading [ty]; but an erased Core
     type says nothing of how the value is held, and there the type the head
-    [declared] it at is read instead ({!Ownership_ir.worth_moving_cpp}):
+    [declared] it at is read instead ({!Ownership_ir.Region.worth_moving_cpp}):
     [x] in an instance's [fun (A : Type) (x : A) => Some x] is a boxed
     [crane::obj]. *)
 let owned_parameters ?(declared : int -> Cpp_ir.Lowered.Type.t option = fun _ -> None) n ~owned ~ty =
   let worth i =
     match (resolve_meta (ty i), declared i) with
-    | (Core.Type.Erased _ | Core.Type.Unknown | Core.Type.Axiom), Some cty -> Ownership_ir.worth_moving_cpp cty
-    | ty, _ -> Ownership_ir.worth_moving ty
+    | (Core.Type.Erased _ | Core.Type.Unknown | Core.Type.Axiom), Some cty -> Ownership_ir.Region.worth_moving_cpp cty
+    | ty, _ -> Ownership_ir.Region.worth_moving ty
   in
   List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)
 

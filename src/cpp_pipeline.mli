@@ -33,7 +33,7 @@ type control_check = unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
     undeclared type variable, a mapping's unsupplied type argument, a method
     or projection called as a function, and the rest of
     {!Cpp_ir.Representation_obligation.t}), or if what it borrows and moves
-    fails {!Borrow_projection.check_decl} or {!Move_check.check_decl}. *)
+    fails {!Borrow_projection.check_decl} or {!Ownership_ir.Move_check.check_decl}. *)
 val finish : check_control:control_check -> Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 

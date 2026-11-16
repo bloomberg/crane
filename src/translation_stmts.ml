@@ -93,9 +93,9 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
          the save moves is the plan's: the machine reads it by the let's
          binder. *)
       let () =
-        match (Ownership_ir.save_moves cx.ctx.lexical.move_plan let_occ, core_binder cx ~site:(Binding let_occ) env' 1)
+        match (Ownership_ir.Region.save_moves cx.ctx.lexical.move_plan let_occ, core_binder cx ~site:(Binding let_occ) env' 1)
           with
-        | Some moved, Some binder -> Ownership_ir.Frame_save.record binder moved
+        | Some moved, Some binder -> Ownership_ir.Region.Frame_save.record binder moved
         | _ -> ()
       in
       (* What the continuation reads, in the right-hand side's coordinates. *)
@@ -286,7 +286,7 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
          moved there is bound as [const T&], saving a [shared_ptr] count
          bump; the plan does not own such a binder, so it is never moved
          from.  Only for [shared_ptr] types. *)
-      let use_const_ref = Ownership_ir.projects_in_place cx.ctx.lexical.move_plan t a in
+      let use_const_ref = Ownership_ir.Region.projects_in_place cx.ctx.lexical.move_plan t a in
       let result =
         match asgn with
           | [Bind_variable (_, Existing, e)] ->

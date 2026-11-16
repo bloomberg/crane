@@ -729,11 +729,11 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
         in
         (* Perceus reuse: where the plan gives this construction the token
            of the use_count()==1-guarded arm it is returned from
-           ({!Ownership_ir.allocation}), call the [<factory>__reuse] variant
+           ({!Ownership_ir.Region.allocation}), call the [<factory>__reuse] variant
            with the token appended (stored last = printed first, matching
            the [_tok] leading parameter). *)
         ( match cx.ctx.lexical.reuse_token with
-        | Some tok when Ownership_ir.allocation cx.ctx.lexical.move_plan construction = Reuse ->
+        | Some tok when Ownership_ir.Region.allocation cx.ctx.lexical.move_plan construction = Reuse ->
           let args = args @ [Cpp_ir.Expr.Move tok] in
           Call
             ( ctor_sig args,
@@ -748,7 +748,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
           then
             (* The arguments are read where the thunk is made, and taken
                by move there when the plan moves them. *)
-            let moved = moved_names env (Ownership_ir.eta_captures cx.ctx.lexical.move_plan ts) in
+            let moved = moved_names env (Ownership_ir.Region.eta_captures cx.ctx.lexical.move_plan ts) in
             Translation_suspension.suspend_ctor ~moved type_expr (Id.of_string ctor_struct) (List.rev args)
           else
             Call

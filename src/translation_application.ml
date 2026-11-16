@@ -1518,7 +1518,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                 let moved =
                   List.filter
                     (fun x -> List.exists (Id.equal x) free)
-                    (moved_names env (Ownership_ir.eta_captures cx.ctx.lexical.move_plan core_args))
+                    (moved_names env (Ownership_ir.Region.eta_captures cx.ctx.lexical.move_plan core_args))
                 in
                 Lambda {l with moved = moved}
               | e -> e ) )
@@ -2026,7 +2026,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           with
           | Lambda l ->
             Lambda
-              {l with moved = moved_names env (Ownership_ir.eta_captures cx.ctx.lexical.move_plan (f :: core_args))}
+              {l with moved = moved_names env (Ownership_ir.Region.eta_captures cx.ctx.lexical.move_plan (f :: core_args))}
           | e -> e )
       else
         Cpp_ir.Build.call (gen_callee ()) args

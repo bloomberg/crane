@@ -46,7 +46,7 @@ let begin_body cx ~owner ?(function_ = false) () =
       (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Base.Table.safe_pr_global owner));
   cx.ctx <-
     { input = { cx.ctx.input with body_owner = Some owner; body_function = function_ };
-      lexical = { cx.ctx.lexical with move_plan = Ownership_ir.empty; representation = []; planned_reads = [] };
+      lexical = { cx.ctx.lexical with move_plan = Ownership_ir.Region.empty; representation = []; planned_reads = [] };
       threaded = { match_param_counter = 0; cs_counter = 0 } }
 
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type

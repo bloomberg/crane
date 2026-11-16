@@ -121,7 +121,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     let x = try get_db_name i env with Failure _ -> db_fallback_id i in
     let var_expr : Cpp_ir.Lowered.Expr.t = Local x in
     (* Move on a last use of a variable the region owns, as its plan says
-       ({!Ownership_ir.use}); a boxed variable is unboxed whole, whatever
+       ({!Ownership_ir.Region.use}); a boxed variable is unboxed whole, whatever
        component of it Core reads.  Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by Core
@@ -131,22 +131,22 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     let move_candidate =
       (not (Base.Common.is_tc_instance_id x))
       &&
-      match Ownership_ir.use ~boxed:boxed_read cx.ctx.lexical.move_plan occ with
+      match Ownership_ir.Region.use ~boxed:boxed_read cx.ctx.lexical.move_plan occ with
       | Some ((Share | Clone | Copy) as copy) ->
         (* The copy the plan names is the one the variable's declaration
            makes, where Core says what its type is. *)
-        ( if Base.Probe.checking () && Ownership_ir.read_is_typed cx.ctx.lexical.move_plan occ then
+        ( if Base.Probe.checking () && Ownership_ir.Region.read_is_typed cx.ctx.lexical.move_plan occ then
             match Translation_binders.binder_cpp_type cx i with
             (* [auto] says nothing of the type it deduces. *)
             | Some Cpp_ir.Type.(Auto | Const Auto | Reference (_, (Auto | Const Auto))) -> ()
-            | Some declared when Ownership_ir.copy_of_declared declared <> copy ->
-              let name : Ownership_ir.Use.t -> string = function
+            | Some declared when Ownership_ir.Region.copy_of_declared declared <> copy ->
+              let name : Ownership_ir.Region.Use.t -> string = function
                 | Share -> "shares" | Clone -> "clones" | Copy -> "copies" | Move -> "moves" | Borrow -> "borrows"
               in
               Base.Probe.violation "copy mode"
                 Pp.(
                   str "the plan " ++ str (name copy) ++ str " " ++ Id.print x ++ str " where its declaration "
-                  ++ str (name (Ownership_ir.copy_of_declared declared)) ++ str " it" )
+                  ++ str (name (Ownership_ir.Region.copy_of_declared declared)) ++ str " it" )
             | Some _ | None -> () );
         false
       | Some use -> use = Move

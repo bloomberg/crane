@@ -3,7 +3,7 @@
 
 (** How the frames of a machine with a stack hold the parameters of its
     loops, decided over its ControlIR: for each parameter, the storage the
-    value a frame holds for it lies in ({!Ownership_ir.Storage}).  Loopify
+    value a frame holds for it lies in ({!Ownership_ir.Region.Storage}).  Loopify
     and {!Control_to_cpp_ir} read the plan when they lay out the
     frames of a machine with a stack.
 
@@ -26,8 +26,8 @@
     parameter of a loop an entry enters, by the Core level it is bound at
     under the loop's parameters, the same. *)
 type t = {
-  own : Ownership_ir.Storage.t list;
-  entered : (int * Ownership_ir.Storage.t) list;
+  own : Ownership_ir.Region.Storage.t list;
+  entered : (int * Ownership_ir.Region.Storage.t) list;
 }
 
 (** A parameter of the loop, by its position, or of a loop an entry enters:
@@ -61,7 +61,7 @@ val passed_holdable : Unit_plan.Context.t -> Core_plan.Callable_abi.passing opti
 
 (** Whether a frame can hold the parameter at position [i] of the loop [l]
     by pointer, as the plan of the local fixpoint's function [l] is made
-    from passes it ({!Ownership_ir.Local_passing}, {!passed_holdable});
+    from passes it ({!Ownership_ir.Region.Local_passing}, {!passed_holdable});
     [None] where [l] is a function's loop, or no plan says.  [u] is the
     unit [l] is lowered in. *)
 val local_holdable : Unit_plan.Context.t -> Control_ir.Term.loop -> int -> bool option

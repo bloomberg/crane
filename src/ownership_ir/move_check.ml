@@ -420,13 +420,13 @@ let check_convention d owner r params body =
   report_conventions owner (Option.default [] (convention_violations d r params body))
 
 (* The lambda of each local fixpoint in [ss] against the plan of the
-   function it is generated for ({!Ownership_ir.Local_passing}): the
+   function it is generated for ({!Region.Local_passing}): the
    parameters it takes other than the members it calls through. *)
 let check_local_conventions owner ss =
   let rec fe (e : expr) =
     ( match e with
     | Lambda {fixpoint = Some lf; params; body; _} -> (
-      match Ownership_ir.Local_passing.lookup lf.member with
+      match Region.Local_passing.lookup lf.member with
       | Some passing ->
         let selves = match lf.encoding with Self_passing ids -> ids | Knot | Lowered -> [] in
         let params =
@@ -478,7 +478,7 @@ let escaping ~group ~callees xs ss =
   List.sort_uniq Id.compare !found
 
 (* Each lambda of a local fixpoint function whose plan holds a capture
-   [By_reference] ({!Ownership_ir.Local_captures}) in [ss]: written
+   [By_reference] ({!Region.Local_captures}) in [ss]: written
    capturing by reference, and not let escape by the statements after the
    one binding it, in the block binding it -- the scope it reads; nor any
    lambda capturing one by reference; nor its partners by the members of
@@ -491,7 +491,7 @@ let check_by_reference_closures owner ss =
         (fun (s : stmt) ->
           match s with
           | Bind_variable (x, Declare _, Lambda {fixpoint = Some lf; _})
-            when Ownership_ir.Local_captures.by_reference lf.member ->
+            when Region.Local_captures.by_reference lf.member ->
             Some (x, fst lf.member)
           | _ -> None )
         ss
@@ -529,7 +529,7 @@ let check_by_reference_closures owner ss =
     let rec go reading : stmt list -> unit = function
       | [] -> ()
       | (Bind_variable (x, Declare _, Lambda ({fixpoint = Some lf; _} as l)) as s) :: rest
-        when Ownership_ir.Local_captures.by_reference lf.member && l.capture <> Written Nothing ->
+        when Region.Local_captures.by_reference lf.member && l.capture <> Written Nothing ->
         (* One the C++ has capture nothing -- what the plan reads is a
            dictionary, a template parameter -- refers into no scope. *)
         if not (by_reference l) then

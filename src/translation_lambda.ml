@@ -28,12 +28,12 @@ let capture_names env is =
 
 (** The names of the variables [captures] says a closure takes by move. *)
 let moved_names env captures =
-  capture_names env (List.filter_map (function i, Ownership_ir.Capture.By_move -> Some i | _ -> None) captures)
+  capture_names env (List.filter_map (function i, Ownership_ir.Region.Capture.By_move -> Some i | _ -> None) captures)
 
 (** A local fixpoint's wrapper parameter, of Core type [ty], forwarded to the
    impl: its one read, a move where the wrapper takes it by value. *)
 let forwarded ~by_value ty (v : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  if by_value && Ownership_ir.worth_moving ty && not (core_type_is_unit ty) then Move v else v
+  if by_value && Ownership_ir.Region.worth_moving ty && not (core_type_is_unit ty) then Move v else v
 
 (** Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
@@ -45,7 +45,7 @@ let owned_flags passing = List.rev_map (fun p -> p = Core_plan.Callable_abi.Owne
     and its body as statements returning its result. *)
 let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   (* What the lambda takes by move as it is made. *)
-  let moved_captures = moved_names env (Ownership_ir.captures cx.ctx.lexical.move_plan a) in
+  let moved_captures = moved_names env (Ownership_ir.Region.captures cx.ctx.lexical.move_plan a) in
   (* Whether a binder becomes a C++ parameter: see
      {!Translation_lambda_params.lambda_binder_emitted}. *)
   let binder_emitted ~body binders i ty =

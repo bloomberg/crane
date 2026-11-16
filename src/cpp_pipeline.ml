@@ -113,7 +113,7 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
        fixpoint applied in place binds its parameters to in order
-       ({!Ownership_ir.evaluated_first}). *)
+       ({!Ownership_ir.Region.evaluated_first}). *)
     on_decl "local_closures" Cpp_local_closures.transform_decl;
     (* A function's constants are declared once at its top, now that nothing
        moves code between functions -- and before the passes that rewrite what
@@ -334,7 +334,7 @@ let spell_type t =
 (* Under [CRANE_CHECK_IR] the obligations are checked in two halves around
    the instantiation passes ({!checked_before_instantiation}), and the
    instantiated declaration is checked for what it borrows and moves
-   ({!Borrow_projection.check_decl}, {!Move_check.check_decl}). *)
+   ({!Borrow_projection.check_decl}, {!Ownership_ir.Move_check.check_decl}). *)
 let finish ~check_control u decl =
   let trace = traced decl in
   let steps = ref [] in
@@ -365,7 +365,7 @@ let finish ~check_control u decl =
   let decl = run inj (instantiation_passes u) decl in
   if checking then begin
     Borrow_projection.check_decl (inj decl);
-    Move_check.check_decl u (inj decl);
+    Ownership_ir.Move_check.check_decl u (inj decl);
     check_settled u late decl
   end;
   Option.iter

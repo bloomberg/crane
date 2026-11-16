@@ -436,7 +436,7 @@ let borrow_cursor_matches shadow_params stmts =
 
     An invariant parameter lives in function scope and is read by every
     iteration of the loop, but the recursion it came from gave each activation
-    its own copy.  The ownership plan ({!Ownership_ir}) sees only the source
+    its own copy.  The ownership plan ({!Ownership_ir.Region}) sees only the source
     program's single syntactic occurrence, so it happily marks e.g. the base
     case of [repeat_with_sep] as [_result = std::move(s)] -- and the resume
     handler then reads [s] again on the next turn of the loop.  The last

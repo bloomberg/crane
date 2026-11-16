@@ -102,7 +102,7 @@ let derived_passed ~unit l =
    keeps one so where the entry takes the parameter by pointer, which
    {!Frame_storage} decides from the C++ parameters, after the plan. *)
 let resumes_of ~unit ?entry_captures ~origin ~depth ~available ~parameters:(first, (l : Control_ir.Term.loop)) () :
-    Ownership_ir.resumes =
+    Ownership_ir.Region.resumes =
   let rebuilt (p : Core_plan.Recursion.resume) =
     List.fold_left
       (fun rebuilt (c : Core_plan.Recursion.recomputable) ->
@@ -182,14 +182,14 @@ let method_resumes ~unit r ~inductive ~receiver ~depth =
    loop's is neither.  A loop built tail modulo cons may recycle the cells
    of an input it walks into its own ({!Reuse_cursor}).  A tail loop moves
    a parameter into its own next value at a Continue where the plan says
-   so ({!Ownership_ir.continue_moves}). *)
+   so ({!Ownership_ir.Region.continue_moves}). *)
 type planned = {
   loop : Control_ir.Term.loop;
   lowering : lowering;
   varying : bool list;
   parts : bool list;
   cursor : Reuse_cursor.t option;
-  moves : (Core.Occurrence.t * Ownership_ir.Continue_move.t list) list;
+  moves : (Core.Occurrence.t * Ownership_ir.Region.Continue_move.t list) list;
 }
 
 (* [l] lowered as [lowering] from what takes C++ parameters standing, in
@@ -212,8 +212,8 @@ let planned_at ~unit (l : Control_ir.Term.loop) lowering positions =
       | Tail ->
         List.map
           (fun (o, moves) ->
-            (o, List.map (function Some i -> List.nth moves i | None -> Ownership_ir.Continue_move.Keep) positions))
-          (Ownership_ir.continue_moves ~effects:(Unit_plan.Context.loop_effects unit) l)
+            (o, List.map (function Some i -> List.nth moves i | None -> Ownership_ir.Region.Continue_move.Keep) positions))
+          (Ownership_ir.Region.continue_moves ~effects:(Unit_plan.Context.loop_effects unit) l)
       | Modulo_cons | Frames -> [] ) }
 
 (* The position among the parameters of the loop [l] of the parameter of
@@ -363,10 +363,10 @@ let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~held
   let pointer_fields = Loopify_analysis.constructor_pointer_fields unit in
   let storage = Frame_storage.plan ~pointer_fields ~in_place ~holdable l in
   let own_pointers =
-    List.map (function Some i -> List.nth storage.own i = Ownership_ir.Storage.Local | None -> false) positions
+    List.map (function Some i -> List.nth storage.own i = Ownership_ir.Region.Storage.Local | None -> false) positions
   in
   let entered (b : Core.Binder.t) =
-    of_entering b && List.assoc_opt b.level storage.entered = Some Ownership_ir.Storage.Local
+    of_entering b && List.assoc_opt b.level storage.entered = Some Ownership_ir.Region.Storage.Local
   in
   (own_pointers, entered)
 

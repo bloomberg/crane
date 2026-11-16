@@ -85,7 +85,7 @@ let local_fix_stmts cx selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowere
   | _ -> self_passing ()
 
 (** How each function of the local fixpoint group whose bodies are [funs]
-    passes its parameters ({!Ownership_ir.Local_passing}): a group of
+    passes its parameters ({!Ownership_ir.Region.Local_passing}): a group of
     [closures] takes each by value; one generated in place lends each its
     body does not own ({!Core_plan.Escape.infer_owned_params}).  A parameter of no
     runtime value is taken by no lambda, but is a binder of the body all the
@@ -111,14 +111,14 @@ let local_passing cx ~closures funs =
 (** Record that the functions [binders] name pass their parameters as
    [passing] says, each the plan of the one at its position. *)
 let record_local_passing ~binders passing =
-  List.iter2 (fun (_, member, _, _) t -> Ownership_ir.Local_passing.record member t) binders passing
+  List.iter2 (fun (_, member, _, _) t -> Ownership_ir.Region.Local_passing.record member t) binders passing
 
 (** Record that the functions [binders] name hold their captures as
    [captures] says, each the modes of the one at its position: what
-   {!Move_check} holds their lambdas to. *)
+   {!Ownership_ir.Move_check} holds their lambdas to. *)
 let record_local_captures ~binders captures =
   List.iter2
-    (fun (_, member, _, _) modes -> Ownership_ir.Local_captures.record member (List.map snd modes))
+    (fun (_, member, _, _) modes -> Ownership_ir.Region.Local_captures.record member (List.map snd modes))
     binders captures
 
 (** Generate local fixpoint declarations using the Y-combinator pattern
@@ -408,8 +408,8 @@ let gen_local_fix_by_ref cx env ~binders ~passing ~captures renamed_ids funs_wit
 
 (** How the lambda of each function of the local fixpoint [fix] holds each
    variable it captures, generated as closures or else [in_place]
-   ({!Ownership_ir.captures_by_member}). *)
-let fix_captures cx ~in_place fix = Ownership_ir.captures_by_member ~in_place cx.ctx.lexical.move_plan fix
+   ({!Ownership_ir.Region.captures_by_member}). *)
+let fix_captures cx ~in_place fix = Ownership_ir.Region.captures_by_member ~in_place cx.ctx.lexical.move_plan fix
 
 (** Report, under [CRANE_CHECK_IR], a let-bound lambda [what] that reached
     translation other than as it is generated: Core puts every one so
@@ -424,7 +424,7 @@ let ungenerated_let_lambda what =
     ([local]), which the plan owns and moves; a violation otherwise. *)
 let check_closure_local cx ty a ~local =
   if Base.Probe.checking () then
-    match Ownership_ir.closure_local cx.ctx.lexical.move_plan ty a with
+    match Ownership_ir.Region.closure_local cx.ctx.lexical.move_plan ty a with
     | Some planned when planned <> local ->
       Base.Probe.violation "ownership plan"
         (Pp.str
@@ -692,7 +692,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
 
        The variables the fixpoint bodies capture are not moved in the
        continuation while a [\[&\]] lambda may still refer to them: the
-       plan pins them ({!Ownership_ir}). *)
+       plan pins them ({!Ownership_ir.Region}). *)
     let all_fix_ids_list = Array.to_list ids in
     (* A group a frame keeps across a resume is stored in the frame and
        called once the frame resumes, after the scope it would read by
@@ -702,7 +702,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
       List.exists (( <> ) []) (fix_captures cx ~in_place:true fix_term)
       &&
       match core_binder cx ~site:(Binding let_occ) env 0 with
-      | Some b -> Ownership_ir.kept_by_frame cx.ctx.lexical.move_plan b
+      | Some b -> Ownership_ir.Region.kept_by_frame cx.ctx.lexical.move_plan b
       | None -> false
     in
     let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
@@ -851,7 +851,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   | At_instance inst ->
     let subst = Base.Core_util.type_subst_list inst in
     ungenerated_let_lambda "a lambda used at one instance";
-    with_plan cx (Ownership_ir.bound_at_instance cx.ctx.lexical.move_plan ~let_:let_occ) (fun () ->
+    with_plan cx (Ownership_ir.Region.bound_at_instance cx.ctx.lexical.move_plan ~let_:let_occ) (fun () ->
         gen_stmts cx ~slot env k (Core.Expr.Let {binder = x;
                                               binder_type = subst t;
                                               value = Base.Core_util.ast_map_types subst a;
@@ -1180,10 +1180,10 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
   let n_outer = List.length outer_tvars in
   let has_extra_tvars = Base.Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
   (* The arguments the plan reads before the call, its parameters being
-     bound to them in order ({!Ownership_ir.evaluated_first}), each
+     bound to them in order ({!Ownership_ir.Region.evaluated_first}), each
      evaluated into a local of its own ahead of everything the call
      makes. *)
-  let first = Ownership_ir.evaluated_first cx.ctx.lexical.move_plan occ in
+  let first = Ownership_ir.Region.evaluated_first cx.ctx.lexical.move_plan occ in
   let evaluated = ref [] in
   let gen_args args =
     let params = List.rev (fst (collect_lams funs.(x))) in
@@ -1205,7 +1205,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
              evaluated := !evaluated
                @ [ ( Bind_variable (id, Declare (Translation_types.cpp_of_core cx env ty, None), e)
                      : Cpp_ir.Lowered.Stmt.t ) ];
-             if Ownership_ir.worth_moving ty then (Move (Local id) : Cpp_ir.Lowered.Expr.t) else Local id
+             if Ownership_ir.Region.worth_moving ty then (Move (Local id) : Cpp_ir.Lowered.Expr.t) else Local id
            | _ -> e )
          args )
   in

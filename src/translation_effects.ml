@@ -92,8 +92,8 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   let bound_by_bind env = core_binder cx ~site:(Binding (Core.Global_use.occurrence use)) env 1 in
   (* Where a machine resumes at the continuation's parameter, which of
      what its frame keeps the save moves is the plan's, as at a let. *)
-  ( match (ids, Ownership_ir.save_moves cx.ctx.lexical.move_plan (Core.Global_use.occurrence use)) with
-  | _ :: _, Some moved -> Option.iter (fun b -> Ownership_ir.Frame_save.record b moved) (bound_by_bind env)
+  ( match (ids, Ownership_ir.Region.save_moves cx.ctx.lexical.move_plan (Core.Global_use.occurrence use)) with
+  | _ :: _, Some moved -> Option.iter (fun b -> Ownership_ir.Region.Frame_save.record b moved) (bound_by_bind env)
   | _ -> () );
   (
   match ids with
@@ -171,7 +171,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
           if cpp_ty = Void || cpp_ty = Obligation Unresolved_type || core_type_is_unit ty then
             None
           else
-            Some (cpp_ty, Ownership_ir.worth_moving ty)
+            Some (cpp_ty, Ownership_ir.Region.worth_moving ty)
         | None -> None
       in
       ( match non_void_ty with

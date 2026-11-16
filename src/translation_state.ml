@@ -278,9 +278,9 @@ type lexical = {
   lifted_fixpoints : Core.Occurrence.t list;
   (** Which binders the region being generated owns where each is read, and
      which reads are last uses where their value may be taken
-     ({!Ownership_ir}).  Set where the region's body is generated
+     ({!Ownership_ir.Region}).  Set where the region's body is generated
      ({!with_region}), and emptied where a body or a closure begins. *)
-  move_plan : Ownership_ir.t;
+  move_plan : Ownership_ir.Region.t;
   (** Whether each pattern binder of the region being generated holds a box,
      as {!Representation_plan} plans it from the region's Core body: by Core
      site and field.  Set beside {!move_plan} ({!with_region}) in a body;
@@ -300,7 +300,7 @@ type lexical = {
   (** Perceus reuse: inside a [use_count() == 1]-guarded reuse arm of a
      match, the token [tok] (the moved, uniquely-owned storage the
      match frees) the constructions the arm's plan names
-     ({!Ownership_ir.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
+     ({!Ownership_ir.Region.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
      instead of the normal factory.  The plan names at most one on any path,
      so nothing here tracks whether it has been taken. *)
   reuse_token : Cpp_ir.Lowered.Expr.t option;
@@ -379,7 +379,7 @@ let create ~pp_cpp_type () =
           in_constructor_expr = false;
           rank2_carrier = None;
           lifted_fixpoints = [];
-          move_plan = Ownership_ir.empty;
+          move_plan = Ownership_ir.Region.empty;
           representation = [];
           planned_reads = [];
           planned_positions = [];
@@ -704,17 +704,17 @@ let plan_positions :
     [body] as one C++ body owning the variables at the de Bruijn indices
     [owned], its closures owning their copy of those at [copied], lowered as
     a machine resuming at [resumes], if any -- [certain]ly, or perhaps --
-    with the moves planned over [body] ({!Ownership_ir.region}), those
+    with the moves planned over [body] ({!Ownership_ir.Region.region}), those
     into the frames entering the machine's entries recorded
-    ({!Ownership_ir.Entry_moves}). *)
+    ({!Ownership_ir.Region.Entry_moves}). *)
 let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
   let outer = Core.Lexenv.type_opt cx.ctx.lexical.env_types in
   let p =
-    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~effects:cx.ctx.input.unit.effects
+    Ownership_ir.Region.region ~owned ~copied ~outer ?resumes ?certain ~effects:cx.ctx.input.unit.effects
       ~n_outer:(List.length cx.ctx.lexical.current_type_vars) body
   in
   (* The frames a machine enters its entries by are planned with it. *)
-  Ownership_ir.Entry_moves.record_plan p;
+  Ownership_ir.Region.Entry_moves.record_plan p;
   (* A region inside another of the same body -- a lambda's -- was walked
      with it, at the binders outside it as the enclosing walk planned them;
      planning it again from its own scope would read those at the types they
@@ -740,13 +740,13 @@ let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.E
     move_plan = p })) p f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative
-    plan of the region being generated ({!Ownership_ir.reuse_arm}). *)
-let with_plan cx (p : Ownership_ir.t) (f : unit -> 'a) : 'a =
+    plan of the region being generated ({!Ownership_ir.Region.reuse_arm}). *)
+let with_plan cx (p : Ownership_ir.Region.t) (f : unit -> 'a) : 'a =
   with_field cx (fun c -> c.lexical.move_plan) (fun p -> set_lexical cx (fun l -> { l with move_plan = p })) p f
 
 (** Whether the construction [e] takes the reuse token. *)
 let takes_reuse_token cx e =
-  Option.has_some cx.ctx.lexical.reuse_token && Ownership_ir.allocation cx.ctx.lexical.move_plan e = Reuse
+  Option.has_some cx.ctx.lexical.reuse_token && Ownership_ir.Region.allocation cx.ctx.lexical.move_plan e = Reuse
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the Perceus reuse token
     of the arm it generates. *)
@@ -952,7 +952,7 @@ let with_escape_analysis cx f =
     { cx.ctx with
       lexical =
         { cx.ctx.lexical with
-          move_plan = Ownership_ir.empty;
+          move_plan = Ownership_ir.Region.empty;
           in_constructor_expr = false;
           current_cpp_return_type = inner_return_type };
       threaded = {match_param_counter = 0; cs_counter = 0} };

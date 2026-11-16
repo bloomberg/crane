@@ -6,7 +6,7 @@
     each finished declaration in CppIR.
 
     The moves a body holds come from several places -- translation at the
-    last uses its region's plan finds ({!Ownership_ir}), Loopify's frames
+    last uses its region's plan finds ({!Region}), Loopify's frames
     and loops, the depth flattening -- and this checks all of
     them against the C++ they ended up in, independently of how each was
     decided.  A move reaches a whole local or one member of it -- a field
@@ -33,8 +33,8 @@
     convention its callable plan states ({!convention_violations}), and the
     lambda of each local fixpoint in its body -- its parameters other than
     the members it calls through -- against its function's
-    ({!Ownership_ir.Local_passing}).  A local fixpoint lambda whose plan
-    captures by reference ({!Ownership_ir.Local_captures}) must be written
+    ({!Region.Local_passing}).  A local fixpoint lambda whose plan
+    captures by reference ({!Region.Local_captures}) must be written
     capturing by reference and must not escape the block that binds it.
 
     Under [CRANE_CHECK_IR] each violation is reported ({!Base.Probe.violation}). *)

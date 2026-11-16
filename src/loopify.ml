@@ -283,7 +283,7 @@ let no_varying_plan = "no ControlIR loop says which parameters vary"
 type member_plan = {
   member_varying : bool list;
   member_parts : bool list;
-  member_moves : (Core.Occurrence.t * Ownership_ir.Continue_move.t list) list;
+  member_moves : (Core.Occurrence.t * Ownership_ir.Region.Continue_move.t list) list;
 }
 
 let member_plan ~unit ~frames member params =
@@ -310,7 +310,7 @@ let member_plan ~unit ~frames member params =
             | Entered _ -> false
           in
           List.map2
-            (fun part (storage : Ownership_ir.Storage.t) -> part || storage = Local)
+            (fun part (storage : Ownership_ir.Region.Storage.t) -> part || storage = Local)
             parts
             (Frame_storage.plan ~pointer_fields:(constructor_pointer_fields unit) ~in_place ~holdable l).own
       in
@@ -321,7 +321,7 @@ let member_plan ~unit ~frames member params =
             ( if frames then []
               else
                 List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept))
-                  (Ownership_ir.continue_moves ~effects:(Unit_plan.Context.loop_effects unit) l) ) }
+                  (Ownership_ir.Region.continue_moves ~effects:(Unit_plan.Context.loop_effects unit) l) ) }
   | Some _ | None -> None
 
 (** Walk through a statement list and loopify each local fixpoint: the
@@ -914,7 +914,7 @@ let receiver_position (mf : meth) =
     @param park           The calls of a tail loop whose receiver is made in
                           the turn ({!Control_ir.Term.rebuilt})
     @param moves          The parameters a tail loop moves into their next
-                          value, by call ({!Ownership_ir.continue_moves})
+                          value, by call ({!Ownership_ir.Region.continue_moves})
     @param cursor         The input whose cells a loop tail modulo cons
                           recycles
     @return An [Method] field with the loopified body *)

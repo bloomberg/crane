@@ -479,7 +479,7 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     the wrapper is not yet declared: a closure over its parameters, of the
     C++ types [param_tys_rev] gives in reverse, calling the self-parameter.
     The closure takes each by value and reads it once, passing it on: it
-    moves one a copy of which costs more ({!Ownership_ir.worth_moving}).
+    moves one a copy of which costs more ({!Ownership_ir.Region.worth_moving}).
 
     Unless [passing], no self-parameter is passed: each call is flattened and
     still calls the fixpoint by its own name, as a loop lowered from the
@@ -526,7 +526,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
           List.map2
             (fun (_, x) core ->
               let v : Cpp_ir.Lowered.Expr.t = Local (Option.get x) in
-              if Ownership_ir.worth_moving core && not (Base.Type_util.core_type_is_unit core) then
+              if Ownership_ir.Region.worth_moving core && not (Base.Type_util.core_type_is_unit core) then
                 (Move v : Cpp_ir.Lowered.Expr.t) else v )
             params_rev self.param_core_tys_rev
         in

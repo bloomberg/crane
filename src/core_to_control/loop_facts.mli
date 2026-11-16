@@ -14,7 +14,7 @@ type t = {
   control : Lower_control.t;  (** the loops that recursion lowers to *)
   effects : Core_plan.Effects.t;
       (** the effect operations of the unit being lowered, which a loop's
-          turns read as its statements ({!Ownership_ir.continue_moves}) *)
+          turns read as its statements ({!Ownership_ir.Region.continue_moves}) *)
 }
 
 (** The facts of a program that defines nothing. *)
