@@ -1165,7 +1165,7 @@ let joined f l = Cpp_ast.joined (List.map f l)
     ({!Cpp_ind.finalized}). *)
 let file_views ~is_header (gens : (GlobRef.t * Gen_decls.generated_fun) list list) =
   let views (fallback, (g : Gen_decls.generated_fun)) =
-    let with_env d = (d, g.gf_env) in
+    let with_env d = (d, g.env) in
     match snd (List.hd (Cpp_ind.finalized ~fallback [g])) with
     | Cpp_ind.Finished_definition (file, e) ->
       ( [with_env (Function_entity.declaration e)],
@@ -1267,7 +1267,7 @@ let pp_wrapper_module_dual ~is_header ctx mp func_sels =
     | Wrapper_functions (fallback, generate) ->
       let gs = generate () in
       record_funs ~fallback gs;
-      let lifted = List.concat_map (fun g -> g.gf_lifted) gs in
+      let lifted = List.concat_map (fun g -> g.lifted) gs in
       List.iter (dbg_lifted ~site:"wrapper-dterm" ~module_:mp) lifted;
       (with_fallback fallback gs, Cpp_ind.helpers_placed lifted)
   in
@@ -2064,7 +2064,7 @@ let plan_file_layout s =
       let ds, helpers = Cpp_ind.instance_entity ~module_ r a t in
       Cpp_ind.instance_placed r ds helpers
     | Wrapper_functions (_, generate) ->
-      Cpp_ind.helpers_placed (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) (generate ()))
+      Cpp_ind.helpers_placed (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.lifted) (generate ()))
   in
   let wrapper_functions mp se =
     let at = element_at mp in
@@ -2195,7 +2195,7 @@ let plan_ctor_aliases s =
           (file_views ~is_header:header [with_fallback fallback gs]);
         if header then
           helpers at ~module_
-            (Cpp_ind.helpers_placed (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs))
+            (Cpp_ind.helpers_placed (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.lifted) gs))
     in
     let classes ~module_ cs =
       if header then

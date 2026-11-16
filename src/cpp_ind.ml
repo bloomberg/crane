@@ -708,8 +708,8 @@ let in_template ~module_ = Scope_plan.templated module_
     implementation file. *)
 let functions ~module_ ~lifted (funs : Gen_decls.generated_fun list) =
   let in_header (g : Gen_decls.generated_fun) =
-    match g.gf_entity with
-    | Defined (d, _) -> {g with gf_entity = Defined (d, Header)}
+    match g.entity with
+    | Defined (d, _) -> {g with entity = Defined (d, Header)}
     | Declared _ -> g
   in
   let funs = if in_template ~module_ then List.map in_header funs else funs in
@@ -766,9 +766,9 @@ let peeking f = in_mode Peeking f
 (* [compare] rather than [=]: [compare] takes a NaN literal to be equal to
    itself, [=] does not. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
-  compare a.gf_entity b.gf_entity = 0
-  && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
-  && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
+  compare a.entity b.entity = 0
+  && List.equal Id.equal (fst a.env) (fst b.env)
+  && Id.Set.equal (snd a.env) (snd b.env)
 
 (** [ahead_once ~module_ ~what ~recorded ~record ~same ?planned ?take ?peek gen]
     is [gen ()] ahead of the files ({!generating_ahead}), recorded
@@ -995,9 +995,9 @@ let generate scope ~module_ d =
           let ds, env = gen_spec r a t in
           (Declared ds, env)
       in
-      [{Gen_decls.gf_entity; gf_env; gf_lifted}]
+      [{Gen_decls.entity = gf_entity; env = gf_env; lifted = gf_lifted}]
     in
-    let lifted funs = List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs in
+    let lifted funs = List.concat_map (fun g -> g.Gen_decls.lifted) funs in
     let claimed = ref None in
     let reuse funs = claimed := Some (header_claim funs (lifted funs)) in
     let peek funs = claimed := Some (planned_claim funs) in
@@ -1008,7 +1008,7 @@ let generate scope ~module_ d =
     let helpers =
       match !claimed with
       | Some helpers -> helpers
-      | None -> List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs
+      | None -> List.concat_map (fun g -> g.Gen_decls.lifted) funs
     in
     functions ~module_ ~lifted:(By_element helpers) funs
   | Core.Decl.Recursive_group fds -> group fds
@@ -1033,7 +1033,7 @@ let helper_id d =
   | None -> CErrors.anomaly Pp.(str "Crane: a declaration placed as a lifted helper is not one.")
 
 (** The declaration a generated function finishes. *)
-let function_decl (g : Gen_decls.generated_fun) = match g.gf_entity with Defined (d, _) | Declared d -> d
+let function_decl (g : Gen_decls.generated_fun) = match g.entity with Defined (d, _) | Declared d -> d
 
 (** The source entity the generated function [g] is: what its declaration is
     about, [fallback] where it says none. *)
@@ -1112,11 +1112,11 @@ let functions_finishing elements =
   let job (fallback, g) = Unit_program.job (function_id ~fallback g) (function_decl g) in
   List.filter_map
     (fun ((_, (g : Gen_decls.generated_fun)) as f) ->
-      match g.gf_entity with Defined _ -> Some (job f) | Declared _ -> None )
+      match g.entity with Defined _ -> Some (job f) | Declared _ -> None )
     funs
   @ List.filter_map
       (fun ((_, (g : Gen_decls.generated_fun)) as f) ->
-        match g.gf_entity with Declared _ -> Some (job f) | Defined _ -> None )
+        match g.entity with Declared _ -> Some (job f) | Defined _ -> None )
       funs
 
 type finished_fun =
@@ -1126,7 +1126,7 @@ type finished_fun =
 let finalized ~fallback (funs : Gen_decls.generated_fun list) =
   List.map
     (fun (g : Gen_decls.generated_fun) ->
-      match g.gf_entity with
+      match g.entity with
       | Declared d -> (g, Finished_declaration d)
       | Defined (d, file) ->
         (g, Finished_definition (file, entity_of ~what:"a function" (function_id ~fallback g) d)) )
@@ -1157,17 +1157,17 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
       List.filter_map
         (fun ((g : Gen_decls.generated_fun), f) ->
           match f with
-          | Finished_definition (Header, e) -> Some (g.gf_env, Function_entity.declaration e)
+          | Finished_definition (Header, e) -> Some (g.env, Function_entity.declaration e)
           | Finished_definition (Implementation, _) | Finished_declaration _ -> None )
         paired
   in
   declarations
   @ List.concat_map
     (fun ((g : Gen_decls.generated_fun), f) ->
-      let with_env d = (g.gf_env, d) in
+      let with_env d = (g.env, d) in
       let lifted =
         if is_header && lifted_inline then
-          List.map (fun d -> (empty_env (), finished_helper d)) g.gf_lifted
+          List.map (fun d -> (empty_env (), finished_helper d)) g.lifted
         else []
       in
       let views =
@@ -1216,7 +1216,7 @@ let record_entity r ids helpers = Unit_program.record (entity r ids helpers)
     its declaration is about, [fallback] where it says none. *)
 let funs_entities ~fallback (funs : Gen_decls.generated_fun list) =
   List.map
-    (fun (g : Gen_decls.generated_fun) -> entity (function_ref ~fallback g) [function_id ~fallback g] g.gf_lifted)
+    (fun (g : Gen_decls.generated_fun) -> entity (function_ref ~fallback g) [function_id ~fallback g] g.lifted)
     funs
 
 (** [record_funs ~fallback funs] records {!funs_entities}. *)
@@ -1578,10 +1578,10 @@ let functions_ahead elements =
     functions =
       List.filter_map
         (fun (g : Gen_decls.generated_fun) ->
-          match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
+          match g.entity with Defined (d, _) -> Some d | Declared _ -> None )
         funs;
     finishing = functions_finishing elements;
-    helpers = List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs;
+    helpers = List.concat_map (fun (g : Gen_decls.generated_fun) -> g.lifted) funs;
     handed_on = [] }
 
 let generate_ahead ~module_ d =

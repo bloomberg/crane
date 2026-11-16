@@ -408,7 +408,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
               List.fold_left_map
                 (fun n {Instance_methods.binder = id; binder_ty = ty; erased} ->
                   if erased then
-                    (n, {mb_name = id_of_binder_name id; mb_core_ty = ty; mb_cpp_ty = Any; mb_kind = `Erased})
+                    (n, {name = id_of_binder_name id; core_ty = ty; cpp_ty = Any; kind = `Erased})
                   else
                     let resolved_ty =
                       let have = subst_promoted_tvars ty in
@@ -417,10 +417,10 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                     in
                     ( n + 1,
                       {
-                        mb_name = id_of_binder_name id;
-                        mb_core_ty = resolved_ty;
-                        mb_cpp_ty = param_cpp_ty n resolved_ty;
-                        mb_kind = (if Table.is_typeclass_type resolved_ty then `Instance else `Value);
+                        name = id_of_binder_name id;
+                        core_ty = resolved_ty;
+                        cpp_ty = param_cpp_ty n resolved_ty;
+                        kind = (if Table.is_typeclass_type resolved_ty then `Instance else `Value);
                       } ) )
                 0 params
             in
@@ -450,7 +450,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  For op : A -> A -> A with body Core.Expr.Lambda(x, nat, Core.Expr.Lambda(y, nat,
                  ...)), the return type is the same as the parameter type
                  (nat). *)
-              let last_param_ty = (List.hd (List.rev binders)).mb_core_ty in
+              let last_param_ty = (List.hd (List.rev binders)).core_ty in
               Translation_types.cpp_ir_of_core_type
                 base_env
                 type_var_names
@@ -483,7 +483,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
           let cpp_params, ret_ty, body_stmts, tc_tparams =
             with_cpp_return_type (Some method_ret_ty) @@ fun () ->
             if bodies then begin_body ~owner:name ();
-            if List.for_all (fun b -> b.mb_kind = `Erased) binders then
+            if List.for_all (fun b -> b.kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
                  a function reference that needs eta-expansion, or a
                  non-function value field.  An erased binder is no parameter,
@@ -626,12 +626,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                  sync cpp_params so the method signature matches. *)
               let renamed_core, env =
                 push_vars'
-                  (List.rev_map (fun b -> (b.mb_name, b.mb_core_ty)) binders)
+                  (List.rev_map (fun b -> (b.name, b.core_ty)) binders)
                   base_env
               in
               let binders =
                 List.map2
-                  (fun (new_name, _) b -> {b with mb_name = new_name})
+                  (fun (new_name, _) b -> {b with name = new_name})
                   (List.rev renamed_core)
                   binders
               in
@@ -641,8 +641,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
               let cpp_params =
                 List.filter_map
                   (fun b ->
-                    if b.mb_kind = `Value then
-                      Some (b.mb_name, b.mb_cpp_ty)
+                    if b.kind = `Value then
+                      Some (b.name, b.cpp_ty)
                     else
                       None )
                   binders
@@ -650,7 +650,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
               let tc_tparams =
                 List.filter_map
                   (fun b ->
-                    if b.mb_kind = `Instance then Some b.mb_name else None )
+                    if b.kind = `Instance then Some b.name else None )
                   binders
               in
               (* Record which binders are the method's parameters: their
@@ -664,17 +664,17 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t)
                    re-deriving them from Core types substitution has since
                    given extra arrows.  Same order as [renamed_core]. *)
                 with_method_env_types ~outer:outer_binders
-                  ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
+                  ~cpp:(List.rev_map (fun b -> Some b.cpp_ty) binders)
                   env renamed_core
                   (fun () ->
                     let binders_db = Array.of_list (List.rev binders) in
                     let owned =
                       Translation_ownership.owned_parameters (Array.length binders_db)
                         ~owned:(fun i ->
-                          binders_db.(i).mb_kind = `Value
-                          && not (Translation_ownership.declared_by_reference binders_db.(i).mb_cpp_ty) )
-                        ~declared:(fun i -> Some binders_db.(i).mb_cpp_ty)
-                        ~ty:(fun i -> binders_db.(i).mb_core_ty)
+                          binders_db.(i).kind = `Value
+                          && not (Translation_ownership.declared_by_reference binders_db.(i).cpp_ty) )
+                        ~declared:(fun i -> Some binders_db.(i).cpp_ty)
+                        ~ty:(fun i -> binders_db.(i).core_ty)
                     in
                     with_region ~owned inner_body (fun () ->
                         gen_body env inner_body ) )

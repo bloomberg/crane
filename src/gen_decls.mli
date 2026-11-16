@@ -43,9 +43,9 @@ type generated_entity =
 (** A generated function, with the environment its names were allocated in and
     the helpers lifted out of its body. *)
 type generated_fun = {
-  gf_entity : generated_entity;  (** the definition or declaration *)
-  gf_env : env;  (** the environment its names were allocated in *)
-  gf_lifted : Cpp_ir.Lowered.Decl.t list;  (** helpers lifted out of its body *)
+  entity : generated_entity;  (** the definition or declaration *)
+  env : env;  (** the environment its names were allocated in *)
+  lifted : Cpp_ir.Lowered.Decl.t list;  (** helpers lifted out of its body *)
 }
 
 (** [defined d tvars] is the definition [d] of a function or constant whose
