@@ -12,7 +12,7 @@ jobs:
         os:
           - ubuntu-24.04
         ocaml-compiler:
-          - "5.4.1"
+          - "ocaml-variants.5.4.1+options,ocaml-option-flambda"
         rocq-version:
           - "9.1.0"
 
@@ -22,8 +22,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # setup-ocaml caches the opam root and the switch; rocq-released comes
-      # first so its Rocq packages win over the older coq-released copies.
+      # setup-ocaml caches the opam root and the switch, keyed on a hash that
+      # includes the full compiler string, so the flambda variant gets its own
+      # cache.  rocq-released comes first so its Rocq packages win over the
+      # older coq-released copies.
       - name: Set up OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v3
         with:
