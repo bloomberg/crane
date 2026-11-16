@@ -1,7 +1,7 @@
 (* The placeholder parser: what a mapping's text means, token by token. *)
 
 open Crane_plugin
-open Foreign_template
+open Cpp_ir.Foreign_template
 
 let check name cond =
   if not cond then (

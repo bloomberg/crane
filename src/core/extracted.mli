@@ -4,19 +4,19 @@
 (** What exists of Core only while types are reconstructed: the
     metavariables extraction and the Core passes make and solve.  A cell is
     made only at {!Phase.extracted}, so no frozen type holds one.  Freezing
-    the program ({!Core_phase.freeze}) replaces each by its solution, or by a
+    the program ({!Core_passes.Phase.freeze}) replaces each by its solution, or by a
     {!Core.Type.Open} where there is none, in the program and in the types its
     globals are registered at, and from then on none is made
-    ({!Core_util.new_meta} makes an open annotation instead) and none solved:
+    ({!Base.Core_util.new_meta} makes an open annotation instead) and none solved:
     under [CRANE_CHECK_IR] a solve after it is an anomaly. *)
 
 module Meta : sig
   (** Making and solving metavariables.
 
       A local definition's open types are minted before freezing
-      ({!Local_types}), and after it a slot that fills a hole carries the
+      ({!Core_passes.Local_types}), and after it a slot that fills a hole carries the
       answer to the terms mentioning the hole instead of writing it
-      ({!Type_util.refine_erased}). *)
+      ({!Base.Type_util.refine_erased}). *)
 
   (** A metavariable cell ({!Core.Type.Meta}): read anywhere, made and solved
       only here. *)

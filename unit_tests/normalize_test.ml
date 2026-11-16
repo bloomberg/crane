@@ -15,7 +15,7 @@ let check name cond =
 
 let r s = GlobRef.VarRef (Id.of_string s)
 let x s = Core.Binder_name.Source (Id.of_string s)
-let tmp n = Core.Binder_name.Generated (Core_util.temporary_id n)
+let tmp n = Core.Binder_name.Generated (Base.Core_util.temporary_id n)
 let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []}
 let tree = Core.Type.Global_app {head = r "tree"; type_arguments = []; index_arguments = []}
 let h = Core.Global_use.monomorphic (r "h")
@@ -33,7 +33,7 @@ let rec occurrences e =
     | _ -> []
   in
   let below = ref [] in
-  Core_util.ast_iter (fun c -> below := !below @ occurrences c) e;
+  Base.Core_util.ast_iter (fun c -> below := !below @ occurrences c) e;
   here @ !below
 
 let shared es = Core.Occurrence.shared (fun visit -> List.iter (fun e -> List.iter visit (occurrences e)) es) <> []
@@ -68,7 +68,7 @@ let () =
                    body = Core.Expr.fresh_rel 1;
                    occurrence = Core.Occurrence.fresh ()}
   in
-  match Normalize.into_branches ~fresh ~rty:tree (tmp 1, nat, occ) branches rest with
+  match Core_plan.Normalize.into_branches ~fresh ~rty:tree (tmp 1, nat, occ) branches rest with
   | Some [| {Core.Match.Branch.result_type = rty0;
              body = b0; _}; {Core.Match.Branch.result_type = rty1; body = b1; _} |] ->
     check "each branch is of the type of what follows" (rty0 = tree && rty1 = tree);
@@ -100,7 +100,7 @@ let () =
                                            occurrence = o; _}; _} ->
       check "the branch's own let stays outermost" (z = x "z");
       check "a later branch binds a temporary of its own"
-        (id <> tmp 1 && match id with Core.Binder_name.Generated v -> Core_util.is_temporary_id v | _ -> false);
+        (id <> tmp 1 && match id with Core.Binder_name.Generated v -> Base.Core_util.is_temporary_id v | _ -> false);
       check "a copy binds temporaries of its own" (t2 <> tmp 2);
       check "a later branch's let is an occurrence of its own" (not (Core.Occurrence.equal o occ))
     | _ -> check "what follows is read past a branch's own lets" false );
@@ -117,7 +117,7 @@ let () =
                 pattern = Core.Pattern.Wildcard;
                 body = Core.Expr.Erased_value Core.Erasure_reason.Type_argument} in
   let at n arity =
-    Normalize.into_branches ~fresh ~rty:nat (tmp 1, nat, Core.Occurrence.fresh ())
+    Core_plan.Normalize.into_branches ~fresh ~rty:nat (tmp 1, nat, Core.Occurrence.fresh ())
       (Array.make arity branch) (sized n) in
   check "a size whose copies fit the budget is copied" (Option.has_some (at 15 3));
   check "one more node per copy is refused" (not (Option.has_some (at 17 3)));

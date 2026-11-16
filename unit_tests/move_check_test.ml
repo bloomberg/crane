@@ -15,7 +15,7 @@ let v x : expr = Local (id x)
 let tree : ty = Entity_application (GlobRef.VarRef (id "tree"), [], [])
 
 (* [tree::node_crane_reuse(args)], the token first. *)
-let reuse args = mk_call (Type_member (tree, Generated_name.companion (id "node") "reuse")) args
+let reuse args = mk_call (Type_member (tree, Base.Generated_name.companion (id "node") "reuse")) args
 
 (* [std::get<tree::Node>(t.v_mut())], the alternative [t] holds. *)
 let alternative t : expr = Variant_get (Member (tree, id "Node"), Some (mk_call (Access (Dot, v t, id "v_mut")) []))
@@ -51,7 +51,7 @@ let match_ t fields body : stmt =
       None )
 
 let check name body expected =
-  let found = List.map Id.to_string (Move_check.moved_reads body) in
+  let found = List.map Id.to_string (Ownership_ir.Move_check.moved_reads body) in
   if found <> expected then (
     Printf.eprintf "move_check: %s: found [%s]\n" name (String.concat "; " found);
     exit 1 )
@@ -144,13 +144,13 @@ let () =
 let () =
   let f = GlobRef.VarRef (id "f") in
   let decided =
-    Callable_abi.decide
-      ~callables:[Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []]
+    Core_plan.Callable_abi.decide
+      ~callables:[Core_plan.Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []]
       ~assumed:[] ~instance_methods:[]
   in
   let cref : ty = Reference (Lvalue, Const tree) in
   let convention name params body expected =
-    let found = Option.map List.length (Move_check.convention_violations decided f params body) in
+    let found = Option.map List.length (Ownership_ir.Move_check.convention_violations decided f params body) in
     if found <> Some expected then (
       Printf.eprintf "move_check: %s: %s violations, expected %d\n" name
         (match found with Some n -> string_of_int n | None -> "no plan's") expected;
@@ -165,7 +165,7 @@ let () =
     [decl "b" (v "a"); Return (Some (Move (v "b")))]
     0;
   convention "a parameter the plan does not pass" [(id "a", tree)] [] 1;
-  if Move_check.convention_violations decided (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
+  if Ownership_ir.Move_check.convention_violations decided (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
     prerr_endline "move_check: a callable with no plan has a convention";
     exit 1 )
 
@@ -175,7 +175,7 @@ let () =
    names the new value. *)
 let () =
   let stale name body expected =
-    let found = List.map (fun (a, b) -> Id.to_string a ^ "@" ^ Id.to_string b) (Move_check.stale_references body) in
+    let found = List.map (fun (a, b) -> Id.to_string a ^ "@" ^ Id.to_string b) (Ownership_ir.Move_check.stale_references body) in
     if found <> expected then (
       Printf.eprintf "move_check: %s: stale [%s]\n" name (String.concat "; " found);
       exit 1 )

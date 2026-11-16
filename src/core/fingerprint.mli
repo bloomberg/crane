@@ -9,9 +9,9 @@
     holds: a mismatch means the structure was rewritten or mutated in between
     (an inductive's [kind] demoted, a packet's [type_variables] renamed, a
     metavariable solved), and the recorded facts describe a different
-    program.  {!Core_phase} uses it to find the elements a second
-    normalization would still rewrite, [Extract_env] to find the elements
-    rendering changed, and [Target_plan] to record the program it planned.
+    program.  {!Core_passes.Phase} uses it to find the elements a second
+    normalization would still rewrite, [Driver.Extract_env] to find the elements
+    rendering changed, and [Driver.Target_plan] to record the program it planned.
 
     The digest is of the structure's meaning, not its representation:
     - a solved metavariable reads as its solution, so a structure does not

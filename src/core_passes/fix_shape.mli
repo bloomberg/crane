@@ -1,0 +1,28 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** Every fixpoint takes the shape its type says, before anything counts its
+    parameters: {!Core_plan.Normalize}, {!Core_plan.Ownership.summarize}, and translation.
+    It runs among the core passes, after the knot is tied and before fresh
+    occurrences are minted.
+
+    - The [let]s between a fixpoint's binder and its first lambda go under
+      the lambdas: [fix F (h := H F) (l : L) := b] as
+      [fix F (l : L) := let h := H F in b].  A call unfolds the body, so the
+      [let]s run at every call either way; floated, the fixpoint's
+      parameters are its lambdas', and a reference to [F] in [H F] is a
+      function, not a fixpoint of no parameters returning one.
+    - A local cofixpoint whose functions take no parameter --
+      [cofix o := Cons 1 o] -- is the call
+      [(cofix o (_ : unit) := Cons 1 (o tt)) tt].  A value cannot name
+      itself before it is built, a function can: each occurrence of [o]
+      becomes a corecursive call, which the constructor guarding it
+      suspends, as it does a top-level [CoFixpoint]'s.  A top-level
+      parameterless [CoFixpoint] is already emitted as such a function. *)
+
+(** [fix F (h := H F) (l : L) := b] as [fix F (l : L) := let h := H F in b]. *)
+val float_lets_under_lams : Core.Expr.extracted -> Core.Expr.extracted
+
+(** Both rewrites, over every definition of a structure: each fixpoint, local
+    or top-level, and each top-level [Core.Decl.Recursive_group] body. *)
+val structure : Core.Program.extracted -> Core.Program.extracted

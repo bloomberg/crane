@@ -32,7 +32,7 @@ let template_of_text s =
 (** [uninstantiated r] is the anomaly for an application of [r]'s mapping
     that places its arguments itself ({!Bare_callee}, {!Templated}) reaching
     a reader of settled declarations -- the printer, or what it names: those
-    are instantiated before ({!Cpp_erasure.instantiate_foreign}), so meeting
+    are instantiated before ({!Cpp_passes.Erasure.instantiate_foreign}), so meeting
     one means that pass was not run. *)
 let uninstantiated r =
   CErrors.anomaly

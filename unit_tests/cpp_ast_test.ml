@@ -12,7 +12,7 @@
    sections are separated, filling wrapper structs with their module's
    body, resolving the names a declaration writes at the frame it is
    written in, and the positions entering a scope produces
-   ({!Cpp_names.enter_from}). *)
+   ({!Unit_plan.Cpp_names.enter_from}). *)
 
 open Crane_plugin
 open Names
@@ -151,13 +151,13 @@ let () =
     | exception Invalid_argument _ -> true
     | _ -> false );
   let resolved_module s : Cpp_ast.module_ref =
-    {path = m; name = Resolved (Cpp_name.unqualified s); in_expression = Unresolved}
+    {path = m; name = Resolved (Base.Cpp_name.unqualified s); in_expression = Unresolved}
   in
   let head =
     { Cpp_ast.template =
         [ Typename (Type_variable (Id.of_string "A"));
           Constrained
-            { concept = {module_type = m; name = Resolved (Cpp_name.unqualified "C")};
+            { concept = {module_type = m; name = Resolved (Base.Cpp_name.unqualified "C")};
               args = [resolved_module "P"];
               param = resolved_module "M" } ];
       name = Named "s";
@@ -178,7 +178,7 @@ let () =
   check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")));
   let unprinted ?templates () =
     let decl : Cpp_ir.Resolved.Decl.t = Static_assert (Literal (Bool true), None) in
-    Cpp_ast.unprinted ~needs:(needs ?templates ()) (Common.empty_env ()) decl
+    Cpp_ast.unprinted ~needs:(needs ?templates ()) (Base.Common.empty_env ()) decl
   in
   let spelled ?(templates = []) sections =
     let write spelling (_ : Cpp_ast.unprinted) = Pp.str (spelling_text spelling) in
@@ -223,7 +223,7 @@ let () =
                      (Cpp_ast.module_body inner [leaf "w"]) ]) ) ])
     "PstructM{y<T>structN{?w};};";
   let forward_leaf s =
-    Cpp_ast.elements ~source:inner (Cpp_ast.forward_declaration (Common.empty_env ()) (Defined_enum (ref_of s))) in
+    Cpp_ast.elements ~source:inner (Cpp_ast.forward_declaration (Base.Common.empty_env ()) (Defined_enum (ref_of s))) in
   check_text "a forward declaration in the prologue is printed as the tree spells it"
     (Pp.string_of_ppcmds
        (Cpp_ast.print ~write:(fun spelling _ -> Pp.str ("fwd " ^ spelling_text spelling))
@@ -315,10 +315,10 @@ let () =
   check "a wrapper struct not filled in is not printed"
     (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
   let ref_text = function GlobRef.VarRef id -> Id.to_string id | _ -> "?" in
-  let resolve spelling (frame : Cpp_resolution.frame) (key : Cpp_resolution.key) =
+  let resolve spelling (frame : Unit_plan.Cpp_resolution.frame) (key : Unit_plan.Cpp_resolution.key) =
     let named what =
-      Cpp_resolution.Name
-        (Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'')) in
+      Unit_plan.Cpp_resolution.Name
+        (Base.Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'')) in
     match key with
     | Module mp -> named (ModPath.to_string mp)
     | Module_declared mp -> named ("declared " ^ ModPath.to_string mp)
@@ -327,24 +327,24 @@ let () =
     | Global (_, r) -> named ("type " ^ ref_text r)
     | _ -> named "?"
   in
-  let signature = Cpp_resolution.Signature {signature = inner; parameters = []} in
+  let signature = Unit_plan.Cpp_resolution.Signature {signature = inner; parameters = []} in
   let requested : Cpp_ast.declaration -> _ = function
-    | Modtype_concept _ -> [([], Cpp_resolution.Module inner); ([signature], Module inner)]
+    | Modtype_concept _ -> [([], Unit_plan.Cpp_resolution.Module inner); ([signature], Module inner)]
     | _ -> []
   in
   let resolved_text sections =
     let write spelling (u : Cpp_ast.unprinted) =
       match u.declaration with
       | Module_alias {target = Module_named {name = Resolved n; _}; _} ->
-        Pp.str (spelling_text spelling ^ "=" ^ Cpp_name.to_string n)
+        Pp.str (spelling_text spelling ^ "=" ^ Base.Cpp_name.to_string n)
       | Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "unresolved"
       | Assertion
         {concept = Of_class {name = Resolved c; _}; subject = Instance {instance = {name = Resolved i; _}; _}} ->
-        Pp.str (Cpp_name.to_string c ^ "<" ^ Cpp_name.to_string i ^ ">")
+        Pp.str (Base.Cpp_name.to_string c ^ "<" ^ Base.Cpp_name.to_string i ^ ">")
       | Modtype_concept _ ->
         let at frame =
-          match Cpp_resolution.find u.names frame (Module inner) with
-          | Found n -> Cpp_name.to_string n
+          match Unit_plan.Cpp_resolution.find u.names frame (Module inner) with
+          | Found n -> Base.Cpp_name.to_string n
           | Unresolved -> "unresolved"
           | Not_requested -> "not requested"
         in
@@ -356,21 +356,21 @@ let () =
         (Cpp_ast.resolve_tree ~requested ~resolve ~resolve_head:resolve (Cpp_ast.seq sections)))
   in
   (let r = ref_of "t" in
-   let head : Cpp_resolution.head =
-     {outer = [Cpp_name.Class "S"]; head = Cpp_name.unqualified "t"; typename = false; templated = true} in
+   let head : Unit_plan.Cpp_resolution.head =
+     {outer = [Base.Cpp_name.Class "S"]; head = Base.Cpp_name.unqualified "t"; typename = false; templated = true} in
    let table =
-     Cpp_resolution.resolve
-       (fun _ key -> match key with Type_head _ -> Head head | _ -> Name (Cpp_name.unqualified "n"))
+     Unit_plan.Cpp_resolution.resolve
+       (fun _ key -> match key with Type_head _ -> Head head | _ -> Name (Base.Cpp_name.unqualified "n"))
        [([], Type_head (Glob_head, r)); ([], Unmapped (Type, r))]
    in
    check "a type's head is resolved as a head"
-     (Cpp_resolution.find_head table [] Glob_head r = Found head);
+     (Unit_plan.Cpp_resolution.find_head table [] Glob_head r = Found head);
    check "a head is resolved only in the form asked for"
-     (Cpp_resolution.find_head table [] Inductive_head r = Not_requested);
+     (Unit_plan.Cpp_resolution.find_head table [] Inductive_head r = Not_requested);
    check "a name beside a head is resolved as a name"
-     (Cpp_resolution.find table [] (Unmapped (Type, r)) = Found (Cpp_name.unqualified "n"));
+     (Unit_plan.Cpp_resolution.find table [] (Unmapped (Type, r)) = Found (Base.Cpp_name.unqualified "n"));
    check "a head is no name"
-     (match Cpp_resolution.find table [] (Type_head (Glob_head, r)) with exception _ -> true | _ -> false));
+     (match Unit_plan.Cpp_resolution.find table [] (Type_head (Glob_head, r)) with exception _ -> true | _ -> false));
   check_text "resolving keeps how each declaration is spelled"
     (resolved_text [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
   let alias = Cpp_ast.module_alias (ModPath.MPdot (inner, Label.make "A")) (Module_named (Cpp_ast.module_ref inner)) in
@@ -425,7 +425,7 @@ let () =
           ~write:(fun _ (u : Cpp_ast.unprinted) ->
             match u.declaration with
             | Modtype_concept _ -> (
-              match Cpp_resolution.find u.names [] (Module inner) with Unresolved -> Pp.str "u" | _ -> Pp.str "r" )
+              match Unit_plan.Cpp_resolution.find u.names [] (Module inner) with Unresolved -> Pp.str "u" | _ -> Pp.str "r" )
             | _ -> Pp.str "?" )
           (Cpp_ast.elements ~source:m concept) ))
     "u"
@@ -433,29 +433,29 @@ let () =
 (* Entering a scope is a function from one position to the next, which
    enter_from hands on. *)
 let () =
-  let start = Cpp_state.file_start Unit_context.detached Cpp_state.no_plans Common.Intf in
-  let s = Cpp_names.next Cpp_resolution.In_struct start in
+  let start = Unit_plan.Cpp_state.file_start Unit_plan.Context.detached Unit_plan.Cpp_state.no_plans Base.Common.Intf in
+  let s = Unit_plan.Cpp_names.next Unit_plan.Cpp_resolution.In_struct start in
   check "entering a struct's body is in a struct, at a frame one deeper"
-    (s.in_struct && (not s.in_template) && s.frame = [Cpp_resolution.In_struct]);
-  let t = Cpp_names.next Cpp_resolution.In_template s in
+    (s.in_struct && (not s.in_template) && s.frame = [Unit_plan.Cpp_resolution.In_struct]);
+  let t = Unit_plan.Cpp_names.next Unit_plan.Cpp_resolution.In_template s in
   check "entering a class template's body keeps what was entered, innermost first"
-    (t.in_struct && t.in_template && t.frame = [Cpp_resolution.In_template; In_struct]);
-  let signature = Cpp_resolution.Signature {signature = m; parameters = []} in
-  let g = Cpp_names.next signature start in
+    (t.in_struct && t.in_template && t.frame = [Unit_plan.Cpp_resolution.In_template; In_struct]);
+  let signature = Unit_plan.Cpp_resolution.Signature {signature = m; parameters = []} in
+  let g = Unit_plan.Cpp_names.next signature start in
   check "entering a signature where nothing planned what is visible changes only the frame"
     ({g with frame = []} = start && g.frame = [signature]);
-  let visible = Common.toplevel_visibility [ModPath.MPfile (DirPath.make [Id.of_string "F"])] in
-  let planned = Cpp_names.next signature {start with visibility = Some visible} in
+  let visible = Base.Common.toplevel_visibility [ModPath.MPfile (DirPath.make [Id.of_string "F"])] in
+  let planned = Unit_plan.Cpp_names.next signature {start with visibility = Some visible} in
   check "entering a signature makes what it declares visible where the resolver reads it"
-    (Common.equal_visibility (Cpp_names.visibility_at planned (Pp.mt ())) (Common.inside m [] visible));
+    (Base.Common.equal_visibility (Unit_plan.Cpp_names.visibility_at planned (Pp.mt ())) (Base.Common.inside m [] visible));
   check "entering a signature keeps the visibility of where the declaration is written"
-    (Option.equal Common.equal_visibility planned.visibility (Some visible));
-  let scope = Some {Scope_plan.module_ = m; qualifier = ["M"]} in
-  let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) s in
+    (Option.equal Base.Common.equal_visibility planned.visibility (Some visible));
+  let scope = Some {Core_plan.Scope_plan.module_ = m; qualifier = ["M"]} in
+  let f = Unit_plan.Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) s in
   check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.scope = None);
-  let o = Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) start in
+  let o = Unit_plan.Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) start in
   check "a function defined outside every struct body is a member of the scope its frame carries"
     (match o.scope with Some {scope; _} ->
-      Scope_plan.equal scope {module_ = m; qualifier = ["M"]} | None -> false);
+      Core_plan.Scope_plan.equal scope {module_ = m; qualifier = ["M"]} | None -> false);
   check "entering scopes one after another is entering each in turn"
-    (Cpp_names.entering_from start [In_struct; In_template] Fun.id = t)
+    (Unit_plan.Cpp_names.entering_from start [In_struct; In_template] Fun.id = t)

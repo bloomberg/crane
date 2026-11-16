@@ -3,7 +3,7 @@
    head put it. *)
 
 open Crane_plugin
-open Callable_abi
+open Core_plan.Callable_abi
 
 let check name cond =
   if not cond then (
@@ -14,28 +14,28 @@ let callee = Names.GlobRef.VarRef (Names.Id.of_string "f")
 let id = Names.Id.of_string
 
 let () =
-  let scheme = Scheme.Id.fresh callee ~arity:2 in
-  let var i = Option.get (Scheme.Var.of_tvar scheme i) in
+  let scheme = Core.Scheme.Id.fresh callee ~arity:2 in
+  let var i = Option.get (Core.Scheme.Var.of_tvar scheme i) in
   (* A dictionary first, the second variable, the first moved last with a
      default, a deduced callable, and a parameter the declaration made up. *)
   let abi =
     of_head ~callee ~scheme:(Some scheme)
       ~minted:
-        [ (Common.tc_instance_id 0, Instance_param 0);
-          (Common.tvar_id 2, Scheme_param 2);
-          (Common.fun_tparam_id 0, Callable_param 0);
-          (Common.tvar_id 1, Scheme_param 1) ]
-      [ (Typename, Common.tc_instance_id 0);
-        (Typename, Common.tvar_id 2);
-        (Callable_declared ([], Void), Common.fun_tparam_id 0);
+        [ (Base.Common.tc_instance_id 0, Instance_param 0);
+          (Base.Common.tvar_id 2, Scheme_param 2);
+          (Base.Common.fun_tparam_id 0, Callable_param 0);
+          (Base.Common.tvar_id 1, Scheme_param 1) ]
+      [ (Typename, Base.Common.tc_instance_id 0);
+        (Typename, Base.Common.tvar_id 2);
+        (Callable_declared ([], Void), Base.Common.fun_tparam_id 0);
         (Typename, id "CraneP0");
-        (Typename_default Void, Common.tvar_id 1) ]
+        (Typename_default Void, Base.Common.tvar_id 1) ]
   in
   let origins = List.map (fun p -> p.origin) (template_head abi) in
   check "origins"
     ( match origins with
     | [From_instance 0; From_scheme v2; From_callable 0; Derived _; From_scheme v1] ->
-      Scheme.Var.equal v2 (var 2) && Scheme.Var.equal v1 (var 1)
+      Core.Scheme.Var.equal v2 (var 2) && Core.Scheme.Var.equal v1 (var 1)
     | _ -> false );
   check "policies"
     ( List.map (fun p -> p.write) (template_head abi)
@@ -49,7 +49,7 @@ let () =
   (* The origin is what the builder recorded, not what the name says: a
      parameter spelled as a variable's is none without the record, and one
      spelled otherwise is the variable recorded. *)
-  let other = of_head ~callee ~scheme:(Some scheme) [(Typename, Common.tvar_id 1)] in
+  let other = of_head ~callee ~scheme:(Some scheme) [(Typename, Base.Common.tvar_id 1)] in
   check "an unrecorded T1 is no variable"
     (match template_head other with [{origin = Derived _; _}] -> true | _ -> false);
   let renamed =
@@ -58,7 +58,7 @@ let () =
   in
   check "a recorded A is its variable"
     ( match template_head renamed with
-    | [{origin = From_scheme v; _}] -> Scheme.Var.equal v (var 2)
+    | [{origin = From_scheme v; _}] -> Core.Scheme.Var.equal v (var 2)
     | _ -> false );
   (* A plan of a callable Crane does not generate states its scheme. *)
   let f = foreign ~callee ~scheme:(Some scheme) () in
@@ -66,7 +66,7 @@ let () =
     ( List.map (fun p -> (p.origin, p.write)) (template_head f)
       |> function
       | [(From_scheme a, Writable); (From_scheme b, Writable)] ->
-        Scheme.Var.equal a (var 1) && Scheme.Var.equal b (var 2)
+        Core.Scheme.Var.equal a (var 1) && Core.Scheme.Var.equal b (var 2)
       | _ -> false );
   (* How the value parameters are passed is part of the head. *)
   let owned = of_head ~passing:[Owned; Borrowed] ~callee ~scheme:(Some scheme) [] in
@@ -78,11 +78,11 @@ let () =
 (* A plan records why its convention omits a variable, and a call reads the
    variables it keeps, and those its dictionaries stand at, from the plan. *)
 let () =
-  let scheme = Scheme.Id.fresh callee ~arity:4 in
-  let var i = Option.get (Scheme.Var.of_tvar scheme i) in
+  let scheme = Core.Scheme.Id.fresh callee ~arity:4 in
+  let var i = Option.get (Core.Scheme.Var.of_tvar scheme i) in
   (* [M] at 1 is a class carrier, 2 and 3 are mentioned, 4 is not. *)
   let omitted v =
-    match Scheme.Var.ordinal v with
+    match Core.Scheme.Var.ordinal v with
     | 1 -> Some Class_carrier
     | 4 -> Some Unmentioned
     | _ -> None
@@ -92,6 +92,6 @@ let () =
   check "a mentioned variable is kept" (keeps f (var 2) && keeps_tvar f 3);
   check "a variable the plan does not know is kept" (keeps_tvar f 9);
   check "dictionaries stand at the omitted variables up to the last mentioned"
-    (List.map Scheme.Var.ordinal (dictionary_carriers f) = [1]);
+    (List.map Core.Scheme.Var.ordinal (dictionary_carriers f) = [1]);
   check "omissions are part of the plan"
     (not (equal f (foreign ~kept:(fun v -> omitted v = None) ~callee ~scheme:(Some scheme) ())))

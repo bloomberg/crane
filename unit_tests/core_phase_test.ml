@@ -18,7 +18,7 @@ let nat_ref = r "nat"
 let mp s = ModPath.MPfile (DirPath.make [Id.of_string s])
 let term name body ty =
   (Label.make name, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r name; body; type_ = ty}))
-let frozen sel = Core_phase.freeze (Core_phase.optimize Fun.id (Core_phase.extracted [(mp "M", sel)]))
+let frozen sel = Core_passes.Phase.freeze (Core_passes.Phase.optimize Fun.id (Core_passes.Phase.extracted [(mp "M", sel)]))
 
 let refused sel =
   match frozen sel with
@@ -64,29 +64,29 @@ let () =
   let use_at scheme ty =
     Core.Expr.Global
       (Core.Global_use.polymorphic (r "g")
-         (Scheme.Instantiation.make scheme (fun _ ->
-              {Scheme.solution = Scheme.Type ty; source = Scheme.Not_written} ) ) )
+         (Core.Scheme.Instantiation.make scheme (fun _ ->
+              {Core.Scheme.solution = Core.Scheme.Type ty; source = Core.Scheme.Not_written} ) ) )
   in
   check "a use at its callee's scheme freezes"
-    (not (refused [term "u" (use_at (Scheme.Id.fresh (r "g") ~arity:1) nat) nat]));
+    (not (refused [term "u" (use_at (Core.Scheme.Id.fresh (r "g") ~arity:1) nat) nat]));
   check "a use instantiated at another declaration's scheme is refused"
-    (refused [term "v" (use_at (Scheme.Id.fresh (r "h") ~arity:1) nat) nat]);
-  Table.add_type (r "p")
+    (refused [term "v" (use_at (Core.Scheme.Id.fresh (r "h") ~arity:1) nat) nat]);
+  Base.Table.add_type (r "p")
     (Core.Type.Arrow
       {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1};
         result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1}});
   let use_of_p scheme =
     Core.Expr.Global
       (Core.Global_use.polymorphic (r "p")
-         (Scheme.Instantiation.make scheme (fun _ ->
-              {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) ) )
+         (Core.Scheme.Instantiation.make scheme (fun _ ->
+              {Core.Scheme.solution = Core.Scheme.Type nat; source = Core.Scheme.Not_written} ) ) )
   in
   check "a use at the scheme its callee is referenced at freezes"
-    (not (refused [term "x" (use_of_p (Option.get (Core_util.reference_scheme (r "p")))) nat]));
+    (not (refused [term "x" (use_of_p (Option.get (Base.Core_util.reference_scheme (r "p")))) nat]));
   check "a use at a look-alike of its callee's scheme is refused"
-    (refused [term "y" (use_of_p (Scheme.Id.fresh (r "p") ~arity:1)) nat]);
+    (refused [term "y" (use_of_p (Core.Scheme.Id.fresh (r "p") ~arity:1)) nat]);
   check "a use holding a metavariable in its instantiation is refused"
-    (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Core.Type.Meta (Core.Extracted.Meta.fresh 3))) nat]);
+    (refused [term "w" (use_at (Core.Scheme.Id.fresh (r "g") ~arity:1) (Core.Type.Meta (Core.Extracted.Meta.fresh 3))) nat]);
   let shared = Core.Type.Meta (Core.Extracted.Meta.fresh 1) in
   let solved = Core.Type.Meta (Core.Extracted.Meta.solved 2 nat) in
   let open_term =
@@ -95,8 +95,8 @@ let () =
         (Core.Type.Arrow {parameter = shared; result = solved}) in
   let zonked = frozen [open_term] in
   check "each unsolved metavariable becomes one open annotation"
-    (Core_phase.open_annotations zonked = 1);
-  ( match Core_phase.structure zonked with
+    (Core_passes.Phase.open_annotations zonked = 1);
+  ( match Core_passes.Phase.structure zonked with
   | [(_,
         [(_,
             Core.Module.Structure_item.Declaration
@@ -107,12 +107,12 @@ let () =
     check "a solved metavariable is replaced by its solution" (t = nat)
   | _ -> check "freezing leaves no metavariable in the program" false );
   Core.Extracted.Meta.thaw ();
-  let two = Core_phase.extracted [(mp "A", fine); (mp "B", [])] in
-  let a, b = Core_phase.partition (ModPath.equal (mp "A")) two in
+  let two = Core_passes.Phase.extracted [(mp "A", fine); (mp "B", [])] in
+  let a, b = Core_passes.Phase.partition (ModPath.equal (mp "A")) two in
   check "partition splits by top-level module"
-    (List.map fst (Core_phase.structure a) = [mp "A"] && List.map fst (Core_phase.structure b) = [mp "B"]);
+    (List.map fst (Core_passes.Phase.structure a) = [mp "A"] && List.map fst (Core_passes.Phase.structure b) = [mp "B"]);
   check "modules keep each module with its own program"
-    (List.map fst (Core_phase.modules two) = [mp "A"; mp "B"])
+    (List.map fst (Core_passes.Phase.modules two) = [mp "A"; mp "B"])
 
 (* Normalizing the frozen program checks that the result is a fixed point of
    the pass, and leaves the metavariable supply where the pass left it. *)
@@ -123,14 +123,14 @@ let () =
       (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous; parameter_type = nat; body = Core.Expr.fresh_rel 1})
         (Core.Type.Arrow {parameter = nat; result = nat})] in
   let normalizes pass =
-    match Core_phase.normalize pass (frozen fine) with
+    match Core_passes.Phase.normalize pass (frozen fine) with
     | _ -> true
     | exception e when CErrors.is_anomaly e -> false
   in
-  let coerce (p : Core_phase.normalizing) =
+  let coerce (p : Core_passes.Phase.normalizing) =
     { p with
       structure =
-        Modutil.map_struct_decls
+        Core_passes.Modutil.map_struct_decls
           (function
             | Core.Decl.Value {entity = r; body = b; type_ = t} ->
               Core.Decl.Value {entity = r;
@@ -140,21 +140,21 @@ let () =
             | d -> d )
           p.structure }
   in
-  let decide_once (p : Core_phase.normalizing) =
-    if Splices.decided p.splices (r "n") then p else {p with splices = Splices.decide (r "n") p.splices}
+  let decide_once (p : Core_passes.Phase.normalizing) =
+    if Core_passes.Splices.decided p.splices (r "n") then p else {p with splices = Core_passes.Splices.decide (r "n") p.splices}
   in
-  let decide_anew (p : Core_phase.normalizing) =
-    {p with splices = Splices.decide ~entered:(Core.Occurrence.fresh ()) (r "n") p.splices} in
+  let decide_anew (p : Core_passes.Phase.normalizing) =
+    {p with splices = Core_passes.Splices.decide ~entered:(Core.Occurrence.fresh ()) (r "n") p.splices} in
   check "a pass its result is a fixed point of normalizes" (normalizes Fun.id);
   check "a pass that would rewrite its own result is refused" (not (normalizes coerce));
   check "a pass that decides once what it splices normalizes" (normalizes decide_once);
   check "a pass that would splice its own result otherwise is refused" (not (normalizes decide_anew));
   check "the splices decided are the program's"
-    (Splices.decided (Core_phase.splices (Core_phase.normalize decide_once (frozen fine))) (r "n"));
-  let minting s = ignore (Core_util.new_meta ()); s in
-  let before = Core_util.new_meta () in
-  ignore (Core_phase.normalize minting (frozen fine));
-  ( match (before, Core_util.new_meta ()) with
+    (Core_passes.Splices.decided (Core_passes.Phase.splices (Core_passes.Phase.normalize decide_once (frozen fine))) (r "n"));
+  let minting s = ignore (Base.Core_util.new_meta ()); s in
+  let before = Base.Core_util.new_meta () in
+  ignore (Core_passes.Phase.normalize minting (frozen fine));
+  ( match (before, Base.Core_util.new_meta ()) with
   | Core.Type.Open o, Core.Type.Open o' ->
     check "checking a normal form makes no number" (Core.Open.id o' = Core.Open.id o + 2)
   | _ -> check "a frozen program makes open annotations" false );
@@ -182,7 +182,7 @@ let () =
   let o = Core.Open.fresh 15 and other = Core.Open.fresh 15 in
   let fills = ref [] in
   let refined =
-    Type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Core.Type.Open o) (Core.Type.Open o))
+    Base.Type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Core.Type.Open o) (Core.Type.Open o))
       (pair nat bool)
   in
   check "a hole met twice is filled once" (refined = pair nat nat);
@@ -191,10 +191,10 @@ let () =
                                parameter_type = Core.Type.Open o;
                                body = Core.Expr.fresh_rel 1} in
   check "a term mentioning the hole is generated with it filled"
-    (Type_util.fill_holes !fills body = Core.Expr.Lambda
+    (Base.Type_util.fill_holes !fills body = Core.Expr.Lambda
       {parameter = Core.Binder_name.Anonymous; parameter_type = nat; body = Core.Expr.fresh_rel 1});
   check "another hole of the same number is not filled"
-    (Type_util.fill_holes !fills
+    (Base.Type_util.fill_holes !fills
       (Core.Expr.Lambda
         {parameter = Core.Binder_name.Anonymous; parameter_type = Core.Type.Open other; body = Core.Expr.fresh_rel 1}) =
           Core.Expr.Lambda
@@ -231,7 +231,7 @@ let () =
                                occurrence = Core.Occurrence.fresh ()};
                    occurrence = Core.Occurrence.fresh ()}
   in
-  Local_types.structure (Translation_state.create ())
+  Core_passes.Local_types.structure (Core_to_cpp.Calls.local_types_lowering (Core_to_cpp.Lowering_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Emit.Print.pp_cpp_type u plans lead tvars ty) ()))
     [(mp "M",
         [term "f" body
           (Core.Type.Arrow

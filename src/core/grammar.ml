@@ -15,7 +15,7 @@
 
     {[ Rocq PCUIC --[extraction.ml]--> Core --[Core passes]--> Core
        --[Translation and the Translation_* modules]--> CppIR
-       --[resolution]--> CppAST --[Cpp_print]--> C++ ]}
+       --[resolution]--> CppAST --[Emit.Print]--> C++ ]}
 
     Extraction from Rocq's PCUIC first erases everything with no
     computational content -- types, logical ([Prop]) subterms, and
@@ -24,7 +24,7 @@
     families: {!Core.Type} for type expressions, {!Core.Expr} for terms,
     {!Core.Inductive} for inductive declarations, {!Core.Decl} and
     {!Core.Module} for whole definitions and module components.  The Core
-    passes ({!Core_phase}: inlining, dead-code elimination, deduplication,
+    passes ({!Core_passes.Phase}: inlining, dead-code elimination, deduplication,
     specialisation, knot-tying, freezing, normalisation) run over these trees
     before lowering turns them into CppIR.
 
@@ -98,16 +98,16 @@ and Type : sig
         (** A De Bruijn type variable.  [Core.Type.Rigidity.Schematic] is a variable of some
             other constant's type scheme, standing to be instantiated when that
             scheme is instantiated; [Core.Type.Rigidity.Rigid] is one of the definition currently
-            being reconstructed, made rigid by {!Core_util.rigidify}.
+            being reconstructed, made rigid by {!Base.Core_util.rigidify}.
 
             The two do not unify with each other even at the same index,
             which is the whole point: it is that failure that makes
-            {!Core_util.needs_magic} insert a {!Core.Expr.Coerce} where a definition's
+            {!Base.Core_util.needs_magic} insert a {!Core.Expr.Coerce} where a definition's
             own variable meets a schematic one.  Note that
-            {!Core_util.type_subst_list} substitutes both flavours -- rigidity
+            {!Base.Core_util.type_subst_list} substitutes both flavours -- rigidity
             constrains unification, not substitution.
 
-            Almost every reader outside {!Core_util} and {!Extraction} ignores
+            Almost every reader outside {!Base.Core_util} and {!Rocq_to_core.Extraction} ignores
             [rigidity]: the back end does not care which flavour it has. *)
     | Variable_app of {
         head : int;
@@ -132,10 +132,10 @@ and Type : sig
             reports it. *)
     | Open of Open.t
         (** An annotation reconstruction left open: a metavariable nothing
-            solved, as {!Core_phase.freeze} hands it on.  Immutable, and read
+            solved, as {!Core_passes.Phase.freeze} hands it on.  Immutable, and read
             as erased.  The annotations that shared the metavariable share the
             [Open.t], so a reader that fills it from other evidence fills it
-            wherever it is written ({!Type_util.fill_holes}).  Unlike a
+            wherever it is written ({!Base.Type_util.fill_holes}).  Unlike a
             [Hole] nothing is owed to it: no instantiation slot stands behind
             it, and a consumer with nothing to fill it from spells it erased.
             No [Meta] survives freezing; this is what becomes of the open
@@ -367,7 +367,7 @@ and Expr : sig
       }
         (** A value of a numeral inductive -- one [Crane Extract Numeral]
             registers: what a numeral converter applied to a digit chain
-            computes ({!Numeral_literal}). *)
+            computes ({!Core_passes.Numeral_literal}). *)
 end =
   Expr
 

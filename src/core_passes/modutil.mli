@@ -1,0 +1,130 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(************************************************************************)
+(*         *      The Rocq Prover / The Rocq Development Team           *)
+(*  v      *         Copyright INRIA, CNRS and contributors             *)
+(* <O___,, * (see version control and CREDITS file for authors & dates) *)
+(*   \VV/  **************************************************************)
+(*    //   *    This file is distributed under the terms of the         *)
+(*         *     GNU Lesser General Public License Version 2.1          *)
+(*         *     (see LICENSE file for the text of the license)         *)
+(************************************************************************)
+
+(** Core module utilities: traversal, search, and optimization functions
+    over a Core program's module structure ({!Core.Program.t}).
+    {!optimize_struct} is the first of the Core passes ([core_passes] in
+    [extract_env.ml], run under {!Phase.optimize}): beta-iota
+    simplification, inlining and dead-code elimination.  The iterators and
+    maps are shared by every later pass that walks a structure. *)
+
+open Names
+
+(** Search for an AST node satisfying a predicate anywhere in the structure.
+    @param f predicate to test each [Core.Expr.t] node
+    @return [true] if any node satisfies [f], [false] otherwise *)
+val struct_ast_search : ('p Core.Expr.at -> bool) -> 'p Core.Program.at -> bool
+
+(** Search for a type satisfying a predicate anywhere in the structure.
+    @param f predicate tested on each leaf type: a node that is neither an
+      arrow nor a [Core.Type.Global_app], whose arguments are searched instead
+    @return [true] if any type satisfies [f], [false] otherwise *)
+val struct_type_search : (Core.Type.t -> bool) -> Core.Program.t -> bool
+
+(** Every function the structure defines outside a functor, with its body
+    and type: a constant whose body is a lambda, and each member of a
+    recursive group. *)
+val struct_functions : 'p Core.Program.at -> (GlobRef.t * 'p Core.Expr.at * 'p Core.Type.at) list
+
+(** Iterate over all declarations, specifications, and module paths, in
+    module and functor bodies and module types alike.
+    @param do_decl callback invoked for each [Core.Decl.t] found
+    @param do_spec callback invoked for each [Core.Signature.Declaration.t] found
+    @param do_mp callback invoked for each [ModPath.t] found *)
+val struct_iter :
+  ('p Core.Decl.at -> unit) ->
+  ('p Core.Signature.Declaration.at -> unit) ->
+  (ModPath.t -> unit) ->
+  'p Core.Program.at ->
+  unit
+
+(** Callback applied to each global reference encountered by the
+    reference-traversal iterators below ({!type_iter_references},
+    {!ast_iter_references}, and friends). *)
+type do_ref = GlobRef.t -> unit
+
+(** Apply [do_ref] to every [GlobRef.t] in a Core type.
+    @param do_ref callback invoked for each global reference encountered
+    @param t the type to traverse *)
+val type_iter_references : do_ref -> 'p Core.Type.at -> unit
+
+(** [ast_iter_references do_term do_cons do_type ast] applies the appropriate
+    callback to every reference in [ast].
+    @param prune when [prune a] is [true], [a] is skipped entirely: neither its
+      own references nor those of its subterms are visited (used to drop subtrees
+      that later passes fold away, e.g. numeral-converter applications)
+    @param do_term callback for term-level references ([Core.Expr.Global])
+    @param do_cons callback for constructor references ([Core.Expr.Construct], [Core.Pattern.Constructor])
+    @param do_type callback for type-level references ([Core.Type.Global_app]) *)
+val ast_iter_references :
+  ?prune:('p Core.Expr.at -> bool) -> do_ref -> do_ref -> do_ref -> 'p Core.Expr.at -> unit
+
+(** Like {!ast_iter_references} but for declarations.
+    @param prune see {!ast_iter_references}
+    @param do_term callback for term-level references
+    @param do_cons callback for constructor references
+    @param do_type callback for type-level references *)
+val decl_iter_references :
+  ?prune:('p Core.Expr.at -> bool) -> do_ref -> do_ref -> do_ref -> 'p Core.Decl.at -> unit
+
+(** Like {!ast_iter_references} but for specifications.
+    @param do_term callback for term-level references
+    @param do_cons callback for constructor references
+    @param do_type callback for type-level references *)
+val spec_iter_references : do_ref -> do_ref -> do_ref -> 'p Core.Signature.Declaration.at -> unit
+
+(** Extract the type signature from a module structure. *)
+val signature_of_structure : 'p Core.Program.at -> 'p Core.Interface.at
+
+(** Convert a module expression to its module type. *)
+val mtyp_of_mexpr : 'p Core.Module.Expr.at -> 'p Core.Module.Type.at
+
+(** Extract the module path from a module type. *)
+val msid_of_mt : 'p Core.Module.Type.at -> ModPath.t
+
+(** Look up a declaration by its [GlobRef.t] in the structure.
+    @param r the global reference to look up
+    @raise Not_found if the reference is not in the structure. *)
+val get_decl_in_structure : GlobRef.t -> 'p Core.Program.at -> 'p Core.Decl.at
+
+(** [decl_of_term r a t] is the declaration of [r], with body [a] and type
+    [t]: a fixpoint when [a] is one under its lambdas -- the fixpoint's own
+    name becoming [r], its parameters [r]'s -- and a term otherwise. *)
+val decl_of_term : GlobRef.t -> 'p Core.Expr.at -> 'p Core.Type.at -> 'p Core.Decl.at
+
+(** Simplify the structure: beta-iota reduction, dead code elimination, inlining
+    of singly-used let-bindings. The first argument specifies which definitions
+    must be kept (not eliminated).
+    @param to_appear pair of global references and module paths that must be
+      preserved (not eliminated by dead-code removal)
+    @return the optimized structure *)
+val optimize_struct :
+  GlobRef.t list * ModPath.t list -> Core.Program.extracted -> Core.Program.extracted
+
+(** The references a declaration defines; an inductive block is represented
+    by its first packet. *)
+val declared_refs : 'p Core.Decl.at -> GlobRef.t list
+
+(** [map_struct_decls f s] applies [f] to every declaration of [s], in modules
+    and functor bodies alike. *)
+val map_struct_decls : ('p Core.Decl.at -> 'p Core.Decl.at) -> 'p Core.Program.at -> 'p Core.Program.at
+
+(** [map_struct ~spec ~with_type decl s] is {!map_struct_decls}[ decl s] with
+    the module types rewritten as well: [spec] applied to every
+    specification, and [with_type] to the type each [with] refinement
+    fixes. *)
+val map_struct :
+  ?spec:('p Core.Signature.Declaration.at -> 'p Core.Signature.Declaration.at) ->
+  ?with_type:('p Core.Type.at -> 'p Core.Type.at) ->
+  ('p Core.Decl.at -> 'p Core.Decl.at) ->
+  'p Core.Program.at ->
+  'p Core.Program.at

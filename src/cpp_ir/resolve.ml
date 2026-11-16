@@ -5,7 +5,7 @@
 
     Each function rebuilds its argument constructor for constructor; a form
     only a lowered value may hold ({!Grammar.lowered}) has no resolved
-    counterpart, and raises {!Owed} naming it.  {!Cpp_pipeline} applies
+    counterpart, and raises {!Owed} naming it.  {!Cpp_passes.Pipeline} applies
     {!decl} to each declaration once CppIR finishing has discharged every
     {!Representation_obligation}, and turns {!Owed} into an anomaly. *)
 

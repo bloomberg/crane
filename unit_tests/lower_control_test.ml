@@ -26,7 +26,7 @@ let callee ~depth:_ = function
 let use () = Core.Global_use.monomorphic count
 let call u args = Core.Expr.Apply {callee = Core.Expr.Global u; arguments = args}
 let plus a b = Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic (r "plus")); arguments = [a; b]}
-let lower body = Lower_control.tail_loop ~effects:Core_effects.empty ~target ~callee body
+let lower body = Core_to_control.Lower_control.tail_loop ~effects:Core_plan.Effects.empty ~target ~callee body
 let continues_at us t = List.equal Core.Occurrence.equal (Term.continues t) (List.map Core.Global_use.occurrence us)
 let id s = Core.Binder_name.Source (Id.of_string s)
 
@@ -121,7 +121,7 @@ let () =
 (* Tail modulo cons: a recursive call held in a chain of constructors
    returned continues into the hole the chain leaves. *)
 let cons = r "cons"
-let lower_cons body = Lower_control.tail_loop ~modulo_cons:true ~effects:Core_effects.empty ~target ~callee body
+let lower_cons body = Core_to_control.Lower_control.tail_loop ~modulo_cons:true ~effects:Core_plan.Effects.empty ~target ~callee body
 
 let () =
   (* cons n (cons acc (count n acc)): two cells, the call in the second's hole. *)
@@ -166,7 +166,7 @@ let () =
 
 (* A machine with a stack: a recursive call a let binds resumes into the
    let's body once it returns. *)
-let lower_frames body = Lower_control.tail_loop ~frames:true ~effects:Core_effects.empty ~target ~callee body
+let lower_frames body = Core_to_control.Lower_control.tail_loop ~frames:true ~effects:Core_plan.Effects.empty ~target ~callee body
 
 let () =
   (* let x := count n acc in plus x x *)
@@ -213,7 +213,7 @@ let () =
      one branch: generated as statements assigning the binder, the call in
      the branch resumes. *)
   let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "R")) in
-  Table.add_inductive_kind kn (Core.Inductive.Kind.Record [{Core.Record.Field.projection = Some (r "a"); type_ = nat}]);
+  Base.Table.add_inductive_kind kn (Core.Inductive.Kind.Record [{Core.Record.Field.projection = Some (r "a"); type_ = nat}]);
   let record = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   let inner = use () and tail = use () in
   let rhs =
@@ -240,7 +240,7 @@ let () =
    an Entry of its function, entered by a Continue of it; its body
    continues both the fixpoint and the function. *)
 let lower_adopting adopted body =
-  Lower_control.tail_loop ~frames:true ~adopted ~effects:Core_effects.empty ~target ~callee body
+  Core_to_control.Lower_control.tail_loop ~frames:true ~adopted ~effects:Core_plan.Effects.empty ~target ~callee body
 
 let () =
   (* (fix go k := match k with O => count n acc | S j => let y := go j in count n y) acc,

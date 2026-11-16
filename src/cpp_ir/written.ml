@@ -4,9 +4,9 @@
 (** What printing a term writes, asked of its structure rather than of its
     rendering: the variables a body's text reads, and whether an expression
     is written with a leading prefix pointer operator.  The printer
-    ({!Cpp_print}) asks the first to name only the parameters a body reads,
+    ({!Emit.Print}) asks the first to name only the parameters a body reads,
     and checks the second against its output under [CRANE_CHECK_IR];
-    {!Cpp_erasure} asks the second to parenthesise a match template's
+    {!Cpp_passes.Erasure} asks the second to parenthesise a match template's
     scrutinee. *)
 
 open Names

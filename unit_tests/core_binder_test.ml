@@ -15,16 +15,16 @@ let check name cond =
 
 let () =
   let origin = GlobRef.VarRef (Id.of_string "f") in
-  let at ?site () = Core_binder.make ~origin ~level:2 ?site () in
+  let at ?site () = Core.Binder.make ~origin ~level:2 ?site () in
   let let_ = Core.Occurrence.fresh () and match_ = Core.Occurrence.fresh () and other = Core.Occurrence.fresh () in
   let bound = at ~site:(Binding let_) () in
   let first = at ~site:(Branch (match_, 0)) () in
   let second = at ~site:(Branch (match_, 1)) () in
   let elsewhere = at ~site:(Branch (other, 0)) () in
-  check "one level is one binder in scope" (Core_binder.equal first second && Core_binder.equal bound first);
-  check "a branch is its own site" (Core_binder.same_site first (at ~site:(Branch (match_, 0)) ()));
-  check "two branches of one match are two sites" (not (Core_binder.same_site first second));
-  check "one branch of two matches is two sites" (not (Core_binder.same_site first elsewhere));
-  check "a pattern is not a let" (not (Core_binder.same_site bound first || Core_binder.same_site first bound));
+  check "one level is one binder in scope" (Core.Binder.equal first second && Core.Binder.equal bound first);
+  check "a branch is its own site" (Core.Binder.same_site first (at ~site:(Branch (match_, 0)) ()));
+  check "two branches of one match are two sites" (not (Core.Binder.same_site first second));
+  check "one branch of two matches is two sites" (not (Core.Binder.same_site first elsewhere));
+  check "a pattern is not a let" (not (Core.Binder.same_site bound first || Core.Binder.same_site first bound));
   check "a binder recording no site is told apart from none"
-    (Core_binder.same_site (at ()) first && Core_binder.same_site bound (at ()))
+    (Core.Binder.same_site (at ()) first && Core.Binder.same_site bound (at ()))

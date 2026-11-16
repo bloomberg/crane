@@ -46,22 +46,22 @@ let program =
         term "caller" ["even"; "self"] ] ) ]
 
 let () =
-  let groups = Recursive_groups.analyze program in
-  check "a function calling nothing is on no cycle" (Recursive_groups.group groups (r "leaf") = None);
-  check "a caller of a cycle is not on it" (Recursive_groups.group groups (r "caller") = None);
+  let groups = Core_plan.Recursive_groups.analyze program in
+  check "a function calling nothing is on no cycle" (Core_plan.Recursive_groups.group groups (r "leaf") = None);
+  check "a caller of a cycle is not on it" (Core_plan.Recursive_groups.group groups (r "caller") = None);
   check "a function calling itself is a group of one"
-    (names (Recursive_groups.group groups (r "self")) = Some ["self"]);
+    (names (Core_plan.Recursive_groups.group groups (r "self")) = Some ["self"]);
   check "a mutual pair is one group, in definition order"
-    (names (Recursive_groups.group groups (r "odd")) = Some ["even"; "odd"]);
+    (names (Core_plan.Recursive_groups.group groups (r "odd")) = Some ["even"; "odd"]);
   check "a longer cycle is one group, in definition order"
-    (names (Recursive_groups.group groups (r "a")) = Some ["c"; "a"; "b"]);
-  check "a member is in its own group" (Recursive_groups.in_group groups (r "b") (r "b"));
+    (names (Core_plan.Recursive_groups.group groups (r "a")) = Some ["c"; "a"; "b"]);
+  check "a member is in its own group" (Core_plan.Recursive_groups.in_group groups (r "b") (r "b"));
   check "partners are in each other's groups"
-    (Recursive_groups.in_group groups (r "even") (r "odd")
-    && Recursive_groups.in_group groups (r "odd") (r "even"));
+    (Core_plan.Recursive_groups.in_group groups (r "even") (r "odd")
+    && Core_plan.Recursive_groups.in_group groups (r "odd") (r "even"));
   check "a callee off the cycle is not in the group"
-    (not (Recursive_groups.in_group groups (r "odd") (r "leaf")));
+    (not (Core_plan.Recursive_groups.in_group groups (r "odd") (r "leaf")));
   check "a function on no cycle has no group, not even itself"
-    (not (Recursive_groups.in_group groups (r "leaf") (r "leaf")));
+    (not (Core_plan.Recursive_groups.in_group groups (r "leaf") (r "leaf")));
   check "analysis is deterministic"
-    (Recursive_groups.equal groups (Recursive_groups.analyze program))
+    (Core_plan.Recursive_groups.equal groups (Core_plan.Recursive_groups.analyze program))

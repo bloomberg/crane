@@ -26,8 +26,8 @@ DECLARE PLUGIN "rocq-crane.plugin"
 open Stdarg
 open Pp
 open Names
-open Table
-open Extract_env
+open Base.Table
+open Driver.Extract_env
 
 let pr_cppname s = spc () ++ qs s
 
@@ -104,47 +104,47 @@ END
 {
 
 let pr_benchmark_language = function
-  | Benchmark.OCaml -> str "OCaml"
-  | Benchmark.Cpp -> str "C++"
+  | Driver.Benchmark.OCaml -> str "OCaml"
+  | Driver.Benchmark.Cpp -> str "C++"
 
 let pr_benchmark_subject subject =
-  Libnames.pr_qualid subject.Benchmark.term
-  ++ match subject.Benchmark.label with
+  Libnames.pr_qualid subject.Driver.Benchmark.term
+  ++ match subject.Driver.Benchmark.label with
      | None -> mt ()
      | Some label -> str " As " ++ quote (str label)
 
 let pr_benchmark_option configuration =
-  pr_benchmark_language configuration.Benchmark.backend
-  ++ if String.equal configuration.Benchmark.flags "" then mt ()
-     else str " With " ++ quote (str configuration.Benchmark.flags)
+  pr_benchmark_language configuration.Driver.Benchmark.backend
+  ++ if String.equal configuration.Driver.Benchmark.flags "" then mt ()
+     else str " With " ++ quote (str configuration.Driver.Benchmark.flags)
 
 }
 
 VERNAC ARGUMENT EXTEND crane_benchmark_subject
 PRINTED BY { pr_benchmark_subject }
 | [ global(term) "As" string(label) ]
-  -> { { Benchmark.term = term; label = Some label } }
-| [ global(term) ] -> { { Benchmark.term = term; label = None } }
+  -> { { Driver.Benchmark.term = term; label = Some label } }
+| [ global(term) ] -> { { Driver.Benchmark.term = term; label = None } }
 END
 
 VERNAC ARGUMENT EXTEND crane_benchmark_language
 PRINTED BY { pr_benchmark_language }
-| [ "OCaml" ] -> { Benchmark.OCaml }
-| [ "C++" ] -> { Benchmark.Cpp }
+| [ "OCaml" ] -> { Driver.Benchmark.OCaml }
+| [ "C++" ] -> { Driver.Benchmark.Cpp }
 END
 
 VERNAC ARGUMENT EXTEND crane_benchmark_option
 PRINTED BY { pr_benchmark_option }
 | [ crane_benchmark_language(backend) "With" string(flags) ]
-  -> { { Benchmark.backend = backend; flags = flags } }
+  -> { { Driver.Benchmark.backend = backend; flags = flags } }
 | [ crane_benchmark_language(backend) ]
-  -> { { Benchmark.backend = backend; flags = "" } }
+  -> { { Driver.Benchmark.backend = backend; flags = "" } }
 END
 
 VERNAC COMMAND EXTEND Benchmark CLASSIFIED AS QUERY STATE opaque_access
 | [ "Crane" "Benchmark" ne_crane_benchmark_subject_list_sep(subjects, ",")
     "On" ne_crane_benchmark_option_list_sep(options, ",") ]
-  -> { Benchmark.run subjects options }
+  -> { Driver.Benchmark.run subjects options }
 END
 
 (* Target Language *)
@@ -191,7 +191,7 @@ END
 
 VERNAC COMMAND EXTEND ExtractionTriviallyCopyable CLASSIFIED AS SIDEFF
 | [ "Crane" "TriviallyCopyable" ne_global_list(l) ]
-  -> { Table.extraction_trivially_copyable l }
+  -> { Base.Table.extraction_trivially_copyable l }
 END
 
 VERNAC COMMAND EXTEND ExtractionReuse CLASSIFIED AS SIDEFF
@@ -355,12 +355,12 @@ END
 
 VERNAC COMMAND EXTEND ExtractionNumeral CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Numeral" global(x) "=>" cppname(fmt) ]
-  -> { Table.extract_numeral x fmt }
+  -> { Base.Table.extract_numeral x fmt }
 END
 
 VERNAC COMMAND EXTEND ExtractionGuardCompare CLASSIFIED AS SIDEFF
 | [ "Crane" "Guard" "Compare" global(f) "=>" global(ret) ]
-  -> { Table.extract_guard_compare f ret }
+  -> { Base.Table.extract_guard_compare f ret }
 END
 
 (* Show the extraction of the current proof *)

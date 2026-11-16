@@ -1,0 +1,2406 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** Frame-based loopification of non-tail recursion for {!Loopify}: explicit
+    frame stacks, continuations, multi-call decomposition, and the bodies the
+    machine adopts as extra entry points.
+
+    It rewrites a translated C++ function body into a dispatch loop over a
+    stack of frames ({!transform_nontail}).  What the machine keeps across a
+    call, which calls enter it, and which values a frame holds by pointer or
+    moves are read from the recursion plan ({!Core_plan.Recursion}), the function's
+    ControlIR ({!Control_ir}) and the ownership plan ({!Ownership_ir.Region}); this
+    module decides only their C++ spelling. *)
+
+open Names
+open Cpp_ir.Type
+open Cpp_ir.Stmt
+open Cpp_ir.Expr
+open Analysis
+open Tail
+open Tmc
+
+(** {3 Frame-based non-tail recursion helpers} *)
+
+(** Field names for the locals a frame saves: each local's own name,
+    deduplicated by appending numeric suffixes when the same name appears more
+    than once. *)
+let derive_field_names (locals : Id.t list) : Id.t list =
+  let raw_names = List.map Id.to_string locals in
+  (* Count occurrences of each name *)
+  let counts = Hashtbl.create 8 in
+  List.iter (fun name ->
+    let c = try Hashtbl.find counts name with Not_found -> 0 in
+    Hashtbl.replace counts name (c + 1))
+    raw_names;
+  (* Assign unique names: if a name appears once, use it as-is;
+     if it appears multiple times, append _0, _1, ... *)
+  let next_idx = Hashtbl.create 8 in
+  List.map (fun name ->
+    if Hashtbl.find counts name = 1 then
+      Id.of_string name
+    else begin
+      let idx = try Hashtbl.find next_idx name with Not_found -> 0 in
+      Hashtbl.replace next_idx name (idx + 1);
+      Id.of_string (name ^ "_" ^ string_of_int idx)
+    end)
+    raw_names
+
+(** One value a frame saves across the recursive call.
+
+    The three facts about a saved value (what it is called in the frame
+    struct, what its type is, and which local it saves) are one
+    record per value, so a frame whose names and types have drifted out of
+    step is not a thing that can be built. *)
+module Saved_slot = struct
+  type t = {
+    field : Id.t;
+        (** field name in the frame struct (see {!derive_field_names}) *)
+    ty : ty;
+        (** the type the local was declared at, or
+            [(Obligation Unresolved_type)] when the frame's environment does
+            not know it; the frame struct then spells it from
+            {!Saved_slot.local} *)
+    local : Id.t;  (** the saved local *)
+  }
+end
+
+(** A collected call frame — saved values + handler body. *)
+module Call_frame_info = struct
+  type t = {
+    name : string;
+        (** e.g. [CraneCont0] — assigned when the push statement is generated *)
+    slots : Saved_slot.t list;
+    env : (Id.t * ty) list;
+        (** type env at frame creation, for the [decltype] fallback *)
+    handler : stmt list;
+    pointers : bool list;
+        (** Which slots the frame keeps as pointers, as the recursion plan has
+            it *)
+  }
+end
+
+(** [make_slots ~types ~locals] pairs a frame's saved types with the
+    locals they are saved from and names each one.
+
+    Naming is {!derive_field_names} over the whole list, so it has to happen
+    here rather than per slot: the names are deduplicated against each other.
+    This is the only way to build a slot list, which is what keeps names,
+    types and locals in step. *)
+let make_slots ~types ~locals =
+  let names = derive_field_names locals in
+  map3_exn ~what:"make_slots"
+    (fun field ty local -> {Saved_slot.field; ty; local})
+    names types locals
+
+(* A frame's slots read one fact at a time. *)
+let cf_field_names cf = List.map (fun s -> s.Saved_slot.field) cf.Call_frame_info.slots
+let cf_saved_types cf = List.map (fun s -> s.Saved_slot.ty) cf.Call_frame_info.slots
+
+(** Collect type bindings from a list of statements. Handles
+    [Bind_variable (id, Declare (ty, _), _)], [Declare (id, ty, _)] and a
+    [Foreign_block]'s result.  Also recurses into [Custom_match] branches,
+    [If], [Match] and [Block] to pick up pattern-bound variables. *)
+let rec collect_type_env (stmts : stmt list) : (Id.t * ty) list =
+  List.concat_map
+    (fun s ->
+      match s with
+      | Bind_variable (id, Declare (Auto, _), Lambda
+        { params = params;
+          return_type = ret_ty_opt;
+          _ }) ->
+        let param_types = List.map (fun (t, _) -> strip_ref_and_const_type t) params in
+        let ret_ty = match ret_ty_opt with
+          | Some t when t <> Void -> t
+          | _ -> Void
+        in
+        [(id, Function (param_types, ret_ty))]
+      | Bind_variable (id, Declare (ty, _), _) -> [(id, ty)]
+      | Declare (id, ty, _) | Foreign_block {custom = _;
+                                             template = _;
+                                             result = id;
+                                             result_type = ty;
+                                             values = _;
+                                             type_args = _;
+                                             binder = _} ->
+        [(id, ty)]
+      | Custom_match {branches; _} ->
+        List.concat_map
+          (fun (b : custom_branch) ->
+            List.map (fun (p : custom_param) -> (p.name, p.type_)) b.params @ collect_type_env b.body)
+          branches
+      | If {condition = _; then_ = then_br; else_ = else_br} ->
+        collect_type_env then_br @ collect_type_env else_br
+      | Match (scrut, branches, default) ->
+        List.concat_map
+          (fun (br : branch) ->
+            (* Register structured-binding field types so that a frame
+               saving one knows its type. *)
+            let field_type_bindings =
+              List.map
+                (fun (fb : field_binding) -> (fb.name, fb.type_))
+                br.field_bindings
+            in
+            (* Also register the aggregate binding for frame-dispatch
+               branches (which use [var] without structured bindings). *)
+            let var_binding =
+              match br.var with
+              | Some id when br.field_bindings = [] ->
+                [(id, Const (br.ctor_type))]
+              | _ -> []
+            in
+            field_type_bindings @ var_binding
+            @ collect_type_env br.body )
+          branches
+        @ (match default with Some ss -> collect_type_env ss | None -> [])
+      | Block ss -> collect_type_env ss
+      | _ -> [] )
+    stmts
+
+(** Look up a variable's type in the environment. *)
+let lookup_var_type env id = List.assoc_opt id env
+
+(** The type a frame keeps a saved local at: the type the local was declared
+    at, or [None] when [env] does not know it.  A forwarding parameter's value
+    is held at [std::decay_t<F>]: its [F] may be deduced as a reference. *)
+let saved_local_type (env : (Id.t * ty) list) id : ty option =
+  Option.map
+    (function Reference (Forwarding, t) -> Decay (strip_ref_type t) | t -> strip_ref_type t)
+    (lookup_var_type env id)
+
+(** {3 Continuation variable helpers}
+
+    When a recursive call occurs mid-statement-sequence (e.g., [let x = f(n) in
+    rest]), the "rest" statements form a continuation. Variables that are free in
+    [rest] but defined before it must be saved in the call frame and restored in
+    the handler. These helpers factor out the repeated pattern of computing,
+    filtering, binding, and registering continuation variables. *)
+
+(** Compute the free variables of a continuation (the "rest" of a statement
+    sequence). Excludes variables that are defined within [rest] itself and
+    the special [_result] accumulator.
+
+    @param rest The remaining statements (the continuation)
+    @return Sorted, unique list of free variable [Core.Binder_name.Source.t] values *)
+let compute_rest_free_vars rest =
+  let rest_defined =
+    List.filter_map
+      (function
+        | Bind_variable (vid, _, _) -> Some vid
+        | Declare (vid, _, _) -> Some vid
+        | _ -> None)
+      rest
+  in
+  List.concat_map free_vars_stmt rest
+  |> List.filter (fun v -> not (List.exists (Id.equal v) rest_defined))
+  |> List.sort_uniq (fun a b -> Id.compare a b)
+
+(** Generate statements that bind continuation variables from frame fields.
+    Produces [<type> <name> = _f.<field i>;] for each continuation variable.
+
+    @param cont_vars The continuation variable names
+    @param cont_types Their types (parallel to [cont_vars])
+    @return List of raw C++ binding statements *)
+let make_cont_bindings ~field_names cont_vars cont_types =
+  List.mapi
+    (fun i id ->
+      let ty = List.nth cont_types i in
+      let field_expr = Access (Dot, Local id_f, List.nth field_names i) in
+      match ty with
+      | Shared_pointer _ -> Bind_variable (id, Declare (ty, None), Move field_expr)
+      | (Obligation Unresolved_type) -> Bind_variable (id, Existing, field_expr)
+      | Const inner when not (is_trivially_copyable_type inner) ->
+        Bind_variable (id, Declare (Reference (Lvalue, Const inner), None), field_expr)
+      | Variable _ ->
+        (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
+           deduced as a reference type, [F0 f = std::move(_f.f)] would be
+           ill-formed — a non-const lvalue reference cannot bind to an rvalue.
+           Use [auto] so the declared type is always deduced as a value type,
+           regardless of whether [F0] was a reference or function type. *)
+        Bind_variable (id, Declare (Auto, None), Move field_expr)
+      | t when not (copies_cheaply t) ->
+        (* Move from frame field to avoid O(n) deep copy of owned value types
+           (e.g. [List<T>]).  Safe because [_f] was obtained via
+           [std::move(std::get<...>(_frame))] and this field is not used again. *)
+        Bind_variable (id, Declare (ty, None), Move field_expr)
+      | _ -> Bind_variable (id, Declare (ty, None), field_expr))
+    cont_vars
+
+(** Build a type environment from continuation variables and their types,
+    prepended to an existing environment.
+
+    @param cont_vars Continuation variable names
+    @param cont_types Their types (parallel to [cont_vars])
+    @param env The existing type environment
+    @return Extended type environment *)
+let make_cont_env cont_vars cont_types env =
+  map2_exn ~what:"make_cont_env" (fun id ty -> (id, ty)) cont_vars cont_types @ env
+
+(** Register a call frame in the mutable [frames_ref] accumulator.
+
+    @param frames_ref Mutable reference to the list of collected frames
+    @param name Frame struct name (e.g., [CraneCont0])
+    @param saved_types Types of the saved locals
+    @param saved_locals The saved locals
+    @param env Type environment at frame creation point
+    @param handler The handler body statements *)
+let register_frame frames_ref ~name ~saved_types ~saved_locals ~env ~handler ~pointers =
+  frames_ref :=
+    !frames_ref
+    @ [{Call_frame_info.name = name;
+        slots = make_slots ~types:saved_types ~locals:saved_locals;
+        env = env; handler = handler; pointers = pointers}]
+
+(** {3 Frame-based non-tail rewrite}
+
+    Rewrite the body for the Enter handler, replacing recursive returns with
+    frame pushes. Collects [call_frame_info] for each call site so that the
+    caller can generate the corresponding handler lambdas.
+
+    The [call_counter] ref assigns sequential IDs (starting from 1). The
+    [frames_ref] accumulates call frame info in order. *)
+
+(** Build a stack push expression. Uses
+    [Call (Access (Dot, ...))] so that
+    [Local "_stack"] is visible to capture detection (ensuring [[&]] capture),
+    and renders with [.] not [->]. *)
+let make_stack_push arg =
+  Expression
+    (Call
+       (call_opaque, Access (Dot, Local (id_stack), id_emplace_back),
+         [arg] ) )
+
+(** {4 Frame construction helpers}
+
+    These helpers reduce code duplication when constructing frame instances and
+    managing the frame counter. *)
+
+(** Extract a short constructor name from a [ty], for use in frame
+    name suffixes. Returns [None] for types that don't have a clear short name. *)
+let ctor_type_short_name : ty -> string option = function
+  | Named (id, _) -> Some (Id.to_string id)
+  | Member (_, id) -> Some (Id.to_string id)
+  | _ -> None
+
+(** Generate a unique call frame name from a role prefix (e.g. [CraneCont])
+    and optional branch context.
+
+    When [branch_ctx] is [Some "Node"], produces [CraneCont_Node] instead of
+    [CraneCont0].  Falls back to a numeric suffix when no context is available.
+    The [seen] table tracks used names for deduplication: if a context-derived
+    name collides, a numeric suffix is appended ([CraneCont_Node_1]). *)
+let make_call_frame_name (prefix : string) (counter : int ref)
+    (seen : (string, int) Hashtbl.t) ?(branch_ctx : string option) () : string =
+  let id = !counter in
+  counter := id + 1;
+  let candidate =
+    Base.Generated_name.separate_underscores
+      (match branch_ctx with
+       | Some s -> prefix ^ "_" ^ s
+       | None -> prefix ^ string_of_int id)
+  in
+  let n = try Hashtbl.find seen candidate with Not_found -> 0 in
+  Hashtbl.replace seen candidate (n + 1);
+  if n = 0 then candidate
+  else candidate ^ "_" ^ string_of_int n
+
+(** The types a frame keeps [locals] at ({!saved_local_type}).
+
+    This is the boundary where not knowing becomes
+    {!Cpp_ir.Representation_obligation.Unresolved_type}: a frame field's
+    declared type is a slot that has to hold something, and
+    [(Obligation Unresolved_type)] is what the rest of the frame machinery
+    reads as "not settled yet". *)
+let saved_local_types env locals =
+  List.map (fun id -> Option.default (Obligation Unresolved_type) (saved_local_type env id)) locals
+
+(** {3 Enter-rewrite context} *)
+
+(** One parameter a frame carries, and how the frame holds it: [pointer_safe]
+    says the caller's value outlives the frame, so the field is a pointer to it
+    rather than a copy.
+
+    The flag lives in the parameter because every reader needs the two
+    together -- the field's type, the push argument and the handler's binding
+    each depend on both -- and a mask beside the list is one more thing to keep
+    in step. *)
+module Frame_param = struct
+  type t = {
+    name : Id.t;
+    ty : ty;
+    pointer_safe : bool;
+  }
+end
+
+(** One entry point of a frame machine.
+
+    An entry is what a call needs in order to become a stack push: the
+    [CraneEnter]-style frame struct that entering it goes through, the parameters
+    that entry binds, and the mask saying which of them vary across calls and
+    so have to be carried in the frame. A function loopified on its own has a
+    single entry; the representation is a table so that an enclosing function
+    and a body adopted from it can share one stack, each entering through its
+    own frame.
+
+    The parameters live here rather than beside the entry because everything
+    the machine derives per entry -- which arguments a frame carries, and at
+    which types -- is a function of the two together. Build one with
+    {!machine_entry}, which checks that the mask describes those parameters. *)
+module Machine_entry = struct
+  type t = {
+    enter_id : Id.t;  (** Frame struct entering this point goes through *)
+    params : (Id.t * ty) list;  (** The parameters this entry binds *)
+    varying : bool list;  (** Mask over {!Machine_entry.params} *)
+  }
+end
+
+(** An entry binding [params], entered through [enter_id], carrying the
+    positions [varying] selects. *)
+let machine_entry ~enter_id ~params ~varying =
+  ignore
+    (map2_exn ~what:"a machine entry's varying mask" (fun _ _ -> ()) varying
+       params );
+  {Machine_entry.enter_id = enter_id; params = params; varying = varying}
+
+(** The parameters [en] carries in its frame: those that vary across calls.
+    The invariant ones are in scope at the handler already. *)
+let entry_varying_params en = filter_by_mask en.Machine_entry.varying en.params
+
+(** The types of {!entry_varying_params}, the layout of [en]'s frame. *)
+let entry_varying_types en = List.map snd (entry_varying_params en)
+
+(** Everything one entry point contributes to the emitted machine: the frame
+    struct its callers push, the parameters it carries and how it holds each
+    of them, and the handler the dispatch loop runs on popping one.
+
+    These four travel together -- a struct's fields, their types, their mask
+    and the handler that binds them all have to describe the same frame -- so
+    they are one record rather than parallel lists indexed by position. *)
+module Entry_emission = struct
+  type t = {
+    id : Id.t;
+    params : Frame_param.t list;
+    body : stmt list;
+  }
+end
+
+(** What [en] contributes to the machine, given the [body] its handler runs.
+    The parameters are read off the entry, so the struct and the frames pushed
+    at it cannot disagree about what it carries.  [pointer_safe] defaults to
+    all-false: only an entry whose parameters come from the enclosing
+    function's own can borrow rather than own them. *)
+let entry_emission ?pointer_safe en body =
+  let params = entry_varying_params en in
+  let params =
+    match pointer_safe with
+    | None ->
+      List.map
+        (fun (id, ty) -> {Frame_param.name = id; ty = ty; pointer_safe = false})
+        params
+    | Some ps ->
+      map2_exn ~what:"an entry emission's pointer-safe mask"
+        (fun safe (id, ty) ->
+          {Frame_param.name = id; ty = ty; pointer_safe = safe} )
+        ps params
+  in
+  {Entry_emission.id = en.enter_id; params = params; body = body}
+
+(** {3 Bodies the machine adopts as extra entry points} *)
+
+(** The statement lists that run as part of evaluating [e]: the bodies of
+    immediately-invoked zero-parameter lambdas, collected recursively.
+
+    Translation wraps a Coq [let fix] that appears in argument position in one
+    of these, so a fixpoint bound there is part of the enclosing function's
+    flow just as much as one bound by a statement.  The body of a lambda that
+    is merely {i passed} somewhere is not collected: it runs later, under a
+    scope this machine does not control. *)
+let invoked_body e =
+  match e with
+  | Call
+      (res, Lambda ({params = []; _} as l), ([] as noargs))
+    ->
+    Some
+      ( l.body,
+        fun body -> Call (res, Lambda {l with body = body}, noargs)
+      )
+  | _ -> None
+
+(* Every {!invoked_body} among [e] and its subexpressions, not looking
+   inside any lambda's body, outermost first. *)
+let rec invoked_bodies_expr e =
+  let acc = ref (match invoked_body e with Some (b, _) -> [b] | None -> []) in
+  iter_expr_children
+    ~on_expr:(fun c -> acc := !acc @ invoked_bodies_expr c)
+    ~on_stmts:(fun _ -> ())
+    e;
+  !acc
+
+(** Apply [f] to every expression in [stmts], innermost first.  Unlike the
+    searches above this does descend into every lambda: an adopted entry is
+    reached by name once installed, and a name has to be rewritten wherever it
+    is written. *)
+let rec rewrite_exprs f stmts = List.map (rewrite_exprs_stmt f) stmts
+
+and rewrite_exprs_stmt f s =
+  map_stmt (rewrite_exprs_expr f) (rewrite_exprs_stmt f) Fun.id s
+
+and rewrite_exprs_expr f e =
+  f (map_expr (rewrite_exprs_expr f) (rewrite_exprs_stmt f) Fun.id e)
+
+(** The first hit of [on_stmt] among the statements that run as part of
+    this function's flow.
+
+    Statements are searched throughout -- what is looked for is often bound
+    inside a match branch rather than at the body's top level.  The
+    traversal enters {!invoked_body} lambdas, since translation wraps a Coq
+    [let fix] appearing in argument position in one of those.  The body of
+    a lambda this function merely {i builds} is never searched: it runs
+    later, under a scope this machine does not control. *)
+let find_in_flow ~on_stmt stmts =
+  let found = ref None in
+  let pending () = Option.is_empty !found in
+  let rec visit stmt =
+    if pending () then (
+      found := on_stmt stmt;
+      if pending () then ignore (map_stmt visit_expr visit Fun.id stmt) );
+    stmt
+  and visit_expr e =
+    if pending () then
+      List.iter (fun body -> List.iter (fun s -> ignore (visit s)) body) (invoked_bodies_expr e);
+    e
+  in
+  List.iter (fun s -> ignore (visit s)) stmts;
+  !found
+
+(** Drop the bindings [dropped] holds of wherever they occur in [stmts].
+
+    Once a local fixpoint becomes an entry point of the enclosing machine, the
+    lambdas that used to implement it are dead -- and not merely untidy: they
+    still hold a call the loopification postcondition would see, so leaving
+    them in gets the function reported as declined even though its machine is
+    correct. *)
+let rec drop_bindings dropped stmts =
+  List.filter_map
+    (fun st ->
+      if dropped st then None
+      else
+        Some
+          (map_stmt ~fl:(drop_bindings dropped) (drop_bindings_expr dropped) (drop_bindings_stmt dropped) Fun.id st) )
+    stmts
+
+(** [drop_bindings] on a single statement, collapsing a list result into a
+    block so that it fits where one statement is expected. *)
+and drop_bindings_stmt dropped s =
+  match drop_bindings dropped [s] with
+  | [] -> Block []
+  | [one] -> one
+  | many -> Block many
+
+(** [drop_bindings] reaching through expressions into the bodies of
+    {!invoked_body} lambdas -- the statements the searches above look in, so
+    the same ones a dropped binding can hide in. *)
+and drop_bindings_expr dropped e =
+  match invoked_body e with
+  | Some (body, rebuild) -> rebuild (drop_bindings dropped body)
+  | None -> map_expr (drop_bindings_expr dropped) Fun.id Fun.id e
+
+(** Whether [st] binds a lambda the local fixpoint [fixpoint] is generated
+    as: the one taking its self-parameter, or, unless [~knot:false], the
+    wrapper tying the knot ({!Analysis.wraps}) -- by the Core fixpoint it was made of,
+    not by its name, which another fixpoint may share. *)
+let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
+  | Bind_variable (_, Declare _, Lambda {fixpoint = Some {member = (o, j); encoding; _}; _}) -> (
+    let (o', j') = fixpoint.member in
+    Core.Occurrence.equal o o' && Int.equal j j'
+    && match encoding with Self_passing _ -> true | Knot -> knot | Lowered -> false )
+  | _ -> false
+
+(** The binder of the wrapper lambda for the local fixpoint [fixpoint]
+    ({!Analysis.wraps}).  Searched over the same flow the fixpoint itself is, since
+    translation emits the pair together. *)
+let find_fix_wrapper fixpoint stmts =
+  find_in_flow stmts
+    ~on_stmt:(function
+      | Bind_variable (wid, Declare (Auto, _), Lambda w) when wraps fixpoint w -> Some wid
+      | _ -> None )
+
+(** A body this machine adopts as an extra entry point: a fixpoint local to
+    the function, whose calls belong to this machine's recursion but sit
+    where the [CraneEnter] rewriter does not go, so that a single-entry
+    machine cannot linearise them.
+
+    {!Adopted.install} rewrites the enclosing body so that the calls that enter
+    the adopted body are calls on the one name {!Adopted.entry_id}, whether they
+    name the fixpoint or a binder of it.  Everything downstream keys on that
+    name. *)
+module Adopted = struct
+  type t = {
+    name : string;  (** Names the entry's frame, [CraneEnter_<name>] *)
+    entry_id : Id.t;
+        (** The synthetic name {!Adopted.install} routes this entry's calls through *)
+    params : (Id.t * ty) list;  (** Parameters, in call-argument order *)
+    ret : ty option;
+        (** The body's result type, where its lambda records one.  The entry
+            shares the machine's one [_result], so it must be the function's. *)
+    captures : Id.t list;
+        (** Free variables the body takes from the enclosing scope.  The entry's
+            frame carries these alongside {!Adopted.params}: they are in scope for a
+            lambda but not for a dispatch loop re-entering it from a popped
+            frame. *)
+    binders : (Id.t * Core.Binder.t) list;
+        (** The Core binder each parameter and capture stands for, by name *)
+    body : stmt list;
+        (** The entry's handler, already installed: its own recursive calls go
+            through {!Adopted.entry_id} like every other call into this entry. *)
+    install : stmt list -> stmt list;
+        (** Prepare the enclosing body for the adoption: route every call that
+            enters this body through {!Adopted.entry_id}, and drop the bindings the
+            adoption makes dead.  Those are not merely untidy -- they still hold
+            a call the loopification postcondition would see, so leaving them in
+            gets the function reported as declined even though its machine is
+            correct. *)
+    what : string;  (** The body, named concretely enough to act on *)
+    fixpoint : Core.Occurrence.t;  (** The occurrence of the Core fixpoint the body is *)
+  }
+end
+
+(** The synthetic name calls entering an entry called [name] are routed
+    through.  Lowercase and prefixed, so it cannot collide with the [CraneEnter_]
+    frame struct nor with a binder translation emits. *)
+let adopted_entry_id name = Id.of_string ("_adopted_" ^ name)
+
+(** The calls reaching [ad], reported as targeting machine entry [entry].
+
+    The captured variables are arguments of the entry even though no call site
+    writes them: they reach the body through a closure, and a frame re-entering
+    it has to carry them.  They are in scope wherever a call to the body is, so
+    appending them here -- in the order the entry's parameter list is built --
+    is what makes the two agree. *)
+let adopted_checker ~entry ad : call_checker =
+  let captured = List.map (fun id -> Local id) ad.Adopted.captures in
+  function
+  | Call (_, Local id, args) when Id.equal id ad.entry_id ->
+    Some (mk_call_site ~entry (List.rev args @ captured))
+  | _ -> None
+
+(** Why a single-entry machine cannot linearise the function [ad] was found
+    in. *)
+let decline_reason ad =
+  Printf.sprintf
+    "a self-call survived the transform: it is inside %s (%d parameter(s)%s), \
+     which needs a second machine entry"
+    ad.Adopted.what
+    (List.length ad.params)
+    ( match ad.captures with
+    | [] -> ""
+    | ids -> ", capturing " ^ String.concat ", " (List.map Id.to_string ids) )
+
+(** Adopt the local fixpoint [stmt] binds, if the recursion plan says the
+    enclosing function's machine may: [planned] holds of the fixpoints some
+    member of which calls back into the enclosing function
+    ({!Core_plan.Recursion.adoptable}).
+
+    The shape is the Y-combinator pair [Core_to_cpp.Local_functions.gen_local_fix_by_ref]
+    emits (see {!Analysis.fixpoint_self}).  A fixpoint whose body calls none of the
+    enclosing function is left for [Loopify.loopify_inner_lambdas], which handles it
+    correctly on its own; one that does call back cannot be loopified alone,
+    because two machines leave each other's stack to unwind.
+
+    Calls reach the fixpoint two ways -- from inside through its
+    self-reference parameter, from outside through the [wrapper] lambda that
+    ties the knot -- and installation rewrites both into calls on
+    {!Adopted.entry_id}.  The self-call forwards the fixpoint as a leading argument
+    that the entry does not need, so installation drops it. *)
+let adopt_local_fix ~unit ~stmts ~planned = function
+  | Bind_variable (impl_id, Declare (Auto, _), Lambda {params;
+                                                       body;
+                                                       return_type;
+                                                       fixpoint = lambda_fixpoint;
+                                                       binders; _}) -> (
+    match (lambda_fixpoint, fixpoint_self lambda_fixpoint params) with
+    | None, _ | _, None -> None
+    | Some ({name; _} as fixpoint), Some self_id ->
+      if not (planned fixpoint) then None
+      else
+        (* Drop the self-parameter, and any unnamed one: a frame can only
+           carry a binder it can name.  The rest are kept the last first, as
+           a loop's parameters are. *)
+        let params =
+          match params with
+          | _self :: rest ->
+            List.filter_map
+              (fun (ty, id_opt) ->
+                match id_opt with Some id -> Some (id, ty) | None -> None )
+              (List.rev rest)
+          | [] -> []
+        in
+        let bound = self_id :: List.map fst params in
+        let captures =
+          free_vars_body body
+          |> List.filter (fun v -> not (List.exists (Id.equal v) bound))
+          |> List.sort_uniq Id.compare
+        in
+        let name = Id.to_string name in
+        let entry_id = adopted_entry_id name in
+        let wrapper = find_fix_wrapper lambda_fixpoint stmts in
+        (* A call enters the fixpoint where it is made of one of the calls
+           the plan has entering it -- not where it names the fixpoint,
+           whose names another fixpoint may share.  How it is rerouted is
+           its shape: one through the self-parameter forwards it as a
+           leading argument the entry does not take. *)
+        let entering = (Core_plan.Recursion.entering (Unit_plan.Context.recursion unit)) (fst fixpoint.member) in
+        let reroute e =
+          match e with
+          | Call (({occurrence = Some o; _} as res), Local id, args)
+            when List.exists (Core.Occurrence.equal o) entering -> (
+            if not (Id.equal id self_id) then Call (res, Local entry_id, args)
+            else
+              match args with
+              | _self_arg :: rest -> Call (res, Local entry_id, rest)
+              | [] -> e )
+          | _ -> e
+        in
+        let install_calls = rewrite_exprs reroute in
+        let bindings =
+          impl_id :: (match wrapper with Some w -> [w] | None -> [])
+        in
+        let install ss = install_calls (drop_bindings (binds_fixpoint fixpoint) ss) in
+        (* [reroute] only knows how to redirect a *call* on the fixpoint.  A
+           program that passes it around as a value -- Coq's [FMapList.map2]
+           returns it from a branch and applies it outside -- keeps a mention
+           that installation cannot rewrite, and dropping the binding under it
+           would leave the name undefined.  Decline instead, and let the
+           postcondition check report the function as not linearisable. *)
+        let survives =
+          let free = free_vars_body (install stmts) in
+          List.exists
+            (fun id -> List.exists (Id.equal id) free)
+            bindings
+        in
+        (* Two copies of one fixpoint keep its occurrence, and so do their
+           calls: rerouting would send the other copy's calls to an entry
+           that never handles them. *)
+        let copied =
+          let rec count_stmt n st =
+            let n = if binds_fixpoint ~knot:false fixpoint st then n + 1 else n in
+            fold_stmt_children ~on_expr:count_expr ~on_stmts:count_stmts n st
+          and count_expr n e =
+            fold_expr_children ~on_expr:count_expr ~on_stmts:count_stmts n e
+          and count_stmts n l = List.fold_left count_stmt n l in
+          count_stmts 0 stmts > 1
+        in
+        if survives || copied then None
+        else
+        Some
+          { Adopted.name = name;
+            entry_id = entry_id;
+            params = params;
+            ret = return_type;
+            captures = captures;
+            binders = binders @ fixpoint.captured;
+            body = install_calls body;
+            install = install;
+            what = "the local fixpoint " ^ name;
+            fixpoint = fst fixpoint.member } )
+  | _ -> None
+
+(** The body this machine should adopt, if any: a local fixpoint, the shape
+    translation emits for Coq's [let fix], which names itself.  Which of them
+    call back into the function is the recursion plan's, [adoptable]; the
+    first in the flow lowering can take is adopted. *)
+let find_adopted ~unit ~adoptable stmts =
+  let planned (lf : local_fixpoint) =
+    List.exists (Core.Occurrence.equal (fst lf.member)) adoptable
+  in
+  find_in_flow stmts ~on_stmt:(adopt_local_fix ~unit ~stmts ~planned)
+
+(** A checker that tries each of [checkers] in turn, so one machine can be
+    driven by the calls that reach any of its entry points. *)
+let any_checker (checkers : call_checker list) : call_checker =
+ fun e -> List.find_map (fun c -> c e) checkers
+
+(** The parameters the nontail frame-based transformation threads through its
+    three mutually-recursive rewrite functions
+    ({!rewrite_enter_lambda_return}, {!rewrite_enter_stmts},
+    {!rewrite_enter_stmt}), bundled
+    into a single value so that call sites read [ctx] rather than a dozen
+    positional arguments.
+
+    All fields are constant within a single invocation of the outer
+    transformation ({!transform_nontail}) except {!enter_rewrite_ctx.env}, which is narrowed
+    when entering lambda bodies, match branches, or continuations. *)
+type enter_rewrite_ctx = {
+  unit : Unit_plan.Context.t;
+      (** The context of the unit being lowered *)
+  check : call_checker;
+      (** Identifies recursive calls in expressions *)
+  entries : Machine_entry.t list;
+      (** The machine's entry points, indexed by {!Analysis.call_site.entry} *)
+  env : (Id.t * ty) list;
+      (** Type environment — changes when entering sub-scopes *)
+  result_ty : ty;
+      (** The type the machine's [_result] is declared at: a call's value as
+          the machine resumes with it *)
+  binders : (Id.t * Core.Binder.t option) list;
+      (** The Core binder each local in scope stands for, innermost first,
+          where translation declared it for one ({!Core.Binder}) *)
+  call_counter : int ref;
+      (** Mutable counter for generating unique frame names *)
+  frames_ref : Call_frame_info.t list ref;
+      (** Mutable accumulator for generated {!call_frame_info} records *)
+  branch_ctx : string option;
+      (** Constructor name when inside a match branch, for frame naming *)
+  seen_frame_names : (string, int) Hashtbl.t;
+      (** Deduplication table for context-derived frame names *)
+  invariant_params : Id.Set.t;
+      (** Invariant parameter ids — referenced directly from function scope,
+          not stored in continuation frames *)
+  bound : (Id.t * stmt) list;
+      (** The locals the machine's body has declared so far, innermost
+          first, each with the statement declaring it: what a continuation
+          binds again of what its frame does not keep. *)
+  entered_by : (Core_plan.Recursion.call -> bool) option;
+      (** The calls that enter the machine, as the recursion plan names
+          what a point resumes after; [None] where the plan does not
+          describe the machine. *)
+  entered : resumes:bool -> expr -> unit;
+      (** Told each call that enters the machine, and whether the machine
+          resumes after it. *)
+  points_into : Core.Binder.t -> bool;
+      (** Whether an entry of the machine takes a value passed for the
+          parameter standing for this Core binder as a pointer to it *)
+  entering : Core.Occurrence.t list option;
+      (** The calls that enter the machine at one of its entries: the
+          Continues of its loop and of the loops its entries enter
+          ({!Control_ir.Term.continues}); [None] where it has no ControlIR *)
+  aliased : Id.Set.t;
+      (** The locals in scope that are references, or that a reference
+          names: one bound to a matched value's field, to what a pointer the
+          frame holds points at, or declared as a reference; and one a
+          reference was bound into -- a match's scrutinee, what a reference
+          declaration or a structured binding names.  A frame saving the
+          first copies what it names; moving the second would empty what a
+          reference still reads. *)
+}
+
+(** [aliased] with [ids] among them. *)
+let with_aliased aliased ids = List.fold_left (fun s id -> Id.Set.add id s) aliased ids
+
+(** [aliased] once [stmt] has run ({!enter_rewrite_ctx.aliased}): what it
+    declares joins them, as a reference, with what it names, or leaves them,
+    held by value. *)
+let aliased_after aliased = function
+  | Bind_variable (id, Declare (ty, _), e) ->
+    if is_borrowed ty then with_aliased aliased (id :: free_vars_expr e) else Id.Set.remove id aliased
+  | Bind_variable (id, Declare_static _, _) -> Id.Set.add id aliased
+  | Declare (id, _, _) | Declare_value_initialized (id, _) | Foreign_block {custom = _;
+                                                                            template = _;
+                                                                            result = id;
+                                                                            result_type = _;
+                                                                            values = _;
+                                                                            type_args = _;
+                                                                            binder = _} ->
+    Id.Set.remove id aliased
+  | Structured_binding (ids, e) -> with_aliased aliased (ids @ free_vars_expr e)
+  | _ -> aliased
+
+(** The entry point a call site targets. *)
+let entry_of ctx cs = List.nth ctx.entries cs.entry
+
+(** The frame of entry [en]'s struct holding [fields], already narrowed to
+    the entry's varying positions. *)
+let enter_frame en fields = Local_aggregate {struct_ = en.Machine_entry.enter_id; type_args = []; values = fields}
+
+(** The frame that re-enters machine entry [entry] with [args], narrowed to
+    that entry's varying positions.  The invariant ones are in scope at the
+    handler already, so parking them would be dead weight.
+
+    Which frame struct that is, and which arguments it carries, both follow
+    from the entry -- so the two must be read together, and this is the only
+    place that pairs them.  {!make_enter_for} is this for a call site. *)
+let make_enter_at ctx entry args =
+  let en = List.nth ctx.entries entry in
+  enter_frame en (filter_by_mask en.varying args)
+
+(** Whether evaluating [e] calls nothing.  A call inside a lambda's body
+    runs when the lambda does, not when it is made, so a closure calls
+    nothing. *)
+let rec calls_nothing e =
+  match e with
+  | Call _ -> false
+  | Lambda _ -> true
+  | _ ->
+    let ok = ref true in
+    iter_expr_children
+      ~on_expr:(fun c -> if not (calls_nothing c) then ok := false)
+      ~on_stmts:(fun _ -> ok := false)
+      e;
+    !ok
+
+(** [bound] once [stmt] has run ({!enter_rewrite_ctx.bound}). *)
+let bound_after bound = function Bind_variable (id, Declare _, _) as stmt -> (id, stmt) :: bound | _ -> bound
+
+(** The Core binder the local [x] stands for, if any. *)
+let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.binders)
+
+(** The [CraneEnter]-style frame expression that enters [cs]'s target, the
+    call [called] made.  An entry's frame holds what it takes by value
+    where the callee may have lent it -- the call's arguments, and, an
+    adopted entry's, the captures it is entered with besides them
+    ({!adopted_checker}) -- and moves each local the ownership plan says
+    the call may take ({!Ownership_ir.Region.Entry_moves}), at a type worth
+    moving; one it holds by pointer is pointed at
+    ({!adjust_frame_push_args}). *)
+let make_enter_for ctx ~called cs =
+  let en = List.nth ctx.entries cs.entry in
+  let moved = Option.default [] (Option.bind (Analysis.made_of called) Ownership_ir.Region.Entry_moves.lookup) in
+  let takes (_, ty) arg =
+    match arg with
+    | Local x
+      when worthwhile_move_type (strip_ref_and_const_type ty)
+           && Option.cata (fun b -> List.exists (Core.Binder.equal b) moved) false (binder_of ctx x) ->
+      Move arg
+    | _ -> arg
+  in
+  let args =
+    if moved <> [] && List.compare_lengths en.params cs.args = 0 then List.map2 takes en.params cs.args
+    else cs.args
+  in
+  make_enter_at ctx cs.entry args
+
+(** Whether the local [x] stands for the Core binder [b]. *)
+let stands_for ctx b x = match binder_of ctx x with Some b' -> Core.Binder.equal b b' | None -> false
+
+(** Whether the Core binder [b] is in scope wherever the machine runs: a
+    parameter no re-entry changes. *)
+let available ctx b = Id.Set.exists (stands_for ctx b) ctx.invariant_params
+
+(** The binders the point [p] has in scope that its continuation binds again
+    rather than keeps: each recomputable from binders {!available} or so
+    bound in turn ({!Core_plan.Recursion.recomputable}). *)
+let rebuilt_binders ctx (p : Core_plan.Recursion.resume) =
+  List.fold_left
+    (fun rebuilt (c : Core_plan.Recursion.recomputable) ->
+      if List.for_all (fun b -> available ctx b || List.exists (Core.Binder.equal b) rebuilt) c.from then
+        c.recomputed :: rebuilt
+      else rebuilt )
+    [] p.recomputable
+
+(** Whether the local [x] is declared as a reference to locals standing for
+    the binder it stands for too -- a pattern variable read through the
+    pointer its field holds: another spelling of a value a frame keeps by
+    the local it names. *)
+let respells ctx x =
+  match (List.assoc_opt x ctx.bound, binder_of ctx x) with
+  | Some (Bind_variable (_, Declare (ty, _), e)), Some b ->
+    is_reference_type ty && free_vars_expr e <> [] && List.for_all (stands_for ctx b) (free_vars_expr e)
+  | _ -> false
+
+(** The declarations, in the order they were made, that bind again the
+    locals of [reads] a continuation does not have -- not [kept] by its
+    frame -- with those they read in turn. *)
+let rebuilt_bindings ctx ~kept reads =
+  let rec need needed v =
+    if List.exists (Id.equal v) needed || kept v then needed
+    else
+      match List.assoc_opt v ctx.bound with
+      | Some (Bind_variable (_, _, e)) -> List.fold_left need (v :: needed) (free_vars_expr e)
+      | Some _ | None -> needed
+  in
+  let needed = List.fold_left need [] reads in
+  List.fold_left
+    (fun found (v, stmt) ->
+      if List.exists (Id.equal v) needed && not (List.mem_assoc v found) then (v, stmt) :: found else found )
+    [] ctx.bound
+
+(** [binders] once [stmt] has run: the local it declares joins them. *)
+let declared_binders binders = function
+  | Bind_variable (id, Declare (_, b), _) | Declare (id, _, b) | Foreign_block {custom = _;
+                                                                                template = _;
+                                                                                result = id;
+                                                                                result_type = _;
+                                                                                values = _;
+                                                                                type_args = _;
+                                                                                binder = b} ->
+    (id, b) :: binders
+  | Bind_variable (id, Declare_static _, _) | Declare_value_initialized (id, _) -> (id, None) :: binders
+  | Structured_binding (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
+  | _ -> binders
+
+(** The locals of the scope of [ctx] that the planned resume point [p]
+    keeps across its call, in the order the Core binds them: for each binder
+    it finds live, the innermost local in scope standing for it that
+    [keeps] picks.  Under [CRANE_CHECK_IR] every binder it finds live has a
+    local in scope standing for it: the frame would otherwise lose it. *)
+let planned_frame ctx ~keeps (p : Core_plan.Recursion.resume) =
+  List.filter_map
+    (fun b ->
+      match List.filter (fun (x, _) -> stands_for ctx b x) ctx.binders with
+      | [] ->
+        Base.Probe.violation "frame plan"
+          (Pp.str "a binder the recursion plan finds live across a call has no local in scope standing for it");
+        None
+      | standing -> List.find_map (fun (x, _) -> if keeps b x then Some x else None) standing )
+    p.live
+
+(* Why no machine is made ({!Analysis.Not_linearisable}). *)
+let no_resume_point = "the recursion plan has no one point a call's result resumes at"
+
+let no_resume_plan = "the recursion plan does not say whether a statement making a recursive call resumes after it"
+
+let no_entering_calls = "no ControlIR loop says which calls enter the machine a frame keeps pointers for"
+
+(** The one point the plan resumes at once the call whose result [tgt] binds
+    to [id] returns, which its binder's site picks out from its siblings
+    ({!Core.Binder.site}).  Where the result stands for no Core binder or
+    the plan has no one point for it, a violation, the machine is not made:
+    nothing else says what its frame keeps. *)
+let planned_point ctx id (tgt : binding) =
+  let binder =
+    match tgt with
+    | Declare (_, b) -> b
+    | Existing -> binder_of ctx id
+    | Declare_static _ -> None
+  in
+  match Option.map (Core_plan.Recursion.resumes_binding (Unit_plan.Context.recursion ctx.unit)) binder with
+  | Some [p] -> p
+  | Some points ->
+    Base.Probe.violation "frame plan"
+      Pp.(str "the recursion plan has " ++ int (List.length points) ++ str " resume points for a call's result");
+    raise (Not_linearisable no_resume_point)
+  | None ->
+    Base.Probe.violation "frame plan" (Pp.str "a call the machine resumes after binds a local standing for no Core binder");
+    raise (Not_linearisable no_resume_point)
+
+(** Whether the statement binding [e] to [id] by [tgt] is a point the
+    machine resumes at once a call returns, as the recursion plan has it:
+    whether the point resuming at the Core binder [id] stands for
+    ({!Core_plan.Recursion.resumes_binding}) resumes after a call that enters the
+    machine ({!enter_rewrite_ctx.entered_by}).  A statement assigning a
+    local declared before it is one branch of a match the Core binds as one
+    let, and resumes only if [e] is itself such a call, which the call the
+    C++ made of it records ({!Cpp_ir.Expr.Call.signature}).  [None]
+    where the plan does not say: the statement binds a local of the
+    backend's own, or the machine is not one the plan describes. *)
+let planned_resume ctx id (tgt : binding) e =
+  let point b =
+    match Core_plan.Recursion.resumes_binding (Unit_plan.Context.recursion ctx.unit) b with [p] -> Some p | _ -> None
+  in
+  match ctx.entered_by with
+  | None -> None
+  | Some entered_by -> (
+    match tgt with
+    | Declare (_, Some b) ->
+      Some (match point b with Some p -> List.exists entered_by p.after | None -> false)
+    | Existing ->
+      Option.map
+        (fun b ->
+          match (point b, e) with
+          | Some p, Call ({occurrence = Some o; _}, _, _) ->
+            List.exists
+              (fun (c : Core_plan.Recursion.call) -> entered_by c && Core.Occurrence.equal c.occurrence o)
+              p.after
+          | _ -> false )
+        (Option.flatten (List.assoc_opt id ctx.binders))
+    | Declare (_, None) | Declare_static _ -> None )
+
+(** Why a machine is not made whose recursion plan and finished body
+    disagree on whether a statement resumes after a recursive call. *)
+let resume_disagreement =
+  "the recursion plan and the finished body disagree on whether a statement resumes after a recursive call"
+
+(* Report {!resume_disagreement} under [CRANE_CHECK_IR]. *)
+let resume_violation () = Base.Probe.violation "resume plan" (Pp.str resume_disagreement)
+
+(** Rewrite a single return statement for the [CraneEnter] handler in frame-based
+    non-tail recursion transformation.
+
+    A returned expression made of one of the loop's Continues, which the
+    machine's checker recognises, is a tail call, and re-enters by
+    [CraneEnter]; any other is the result.  A call it holds that its
+    ControlIR takes is left there, which {!Lower}
+    reports of the lowered loop.
+
+    @param ctx  Enter-rewrite context (see {!enter_rewrite_ctx})
+    @param stmt The statement to rewrite (typically a [Return] statement)
+    @return A list of rewritten statements (frame pushes or result assignments) *)
+let rec rewrite_enter_lambda_return ctx stmt =
+  let { check = check; env = env; _ } = ctx in
+  match stmt with
+  | Return (Some e) -> (
+    match check e with
+    | Some cs ->
+      ctx.entered ~resumes:false e;
+      [make_stack_push (make_enter_for ctx ~called:e cs)]
+    | None -> assign_result e )
+  | If {condition = cond; then_ = then_br; else_ = else_br} ->
+    let rw_stmts = rewrite_enter_stmts ctx in
+    let rw_then = rw_stmts then_br in
+    let rw_else = rw_stmts else_br in
+    [If {condition = cond; then_ = rw_then; else_ = rw_else}]
+  | Custom_match ({scrutinee = scrut; branches; _} as m) ->
+    (* A recursive call in the scrutinee is bound before the match by
+       {!Core_plan.Normalize}; only the branches are left to rewrite. *)
+    [
+      Custom_match
+        { m with
+          branches =
+          List.map
+            (fun (b : custom_branch) ->
+              let ps = b.params in
+              let lenv = List.map (fun (p : custom_param) -> (p.name, p.type_)) ps @ env in
+              let br_ctx = match ps with
+                | p :: _ -> Some (Id.to_string p.name)
+                | [] -> None
+              in
+              { b with body =
+                rewrite_enter_stmts
+                  { ctx with env = lenv;
+                    binders = List.map (fun (p : custom_param) -> (p.name, p.binder)) ps @ ctx.binders;
+                                               branch_ctx = br_ctx;
+                                               aliased =
+                                                 with_aliased ctx.aliased
+                                                   (free_vars_expr scrut
+                                                     @ List.map (fun (p : custom_param) -> p.name) ps) } b.body } )
+            branches };
+    ]
+  | Match (scrut, branches, default) ->
+    (* Augment the env with each branch's binding variable types so that
+       {!saved_local_types} resolves field types correctly per-branch. *)
+    let rw_branch (br : branch) =
+      let branch_env =
+        (* Register structured-binding field types. *)
+        let fb_env =
+          List.map (fun (fb : field_binding) -> (fb.name, fb.type_)) br.field_bindings
+        in
+        (* Also register aggregate binding for frame-dispatch branches. *)
+        let var_env =
+          match br.var with
+          | Some id when br.field_bindings = [] ->
+            [(id, Const (br.ctor_type))]
+          | _ -> []
+        in
+        fb_env @ var_env @ env
+      in
+      let branch_binders =
+        List.map (fun (fb : field_binding) -> (fb.name, fb.binder)) br.field_bindings
+        @ (match br.var with Some id -> [(id, None)] | None -> [])
+        @ ctx.binders
+      in
+      let br_ctx = ctor_type_short_name br.ctor_type in
+      let branch_aliased =
+        with_aliased ctx.aliased
+          (free_vars_expr scrut.expr
+          @ Option.List.cons br.var (List.map (fun (fb : field_binding) -> fb.name) br.field_bindings))
+      in
+      let rw = rewrite_enter_stmts { ctx with env = branch_env;
+                                              binders = branch_binders;
+                                              branch_ctx = br_ctx;
+                                              aliased = branch_aliased } in
+      { br with body = rw br.body }
+    in
+    let rw_default = rewrite_enter_stmts { ctx with branch_ctx = None } in
+    [Match (scrut, List.map rw_branch branches, Option.map rw_default default)]
+  | Block stmts ->
+    [Block (rewrite_enter_stmts ctx stmts)]
+  | Switch {scrutinee = scrut; enum = r; branches = branches; default = default} ->
+    let rw_branches =
+      List.map
+        (fun (id, body) -> (id, rewrite_enter_stmts ctx body))
+        branches
+    in
+    let rw_default = Option.map (rewrite_enter_stmts ctx) default in
+    [Switch {scrutinee = scrut; enum = r; branches = rw_branches; default = rw_default}]
+  | s -> [s]
+
+(** Process a sequence of statements using continuation-passing to handle
+    recursive calls in assignment positions.
+
+    This is the core of the nontail frame-based transformation for statement
+    sequences. When it encounters [Bind_variable(id, ty, e)] where [e] contains one or
+    more recursive calls, it captures the remaining statements ([rest]) as a
+    "continuation" that is embedded in the Call frame's handler.
+
+    {b Stack frame chaining strategy.}  For [let x = f(a) in rest]:
+    + Push [CraneContN\{saved_fields\}]: saves continuation variables live
+      across the call.
+    + Push [CraneEnter\{args\}]: provides the recursive call's arguments.
+    + The loop pops [CraneEnter], executes the call, stores the result in
+      [_result], then pops [CraneContN] whose handler binds [x = _result],
+      restores saved fields, and processes [rest].
+
+    For nested calls like [let x = f(a) in let y = f(b) in rest], frames
+    chain: [CraneCont1]'s handler processes the [let y = ...] assignment,
+    which pushes [CraneCont2] + [CraneEnter] for the second call.  The final
+    handler, in [CraneCont2], processes [rest].  A frame made inside a match
+    branch is named after the branch's constructor instead
+    ({!make_call_frame_name}).
+
+    The function handles several cases:
+    - {b A call}: [let x = f(args) in rest] -- creates one continuation
+      frame whose handler assigns [_result] to [x] then processes [rest].
+    - {b Non-assignment statements}: delegates to {!rewrite_enter_lambda_return}.
+
+    Continuation variables (free in [rest] but defined before it) are saved in
+    each Call frame and restored via [make_cont_bindings] in the handler.
+
+    @param ctx    Enter-rewrite context (see {!enter_rewrite_ctx})
+    @param stmts  The statement sequence to process
+    @return Rewritten statement list (typically stack push operations) *)
+and rewrite_enter_stmts ctx stmts =
+  let { check = check;
+        env = env;
+        call_counter = call_counter; frames_ref = frames_ref;
+        branch_ctx = branch_ctx;
+        seen_frame_names = seen; _ } = ctx
+  in
+  match stmts with
+  | [] -> []
+  | Bind_variable (id, tgt, e) :: rest when count_calls_expr check e >= 1 ->
+    let n_calls = count_calls_expr check e in
+    let rest_free = compute_rest_free_vars rest in
+    (* The continuation of [id = f(args)]: a frame saving what the rest
+       reads, whose handler binds [id] to the call's result and runs the
+       rest, pushed under [enter], the call's re-entry.  [cast] is what the
+       statement casts the call's result to, if anything. *)
+    let make_cont_handler ~cast enter =
+      let result r = match cast with Some ty -> Any_cast (ty, r) | None -> r in
+      (* Which Core values cross the call, in what order the frame keeps
+         them, and which it binds again instead -- those no re-entry changes,
+         and those recomputable from them -- is the plan's.  Of a value kept
+         the frame keeps the local holding it, not one respelling it. *)
+      let p = planned_point ctx id tgt in
+      let cont_vars =
+        let rebuilt = rebuilt_binders ctx p in
+        let dropped b = available ctx b || List.exists (Core.Binder.equal b) rebuilt in
+        planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p
+      in
+      (* What the rest reads of what the frame does not keep is bound again
+         in the handler.  Under [CRANE_CHECK_IR] each such local is one the
+         plan finds recomputable, another spelling of one the frame keeps,
+         or a backend local standing for no Core binder, and it is bound
+         again by a declaration calling nothing: running a call again in
+         the handler would repeat its work, and a recursive one would recurse. *)
+      let remat =
+        let kept v = List.exists (Id.equal v) cont_vars || Id.equal v id || Id.equal v id_result in
+        let rebuilt = rebuilt_bindings ctx ~kept rest_free in
+        ( if Base.Probe.checking () then
+            let recomputed = rebuilt_binders ctx p in
+            let rebindable (v, st) =
+              ( match binder_of ctx v with
+              | Some b -> List.exists (Core.Binder.equal b) recomputed || respells ctx v
+              | None -> true )
+              && match st with Bind_variable (_, _, e) -> calls_nothing e | _ -> false
+            in
+            if not (List.for_all rebindable rebuilt) then
+              Base.Probe.violation "frame plan"
+                (Pp.str "a continuation binds again a local the recursion plan neither keeps nor finds recomputable") );
+        rebuilt
+      in
+      (* A local is kept as a pointer where what follows passes it on, as
+         it is, for a parameter the machine's entry takes a pointer for: a
+         copy in the frame would die with the handler that pushed the
+         pointer to it. *)
+      let pointers =
+        let entering =
+          match ctx.entering with Some entering -> entering | None -> raise (Not_linearisable no_entering_calls)
+        in
+        let passed b =
+          List.exists
+            (fun (q : Core_plan.Recursion.passing) ->
+              Core.Binder.equal q.passed b && ctx.points_into q.into
+              && List.exists (Core.Occurrence.equal q.call.occurrence) entering )
+            p.passes
+        in
+        List.map (fun x -> Option.cata passed false (binder_of ctx x)) cont_vars
+      in
+      (* Each kept at the type its local was declared at: the binder's. *)
+      let cont_types = saved_local_types env cont_vars in
+      if Base.Probe.checking ()
+        && List.exists (function (Obligation Unresolved_type) | Auto -> true | _ -> false) cont_types then
+        Base.Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
+      let call_name = make_call_frame_name (Base.Generated_name.role "Cont") call_counter seen ?branch_ctx () in
+      let field_names = derive_field_names cont_vars in
+      let bindings = make_cont_bindings ~field_names cont_vars cont_types in
+      (* The rest sees the result binding too: a later frame saving it needs
+         its type.  Where the body says only [auto], the binding holds the
+         call's value as the machine resumes with it, uncast: [_result]'s. *)
+      let rest_env =
+        let bound =
+          match (tgt, cast) with
+          | Declare (Auto, _), None -> [(id, ctx.result_ty)]
+          | Declare (ty, _), _ when ty <> Auto -> [(id, ty)]
+          | _ -> []
+        in
+        bound @ make_cont_env cont_vars cont_types env
+      in
+      (* When tgt is Existing (a bare assignment), the variable was declared
+         in the CraneEnter handler scope and does not exist in the CraneCont handler
+         scope.  Promote to [auto] so the handler declares it. *)
+      let handler_ty : binding = match tgt with Existing -> Declare (Auto, None) | t -> t in
+      let remat_stmts = List.map snd remat in
+      (* A variable the rest assigns before reading it was declared in the
+         scope the call was made in, which the handler is not: its first
+         assignment declares it there, at the type it was declared with. *)
+      let rest_processed =
+        let declared = ref [] in
+        List.map
+          (function
+            | Bind_variable (v, Existing, e)
+              when (not (List.exists (Id.equal v) !declared)) && List.mem_assoc v env ->
+              declared := v :: !declared;
+              Bind_variable (v, Declare (List.assoc v env, None), e)
+            | (Bind_variable (v, Declare _, _) | Declare (v, _, _)) as s ->
+              declared := v :: !declared;
+              s
+            | s -> s )
+          (rewrite_enter_stmts
+             { ctx with
+               env = rest_env;
+               binders =
+                 (match tgt with
+                  | Declare (_, b) -> (id, b) :: ctx.binders
+                  | Existing -> ctx.binders
+                  | Declare_static _ -> (id, None) :: ctx.binders);
+               aliased =
+                 List.fold_left aliased_after ctx.aliased
+                   (bindings @ remat_stmts @ [Bind_variable (id, handler_ty, Local id_result)]) }
+             rest)
+      in
+      (* The handler restores what it saved and rebuilds what it did not,
+         then binds the call's result.  The temporaries among the restores
+         come last, next to the result: what reads them follows, so
+         {!Cpp_passes.Temporaries} can put each back where it is read. *)
+      let early, late =
+        let read_by_remat = List.concat_map free_vars_stmt remat_stmts in
+        List.partition
+          (function
+            | Bind_variable (v, _, _) ->
+              (not (Base.Core_util.is_temporary_id v)) || List.exists (Id.equal v) read_by_remat
+            | _ -> true )
+          bindings
+      in
+      let handler =
+        early @ remat_stmts @ late
+        @ (Bind_variable (id, handler_ty, result (Move (Local id_result))) :: rest_processed)
+      in
+      (* A local the frame keeps is read for the last time where it is
+         saved, unless the call the frame is saved for reads it, which the
+         plan says ({!Core_plan.Recursion.resume.read_by_call}); one held by value
+         is moved into the frame there.  One the frame keeps as a pointer is
+         pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
+         none of those the plan says they do not.  Which a save moves is the
+         ownership plan's, which planned the let or bind the machine resumes
+         at ({!Ownership_ir.Region.Frame_save}): each binder it owns there or an
+         enclosing frame of the turn holds, read last by the save; the
+         declared types say only which are worth moving.  A save it did not
+         plan moves nothing, and is a violation under [CRANE_CHECK_IR]. *)
+      let plan_moves =
+        let b = match tgt with Declare (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
+        match Option.bind b Ownership_ir.Region.Frame_save.lookup with
+        | Some moved -> moved
+        | None ->
+          if cont_vars <> [] then
+            Base.Probe.violation "frame save"
+              (Pp.str "a machine saves a frame at a point the ownership plan did not plan the save of");
+          []
+      in
+      let saved_conv =
+        let read_by_call cid =
+          match binder_of ctx cid with
+          | Some b -> Some (List.exists (Core.Binder.equal b) p.read_by_call)
+          | None -> None
+        in
+        if Base.Probe.checking () then begin
+          (* A read of a binder the plan finds recomputable -- a closure, a
+             field -- reads what it is recomputed from. *)
+          let rec through b =
+            b
+            ::
+              ( match List.find_opt
+                (fun (c : Core_plan.Recursion.recomputable) -> Core.Binder.equal c.recomputed b) p.recomputable with
+               | Some c -> List.concat_map through c.from
+               | None -> [] )
+          in
+          let read = List.concat_map (fun v -> Option.cata through [] (binder_of ctx v)) (free_vars_expr enter) in
+          let reads cid = Option.cata (fun b -> List.exists (Core.Binder.equal b) read) false (binder_of ctx cid) in
+          if List.exists (fun cid -> read_by_call cid = Some false && reads cid) cont_vars then
+            Base.Probe.violation "frame plan"
+              (Pp.str "the call a frame is saved for reads a local the frame keeps the recursion plan says it does not")
+        end;
+        let owned cid =
+          (not (Id.Set.mem cid ctx.aliased))
+          && (not (Id.Set.mem cid ctx.invariant_params))
+          && match List.assoc_opt cid env with Some ty -> movable ty | None -> false
+        in
+        List.map2
+          (fun cid pointer ->
+            let planned =
+              (not pointer)
+              && (match List.assoc_opt cid env with Some ty -> movable ty | None -> false)
+              && Option.cata (fun b -> List.exists (Core.Binder.equal b) plan_moves) false (binder_of ctx cid)
+            in
+            (* Under [CRANE_CHECK_IR], the plan moves at least what the
+               C++ reading -- a local declared by value, not aliased, that
+               the call does not read -- would: it moves more where a binder
+               the C++ finds aliased is one it owns, a structured binding's
+               by value or a field of an owned match. *)
+            if Base.Probe.checking () && (not pointer) && owned cid && read_by_call cid = Some false && not planned then
+              Base.Probe.violation "frame save"
+                (Pp.str "a frame save the plan decides keeps a local the C++ reading would move");
+            if planned then Move (Local cid) else Local cid )
+          cont_vars pointers
+      in
+      register_frame frames_ref ~name:call_name ~saved_types:cont_types
+        ~saved_locals:cont_vars ~env ~handler ~pointers;
+      [
+        make_stack_push (Local_aggregate {struct_ = Id.of_string call_name; type_args = []; values = saved_conv});
+        make_stack_push enter;
+      ]
+    in
+    (* Whether the statement resumes is the plan's ({!planned_resume}); the
+       call the frame re-enters by is the one {!Core_plan.Normalize} bound there, the
+       whole right-hand side, one call the machine's checker recognises.  A
+       statement the plan says nothing of, or one the C++ disagrees with
+       the plan about, is a violation, and the machine is not made. *)
+    (* A temporary Normalize bound at the type the Core gives the call, of
+       a function returning it erased, is the call cast: the frame re-enters
+       by the call, and the handler casts its result. *)
+    let cast, called =
+      match e with
+      | Any_cast (ty, called) -> (Some ty, called)
+      | _ -> (None, e)
+    in
+    let call = if n_calls = 1 then check called else None in
+    ( match (planned_resume ctx id tgt e, call) with
+    | Some true, Some cs ->
+      ctx.entered ~resumes:true called;
+      make_cont_handler ~cast (make_enter_for ctx ~called cs)
+    | Some false, None -> Bind_variable (id, tgt, e) :: rewrite_enter_stmts ctx rest
+    | Some _, _ ->
+      resume_violation ();
+      raise (Not_linearisable resume_disagreement)
+    | None, _ ->
+      Base.Probe.violation "resume plan" (Pp.str no_resume_plan);
+      raise (Not_linearisable no_resume_plan) )
+  (* Conditional recursion: at least one branch has a recursive call and there
+     are continuation statements after.  Merge the continuation into each branch
+     so the recursive branch captures it via the Bind_variable::rest CraneCont pattern while
+     the non-recursive branch processes it inline.
+     Non-recursive branches wrap [rest] in Block to prevent name collisions
+     with bindings generated by custom match destructuring in the branch. *)
+  | If {condition = cond; then_ = then_br; else_ = else_br} :: rest
+      when rest <> []
+        && count_calls_expr check cond = 0
+        && (count_calls_stmts check then_br > 0
+            || count_calls_stmts check else_br > 0) ->
+    let merge_rest br =
+      if count_calls_stmts check br > 0 then br @ rest
+      else br @ [Block rest]
+    in
+    rewrite_enter_lambda_return ctx
+      (If {condition = cond; then_ = merge_rest then_br; else_ = merge_rest else_br})
+
+  | Custom_match ({scrutinee = scrut; branches; _} as m) :: rest
+      when rest <> []
+        && count_calls_expr check scrut = 0
+        && List.exists (fun (b : custom_branch) -> count_calls_stmts check b.body > 0)
+             branches ->
+    let merged =
+      List.map (fun (b : custom_branch) ->
+        if count_calls_stmts check b.body > 0 then {b with body = b.body @ rest}
+        else {b with body = b.body @ [Block rest]})
+        branches
+    in
+    rewrite_enter_lambda_return ctx
+      (Custom_match {m with branches = merged})
+
+  | Match (scrut, branches, default) :: rest
+      when rest <> []
+        && List.exists
+             (fun (br : branch) -> count_calls_stmts check br.body > 0)
+             branches ->
+    let merged_brs =
+      List.map (fun (br : branch) ->
+        if count_calls_stmts check br.body > 0
+        then { br with body = br.body @ rest }
+        else { br with body = br.body @ [Block rest] })
+        branches
+    in
+    let merged_default = Option.map (fun d -> d @ rest) default in
+    rewrite_enter_lambda_return ctx
+      (Match (scrut, merged_brs, merged_default))
+
+  | stmt :: rest ->
+    ( match stmt with
+    | Bind_variable (id, tgt, e) when Base.Probe.checking () && planned_resume ctx id tgt e = Some true ->
+      resume_violation ()
+    | _ -> () );
+    (* Extend the environment with any variable bound by this statement so
+       that a frame saving it in [rest] knows its type.
+       This is important when a local [std::function] (e.g. from [let fix])
+       is defined here and then used as the callee in a continuation. *)
+    let updated_env =
+      match stmt with
+      | Bind_variable (id, Declare (Auto, _), Lambda
+        { params = params;
+          return_type = ret_ty_opt;
+          _ }) ->
+        let param_types = List.map (fun (t, _) -> strip_ref_and_const_type t) params in
+        let ret_ty = match ret_ty_opt with
+          | Some t when t <> Void -> t
+          | _ -> Void
+        in
+        (id, Function (param_types, ret_ty)) :: ctx.env
+      | Bind_variable (id, Declare (ty, _), _) -> (id, ty) :: ctx.env
+      | Declare (id, ty, _) | Foreign_block {custom = _;
+                                             template = _;
+                                             result = id;
+                                             result_type = ty;
+                                             values = _;
+                                             type_args = _;
+                                             binder = _} ->
+        (id, ty) :: ctx.env
+      | _ -> ctx.env
+    in
+    let here =
+      match stmt, rest with
+      | Declare (id, _, _), Bind_variable (id', Existing, e) :: _ when Id.equal id id'
+        && count_calls_expr check e >= 1 ->
+        (* The call assigning [id] ends this handler: all that follows it,
+           every use of [id], runs in the continuation's, which declares
+           [id] itself. *)
+        []
+      | _ -> rewrite_enter_lambda_return ctx stmt
+    in
+    here
+    @ rewrite_enter_stmts
+        { ctx with
+          bound = bound_after ctx.bound stmt;
+          env = updated_env;
+          binders = declared_binders ctx.binders stmt;
+          aliased = aliased_after ctx.aliased stmt }
+        rest
+
+(** Rewrite a single non-tail recursive statement for the Enter handler.
+
+    Thin wrapper around {!rewrite_enter_lambda_return} that collapses a
+    multi-statement result into a single [Block]. This is the entry point used
+    by {!transform_nontail} when rewriting each top-level body statement for the
+    Enter handler of the frame-based loop.
+
+    @param ctx  Enter-rewrite context (see {!enter_rewrite_ctx})
+    @param stmt The single statement to rewrite
+    @return A single statement (possibly [Block] wrapping multiple results) *)
+let rewrite_enter_stmt ctx stmt =
+  match rewrite_enter_lambda_return ctx stmt with
+  | [s] -> s
+  | ss -> Block ss
+
+(** {3 Shared helpers for transform_nontail}
+
+    The non-tail recursion transform generates boilerplate: struct definitions,
+    stack initialization, parameter copies from frame, frame lambdas, and the
+    while-loop dispatch. These helpers factor out the common patterns. *)
+
+(** Generate the initial [_stack.emplace_back(CraneEnter\{...\})] statement.
+
+    @param varying_params The parameters to include in the Enter frame
+    @return A raw C++ statement pushing the initial Enter frame *)
+let make_stack_init varying_params =
+  let move_if_needed ty v =
+    match ty with
+    | Const _ | Reference _ -> v
+    | t when not (copies_cheaply t) -> Move v
+    | _ -> v
+  in
+  make_stack_push
+    (Local_aggregate {struct_ = id_enter; type_args = []; values = List.map
+           (fun p ->
+             let v = Local p.Frame_param.name in
+             if p.pointer_safe then Unary (Address_of, v)
+             else move_if_needed p.ty v )
+           varying_params})
+
+(** Generate parameter bindings that read frame fields into locals.
+    For trivially copyable types (scalars, pointers, enums), produces a copy.
+    For non-trivially-copyable const-ref types (invariant borrowed params stored by
+    pointer), produces a [const T&] reference to the frame field.
+    For non-trivially-copyable owned types (e.g. [List<T>]), produces a move to
+    avoid an O(n) deep copy — safe because [_f] was moved off the stack.
+    For trivially-copyable scalars, produces a plain copy.
+
+    @param varying_params The parameters to bind from the frame
+    @return List of assignment statements *)
+let make_param_copies ~unit varying_params =
+  (* Helper: choose the right binding expression for a frame field access. *)
+  let bind_field id ty =
+    let stripped = strip_ref_type ty in
+    let f = Access (Dot, Local (id_f), id) in
+    match stripped with
+    | Const inner when not (is_trivially_copyable_type inner) ->
+      (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
+         than cloning. *)
+      Bind_variable (id, Declare (Reference (Lvalue, Const inner), None), f)
+    | Variable _ ->
+      (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
+         deduced as a reference type, [F0 f = std::move(_f.f)] would be
+         ill-formed — a non-const lvalue reference cannot bind to an rvalue.
+         Use [auto] so the declared type is always deduced as a value type,
+         regardless of whether [F0] was a reference or function type. *)
+      Bind_variable (id, Declare (Auto, None), Move f)
+    | t when not (copies_cheaply t) ->
+      (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
+         an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
+         so the field is safe to consume. *)
+      Bind_variable (id, Declare (t, None), Move f)
+    | _ ->
+      (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
+      Bind_variable (id, Declare (stripped, None), f)
+  in
+  List.map
+    (fun {Frame_param.name = id; ty = ty; pointer_safe} ->
+      if not pointer_safe then bind_field id ty
+      else
+        match borrowed_value_param_pointee unit ty with
+        | Some t ->
+          Bind_variable (id, Declare (Reference (Lvalue, Const t), None),
+                 Dereference (Access (Dot, Local (id_f), id)))
+        | None ->
+          let stripped = strip_ref_type ty in
+          Bind_variable (id, Declare (stripped, None),
+                 Access (Dot, Local (id_f), id)) )
+    varying_params
+
+(** Rewrite frame push expressions so that pointer-safe positions use
+    [&x] (for variables) or [crane_raw(x)] (for dereferences) instead of
+    deep-copying.  Handles both [CraneEnter] and [CraneContN] pushes.
+
+    A [Local x] at a pointer-safe position is looked up among the bindings
+    in scope where the push stands: if [x = *(sp)], emit [crane_raw(sp)]
+    rather than [&x] (which would be a dangling pointer to a local).  Only
+    those in scope: another handler, or another branch, may bind the same
+    name to something this one cannot reach.
+
+    @param frame_pointer_safe [(frame_name, bool list)] mapping
+    @param frame_sptr  [(frame_name, bool list)] — positions where the
+           original saved type is [Shared_pointer _]. At these positions, emit
+           [crane_raw(...)] instead of [&] to extract the raw pointer. *)
+let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
+  if frame_pointer_safe = [] then stmts
+  else
+    let lookup name_s = List.assoc_opt name_s frame_pointer_safe in
+    let lookup_uptr name_s = List.assoc_opt name_s frame_sptr in
+    let adjust_arg binding_env safe is_uptr arg =
+      if not safe then arg
+      else
+      let arg = match arg with Move a -> a | a -> a in
+      let raw_of e =
+        Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [e])
+      in
+      if is_uptr then
+        (* If the argument is a local variable loaded as a const-reference from a
+           pointer-safe frame field (const T &x = *_f.field after fix_handler_bindings),
+           take its address (&x) rather than extracting a raw pointer from a
+           non-pointer local. *)
+        (match arg with
+         | Local x ->
+           (match List.assoc_opt x binding_env with
+            | Some (Dereference (Access (Dot, Local f, _)))
+              when Id.equal f id_f ->
+              Unary (Address_of, arg)
+            | _ ->
+              raw_of arg)
+         | _ -> raw_of arg)
+      else
+        match arg with
+        | Dereference (Local x) ->
+          (match List.assoc_opt x binding_env with
+           | Some (Dereference (Access (Dot, Local f, _)))
+             when Id.equal f id_f ->
+             Unary (Address_of, Local x)
+           | Some (Dereference sp) ->
+             raw_of sp
+           | _ ->
+             raw_of (Local x))
+        | Dereference inner ->
+          raw_of inner
+        | Local x ->
+          (match List.assoc_opt x binding_env with
+           | Some (Dereference (Access (Dot, Local f, _)))
+             when Id.equal f id_f ->
+             Unary (Address_of, arg)
+           | Some (Dereference sp) ->
+             raw_of sp
+           (* A copy the handler took out of its frame dies with the handler,
+              and the frame pushed would point at it. *)
+           | Some (Move (Access (Dot, Local f, _)) | Access (Dot, Local f, _)) when Id.equal f id_f ->
+             raise (Not_linearisable "a frame would point at a copy its handler took out of the frame it popped")
+           | _ -> Unary (Address_of, arg))
+        | _ -> arg
+    in
+    (* [crane_raw(x)] of a local read through a pointer the frame saved --
+       [const T &x = *_f.field] -- is that pointer. *)
+    let saved_pointer binding_env arg =
+      match arg with
+      | Call (_, Runtime Cpp_ir.Crane_rt.Raw, [Local x]) -> (
+        match List.assoc_opt x binding_env with
+        | Some (Dereference (Access (Dot, Local f, _) as field)) when Id.equal f id_f -> field
+        | _ -> arg )
+      | _ -> arg
+    in
+    let rec on_stmts env = function
+      | [] -> []
+      | s :: rest ->
+        let s' = on_stmt env s in
+        let env = match s with Bind_variable (id, _, e) -> (id, e) :: env | _ -> env in
+        s' :: on_stmts env rest
+    and on_stmt env = function
+      | Expression (Call (_, callee, [Local_aggregate {struct_ = name; type_args = targs; values = args}])) -> (
+        let args = List.map (saved_pointer env) args in
+        let push args = Expression (Call (call_opaque, callee, [Local_aggregate {struct_ = name;
+                                                                                 type_args = targs;
+                                                                                 values = args}])) in
+        match lookup (Id.to_string name) with
+        | Some flags when List.length args = List.length flags ->
+          let uptr_flags = match lookup_uptr (Id.to_string name) with
+            | Some f -> f
+            | None -> List.map (fun _ -> false) flags
+          in
+          push
+            (List.map2 (fun (safe, is_uptr) arg -> adjust_arg env safe is_uptr arg)
+              (List.combine flags uptr_flags) args)
+        | _ -> push args )
+      | s -> map_stmt ~fl:(on_stmts env) Fun.id (on_stmt env) Fun.id s
+    in
+    on_stmts [] stmts
+
+(** Rewrite [Match] nodes in [stmts] whose scrutinee is a value-type accessor
+    [param.v()] for any [param] in [owned_names], marking the scrutinee owned
+    so that the printer emits [param.v_mut()] and [auto& [...]] structured
+    bindings.  This enables [std::move] of child [shared_ptr] fields when the
+    parameter was moved into the handler (not borrowed).
+
+    Does not recurse into lambda bodies — only into statement-level nesting
+    ([Block], [If], [While], [Match] branch bodies, etc.). *)
+let make_owned_param_matches owned_names stmts =
+  let rec rewrite_stmts ss = List.map rewrite_stmt ss
+  and rewrite_stmt s =
+    match s with
+    | Match (scrut, branches, default) ->
+      let is_owned_param =
+        (* Value-type inductives:
+           scrutinee = Call (Access (Dot, id, "v"), []) *)
+        match scrut.expr with
+        | Call (_, Access (Dot, Local id, v_id), [])
+          when Id.equal v_id id_v ->
+          List.exists (Id.equal id) owned_names
+        | _ -> false
+      in
+      Match
+        ( { scrut with owned = scrut.owned || is_owned_param },
+          List.map
+            (fun (br : branch) -> { br with body = rewrite_stmts br.body })
+            branches,
+          Option.map rewrite_stmts default )
+    | s ->
+      (* Recurse into statement-level nesting.  [Fun.id] for the expression
+         mapper ensures we never descend into [Lambda] bodies. *)
+      map_stmt Fun.id rewrite_stmt Fun.id s
+  in
+  rewrite_stmts stmts
+
+(** A handler's bindings of its frame's fields, [body], with each local
+    bound by const reference to a field the frame holds by value, that the
+    handler moves and does not read through the frame again, bound by value
+    instead, moved out of the frame: the handler owns its frame ([_f] was
+    moved off the stack), and a move out of a const reference copies.  A
+    lent parameter or a saved local is held by value in a frame not pointing
+    into it -- [CraneEnter{l, fuel}] -- and its handler's read of it last,
+    [_result = std::move(l)], is such a move. *)
+let own_moved_bindings body =
+  let rec go = function
+    | Bind_variable (id, Declare (Reference (Lvalue, Const t), None), (Access (Dot, Local f, field) as read)) :: rest
+      when Id.equal f id_f
+           && body_exists (function Move (Local x) -> Id.equal x id | _ -> false) rest
+           && not
+                (body_exists
+                   (function Access (Dot, Local f', field') -> Id.equal f' id_f && Id.equal field' field | _ -> false)
+                   rest ) ->
+      Bind_variable (id, Declare (t, None), Move read) :: go rest
+    | s :: rest -> s :: go rest
+    | [] -> []
+  in
+  go body
+
+(** Build one branch of the frame-dispatch [Match].
+
+    The loop variable [_frame] is the scrutinee; the frame struct type is
+    represented as [External name] (avoids the struct-name qualification
+    that [Named] would add); [_f] is the frame, moved off it, that gives the
+    handler body access to the saved frame fields ({!own_moved_bindings}).
+
+    @param frame_name Name of the frame struct (e.g. [CraneEnter], [CraneCont1])
+    @param body       Handler body statements
+    @return A branch for use under {!frame_scrutinee} *)
+let make_frame_branch frame_name body : branch =
+  { ctor_type = External (frame_name, []);
+    var = Some (id_f);
+    field_bindings = [];
+    extra_conditions = [];
+    body = own_moved_bindings body }
+
+(** The scrutinee of the frame-dispatch match: the loop variable [_frame],
+    owned (it was moved off the stack) and held as a variant. *)
+let frame_scrutinee : scrutinee =
+  { expr = Local id_frame;
+    access = Arrow;
+    owned = true;
+    flat = false }
+
+(** Generate the while-loop body and surrounding boilerplate for the
+    frame-dispatch loop.  Each iteration moves the top frame into a local,
+    pops the stack, then dispatches via an [Match] if/else-if chain.
+
+    @param struct_defs The struct definitions ([CraneEnter], [CraneContN], etc.)
+    @param ret_ty      Return type for the [_result] declaration
+    @param init_push   The initial stack-push statement
+    @param branches    One [branch] per frame type, in dispatch order
+    @return Complete statement list for the loopified function body *)
+let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches ~frame_names =
+  let result_decl = Declare_value_initialized (id_result, ret_ty) in
+  let frame_ty = External (Id.to_string id_Frame, []) in
+  (* [crane::small_vector] rather than [std::vector]: the frame stack is only
+     as deep as the recursion it replaced, so for the overwhelming majority of
+     calls it never exceeds the inline capacity.  A [std::vector] with
+     [reserve(8)] would pay one heap allocation on *every* call regardless --
+     and loopified comparison functions are called once per key comparison,
+     so that allocation is a third of all allocations in a comparison-heavy
+     workload. *)
+  let vector_ty =
+    External (Cpp_ir.Crane_rt.small_vector, [frame_ty])
+  in
+  let stack_id = id_stack in
+  let stack_decl = Declare (stack_id, vector_ty, None) in
+  (* An exhaustive if/else-if chain; no wildcard needed, since the variant can
+     only hold the listed frame types. *)
+  let dispatch_stmt = Match (frame_scrutinee, branches, None) in
+  let loop_body =
+    [
+      Bind_variable (id_frame, Declare (frame_ty, None),
+             Move
+               (Call
+                  (call_opaque, Access (Dot, Local (id_stack),
+                              id_back), [])));
+      Expression
+        (Call
+           (call_opaque, Access (Dot, Local (id_stack),
+                       id_pop_back), []));
+      dispatch_stmt;
+    ]
+  in
+  let loop_comment =
+    let all_names = Id.to_string id_enter :: frame_names in
+    let prefix = match fn_name with
+      | Some name -> "Loopified " ^ name ^ ": "
+      | None -> "Frame dispatch: "
+    in
+    prefix ^ String.concat " -> " all_names ^ "."
+  in
+  struct_defs
+  @ [
+      result_decl;
+      stack_decl;
+      init_push;
+      Comment loop_comment;
+      While
+        (Unary (Not,
+                  Call
+                    (call_opaque, Access (Dot, Local (id_stack),
+                                id_empty), [])),
+         loop_body);
+      Return (Some (Local (id_result)));
+    ]
+
+(** The [std::decay_t<decltype(id)>] a frame field falls back on when the
+    type of the saved local [id] is unknown.  The frame struct is defined
+    where the local is not in scope, so a local [env] knows the type of is
+    read as [std::declval<T&>()] instead.
+
+    @param env  Type environment at the frame's creation ({!Call_frame_info.env})
+    @param id   The saved local *)
+let decltype_of_saved_local env id =
+  let read =
+    match lookup_var_type env id with
+    | Some ty -> Declval (Reference (Lvalue, strip_ref_type ty))
+    | None -> Local id
+  in
+  Decay (Type_of read)
+
+(** Fix bindings in a continuation frame handler for fields that became
+    pointer-safe ({!Call_frame_info.pointers}).
+
+    When a frame field is pointer-safe, its C++ type changes from [T] to
+    [const T*].  The handler body (generated by [make_cont_bindings] before
+    pointer-safe computation) has bindings of the form:
+      [T id = std::move(_f.field)]  — invalid: field is [const T*], not [T]
+    This function replaces those with a const-reference binding:
+      [const T& id = *(_f.field)]   — dereference the pointer (zero copy)
+
+    A reference binding is preferred over a plain pointer copy because:
+    - Lambda captures ([=]) copy the referenced value by value (semantics preserved)
+    - Method calls ([id.foo()]) work directly without an extra dereference
+    - [&id] in pointer-safe push args gives back the original raw pointer
+
+    The subsequent [adjust_frame_push_args] pass then rewrites [CraneEnter{id}] and
+    [CraneContN{..., id, ...}] push arguments at pointer-safe positions to [&id],
+    recovering the [const T*] that those frames expect.
+
+    Only processes top-level [Bind_variable] statements in the handler body, which is
+    all that [make_cont_bindings] generates.  Does not recurse into nested
+    statement structures (inner lambdas, visitor branches, etc.).
+
+    @param field_names  Field names of the frame struct ({!cf_field_names})
+    @param cf_ps        Pointer-safe flags for each field, as the recursion
+                        plan has them ({!Call_frame_info.pointers})
+    @param handler      The handler body to fix
+    @return Fixed handler body with pointer-safe bindings adjusted *)
+let fix_handler_bindings field_names cf_ps handler =
+  let ps_field_ids =
+    List.filter_map
+      (fun (safe, name) -> if safe then Some name else None)
+      (List.combine cf_ps field_names)
+  in
+  if ps_field_ids = [] then handler
+  else
+    let is_ps_field_access = function
+      | Access (Dot, Local f, field_id)
+        when Id.equal f id_f ->
+        List.exists (Id.equal field_id) ps_field_ids
+      | _ -> false
+    in
+    let remapped = ref [] in
+    let fixed =
+      List.map
+        (fun stmt ->
+          match stmt with
+          | Bind_variable (id, Declare (orig_ty, _), Move e) when is_ps_field_access e ->
+            let base_ty = match orig_ty with
+              | Shared_pointer inner -> inner
+              | _ -> strip_ref_and_const_type orig_ty
+            in
+            remapped := id :: !remapped;
+            Bind_variable (id, Declare (Reference (Lvalue, Const base_ty), None), Dereference e)
+          | Bind_variable (id, Declare (orig_ty, _), e) when is_ps_field_access e ->
+            let base_ty = match orig_ty with
+              | Shared_pointer inner -> inner
+              | _ -> strip_ref_and_const_type orig_ty
+            in
+            remapped := id :: !remapped;
+            Bind_variable (id, Declare (Reference (Lvalue, Const base_ty), None), Dereference e)
+          | s -> s)
+        handler
+    in
+    (* Rewrite Dereference(Local x) → Local x for remapped IDs.
+       After rebinding as [const T &x = *_f.field], any [*x] expression that
+       previously dereferenced the shared_ptr is now a double-dereference of a
+       reference, which is invalid.  Replace with [x] directly. *)
+    if !remapped = [] then fixed
+    else
+      let rids = !remapped in
+      let rec fe e = match e with
+        | Dereference (Local x) when List.exists (Id.equal x) rids -> Local x
+        | e -> map_expr fe Fun.id Fun.id e
+      in
+      let rec fs s = map_stmt fe fs Fun.id s in
+      List.map fs fixed
+
+(** Transform a non-tail recursive function body using an explicit frame-based stack.
+
+    Non-tail recursion requires saving continuation context. We use typed frames
+    stored in a [std::variant] stack. Each frame captures the state needed to
+    resume after a recursive call returns.
+
+    {v
+    let rec f x = if base(x) then result else combine(x, f(next(x)))
+
+    becomes:
+
+    struct CraneEnter { T x; };
+    struct CraneCont1 { T x; };  // saves 'x' for combine step
+    using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+
+    let f x_init =
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{x_init});
+      T _result;
+      while (!_stack.empty()) {
+        CraneFrame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
+          if (base(_f.x)) { _result = result; }
+          else {
+            _stack.emplace_back(CraneCont1{_f.x});    // save x
+            _stack.emplace_back(CraneEnter{next(_f.x)});  // recurse
+          }
+        } else {
+          auto _f = std::move(std::get<CraneCont1>(_frame));
+          _result = combine(_f.x, _result);
+        }
+      }
+      return _result;
+    v}
+
+    Frame types:
+    - [CraneEnter]: Captures function arguments (the "call" part of a recursive call)
+    - [CraneContN]: Captures continuation context (values needed after a call returns)
+
+    The transformation:
+    1. Adopts a local fixpoint as a second entry point, if [adopted] gives one
+    2. Rewrites [CraneEnter] handler: returns → frame pushes
+    3. Collects [CraneContN] frame info during rewriting
+    4. Generates frame struct definitions
+    5. Generates the dispatch loop as an if/else-if chain over the frame
+
+    @param fn_name  Optional function name used to annotate the generated
+                    [while] loop comment (aids readability of the emitted C++)
+    @param loop     The ControlIR loop the machine lowers, whose Continues
+                    are the calls entering it
+    @param adopted  A local fixpoint to adopt as a second entry point
+    @param entered_by The calls entering the machine, as the recursion plan
+                    names them
+    @param outer_env Types of what the enclosing scope binds
+    @param entered_pointers Whether an entry takes a pointer for the
+                    parameter standing for a Core binder
+    @param parts    Which parameters every recursive call passes a part of
+                    what the caller passed, as the loop's ControlIR says
+                    ({!Tail.pointer_safe_flags})
+    @param check    Call checker for identifying recursive calls
+    @param tparams  Template parameter context of the enclosing function
+    @param params   Function parameters [(id, type)]
+    @param varying  Which of [params] the machine's own entry varies, as its
+                    ControlIR says
+    @param binders  The Core binder each parameter, or capture, stands for, by
+                    name ({!Core.Binder})
+    @param entered  Told each call entering the machine, and whether it
+                    resumes after it
+    @param ret_ty   Return type of the function
+    @param body     Function body statements
+    @return Transformed body with frame-based stack structure
+    @raise Not_linearisable where no machine can be made: the recursion plan
+           and the body disagree, the plan has no resume point for a call, or
+           a frame would point at a copy its handler took. *)
+let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?entered_by
+    ?(entered = fun ~resumes:_ _ -> ()) ?(outer_env = []) ?(binders = []) ?(entered_pointers = fun _ -> false) ~parts
+    check tparams params ret_ty body =
+  (* An adopted body becomes a second entry point of this machine rather than
+     a machine of its own: two machines cannot unwind each other's stack, so
+     loopifying them separately leaves the recursion in place.  The calls that
+     enter it are recursive calls of this machine targeting entry 1, and the
+     bindings it leaves dead are dropped.
+
+     It is entered with its own parameters {e and} the variables it captures
+     from this function's scope, which are in scope for a lambda but not for a
+     dispatch loop re-entering it from a popped frame.  A capture whose type
+     this function cannot name is not something a frame can carry, so the
+     adoption is abandoned rather than guessed at -- and that is settled
+     before anything routes a call to entry 1, which an abandoned adoption
+     never registers.
+
+     A template parameter is no capture: it is named wherever the function
+     is, the dispatch loop included, and [_tcI0::size(n)] mentions a
+     dictionary's type, not a value a frame could carry. *)
+  let adopted =
+    Option.bind adopted (fun ad ->
+        let is_tparam id = List.exists (fun (_, t) -> Id.equal t id) tparams in
+        let ad =
+          { ad with
+            Adopted.captures = List.filter (fun id -> not (is_tparam id)) ad.Adopted.captures }
+        in
+        (* The body yields what the function does: ControlIR enters no other
+           ({!Core_to_control.Lower_control.lower}).  A parameter only a generic lambda
+           can declare ([auto &&]), or a capture of a type the function
+           cannot name, is not one a frame can store, which no entry in the
+           corpus has: under [CRANE_CHECK_IR] a violation. *)
+        let unnameable_param =
+          List.exists
+            (fun (_, ty) -> strip_ref_and_const_type ty = Auto)
+            ad.params
+        in
+        let env = collect_type_env body @ params in
+        let capture_params =
+          List.filter_map
+            (fun id -> Option.map (fun ty -> (id, ty)) (List.assoc_opt id env))
+            ad.captures
+        in
+        if unnameable_param || List.compare_lengths capture_params ad.captures <> 0 then begin
+          Base.Probe.violation "control lowering"
+            Pp.(
+              str "the machine of " ++ str (Option.default "a function" fn_name)
+              ++ str " cannot store what " ++ str ad.what ++ str ", which its ControlIR enters, takes" );
+          None
+        end
+        else Some (ad, capture_params) )
+  in
+  let check =
+    match adopted with
+    | None -> check
+    | Some (ad, _) -> any_checker [check; adopted_checker ~entry:1 ad]
+  in
+  (* A machine adopting a local fixpoint is entered by its members too. *)
+  let entered_by =
+    match adopted with
+    | None -> entered_by
+    | Some (ad, _) ->
+      let adopted_enters (c : Core_plan.Recursion.call) =
+        match c.target with
+        | Member (o, _) | Entering o -> Core.Occurrence.equal o ad.fixpoint
+        | Function _ -> false
+      in
+      Option.map (fun entered_by c -> entered_by c || adopted_enters c) entered_by
+  in
+  let body =
+    match adopted with
+    | None -> body
+    | Some (ad, _) -> ad.install body
+  in
+  let pointer_safe = pointer_safe_flags unit ~parts params in
+  (* Loopifying a function on its own gives a machine with one entry: the
+     function itself, entered through [CraneEnter]. *)
+  let own_entry = machine_entry ~enter_id:id_enter ~params ~varying in
+  let pointer_safe_varying = filter_by_mask varying pointer_safe in
+  (* The type environment is lexical: the parameters and what the enclosing
+     scope binds (a local fixpoint's frame saves the variables it captures as
+     well as its own), each declaration in the body joining it where the
+     rewrite passes it.  A name the body declares in two sibling scopes is
+     then never read at the other one's type. *)
+  let env = params @ outer_env in
+  (* A parameter that is a raw pointer already -- a method's receiver,
+     [_self] -- takes a pointer at every entry. *)
+  let is_pointer_param (_, ty) = match ty with Pointer _ | Const (Pointer _) -> true | _ -> false in
+  let entry_pointers = List.map2 ( || ) pointer_safe (List.map is_pointer_param params) in
+  (* Of the adopted entry's parameters, those its frames hold by pointer:
+     its parameters as the plan has them, of a type a pointer can stand for.
+     The variables it captures are copied into its frames, but one the scope
+     binds by reference to a dereference, [const T &a1_value = *a1], and the
+     body passes to a parameter of the machine held by pointer: the plan
+     holds that parameter so only where what it is passed lies in a cell
+     that outlives the machine, and its frames keep the pointer to that
+     cell, so that a frame pushed from them may point at it. *)
+  let adopted_pointers =
+    match adopted with
+    | None -> []
+    | Some (ad, capture_params) ->
+      let dereferences = ref [] in
+      let rec scan s =
+        ( match s with
+        | Bind_variable (id, Declare (ty, _), Dereference _) when is_reference_type ty ->
+          dereferences := id :: !dereferences
+        | _ -> () );
+        map_stmt Fun.id (fun s -> ignore (scan s); s) Fun.id s
+      in
+      List.iter (fun s -> ignore (scan s)) body;
+      let passed_to_pointer id =
+        body_exists
+          (fun e ->
+            match check e with
+            | Some cs when List.compare_lengths cs.args entry_pointers = 0 ->
+              List.exists2
+                (fun a pointer -> pointer && match a with Local x | Move (Local x) -> Id.equal x id | _ -> false)
+                cs.args entry_pointers
+            | Some _ | None -> false )
+          ad.body
+      in
+      List.map
+        (fun (id, ty) ->
+          Option.has_some (borrowed_value_param_pointee unit ty)
+          && Option.cata entered_pointers false (List.assoc_opt id ad.binders) )
+        ad.params
+      @ List.map
+          (fun (id, ty) ->
+            List.exists (Id.equal id) !dereferences
+            && Option.has_some (borrowed_value_param_pointee unit ty)
+            && passed_to_pointer id )
+          capture_params
+  in
+  let points_into b =
+    List.exists2
+      (fun (id, _) (varies, pointer) ->
+        varies && pointer
+        && match List.assoc_opt id binders with Some b' -> Core.Binder.equal b b' | None -> false )
+      params (List.combine varying entry_pointers)
+    ||
+    match adopted with
+    | Some (ad, _) ->
+      List.exists2
+        (fun (id, _) pointer ->
+          pointer && match List.assoc_opt id ad.binders with Some b' -> Core.Binder.equal b b' | None -> false )
+        ad.params
+        (List.filteri (fun i _ -> i < List.length ad.params) adopted_pointers)
+    | None -> false
+  in
+  (
+  (* Rewrite body for Enter handler and collect call frame info *)
+  let call_counter = ref 1 in
+  let frames_ref = ref [] in
+  (* What no re-entry rebinds: the parameters that do not vary, and what the
+     body reads from an enclosing scope -- a local fixpoint's captures, bound
+     before the loop and in scope for all of it.  A frame that saved one
+     would move it out of that scope at the first push. *)
+  let invariant_params =
+    List.fold_left2 (fun acc (id, _) v ->
+      if not v then Id.Set.add id acc else acc)
+      (Id.Set.diff (Id.Set.of_list (free_vars_body body)) (Id.Set.of_list (List.map fst params)))
+      params varying
+  in
+  (* Entry 1, when a body was adopted.  Every one of its parameters varies --
+     each re-entry rebinds them -- so the mask is all-true. *)
+  let adopted_entry =
+    Option.map
+      (fun (ad, capture_params) ->
+        let params = ad.Adopted.params @ capture_params in
+        ( ad,
+          machine_entry
+            ~enter_id:(Id.of_string (Id.to_string id_enter ^ "_" ^ ad.name))
+            ~params
+            ~varying:(List.map (fun _ -> true) params) ) )
+      adopted
+  in
+  let entries =
+    own_entry
+    :: (match adopted_entry with Some (_, en) -> [en] | None -> [])
+  in
+  (* The parameters an entry's handler binds as references, with what they
+     name, as it binds them ({!make_param_copies}). *)
+  let aliased_params ?pointer_safe en =
+    List.fold_left aliased_after Id.Set.empty (make_param_copies ~unit (entry_emission ?pointer_safe en []).params)
+  in
+  let ctx = { unit; check = check; entries = entries;
+               env = env;
+               result_ty = ret_ty;
+               binders = List.map (fun (id, b) -> (id, Some b)) binders;
+               call_counter = call_counter; frames_ref = frames_ref;
+               branch_ctx = None;
+               seen_frame_names = Hashtbl.create 16;
+               invariant_params = invariant_params;
+               bound = [];
+               entered_by = entered_by;
+               entered = entered;
+               points_into = points_into;
+               entering = Option.bind loop
+                 (fun l -> Option.map Control_ir.Term.continues ((Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)) l));
+               aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
+  in
+  (* The body is a sequence like any other: a recursive call bound at its top
+     level -- a temporary {!Core_plan.Normalize} made of a call in the function's
+     result -- resumes into the statements after it. *)
+  let rewritten_body = rewrite_enter_stmts ctx body in
+  (* The adopted entry's handler is that body, rewritten under a context
+     describing its parameters rather than this function's.  Both handlers
+     share the frame accumulator and the call counter, so the resume frames
+     either of them needs land in this one machine -- which is why this runs
+     before the frames are collected below. *)
+  let adopted_emission =
+    match adopted_entry with
+    | None -> []
+    | Some (ad, en) ->
+      let ctx1 =
+        { ctx with
+          env = env @ en.params;
+          binders =
+            List.map (fun (id, _) -> (id, List.assoc_opt id ad.binders)) en.params @ ctx.binders;
+          invariant_params = Id.Set.empty;
+          aliased = aliased_params ~pointer_safe:adopted_pointers en }
+      in
+      [entry_emission ~pointer_safe:adopted_pointers en (rewrite_enter_stmts ctx1 ad.body)]
+  in
+  (* Sort frames by name to ensure consistent ordering *)
+  let frames =
+    List.sort (fun a b -> String.compare a.Call_frame_info.name b.Call_frame_info.name) !frames_ref
+  in
+  (* Which slots each frame keeps as pointers is the recursion plan's
+     ({!Call_frame_info.pointers}). *)
+  let frame_ps_map =
+    List.filter_map
+      (fun cf -> if List.exists Fun.id cf.Call_frame_info.pointers then Some (cf.name, cf.pointers) else None)
+      frames
+  in
+  (* One emission per entry point, in {!entries} order. *)
+  let emissions =
+    entry_emission ~pointer_safe:pointer_safe_varying own_entry rewritten_body
+    :: adopted_emission
+  in
+  let ee_name ee = Id.to_string ee.Entry_emission.id in
+  let all_frame_ps =
+    List.map
+      (fun ee ->
+        (ee_name ee, List.map (fun p -> p.Frame_param.pointer_safe) ee.params) )
+      emissions
+    @ frame_ps_map
+  in
+  let frame_sptr =
+    List.filter_map (fun cf ->
+      let flags = List.map contains_shared_ptr (cf_saved_types cf) in
+      if List.exists Fun.id flags then Some (cf.name, flags) else None)
+      frames
+  in
+  (* Build struct definitions *)
+  (* The type a frame struct stores a value of type [ty] at.
+     [strip_ref_and_const_type] removes the [const T&] wrapper that e.g. a
+     [const unsigned int &fuel] param carries: keeping [const] in the field
+     would prevent the struct from being move-assignable (breaks
+     [std::variant] in some compilers).  A forwarding parameter is the one
+     case that needs [std::decay_t]: its [F1] is deduced as [L &] for an
+     lvalue argument, and a field of that type is a reference the frame
+     cannot rebind to what it moves in.  Any other template parameter is
+     deduced from a [const T &] or a value and is never a reference. *)
+  let frame_field_type ty =
+    match ty with
+    | Reference (Forwarding, t) -> Decay (strip_ref_and_const_type t)
+    | ty -> strip_ref_and_const_type ty
+  in
+  let entry_fields ee =
+    List.map
+      (fun p ->
+        match p.Frame_param.pointer_safe, borrowed_value_param_pointee unit p.ty with
+        | true, Some t -> (p.name, Pointer (Const t))
+        | _ -> (p.name, frame_field_type p.ty) )
+      ee.Entry_emission.params
+  in
+  let frame_description cf =
+    let field_names_str =
+      if (cf_field_names cf) = [] then ""
+      else
+        let names = List.map Id.to_string (cf_field_names cf) in
+        " saves [" ^ String.concat ", " names ^ "],"
+    in
+    cf.name ^ ":" ^ field_names_str
+    ^ " resumes after recursive call, then processes rest."
+  in
+  let compute_frame_field_types (cf : Call_frame_info.t) cf_ps =
+    map2_exn ~what:"compute_frame_field_types"
+      (fun ps {Saved_slot.ty = ty; local = id; _} ->
+        if ps then
+          match ty with
+          | Shared_pointer inner -> Pointer (Const inner)
+          | _ -> Pointer (Const (strip_ref_and_const_type ty))
+        else
+          match ty with
+          | (Obligation Unresolved_type) | Auto -> decltype_of_saved_local cf.env id
+          | _ -> frame_field_type ty)
+      cf_ps cf.slots
+  in
+  let frame_ps_for cf =
+    match List.assoc_opt cf.Call_frame_info.name frame_ps_map with
+    | Some flags -> flags
+    | None -> List.map (fun _ -> false) (cf_saved_types cf)
+  in
+  let call_structs =
+    List.concat_map
+      (fun cf ->
+        let cf_ps = frame_ps_for cf in
+        let field_tys = compute_frame_field_types cf cf_ps in
+        let fields =
+          map2_exn ~what:"call_struct_fields"
+            (fun s ty -> (s.Saved_slot.field, ty))
+            cf.slots field_tys
+        in
+        [Comment (frame_description cf);
+         Local_struct (Id.of_string cf.name, fields)])
+      frames
+  in
+  let call_names = List.map (fun cf -> cf.Call_frame_info.name) frames in
+  let variant_tys =
+    List.map (fun ee -> External (ee_name ee, [])) emissions
+    @ List.map (fun name -> External (name, [])) call_names
+  in
+  let struct_defs =
+    List.concat_map
+      (fun ee ->
+        [Comment
+           (ee_name ee
+           ^ ": captures varying parameters for each recursive call.");
+         Local_struct (ee.id, entry_fields ee)])
+      emissions
+    @ call_structs
+    @ [Local_type_alias (id_Frame, Variant (Inline, variant_tys))]
+  in
+  (* The machine is entered at its first entry point: that is the call the
+     caller made. *)
+  let init_push =
+    match emissions with
+    | ee :: _ -> make_stack_init ee.params
+    | [] -> CErrors.anomaly (Pp.str "loopify: frame machine with no entry point")
+  in
+  (* Identify varying params that are moved into the Enter handler (not passed
+     as pointers).  For these, the Match scrutinee should use [v_mut()] so
+     that [shared_ptr] child fields are mutable and can be moved into the next
+     [CraneEnter] frame (avoiding an unnecessary refcount bump).
+
+     Mirrors [make_param_copies.bind_field] exactly: use [strip_ref_type]
+     (not [strip_ref_and_const_type]) so that [const T&] params (which are
+     bound as [const T& id = _f.id], not moved) are excluded. *)
+  let owned_varying_names ee =
+    List.filter_map
+      (fun p ->
+        if p.Frame_param.pointer_safe then None
+        else
+          match strip_ref_type p.ty with
+          | Const _ -> None  (* const-ref bind: not owned *)
+          | Entity_application (r, _, _) when Base.Table.is_coinductive r -> None
+          | t when not (copies_cheaply t) -> Some p.name
+          | _ -> None )
+      ee.Entry_emission.params
+  in
+  (* Enter handler: copy frame fields to locals (only varying params; invariant
+     params are captured directly from function scope) *)
+  let entry_branch ee =
+    let owned = owned_varying_names ee in
+    let body =
+      if owned = [] then ee.body
+      else make_owned_param_matches owned ee.body
+    in
+    (* A handler gets no C++-level last-use pass: every read the Core plan
+       moves is moved already, and all such a pass would add is a
+       [std::move] into a const reference binding of a frame field, which
+       moves nothing. *)
+    let handler =
+      adjust_frame_push_args ~frame_sptr all_frame_ps (make_param_copies ~unit ee.params @ body)
+    in
+    make_frame_branch (ee_name ee) handler
+  in
+  let enter_branches = List.map entry_branch emissions in
+  (* Call handlers — fix pointer-safe field bindings, then adjust push args *)
+  let call_branches =
+    List.map
+      (fun cf ->
+        let cf_ps = frame_ps_for cf in
+        (* Step 1: fix [T id = std::move(_f.field)] → [const T& id = *(_f.field)]
+           for pointer-safe fields so that downstream lambda captures and method
+           calls still work on value-typed [id]. *)
+        let handler =
+          if List.exists Fun.id cf_ps then
+            fix_handler_bindings (cf_field_names cf) cf_ps cf.handler
+          else cf.handler
+        in
+        (* Step 2: adjust push arguments at pointer-safe positions.  After
+           fix_handler_bindings, pointer-safe locals are [const T&] references;
+           [adjust_frame_push_args] converts [CraneEnter{id}] → [CraneEnter{&id}] so
+           that [const T&] is passed as [const T*] as the frame struct expects. *)
+        (* Guard on [all_frame_ps], not [frame_ps_map]: a handler that has no
+           pointer-safe fields of its own can still push an [CraneEnter] frame whose
+           fields are pointer-safe, and that push needs adjusting too. *)
+        let handler =
+          if all_frame_ps <> [] then
+            adjust_frame_push_args ~frame_sptr all_frame_ps handler
+          else handler
+        in
+        make_frame_branch cf.name handler)
+      frames
+  in
+  make_loop_and_return ?fn_name struct_defs ret_ty init_push
+    (enter_branches @ call_branches) ~frame_names:call_names
+  |> unmove_invariant_params invariant_params
+  )
