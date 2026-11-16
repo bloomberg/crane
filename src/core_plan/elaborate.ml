@@ -1133,7 +1133,18 @@ let singleton_dictionary_call ~walk ~live occ =
   in
   lookup "singleton dictionary calls" ~walk ~equal:(Option.equal same_head) ~live planned
 
+(* Whether the table facts {!is_shared_constant_term} starts from hold of
+   the construction [e].  Both are settled before the walk, so where they
+   fail every answer the walk recorded for [e] is [false], as the live
+   answer is, and none needs looking up: a unit without shared variants
+   asks for no occurrence among its constructions. *)
+let may_be_shared_constant = function
+  | Core.Expr.Construct {constructor = GlobRef.ConstructRef ((kn, i), _) as r; _} ->
+    Base.Table.is_shared_variant (GlobRef.IndRef (kn, i)) && not (Base.Table.is_custom r)
+  | _ -> false
+
 let shared_constant ~walk = function
+  | Core.Expr.Construct _ as e when not (may_be_shared_constant e) -> false
   | Core.Expr.Construct {constructor = r; occurrence = occ; _} as e ->
     let planned =
       match GlobRef.Map_env.find_opt r (walk_of walk).constructions with
