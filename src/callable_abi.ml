@@ -262,17 +262,22 @@ type decided = {
   plans : t GlobRef.Map_env.t;
   assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t;
   instance_methods : (Id.t * t) list Ref.User.Map.t;
+  (* The unit's foreign plans, without dictionaries, by callee. *)
+  foreign : t GlobRef.Map_env.t;
+  (* How many of them emission found. *)
+  foreign_found : int ref;
+  (* The unit's plans of class fields called through a concrete instance, by
+     field. *)
+  projections : t GlobRef.Map_env.t;
 }
 
-let undecided = {plans = GlobRef.Map_env.empty; assumed = Ref.User.Map.empty; instance_methods = Ref.User.Map.empty}
-
-(* The plans read, for the extent {!with_decided} binds them for. *)
-let current = ref undecided
-
-let with_decided d f = State.bind current d f
-
-let () =
-  Table.register_census "callable ABI plans" (fun () -> GlobRef.Map_env.cardinal !current.plans)
+let undecided =
+  { plans = GlobRef.Map_env.empty;
+    assumed = Ref.User.Map.empty;
+    instance_methods = Ref.User.Map.empty;
+    foreign = GlobRef.Map_env.empty;
+    foreign_found = ref 0;
+    projections = GlobRef.Map_env.empty }
 
 (* The head of [abi], one line, for a violation report. *)
 let describe abi =
@@ -338,39 +343,39 @@ let decide ~callables ~assumed ~instance_methods =
         Ref.User.Map.add instance methods m )
       Ref.User.Map.empty instance_methods
   in
-  {plans; assumed; instance_methods}
+  {undecided with plans; assumed; instance_methods; foreign_found = ref 0}
 
-let lookup r = GlobRef.Map_env.find_opt r !current.plans
+let lookup d r = GlobRef.Map_env.find_opt r d.plans
 
 let unplanned what =
   CErrors.anomaly Pp.(what ++ str " has no callable plan: planning the callables missed it.")
 
-let planned r =
-  match lookup r with
+let planned d r =
+  match lookup d r with
   | Some abi -> abi
   | None -> unplanned Pp.(str "the declaration of " ++ GlobRef.print r)
 
-let instance_method ~instance name =
-  Option.bind (Ref.User.Map.find_opt instance !current.instance_methods) (fun methods ->
+let instance_method d ~instance name =
+  Option.bind (Ref.User.Map.find_opt instance d.instance_methods) (fun methods ->
       List.find_map (fun (n, abi) -> if Id.equal n name then Some abi else None) methods )
 
-let planned_instance_method ~instance name =
-  match instance_method ~instance name with
+let planned_instance_method d ~instance name =
+  match instance_method d ~instance name with
   | Some abi -> abi
   | None -> unplanned Pp.(str "the method " ++ Id.print name ++ str " of " ++ GlobRef.print instance)
 
-let check_instance_method ~instance name abi =
+let check_instance_method d ~instance name abi =
   validated abi;
-  reproduces (planned_instance_method ~instance name) abi
+  reproduces (planned_instance_method d ~instance name) abi
 
-let check abi =
+let check d abi =
   validated abi;
-  reproduces (planned abi.callee) abi
+  reproduces (planned d abi.callee) abi
 
-let deduces_callable r pos =
-  match lookup r with
+let deduces_callable d r pos =
+  match lookup d r with
   | Some abi -> deduces_callable_at abi pos
-  | None -> List.exists (Param_pos.equal pos) (Option.default [] (Ref.User.Map.find_opt r !current.assumed))
+  | None -> List.exists (Param_pos.equal pos) (Option.default [] (Ref.User.Map.find_opt r d.assumed))
 
 (* [abi] with [instances] dictionaries in front of its head, as a call
    passing that many writes it. *)
@@ -420,30 +425,27 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
       core_type = recorded_core_type callee;
       phase = Common.get_phase () }
 
-(* The unit's foreign plans, without dictionaries, by callee. *)
-let foreign_plans : t GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
-
-let foreign_found = State.cell State.Unit 0
-
-let install_foreign derive callees =
+let with_foreign d derive callees =
   (* [derive] plans through {!plan}, which must derive afresh rather than
-     answer from plans this replaces. *)
-  foreign_plans := GlobRef.Map_env.empty;
-  foreign_plans :=
+     answer from plans this replaces: it reads plans without them. *)
+  let d = {d with foreign = GlobRef.Map_env.empty} in
+  let foreign =
     List.fold_left
       (fun m r ->
-        match lookup r with
+        match lookup d r with
         | Some {receiver = None; _} -> m
         | Some {receiver = Some _; _} | None -> GlobRef.Map_env.add r (derive r) m )
       GlobRef.Map_env.empty callees
+  in
+  {d with foreign; foreign_found = ref 0}
 
 (* A method's call is still written as its function's would be, against the
    conventions of a callee generated nowhere, and printed on its receiver
    without the variables the receiver carries or the method dropped
    ({!dropped_positions}). *)
-let plan ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee
+let plan d ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee
     ~scheme =
-  match lookup callee with
+  match lookup d callee with
   | Some ({receiver = None; _} as abi) -> abi
   | Some {receiver = Some _; _} | None ->
     let derive () =
@@ -451,9 +453,9 @@ let plan ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?pha
     in
     let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
     let base =
-      match GlobRef.Map_env.find_opt callee !foreign_plans with
+      match GlobRef.Map_env.find_opt callee d.foreign with
       | Some base ->
-        if emitting then incr foreign_found;
+        if emitting then incr d.foreign_found;
         if Probe.checking () && not (same_head base (derive ())) then
           Probe.violation "callable ABI"
             Pp.(str "the foreign plan of " ++ GlobRef.print callee ++ str " differs from the one planned");
@@ -463,15 +465,11 @@ let plan ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?pha
     in
     with_dictionaries instances base
 
-(* The unit's plans of class fields called through a concrete instance, by
-   field. *)
-let projection_plans : t GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
+let with_projections d derive fields =
+  {d with projections = List.fold_left (fun m r -> GlobRef.Map_env.add r (derive r) m) GlobRef.Map_env.empty fields}
 
-let install_projections derive fields =
-  projection_plans := List.fold_left (fun m r -> GlobRef.Map_env.add r (derive r) m) GlobRef.Map_env.empty fields
-
-let projection derive x =
-  match GlobRef.Map_env.find_opt x !projection_plans with
+let projection d derive x =
+  match GlobRef.Map_env.find_opt x d.projections with
   | Some abi ->
     if Probe.checking () && not (same_head abi (derive x)) then
       Probe.violation "callable ABI"
@@ -482,26 +480,26 @@ let projection derive x =
     | Common.Emit -> unplanned Pp.(str "the projection " ++ GlobRef.print x)
     | Common.Plan -> derive x )
 
-let report_foreign () =
+let report_foreign d =
   Printf.sprintf "foreign callable plans: %d planned; emission found %d"
-    (GlobRef.Map_env.cardinal !foreign_plans) !foreign_found
+    (GlobRef.Map_env.cardinal d.foreign) !(d.foreign_found)
 
-let dropped_positions r =
-  match lookup r with
+let dropped_positions d r =
+  match lookup d r with
   | Some {receiver = Some {dropped; _}; _} -> List.map (fun v -> Scheme.Var.ordinal v - 1) dropped
   | _ -> []
 
-let method_params r =
-  match lookup r with
+let method_params d r =
+  match lookup d r with
   | Some {receiver = Some {params; _}; _} -> Some params
   | _ -> None
 
 let core_type abi = abi.core_type
 
-let planned_core_type r =
-  match lookup r with
+let planned_core_type d r =
+  match lookup d r with
   | Some abi -> Some abi.core_type
   | None -> (
-    match GlobRef.Map_env.find_opt r !foreign_plans with
+    match GlobRef.Map_env.find_opt r d.foreign with
     | Some abi -> Some abi.core_type
-    | None -> Option.map (fun abi -> abi.core_type) (GlobRef.Map_env.find_opt r !projection_plans) )
+    | None -> Option.map (fun abi -> abi.core_type) (GlobRef.Map_env.find_opt r d.projections) )

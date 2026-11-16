@@ -119,7 +119,7 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
     let by_var = List.map (fun (v, t) -> (v, Translation_types.cpp_of_core env t)) (Core_util.Var_types.bindings tys) in
     Template_application.to_list
       (Template_application.plan
-         (Callable_abi.projection Translation_calls.projection_abi x)
+         (Callable_abi.projection (Translation_state.callables ()) Translation_calls.projection_abi x)
          ~instance:(fun _ -> None)
          ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) )
   in

@@ -260,11 +260,11 @@ val is_record_cached : Names.GlobRef.t -> bool
 (** The position of the [this] argument for a method global, if any. *)
 val lookup_method_this_pos : Names.GlobRef.t -> int option
 
-(** [method_type_args n tys] -- of the type arguments [tys] a reference to
+(** [method_type_args d n tys] -- of the type arguments [tys] a reference to
     the method [n] was instantiated at, the ones a call must write: the
     receiver's struct carries its own parameters, and the parameters the
     method's plan drops are not in its signature at all. *)
-val method_type_args : Names.GlobRef.t -> 'a list -> 'a list
+val method_type_args : Callable_abi.decided -> Names.GlobRef.t -> 'a list -> 'a list
 
 (** Sets of identifiers ([Names.variable]). *)
 module IdSet : Set.S with type elt = Names.variable

@@ -999,6 +999,12 @@ let module_filename mp =
   let fimpl = Filename.concat (output_directory_for_module ()) fimpl_base in
   (Some fimpl, Option.map (( ^ ) f) d.sig_suffix, id)
 
+(** [with_context u f] is [f u] with lowering reading the unit's context
+    [u] ({!Translation_state.unit_context}), a context the planning so far
+    has added to. *)
+let with_context (u : Unit_context.t) f =
+  Translation_state.with_unit_facts {(Translation_state.unit_facts ()) with context = u} (fun () -> f u)
+
 (** The steps of {!plan_layout}, in order. *)
 let prepare_layout = "prepare"
 let plan_names = "plan_names"
@@ -1058,8 +1064,10 @@ let layout_pass_names =
     the elaborations.  Under [CRANE_CHECK_IR] the callables are
     planned a second time with every list reversed, and the two must agree:
     a head is a function of its declaration, not of what was planned before
-    it.  Runs in the planning phase, which is the one that names modules. *)
-let plan_layout (acc : Accumulated_plan.t) struc k =
+    it.  Runs in the planning phase, which is the one that names modules.
+    [u] is the unit's context, which [k] is handed with the callable plans
+    in it. *)
+let plan_layout u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" prepare_layout;
   let modules = Cpp.prepare_structure struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
@@ -1139,9 +1147,9 @@ let plan_layout (acc : Accumulated_plan.t) struc k =
   let assumed =
     Translation_state.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
   Pipeline_trace.event "layout" decide_callables;
-  let acc = {acc with callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
-  Accumulated_plan.bind acc @@ fun () ->
-  k acc
+  let u = {u with Unit_context.callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
+  with_context u @@ fun u ->
+  k u acc
   ( modules,
     { Target_plan.module_names;
       names;
@@ -1489,21 +1497,26 @@ let represent_pass_names = [template_kinds]
 let plan_foreign_callables = "plan_foreign_callables"
 let elaborate_pass_names = [plan_foreign_callables]
 
-(** Plan the callables of the globals the unit's [elaborations] name that it
-    does not declare, and the calls of class fields it may project through
-    an instance. *)
-let elaborate_unit elaborations =
+(** The unit's context [u] with the plans of the callables of the globals
+    the unit's [elaborations] name that it does not declare, and of the
+    calls of class fields it may project through an instance. *)
+let elaborate_unit (u : Unit_context.t) elaborations =
   Translation_state.generating_outside_modules @@ fun () ->
   Pipeline_trace.event "elaborate" plan_foreign_callables;
-  Callable_abi.install_foreign
-    (fun r -> Translation_calls.callee_abi ~instances:0 r)
-    (Core_elaborate.referenced elaborations);
+  let foreign =
+    Callable_abi.with_foreign u.callables
+      (fun r -> Translation_calls.callee_abi ~instances:0 r)
+      (Core_elaborate.referenced elaborations)
+  in
+  with_context {u with callables = foreign} @@ fun u ->
   (* Every global a call may project through an instance
      ({!Core_query.static_projection}). *)
-  Callable_abi.install_projections Translation_calls.projection_abi
-    (List.filter
-       (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)
-       (Core_elaborate.referenced elaborations) )
+  { u with
+    callables =
+      Callable_abi.with_projections u.callables Translation_calls.projection_abi
+        (List.filter
+           (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)
+           (Core_elaborate.referenced elaborations) ) }
 
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan].  They are decided from the inductive kinds
@@ -1647,9 +1660,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  plan_layout earlier struc @@ fun acc (modules, representation, callables, assumed, elaborations) ->
+  plan_layout u earlier struc @@ fun u acc (modules, representation, callables, assumed, elaborations) ->
   let plan = Target_plan.with_layout plan modules representation callables assumed in
-  elaborate_unit elaborations;
+  with_context (elaborate_unit u elaborations) @@ fun u ->
   let planned_checkpoint = checkpoint () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
@@ -1717,7 +1730,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   if Pipeline_trace.enabled () then begin
     Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
     Pipeline_trace.event "emit" (Core_effects.report facts.effects);
-    Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
+    Pipeline_trace.event "emit" (Callable_abi.report_foreign u.callables)
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   (* The header includes every file either of the unit's files names, so a
@@ -2555,9 +2568,9 @@ let print_one_decl struc mp decl =
       context = u }
   @@ fun () ->
   Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
-  plan_layout (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
-  @@ fun _ (_, _, _, _, elaborations) ->
-  elaborate_unit elaborations;
+  plan_layout u (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
+  @@ fun u _ (_, _, _, _, elaborations) ->
+  with_context (elaborate_unit u elaborations) @@ fun u ->
   end_planning ();
   let ans =
     Cpp.generate_decl_ahead u ~module_:mp decl;

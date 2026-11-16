@@ -268,7 +268,7 @@ let holdable_type ~unit ty = Option.has_some (Loopify_tail.borrowed_value_param_
 let planned_holdable ~unit r k ty =
   Option.map
     (fun passing -> Frame_storage.passed_holdable unit (List.nth_opt passing k) ty)
-    (Option.bind (Callable_abi.lookup r) Callable_abi.passing)
+    (Option.bind (Callable_abi.lookup unit.callables r) Callable_abi.passing)
 
 (* [held k cty] for {!storage_at} of the machine of the callable [r], its
    loop [l], the C++ parameter at [k] declared at [cty] and standing for the

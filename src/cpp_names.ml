@@ -891,12 +891,12 @@ let struct_declaration_name ~merged ~promoted ~local id =
     [void] -- separates the two; the registry records the C++ one. *)
 let lookup_method_this_pos n = Option.map snd (is_registered_method n)
 
-let method_type_args n tys =
+let method_type_args d n tys =
   match tys with
   | [] -> []
   | _ ->
     let carried = lookup_method_ind_tvar_positions n in
-    let dropped = Callable_abi.dropped_positions n in
+    let dropped = Callable_abi.dropped_positions d n in
     List.filteri (fun i _ -> not (List.mem i carried || List.mem i dropped)) tys
 
 module IdSet = Set.Make (Names.Id)

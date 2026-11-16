@@ -613,9 +613,9 @@ let plan_instance_methods r a t =
 let planned_methods ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
   let planned (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
     if Probe.checking () then
-      Callable_abi.check_instance_method ~instance:r m.name
+      Callable_abi.check_instance_method (Translation_state.callables ()) ~instance:r m.name
         (Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:r m);
-    let abi = Callable_abi.planned_instance_method ~instance:r m.name in
+    let abi = Callable_abi.planned_instance_method (Translation_state.callables ()) ~instance:r m.name in
     match Callable_abi.receiver abi with
     | Some {params; ret; _} when List.length params = List.length m.params ->
       { m with

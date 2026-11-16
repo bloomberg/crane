@@ -171,5 +171,5 @@ val represent_pass_names : string list
 val layout_pass_names : string list
 
 (** The steps run on a unit's Core once its layout is planned
-    ({!Callable_abi.install_foreign}), in order. *)
+    ({!Callable_abi.with_foreign}), in order. *)
 val elaborate_pass_names : string list

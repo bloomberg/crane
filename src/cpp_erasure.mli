@@ -203,13 +203,14 @@ val instantiate_type : Unit_context.t -> ty -> ty
     concept. *)
 val type_pieces : Names.GlobRef.t -> string -> ty list -> Cpp_ir.Foreign.piece list
 
-(** [lower_method_calls decl] writes each call of a function the method
+(** [lower_method_calls u decl] writes each call of a function the method
     registry made a member of its receiver's struct as the method call it
     is: the receiver taken out of the argument list, reached with [.] or
     [->], and the template arguments the struct carries left off.  Every
     other reference to such a function names it as a value, and becomes the
-    lambda calling it on its receiver. *)
-val lower_method_calls : settled -> settled
+    lambda calling it on its receiver.  The methods' plans are the unit
+    [u]'s. *)
+val lower_method_calls : Unit_context.t -> settled -> settled
 
 (** [lower_projections decl] writes each record projection the same way:
     applied to its record, as the projection reading its field; named as a

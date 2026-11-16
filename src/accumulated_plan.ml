@@ -14,7 +14,6 @@ type t = {
   accessors : Cpp_state.accessors;
   nested_structs : Cpp_state.nested_struct_owner list CString.Map.t;
   instance_promoted_types : (Id.t * Core.Type.t) list GlobRef.Map.t;
-  callables : Callable_abi.decided;
 }
 
 let start ~accessors =
@@ -24,8 +23,7 @@ let start ~accessors =
     promoted_inductives = Ref.User.Set.empty;
     accessors;
     nested_structs = CString.Map.empty;
-    instance_promoted_types = GlobRef.Map.empty;
-    callables = Callable_abi.undecided }
+    instance_promoted_types = GlobRef.Map.empty }
 
 let bind t f =
   Module_plan.with_layout t.modules @@ fun () ->
@@ -34,7 +32,6 @@ let bind t f =
   Table.with_promoted_inductives t.promoted_inductives @@ fun () ->
   Cpp_state.with_accessors t.accessors @@ fun () ->
   Cpp_state.with_nested_struct_names t.nested_structs @@ fun () ->
-  Table.with_instance_promoted_types t.instance_promoted_types @@ fun () ->
-  Callable_abi.with_decided t.callables f
+  Table.with_instance_promoted_types t.instance_promoted_types f
 
-let for_next_unit t = {t with modules = Module_plan.for_next_unit t.modules; callables = Callable_abi.undecided}
+let for_next_unit t = {t with modules = Module_plan.for_next_unit t.modules}

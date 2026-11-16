@@ -32,11 +32,6 @@ type t = {
   instance_promoted_types : (Id.t * Core.Type.t) list GlobRef.Map.t;
       (** The concrete types each instance gives its class's promoted
           variables. *)
-  callables : Callable_abi.decided;
-      (** The unit's callable plans, from its [decide_callables] pass on;
-          none before it.  They are not carried to the next unit: a callee
-          another unit defines is planned as foreign
-          ({!Callable_abi.install_foreign}). *)
 }
 
 (** What the first unit of an extraction starts from: [accessors], those
@@ -47,10 +42,12 @@ val start : accessors:Cpp_state.accessors -> t
     from ({!Module_plan.with_layout}, {!Loopify_analysis.with_pointer_fields},
     {!Cpp_state.with_unmerged_wrappers}, {!Table.with_promoted_inductives},
     {!Cpp_state.with_accessors}, {!Cpp_state.with_nested_struct_names},
-    {!Table.with_instance_promoted_types}, {!Callable_abi.with_decided}). *)
+    {!Table.with_instance_promoted_types}). *)
 val bind : t -> (unit -> 'a) -> 'a
 
 (** What the next unit of the extraction starts from, once a unit planned
     [t]: [t] without the facts that belong to one unit, the per-unit
-    layout ({!Module_plan.for_next_unit}) and the callable plans. *)
+    layout ({!Module_plan.for_next_unit}).  The callable plans are the
+    unit's own ({!Unit_context.t.callables}): a callee another unit defines
+    is planned as foreign ({!Callable_abi.with_foreign}). *)
 val for_next_unit : t -> t

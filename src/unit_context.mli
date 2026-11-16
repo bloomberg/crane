@@ -14,9 +14,14 @@ type t = {
       (** The unit's configuration ({!Target_plan.t.config}): whether it
           runs on several threads, which withholds a [Crane NonAtomicRc] or
           [Crane SingleThreaded] request. *)
+  callables : Callable_abi.decided;
+      (** The callable plans decided so far: none until the unit's are
+          ({!Callable_abi.decide}), then its own, its foreign and its
+          projection plans as they are planned. *)
 }
 
-(** [make ~config] is the context of a unit configured as [config]. *)
+(** [make ~config] is the context of a unit configured as [config], with
+    no plan decided. *)
 val make : config:Table.unit_config -> t
 
 (** The context of a declaration extracted outside every unit: one that

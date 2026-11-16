@@ -3,9 +3,12 @@
 
 (** The context of one unit's extraction.  See [unit_context.mli]. *)
 
-type t = {config : Table.unit_config}
+type t = {
+  config : Table.unit_config;
+  callables : Callable_abi.decided;
+}
 
-let make ~config = {config}
-let detached = {config = {Table.concurrent = false}}
+let make ~config = {config; callables = Callable_abi.undecided}
+let detached = make ~config:{Table.concurrent = false}
 let non_atomic_rc u = Table.non_atomic_rc_for u.config
 let count_rc u = Table.count_rc_for u.config

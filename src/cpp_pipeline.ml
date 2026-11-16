@@ -82,7 +82,8 @@ let casts = Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
 let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
 let boxed_reads = Pipeline_trace.pass "boxed_reads" Cpp_erasure.lower_boxed_reads
 let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
-let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
+(* The method calls of a declaration of the unit [u]. *)
+let method_calls u = Pipeline_trace.pass "method_calls" (Cpp_erasure.lower_method_calls u)
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
 let conditionals = Pipeline_trace.pass "conditionals" Cpp_erasure.lower_conditionals
 let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
@@ -140,8 +141,9 @@ let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
     input type. *)
 let seam = "materialise"
 
-(** Every pass after the seam, in the order they run. *)
-let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
+(** Every pass after the seam, in the order they run, over a declaration of
+    the unit [u]. *)
+let settled_passes u : Cpp_erasure.settled Pipeline_trace.pass list =
   [ casts;
     (* With the heads final, a body naming a type variable no head declares
        is a name nothing in scope introduces; spell it [std::any] rather than
@@ -155,7 +157,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     template_args;
     (* A call of a methodified function becomes the member call it is, so
        the printer spells the call it is given. *)
-    method_calls;
+    method_calls u;
     (* So does a projection, applied or named as a value. *)
     projections;
     (* A lambda invoked only to choose between two values is the choice. *)
@@ -178,7 +180,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
 let instantiation_passes u = [foreign; qualifiers; pointer_slots u; scrutinees; captures; initialisers]
 
 let pass_names =
-  Pipeline_trace.names lowered_passes @ [seam] @ Pipeline_trace.names settled_passes
+  Pipeline_trace.names lowered_passes @ [seam] @ Pipeline_trace.names (settled_passes Unit_context.detached)
   @ Pipeline_trace.names (instantiation_passes Unit_context.detached)
 
 (** {2 What the printer is not owed}
@@ -210,7 +212,8 @@ let describe : obligation -> string = function
   | Free_type_variable -> "an undeclared type variable, owed by " ^ free_tvars.name
   | Implicit_boxed_read -> "an implicit boxed read, owed by " ^ boxed_reads.name
   | Missing_template_argument -> "a mapping's unsupplied type argument, owed by " ^ template_args.name
-  | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
+  | Unlowered_method_call ->
+    "a method called as a function, owed by " ^ (method_calls Unit_context.detached).name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
   | Unlowered_conditional -> "a choice written as an invoked lambda, owed by " ^ conditionals.name
   | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
@@ -250,7 +253,7 @@ let owes u (decl : Cpp_erasure.settled) (o : obligation) =
   | Free_type_variable -> rewrites free_tvars
   | Implicit_boxed_read -> rewrites boxed_reads
   | Missing_template_argument -> rewrites template_args
-  | Unlowered_method_call -> rewrites method_calls
+  | Unlowered_method_call -> rewrites (method_calls u)
   | Unlowered_projection -> rewrites projections
   | Unlowered_conditional -> rewrites conditionals
   | Move_under_access -> rewrites access_moves
@@ -348,13 +351,13 @@ let finish u decl =
   let inj (d : Cpp_erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
-  let decl = run inj settled_passes settled in
+  let decl = run inj (settled_passes u) settled in
   let early, late = List.partition checked_before_instantiation obligations in
   if checking then check_settled u early decl;
   let decl = run inj (instantiation_passes u) decl in
   if checking then begin
     Borrow_projection.check_decl (inj decl);
-    Move_check.check_decl (inj decl);
+    Move_check.check_decl u (inj decl);
     check_settled u late decl
   end;
   Option.iter

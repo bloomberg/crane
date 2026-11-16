@@ -647,8 +647,9 @@ let plan_method name vars ((func_ref, _, ty, _) as candidate) =
     of the variables it drops.  Under [CRANE_CHECK_IR] the head is decided
     again ({!method_head}) and checked against the plan. *)
 let planned_method_head func_ref vars s =
-  let abi = Callable_abi.planned func_ref in
-  if Probe.checking () then Callable_abi.check (method_plan func_ref s (method_head vars s));
+  let abi = Callable_abi.planned (Translation_state.callables ()) func_ref in
+  if Probe.checking () then
+    Callable_abi.check (Translation_state.callables ()) (method_plan func_ref s (method_head vars s));
   match Callable_abi.receiver abi with
   | Some r ->
     (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
@@ -853,7 +854,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       | Entity (_, _, Some {inline = Some _; _}) -> ()
       | Call (_, Entity (_, _, Some {inline = Some _; _}), args) -> List.iter on_expr args
       | Entity (r, tys, ci) when Cpp_names.lookup_method_this_pos r <> None ->
-        Cpp_ir.Children.expr (Lazy.force visitor) (Entity (r, Cpp_names.method_type_args r tys, ci))
+        let tys = Cpp_names.method_type_args (Translation_state.callables ()) r tys in
+        Cpp_ir.Children.expr (Lazy.force visitor) (Entity (r, tys, ci))
       | e -> Cpp_ir.Children.expr (Lazy.force visitor) e
     in
     List.iter (fun s -> Cpp_ir.Children.stmt (Lazy.force visitor) s) stmts;

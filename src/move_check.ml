@@ -408,16 +408,16 @@ let passing_violations (passing : Callable_abi.passing list) params body =
            | (Owned | Borrowed), _ -> [] )
          passing params )
 
-let convention_violations r params body =
+let convention_violations d r params body =
   Option.map
     (fun passing -> passing_violations passing params body)
-    (Option.bind (Callable_abi.lookup r) Callable_abi.passing)
+    (Option.bind (Callable_abi.lookup d r) Callable_abi.passing)
 
 let report_conventions owner =
   List.iter (fun what -> Probe.violation "callable convention" Pp.(str "in " ++ owner ++ str ", " ++ str what))
 
-let check_convention owner r params body =
-  report_conventions owner (Option.default [] (convention_violations r params body))
+let check_convention d owner r params body =
+  report_conventions owner (Option.default [] (convention_violations d r params body))
 
 (* The lambda of each local fixpoint in [ss] against the plan of the
    function it is generated for ({!Ownership_ir.Local_passing}): the
@@ -562,15 +562,16 @@ let check_by_reference_closures owner ss =
 
 (* Every body of [d] through all four checks: moved reads, local fixpoint
    conventions, by-reference closures, and, for a top-level function or a
-   method with a globref, its own callable convention. *)
-let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
+   method with a globref, its own callable convention, as the plans of the
+   unit [u] state it. *)
+let rec check_decl (u : Unit_context.t) (d : Cpp_ir.Lowered.Decl.t) =
   let rec field ((f, _, _) : phase Field.member) =
     match f with
     | Method m ->
       check_body (Id.print m.name) m.body;
       check_local_conventions (Id.print m.name) m.body;
       check_by_reference_closures (Id.print m.name) m.body;
-      Option.iter (fun r -> check_convention (Id.print m.name) r m.params m.body) m.globref
+      Option.iter (fun r -> check_convention u.callables (Id.print m.name) r m.params m.body) m.globref
     | Nested_struct (_, fs) -> List.iter field fs
     | _ -> ()
   in
@@ -580,8 +581,8 @@ let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
     check_body (GlobRef.print r) ss;
     check_local_conventions (GlobRef.print r) ss;
     check_by_reference_closures (GlobRef.print r) ss;
-    if path.inner = [] then check_convention (GlobRef.print r) r params ss
-  | Template (_, _, inner) -> check_decl inner
-  | Namespace (_, ds) -> List.iter check_decl ds
+    if path.inner = [] then check_convention u.callables (GlobRef.print r) r params ss
+  | Template (_, _, inner) -> check_decl u inner
+  | Namespace (_, ds) -> List.iter (check_decl u) ds
   | Struct s | Merged_struct_members s -> List.iter field s.fields
   | _ -> ()

@@ -41,8 +41,8 @@
 
 (** Check every function and method body of a declaration, nested
     namespaces, templates and structs included, and report each violation
-    of the rules above. *)
-val check_decl : Cpp_ir.Lowered.Decl.t -> unit
+    of the rules above, against the plans of the unit given. *)
+val check_decl : Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit
 
 (** The locals [ss], a body, reads after it moves them, the backend's own
     storage aside. *)
@@ -55,9 +55,9 @@ val moved_reads : Cpp_ir.Lowered.Stmt.t list -> Names.Id.t list
     pointer local given a new value leaves what it pointed at as it was. *)
 val stale_references : Cpp_ir.Lowered.Stmt.t list -> (Names.Id.t * Names.Id.t) list
 
-(** [convention_violations r params body]: what the parameters [params] of
-    the callable [r], in declaration order, and its [body] contradict of the
-    convention its callable plan states ({!Callable_abi.passing}), [None]
+(** [convention_violations d r params body]: what the parameters [params]
+    of the callable [r], in declaration order, and its [body] contradict of
+    the convention its callable plan in [d] states ({!Callable_abi.passing}), [None]
     where no plan states one.  The plan passes each parameter one way: a
     deduced callable forwarded exactly where the declaration is an [F &&],
     one it owns declared by value, and none it lends by reference moved out
@@ -65,4 +65,5 @@ val stale_references : Cpp_ir.Lowered.Stmt.t list -> (Names.Id.t * Names.Id.t) l
     the body (a name the body declares again, as a frame handler binds a
     parameter's to the frame's field, is that local's). *)
 val convention_violations :
+  Callable_abi.decided ->
   Names.GlobRef.t -> (Names.Id.t * Cpp_ir.Lowered.Type.t) list -> Cpp_ir.Lowered.Stmt.t list -> string list option

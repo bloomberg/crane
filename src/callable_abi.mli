@@ -17,8 +17,9 @@
     A callee has one plan, wherever it is generated: a function rendered
     inside a struct and the same function at namespace scope take one head.
     Every plan is decided before anything is rendered, by planning the
-    unit's callables ({!Cpp.plan_callables}), and bound then
-    ({!with_decided}); generating a declaration only checks it ({!check}).
+    unit's callables ({!Cpp.plan_callables}), and handed to the unit's
+    stages in its context ({!Unit_context.t.callables}); generating a
+    declaration only checks it ({!check}).
     Generating a declaration must reproduce its plan exactly, and a
     declaration generated with no plan is one the planning missed.  Both are
     reported under [CRANE_CHECK_IR]. *)
@@ -237,8 +238,10 @@ val validate : t -> string list
 (** {2 The decided plans} *)
 
 (** A unit's plans: of its callables, the callables a function of it with
-    none is assumed to deduce ({!deduces_callable}), and its instance
-    structs' methods. *)
+    none is assumed to deduce ({!deduces_callable}), its instance structs'
+    methods, the foreign plans of the callees it names that it does not
+    generate ({!with_foreign}), and of the class fields it calls through an
+    instance ({!with_projections}). *)
 type decided
 
 (** No plans. *)
@@ -246,8 +249,8 @@ val undecided : decided
 
 (** [decide ~callables ~assumed ~instance_methods] are the plans
     [callables], [assumed], and [instance_methods] -- for each instance,
-    each method's by name -- as one value, read once bound
-    ({!with_decided}).  When checking, a plan {!validate} rejects, or a
+    each method's by name -- as one value, with no foreign or projection
+    plan.  When checking, a plan {!validate} rejects, or a
     callee planned twice with two heads, is a violation. *)
 val decide :
   callables:t list ->
@@ -255,39 +258,32 @@ val decide :
   instance_methods:(Names.GlobRef.t * (Names.Id.t * t) list) list ->
   decided
 
-(** [with_decided d f] is [f ()] reading the plans [d]: bound once they
-    are decided, before anything is rendered, so that from there they are
-    an immutable program fact.  A separate extraction binds the previous
-    unit's while the next is planned up to its own
-    ({!Accumulated_plan.bind}). *)
-val with_decided : decided -> (unit -> 'a) -> 'a
-
-(** Checks the head a declaration is generated with against its plan, adding
-    nothing: under [CRANE_CHECK_IR] a different head, or a declaration
-    generated with no plan, is an error. *)
-val check : t -> unit
+(** Checks the head a declaration is generated with against its plan in
+    [d], adding nothing: under [CRANE_CHECK_IR] a different head, or a
+    declaration generated with no plan, is an error. *)
+val check : decided -> t -> unit
 
 (** The plan of a declaration. *)
-val lookup : Names.GlobRef.t -> t option
+val lookup : decided -> Names.GlobRef.t -> t option
 
 (** {!lookup} for a declaration that is generated: an anomaly where planning
     made it no plan. *)
-val planned : Names.GlobRef.t -> t
+val planned : decided -> Names.GlobRef.t -> t
 
 (** The plan of the method [name] of [instance]'s struct. *)
-val instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t option
+val instance_method : decided -> instance:Names.GlobRef.t -> Names.Id.t -> t option
 
 (** {!instance_method} for a method that is generated: an anomaly where
     planning made it no plan. *)
-val planned_instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t
+val planned_instance_method : decided -> instance:Names.GlobRef.t -> Names.Id.t -> t
 
 (** {!check} for the method [name] of [instance]'s struct. *)
-val check_instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t -> unit
+val check_instance_method : decided -> instance:Names.GlobRef.t -> Names.Id.t -> t -> unit
 
 (** Whether a call to [r] passes the callable it declares at [pos] to a
     deduced [F &&]: as [r]'s plan says ({!deduces_callable_at}), or where it
     has none as its call sites assume ({!decide}). *)
-val deduces_callable : Names.GlobRef.t -> Param_pos.orig Param_pos.pos -> bool
+val deduces_callable : decided -> Names.GlobRef.t -> Param_pos.orig Param_pos.pos -> bool
 
 (** The plan of a callable Crane does not generate here -- a custom mapping,
     a declaration of another file or library -- as the conventions its call
@@ -309,14 +305,15 @@ val foreign :
   unit ->
   t
 
-(** [install_foreign derive callees] makes the {!foreign} plan [derive r]
-    gives each of [callees] with no plan of its own, or only a
-    method's, the unit's plan of [r]: planned with no dictionary, before
-    anything is rendered.  Replaces the unit's previous foreign plans. *)
-val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
+(** [with_foreign d derive callees] is [d] with the {!foreign} plan
+    [derive r] gives each of [callees] with no plan of its own, or only a
+    method's, as the unit's plan of [r]: planned with no dictionary, before
+    anything is rendered, by a [derive] that reads [d]'s plans without
+    foreign ones.  Replaces [d]'s foreign plans. *)
+val with_foreign : decided -> (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> decided
 
-(** The plan of [callee], or else its foreign one, with
-    [instances] dictionaries: the one {!install_foreign} planned, or where it
+(** The plan in [d] of [callee], or else its foreign one, with
+    [instances] dictionaries: the one {!with_foreign} planned, or where it
     planned none, {!foreign}'s.  Under [CRANE_CHECK_IR] a planned one is
     checked against {!foreign}'s, and emission finding none planned is a
     violation: every callee a body names is planned before bodies are
@@ -325,6 +322,7 @@ val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
     without the variables the receiver carries or
     {!dropped_positions}. *)
 val plan :
+  decided ->
   ?omitted:(Scheme.Var.t -> omission option) ->
   ?instances:int ->
   ?higher_kinded:(Scheme.Var.t -> bool) ->
@@ -336,30 +334,30 @@ val plan :
   scheme:Scheme.Id.t option ->
   t
 
-(** [install_projections derive fields] makes [derive x] the unit's plan of
-    a call of each class field [x] of [fields] through a concrete instance,
-    planned before anything is rendered.  Replaces the unit's previous
+(** [with_projections d derive fields] is [d] with [derive x] as the unit's
+    plan of a call of each class field [x] of [fields] through a concrete
+    instance, planned before anything is rendered.  Replaces [d]'s
     projection plans. *)
-val install_projections : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
+val with_projections : decided -> (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> decided
 
-(** The plan {!install_projections} made of a call of the class field [x]
-    through a concrete instance.  Under [CRANE_CHECK_IR] it is checked
+(** The plan {!with_projections} made in [d] of a call of the class field
+    [x] through a concrete instance.  Under [CRANE_CHECK_IR] it is checked
     against [derive x]; emission finding none planned is a violation. *)
-val projection : (Names.GlobRef.t -> t) -> Names.GlobRef.t -> t
+val projection : decided -> (Names.GlobRef.t -> t) -> Names.GlobRef.t -> t
 
-(** How many foreign plans the unit planned, and how many emission found
-    planned or derived itself. *)
-val report_foreign : unit -> string
+(** How many foreign plans [d] holds, and how many emission found planned
+    or derived itself. *)
+val report_foreign : decided -> string
 
 (** The places, among the variables of the function [r] was made from, of
     those the method [r] dropped ({!receiver}); none where [r] is not a
     planned method. *)
-val dropped_positions : Names.GlobRef.t -> int list
+val dropped_positions : decided -> Names.GlobRef.t -> int list
 
 (** The C++ types the planned method [r]'s parameters other than its
     receiver are declared at ({!receiver}); [None] where [r] is not a
     planned method. *)
-val method_params : Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option
+val method_params : decided -> Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option
 
 (** The callee's Core type the plan was made against: the plain type
     beside the declared signature ({!Core.Signature.t}), before the head's relaxations,
@@ -368,7 +366,7 @@ val method_params : Names.GlobRef.t -> Cpp_ir.Lowered.Type.t list option
     type. *)
 val core_type : t -> Core.Type.t option
 
-(** [planned_core_type r] -- {!core_type} of the unit's plan of [r], decided,
+(** [planned_core_type d r] -- {!core_type} of [d]'s plan of [r], decided,
     foreign or a projection's, without planning one; [None] where none is
     planned. *)
-val planned_core_type : Names.GlobRef.t -> Core.Type.t option option
+val planned_core_type : decided -> Names.GlobRef.t -> Core.Type.t option option
