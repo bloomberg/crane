@@ -288,11 +288,11 @@ let promoted_of_decl d = ir_promoted (fun ~decl ~ty:_ -> decl d)
 
 let promoted_of_type t = ir_promoted (fun ~decl:_ ~ty -> ty t)
 
-let of_modtype_concept unit (c : Modtype_concept.t) =
+let of_modtype_concept unit (c : Cpp_ast.Modtype_concept.t) =
   let found = ref [] in
   let need hs = List.iter (fun h -> if not (List.mem h !found) then found := h :: !found) hs in
   let concepts () = need [Base.Table.Standard "concepts"] in
-  let rec cty : Modtype_concept.concept_type -> unit = function
+  let rec cty : Cpp_ast.Modtype_concept.concept_type -> unit = function
     | Member {arguments; _} -> List.iter cty arguments
     | Parameter t | Plain t -> need (of_type unit t)
     | Foreign {pieces; arguments; _} ->
@@ -313,7 +313,7 @@ let of_modtype_concept unit (c : Modtype_concept.t) =
       List.iter cty dom;
       cty cod
   in
-  let requirement : Modtype_concept.requirement -> unit = function
+  let requirement : Cpp_ast.Modtype_concept.requirement -> unit = function
     (* Its arguments are written as erased placeholders. *)
     | Inductive_member {arity; _} -> if arity > 0 then need (of_type unit Any)
     | Type_member _ | Submodule _ -> ()
@@ -328,11 +328,11 @@ let of_modtype_concept unit (c : Modtype_concept.t) =
       List.iter cty parameters;
       cty result
   in
-  let rec constraint_ : Modtype_concept.constraint_ -> unit = function
+  let rec constraint_ : Cpp_ast.Modtype_concept.constraint_ -> unit = function
     | Named _ -> ()
     | Requirements {items; _} ->
       List.iter
-        (function Modtype_concept.Requirement r -> requirement r | Nested (_, c) -> constraint_ c)
+        (function Cpp_ast.Modtype_concept.Requirement r -> requirement r | Nested (_, c) -> constraint_ c)
         items
   in
   ( match c with

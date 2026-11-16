@@ -5,7 +5,7 @@
     [modtype_concept_generation.mli]. *)
 
 open Names
-open Modtype_concept
+open Cpp_ast.Modtype_concept
 
 (* A type translation writes for a concept, in CppIR: a concept is generated
    after its module type is settled, so every type it writes has a C++

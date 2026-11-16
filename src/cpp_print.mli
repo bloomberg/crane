@@ -56,7 +56,7 @@ val print_unprinted :
     names:Unit_plan.Cpp_resolution.table ->
     params:ModPath.t list ->
     ModPath.t ->
-    Modtype_concept.t ->
+    Cpp_ast.Modtype_concept.t ->
     Pp.t ) ->
   assertion:(Unit_plan.Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t) ->
   Cpp_ast.unprinted ->
@@ -150,7 +150,7 @@ val decl_type_ref : decl -> GlobRef.t option
 (** [pp_type_pieces r pieces arg] writes the type mapping [r] instantiated
     in [pieces], hole [i] filled with [arg i] -- in a module type's concept,
     each argument written as the concept qualifies it.  Every hole is
-    supplied, an erased argument included ({!Modtype_concept.concept_type}). *)
+    supplied, an erased argument included ({!Cpp_ast.Modtype_concept.concept_type}). *)
 val pp_type_pieces : GlobRef.t -> Cpp_ir.Foreign.piece list -> (int -> Pp.t option) -> Pp.t
 
 (** {2 Wrapper structs} *)

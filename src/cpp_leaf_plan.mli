@@ -167,7 +167,7 @@ val print_unprinted :
     names:Unit_plan.Cpp_resolution.table ->
     params:ModPath.t list ->
     ModPath.t ->
-    Modtype_concept.t ->
+    Cpp_ast.Modtype_concept.t ->
     Pp.t ) ->
   assertion:(Unit_plan.Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t) ->
   Cpp_ast.unprinted ->

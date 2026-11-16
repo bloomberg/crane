@@ -278,7 +278,7 @@ val concept :
     which generates it again under [CRANE_CHECK_IR] to compare. *)
 val modtype_concept :
   Translation_state.t -> module_:Names.ModPath.t -> Names.ModPath.t -> params:Names.ModPath.t list ->
-    Core.Module.Type.t -> Modtype_concept.t
+    Core.Module.Type.t -> Cpp_ast.Modtype_concept.t
 
 (** [record_methods r vars candidates] is the methods the eponymous record
     [r], of variables [vars], is given, made of [candidates], with the
@@ -303,7 +303,7 @@ val record_field_types :
 
 (** Every module type's concept generated ahead of the files
     ({!modtype_concept}). *)
-val generated_concepts : unit -> Modtype_concept.t list
+val generated_concepts : unit -> Cpp_ast.Modtype_concept.t list
 
 (** The types of every eponymous record's fields converted ahead of the
     files ({!record_field_types}). *)

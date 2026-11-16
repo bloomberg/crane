@@ -5,6 +5,9 @@
 
 open Names
 
+(** The concept a module type becomes, as the value the tree holds. *)
+module Modtype_concept = Modtype_concept
+
 module Needs = struct
   type t = {templates : string list; names : GlobRef.t list; defines : GlobRef.t list}
 

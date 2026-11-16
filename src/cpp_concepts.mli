@@ -1,10 +1,10 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The C++ concept a module type becomes ({!Modtype_concept.t}), as text:
+(** The C++ concept a module type becomes ({!Cpp_ast.Modtype_concept.t}), as text:
     its declaration, the concepts of the module types nested in it, and the
     name every reference to it spells.  Part of the printer: the concept
-    itself is built by {!Modtype_concept}, and the names it writes are
+    itself is built by {!Cpp_ast.Modtype_concept}, and the names it writes are
     resolved ahead of printing from {!names_requested}. *)
 
 open Names
@@ -19,7 +19,7 @@ val pp_modtype_concept :
   names:Unit_plan.Cpp_resolution.table ->
   params:ModPath.t list ->
   ModPath.t ->
-  Modtype_concept.t ->
+  Cpp_ast.Modtype_concept.t ->
   Pp.t
 
 (** The assertion [a], as written at the position where the tree puts it. *)
@@ -39,4 +39,4 @@ val names_requested :
     is applied to past [M] and the globals of the refinements' types, or its
     requirements' names. *)
 val concept_body_names :
-  Translation_state.t -> Unit_plan.Context.t -> Modtype_concept.t -> (Unit_plan.Cpp_resolution.frame * Unit_plan.Cpp_resolution.key) list
+  Translation_state.t -> Unit_plan.Context.t -> Cpp_ast.Modtype_concept.t -> (Unit_plan.Cpp_resolution.frame * Unit_plan.Cpp_resolution.key) list

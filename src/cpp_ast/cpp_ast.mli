@@ -29,6 +29,9 @@
 
 open Names
 
+(** The concept a module type becomes, as the value the tree holds. *)
+module Modtype_concept = Modtype_concept
+
 (** What placing the declarations a written declaration needs reads off it,
     each by the name it is declared under. *)
 module Needs : sig

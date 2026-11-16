@@ -850,7 +850,7 @@ let rec pp_structure_elem cx ~is_header f ctx ~module_ = function
                   let path = MPdot (mp, l) in
                   let concept = Cpp_ind.modtype_concept cx ~module_ path ~params:[] m in
                   let concept_pp = Cpp_ast.modtype_concept ~path ~params:[] concept in
-                  Some (Modtype path, concept_pp, Modtype_concept.names_member mp concept)
+                  Some (Modtype path, concept_pp, Cpp_ast.Modtype_concept.names_member mp concept)
                 | _ -> None )
               sel
           else
@@ -1564,7 +1564,7 @@ let walk_as_rendered cx ?(reversed = false) ?(after_wrapper = ignore) ?(classes 
     method_candidates := frame.method_candidates;
     let modtypes =
       List.map
-        (fun (path, c) -> (Modtype path, Modtype_concept.names_member mp c))
+        (fun (path, c) -> (Modtype path, Cpp_ast.Modtype_concept.names_member mp c))
         (modtypes ~module_ mp ~params:[] sel)
     in
     let plan = Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes in

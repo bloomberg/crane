@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The C++ concept a module type becomes ({!Modtype_concept.t}), as text:
+(** The C++ concept a module type becomes ({!Cpp_ast.Modtype_concept.t}), as text:
     its declaration, the concepts of the module types nested in it, and the
     name every reference to it spells. *)
 
@@ -76,7 +76,7 @@ let type_names u frame ty = global_names u [frame] (type_globals ty)
    [r]. *)
 let namespaced r r' e : Cpp_ir.Resolved.Type.t = In_namespace (r, Entity_application (r', [], e))
 
-let rec concept_type_names cx u frame : Modtype_concept.concept_type -> _ = function
+let rec concept_type_names cx u frame : Cpp_ast.Modtype_concept.concept_type -> _ = function
   | Member {member; arguments; _} ->
     (frame, Unit_plan.Cpp_resolution.Global (Type, member)) :: concept_types_names cx u frame arguments
   | Global (r, args) -> type_names u frame (Entity_application (r, [], [])) @ concept_types_names cx u frame args
@@ -90,7 +90,7 @@ let rec concept_type_names cx u frame : Modtype_concept.concept_type -> _ = func
 
 and concept_types_names cx u frame tys = List.concat_map (concept_type_names cx u frame) tys
 
-let requirement_names cx u frame : Modtype_concept.requirement -> _ = function
+let requirement_names cx u frame : Cpp_ast.Modtype_concept.requirement -> _ = function
   | Inductive_member {member; _} -> [(frame, Unit_plan.Cpp_resolution.Short (Type, member))]
   | Type_member {member; _} -> [(frame, Unmapped (Type, member))]
   | Instance_member {value; class_; arguments} ->
@@ -102,20 +102,20 @@ let requirement_names cx u frame : Modtype_concept.requirement -> _ = function
     (frame, Unit_plan.Cpp_resolution.Unmapped (Term, value)) :: concept_types_names cx u frame (result :: parameters)
   | Submodule {module_type; _} -> [(frame, Modtype_concept module_type)]
 
-let rec constraint_names cx u frame : Modtype_concept.constraint_ -> _ = function
+let rec constraint_names cx u frame : Cpp_ast.Modtype_concept.constraint_ -> _ = function
   | Named kn -> [(frame, Unit_plan.Cpp_resolution.Module kn)]
   | Requirements {signature; parameters; items} ->
     let frame = Unit_plan.Cpp_resolution.Signature {signature; parameters} :: frame in
     List.concat_map
       (function
-        | Modtype_concept.Requirement r -> requirement_names cx u frame r
+        | Cpp_ast.Modtype_concept.Requirement r -> requirement_names cx u frame r
         | Nested (path, c) -> (frame, Unit_plan.Cpp_resolution.Modtype_concept_declared path) :: constraint_names cx u frame c )
       items
 
 let modules frame = List.map (fun p -> (frame, Unit_plan.Cpp_resolution.Module p))
 
 (* What the definition of the concept [c] names, after its head. *)
-let concept_body_names cx u : Modtype_concept.t -> _ = function
+let concept_body_names cx u : Cpp_ast.Modtype_concept.t -> _ = function
   | Alias {base; refinements} ->
     (([], Unit_plan.Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base))
     @ List.concat_map (fun (_, ty) -> type_names u [] ty) refinements
@@ -124,13 +124,13 @@ let concept_body_names cx u : Modtype_concept.t -> _ = function
 (* What the whole declaration of the concept of the module type at [path]
    names: its own name, the functor parameters [params] it is written over,
    and its body ({!concept_body_names}). *)
-let modtype_concept_names cx u ~path ~params (c : Modtype_concept.t) =
+let modtype_concept_names cx u ~path ~params (c : Cpp_ast.Modtype_concept.t) =
   (([], Unit_plan.Cpp_resolution.Modtype_concept_declared path) :: modules [] params) @ concept_body_names cx u c
 
 (** A type of a module-type concept's requirements, spelled from inside the
-    concept ({!Modtype_concept.concept_type}), naming what [names] names at
+    concept ({!Cpp_ast.Modtype_concept.concept_type}), naming what [names] names at
     [frame]. *)
-let rec pp_concept_type cx ctx names frame (t : Modtype_concept.concept_type) : Pp.t =
+let rec pp_concept_type cx ctx names frame (t : Cpp_ast.Modtype_concept.concept_type) : Pp.t =
   let pp_concept_type = pp_concept_type cx ctx names frame in
   match t with
   | Member {member; enum; arguments} ->
@@ -173,11 +173,11 @@ let rec pp_concept_type cx ctx names frame (t : Modtype_concept.concept_type) : 
   | Plain ty -> pp_type ctx ty
 
 (** One line of a module-type concept's [requires] clause
-    ({!Modtype_concept.requirement}).  A nullary value may be a static data
+    ({!Cpp_ast.Modtype_concept.requirement}).  A nullary value may be a static data
     member or, inside a template where it becomes a Meyers singleton, a
     nullary accessor; which one a functor body uses is decided by
     per-reference resolution later, so both are accepted. *)
-let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
+let pp_requirement cx ctx names frame : Cpp_ast.Modtype_concept.requirement -> Pp.t =
   let name key = name_in ctx names frame key in
   let pp_concept_type = pp_concept_type cx ctx names frame in
   function
@@ -261,18 +261,18 @@ let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
     ++ fnl ()
 
 (** What a module type contributes where a concept body is expected
-    ({!Modtype_concept.constraint_}), with the concepts of the module types
+    ({!Cpp_ast.Modtype_concept.constraint_}), with the concepts of the module types
     nested in it, which are declared ahead of the concept it is the body of,
     innermost first.  An anonymous signature's requirements are printed with
     the signature and the functor parameters visible in it visible, which
     is the frame [names] names them at. *)
-let rec pp_constraint cx ctx names frame : Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
+let rec pp_constraint cx ctx names frame : Cpp_ast.Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
   | Named kn -> ([], Name (Base.Cpp_name.pp (name_in ctx names frame (Module kn))))
   | Requirements {signature; parameters; items} ->
     let entered = Unit_plan.Cpp_resolution.Signature {signature; parameters} in
     let frame = entered :: frame in
     enter_from ctx entered @@ fun ctx ->
-    let item (hoisted, reqs) : Modtype_concept.item -> _ = function
+    let item (hoisted, reqs) : Cpp_ast.Modtype_concept.item -> _ = function
       | Requirement req -> (hoisted, pp_requirement cx ctx names frame req :: reqs)
       | Nested (path, c) ->
         let inner, nested = pp_constraint cx ctx names frame c in
@@ -286,7 +286,7 @@ let rec pp_constraint cx ctx names frame : Modtype_concept.constraint_ -> Pp.t l
 
 (** The [std::same_as] constraints the [with Definition] refinements of a
     module type conjoin onto the concept it refines
-    ({!Modtype_concept.Alias}): [BASE with Definition t := nat] asks for
+    ({!Cpp_ast.Modtype_concept.Alias}): [BASE with Definition t := nat] asks for
     [std::same_as<typename M::t, uint64_t>] on top of [BASE]'s concept. *)
 let pp_refinements ctx refinements =
   let clauses =
@@ -309,7 +309,7 @@ let pp_refinements ctx refinements =
     of it, naming what [names] names.  The concept is over [M], the module
     it constrains, and over [params], the parameters of a functor declaring
     it, which its requirements may mention. *)
-let pp_modtype_concept cx ctx ~names ~params path (c : Modtype_concept.t) =
+let pp_modtype_concept cx ctx ~names ~params path (c : Cpp_ast.Modtype_concept.t) =
   let here key = Base.Cpp_name.pp (name_in ctx names [] key) in
   let name = here (Modtype_concept_declared path) in
   let head =

@@ -1423,7 +1423,7 @@ let concept cx ~module_ r fields =
 
 (** The concept of each module type, generated ahead of the files where
     the header writes it, by the module type's path. *)
-let modtype_concepts_generated : (ModPath.t * Modtype_concept.t) list MPmap.t ref =
+let modtype_concepts_generated : (ModPath.t * Cpp_ast.Modtype_concept.t) list MPmap.t ref =
   Base.State.cell Base.State.Unit MPmap.empty
 
 (** [modtype_concept path ~params mt] is the concept of the module type
