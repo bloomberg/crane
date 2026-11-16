@@ -3,7 +3,7 @@
 
 (** Test sigma type precondition extraction *)
 
-From Coq Require Import Arith PeanoNat.
+From Stdlib Require Import Arith PeanoNat.
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 

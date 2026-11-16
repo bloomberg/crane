@@ -11,7 +11,7 @@
     varies. *)
 
 From Crane.Mapping Require Import Std.
-Require Import String List.
+From Stdlib Require Import String List.
 
 Module LoopifyFrameReceiverPtr.
 

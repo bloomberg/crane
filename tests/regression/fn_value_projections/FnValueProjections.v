@@ -6,7 +6,7 @@
     definition was emitted with an erased signature over [std::any]. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import NatIntStd.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module FnValueProjections.

@@ -1633,9 +1633,7 @@ let safe_pr_long_global r =
     | _ -> assert false )
 
 let pr_long_mp mp =
-  try
-    let lid = DirPath.repr (Nametab.dirpath_of_module mp) in
-    str (String.concat "." (List.rev_map Id.to_string lid))
+  try pr_path (Nametab.path_of_module mp)
   with Not_found ->
     str (ModPath.to_string mp)
 
@@ -4150,7 +4148,7 @@ let extract_numeral r fmt =
         try Some (Nametab.locate (Libnames.qualid_of_string qstr))
         with Not_found ->
           (* Fallback: try in the inductive's own directory *)
-          let ind_dir = Libnames.dirpath ind_path in
+          let ind_dir = Libnames.(pop_dirpath (dirpath_of_path ind_path)) in
           let qid = Libnames.make_qualid ind_dir (Names.Id.of_string name) in
           try Some (Nametab.locate qid) with Not_found -> None)
         converter_names

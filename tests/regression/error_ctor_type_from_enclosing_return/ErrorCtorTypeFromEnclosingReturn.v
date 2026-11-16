@@ -28,7 +28,7 @@
    parameter a second place to come from. *)
 
 From Crane Require Import Extraction.
-Require Import PeanoNat.
+From Stdlib Require Import PeanoNat.
 
 (* An error monad whose failure constructor says nothing about the payload
    type: [A] occurs in neither [Err]'s argument nor its arity. *)

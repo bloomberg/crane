@@ -149,7 +149,7 @@ let declared_functor_scope f =
         | MoreFunctor (mbid, _, body) -> params (MPbound mbid :: acc) body
         | NoFunctor sign -> (List.rev acc, sign)
       in
-      match (Declareops.mod_expr mb, params [] mb.mod_type) with
+      match (Mod_declarations.mod_expr mb, params [] (Mod_declarations.mod_type mb)) with
       | (FullStruct | Struct _), ((_ :: _ as ps), sign)
         when List.exists (function _, Declarations.SFBmodtype _ -> true | _ -> false) sign ->
         Some {Module_plan.functor_ = f; args = ps}

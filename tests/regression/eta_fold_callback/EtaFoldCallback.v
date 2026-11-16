@@ -6,7 +6,7 @@
     two-argument constraint on the generated [fold_right]. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import NatIntStd.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module EtaFoldCallback.

@@ -6,7 +6,7 @@
     v} *)
 
 From Crane.Mapping Require Import Std.
-Require Import BinPos.
+From Stdlib Require Import BinPos.
 
 Module MissingInductivePosMask.
 

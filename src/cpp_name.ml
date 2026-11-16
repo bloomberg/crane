@@ -140,7 +140,7 @@ let written doc =
     match Pp.repr d with
     | Pp.Ppcmd_empty | Ppcmd_comment _ -> ()
     | Ppcmd_print_break _ | Ppcmd_force_newline -> Buffer.add_char run ' '
-    | Ppcmd_string s -> Buffer.add_string run s
+    | Ppcmd_string s | Ppcmd_sized_string (_, s) -> Buffer.add_string run s
     | Ppcmd_glue ds -> List.iter go ds
     | Ppcmd_box (_, d) -> go d
     | Ppcmd_tag (tag, _) when String.equal tag Doc_comments.tag -> ()

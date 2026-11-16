@@ -17,7 +17,7 @@ From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
 From ITree Require Import ITree.
 From ExtLib Require Import Structures.Monad.
-Require Import PeanoNat.
+From Stdlib Require Import PeanoNat.
 
 Import MonadNotation.
 Local Open Scope monad_scope.

@@ -256,7 +256,7 @@ let starts_with_doc_comment t =
     | p :: rest -> (
       match Pp.repr p with
       | Ppcmd_empty | Ppcmd_print_break _ -> first_output rest
-      | Ppcmd_string text -> Some (String.starts_with ~prefix:"///" text)
+      | Ppcmd_string text | Ppcmd_sized_string (_, text) -> Some (String.starts_with ~prefix:"///" text)
       | Ppcmd_glue parts -> (
         match first_output parts with Some _ as result -> result | None -> first_output rest )
       | Ppcmd_box (_, contents) | Ppcmd_tag (_, contents) -> (

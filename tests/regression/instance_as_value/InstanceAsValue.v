@@ -6,7 +6,7 @@
     plugin raises an anomaly instead of extracting it. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import NatIntStd.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module InstanceAsValue.

@@ -63,9 +63,9 @@ let pending_cpp_meta_fills : (Core.Extracted.Meta.t * Core.Type.extracted) list 
 let type_of env sg c =
   Retyping.get_type_of ~polyprop:false env sg (Termops.strip_outer_cast sg c)
 
-(** The sort family of [c]'s type, outer casts stripped. *)
+(** The sort quality of [c]'s type, outer casts stripped. *)
 let sort_of env sg c =
-  Retyping.get_sort_family_of
+  Retyping.get_sort_quality_of
     ~polyprop:false
     env
     sg
@@ -101,11 +101,11 @@ type flag = info * scheme
 (** {2 [flag_of_type] transforms a type [t] into a [flag]. Really important
     function} *)
 
-let info_of_family = function
-  | InSProp | InProp -> Logic
-  | InSet | InType | InQSort -> Info
+let info_of_quality = function
+  | UnivGen.QualityOrSet.Qual (QConstant (QSProp | QProp)) -> Logic
+  | Set | Qual (QConstant QType | QVar _) -> Info
 
-let info_of_sort s = info_of_family (Sorts.family s)
+let info_of_sort s = info_of_quality (UnivGen.QualityOrSet.of_sort s)
 
 (** The {!flag} of a term of type [t]: [t] is reduced and its products are
     stripped; a sort at the end makes the term a [TypeScheme]. *)
@@ -115,7 +115,7 @@ let rec flag_of_type env sg t : flag =
   | Prod (x, t, c) ->
     flag_of_type (EConstr.push_rel (LocalAssum (x, t)) env) sg c
   | Sort s -> (info_of_sort (EConstr.ESorts.kind sg s), TypeScheme)
-  | _ -> (info_of_family (sort_of env sg t), Default)
+  | _ -> (info_of_quality (sort_of env sg t), Default)
 
 (** {2 Two particular cases of [flag_of_type]} *)
 
@@ -162,7 +162,7 @@ let arg_survives_extraction env sg a =
        environment and its position must be kept regardless. *)
     true
   else
-    try info_of_family (sort_of env sg (type_of env sg a)) != Logic
+    try info_of_quality (sort_of env sg (type_of env sg a)) != Logic
     with Retyping.RetypeError _ -> true
 
 (** The class-argument shape an applied term writes ({!Table.class_arg}), if
@@ -385,10 +385,7 @@ let db_from_sign s =
     higher-kinded case included -- and everything else is a value or a proof. *)
 let rec returns_type_sort c =
   match Constr.kind c with
-  | Sort s -> (
-    match Sorts.family s with
-    | Sorts.InType | Sorts.InSet | Sorts.InQSort -> true
-    | Sorts.InProp | Sorts.InSProp -> false )
+  | Sort s -> info_of_sort s == Info
   | Prod (_, _, body) -> returns_type_sort body
   | _ -> false
 
@@ -407,7 +404,7 @@ let rec returns_type_sort c =
     are the one type variable, and a named binder therefore takes the number
     its name already has. *)
 let db_from_rel_context env =
-  let outer_first = List.rev env.env_rel_context.env_rel_ctx in
+  let outer_first = List.rev (Environ.rel_context env) in
   let seen = ref [] in
   snd
     (List.fold_left
@@ -701,7 +698,7 @@ and extract_spine env sg db j c args =
       binder ~tvar:None (Some dom)
         (arrow (lazy dom) (extract_spine env' sg (0 :: db) j d [])) )
   | Sort _ -> leaf (Core.Type.Erased Core.Erasure_reason.Type_argument) (* The two logical cases. *)
-  | _ when info_of_family (sort_of env sg (applistc c args)) == Logic ->
+  | _ when info_of_quality (sort_of env sg (applistc c args)) == Logic ->
     leaf (Core.Type.Erased Core.Erasure_reason.Proof)
   | Rel n ->
     ( match EConstr.lookup_rel n env with
@@ -2470,7 +2467,7 @@ and extract_case env sg type_env (((kn, i) as ip), c, br) extracted_ty =
   else (* [c] has an inductive type, and is not a type scheme type. *)
     let t = type_of env sg c in
     (* The only non-informative case: [c] is of sort [Prop]/[SProp] *)
-    if info_of_family (sort_of env sg t) == Logic then (
+    if info_of_quality (sort_of env sg t) == Logic then (
       add_recursors env kn;
       (* May have passed unseen if logical ... *)
       (* Logical singleton case: *)
@@ -2984,7 +2981,7 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
   current_fixpoints := kns;
   Fun.protect ~finally:(fun () -> current_fixpoints := []) (fun () ->
   for i = 0 to n - 1 do
-    if info_of_family (sort_of env sg ti.(i)) != Logic then
+    if info_of_quality (sort_of env sg ti.(i)) != Logic then
       try
         let e, t =
           extract_std_constant

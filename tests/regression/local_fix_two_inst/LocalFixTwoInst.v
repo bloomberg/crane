@@ -6,7 +6,7 @@
     monomorphically, so the second instantiation does not type-check. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module LocalFixTwoInst.

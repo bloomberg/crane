@@ -6,7 +6,7 @@
     element, and clang exhausts its parser stack on the result. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module DeepLiteralNesting.
