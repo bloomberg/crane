@@ -27,7 +27,7 @@
       the Core structure, simplified.
     + {b Planning}, as values: the unit's {!Program_facts} and its
       {!Target_plan} -- the unit's configuration, which the unit's context
-      hands to every later stage ({!Unit_context}), the inductive kinds, recorded in the
+      hands to every later stage ({!Unit_plan.Context}), the inductive kinds, recorded in the
       structure ({!Target_plan.record_kinds}), then, once the unit's
       preparation has run, the template-parameter kinds.
     + {b Layout} ([Base.Common.Plan]): {!Cpp.prepare_structure} runs

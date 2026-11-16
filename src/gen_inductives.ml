@@ -759,8 +759,8 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
      [], _)] with [Entity (func_ref, all_type_args, _)].
 
      The type args must be in the ORIGINAL tys order (matching the
-     inductive's variable positions {!Cpp_names.method_type_args} filters out
-     at the call site, {!Cpp_state.lookup_method_ind_tvar_positions}).
+     inductive's variable positions {!Unit_plan.Cpp_names.method_type_args} filters out
+     at the call site, {!Unit_plan.Cpp_state.lookup_method_ind_tvar_positions}).
      Position i in tys
      corresponds to Core.Type.Variable (i+1) in the original Core type. After remapping, Core.Type.Variable
      (i+1) → remap_core_tvar(i+1). We construct the C++ type arg from
@@ -840,7 +840,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
      custom text names its type arguments, and the signature recorded on a
      call to it, only where the text spells them: not at all, here.  A method
      callee, this one's own self-call included, is written on its receiver
-     with only the type arguments {!Cpp_names.method_type_args} keeps: the
+     with only the type arguments {!Unit_plan.Cpp_names.method_type_args} keeps: the
      ones the receiver carries and the ones its head dropped are not. *)
   let stmt_has_tvar name stmts =
     let found = ref false in
@@ -853,8 +853,8 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
       match e with
       | Entity (_, _, Some {inline = Some _; _}) -> ()
       | Call (_, Entity (_, _, Some {inline = Some _; _}), args) -> List.iter on_expr args
-      | Entity (r, tys, ci) when Cpp_names.lookup_method_this_pos r <> None ->
-        let tys = Cpp_names.method_type_args (Translation_state.callables cx) r tys in
+      | Entity (r, tys, ci) when Unit_plan.Cpp_names.lookup_method_this_pos r <> None ->
+        let tys = Unit_plan.Cpp_names.method_type_args (Translation_state.callables cx) r tys in
         Cpp_ir.Children.expr (Lazy.force visitor) (Entity (r, tys, ci))
       | e -> Cpp_ir.Children.expr (Lazy.force visitor) e
     in
@@ -1002,7 +1002,7 @@ let gen_single_method cx name vars ((func_ref, _, _, _) as candidate) =
     says so. *)
 let gen_methods cx ?(merged = false) name vars candidates =
   let merged =
-    merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
+    merged || Option.cata (fun r -> globref_equal r name) false !Unit_plan.Cpp_state.eponymous_promote_ref
   in
   Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context cx) ~merged name vars
     (List.concat_map

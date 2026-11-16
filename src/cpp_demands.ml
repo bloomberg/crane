@@ -8,7 +8,7 @@ let of_external name =
   if String.equal name Cpp_ir.Crane_rt.small_vector then Some Base.Table.small_vector_header
   else if String.equal name Cpp_ir.Crane_rt.itree then Some Base.Table.itree_header
   else if String.equal name Cpp_ir.Crane_rt.field then Some (Base.Table.Runtime Cpp_ir.Crane_rt.field_header)
-  else if String.equal name (Cpp_state.std_namespace () ^ "::optional") then Some (Base.Table.Standard "optional")
+  else if String.equal name (Unit_plan.Cpp_state.std_namespace () ^ "::optional") then Some (Base.Table.Standard "optional")
   else if String.equal name "std::vector" then Some (Base.Table.Standard "vector")
   else if String.equal name Cpp_ir.Crane_rt.constant_tc then Some (Base.Table.Runtime Cpp_ir.Crane_rt.obj_header)
   else if String.equal name Cpp_ir.Crane_rt.shared_box || String.equal name Cpp_ir.Crane_rt.shared_or then
@@ -41,7 +41,7 @@ module Ir = struct
 
   let at_type_variable : ty -> bool = function Variable _ | Apply (Variable _, _) -> true | _ -> false
 
-  let collect ?(unit = Unit_context.detached) ?(global = ignore) ?(promoted = ignore)
+  let collect ?(unit = Unit_plan.Context.detached) ?(global = ignore) ?(promoted = ignore)
       ?(tyctor = fun ~vl:_ ~owner:_ _ -> ()) ?(vl = []) visit =
     let found = ref [] in
     (* The names of the template parameters the type variables written are
@@ -56,7 +56,7 @@ module Ir = struct
     let std h = need (Base.Table.Standard h) in
     let rt h = need (Base.Table.Runtime h) in
     let obj () = rt Cpp_ir.Crane_rt.obj_header in
-    let variant () = need (Cpp_state.std_names_of unit).variant_header in
+    let variant () = need (Unit_plan.Cpp_state.std_names_of unit).variant_header in
     let erase_fn () = need Base.Table.erase_fn_header in
     let string_literal : expr -> unit = function Literal (String _) -> std "string" | _ -> () in
     let rec ty (t : ty) =
@@ -120,7 +120,7 @@ module Ir = struct
       | Lambda {capture = Written (By_copy {moved = _ :: _; _}); _} -> std "utility"
       | Allocate (Heap, _) -> std "memory"
       | Allocate (Arena_scoped, _) ->
-        if Unit_context.non_atomic_rc unit then std "memory"
+        if Unit_plan.Context.non_atomic_rc unit then std "memory"
         else if not (String.equal (Base.Table.std_lib ()) "BDE") then need Base.Table.arena_header
       | Converting_construct (t, _) when at_type_variable t -> obj ()
       | Conditional (_, Call (_, Allocate (Heap, _), _), Literal Null_pointer) -> std "memory"

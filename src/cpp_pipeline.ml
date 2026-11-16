@@ -97,7 +97,7 @@ let scrutinees = Base.Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutine
 let captures = Base.Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Base.Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
 
-type control_check = unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit
+type control_check = unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run, over a
     declaration of the unit [u]. *)
@@ -186,10 +186,10 @@ let instantiation_passes u =
   [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; captures; initialisers]
 
 let pass_names =
-  Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_context.detached)
+  Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)
   @ [seam]
-  @ Base.Pipeline_trace.names (settled_passes Unit_context.detached)
-  @ Base.Pipeline_trace.names (instantiation_passes Unit_context.detached)
+  @ Base.Pipeline_trace.names (settled_passes Unit_plan.Context.detached)
+  @ Base.Pipeline_trace.names (instantiation_passes Unit_plan.Context.detached)
 
 (** {2 What the printer is not owed}
 
@@ -221,14 +221,14 @@ let describe : obligation -> string = function
   | Implicit_boxed_read -> "an implicit boxed read, owed by " ^ boxed_reads.name
   | Missing_template_argument -> "a mapping's unsupplied type argument, owed by " ^ template_args.name
   | Unlowered_method_call ->
-    "a method called as a function, owed by " ^ (method_calls Unit_context.detached).name
+    "a method called as a function, owed by " ^ (method_calls Unit_plan.Context.detached).name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
   | Unlowered_conditional -> "a choice written as an invoked lambda, owed by " ^ conditionals.name
   | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
   | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
   | Uninstantiated_mapping -> "an uninstantiated mapping, owed by " ^ foreign.name
   | Unlowered_qualifier -> "a type qualifier in value position, owed by " ^ qualifiers.name
-  | Unslotted_pointer -> "a pointer's unchosen slot, owed by " ^ (pointer_slots Unit_context.detached).name
+  | Unslotted_pointer -> "a pointer's unchosen slot, owed by " ^ (pointer_slots Unit_plan.Context.detached).name
   | Unnamed_scrutinee -> "a match's unnamed scrutinee, owed by " ^ scrutinees.name
   | Undecided_capture -> "an undecided lambda capture, owed by " ^ captures.name
   | Capture_outside_a_block -> "a capturing lambda in an initialiser, owed by " ^ initialisers.name

@@ -27,8 +27,8 @@ open Pp
 open Names
 open Base.Table
 open Base.Common
-open Cpp_state
-open Cpp_names
+open Unit_plan.Cpp_state
+open Unit_plan.Cpp_names
 module I = Cpp_ir
 
 type ty = I.Resolved.Type.t
@@ -108,7 +108,7 @@ let writes_variant ctx = writes (sn ctx.unit).variant_header
 
 
 (** A name of Crane's runtime or of the standard library the configuration
-    selects, written in full as {!Cpp_ir.Crane_rt} and {!Cpp_state.sn} spell it:
+    selects, written in full as {!Cpp_ir.Crane_rt} and {!Unit_plan.Cpp_state.sn} spell it:
     every qualifier such a name has is a namespace. *)
 let library_name s =
   match List.rev (Str.split (Str.regexp_string "::") s) with
@@ -238,9 +238,9 @@ let ctor_alias_tvar = Base.Generated_name.role "TcArg"
     spell.  Its body has the captured names replaced by the holder's own, so
     two declarations that differ only in what they call their parameters
     share one holder. *)
-type ctor_alias = Cpp_state.ctor_alias = {
+type ctor_alias = Unit_plan.Cpp_state.ctor_alias = {
   base : string;  (** What its name is made from. *)
-  holder : Cpp_state.holder_parameter list option;  (** A holder's parameters, where it is one. *)
+  holder : Unit_plan.Cpp_state.holder_parameter list option;  (** A holder's parameters, where it is one. *)
   declared : Cpp_ast.declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
   body : string;
       (** The type it abbreviates, as written where it is declared, with the
@@ -256,7 +256,7 @@ type ctor_alias = Cpp_state.ctor_alias = {
 let ctor_aliases_spelled : ctor_alias list ref = ref []
 
 (** [a] spelled at [ctx]: collected where the position collects
-    ({!Cpp_state.render_ctx.aliases}), and otherwise, under
+    ({!Unit_plan.Cpp_state.render_ctx.aliases}), and otherwise, under
     [CRANE_CHECK_IR], noted as spelled in the file. *)
 let note_ctor_alias_spelled ctx a =
   let add spelled = if not (List.mem a !spelled) then spelled := !spelled @ [a] in
@@ -363,7 +363,7 @@ let rec member_kind : ty -> _ = function
     file-scope [using iptr = std::any;], and some unrelated struct's hoisted
     body must resolve [iptr] to that alias rather than claim it as a member it
     never declared.  The position says which promoted variables' aliases its
-    file declares at file scope ({!Cpp_state.out_of_line}); the variable is
+    file declares at file scope ({!Unit_plan.Cpp_state.out_of_line}); the variable is
     the alias's identity, one alias serving every class field of that name.
 
     Those aliases only {i withhold} the qualifier, and a file-scope alias
@@ -397,16 +397,16 @@ type written_head = {
 let unqualified_head head = {outer = []; head; typename = false; template_keyword = false}
 
 (** [h] written with template arguments after it if [applied]. *)
-let written_head ~applied (h : Cpp_resolution.head) =
+let written_head ~applied (h : Unit_plan.Cpp_resolution.head) =
   {outer = h.outer; head = h.head; typename = h.typename; template_keyword = applied && h.templated}
 
 (** The head of the type [Entity_application (r, tys, _)] that no custom mapping inlines,
     [applied] when [tys] is not empty. *)
-let glob_head ctx r ~applied = written_head ~applied (Cpp_names.type_head ctx Glob_head r)
+let glob_head ctx r ~applied = written_head ~applied (Unit_plan.Cpp_names.type_head ctx Glob_head r)
 
 (** The head of the inductive type [In_namespace (r, Entity_application (r, args, _))],
     [applied] when [args] is not empty. *)
-let inductive_head ctx r ~applied = written_head ~applied (Cpp_names.type_head ctx Inductive_head r)
+let inductive_head ctx r ~applied = written_head ~applied (Unit_plan.Cpp_names.type_head ctx Inductive_head r)
 
 (** [h] written, the [typename] it asks for only if [lead]. *)
 let pp_written_head ~lead h =
@@ -501,7 +501,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes_obj ();
       pp_library_name Cpp_ir.Crane_rt.obj
     | Entity_application (r, tys, _) ->
-      ( match Cpp_names.inline_custom_text ctx r with
+      ( match Unit_plan.Cpp_names.inline_custom_text ctx r with
       (* A mapped type is instantiated before it is printed
          ({!Cpp_erasure.instantiate_foreign}, {!Cpp_erasure.instantiate_type}
          for one written outside a declaration), and one mapped to nothing
@@ -532,7 +532,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       | _ ->
         (* Fallback: generic namespace-qualified type *)
         leading_typename
-        ++ Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Cpp_names.inductive_scope ctx r)
+        ++ Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Unit_plan.Cpp_names.inductive_scope ctx r)
         ++ pp_rec false t )
     | (Member _ | Apply (Member _, _)) as qualified_ty ->
       (* An associated type may itself be an alias template — the carrier of a
@@ -644,7 +644,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       note_ctor_alias_spelled ctx alias;
       let name = ctor_alias_name alias in
       if Option.has_some alias.holder then
-        let arg : Cpp_state.holder_argument -> _ = function
+        let arg : Unit_plan.Cpp_state.holder_argument -> _ = function
           | Captured_variable (i, name) -> pp_rec false (Variable (Index (i, name)))
           | Captured_instance id -> Id.print id
         in
@@ -682,7 +682,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', _, _)) when globref_equal r r' ->
       pp_written_head ~lead:false (inductive_head ctx r' ~applied:true)
     | In_namespace (r, t) ->
-      Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Cpp_names.inductive_scope ctx r) ++ template_name t
+      Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Unit_plan.Cpp_names.inductive_scope ctx r) ++ template_name t
     | Shared_pointer _ ->
       writes_standard "memory";
       pp_library_name (sn ctx.unit).shared_ptr
@@ -702,7 +702,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
 (** How the type constructor [t] (the constructor of the template template
     argument written), naming the variables [vl] by index, is written at
     [ctx]: as the plan of the leaf being printed says, or as planning, which
-    is spelling it, decides ({!Cpp_state.tyctor_plan}).  The printer decides
+    is spelling it, decides ({!Unit_plan.Cpp_state.tyctor_plan}).  The printer decides
     none: a synthesised template's body is written where the template is
     declared, which only planning renders.  Under [CRANE_CHECK_IR] a
     constructor planning notes twice must be decided alike. *)
@@ -798,7 +798,7 @@ and pp_cpp_expr ctx env args (t : expr) =
       | GlobRef.IndRef _ -> named (inductive_value ctx x)
       | GlobRef.VarRef v -> named (Base.Cpp_name.unqualified (Id.to_string v))
       | _ -> (
-        match Cpp_names.value_reference ctx x with
+        match Unit_plan.Cpp_names.value_reference ctx x with
         | Named_value {name; type_arguments = true} -> named name
         | Named_value {name; type_arguments = false} -> Base.Cpp_name.pp name
         | Record_member {record; type_params} ->
@@ -814,7 +814,7 @@ and pp_cpp_expr ctx env args (t : expr) =
           ++ match tys with [] -> str func_name | _ -> str "template " ++ str func_name ++ type_args () )
     in
     let full_name =
-      match Cpp_names.access ctx x with
+      match Unit_plan.Cpp_names.access ctx x with
       | Variable -> full_name
       | Either_form ->
         (* Reached through a bound module parameter, whose member shape is not
@@ -944,7 +944,7 @@ and pp_cpp_expr ctx env args (t : expr) =
        non-atomic pointers has its pointer's factory instead, chosen at the
        seam ({!Cpp_erasure.lower_pointer_slots}). *)
     ( if Base.Probe.checking () then
-        if Unit_context.non_atomic_rc ctx.unit then
+        if Unit_plan.Context.non_atomic_rc ctx.unit then
           CErrors.anomaly (Pp.str "pp_cpp_expr: an arena allocation of a non-atomic pointer reached the printer") );
     let inner = pp_cpp_type ctx false [] t in
     if Base.Table.std_lib () = "BDE" then
@@ -961,7 +961,7 @@ and pp_cpp_expr ctx env args (t : expr) =
       | [] -> mt ()
       | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
     in
-    let struct_name = Cpp_names.built_struct ctx id in
+    let struct_name = Unit_plan.Cpp_names.built_struct ctx id in
     typename_prefix_for ctx struct_name
     ++ Base.Cpp_name.pp struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
   | Local_aggregate {struct_ = id; type_args = tys; values = es} ->
@@ -991,7 +991,7 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Literal (Uint63 x) ->
     (* Spelled through the mapping of the primitive type. *)
     let s = Uint63.to_string x in
-    let mapped = Option.bind (uint63_type ()) (Cpp_names.inline_custom_text ctx) in
+    let mapped = Option.bind (uint63_type ()) (Unit_plan.Cpp_names.inline_custom_text ctx) in
     ( match mapped with
     | Some "int64_t" -> str ("INT64_C(" ^ s ^ ")")
     | Some cpp_type -> str (cpp_type ^ "(" ^ s ^ ")")
@@ -1093,8 +1093,8 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Enum_value (ind, ctor) ->
     (* [EnumType::Constructor] for an enum class value, the enum named as
        resolution qualifies it where it is written
-       ({!Cpp_names.enumerator_qualifier}). *)
-    Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Cpp_names.enumerator_qualifier ctx Enumerator_value ind)
+       ({!Unit_plan.Cpp_names.enumerator_qualifier}). *)
+    Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Unit_plan.Cpp_names.enumerator_qualifier ctx Enumerator_value ind)
     ++ Id.print ctor
   | Literal Null_pointer -> str "nullptr"
   | In_place ->
@@ -1332,8 +1332,8 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
   | Switch {scrutinee = scrut; enum = ind; branches; default} ->
     (* A switch over an enum class, each case label qualified with the enum
        as resolution names it at a case label
-       ({!Cpp_names.enumerator_qualifier}). *)
-    let type_name = Base.Cpp_name.pp (Cpp_names.enumerator_qualifier ctx Case_label ind) in
+       ({!Unit_plan.Cpp_names.enumerator_qualifier}). *)
+    let type_name = Base.Cpp_name.pp (Unit_plan.Cpp_names.enumerator_qualifier ctx Case_label ind) in
     let ends_with_return (stmts : stmt list) =
       match List.rev stmts with
       | Return _ :: _ -> true
@@ -1837,7 +1837,7 @@ let pp_template_type ctx : I.Resolved.phase I.Template.Parameter_kind.t -> _ = f
          (List.init arity Fun.id)
     ++ str "> class"
   | Invocable _ -> str "typename"
-  | Concept (concept, _) when Cpp_names.held_back_concept ctx concept ->
+  | Concept (concept, _) when Unit_plan.Cpp_names.held_back_concept ctx concept ->
     str "typename"
   | Concept (concept, []) -> pp_concept_name_of_ref ctx concept
   | Concept (_, _ :: _) ->
@@ -1913,7 +1913,7 @@ let pp_requires_of_tparams ctx tparams =
             ++ str ">"
           in
           Some (prlist_with_sep (fun () -> str " && ") clause invs)
-        | Concept (concept, _) when Cpp_names.held_back_concept ctx concept -> None
+        | Concept (concept, _) when Unit_plan.Cpp_names.held_back_concept ctx concept -> None
         | Concept (concept, (_ :: _ as args)) ->
           (* Multi-parameter concept constraint: [C<_tcI0, T1, …>].  The
              constrained parameter [id] is the first concept argument, the
@@ -2366,7 +2366,7 @@ let pp_meyers_singleton ctx env id (ty : ty) expr_pp =
   ++ str "}"
 
 (** The name the struct wrapping [id] at namespace scope is written under at
-    the position [ctx] ({!Cpp_names.wrapper_name_from}). *)
+    the position [ctx] ({!Unit_plan.Cpp_names.wrapper_name_from}). *)
 let nspace_wrapper_name ctx id = wrapper_name_from (declared_name ctx) id
 
 (** Whether the wrapper [w] of the declaration [members] and the struct
@@ -2389,10 +2389,10 @@ let nspace_merges ctx (w : I.Decl.Namespace.wrapper) (members : decl list) =
   w.merges
 
 (** The name the struct of [id] is defined under. *)
-let struct_definition_name ctx id = Base.Cpp_name.pp (Cpp_names.definition_name ctx Struct_definition id)
+let struct_definition_name ctx id = Base.Cpp_name.pp (Unit_plan.Cpp_names.definition_name ctx Struct_definition id)
 
 (** The name the scoped enum of [r] is defined under. *)
-let enum_definition_name ctx r = Base.Cpp_name.pp (Cpp_names.definition_name ctx Enum_definition r)
+let enum_definition_name ctx r = Base.Cpp_name.pp (Unit_plan.Cpp_names.definition_name ctx Enum_definition r)
 
 (** The forward declaration of a struct or a scoped enum defined later: a
     struct's template head repeats the definition's constraint
@@ -2412,7 +2412,7 @@ let start_file_scope_census () = file_scope_types_written := GlobRef.Set.empty
     scope must be the ones planned for it. *)
 let check_file_scope_types ~file =
   if Base.Probe.checking () then begin
-    let written = !file_scope_types_written and planned = Cpp_state.file_scope_types_of file in
+    let written = !file_scope_types_written and planned = Unit_plan.Cpp_state.file_scope_types_of file in
     file_scope_types_written := GlobRef.Set.empty;
     if not (GlobRef.Set.equal written planned) then
       let refs s = Pp.prlist_with_sep Pp.pr_comma GlobRef.print (GlobRef.Set.elements s) in
@@ -2689,7 +2689,7 @@ and pp_leaf_decl ctx env (d : decl) =
       printed_nested_struct (Pp.string_of_ppcmds struct_name) (Global id);
     let f_s =
       entering_from ctx
-        (Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
+        (Unit_plan.Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
         (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env fields)
     in
     let tmpl = struct_template_head ~pp_param:(pp_template_param ctx) ctx env tparams cstr in
@@ -2747,9 +2747,9 @@ and pp_leaf_decl ctx env (d : decl) =
       let static_kw =
         match (ctx.in_struct, literal) with
         | true, true -> str "static constexpr "
-        | true, false when Cpp_names.read_by_a_function ctx id -> str "[[gnu::used]] static inline "
+        | true, false when Unit_plan.Cpp_names.read_by_a_function ctx id -> str "[[gnu::used]] static inline "
         | true, false -> str "static inline "
-        | false, false when Cpp_names.read_by_a_function ctx id -> str "[[gnu::used]] inline "
+        | false, false when Unit_plan.Cpp_names.read_by_a_function ctx id -> str "[[gnu::used]] inline "
         | false, true -> str "inline constexpr "
         | false, false -> mt ()
       in
@@ -2818,7 +2818,7 @@ and pp_leaf_decl ctx env (d : decl) =
         sname ++ str "<" ++ pp_list (fun (_, id) -> Id.print id) tps ++ str ">"
     in
     entering_from ctx
-      ((if dm_tparams = [] then [] else [Cpp_resolution.In_template]) @ [Inductive_struct dm_owner])
+      ((if dm_tparams = [] then [] else [Unit_plan.Cpp_resolution.In_template]) @ [Inductive_struct dm_owner])
       (fun ctx ->
         pp_cpp_field ~struct_name:(str own_name) ctx ~mode:(Defined (qual, dm_tparams)) env
           (I.Field.of_out_of_line dm_field) )
@@ -2827,9 +2827,9 @@ and pp_leaf_decl ctx env (d : decl) =
       str (String.capitalize_ascii (str_global ctx Type ds.ref_))
     in
     entering_from ctx
-      ((Cpp_resolution.In_struct :: (if ds.type_params = [] then [] else [In_template])) @ [Inductive_struct ds.ref_])
+      ((Unit_plan.Cpp_resolution.In_struct :: (if ds.type_params = [] then [] else [In_template])) @ [Inductive_struct ds.ref_])
       (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env ds.fields)
-  | Static_assert (Concept_application (class_ref, _, _), None) when Cpp_names.held_back_concept ctx class_ref ->
+  | Static_assert (Concept_application (class_ref, _, _), None) when Unit_plan.Cpp_names.held_back_concept ctx class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it
        ({!Cpp_leaf_plan.held_back_assertions}). *)
@@ -2878,7 +2878,7 @@ and pp_leaf_decl ctx env (d : decl) =
 let read_cpp_decl ctx env d = pp_cpp_decl ctx env d
 
 (** The name [resolution] gives [key], checked at the position [ctx]
-    ({!Cpp_names.checked}); an unresolved name is an anomaly. *)
+    ({!Unit_plan.Cpp_names.checked}); an unresolved name is an anomaly. *)
 let resolved ctx key (resolution : Cpp_ast.resolution) =
   match resolution with Resolved n -> checked ctx key n | Unresolved -> unresolved key
 
@@ -2958,7 +2958,7 @@ let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
 
 (* The declaration of a synthesised template, its body written where it is
    declared, which is where it is printed, a holder's parameters as planned
-   ({!Cpp_state.holder_parameter}). *)
+   ({!Unit_plan.Cpp_state.holder_parameter}). *)
 let pp_synthesised ctx (s : Cpp_ast.synthesised) =
   let body = Pp.string_of_ppcmds (pp_cpp_type ctx false s.vars s.body) in
   if Base.Probe.checking () && not (String.equal body s.planned) then
@@ -3015,7 +3015,7 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
       match a with
       | Alias_of_type {target; definition; tparams} ->
         (tparams, Base.Cpp_name.pp (resolved ctx (Definition (definition, target.global)) target.name))
-      | Alias_of_module m -> ([], Cpp_names.module_struct_name_of (resolved_module ctx m))
+      | Alias_of_module m -> ([], Unit_plan.Cpp_names.module_struct_name_of (resolved_module ctx m))
     in
     let args =
       if tparams = [] then mt () else

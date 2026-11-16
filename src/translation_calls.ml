@@ -1931,7 +1931,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
           let cpp_ty = Translation_types.cpp_of_core cx env core_ty in
           if Cpp_ir.Types.prints_as_any cpp_ty then None
           else Some (var_name, cpp_ty)
-        ) (Unit_context.instance_promoted_types_of (Translation_state.unit_context cx) r)
+        ) (Unit_plan.Context.instance_promoted_types_of (Translation_state.unit_context cx) r)
       | _ -> []
     ) typeclass_core_args
   in

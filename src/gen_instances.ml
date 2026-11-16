@@ -239,7 +239,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
          call sites substitute, were planned before rendering
          ({!instance_promoted_types}). *)
       if Base.Probe.checking () then begin
-        let planned = Unit_context.instance_promoted_types_of (Translation_state.unit_context cx) name in
+        let planned = Unit_plan.Context.instance_promoted_types_of (Translation_state.unit_context cx) name in
         let generated = instance_promoted_types cx name body ty in
         if
           not

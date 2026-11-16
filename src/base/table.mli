@@ -46,7 +46,7 @@
       [erased_type_consts], [value_dep_type_schemes], [erased_fix_groups].
       A phase result: its owner is the extracted program.
     - {b Plan facts}: none is kept here; a unit's are fields of its context
-      ([Unit_context]).  The plan's decided kinds are recorded in
+      ([Unit_plan.Context]).  The plan's decided kinds are recorded in
       [inductive_kinds] ([Target_plan.record_kinds]).
     - {b Analysis results registered while a later phase runs}: [flat_inductives]
       and [enum_inductives] (registered by layout and generation, with a

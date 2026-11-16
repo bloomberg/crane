@@ -35,7 +35,7 @@ module IntSet = Core_plan.Escape.IntSet
     printer. *)
 let type_alias_rhs cx r vars ot =
   with_method_ns_for_locals cx @@ fun () ->
-  match Cpp_state.find_type_custom_opt r with
+  match Unit_plan.Cpp_state.find_type_custom_opt r with
   | Some (_ids, s) -> (Some (External (s, []) : Cpp_ir.Lowered.Type.t), None)
   | None -> (
     match ot with
@@ -55,13 +55,13 @@ let type_alias_rhs cx r vars ot =
 (** The kinds of the parameters [vars] of the type alias [r], whose body is
     [t], as {!gen_type_alias} declares them -- without recording them. *)
 let type_alias_kinds cx r vars t =
-  let vars = rename_tvars Cpp_state.keywords vars in
+  let vars = rename_tvars Unit_plan.Cpp_state.keywords vars in
   let rhs, _ = type_alias_rhs cx r vars (Some t) in
   snd (template_kinds ?applied:rhs vars [t])
 
 (** Build the [using] declaration for a type alias; see {!type_alias_rhs}. *)
 let gen_type_alias cx r vars ot =
-  let vars = rename_tvars Cpp_state.keywords vars in
+  let vars = rename_tvars Unit_plan.Cpp_state.keywords vars in
   let du_rhs, du_note = type_alias_rhs cx r vars ot in
   let du_tparams_head =
     hkt_templates ?applied:du_rhs r vars

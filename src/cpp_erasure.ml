@@ -52,7 +52,7 @@ module Types = Cpp_ir.Types
 (** Names introduced by [using X = std::any;].  Populated as declarations are
     walked, in the order they are emitted, so an alias is visible exactly where
     C++ would see it. *)
-let any_type_aliases : Id.Set.t ref = Cpp_state.owned_ref Id.Set.empty
+let any_type_aliases : Id.Set.t ref = Unit_plan.Cpp_state.owned_ref Id.Set.empty
 
 (** The member aliases the struct being walked declares.  A type-level
     declaration whose body erased -- a higher-kinded class field [memM] among
@@ -134,16 +134,16 @@ let tolerant (ty : ty) =
 (** [is_method n] -- [n] is rendered as a member function: one the registry
     found in its up-front scan, which every candidate a render collects is
     ({!Core_plan.Method_registry.planned_candidate}). *)
-let is_method (n : GlobRef.t) : bool = Cpp_state.is_registered_method n <> None
+let is_method (n : GlobRef.t) : bool = Unit_plan.Cpp_state.is_registered_method n <> None
 
 (** [returns_a_box e] -- [e] is a call whose result is declared [std::any], so
     reading it at a concrete type needs a cast.  Method results are the only
     boxed-return positions the registry tracks; an application through the
     erased convention counts too, since that convention hands back a box. *)
 let returns_a_box : expr -> bool = function
-  | Access_call (Arrow, Entity (n, _, _), _, _) -> Cpp_state.method_returns_any n
-  | Call (_, Entity (n, _, _), _) when is_method n -> Cpp_state.method_returns_any n
-  | Call (_, Project (_, n, _), _) -> Cpp_state.method_returns_any n
+  | Access_call (Arrow, Entity (n, _, _), _, _) -> Unit_plan.Cpp_state.method_returns_any n
+  | Call (_, Entity (n, _, _), _) when is_method n -> Unit_plan.Cpp_state.method_returns_any n
+  | Call (_, Project (_, n, _), _) -> Unit_plan.Cpp_state.method_returns_any n
   | Erased_call _ -> true
   | _ -> false
 
@@ -888,7 +888,7 @@ let pointer_slots u () =
       Type_member (External (Cpp_ir.Crane_rt.shared_box, [t]), Id.of_string "make")
     (* A unit of non-atomic pointers allocates in an arena through its own
        pointer's factory. *)
-    | Allocate (Arena_scoped, t) when Unit_context.non_atomic_rc u ->
+    | Allocate (Arena_scoped, t) when Unit_plan.Context.non_atomic_rc u ->
       Type_member (External (Cpp_ir.Crane_rt.rc, [t]), Id.of_string "make")
     | e -> e
   and fs s = Map.stmt (rw ()) s
@@ -1055,10 +1055,10 @@ let method_value u n (tys : ty list) pos : expr =
   let contains_tvar = Cpp_ir.Children.exists_type (function Variable _ | Auto -> true | _ -> false) in
   let spellable ty = if contains_tvar ty then None else Some ty in
   let receiver =
-    match Cpp_state.is_registered_method n with
+    match Unit_plan.Cpp_state.is_registered_method n with
     | None -> None
     | Some (epon_ref, _) ->
-      let positions = Cpp_state.lookup_method_ind_tvar_positions n in
+      let positions = Unit_plan.Cpp_state.lookup_method_ind_tvar_positions n in
       let ind_tys = List.filteri (fun i _ -> List.mem i positions) tys in
       (* Every one of the receiver's template parameters has to be recovered:
          an inductive spelled with too few is not a type. *)
@@ -1066,13 +1066,13 @@ let method_value u n (tys : ty list) pos : expr =
       else spellable (Entity_application (epon_ref, ind_tys, []))
   in
   let params, receiver_pos =
-    match Cpp_state.lookup_method_arity n with
+    match Unit_plan.Cpp_state.lookup_method_arity n with
     | arity when arity <= 1 -> ([receiver], 0)
     | arity ->
       (* The plan records the declared parameters in order, without the
          receiver's slot; each carries however many qualifiers the
          declaration gave it, and the lambda spells its own. *)
-      let declared = Option.default [] (Core_plan.Callable_abi.method_params u.Unit_context.callables n) in
+      let declared = Option.default [] (Core_plan.Callable_abi.method_params u.Unit_plan.Context.callables n) in
       let rec unqualified : ty -> ty = function Reference (_, t) | Const t -> unqualified t | t -> t in
       let param i =
         if i = pos then receiver
@@ -1087,7 +1087,7 @@ let method_value u n (tys : ty list) pos : expr =
       access = Dot;
       receiver = receiver_pos;
       params;
-      type_args = Cpp_names.method_type_args u.Unit_context.callables n tys }
+      type_args = Unit_plan.Cpp_names.method_type_args u.Unit_plan.Context.callables n tys }
 
 (* Whether a global is written as a function of its own, not a mapping's
    text. *)
@@ -1098,7 +1098,7 @@ let lower_method_calls u (d : settled) : settled =
   let rec fe (e : expr) : expr =
     match e with
     | Call (_, Entity (n, tys, ci), args) when not_inline ci -> (
-      match Cpp_names.lookup_method_this_pos n with
+      match Unit_plan.Cpp_names.lookup_method_this_pos n with
       | None -> Map.expr (rw ()) e
       | Some pos -> (
         match Base.Common.extract_at_pos pos args with
@@ -1114,11 +1114,11 @@ let lower_method_calls u (d : settled) : settled =
             match receiver with This -> (Arrow, This) | Dereference p -> (Arrow, p) | receiver -> (Dot, receiver)
           in
           let args = List.map fe rest in
-          let type_args = Cpp_names.method_type_args u.Unit_context.callables n tys in
+          let type_args = Unit_plan.Cpp_names.method_type_args u.Unit_plan.Context.callables n tys in
           Method_call {method_ = n; access; receiver; type_args; args}
         | None, _ -> Map.expr (rw ()) e ) )
     | Entity (n, tys, ci) when not_inline ci -> (
-      match Cpp_names.lookup_method_this_pos n with Some pos -> method_value u n tys pos | None -> e )
+      match Unit_plan.Cpp_names.lookup_method_this_pos n with Some pos -> method_value u n tys pos | None -> e )
     | e -> Map.expr (rw ()) e
   and fs s = Map.stmt (rw ()) s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in

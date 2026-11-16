@@ -12,9 +12,9 @@ module Needs = struct
   let is_none n = n.templates = [] && n.names = [] && n.defines = []
 end
 
-type declared_in = Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
+type declared_in = Unit_plan.Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
 
-type holder_parameter = Cpp_state.holder_parameter = Constructor_parameter of Id.t | Type_parameter of Id.t
+type holder_parameter = Unit_plan.Cpp_state.holder_parameter = Constructor_parameter of Id.t | Type_parameter of Id.t
 
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t | Template_in of declared_in
 
@@ -37,7 +37,7 @@ type template_param =
 
 and parameter = Type_variable of Id.t | Module_parameter of module_ref
 
-type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_resolution.value
+type resolver = Unit_plan.Cpp_resolution.frame -> Unit_plan.Cpp_resolution.key -> Unit_plan.Cpp_resolution.value
 
 type defined =
   | Defined_struct of {
@@ -88,13 +88,13 @@ and global_alias =
     }
   | Alias_of_module of module_ref
 
-and definition = Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
+and definition = Unit_plan.Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
 
 type unprinted = {
   declaration : declaration;
   needs : Needs.t;
-  names : Cpp_resolution.table;
-  tyctors : Cpp_state.tyctor_use list option;
+  names : Unit_plan.Cpp_resolution.table;
+  tyctors : Unit_plan.Cpp_state.tyctor_use list option;
 }
 
 type t =
@@ -177,7 +177,7 @@ let pp_struct_head {template; name; base} =
 let decl ~needs text = Decl {text; needs}
 (* A declaration not yet printed, its names not yet resolved. *)
 let leaf ?(needs = Needs.none) ?tyctors declaration =
-  Unprinted {declaration; needs; names = Cpp_resolution.unresolved; tyctors}
+  Unprinted {declaration; needs; names = Unit_plan.Cpp_resolution.unresolved; tyctors}
 
 let unprinted ~needs ?tyctors env decl = leaf ~needs ?tyctors (Declaration {env; decl})
 let absorbed ?tyctors env decl = leaf ?tyctors (Absorbed {env; decl})
@@ -507,9 +507,9 @@ let map_leaves ?(head = fun _ h -> h) f t =
   map None t
 
 (* Each name written as [here] names it where it is written. *)
-let resolve_module_ref here (m : module_ref) = {m with name = Resolved (here (Cpp_resolution.Module m.path))}
+let resolve_module_ref here (m : module_ref) = {m with name = Resolved (here (Unit_plan.Cpp_resolution.Module m.path))}
 let resolve_declared_module here (m : declared_module) =
-  {m with name = Resolved (here (Cpp_resolution.Module_declared m.declares))}
+  {m with name = Resolved (here (Unit_plan.Cpp_resolution.Module_declared m.declares))}
 
 let resolve_template_param here = function
   | Typename (Type_variable _) as p -> p
@@ -533,7 +533,7 @@ let resolve_head (resolve : spelling -> resolver) spelling h =
   | _ when not (head_names h) -> h
   | None -> invalid_arg "Cpp_ast: a struct whose head names a module written where nothing says how it is spelled"
   | Some spelling ->
-    let here key = Cpp_resolution.name_of key (resolve spelling [] key) in
+    let here key = Unit_plan.Cpp_resolution.name_of key (resolve spelling [] key) in
     { h with
       template = List.map (resolve_template_param here) h.template;
       name = (match h.name with Named _ as n -> n | Module_struct m -> Module_struct (resolve_declared_module here m)) }
@@ -542,7 +542,7 @@ let resolve_head (resolve : spelling -> resolver) spelling h =
    fields carry resolved as [resolve] names them where it is written; a
    finished declaration carries none, its names being in its table. *)
 let resolve_declaration (resolve : resolver) declaration =
-  let here key = Cpp_resolution.name_of key (resolve [] key) in
+  let here key = Unit_plan.Cpp_resolution.name_of key (resolve [] key) in
   let module_ref = resolve_module_ref here and template_param = resolve_template_param here in
   let global_ref key (g : global_ref) = {g with name = Resolved (here (key g.global))} in
   let concept : asserted -> asserted = function
@@ -584,7 +584,7 @@ let resolve_tree ~requested ~resolve ~resolve_head:head t =
       Unprinted
         { u with
           declaration = resolve_declaration resolve u.declaration;
-          names = Cpp_resolution.resolve resolve (requested u.declaration) } )
+          names = Unit_plan.Cpp_resolution.resolve resolve (requested u.declaration) } )
     t
 
 let resolve ~requested ~resolve ~resolve_head s =

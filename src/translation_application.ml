@@ -360,7 +360,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
           | _ -> false )
         | _ -> false
       in
-      match Cpp_names.lookup_method_this_pos id with
+      match Unit_plan.Cpp_names.lookup_method_this_pos id with
       | Some pos
         when Core_plan.Param_pos.equal (Core_plan.Param_pos.of_receiver pos) param_index
              && receiver_is_boxed -> (
@@ -731,7 +731,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
     let args =
       match written_fn_ty with
       | Some (Cpp_ir.Type.Function (doms, _))
-        when Cpp_names.lookup_method_this_pos id = None
+        when Unit_plan.Cpp_names.lookup_method_this_pos id = None
              && List.length doms >= List.length args
              && List.length regular_core_args = List.length args
              && not (List.exists (function Core.Expr.Erased_value _ -> true | _ -> false) regular_core_args)
@@ -1186,7 +1186,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                     match tc_arg with
                     | Core.Expr.Global {callee = r; _} ->
                       let bindings =
-                        Unit_context.instance_promoted_types_of (Translation_state.unit_context cx) r
+                        Unit_plan.Context.instance_promoted_types_of (Translation_state.unit_context cx) r
                       in
                       List.map
                         (fun (var_name, core_ty) ->

@@ -33,7 +33,7 @@ type t = Cpp_state.module_frame = {
     printed [name], of elements [sel], declared among [enclosing], in the
     unit [u]. *)
 val of_module :
-  Unit_context.t ->
+  Context.t ->
   ModPath.t ->
   name:string ->
   (Label.t * Core.Module.Structure_item.t) list ->

@@ -156,7 +156,7 @@ let promoted scopes mp sel eponymous_type =
       sel
   | _ -> None
 
-let of_module (u : Unit_context.t) mp ~name sel ~enclosing =
+let of_module (u : Context.t) mp ~name sel ~enclosing =
   let eponymous_type, eponymous_record = eponymous ~name sel in
   let method_candidates =
     match (eponymous_type, eponymous_record) with

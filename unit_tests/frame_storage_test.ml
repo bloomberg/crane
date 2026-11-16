@@ -132,7 +132,7 @@ let () =
     (p.entered = [(4, Storage.Frame)] && p.own = [Storage.Frame]);
 
   (* A local fixpoint's plan: what translation recorded of each function. *)
-  let u = Unit_context.detached in
+  let u = Unit_plan.Context.detached in
   let local_holdable = Frame_storage.local_holdable u in
   let o = Core.Occurrence.fresh () in
   let member = Loop.Member (o, 0) in

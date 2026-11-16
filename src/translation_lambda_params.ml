@@ -15,7 +15,7 @@ open Base.Table
 
 (** Whether a reference was methodified: spelled [x.f(...)] rather than
     [f(x, ...)]. *)
-let is_methodified r = Cpp_names.lookup_method_this_pos r <> None
+let is_methodified r = Unit_plan.Cpp_names.lookup_method_this_pos r <> None
 
 (** [stmts], a body, whose returned lambdas hold copies ([\[=\]]) rather
     than references into the frame they were written in, which they

@@ -14,8 +14,8 @@
     planned for it. *)
 
 open Names
-open Cpp_state
-open Cpp_names
+open Unit_plan.Cpp_state
+open Unit_plan.Cpp_names
 open Cpp_print
 
 (** What planning a leaf reads off a finished declaration. *)
@@ -46,7 +46,7 @@ module Ir = struct
       argument, the primitive integer type, through whose mapping each of its
       literals is spelled, the eponymous record a global is a member of, and
       the custom whose template a custom match writes. *)
-  let globals_written_beside (u : Unit_context.t) (d : decl) =
+  let globals_written_beside (u : Unit_plan.Context.t) (d : decl) =
     let found = ref [] in
     let rec visitor = {Children.expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = (fun t -> ty t)}
     and ty (t : ty) =
@@ -114,9 +114,9 @@ module Ir = struct
 
   (** The frames printing [d] enters names at: the scopes the declaration
       printer ({!Cpp_print.read_cpp_decl}) enters, read without printing. *)
-  let declaration_frames (u : Unit_context.t) (d : decl) =
+  let declaration_frames (u : Unit_plan.Context.t) (d : decl) =
     let entered frame l = List.rev_append l frame in
-    let template_body tps = if tps = [] then [] else [Cpp_resolution.In_template] in
+    let template_body tps = if tps = [] then [] else [Unit_plan.Cpp_resolution.In_template] in
     let rec decl frame (d : decl) =
       match d with
       | Template (_, _, inner) -> frame :: decl frame inner
@@ -124,24 +124,24 @@ module Ir = struct
       | Namespace (Some w, members) -> (
         match members with
         | [Struct s] when w.merges ->
-          [frame; entered frame ((Cpp_resolution.In_struct :: template_body s.type_params) @ [Inductive_struct s.ref_])]
-        | _ -> frame :: List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
+          [frame; entered frame ((Unit_plan.Cpp_resolution.In_struct :: template_body s.type_params) @ [Inductive_struct s.ref_])]
+        | _ -> frame :: List.concat_map (decl (Unit_plan.Cpp_resolution.In_struct :: frame)) members )
       | Function f ->
         let defines = match f.shape with Definition _ -> true | Declaration _ -> false in
         let owner = fst f.path.outer in
-        [Cpp_resolution.Function {owner; defines; scope = Core_plan.Scope_plan.of_declaration u.modules u.scopes owner} :: frame]
-      | Struct s -> [frame; entered frame (Cpp_resolution.Inductive_struct s.ref_ :: template_body s.type_params)]
+        [Unit_plan.Cpp_resolution.Function {owner; defines; scope = Core_plan.Scope_plan.of_declaration u.modules u.scopes owner} :: frame]
+      | Struct s -> [frame; entered frame (Unit_plan.Cpp_resolution.Inductive_struct s.ref_ :: template_body s.type_params)]
       | Member_definition m ->
-        [frame; entered frame (template_body m.type_params @ [Cpp_resolution.Inductive_struct m.owner])]
+        [frame; entered frame (template_body m.type_params @ [Unit_plan.Cpp_resolution.Inductive_struct m.owner])]
       | Merged_struct_members s ->
-        [frame; entered frame ((Cpp_resolution.In_struct :: template_body s.type_params) @ [Inductive_struct s.ref_])]
+        [frame; entered frame ((Unit_plan.Cpp_resolution.In_struct :: template_body s.type_params) @ [Inductive_struct s.ref_])]
       | Variable _ | Concept _ | Static_assert _ | Type_alias _ | Struct_forward_declaration _ | Enum _ -> [frame]
     in
     decl [] d
 
   (** The out-of-line scope of each function [d] writes, asked at the frame
       the function is written at, which is where the declaration printer
-      enters its {!Cpp_resolution.Function} frame from. *)
+      enters its {!Unit_plan.Cpp_resolution.Function} frame from. *)
   let function_scopes (d : decl) =
     let rec decl frame (d : decl) =
       match d with
@@ -150,8 +150,8 @@ module Ir = struct
       | Namespace (Some w, members) -> (
         match members with
         | [Struct _] when w.merges -> []
-        | _ -> List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
-      | Function f -> [(frame, Cpp_resolution.Out_of_line_scope (fst f.path.outer))]
+        | _ -> List.concat_map (decl (Unit_plan.Cpp_resolution.In_struct :: frame)) members )
+      | Function f -> [(frame, Unit_plan.Cpp_resolution.Out_of_line_scope (fst f.path.outer))]
       | Struct _ | Member_definition _ | Merged_struct_members _ | Variable _ | Concept _ | Static_assert _
       | Type_alias _ | Struct_forward_declaration _ | Enum _ ->
         []
@@ -164,8 +164,8 @@ module Ir = struct
     match d with
     | Template (_, _, inner) -> defined_types inner
     | Namespace (_, ds) -> List.concat_map defined_types ds
-    | Struct s -> [Cpp_resolution.Definition (Struct_definition, s.ref_)]
-    | Enum e -> [Cpp_resolution.Definition (Enum_definition, e.ref_)]
+    | Struct s -> [Unit_plan.Cpp_resolution.Definition (Struct_definition, s.ref_)]
+    | Enum e -> [Unit_plan.Cpp_resolution.Definition (Enum_definition, e.ref_)]
     | _ -> []
 
   (** The structs and scoped enums [d] defines at namespace scope, written
@@ -380,7 +380,7 @@ let type_names_into_a_struct ctx (t : ty) =
   | Named (_, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes ctx t)) ||? any args
   | External (id_s, args) -> text_names_into_a_struct (external_type_name ctx.unit id_s) ||? any args
   | Entity_application (r, tys, _) -> (
-    match Cpp_names.inline_custom_text ctx r with
+    match Unit_plan.Cpp_names.inline_custom_text ctx r with
     | Some s -> text_names_into_a_struct s ||? any tys
     | None ->
       head_names_into_a_struct (glob_head ctx r ~applied:(tys <> [])) ||? any tys )
@@ -515,8 +515,8 @@ let resolved_names_into_a_struct ctx names (d : Cpp_ir.Resolved.Decl.t) =
 
 
 (** What a file writes that places the templates it writes
-    ({!Cpp_state.written}). *)
-type written = Cpp_state.written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of GlobRef.t
+    ({!Unit_plan.Cpp_state.written}). *)
+type written = Unit_plan.Cpp_state.written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of GlobRef.t
 
 (** What planning reads off something a file writes: what it is, as the
     render reads it back, the synthesised templates it writes, in the
@@ -656,25 +656,25 @@ let global_names u frames globals =
   let keys =
     List.concat_map
       (fun r ->
-        Cpp_resolution.
+        Unit_plan.Cpp_resolution.
           [ Unmapped (Type, r); Unmapped (Term, r); Short (Type, r); Short (Term, r); Class_concept r;
             Type_head (Glob_head, r) ]
         @
-        Cpp_resolution.Built_struct r
+        Unit_plan.Cpp_resolution.Built_struct r
         ::
         match r with
         | GlobRef.IndRef _ ->
-          Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
-          @ if Cpp_names.is_enum_cached u r then
-            Cpp_resolution.[Enumerator_qualifier (Enumerator_value, r); Enumerator_qualifier (Case_label, r)] else []
-        | GlobRef.ConstRef _ | GlobRef.ConstructRef _ -> [Cpp_resolution.Value_reference r]
+          Unit_plan.Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
+          @ if Unit_plan.Cpp_names.is_enum_cached u r then
+            Unit_plan.Cpp_resolution.[Enumerator_qualifier (Enumerator_value, r); Enumerator_qualifier (Case_label, r)] else []
+        | GlobRef.ConstRef _ | GlobRef.ConstructRef _ -> [Unit_plan.Cpp_resolution.Value_reference r]
         | GlobRef.VarRef _ -> [] )
       (List.filter decided globals)
-    @ Cpp_names.custom_texts_named globals @ Cpp_names.inline_customs_named globals
+    @ Unit_plan.Cpp_names.custom_texts_named globals @ Unit_plan.Cpp_names.inline_customs_named globals
     @ List.concat_map
         (fun r ->
-          Cpp_resolution.[Value_access r; Read_by_a_function r]
-          @ if Base.Table.is_typeclass r then [Cpp_resolution.Held_back_concept r] else [] )
+          Unit_plan.Cpp_resolution.[Value_access r; Read_by_a_function r]
+          @ if Base.Table.is_typeclass r then [Unit_plan.Cpp_resolution.Held_back_concept r] else [] )
         globals
   in
   List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
@@ -807,19 +807,19 @@ let resolved_for ctx t =
   { ctx with
     names =
       Names_resolved
-        (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names ctx.unit [ctx.frame] (type_globals t)))
+        (Unit_plan.Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names ctx.unit [ctx.frame] (type_globals t)))
   }
 
 (** {2 Synthesised templates}
 
     Whether a type constructor written as a template template argument has
     a template name of its own, and the template synthesised for it where
-    it has not, decided where planning spells it ({!Cpp_state.Deciding}):
+    it has not, decided where planning spells it ({!Unit_plan.Cpp_state.Deciding}):
     the printer reads the decision off the plan of the leaf it prints. *)
 
 (** The module struct the template abbreviating [body], written in [file],
     has to be declared inside, if any: that of the module whose element is
-    being written ({!Cpp_state.render_ctx}), where [body] names a global
+    being written ({!Unit_plan.Cpp_state.render_ctx}), where [body] names a global
     declared anywhere in the struct at namespace scope that encloses it --
     of that module, of one enclosing it, or of one nested in either.  Such
     a global is incomplete, or written bare, in front of that struct, and
@@ -897,7 +897,7 @@ let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   | In_struct_of home, Base.Common.Intf ->
     {start with in_struct = true; in_template = Core_plan.Scope_plan.templated ctx.unit.scopes home; module_ = Some home}
   | In_struct_of home, Base.Common.Impl ->
-    let out_of_line scope = {scope; Cpp_state.Out_of_line.file_scope_aliases = file_scope_aliases_of Base.Common.Impl} in
+    let out_of_line scope = {scope; Unit_plan.Cpp_state.Out_of_line.file_scope_aliases = file_scope_aliases_of Base.Common.Impl} in
     {start with scope = Option.map out_of_line (Core_plan.Scope_plan.of_module ctx.unit.scopes home); module_ = Some home}
 
 (* The indices of the type variables writing [t], naming the variables [vl]
@@ -1141,11 +1141,11 @@ and ctor_alias_of_probe ctx vl ~base probe =
         (
           {base = base; holder = Some params; declared = declared_in; body = body; type_ = renamed;
             vars = vl; uses = uses},
-          List.map (fun (i, name) -> Cpp_state.Captured_variable (i, name)) vars
-          @ List.map (fun id -> Cpp_state.Captured_instance id) instances )
+          List.map (fun (i, name) -> Unit_plan.Cpp_state.Captured_variable (i, name)) vars
+          @ List.map (fun id -> Unit_plan.Cpp_state.Captured_instance id) instances )
 
 (** [ctx], deciding each type constructor written there and noting the
-    decision in [noted] ({!Cpp_state.Deciding}). *)
+    decision in [noted] ({!Unit_plan.Cpp_state.Deciding}). *)
 and deciding ctx noted = {ctx with tyctors = Deciding {decide = ctor_alias_at; noted}}
 
 (** The body [t] of a synthesised template, naming the variables [vl] by
@@ -1175,7 +1175,7 @@ and written_body at vl t =
     constructors [visit] calls its argument at, in the order spelled -- one
     written in another's body ahead of it -- each decided there without
     writing it ({!tyctor_spelled}), inside the struct of the inductive whose
-    members are written around it, if any ({!Cpp_resolution.Inductive_struct});
+    members are written around it, if any ({!Unit_plan.Cpp_resolution.Inductive_struct});
     and how each type constructor is written, in the order first spelled.
     Under [CRANE_CHECK_IR], rendering each must decide the same. *)
 let ctor_aliases_found ctx visit =
@@ -1307,10 +1307,10 @@ let unprinted_names u : Cpp_ast.declaration -> _ = function
   | Assertion {subject = Instance {args; _}; _} -> global_names u [[]] (List.concat_map type_globals args)
   | Global_alias (Alias_of_type {tparams; _}) -> global_names u [[]] (template_param_globals tparams)
   | Forward_declaration {defined = Defined_struct {struct_; tparams; constraint_; _}; _} ->
-    ([], Cpp_resolution.Definition (Struct_definition, struct_))
+    ([], Unit_plan.Cpp_resolution.Definition (Struct_definition, struct_))
     :: global_names u [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
   | Forward_declaration {defined = Defined_enum r; _} ->
-    ([], Cpp_resolution.Definition (Enum_definition, r)) :: global_names u [[]] [r]
+    ([], Unit_plan.Cpp_resolution.Definition (Enum_definition, r)) :: global_names u [[]] [r]
   | Synthesised_template {body; _} -> global_names u [[]] (type_globals body)
   | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
   | Functor_alias _ | Derived_functor _ ->
@@ -1322,7 +1322,7 @@ let unprinted_names u : Cpp_ast.declaration -> _ = function
    planned yet, as decided. *)
 let writing ctx d =
   let names =
-    Cpp_resolution.resolve
+    Unit_plan.Cpp_resolution.resolve
       (fun frame key -> at_frame ctx frame (fun c -> live_value c key))
       (declaration_names ctx.unit d)
   in
@@ -1348,7 +1348,7 @@ let unmerged_wrappers_named ~name d = List.map name (Ir.unmerged_wrappers d)
     struct merged into them, in the order it writes them: the structs
     another wrapper's declarations can be written into, each by the wrapper
     and its name spelled to be compared with a wrapper module's
-    ({!Cpp_names.wrapper_spelling}). *)
+    ({!Unit_plan.Cpp_names.wrapper_spelling}). *)
 let unmerged_wrappers_written d = unmerged_wrappers_named ~name:(fun r -> (r, wrapper_spelling r)) d
 
 (* The wrapper module [homed] says the struct of the wrapper [r] holds the

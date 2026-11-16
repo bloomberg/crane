@@ -649,7 +649,7 @@ let adopt_local_fix ~unit ~stmts ~planned = function
            whose names another fixpoint may share.  How it is rerouted is
            its shape: one through the self-parameter forwards it as a
            leading argument the entry does not take. *)
-        let entering = (Core_plan.Recursion.entering (Unit_context.recursion unit)) (fst fixpoint.member) in
+        let entering = (Core_plan.Recursion.entering (Unit_plan.Context.recursion unit)) (fst fixpoint.member) in
         let reroute e =
           match e with
           | Call (({occurrence = Some o; _} as res), Local id, args)
@@ -731,7 +731,7 @@ let any_checker (checkers : call_checker list) : call_checker =
     transformation ({!transform_nontail}) except {!enter_rewrite_ctx.env}, which is narrowed
     when entering lambda bodies, match branches, or continuations. *)
 type enter_rewrite_ctx = {
-  unit : Unit_context.t;
+  unit : Unit_plan.Context.t;
       (** The context of the unit being lowered *)
   check : call_checker;
       (** Identifies recursive calls in expressions *)
@@ -963,7 +963,7 @@ let planned_point ctx id (tgt : binding) =
     | Existing -> binder_of ctx id
     | Declare_static _ -> None
   in
-  match Option.map (Core_plan.Recursion.resumes_binding (Unit_context.recursion ctx.unit)) binder with
+  match Option.map (Core_plan.Recursion.resumes_binding (Unit_plan.Context.recursion ctx.unit)) binder with
   | Some [p] -> p
   | Some points ->
     Base.Probe.violation "frame plan"
@@ -985,7 +985,7 @@ let planned_point ctx id (tgt : binding) =
     backend's own, or the machine is not one the plan describes. *)
 let planned_resume ctx id (tgt : binding) e =
   let point b =
-    match Core_plan.Recursion.resumes_binding (Unit_context.recursion ctx.unit) b with [p] -> Some p | _ -> None
+    match Core_plan.Recursion.resumes_binding (Unit_plan.Context.recursion ctx.unit) b with [p] -> Some p | _ -> None
   in
   match ctx.entered_by with
   | None -> None
@@ -2190,7 +2190,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
                entered = entered;
                points_into = points_into;
                entering = Option.bind loop
-                 (fun l -> Option.map Control_ir.Term.continues ((Core_to_control.Lower_control.loop (Unit_context.control unit)) l));
+                 (fun l -> Option.map Control_ir.Term.continues ((Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)) l));
                aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top

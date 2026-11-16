@@ -615,7 +615,7 @@ and render_ctx = {
   (* How the type constructors written from here are written. *)
   tyctors : tyctor_plan;
   (* The unit the file is of. *)
-  unit : Unit_context.t;
+  unit : Context.t;
   (* What the backend's passes decided about the unit. *)
   plans : plans;
 }
@@ -743,11 +743,11 @@ let no_accessors = Core_plan.Struct_plan.no_accessors
 let add_accessor = Core_plan.Struct_plan.add_accessor
 let add_accessor_ref = Core_plan.Struct_plan.add_accessor_ref
 
-let template_static_accessor_names (u : Unit_context.t) = u.accessors.accessor_names
+let template_static_accessor_names (u : Context.t) = u.accessors.accessor_names
 
-let is_template_static_accessor_constant (u : Unit_context.t) c = Core_plan.Struct_plan.is_accessor_constant u.accessors c
+let is_template_static_accessor_constant (u : Context.t) c = Core_plan.Struct_plan.is_accessor_constant u.accessors c
 
-let is_template_static_accessor (u : Unit_context.t) mp lbl = Core_plan.Struct_plan.is_accessor u.accessors mp lbl
+let is_template_static_accessor (u : Context.t) mp lbl = Core_plan.Struct_plan.is_accessor u.accessors mp lbl
 
 
 (** Track eponymous type info for method generation. When a module M contains an
@@ -830,8 +830,8 @@ let setting cell v f =
       cell := v;
       f () )
 
-(** Resolved standard library names ({!Unit_context.std_names}). *)
-type std_names = Unit_context.std_names = {
+(** Resolved standard library names ({!Context.std_names}). *)
+type std_names = Context.std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
@@ -850,7 +850,7 @@ type std_names = Unit_context.std_names = {
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
 }
 
-let default_std_names = Unit_context.default_std_names
+let default_std_names = Context.default_std_names
 
 let mk_std_names prefix =
   match prefix with
@@ -870,7 +870,7 @@ let mk_std_names prefix =
 
 let std_namespace () = if Base.Table.std_lib () = "BDE" then "bsl" else "std"
 
-let std_names_of (u : Unit_context.t) =
+let std_names_of (u : Context.t) =
   let base =
     if Base.Table.std_lib () = "BDE" then mk_std_names "bsl::"
     else mk_std_names "std::"
@@ -903,19 +903,19 @@ let std_names_of (u : Unit_context.t) =
   (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
        counting one.  [enable_from_this] stays as it is: [shared_from_this ()]
        hands back a [std::shared_ptr], which a [counting_ptr] adopts. *)
-  if Unit_context.count_rc u then
+  if Context.count_rc u then
     { base with
       shared_ptr = Cpp_ir.Crane_rt.counting_ptr;
       make_shared = Cpp_ir.Crane_rt.make_counting }
-  else if Unit_context.non_atomic_rc u then
+  else if Context.non_atomic_rc u then
     { base with
       shared_ptr = Cpp_ir.Crane_rt.rc;
       make_shared = Cpp_ir.Crane_rt.make_rc;
       enable_from_this = Cpp_ir.Crane_rt.enable_rc_from_this }
   else base
 
-let sn (u : Unit_context.t) = u.std_names
-let with_std_names (u : Unit_context.t) = {u with std_names = std_names_of u}
+let sn (u : Context.t) = u.std_names
+let with_std_names (u : Context.t) = {u with std_names = std_names_of u}
 
 
 
@@ -939,7 +939,7 @@ let with_std_names (u : Unit_context.t) = {u with std_names = std_names_of u}
     which is what makes it safe to read from a [.cpp] body printed before the
     [.h] declares the name. *)
 
-let unmerged_wrapper (u : Unit_context.t) name = CString.Map.find_opt name u.unmerged_wrappers
+let unmerged_wrapper (u : Context.t) name = CString.Map.find_opt name u.unmerged_wrappers
 
 (** Whether the inductive [r] is written inside a wrapper that holds other
     declarations, and so is spelled [List::list] rather than [List].
@@ -986,7 +986,7 @@ let add_nested_struct_name = Core_plan.Struct_plan.add_nested_struct_name
 (** Whether [r] is itself emitted as a struct nested inside another one --
     the case where its own name does not reach a use written outside that
     struct, so the reference needs the enclosing struct's qualifier. *)
-let is_nested_struct_ref (u : Unit_context.t) r =
+let is_nested_struct_ref (u : Context.t) r =
   CString.Map.exists
     (fun _name owners -> List.exists (function Global r' -> Base.Common.globref_equal r r' | _ -> false) owners)
     u.nested_structs
@@ -997,7 +997,7 @@ let is_nested_struct_ref (u : Unit_context.t) r =
     point at global scope, where it does not live.  Under separate extraction
     each file is a namespace of its own, so only a nested struct of [r]'s
     file can shadow [r], though the table holds every unit's. *)
-let is_shadowed_global_name (u : Unit_context.t) name r =
+let is_shadowed_global_name (u : Context.t) name r =
   let same_file = function
     | Global r' -> ModPath.equal (base_mp (modpath_of_r r')) (base_mp (modpath_of_r r))
     | Module mp -> ModPath.equal (base_mp mp) (base_mp (modpath_of_r r))

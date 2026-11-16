@@ -123,7 +123,7 @@ let no_control_ir = "the loop has no ControlIR"
     Continues.  [check] still reads the call's arguments and receiver.  A
     loop with no ControlIR is a violation, and the transform declines. *)
 let planned_jumps ~unit loop check =
-  match Option.bind loop (Core_to_control.Lower_control.loop (Unit_context.control unit)) with
+  match Option.bind loop (Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)) with
   | None ->
     Base.Probe.violation "control IR" (Pp.str no_control_ir);
     raise (Not_linearisable no_control_ir)
@@ -149,7 +149,7 @@ let checked_tail_loop ~unit loop transform =
       | Control_ir.Loop.Function r -> Pp.str (Base.Table.kername_of_global r)
       | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
     in
-    match (Core_to_control.Lower_control.loop (Unit_context.control unit)) l with
+    match (Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)) l with
     | None -> Base.Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
     | Some t when not (made_as_planned (Control_ir.Term.continues t) (List.rev !jumps)) ->
       Base.Probe.violation "control IR"
@@ -173,7 +173,7 @@ let machine_disagreement ~unit l entries =
   let within a b = List.for_all (fun o -> List.exists (Core.Occurrence.equal o) b) a in
   let same a b = within a b && within b a in
   let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) entries in
-  match (Core_to_control.Lower_control.loop (Unit_context.control unit)) l with
+  match (Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)) l with
   | None -> Some Pp.(str "no ControlIR for the machine of " ++ what ())
   | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) entries ->
     Some Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
@@ -213,7 +213,7 @@ let planned_local_strategy ~unit (fixpoint : local_fixpoint option) =
   | Some {member; binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print binder) in
     let pointer_fields = constructor_pointer_fields unit in
-    match Core_plan.Recursion.strategy_at (Unit_context.recursion unit) ~pointer_fields member with
+    match Core_plan.Recursion.strategy_at (Unit_plan.Context.recursion unit) ~pointer_fields member with
     | Some planned -> planned
     | None ->
       Base.Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
@@ -252,8 +252,8 @@ let entered_by_definition r =
     its finished body is one it still recurses by. *)
 let definition_calls ~unit r =
   match Base.Lifted.of_ref r with
-  | Some h -> Option.cata (Core_plan.Recursion.member_calls (Unit_context.recursion unit)) [] (Base.Lifted.fixpoint h)
-  | None -> (Core_plan.Recursion.calls (Unit_context.recursion unit)) r
+  | Some h -> Option.cata (Core_plan.Recursion.member_calls (Unit_plan.Context.recursion unit)) [] (Base.Lifted.fixpoint h)
+  | None -> (Core_plan.Recursion.calls (Unit_plan.Context.recursion unit)) r
 
 (** The calls a finished body of the function [f] still recurses by
     ({!definition_calls}), whatever C++ heads them. *)
@@ -287,7 +287,7 @@ type member_plan = {
 }
 
 let member_plan ~unit ~frames member params =
-  match (Core_to_control.Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Member (fst member, snd member)) with
+  match (Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)) (Control_ir.Loop.Member (fst member, snd member)) with
   | Some (Loop l) ->
     let kept = kept_positions l in
     if List.compare_lengths kept params <> 0 then None
@@ -321,7 +321,7 @@ let member_plan ~unit ~frames member params =
             ( if frames then []
               else
                 List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept))
-                  (Ownership_ir.continue_moves ~effects:(Unit_context.loop_effects unit) l) ) }
+                  (Ownership_ir.continue_moves ~effects:(Unit_plan.Context.loop_effects unit) l) ) }
   | Some _ | None -> None
 
 (** Walk through a statement list and loopify each local fixpoint: the
@@ -737,9 +737,9 @@ let planned_strategy ~unit r =
     let planned =
       match Option.map Base.Lifted.site (Base.Lifted.of_ref r) with
       | Some (Fixpoint (occurrence, member)) ->
-        (Core_plan.Recursion.strategy_at (Unit_context.recursion unit)) ~pointer_fields (occurrence, member)
-      | Some (Let occurrence) -> (Core_plan.Recursion.strategy_of_let (Unit_context.recursion unit)) occurrence
-      | None -> (Core_plan.Recursion.strategy (Unit_context.recursion unit)) ~pointer_fields r
+        (Core_plan.Recursion.strategy_at (Unit_plan.Context.recursion unit)) ~pointer_fields (occurrence, member)
+      | Some (Let occurrence) -> (Core_plan.Recursion.strategy_of_let (Unit_plan.Context.recursion unit)) occurrence
+      | None -> (Core_plan.Recursion.strategy (Unit_plan.Context.recursion unit)) ~pointer_fields r
     in
     let what () = Pp.str (Base.Table.kername_of_global r) in
     match planned with
@@ -754,8 +754,8 @@ let planned_strategy ~unit r =
 let planned_adoptable ~unit r =
   match Base.Lifted.of_ref r with
   | Some h -> (
-    match Base.Lifted.fixpoint h with Some m -> (Core_plan.Recursion.adoptable_at (Unit_context.recursion unit)) m | None -> [] )
-  | None -> (Core_plan.Recursion.adoptable_in (Unit_context.recursion unit)) r
+    match Base.Lifted.fixpoint h with Some m -> (Core_plan.Recursion.adoptable_at (Unit_plan.Context.recursion unit)) m | None -> [] )
+  | None -> (Core_plan.Recursion.adoptable_in (Unit_plan.Context.recursion unit)) r
 
 (** The chains a strategy lowers tail modulo cons around, if it does. *)
 let modulo_cons_chains = function
@@ -871,7 +871,7 @@ let rebuilt_receiver_read =
 
 (** The position of the receiver of the method [mf] among the arguments a
     C++ call of it writes: the registry's
-    ({!Cpp_names.lookup_method_this_pos}).  The method's own [this_position]
+    ({!Unit_plan.Cpp_names.lookup_method_this_pos}).  The method's own [this_position]
     counts the arrows of its Core type, and an erased one before the receiver
     -- a dictionary, a type binder kept under Conservative Types -- takes
     no argument.  A static method has no receiver to strip from a call: its
@@ -881,7 +881,7 @@ let receiver_position (mf : meth) =
   match mf.receiver with
   | Static -> 0
   | Instance r -> (
-    match Option.bind mf.globref Cpp_state.is_registered_method with
+    match Option.bind mf.globref Unit_plan.Cpp_state.is_registered_method with
     | Some (_, pos) -> pos
     | None -> r.this_position )
 
@@ -1023,7 +1023,7 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
           let check = planned_jumps ~unit loop self_check in
           let shapes =
             Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t))
-              (Option.bind loop (Core_to_control.Lower_control.loop (Unit_context.control unit)))
+              (Option.bind loop (Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)))
           in
           let r =
             apply_nontail_loopification ~unit

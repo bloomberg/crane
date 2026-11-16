@@ -1003,13 +1003,13 @@ let module_filename mp =
 (** [with_context u f] is [f u] with lowering reading the unit's context
     [u] ({!Translation_state.unit_context}), a context the planning so far
     has added to. *)
-let with_context cx (u : Unit_context.t) f =
+let with_context cx (u : Unit_plan.Context.t) f =
   Translation_state.with_unit_facts cx {(Translation_state.unit_facts cx) with context = u} (fun () -> f u)
 
 (** [with_plans p f] is [f ()] with lowering and rendering reading [p] as
     what the backend's passes decided about the unit
     ({!Translation_state.plans}), a value each of those passes adds to. *)
-let with_plans cx (p : Cpp_state.plans) f =
+let with_plans cx (p : Unit_plan.Cpp_state.plans) f =
   Translation_state.with_unit_facts cx {(Translation_state.unit_facts cx) with plans = p} f
 
 (** [with_plan u acc f] is {!with_context} of the unit's context [u]
@@ -1083,7 +1083,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   Base.Pipeline_trace.event "layout" prepare_layout;
   let modules, names, analysis = Cpp.prepare_structure cx u struc in
   let acc = {acc with modules = Core_plan.Module_plan.extend acc.modules modules} in
-  with_plans cx {Cpp_state.no_plans with analysis = Some analysis} @@ fun () ->
+  with_plans cx {Unit_plan.Cpp_state.no_plans with analysis = Some analysis} @@ fun () ->
   with_plan cx {u with names = Some names} acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
@@ -1121,12 +1121,12 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_accessors;
   let accessors = Cpp.plan_accessors cx u struc in
-  let acc = {acc with accessors = List.fold_left Cpp_state.add_accessor_ref acc.accessors accessors} in
+  let acc = {acc with accessors = List.fold_left Unit_plan.Cpp_state.add_accessor_ref acc.accessors accessors} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs cx struc in
   let acc =
-    {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
+    {acc with nested_structs = List.fold_left Unit_plan.Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types cx struc in
@@ -1163,7 +1163,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
     Translation_state.generating_outside_modules cx (fun () -> Translation_calls.assumed_callables cx struc
       callables) in
   Base.Pipeline_trace.event "layout" decide_callables;
-  let u = {u with Unit_context.callables = Core_plan.Callable_abi.decide ~callables ~assumed ~instance_methods} in
+  let u = {u with Unit_plan.Context.callables = Core_plan.Callable_abi.decide ~callables ~assumed ~instance_methods} in
   with_context cx u @@ fun u ->
   k u acc
   ( modules,
@@ -1531,7 +1531,7 @@ let elaborate_pass_names = [plan_foreign_callables]
 (** The unit's context [u] with the plans of the callables of the globals
     the unit's [elaborations] name that it does not declare, and of the
     calls of class fields it may project through an instance. *)
-let elaborate_unit cx (u : Unit_context.t) elaborations =
+let elaborate_unit cx (u : Unit_plan.Context.t) elaborations =
   Translation_state.generating_outside_modules cx @@ fun () ->
   Base.Pipeline_trace.event "elaborate" plan_foreign_callables;
   let foreign =
@@ -1598,12 +1598,12 @@ let check_against_plan (plan : Target_plan.t) =
     let describe (name, owner) =
       name ^ " ("
       ^ ( match owner with
-        | Cpp_state.Global r -> Pp.string_of_ppcmds (GlobRef.print r)
-        | Cpp_state.Module mp -> ModPath.to_string mp )
+        | Unit_plan.Cpp_state.Global r -> Pp.string_of_ppcmds (GlobRef.print r)
+        | Unit_plan.Cpp_state.Module mp -> ModPath.to_string mp )
       ^ ")"
     in
-    let mem (n, o) l = List.exists (fun (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o') l in
-    let promoted = plan.representation.promoted_inductives and rendered = !Cpp_state.rendered_promotions in
+    let mem (n, o) l = List.exists (fun (n', o') -> String.equal n n' && Unit_plan.Cpp_state.nested_struct_owner_equal o o') l in
+    let promoted = plan.representation.promoted_inductives and rendered = !Unit_plan.Cpp_state.rendered_promotions in
     let has r l = List.exists (GlobRef.UserOrd.equal r) l in
     List.iter
       (fun r ->
@@ -1615,7 +1615,7 @@ let check_against_plan (plan : Target_plan.t) =
         if not (has r rendered) then
           fail ("promoted inductives: planned but not rendered " ^ Pp.string_of_ppcmds (GlobRef.print r)) )
       promoted;
-    let planned = plan.representation.nested_structs and printed = !Cpp_state.printed_nested_structs in
+    let planned = plan.representation.nested_structs and printed = !Unit_plan.Cpp_state.printed_nested_structs in
     List.iter
       (fun x -> if not (mem x planned) then fail ("nested structs: printed but not planned " ^ describe x)) printed;
     if printed <> [] then
@@ -1659,7 +1659,7 @@ let declares struc =
     the plan, then writes and formats them.  Returns what the next unit of
     a separate extraction starts from ({!Accumulated_plan.for_next_unit}). *)
 let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
-  ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
+  ?(earlier = Accumulated_plan.start ~accessors:Unit_plan.Cpp_state.no_accessors)
     (fn, si, mo) dry (loops : Core_to_control.Loop_facts.t) (core : Core_passes.Phase.normalized Core_passes.Phase.program) =
   let dry = dry || Base.Probe.census_dry () in
   Base.Probe.census_unit ();
@@ -1680,15 +1680,15 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   in
   (* The unit's context holds what the earlier units decided from the
      start; its configuration is its plan's. *)
-  with_plan cx (Cpp_state.with_std_names Unit_context.detached) earlier @@ fun u ->
+  with_plan cx (Unit_plan.Cpp_state.with_std_names Unit_plan.Context.detached) earlier @@ fun u ->
   let facts, plan = analyze_and_plan struc in
-  let u = Cpp_state.with_std_names {u with config = plan.config; loops = {loops with effects = facts.effects}} in
+  let u = Unit_plan.Cpp_state.with_std_names {u with config = plan.config; loops = {loops with effects = facts.effects}} in
   Translation_state.with_unit_facts cx
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
       context = u;
-      plans = Cpp_state.no_plans }
+      plans = Unit_plan.Cpp_state.no_plans }
   @@ fun () ->
   ignore (Base.Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
   let plan = plan_representation cx plan struc in
@@ -1907,7 +1907,7 @@ let init ?(compute = false) ?(inner = false) modular library =
   set_modular modular;
   set_library library;
   set_extrcompute compute;
-  Cpp_state.reset_cpp_state ();
+  Unit_plan.Cpp_state.reset_cpp_state ();
   (* Reset ALL C++ global state from previous extractions *)
   reset ()
 
@@ -2101,8 +2101,8 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
      body aborts. *)
   Fun.protect
     ~finally:(fun () ->
-      Cpp_state.clear_global_method_registry ();
-      Cpp_state.clear_valid_output_modules ();
+      Unit_plan.Cpp_state.clear_global_method_registry ();
+      Unit_plan.Cpp_state.clear_valid_output_modules ();
       Base.Common.clear_non_output_modules () )
   @@ fun () ->
   (* Descend through applications/functors to the underlying struct body,
@@ -2152,7 +2152,7 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
   let valid_mps =
     List.filter_map (fun (mp, sel) -> if has_real_decls sel then Some mp else None) struc
   in
-  Cpp_state.set_valid_output_modules valid_mps;
+  Unit_plan.Cpp_state.set_valid_output_modules valid_mps;
   Base.Common.set_non_output_modules valid_mps;
   (* Build a topological position map for all extracted modules.  The struc
      list is already in topological order (each module after its dependencies).
@@ -2178,7 +2178,7 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
   List.iter (fun (mp, sel) -> collect_modtypes mp sel) struc;
   (* The accessors a pre-scan of the whole program finds, which every unit
      starts from. *)
-  let accessors = ref Cpp_state.no_accessors in
+  let accessors = ref Unit_plan.Cpp_state.no_accessors in
   let rec pre_scan_meyers_singletons ~in_template sel =
     List.iter (fun (_l, se) ->
       match se with
@@ -2187,7 +2187,7 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
           (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
             let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
             if in_template && not is_function then
-              accessors := Cpp_state.add_accessor_ref !accessors r )
+              accessors := Unit_plan.Cpp_state.add_accessor_ref !accessors r )
           (Base.Core_util.term_defs d)
       | Core.Module.Structure_item.Module m ->
         let has_params = match m.expr with
@@ -2203,8 +2203,8 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
                 let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
                 if not is_function then begin
                   let lbl = Base.Table.label_of_r r in
-                  accessors := Cpp_state.add_accessor !accessors (Base.Table.modpath_of_r r) lbl;
-                  Option.iter (fun pmp -> accessors := Cpp_state.add_accessor !accessors pmp lbl) param_mp
+                  accessors := Unit_plan.Cpp_state.add_accessor !accessors (Base.Table.modpath_of_r r) lbl;
+                  Option.iter (fun pmp -> accessors := Unit_plan.Cpp_state.add_accessor !accessors pmp lbl) param_mp
                 end
               | Core.Module.Signature_item.Module mt ->
                 let sub_param_mp = match param_mp with
@@ -2272,11 +2272,11 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
   in
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
-  Cpp_state.set_global_method_registry (Cpp.method_registry_of cx struc);
+  Unit_plan.Cpp_state.set_global_method_registry (Cpp.method_registry_of cx struc);
   (* Which values another declaration names, any unit's: a function of a
      later unit may read a value of an earlier one, which then has to be
      initialised wherever its header is included
-     ({!Cpp_state.read_by_a_function}). *)
+     ({!Unit_plan.Cpp_state.read_by_a_function}). *)
   let program_reads = ref Core.Ref.Can.Set.empty in
   Core_passes.Modutil.struct_iter
     (fun d ->
@@ -2285,7 +2285,7 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
         (fun r -> if not (List.exists (Core.Ref.Can.equal r) own) then program_reads := Core.Ref.Can.Set.add r !program_reads)
         ignore ignore d)
     ignore ignore struc;
-  Cpp_state.note_program_reads !program_reads;
+  Unit_plan.Cpp_state.note_program_reads !program_reads;
   (* Generic traversal of Core.Program.t: walks
      Core.Module.Expr.Structure/Core.Module.Expr.Functor/Core.Module.Expr.Apply
      and calls [visit ~in_struct elem] on each structure element. *)
@@ -2325,7 +2325,7 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
       List.iter
         (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
           if (match ty with Core.Type.Arrow _ -> false | _ -> true) then
-            accessors := Cpp_state.add_accessor !accessors (Base.Table.modpath_of_r r) (Base.Table.label_of_r r) )
+            accessors := Unit_plan.Cpp_state.add_accessor !accessors (Base.Table.modpath_of_r r) (Base.Table.label_of_r r) )
         (Base.Core_util.term_defs d)
     | _ -> ()
   ) struc;
@@ -2599,15 +2599,15 @@ let print_one_decl cx loops struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
   let facts = Program_facts.analyze struc in
-  let u = Cpp_state.with_std_names {Unit_context.detached with loops = {loops with effects = facts.effects}} in
+  let u = Unit_plan.Cpp_state.with_std_names {Unit_plan.Context.detached with loops = {loops with effects = facts.effects}} in
   Translation_state.with_unit_facts cx
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
       context = u;
-      plans = Cpp_state.no_plans }
+      plans = Unit_plan.Cpp_state.no_plans }
   @@ fun () ->
-  plan_layout cx u (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
+  plan_layout cx u (Accumulated_plan.start ~accessors:Unit_plan.Cpp_state.no_accessors) struc
   @@ fun u _ (_, _, _, _, elaborations) ->
   with_context cx (elaborate_unit cx u elaborations) @@ fun u ->
   end_planning ();

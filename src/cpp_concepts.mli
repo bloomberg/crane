@@ -15,15 +15,15 @@ open Names
     declaring it, with the concepts its nested module types are hoisted into
     ahead of it, naming what [names] names ({!names_requested}). *)
 val pp_modtype_concept :
-  Translation_state.t -> Cpp_state.render_ctx ->
-  names:Cpp_resolution.table ->
+  Translation_state.t -> Unit_plan.Cpp_state.render_ctx ->
+  names:Unit_plan.Cpp_resolution.table ->
   params:ModPath.t list ->
   ModPath.t ->
   Modtype_concept.t ->
   Pp.t
 
 (** The assertion [a], as written at the position where the tree puts it. *)
-val pp_assertion : Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
+val pp_assertion : Unit_plan.Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
 
 (** What a declaration not yet printed names, at the frames inside it,
     beyond the references the tree holds itself: what
@@ -32,11 +32,11 @@ val pp_assertion : Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
     writes included ({!Cpp_leaf_plan.global_names}); of any other
     declaration, nothing. *)
 val names_requested :
-  Translation_state.t -> Unit_context.t -> Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
+  Translation_state.t -> Unit_plan.Context.t -> Cpp_ast.declaration -> (Unit_plan.Cpp_resolution.frame * Unit_plan.Cpp_resolution.key) list
 
 (** What the definition of the concept [c] names after its head, at the
     frames inside it: the base concept it refines, the modules that concept
     is applied to past [M] and the globals of the refinements' types, or its
     requirements' names. *)
 val concept_body_names :
-  Translation_state.t -> Unit_context.t -> Modtype_concept.t -> (Cpp_resolution.frame * Cpp_resolution.key) list
+  Translation_state.t -> Unit_plan.Context.t -> Modtype_concept.t -> (Unit_plan.Cpp_resolution.frame * Unit_plan.Cpp_resolution.key) list

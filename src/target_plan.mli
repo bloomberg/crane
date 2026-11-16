@@ -13,7 +13,7 @@
     plan of every generated function and method.  It is filled in stages
     ({!plan}, {!with_template_kinds}, {!with_layout}).  Its readers do not
     ask it: the configuration is handed to the stages in the unit's
-    context ({!Unit_context}), the inductive kinds are written into the structure ({!record_kinds}), and
+    context ({!Unit_plan.Context}), the inductive kinds are written into the structure ({!record_kinds}), and
     each layout decision is bound as it is taken, over the earlier units'
     ({!Accumulated_plan}).  Under [CRANE_CHECK_IR] the plan is what the
     emitted result is compared against once the unit is rendered. *)
@@ -61,7 +61,7 @@ type representation = {
       (** The inductives promoted to their eponymous module's struct. *)
   accessors : Names.GlobRef.t list;
       (** The constants emitted as accessor functions, which a use calls. *)
-  nested_structs : (string * Cpp_state.nested_struct_owner) list;
+  nested_structs : (string * Unit_plan.Cpp_state.nested_struct_owner) list;
       (** The structs written inside another struct, with their names. *)
   scopes : Core_plan.Scope_plan.t;
       (** How a definition written outside its struct's body names the
@@ -84,7 +84,7 @@ type t = {
           whether it runs on several threads, which withholds a [Crane
           NonAtomicRc] or [Crane SingleThreaded] request.  Generation, the
           finishing passes, the printer and the runtime's spelling read it
-          off the unit's context ({!Unit_context.t.config}). *)
+          off the unit's context ({!Unit_plan.Context.t.config}). *)
   inductive_kinds : kind_decision list;
       (** In the order they were decided; a later decision about a block
           supersedes an earlier one. *)

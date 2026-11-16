@@ -271,7 +271,7 @@ let module_declared_name mp = Base.Table.escape_reserved_struct_name (Base.Commo
     body of the module whose element is being written
     ({!Module_frame.demoted_around}). *)
 let promoted_at (c : render_ctx) r =
-  Unit_context.is_promoted_inductive c.unit r
+  Context.is_promoted_inductive c.unit r
   &&
   match c.module_ with
   | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around c.plans c.unit.scopes mp))
@@ -609,7 +609,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
     including inside the global struct itself -- so no other name has to move.
 
     The nested names are the plan's, in the unit's context [u] before
-    anything is printed ({!Unit_context.t.nested_structs}); the printer checks, under
+    anything is printed ({!Context.t.nested_structs}); the printer checks, under
     [CRANE_CHECK_IR], that it printed exactly those. *)
 let global_scopes_for u r n =
   match r with
@@ -754,7 +754,7 @@ let live_value_reference ctx x : Cpp_resolution.reference =
 (* {!access} as the resolver answers it: the accessors planned before
    rendering ({!Cpp.plan_accessors}), recorded by module and label, and by
    canonical name. *)
-let live_access (u : Unit_context.t) x : Cpp_resolution.access =
+let live_access (u : Context.t) x : Cpp_resolution.access =
   let x_mp = modpath_of_r x in
   let x_lbl = label_of_r x in
   let rec resolve_mp mp =
@@ -791,7 +791,7 @@ let live_access (u : Unit_context.t) x : Cpp_resolution.access =
 (** {2 Name-resolution cache and cached predicates} *)
 
 (* These query the precomputed {!Core_plan.Name_resolution} cache, where the unit's
-   context holds it ({!Unit_context.t.names}), for how an inductive is classified:
+   context holds it ({!Context.t.names}), for how an inductive is classified:
    eponymous record, enum, record.  The names themselves are produced by the
    functions above ({!inductive_type_name}, {!inductive_name}), which depend
    on the position being written; the cache only answers the questions that
@@ -805,7 +805,7 @@ let live_access (u : Unit_context.t) x : Cpp_resolution.access =
     @param r             the global reference to classify
     @return the result of [cached_lookup] or [fallback], depending on cache
             availability *)
-let with_cache (u : Unit_context.t)
+let with_cache (u : Context.t)
     (cached_lookup : Core_plan.Name_resolution.t -> GlobRef.t -> 'a)
     (fallback : GlobRef.t -> 'a)
     (r : GlobRef.t) : 'a =
@@ -849,7 +849,7 @@ type struct_spelling =
 (** The spelling of [id]'s struct at its declaration, [local] where the
     declaration is rendered among the inductives local to it: a promoted
     inductive, and one a reference sees as merged, take the merged spelling. *)
-let struct_spelling (u : Unit_context.t) ~merged ~promoted ~local id =
+let struct_spelling (u : Context.t) ~merged ~promoted ~local id =
   match id with
   | GlobRef.IndRef _ when is_eponymous_record_cached u.modules id -> Eponymous_record_name
   | GlobRef.IndRef _ when promoted id -> Capitalized

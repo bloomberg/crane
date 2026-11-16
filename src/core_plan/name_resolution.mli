@@ -10,7 +10,7 @@
     inductive declared at top level or in a module structure its
     classification ({!Cpp_ir.Inductive.Kind}: sum, enum, record,
     eponymous record or type class).  The printer reads the classification
-    through {!Cpp_names}, falling back to the live tables for an inductive
+    through {!Unit_plan.Cpp_names}, falling back to the live tables for an inductive
     the scan did not see.  Nothing here qualifies or renames a name.
 
     {2 Usage}

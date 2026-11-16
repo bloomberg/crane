@@ -5,7 +5,7 @@
     pointer, as planned before rendering ({!Cpp.plan_pointer_fields}) and
     accumulated over the units of an extraction (the [pointer_fields] of
     {!Accumulated_plan.t}); a unit's stages read them off its context
-    ({!Unit_context.t.pointer_fields}). *)
+    ({!Unit_plan.Context.t.pointer_fields}). *)
 
 (** A constructor field stored behind the smart pointer: a recursive one,
     which holds the inductive itself, or one [Crane BoxedFields] boxed for

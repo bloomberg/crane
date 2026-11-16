@@ -162,7 +162,7 @@ val lower_qualifiers : settled -> settled
     shared pointer is an ordinary pointer, and the printer reads no
     representation fact to spell one.  An arena allocation in a unit of
     non-atomic pointers becomes its pointer's own factory. *)
-val lower_pointer_slots : Unit_context.t -> settled -> settled
+val lower_pointer_slots : Unit_plan.Context.t -> settled -> settled
 
 (** [mark_unused_bindings decl] records, for each field a match branch binds,
     whether the branch's finished body or conditions read it; one that is not
@@ -202,7 +202,7 @@ val invoke_capturing_initialisers : settled -> settled
     {!instantiate_foreign} does a declaration's: for a type written outside
     every declaration, a record's field -- and writes each pointer in its
     slot, as {!lower_pointer_slots} does in the unit [u]. *)
-val instantiate_type : Unit_context.t -> ty -> ty
+val instantiate_type : Unit_plan.Context.t -> ty -> ty
 
 (** [type_pieces r text tys] is the type mapping [r]'s [text] applied at
     [tys] in pieces, each [%elem] hole boxed or not as {!instantiate_type}
@@ -217,7 +217,7 @@ val type_pieces : Names.GlobRef.t -> string -> ty list -> Cpp_ir.Foreign.piece l
     other reference to such a function names it as a value, and becomes the
     lambda calling it on its receiver.  The methods' plans are the unit
     [u]'s. *)
-val lower_method_calls : Unit_context.t -> settled -> settled
+val lower_method_calls : Unit_plan.Context.t -> settled -> settled
 
 (** [lower_projections decl] writes each record projection the same way:
     applied to its record, as the projection reading its field; named as a

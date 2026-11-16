@@ -5,7 +5,7 @@
     analysis of the program and of the unit being lowered: the input of the
     passes that turn recursion into loops (ControlIR), as
     {!Translation_state}'s is lowering's.  A field of the unit's context
-    ({!Unit_context.t.loops}): the program's, from
+    ({!Unit_plan.Context.t.loops}): the program's, from
     {!Program_facts.analyze_program}, with the unit's effect operations,
     from {!Program_facts.analyze}. *)
 

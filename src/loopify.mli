@@ -26,7 +26,7 @@ open Loopify_analysis
     [Loopify_analysis.Not_linearisable] around the transform that built
     [loop], not around this. *)
 val after_tail_loop :
-  unit:Unit_context.t ->
+  unit:Unit_plan.Context.t ->
   ?strategy:Loopify_analysis.loopify_outcome ->
   ?survived:string ->
   tparams:(param_kind * Id.t) list ->
@@ -66,7 +66,7 @@ type unlowered =
     raises [Loopify_analysis.Not_linearisable] where the transform
     declines. *)
 val frame_machine :
-  unit:Unit_context.t ->
+  unit:Unit_plan.Context.t ->
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
   ?entered_pointers:(Core.Binder.t -> bool) ->
@@ -83,7 +83,7 @@ val frame_machine :
     C++ call made of it records: a function's own, in its recursive group's
     bodies ({!Core_plan.Recursion.calls}), or those of the member of the local
     fixpoint a helper lifted for it lowers. *)
-val definition_calls : unit:Unit_context.t -> GlobRef.t -> Core.Occurrence.t list
+val definition_calls : unit:Unit_plan.Context.t -> GlobRef.t -> Core.Occurrence.t list
 
 (** [record_unlowered ?unlowered f body] records the outcome of the
     function [f], whose body is [body], of which no loop of its own is made
@@ -92,11 +92,11 @@ val definition_calls : unit:Unit_context.t -> GlobRef.t -> Core.Occurrence.t lis
     lowers it to none, a deferral for a suspended cofixpoint, and otherwise
     the decline, or the planned strategy read off [body]: a decline where a
     call of [f] is left in it ({!Loopify_analysis.report_outcome}). *)
-val record_unlowered : unit:Unit_context.t -> ?unlowered:unlowered -> func -> stmt list -> unit
+val record_unlowered : unit:Unit_plan.Context.t -> ?unlowered:unlowered -> func -> stmt list -> unit
 
 (** [record_unlowered_method m] is {!record_unlowered} for the method [m],
     of which no loop is attempted: its calls those of the method. *)
-val record_unlowered_method : unit:Unit_context.t -> meth -> unit
+val record_unlowered_method : unit:Unit_plan.Context.t -> meth -> unit
 
 (** [modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check
     f params body] is the tail-modulo-cons loop of the function [f], whose
@@ -110,7 +110,7 @@ val record_unlowered_method : unit:Unit_context.t -> meth -> unit
     [CRANE_CHECK_IR], or leave a call behind.  It raises
     [Loopify_analysis.Not_linearisable] where the transform declines. *)
 val modulo_cons_loop :
-  unit:Unit_context.t ->
+  unit:Unit_plan.Context.t ->
   jumped:(expr -> unit) ->
   ?cursor:Reuse_cursor.t ->
   varying:bool list ->
@@ -142,7 +142,7 @@ val modulo_cons_loop :
     loop moves a parameter into its own next value at the calls [moves]
     gives ({!Ownership_ir.continue_moves}). *)
 val transform_method_own :
-  unit:Unit_context.t ->
+  unit:Unit_plan.Context.t ->
   ?cursor:Reuse_cursor.t ->
   ?moves:(Core.Occurrence.t * Ownership_ir.Continue_move.t list) list ->
   varying:bool list ->
@@ -167,14 +167,14 @@ val rebuilt_receiver_read : string
     tail-recursive local fixpoints in them turned into loops, under the
     template parameters [tparams]. *)
 val lower_local_tail_loops :
-  unit:Unit_context.t -> tparams:(param_kind * Id.t) list -> stmt list -> stmt list
+  unit:Unit_plan.Context.t -> tparams:(param_kind * Id.t) list -> stmt list -> stmt list
 
 (** [lower_function_locals ~tparams params body] is the body [body] of a
     function taking [params], of which Loopify makes no loop of its own,
     with every local fixpoint in it Loopify lowers turned into its loop or
     its machine. *)
 val lower_function_locals :
-  unit:Unit_context.t -> tparams:(param_kind * Id.t) list -> (Id.t * ty) list -> stmt list -> stmt list
+  unit:Unit_plan.Context.t -> tparams:(param_kind * Id.t) list -> (Id.t * ty) list -> stmt list -> stmt list
 
 (** [local_frame_machine ~member ~name ~binders ~varying ~parts ~tparams
     check params ret_ty body] is the body of the machine with a stack of
@@ -189,7 +189,7 @@ val lower_function_locals :
     It raises [Loopify_analysis.Not_linearisable] where the transform
     declines. *)
 val local_frame_machine :
-  unit:Unit_context.t ->
+  unit:Unit_plan.Context.t ->
   member:Core.Occurrence.t * int ->
   name:Id.t ->
   binders:(Id.t * Core.Binder.t) list ->
@@ -225,7 +225,7 @@ type member_plan = {
     a stack of frames where [frames]; [None] where it has no ControlIR loop,
     or the lambda takes other parameters than the loop. *)
 val member_plan :
-  unit:Unit_context.t -> frames:bool -> Core.Occurrence.t * int -> (Names.Id.t * ty) list -> member_plan option
+  unit:Unit_plan.Context.t -> frames:bool -> Core.Occurrence.t * int -> (Names.Id.t * ty) list -> member_plan option
 
 val worthwhile_move_type : ty -> bool
 (** Whether a value of this type is expensive enough to copy that writing

@@ -122,15 +122,15 @@ let no_program_facts =
     are written as standalone functions, and the effect operations its
     applications are ({!Program_facts.t}), and the elaborations of the
     unit's calls ({!Core_plan.Elaborate.structure}), [None] until the unit is
-    walked; the unit's context ({!Unit_context}); and what the C++
-    backend's passes decided about the unit ({!Cpp_state.plans}), which
+    walked; the unit's context ({!Unit_plan.Context}); and what the C++
+    backend's passes decided about the unit ({!Unit_plan.Cpp_state.plans}), which
     the declarations generated and rendered after them read. *)
 type unit_facts = {
   higher_order_projections : Core.Ref.User.Set.t;
   effects : Core_plan.Effects.t;
   elaborations : Core_plan.Elaborate.t option;
-  context : Unit_context.t;
-  plans : Cpp_state.plans;
+  context : Unit_plan.Context.t;
+  plans : Unit_plan.Cpp_state.plans;
 }
 
 (** The facts of no unit: lowering outside a unit's extent. *)
@@ -138,8 +138,8 @@ let no_unit_facts =
   { higher_order_projections = Core.Ref.User.Set.empty;
     effects = Core_plan.Effects.empty;
     elaborations = None;
-    context = Unit_context.detached;
-    plans = Cpp_state.no_plans }
+    context = Unit_plan.Context.detached;
+    plans = Unit_plan.Cpp_state.no_plans }
 
 (** What the generator of a declaration says about the body it lowers, set
     before lowering starts and not changed by it: the declaration's head,
@@ -348,7 +348,7 @@ type translation_ctx = {
 type t = {
   mutable ctx : translation_ctx;
   mutable lifted : Cpp_ir.Lowered.Decl.t list option;
-  pp_cpp_type : Unit_context.t -> Cpp_state.plans -> bool -> Names.Id.t list -> Cpp_ir.Resolved.Type.t -> Pp.t;
+  pp_cpp_type : Unit_plan.Context.t -> Unit_plan.Cpp_state.plans -> bool -> Names.Id.t list -> Cpp_ir.Resolved.Type.t -> Pp.t;
       (** The printer's spelling of a finished type ({!Cpp_print.pp_cpp_type}),
           for a [CRANE_CHECK_IR] report to quote.  The printer comes after
           lowering, so the driver hands it in when it creates the context. *)
@@ -537,10 +537,10 @@ let unit_context cx = cx.ctx.input.unit.context
 let plans cx = cx.ctx.input.unit.plans
 
 (** Whether the unit being lowered counts references non-atomically
-    ({!Unit_context.non_atomic_rc}). *)
-let non_atomic_rc cx = Unit_context.non_atomic_rc (unit_context cx)
+    ({!Unit_plan.Context.non_atomic_rc}). *)
+let non_atomic_rc cx = Unit_plan.Context.non_atomic_rc (unit_context cx)
 
-(** The callable plans of the unit being lowered ({!Unit_context.t.callables}). *)
+(** The callable plans of the unit being lowered ({!Unit_plan.Context.t.callables}). *)
 let callables cx = (unit_context cx).callables
 
 (** [callee_core_type r] -- the Core type of the callable [r] as the unit's plan

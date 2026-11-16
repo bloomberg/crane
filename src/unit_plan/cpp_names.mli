@@ -157,7 +157,7 @@ type struct_spelling =
     sees it ({!merged_at}), and [promoted] whether it is promoted where it
     is declared; in the unit of context given. *)
 val struct_spelling :
-  Unit_context.t ->
+  Context.t ->
   merged:(Names.GlobRef.t -> bool) ->
   promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
@@ -169,7 +169,7 @@ val enum_declaration_name : Names.GlobRef.t -> string
 
 (** {!struct_spelling} as a string. *)
 val struct_declaration_name :
-  Unit_context.t ->
+  Context.t ->
   merged:(Names.GlobRef.t -> bool) ->
   promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
@@ -190,7 +190,7 @@ val struct_scopes_for : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name
 (** The global-scope qualifier needed in front of an inductive's type name,
     written otherwise as given, where a nested struct of the unit given
     shadows it. *)
-val global_scopes_for : Unit_context.t -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.scope list
+val global_scopes_for : Context.t -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.scope list
 
 (** {!Cpp_state.wrapper_qualify}. *)
 val wrapper_qualify : Core_plan.Module_plan.layout -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
@@ -241,7 +241,7 @@ val read_by_a_function : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
 (** Run a resolver against the name-resolution cache the unit's context
     holds, falling back otherwise. *)
 val with_cache :
-  Unit_context.t ->
+  Context.t ->
   (Core_plan.Name_resolution.t -> Names.GlobRef.t -> 'a) ->
   (Names.GlobRef.t -> 'a) -> Names.GlobRef.t -> 'a
 
@@ -252,13 +252,13 @@ val is_eponymous_record_cached : Core_plan.Module_plan.layout -> Names.GlobRef.t
 val is_global_scope_enum_cached : Core_plan.Module_plan.layout -> Names.GlobRef.t -> bool
 
 (** Cached in the unit's context: the C++ inductive kind of the global, if any. *)
-val get_ind_kind_cached : Unit_context.t -> Names.GlobRef.t -> Cpp_ir.Inductive.Kind.t option
+val get_ind_kind_cached : Context.t -> Names.GlobRef.t -> Cpp_ir.Inductive.Kind.t option
 
 (** Cached in the unit's context: whether the global is an enum. *)
-val is_enum_cached : Unit_context.t -> Names.GlobRef.t -> bool
+val is_enum_cached : Context.t -> Names.GlobRef.t -> bool
 
 (** Cached in the unit's context: whether the global is a record. *)
-val is_record_cached : Unit_context.t -> Names.GlobRef.t -> bool
+val is_record_cached : Context.t -> Names.GlobRef.t -> bool
 
 (** {2 Method receivers} *)
 

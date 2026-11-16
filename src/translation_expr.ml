@@ -57,7 +57,7 @@ let check_binder_scopes cx env i =
     it, and forwarding the ones the declaration kept.  [None] where the
     declaration keeps every parameter, or is not one Crane writes. *)
 let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t option =
-  if Base.Table.is_custom x || Base.Table.is_projection x || Option.has_some (Cpp_names.lookup_method_this_pos x) then None
+  if Base.Table.is_custom x || Base.Table.is_projection x || Option.has_some (Unit_plan.Cpp_names.lookup_method_this_pos x) then None
   else
     match callee_core_type cx x with
     | None -> None

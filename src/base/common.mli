@@ -151,7 +151,7 @@ val file_name : file -> string
     names of what a unit declares and refers to, its layout, its callables.
     {!Emit} generates the unit's declarations ahead of the files, from those
     decisions, and renders each file, which one the printer's position says
-    ({!Cpp_state.render_ctx}).  Beyond its text it may only demand -- the
+    ({!Unit_plan.Cpp_state.render_ctx}).  Beyond its text it may only demand -- the
     headers its body includes -- and generate the helpers it lifts out of
     the bodies it translates, which are named as they are lifted;
     {!names_decided_while_emitting} is how that is checked. *)
@@ -349,7 +349,7 @@ val resolved_is_qualified : resolved -> bool
     Each of these is a function of the visibility it is given and the naming
     tables, so it answers the same wherever it is asked.  No visibility is
     installed anywhere: whoever names something says where it is written
-    ({!Cpp_state.render_ctx.visibility}). *)
+    ({!Unit_plan.Cpp_state.render_ctx.visibility}). *)
 
 (** The name of a reference written where the visibility is, using the
     kernel name key to find its defining module. *)
@@ -470,7 +470,7 @@ val field_param_id : int -> Id.t
     position, to the C++ field name derived from its Rocq binder.  Filled
     where the struct is declared ({!Translation_naming.compute_and_register_field_names})
     and read where a field is accessed.  It lives here rather than in
-    {!Cpp_state} because [Cpp_state] depends on [Translation], which needs the
+    {!Unit_plan.Cpp_state} because [Unit_plan.Cpp_state] depends on [Translation], which needs the
     registry.  Cleared on every extraction reset. *)
 
 (** A stable key for the inductive owning a constructor struct.  Accepts

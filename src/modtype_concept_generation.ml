@@ -23,7 +23,7 @@ let is_functor_param_ref r =
   List.exists
     (fun (key, ({functor_; args} : Core_plan.Module_plan.concept_scope)) ->
       ModPath.equal key functor_ && List.exists (ModPath.equal b) args)
-    !Cpp_state.functor_concept_scopes
+    !Unit_plan.Cpp_state.functor_concept_scopes
 
 (* Whether [r] is a member of [M], the module the concept of the signature
    at [Core.Signature.t] constrains: declared in it, or reached through a functor
@@ -40,7 +40,7 @@ let rec concept_type cx signature (ty : Cpp_ir.Lowered.Type.t) =
   let args = List.map (concept_type cx signature) in
   match ty with
   | Entity_application (r, tys, _) when (not (Base.Table.is_custom r)) && is_member_ref signature r ->
-    Member {member = r; enum = Cpp_names.is_enum_cached (Translation_state.unit_context cx) r; arguments = args tys}
+    Member {member = r; enum = Unit_plan.Cpp_names.is_enum_cached (Translation_state.unit_context cx) r; arguments = args tys}
   | Entity_application (r, [], _) when (not (Base.Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
   | Entity_application (r, tys, _) -> (
     match Base.Table.find_custom_opt r with
@@ -94,7 +94,7 @@ let requirements cx signature = function
            let r = GlobRef.IndRef (kn, i) in
            Inductive_member
              { member = r;
-               enum = Cpp_names.is_enum_cached (Translation_state.unit_context cx) r;
+               enum = Unit_plan.Cpp_names.is_enum_cached (Translation_state.unit_context cx) r;
                arity = List.length p.type_variables } )
          ind.packets )
   (* A polymorphic value is a member template, which a requires-expression

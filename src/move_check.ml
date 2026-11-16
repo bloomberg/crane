@@ -564,7 +564,7 @@ let check_by_reference_closures owner ss =
    conventions, by-reference closures, and, for a top-level function or a
    method with a globref, its own callable convention, as the plans of the
    unit [u] state it. *)
-let rec check_decl (u : Unit_context.t) (d : Cpp_ir.Lowered.Decl.t) =
+let rec check_decl (u : Unit_plan.Context.t) (d : Cpp_ir.Lowered.Decl.t) =
   let rec field ((f, _, _) : phase Field.member) =
     match f with
     | Method m ->

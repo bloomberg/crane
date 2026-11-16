@@ -5,7 +5,7 @@
     part of the {!Target_plan}: for each module the unit emits as a struct, how
     a definition of one of its members, written out of line, names that struct.
     Planned from the layout and the names before anything is rendered
-    ({!Cpp.plan_scopes}), held by the unit's context ({!Unit_context.t.scopes}), and read by
+    ({!Cpp.plan_scopes}), held by the unit's context ({!Unit_plan.Context.t.scopes}), and read by
     declaration: where a definition goes is a question about the definition, not
     about where a printer happens to be. *)
 
@@ -51,7 +51,7 @@ val empty : t
 val equal_plans : t -> t -> bool
 
 (** A plan as the queries below read it, which a unit's context holds
-    ({!Unit_context.t.scopes}). *)
+    ({!Unit_plan.Context.t.scopes}). *)
 type bound
 
 (** [bound_of t] is [t] as the queries read it. *)
@@ -94,7 +94,7 @@ val visibility : bound -> ModPath.t -> Base.Common.visibility option
     [Cpp.file_local_inductives] says every such module does. *)
 val local_inductives : bound -> ModPath.t -> GlobRef.t list option
 
-(** The modules whose frames ({!Module_frame}) are around the body of the
+(** The modules whose frames ({!Unit_plan.Module_frame}) are around the body of the
     module [mp], innermost first: every module declared with a struct for
     its body, around which the render enters its frame, that is [mp] or
     encloses it.  A functor's body is entered without one, and so is a

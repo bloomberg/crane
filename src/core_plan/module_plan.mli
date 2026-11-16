@@ -9,7 +9,7 @@
     {!Cpp.plan_concept_prerequisites}; each decision is folded into the
     layout the extraction has accumulated ({!extend}, the [modules] field of
     {!Accumulated_plan.t}) and handed to the unit's stages in its context
-    ({!Unit_context.t.modules}) before anything is rendered, read-only
+    ({!Unit_plan.Context.t.modules}) before anything is rendered, read-only
     afterwards -- which is what makes it safe to read from a [.cpp] body
     printed before the [.h] that declares the names. *)
 
@@ -97,7 +97,7 @@ val for_next_unit : layout -> layout
 (** {1 Queries}
 
     Each reads the layout it is handed: the one a unit is planned and
-    rendered with is in its context ({!Unit_context.t.modules}). *)
+    rendered with is in its context ({!Unit_plan.Context.t.modules}). *)
 
 (** Whether an enum inductive is written at global scope
     ([global_scope_enums] of the current unit). *)

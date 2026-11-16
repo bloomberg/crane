@@ -686,7 +686,7 @@ let register_methods_for_epon
        struct is at C++ global scope, ahead of the file's module struct, and
        in a nested module it is a member written ahead of them.  So a function
        whose type names one stays a function -- in a nested module, as the
-       module's frame already keeps it ({!Module_frame.method_candidates}).
+       module's frame already keeps it ({!Unit_plan.Module_frame.method_candidates}).
        Registering it here as well would write its calls as calls of a
        method of an eponymous record that the record never gets, and give a
        function of an eponymous inductive to it as a method naming an alias

@@ -9,8 +9,8 @@ open Pp
 open Util
 open Names
 open Base.Common
-open Cpp_state
-open Cpp_names
+open Unit_plan.Cpp_state
+open Unit_plan.Cpp_names
 open Cpp_print
 open Cpp_leaf_plan
 
@@ -78,11 +78,11 @@ let namespaced r r' e : Cpp_ir.Resolved.Type.t = In_namespace (r, Entity_applica
 
 let rec concept_type_names cx u frame : Modtype_concept.concept_type -> _ = function
   | Member {member; arguments; _} ->
-    (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names cx u frame arguments
+    (frame, Unit_plan.Cpp_resolution.Global (Type, member)) :: concept_types_names cx u frame arguments
   | Global (r, args) -> type_names u frame (Entity_application (r, [], [])) @ concept_types_names cx u frame args
   | Namespaced (r, r', e, args) -> type_names u frame (namespaced r r' e) @ concept_types_names cx u frame args
   | Foreign {custom; arguments; _} ->
-    (frame, Cpp_resolution.Custom_text custom) :: concept_types_names cx u frame arguments
+    (frame, Unit_plan.Cpp_resolution.Custom_text custom) :: concept_types_names cx u frame arguments
   | Variant (_, args) -> concept_types_names cx u frame args
   | Shared_pointer ty -> concept_type_names cx u frame ty
   | Function (dom, cod) -> concept_types_names cx u frame (cod :: dom)
@@ -91,33 +91,33 @@ let rec concept_type_names cx u frame : Modtype_concept.concept_type -> _ = func
 and concept_types_names cx u frame tys = List.concat_map (concept_type_names cx u frame) tys
 
 let requirement_names cx u frame : Modtype_concept.requirement -> _ = function
-  | Inductive_member {member; _} -> [(frame, Cpp_resolution.Short (Type, member))]
+  | Inductive_member {member; _} -> [(frame, Unit_plan.Cpp_resolution.Short (Type, member))]
   | Type_member {member; _} -> [(frame, Unmapped (Type, member))]
   | Instance_member {value; class_; arguments} ->
-    (frame, Cpp_resolution.Unmapped (Term, value)) :: (frame, Short (Type, class_))
+    (frame, Unit_plan.Cpp_resolution.Unmapped (Term, value)) :: (frame, Short (Type, class_))
       :: concept_types_names cx u frame arguments
   | Nullary_member {value; result} ->
-    (frame, Cpp_resolution.Unmapped (Term, value)) :: concept_type_names cx u frame result
+    (frame, Unit_plan.Cpp_resolution.Unmapped (Term, value)) :: concept_type_names cx u frame result
   | Function_member {value; parameters; result} ->
-    (frame, Cpp_resolution.Unmapped (Term, value)) :: concept_types_names cx u frame (result :: parameters)
+    (frame, Unit_plan.Cpp_resolution.Unmapped (Term, value)) :: concept_types_names cx u frame (result :: parameters)
   | Submodule {module_type; _} -> [(frame, Modtype_concept module_type)]
 
 let rec constraint_names cx u frame : Modtype_concept.constraint_ -> _ = function
-  | Named kn -> [(frame, Cpp_resolution.Module kn)]
+  | Named kn -> [(frame, Unit_plan.Cpp_resolution.Module kn)]
   | Requirements {signature; parameters; items} ->
-    let frame = Cpp_resolution.Signature {signature; parameters} :: frame in
+    let frame = Unit_plan.Cpp_resolution.Signature {signature; parameters} :: frame in
     List.concat_map
       (function
         | Modtype_concept.Requirement r -> requirement_names cx u frame r
-        | Nested (path, c) -> (frame, Cpp_resolution.Modtype_concept_declared path) :: constraint_names cx u frame c )
+        | Nested (path, c) -> (frame, Unit_plan.Cpp_resolution.Modtype_concept_declared path) :: constraint_names cx u frame c )
       items
 
-let modules frame = List.map (fun p -> (frame, Cpp_resolution.Module p))
+let modules frame = List.map (fun p -> (frame, Unit_plan.Cpp_resolution.Module p))
 
 (* What the definition of the concept [c] names, after its head. *)
 let concept_body_names cx u : Modtype_concept.t -> _ = function
   | Alias {base; refinements} ->
-    (([], Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base))
+    (([], Unit_plan.Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base))
     @ List.concat_map (fun (_, ty) -> type_names u [] ty) refinements
   | Constraint c -> constraint_names cx u [] c
 
@@ -125,7 +125,7 @@ let concept_body_names cx u : Modtype_concept.t -> _ = function
    names: its own name, the functor parameters [params] it is written over,
    and its body ({!concept_body_names}). *)
 let modtype_concept_names cx u ~path ~params (c : Modtype_concept.t) =
-  (([], Cpp_resolution.Modtype_concept_declared path) :: modules [] params) @ concept_body_names cx u c
+  (([], Unit_plan.Cpp_resolution.Modtype_concept_declared path) :: modules [] params) @ concept_body_names cx u c
 
 (** A type of a module-type concept's requirements, spelled from inside the
     concept ({!Modtype_concept.concept_type}), naming what [names] names at
@@ -269,7 +269,7 @@ let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
 let rec pp_constraint cx ctx names frame : Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
   | Named kn -> ([], Name (Base.Cpp_name.pp (name_in ctx names frame (Module kn))))
   | Requirements {signature; parameters; items} ->
-    let entered = Cpp_resolution.Signature {signature; parameters} in
+    let entered = Unit_plan.Cpp_resolution.Signature {signature; parameters} in
     let frame = entered :: frame in
     enter_from ctx entered @@ fun ctx ->
     let item (hoisted, reqs) : Modtype_concept.item -> _ = function

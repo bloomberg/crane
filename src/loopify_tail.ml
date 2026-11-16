@@ -77,7 +77,7 @@ let is_moveable_param_type = function
     avoid copying the entire value at each loop iteration.
 
     Under [Crane Reuse] with non-atomic reference counts in the unit [u]
-    ({!Unit_context.non_atomic_rc}) an owned by-value parameter qualifies too.  Reuse
+    ({!Unit_plan.Context.non_atomic_rc}) an owned by-value parameter qualifies too.  Reuse
     needs the scrutinee owned (that is what gives the loop cells it may
     recycle), and escape analysis ({!Core_plan.Escape}) therefore passes it by value;
     without this case the shadow
@@ -99,7 +99,7 @@ let borrowed_value_param_pointee u = function
   | Reference (Lvalue, Const t) when is_value_type_ret t -> Some t
   | Const (Reference (Lvalue, t)) when is_value_type_ret t -> Some t
   | Const t when is_value_type_ret t -> Some t
-  | t when Base.Table.reuse_here () && Unit_context.non_atomic_rc u && is_value_type_ret t ->
+  | t when Base.Table.reuse_here () && Unit_plan.Context.non_atomic_rc u && is_value_type_ret t ->
     Some t
   | _ -> None
 

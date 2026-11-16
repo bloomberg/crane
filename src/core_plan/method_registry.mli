@@ -132,7 +132,7 @@ val cpp_arg_pos : Core.Type.t -> int -> int
 (** Convenience: is the function a registered method? Returns
     [Some (epon_ref, this_pos)] if yes, [None] otherwise. Used by
     {!Program_facts} for each method's receiver, and by the renderer through
-    {!Cpp_state.is_registered_method}.
+    {!Unit_plan.Cpp_state.is_registered_method}.
     @param t the registry to query
     @param func_ref the function to test
     @return [Some (epon_ref, this_pos)] where [epon_ref] is the eponymous

@@ -35,8 +35,8 @@ open Names
 open Base.Table
 open Base.Common
 open Gen_decls
-open Cpp_state
-open Cpp_names
+open Unit_plan.Cpp_state
+open Unit_plan.Cpp_names
 
 (** Declarations as generated, each with the name environment it is printed
     in. *)
@@ -513,7 +513,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
               (empty_env (), (Merged_struct_members s : Cpp_ir.Lowered.Decl.t)) :: pp (i + 1)
             | _ ->
               (* Only an enum generates something else, and an enum is never
-                 promoted ({!Module_frame.promoted}). *)
+                 promoted ({!Unit_plan.Module_frame.promoted}). *)
               CErrors.anomaly
                 Pp.(str "Crane: the promoted inductive " ++ GlobRef.print names.(i)
                     ++ str " generated no struct.")
@@ -535,7 +535,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
                      planned into the wrapper. *)
                   let merges =
                     (match decl with Struct _ -> true | _ -> false)
-                    && not (Cpp_state.in_unmerged_wrapper (Translation_state.unit_context cx) names.(i))
+                    && not (Unit_plan.Cpp_state.in_unmerged_wrapper (Translation_state.unit_context cx) names.(i))
                   in
                   Namespace (Some {ref_ = names.(i); merges}, [decl])
                 else decl
@@ -1295,11 +1295,11 @@ let header_element_position cx u mp =
   { (file_start u (Translation_state.plans cx) Intf) with
     in_struct = in_struct;
     concepts_hoisted = concepts_hoisted;
-    in_template = Core_plan.Scope_plan.templated u.Unit_context.scopes mp }
+    in_template = Core_plan.Scope_plan.templated u.Unit_plan.Context.scopes mp }
 
-type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
+type concept_placement = Unit_plan.Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-type concept_plan = Cpp_state.concept_plan = {
+type concept_plan = Unit_plan.Cpp_state.concept_plan = {
   placements : (held_concept * concept_placement) list;
   held_back : held_concept list;
 }
@@ -1327,7 +1327,7 @@ let concept_placement plan c =
   | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
 
 (* The visibility planned for the body of [mp]; an anomaly if none was. *)
-let planned_visibility (u : Unit_context.t) mp =
+let planned_visibility (u : Unit_plan.Context.t) mp =
   match Core_plan.Scope_plan.visibility u.scopes mp with
   | Some v -> v
   | None ->
@@ -1360,10 +1360,10 @@ let at_spelling cx ~file spelling k = k (spelling_position cx ~file spelling)
 (* The live name of [key] at [frame] inside the position of [spelling] in
    [file], noting it as written. *)
 let head_resolver_at cx ~file spelling frame key =
-  at_spelling cx ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_value ctx key))
+  at_spelling cx ~file spelling (fun ctx -> Unit_plan.Cpp_names.at_frame ctx frame (fun ctx -> Unit_plan.Cpp_names.live_value ctx key))
 
 (* A declaration's names are noted as written where it is printed, which
-   names them again under CRANE_CHECK_IR ({!Cpp_names.checked}); a struct's
+   names them again under CRANE_CHECK_IR ({!Unit_plan.Cpp_names.checked}); a struct's
    head is printed as resolved, so its names are noted here. *)
 let resolver_at cx ~file spelling frame key =
   Base.Common.without_noting_written_files (fun () -> head_resolver_at cx ~file spelling frame key)
@@ -1383,7 +1383,7 @@ let resolve cx ~file = Cpp_ast.resolve ~requested:(requested cx) ~resolve:(resol
   ~resolve_head:(head_resolver_at cx ~file)
 
 let names_into_a_struct_as_written cx ~file spelling decl =
-  let names = Cpp_resolution.resolve (resolver_at cx ~file spelling) (requested cx (Declaration {env = empty_env ();
+  let names = Unit_plan.Cpp_resolution.resolve (resolver_at cx ~file spelling) (requested cx (Declaration {env = empty_env ();
                                                                                            decl})) in
   at_spelling cx ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names decl)
 

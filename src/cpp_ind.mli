@@ -37,7 +37,7 @@ type rendered = (Base.Common.env * Cpp_ir.Resolved.Decl.t) list
 
 (** Print the declarations an entry point answered with, at the position
     given. *)
-val pp_decls : Cpp_state.render_ctx -> rendered -> Cpp_ast.t
+val pp_decls : Unit_plan.Cpp_state.render_ctx -> rendered -> Cpp_ast.t
 
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's
@@ -190,7 +190,7 @@ val header_scope : Names.ModPath.t -> header_scope option
 (** [spelling_position ~file spelling] is the position a declaration
     spelled [spelling] is written at in [file], a function of the plan
     alone. *)
-val spelling_position : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_state.render_ctx
+val spelling_position : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Unit_plan.Cpp_state.render_ctx
 
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
@@ -206,7 +206,7 @@ type section = group list
 (** A section's groups, in order, written at the position given, each to be
     printed as an element of its source module is spelled
     ({!Cpp_ast.Elements}). *)
-val render_section : Cpp_state.render_ctx -> section -> Cpp_ast.t list
+val render_section : Unit_plan.Cpp_state.render_ctx -> section -> Cpp_ast.t list
 
 (** [resolver_at ~file spelling] names what a declaration spelled
     [spelling] names where it is written in [file], in the visibility planned
@@ -239,14 +239,14 @@ val write_unprinted : Translation_state.t -> file:Base.Common.file -> Cpp_ast.sp
     concepts at file scope.  Otherwise a concept goes ahead of the module's
     struct, whose body may constrain a functor with it, unless it names one
     of the struct's members, when it follows the struct. *)
-type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
+type concept_placement = Unit_plan.Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-(** {!Cpp_state.concept_plan}. *)
-type concept_plan = Cpp_state.concept_plan = {
-  placements : (Cpp_state.held_concept * concept_placement) list;
+(** {!Unit_plan.Cpp_state.concept_plan}. *)
+type concept_plan = Unit_plan.Cpp_state.concept_plan = {
+  placements : (Unit_plan.Cpp_state.held_concept * concept_placement) list;
       (** The class concepts, then the module-type concepts, in declaration
           order. *)
-  held_back : Cpp_state.held_concept list;
+  held_back : Unit_plan.Cpp_state.held_concept list;
       (** The concepts the struct's body treats as not declared yet. *)
 }
 
@@ -255,15 +255,15 @@ type concept_plan = Cpp_state.concept_plan = {
     its module, of a module inside a struct if [nested]. *)
 val plan_concepts :
   nested:bool ->
-  classes:(Cpp_state.held_concept * bool) list ->
-  modtypes:(Cpp_state.held_concept * bool) list ->
+  classes:(Unit_plan.Cpp_state.held_concept * bool) list ->
+  modtypes:(Unit_plan.Cpp_state.held_concept * bool) list ->
   concept_plan
 
 (** Structural equality of two plans, placements in order. *)
 val equal_concept_plan : concept_plan -> concept_plan -> bool
 
 (** Where [plan] places the concept [c]; an anomaly if it does not. *)
-val concept_placement : concept_plan -> Cpp_state.held_concept -> concept_placement
+val concept_placement : concept_plan -> Unit_plan.Cpp_state.held_concept -> concept_placement
 
 (** [concept r fields] is the concept of the class [r], of fields [fields]:
     generated ahead of the files ({!generating_ahead}) in the module
@@ -434,29 +434,29 @@ type element = {
 
 (** The implementation-file declarations for one Core declaration, written
     at the position given. *)
-val impl_decls : Translation_state.t -> Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+val impl_decls : Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** The header declarations for one Core declaration, written at the
     position given. *)
-val header_decls : Translation_state.t -> Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+val header_decls : Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** What {!header_decls} gives for a declaration, read off what was generated
     ahead of the files without taking it: nothing is recorded or claimed,
     and the helpers are those the header is planned to place there.  Read
     at the position given. *)
 val header_element_ahead :
-  Translation_state.t -> Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+  Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** What the implementation writes for a declaration, read off what was
     generated ahead of the files without taking it, at the position
     given. *)
 val impl_element_ahead :
-  Translation_state.t -> Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+  Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** Whether the inductive [d] declares, promoted to its module's struct,
     makes that struct derive from [enable_shared_from_this], read off what
     was generated ahead of the files in the module [module_], written at
     the position given. *)
 val promoted_shared_from_this :
-  Translation_state.t -> Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> bool
+  Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> bool
 

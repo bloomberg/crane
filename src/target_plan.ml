@@ -25,7 +25,7 @@ type representation = {
   unmerged_wrappers : (string * Names.ModPath.t) list;
   promoted_inductives : GlobRef.t list;
   accessors : GlobRef.t list;
-  nested_structs : (string * Cpp_state.nested_struct_owner) list;
+  nested_structs : (string * Unit_plan.Cpp_state.nested_struct_owner) list;
   scopes : Core_plan.Scope_plan.t;
   instance_promoted_types : (GlobRef.t * (Id.t * Core.Type.t) list) list;
 }
@@ -366,7 +366,7 @@ let equal a b =
   && List.equal GlobRef.UserOrd.equal a.representation.promoted_inductives b.representation.promoted_inductives
   && List.equal GlobRef.UserOrd.equal a.representation.accessors b.representation.accessors
   && List.equal
-       (fun (n, o) (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o')
+       (fun (n, o) (n', o') -> String.equal n n' && Unit_plan.Cpp_state.nested_struct_owner_equal o o')
        a.representation.nested_structs b.representation.nested_structs
   && Core_plan.Scope_plan.equal_plans a.representation.scopes b.representation.scopes
   && List.equal

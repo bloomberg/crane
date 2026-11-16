@@ -340,7 +340,7 @@ let ptr_field_index = Core_plan.Pointer_fields.index
     it has any; queried by {!Loopify_tmc.make_cell} to determine which
     fields need [make_shared] wrapping in the direct-struct-construction
     path. *)
-let pointer_fields_of (u : Unit_context.t) key = Core_plan.Pointer_fields.find u.pointer_fields key
+let pointer_fields_of (u : Unit_plan.Context.t) key = Core_plan.Pointer_fields.find u.pointer_fields key
 
 (** The arguments of the constructor [c] its struct stores behind the pointer
     in the unit [u], as planned, or [None] where it stores none. *)
@@ -557,7 +557,7 @@ let fixpoint_self (fixpoint : local_fixpoint option) params =
     reported the last first, parallel to the parameters a local fixpoint's
     loop is lowered over. *)
 let planned_self_checker ~unit member : call_checker =
-  let calls = (Core_plan.Recursion.member_calls (Unit_context.recursion unit)) member in
+  let calls = (Core_plan.Recursion.member_calls (Unit_plan.Context.recursion unit)) member in
   fun e ->
     let planned =
       match e with

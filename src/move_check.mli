@@ -42,7 +42,7 @@
 (** Check every function and method body of a declaration, nested
     namespaces, templates and structs included, and report each violation
     of the rules above, against the plans of the unit given. *)
-val check_decl : Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit
+val check_decl : Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
 
 (** The locals [ss], a body, reads after it moves them, the backend's own
     storage aside. *)

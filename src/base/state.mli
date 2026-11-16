@@ -3,7 +3,7 @@
 
 (** The one registry of mutable cells that must be emptied between runs.  A
     cell enrols where it is defined, with the scope it lives for.
-    {!Table.reset_tables} and {!Cpp_state.reset_cpp_state} reset the
+    {!Table.reset_tables} and {!Unit_plan.Cpp_state.reset_cpp_state} reset the
     [Extraction] scope when a command starts;
     {!Common.reset_renaming_tables} resets the [Unit] scope, at the start of
     an extraction and before each generated file.
@@ -11,7 +11,7 @@
     A cell holding a plan value is not enrolled: it is bound for the
     dynamic extent the value is good for ({!bind}).  What a unit's plan
     decides, and what the earlier units of a separate extraction decided,
-    is no cell: it is a field of the unit's context ({!Unit_context.t}),
+    is no cell: it is a field of the unit's context ({!Unit_plan.Context.t}),
     handed to the stages that read it. *)
 
 (** How long a cell's contents are good for.

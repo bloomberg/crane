@@ -5,7 +5,7 @@
     rendered and accumulated over the units of an extraction
     ({!Accumulated_plan.t}): the constants written as accessor functions,
     and the structs written inside another struct.  A unit's stages read
-    them, with the unmerged wrappers, off its context ({!Unit_context.t}). *)
+    them, with the unmerged wrappers, off its context ({!Unit_plan.Context.t}). *)
 
 (** {2 Accessors} *)
 

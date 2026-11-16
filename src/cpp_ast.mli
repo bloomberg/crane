@@ -47,13 +47,13 @@ module Needs : sig
   val is_none : t -> bool
 end
 
-(** Where a synthesised template is declared ({!Cpp_state.declared_in}),
+(** Where a synthesised template is declared ({!Unit_plan.Cpp_state.declared_in}),
     defined beside the position that collects the templates spelled from
     it. *)
-type declared_in = Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
+type declared_in = Unit_plan.Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
 
-(** A holder's parameter ({!Cpp_state.holder_parameter}). *)
-type holder_parameter = Cpp_state.holder_parameter = Constructor_parameter of Id.t | Type_parameter of Id.t
+(** A holder's parameter ({!Unit_plan.Cpp_state.holder_parameter}). *)
+type holder_parameter = Unit_plan.Cpp_state.holder_parameter = Constructor_parameter of Id.t | Type_parameter of Id.t
 
 (** How a declaration not yet printed is spelled, which is what printing it
     reads off where the tree puts it. *)
@@ -79,7 +79,7 @@ type resolution = Unresolved | Resolved of Base.Cpp_name.t
 
 (** A module a declaration names, by its path, and its name where the
     declaration is written; in a module expression, also as the expression
-    names it ({!Cpp_resolution.Module_in_expression}), resolved only
+    names it ({!Unit_plan.Cpp_resolution.Module_in_expression}), resolved only
     there. *)
 type module_ref = {path : ModPath.t; name : resolution; in_expression : resolution}
 
@@ -124,7 +124,7 @@ and parameter =
 
 (** How {!resolve} names what a declaration names where it is written, at
     a frame inside it. *)
-type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_resolution.value
+type resolver = Unit_plan.Cpp_resolution.frame -> Unit_plan.Cpp_resolution.key -> Unit_plan.Cpp_resolution.value
 
 (** A struct or scoped enum a declaration defines at namespace scope, which
     a forward declaration declares ahead of it. *)
@@ -141,7 +141,7 @@ type defined =
 
 (** The name a {!Defined_struct} is declared under. *)
 and defined_name =
-  | As_defined  (** Its definition's ({!Cpp_resolution.Struct_definition}). *)
+  | As_defined  (** Its definition's ({!Unit_plan.Cpp_resolution.Struct_definition}). *)
   | As_inductive_wrapper  (** That of the wrapper merged with the inductive's struct. *)
 
 (** What a declaration not yet printed declares. *)
@@ -238,7 +238,7 @@ and global_alias =
 
 (** How the type an {!Alias_of_type} stands in for is declared, which is
     the name it is declared under. *)
-and definition = Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
+and definition = Unit_plan.Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
 
 (** A declaration not yet printed, with what placing the declarations it
     needs reads -- planned, so known before it is printed -- and the names it
@@ -246,10 +246,10 @@ and definition = Cpp_resolution.definition = Enum_definition | Struct_definition
 type unprinted = {
   declaration : declaration;  (** What it declares. *)
   needs : Needs.t;  (** What placing the declarations it needs reads. *)
-  names : Cpp_resolution.table;
+  names : Unit_plan.Cpp_resolution.table;
       (** The names it is printed with, once {!resolve_tree} has resolved
           them where it is written. *)
-  tyctors : Cpp_state.tyctor_use list option;
+  tyctors : Unit_plan.Cpp_state.tyctor_use list option;
       (** How the type constructors it writes as template template arguments
           are written, planned with the synthesised templates it writes; none
           where nothing planned them, where printing decides them. *)
@@ -361,17 +361,17 @@ val decl : needs:Needs.t -> Pp.t -> t
 (** [unprinted ~needs ?tyctors env d] is [d], printed in [env] where the
     tree puts it, writing its type constructors as [tyctors] says
     ({!unprinted.tyctors}). *)
-val unprinted : needs:Needs.t -> ?tyctors:Cpp_state.tyctor_use list -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> t
+val unprinted : needs:Needs.t -> ?tyctors:Unit_plan.Cpp_state.tyctor_use list -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> t
 
 (** [absorbed ?tyctors env d] is {!Absorbed}, printed where the tree puts
     it. *)
-val absorbed : ?tyctors:Cpp_state.tyctor_use list -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> t
+val absorbed : ?tyctors:Unit_plan.Cpp_state.tyctor_use list -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> t
 
 (** [fields ~needs ?tyctors ~record ~vars fields] is {!Fields}, printed
     where the tree puts it. *)
 val fields :
   needs:Needs.t ->
-  ?tyctors:Cpp_state.tyctor_use list ->
+  ?tyctors:Unit_plan.Cpp_state.tyctor_use list ->
   record:GlobRef.t ->
   vars:Id.t list ->
   (string * Cpp_ir.Resolved.Type.t) list ->
@@ -413,7 +413,7 @@ val forward_declaration : Base.Common.env -> defined -> t
     wherever the tree puts it as declared in its home, its body writing its
     type constructors as [tyctors] says.  It needs nothing placed in front
     of it. *)
-val synthesised_template : tyctors:Cpp_state.tyctor_use list -> synthesised -> t
+val synthesised_template : tyctors:Unit_plan.Cpp_state.tyctor_use list -> synthesised -> t
 
 (** [wrapper_struct ~name ~module_ ~fields] is {!Wrapper_struct}. *)
 val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t
@@ -494,7 +494,7 @@ val to_pp : t -> Pp.t
     head names a module is outside every {!Elements} and struct
     {!Module}. *)
 val resolve_tree :
-  requested:(declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list) ->
+  requested:(declaration -> (Unit_plan.Cpp_resolution.frame * Unit_plan.Cpp_resolution.key) list) ->
   resolve:(spelling -> resolver) ->
   resolve_head:(spelling -> resolver) ->
   t ->
@@ -574,7 +574,7 @@ val schedule : templates:template list -> forwards:forward list -> translation_u
 
 (** {!resolve_tree} over each section of a scheduled unit. *)
 val resolve :
-  requested:(declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list) ->
+  requested:(declaration -> (Unit_plan.Cpp_resolution.frame * Unit_plan.Cpp_resolution.key) list) ->
   resolve:(spelling -> resolver) ->
   resolve_head:(spelling -> resolver) ->
   scheduled ->

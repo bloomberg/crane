@@ -100,7 +100,7 @@ let storage_of (planned : planned_result) ret_ty = if planned.values then Value_
 (* Whether a result may be assembled in cells a reuse cursor recycles: one
    of values under the reuse policy, unless a shared variant. *)
 let recyclable_result u (planned : planned_result) =
-  planned.values && Base.Table.reuse_here () && Unit_context.non_atomic_rc u && not planned.shared
+  planned.values && Base.Table.reuse_here () && Unit_plan.Context.non_atomic_rc u && not planned.shared
 
 (** The value type a cell holds behind its pointer, when cells are values. *)
 let cell_value_type = function
@@ -973,7 +973,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
   let root_decls =
     match storage with
     | Value_root t ->
-      [ Declare_value_initialized (id_root, External (Cpp_state.std_namespace () ^ "::optional", [t]));
+      [ Declare_value_initialized (id_root, External (Unit_plan.Cpp_state.std_namespace () ^ "::optional", [t]));
         Bind_variable (id_write, Declare (Pointer head_ty, None), Literal Null_pointer) ]
     | Boxed_root _ | Pointer_result _ ->
       [ Declare_value_initialized (id_head, head_ty);

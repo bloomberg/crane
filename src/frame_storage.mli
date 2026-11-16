@@ -57,14 +57,14 @@ val value_inductive : abbreviations:bool -> Core.Type.t -> bool
     through an abbreviation ({!Translation_ownership.wrap_param_by_ownership}
     declares either by reference).  A parameter of no runtime value
     ([None]) is held by none.  NonAtomicRc is the unit [u]'s. *)
-val passed_holdable : Unit_context.t -> Core_plan.Callable_abi.passing option -> Core.Type.t -> bool
+val passed_holdable : Unit_plan.Context.t -> Core_plan.Callable_abi.passing option -> Core.Type.t -> bool
 
 (** Whether a frame can hold the parameter at position [i] of the loop [l]
     by pointer, as the plan of the local fixpoint's function [l] is made
     from passes it ({!Ownership_ir.Local_passing}, {!passed_holdable});
     [None] where [l] is a function's loop, or no plan says.  [u] is the
     unit [l] is lowered in. *)
-val local_holdable : Unit_context.t -> Control_ir.Term.loop -> int -> bool option
+val local_holdable : Unit_plan.Context.t -> Control_ir.Term.loop -> int -> bool option
 
 (** [check_local i ~planned ~declared]: under [CRANE_CHECK_IR], where the
     plan of a local fixpoint has a frame hold the parameter at [i] of its

@@ -25,9 +25,9 @@ type t = {
           the module it wraps. *)
   promoted_inductives : Core.Ref.User.Set.t;
       (** The inductives promoted to their eponymous module's struct. *)
-  accessors : Cpp_state.accessors;
+  accessors : Unit_plan.Cpp_state.accessors;
       (** The constants emitted as accessor functions. *)
-  nested_structs : Cpp_state.nested_struct_owner list CString.Map.t;
+  nested_structs : Unit_plan.Cpp_state.nested_struct_owner list CString.Map.t;
       (** The structs written inside another struct, by name. *)
   instance_promoted_types : (Id.t * Core.Type.t) list GlobRef.Map.t;
       (** The concrete types each instance gives its class's promoted
@@ -36,15 +36,15 @@ type t = {
 
 (** What the first unit of an extraction starts from: [accessors], those
     a pre-scan of the whole program found, and nothing else. *)
-val start : accessors:Cpp_state.accessors -> t
+val start : accessors:Unit_plan.Cpp_state.accessors -> t
 
 (** [context t u] is the unit's context [u] holding the facts of [t] its
     readers read off it: every one. *)
-val context : t -> Unit_context.t -> Unit_context.t
+val context : t -> Unit_plan.Context.t -> Unit_plan.Context.t
 
 (** What the next unit of the extraction starts from, once a unit planned
     [t]: [t] without the facts that belong to one unit, the per-unit
     layout ({!Core_plan.Module_plan.for_next_unit}).  The callable plans are the
-    unit's own ({!Unit_context.t.callables}): a callee another unit defines
+    unit's own ({!Unit_plan.Context.t.callables}): a callee another unit defines
     is planned as foreign ({!Core_plan.Callable_abi.with_foreign}). *)
 val for_next_unit : t -> t

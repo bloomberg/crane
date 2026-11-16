@@ -196,6 +196,6 @@ val throwing_values : Core.Program.t -> GlobRef.t list
 val concept_self_param : string
 
 (** The concept identifier a module type labelled [l] takes unless a clash
-    qualifies it ({!Cpp_names.modtype_concept_name} is the only reader outside
+    qualifies it ({!Unit_plan.Cpp_names.modtype_concept_name} is the only reader outside
     this module). *)
 val concept_name_of_label : Label.t -> string

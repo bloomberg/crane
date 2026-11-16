@@ -11,8 +11,8 @@ type t = {
   pointer_fields : Core_plan.Pointer_fields.t;
   unmerged_wrappers : ModPath.t CString.Map.t;
   promoted_inductives : Core.Ref.User.Set.t;
-  accessors : Cpp_state.accessors;
-  nested_structs : Cpp_state.nested_struct_owner list CString.Map.t;
+  accessors : Unit_plan.Cpp_state.accessors;
+  nested_structs : Unit_plan.Cpp_state.nested_struct_owner list CString.Map.t;
   instance_promoted_types : (Id.t * Core.Type.t) list GlobRef.Map.t;
 }
 
@@ -25,7 +25,7 @@ let start ~accessors =
     nested_structs = CString.Map.empty;
     instance_promoted_types = GlobRef.Map.empty }
 
-let context t (u : Unit_context.t) =
+let context t (u : Unit_plan.Context.t) =
   { u with
     modules = t.modules;
     pointer_fields = t.pointer_fields;

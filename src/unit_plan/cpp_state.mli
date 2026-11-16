@@ -12,7 +12,7 @@
    it lives here so the other [cpp_*] modules can share it without depending
    on each other.  The facts a unit's plan decides -- the accessors, the
    unmerged wrappers, the nested struct names -- are not here: they are
-   fields of the unit's context ({!Unit_context.t}), which the queries
+   fields of the unit's context ({!Context.t}), which the queries
    below are handed. *)
 
 (** {2 Owned cells}
@@ -349,13 +349,13 @@ and render_ctx = {
   tyctors : tyctor_plan;
       (** How the type constructors written from here are written
           ({!tyctor_plan}). *)
-  unit : Unit_context.t;  (** The unit the file is of. *)
+  unit : Context.t;  (** The unit the file is of. *)
   plans : plans;  (** What the backend's passes decided about the unit. *)
 }
 
 (** The context at the start of the file [file] of the unit [u], whose
     backend's passes planned [plans]: file scope, outside every struct. *)
-val file_start : Unit_context.t -> plans -> Base.Common.file -> render_ctx
+val file_start : Context.t -> plans -> Base.Common.file -> render_ctx
 
 (** What a file declares at file scope: the types, by the entity each
     declaration declares, and the promoted type variables among them, by
@@ -469,16 +469,16 @@ val add_accessor_ref : accessors -> Names.GlobRef.t -> accessors
 (** The module paths and labels of the accessors of the unit given: those
     its plan decided ([Cpp.plan_accessors]), every earlier unit's of a
     separate extraction, and those its pre-scan of the whole program
-    found ({!Unit_context.t.accessors}). *)
-val template_static_accessor_names : Unit_context.t -> (Names.ModPath.t * Names.Label.t) list
+    found ({!Context.t.accessors}). *)
+val template_static_accessor_names : Context.t -> (Names.ModPath.t * Names.Label.t) list
 
 (** Whether the constant's canonical kernel name is an accessor's in the
     unit given. *)
-val is_template_static_accessor_constant : Unit_context.t -> Names.Constant.t -> bool
+val is_template_static_accessor_constant : Context.t -> Names.Constant.t -> bool
 
 (** Whether the definition [lbl] of [mp] is an accessor in the unit
     given. *)
-val is_template_static_accessor : Unit_context.t -> Names.ModPath.t -> Names.Label.t -> bool
+val is_template_static_accessor : Context.t -> Names.ModPath.t -> Names.Label.t -> bool
 
 (** {2 Eponymous records} *)
 
@@ -524,7 +524,7 @@ val setting : 'a ref -> 'a -> (unit -> 'b) -> 'b
     Each is the [std::] or [bsl::] spelling of the field's name unless noted;
     [Crane NonAtomicRc], [Crane FastVariant], [Crane SharedVariant] and
     [CRANE_COUNT_RC] substitute runtime names ({!sn}). *)
-type std_names = Unit_context.std_names = {
+type std_names = Context.std_names = {
   shared_ptr : string;  (** the smart pointer for recursive fields *)
   make_shared : string;  (** its factory *)
   move : string;
@@ -562,15 +562,15 @@ val std_namespace : unit -> string
     [Base.Table.count_rc_for], the counting pointer, or else under
     [Base.Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
     [crane::enable_rc_from_this], in [u]'s configuration. *)
-val std_names_of : Unit_context.t -> std_names
+val std_names_of : Context.t -> std_names
 
-(** The names the unit's context carries ({!Unit_context.t.std_names}),
+(** The names the unit's context carries ({!Context.t.std_names}),
     computed where the unit is configured ({!with_std_names}): what the
     printer reads, a fact it is handed rather than one it asks the table. *)
-val sn : Unit_context.t -> std_names
+val sn : Context.t -> std_names
 
 (** [u] carrying the names a file of it is written with ({!std_names_of}). *)
-val with_std_names : Unit_context.t -> Unit_context.t
+val with_std_names : Context.t -> Context.t
 
 (** {2 Wrapper and scope tables} *)
 
@@ -578,17 +578,17 @@ val with_std_names : Unit_context.t -> Unit_context.t
     declarations and therefore cannot be merged with the module's
     inductive, among the unit's: its own, planned
     ([Cpp.plan_unmerged_wrappers]), and every earlier unit's of a separate
-    extraction ({!Unit_context.t.unmerged_wrappers}). *)
-val unmerged_wrapper : Unit_context.t -> string -> Names.ModPath.t option
+    extraction ({!Context.t.unmerged_wrappers}). *)
+val unmerged_wrapper : Context.t -> string -> Names.ModPath.t option
 
 (** Whether an inductive's struct is written inside a wrapper that holds
     other declarations, and so is spelled [List::list] rather than [List]: a
     property of its declaration, the same wherever a use is written.  The
     wrappers are the unit's ({!unmerged_wrapper}). *)
-val in_unmerged_wrapper : Unit_context.t -> Names.GlobRef.t -> bool
+val in_unmerged_wrapper : Context.t -> Names.GlobRef.t -> bool
 
 (** {!in_unmerged_wrapper}, the inductive's short name given. *)
-val in_unmerged_wrapper_named : Unit_context.t -> string -> Names.GlobRef.t -> bool
+val in_unmerged_wrapper_named : Context.t -> string -> Names.GlobRef.t -> bool
 
 (** What a nested struct name was emitted for ({!Core_plan.Struct_plan.nested_struct_owner}). *)
 type nested_struct_owner = Core_plan.Struct_plan.nested_struct_owner =
@@ -621,14 +621,14 @@ val add_nested_struct_name :
 (** Whether the reference is itself emitted as a struct nested in another,
     among the nested structs of the unit given: its own, planned
     ([Cpp.plan_nested_structs]), and every earlier unit's of a separate
-    extraction ({!Unit_context.t.nested_structs}). *)
-val is_nested_struct_ref : Unit_context.t -> Names.GlobRef.t -> bool
+    extraction ({!Context.t.nested_structs}). *)
+val is_nested_struct_ref : Context.t -> Names.GlobRef.t -> bool
 
 (** Whether a reference rendered unqualified under the given name is shadowed
     by a nested struct of that name in the unit given: a nested struct
     shadows any global-scope type of the same name. False for the shadower
     itself. *)
-val is_shadowed_global_name : Unit_context.t -> string -> Names.GlobRef.t -> bool
+val is_shadowed_global_name : Context.t -> string -> Names.GlobRef.t -> bool
 
 (** Qualify a C++ name with its wrapper struct when the reference's module path
     is a wrapper module. [VarRef] references (lifted declarations) are never
