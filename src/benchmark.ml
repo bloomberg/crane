@@ -162,9 +162,10 @@ let ocaml_callable reference =
   let _, labels = Table.labels_of_ref reference in
   let modules, _ = split_last_label labels in
   let term =
-    Extraction_plugin.Common.pp_global_name
-      Extraction_plugin.Common.Term
-      reference
+    let open Extraction_plugin in
+    let keywords = Ocaml.ocaml_descr.keywords in
+    let state = Common.State.make ~modular:false ~library:false ~keywords () in
+    Common.pp_global_name state Common.Term {Miniml.glob = reference; inst = Miniml.InfvInst.empty}
   in
   String.concat "." (List.map Label.to_string modules @ [term])
 
@@ -174,7 +175,7 @@ let ocaml_output expression =
   let string_ref =
     Nametab.locate (qualid_of_string "Corelib.Strings.PrimString.string")
   in
-  if Extraction_plugin.Table.is_custom string_ref then
+  if Extraction_plugin.(Table.is_custom {Miniml.glob = string_ref; inst = Miniml.InfvInst.empty}) then
     expression
   else
     "Pstring.to_string (" ^ expression ^ ")"
