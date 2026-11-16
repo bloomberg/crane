@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 #include "../result.h"
@@ -33,30 +34,45 @@ public:
     /// and signals retry/failure by throwing StmError (caught internally).
     template <typename T, typename F>
     static T with(F&& f) {
-        auto result = with_control<T>(
+        [[maybe_unused]] auto result = with_control<T>(
             [](StmError) { return TransactionControl::Retry; },
             std::forward<F>(f));
         // with Retry control, result is always present
-        return std::move(*result);
+        if constexpr (!std::is_void_v<T>) {
+            return std::move(*result);
+        }
     }
 
     /// Run with a control function that can abort on errors.
-    /// Mirrors Rust's `Transaction::with_control`.
+    /// Mirrors Rust's `Transaction::with_control`.  A [void] transaction has
+    /// no result to hold, and reports whether it committed as a [bool].
     template <typename T, typename F, typename C>
-    static std::optional<T> with_control(C&& control, F&& f) {
+    static auto with_control(C&& control, F&& f)
+        -> std::conditional_t<std::is_void_v<T>, bool, std::optional<T>> {
         TransactionGuard guard;
 
         Transaction transaction;
 
         while (true) {
             try {
-                T result = f(transaction);
-                if (transaction.commit()) {
-                    return result;
+                if constexpr (std::is_void_v<T>) {
+                    f(transaction);
+                    if (transaction.commit()) {
+                        return true;
+                    }
+                } else {
+                    T result = f(transaction);
+                    if (transaction.commit()) {
+                        return result;
+                    }
                 }
             } catch (StmError e) {
                 if (control(e) == TransactionControl::Abort) {
-                    return std::nullopt;
+                    if constexpr (std::is_void_v<T>) {
+                        return false;
+                    } else {
+                        return std::nullopt;
+                    }
                 }
                 if (e == StmError::Retry) {
                     transaction.wait_for_change();

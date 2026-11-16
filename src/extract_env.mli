@@ -89,9 +89,9 @@ val full_extraction :
   qualid list ->
   unit
 
-(** How C++ spells an extracted constant, and Rocq's [tt], from where the
-    constant is declared -- read while the unit's naming tables were live. *)
-type export = {ref : Names.GlobRef.t; name : string; unit : string}
+(** How C++ spells an extracted constant from where it is declared -- read
+    while the unit's naming tables were live. *)
+type export = {ref : Names.GlobRef.t; name : string}
 
 (** {!full_extraction}, returning an {!export} for each requested
     constant. *)

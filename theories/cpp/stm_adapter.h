@@ -71,22 +71,12 @@ void writeTVar(const TVar<T>& tv, std::type_identity_t<T> val) {
 
 template <typename F>
 auto atomically(F&& f) -> decltype(f()) {
+    // [R] may be [void]: a transaction run for its effects alone.
     using R = decltype(f());
-    if constexpr (std::is_void_v<R>) {
-        // Transaction::with<void> is not valid (C++ can't return void from a
-        // template that stores the result).  Wrap with std::monostate instead,
-        // then discard the result.
-        Transaction::with<std::monostate>([&](Transaction& tx) -> std::monostate {
-            compat::TxScope scope(tx);
-            f();
-            return {};
-        });
-    } else {
-        return Transaction::with<R>([&](Transaction& tx) -> R {
-            compat::TxScope scope(tx);
-            return f();
-        });
-    }
+    return Transaction::with<R>([&](Transaction& tx) -> R {
+        compat::TxScope scope(tx);
+        return f();
+    });
 }
 
 // ---- orElse for eagerly-evaluated values ------------------------------------

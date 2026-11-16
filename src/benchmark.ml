@@ -41,7 +41,10 @@ end
 type artifact = {
   source : string;  (** Extracted or user-supplied source path. *)
   callable : string;  (** Qualified benchmark function expression. *)
-  unit : string;  (** Backend expression representing Rocq [tt]. *)
+  unit : string;
+      (** Backend expression passed for the subject's [unit] parameter: Rocq's
+          [tt] in OCaml, nothing in C++, where a declared [unit] parameter has
+          no counterpart. *)
 }
 
 (** One successfully compiled cell in the benchmark matrix. *)
@@ -256,7 +259,7 @@ let extract_managed_artifact
       {
         source = source;
         callable = e.name;
-        unit = e.unit;
+        unit = "";
       }
     | None ->
       benchmark_error "Crane Benchmark subject is not an extracted constant." )

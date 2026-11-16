@@ -23,7 +23,7 @@ using M = LocalFixEscapesByRef;
 int main() {
   // The Rocq-level check, where the state function happens to run before
   // the stack is reused.
-  bool ok = M::check(std::monostate{});
+  bool ok = M::check();
   // The same computation with map_monad_acc's frame overwritten before the
   // returned state function runs.
   auto m = build();

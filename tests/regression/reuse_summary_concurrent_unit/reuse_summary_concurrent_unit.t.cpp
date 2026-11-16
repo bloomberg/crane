@@ -10,7 +10,7 @@ int main() {
     return EXIT_FAILURE;
   }
   for (int i = 0; i < 5; ++i) {
-    ReuseSummaryConcurrentUnit::run(std::monostate{});
+    ReuseSummaryConcurrentUnit::run();
   }
   return 0;
 }
