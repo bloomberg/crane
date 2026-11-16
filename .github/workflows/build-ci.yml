@@ -11,10 +11,10 @@ jobs:
       matrix:
         os:
           - ubuntu-24.04
-        coq_version:
-          - "9.1"
-        ocaml_version:
-          - "4.14-flambda"
+        ocaml-compiler:
+          - "5.4.1"
+        rocq-version:
+          - "9.1.0"
 
     runs-on: ${{ matrix.os }}
 
@@ -22,38 +22,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Normalize Workspace Permissions
-        run: |
-          sudo chmod -R a+rwX "$GITHUB_WORKSPACE"
-
-      - name: Build and Extract
-        uses: coq-community/docker-coq-action@v1
+      # setup-ocaml caches the opam root and the switch; rocq-released comes
+      # first so its Rocq packages win over the older coq-released copies.
+      - name: Set up OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v3
         with:
-          opam_file: 'rocq-crane.opam'
-          coq_version: ${{ matrix.coq_version }}
-          ocaml_version: ${{ matrix.ocaml_version }}
-          before_install: |
-            startGroup "Print opam config"
-              opam config list; opam repo list; opam list
-            endGroup
-          # A custom script replaces the action's default one, so it has to
-          # ask for the dependency installation itself.  One command per
-          # line: the script runs under `set -e`, which ignores a failure on
-          # the left of `&&` -- a build that never found coqc used to pass.
-          custom_script: |
-            {{before_install}}
-            {{install}}
-            {{after_install}}
-            startGroup "Build project"
-              opam exec -- dune build -p rocq-crane
-              opam exec -- dune install
-            endGroup
-            startGroup "OCaml unit tests"
-              opam exec -- dune build @unit_tests/runtest
-            endGroup
-            startGroup "Module dependency direction"
-              opam exec -- scripts/check-module-deps.sh
-            endGroup
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          opam-repositories: |
+            rocq-released: https://rocq-prover.org/opam/released
+            coq-released: https://coq.inria.fr/opam/released
+            default: https://opam.ocaml.org
+
+      # Rocq is installed at the exact version first: the package's own
+      # bounds (>= 9.1, < 9.2) would otherwise let opam pick a later 9.1.x.
+      - name: Install Rocq ${{ matrix.rocq-version }} and dependencies
+        run: |
+          opam install -y rocq-runtime.${{ matrix.rocq-version }} rocq-core.${{ matrix.rocq-version }} coq.${{ matrix.rocq-version }}
+          opam install -y . --deps-only --with-test
+          opam list
+
+      - name: Build project
+        run: |
+          opam exec -- dune build -p rocq-crane
+          opam exec -- dune install
+
+      - name: OCaml unit tests
+        run: opam exec -- dune build @unit_tests/runtest
+
+      - name: Module dependency direction
+        run: opam exec -- scripts/check-module-deps.sh
 
       - name: Install clang and GMP
         run: |
