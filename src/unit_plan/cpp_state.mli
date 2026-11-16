@@ -240,7 +240,7 @@ type ctor_alias_plan = {
 
 (** What the C++ backend's passes decided about the unit, for the passes
     after them and the renders: a value each pass's result is added to,
-    held beside the unit's context ({!Translation_state.unit_facts}) and
+    held beside the unit's context ({!Core_to_cpp.Lowering_state.unit_facts}) and
     on each position ({!render_ctx}). *)
 type plans = {
   analysis : Core_plan.Structure.t option;

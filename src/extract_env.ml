@@ -1001,16 +1001,16 @@ let module_filename mp =
   (Some fimpl, Option.map (( ^ ) f) d.sig_suffix, id)
 
 (** [with_context u f] is [f u] with lowering reading the unit's context
-    [u] ({!Translation_state.unit_context}), a context the planning so far
+    [u] ({!Core_to_cpp.Lowering_state.unit_context}), a context the planning so far
     has added to. *)
 let with_context cx (u : Unit_plan.Context.t) f =
-  Translation_state.with_unit_facts cx {(Translation_state.unit_facts cx) with context = u} (fun () -> f u)
+  Core_to_cpp.Lowering_state.with_unit_facts cx {(Core_to_cpp.Lowering_state.unit_facts cx) with context = u} (fun () -> f u)
 
 (** [with_plans p f] is [f ()] with lowering and rendering reading [p] as
     what the backend's passes decided about the unit
-    ({!Translation_state.plans}), a value each of those passes adds to. *)
+    ({!Core_to_cpp.Lowering_state.plans}), a value each of those passes adds to. *)
 let with_plans cx (p : Unit_plan.Cpp_state.plans) f =
-  Translation_state.with_unit_facts cx {(Translation_state.unit_facts cx) with plans = p} f
+  Core_to_cpp.Lowering_state.with_unit_facts cx {(Core_to_cpp.Lowering_state.unit_facts cx) with plans = p} f
 
 (** [with_plan u acc f] is {!with_context} of the unit's context [u]
     holding the facts [acc] holds ({!Accumulated_plan.context}). *)
@@ -1140,13 +1140,13 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" elaborate_calls;
   let elaborations =
-    Translation_state.generating_outside_modules cx @@ fun () ->
+    Core_to_cpp.Lowering_state.generating_outside_modules cx @@ fun () ->
     Core_plan.Elaborate.structure
       ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods
         cx kn ind))
       struc
   in
-  Translation_state.with_unit_facts cx { (Translation_state.unit_facts cx) with elaborations = Some elaborations }
+  Core_to_cpp.Lowering_state.with_unit_facts cx { (Core_to_cpp.Lowering_state.unit_facts cx) with elaborations = Some elaborations }
   @@ fun () ->
   Base.Pipeline_trace.event "layout" plan_callables;
   let ((callables, instance_methods) as planned), (frames, concepts) = Cpp.plan_callables cx struc in
@@ -1158,9 +1158,9 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
       ( Target_plan.same_callables callables callables'
       && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
-  with_plans cx {(Translation_state.plans cx) with frames; concepts} @@ fun () ->
+  with_plans cx {(Core_to_cpp.Lowering_state.plans cx) with frames; concepts} @@ fun () ->
   let assumed =
-    Translation_state.generating_outside_modules cx (fun () -> Translation_calls.assumed_callables cx struc
+    Core_to_cpp.Lowering_state.generating_outside_modules cx (fun () -> Core_to_cpp.Calls.assumed_callables cx struc
       callables) in
   Base.Pipeline_trace.event "layout" decide_callables;
   let u = {u with Unit_plan.Context.callables = Core_plan.Callable_abi.decide ~callables ~assumed ~instance_methods} in
@@ -1351,7 +1351,7 @@ let report_body_generations fn =
         ++ str ": "
         ++ prlist_with_sep (fun () -> str ", ")
              (fun (p, n) -> str (phase_name p) ++ str " " ++ int n)
-             (Gen_decls.body_generation_counts ()) )
+             (Core_to_cpp.Lower_decl.body_generation_counts ()) )
 
 (** [Core_passes.Modutil.optimize_struct], one body for coinciding definitions, a
     recursive function specialized to the lambda a definition passes it,
@@ -1370,13 +1370,13 @@ let core_passes cx to_appear : Core.Program.extracted Base.Pipeline_trace.pass l
     pass "knot" Core_passes.Knot.structure;
     pass "fix_shape" Core_passes.Fix_shape.structure;
     pass "fresh_occurrences" Core_passes.Fresh_occurrences.structure;
-    effect_ "local_types" (Core_passes.Local_types.structure (Translation_calls.local_types_lowering cx));
+    effect_ "local_types" (Core_passes.Local_types.structure (Core_to_cpp.Calls.local_types_lowering cx));
     effect_ "ir_check" Core_passes.Check.structure ]
 
 (** A translation context nothing has been lowered in yet, quoting finished
     types in its reports as the printer spells them. *)
 let translation_context () =
-  Translation_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Cpp_print.pp_cpp_type u plans lead tvars ty) ()
+  Core_to_cpp.Lowering_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Cpp_print.pp_cpp_type u plans lead tvars ty) ()
 
 let core_pass_names =
   let cx = translation_context () in
@@ -1395,9 +1395,9 @@ let core_pass_names =
 let normalize_passes cx : Core_passes.Phase.normalizing Base.Pipeline_trace.pass list =
   let rewriting f (p : Core_passes.Phase.normalizing) = {p with structure = f p.structure} in
   let lowering =
-    { Core_plan.Normalize.app_result_type = (fun f args -> Translation_calls.core_app_result_type cx f args);
-      return_type_is_erased = (fun params ret -> Translation.return_type_is_erased cx params ret);
-      suspension = Translation_suspension.suspension cx }
+    { Core_plan.Normalize.app_result_type = (fun f args -> Core_to_cpp.Calls.core_app_result_type cx f args);
+      return_type_is_erased = (fun params ret -> Core_to_cpp.Lower_expr.return_type_is_erased cx params ret);
+      suspension = Core_to_cpp.Suspension.suspension cx }
   in
   Base.Pipeline_trace.
     [ pass "eta_expand" (rewriting Core_plan.Normalize.eta_expand);
@@ -1453,14 +1453,14 @@ let check_structure_unchanged planned struc =
     reads of that analysis ({!Core_to_control.Loop_facts}). *)
 let freeze cx core f =
   let normalized, program =
-    Translation_state.generating_outside_modules cx @@ fun () ->
+    Core_to_cpp.Lowering_state.generating_outside_modules cx @@ fun () ->
     let normalized =
       Core_passes.Phase.normalize (Base.Pipeline_trace.run ~stage:"normalize" (normalize_passes cx)) (Core_passes.Phase.freeze core)
     in
     Base.Pipeline_trace.event "core" "analyze_program";
     (normalized, Program_facts.analyze_program cx normalized)
   in
-  Translation_state.with_program_facts cx (Program_facts.lowering program) @@ fun () ->
+  Core_to_cpp.Lowering_state.with_program_facts cx (Program_facts.lowering program) @@ fun () ->
   f {Core_to_control.Loop_facts.none with recursion = program.recursion; control = program.control} normalized
 
 (** The extracted structure [struc] through the Core passes
@@ -1532,11 +1532,11 @@ let elaborate_pass_names = [plan_foreign_callables]
     the unit's [elaborations] name that it does not declare, and of the
     calls of class fields it may project through an instance. *)
 let elaborate_unit cx (u : Unit_plan.Context.t) elaborations =
-  Translation_state.generating_outside_modules cx @@ fun () ->
+  Core_to_cpp.Lowering_state.generating_outside_modules cx @@ fun () ->
   Base.Pipeline_trace.event "elaborate" plan_foreign_callables;
   let foreign =
     Core_plan.Callable_abi.with_foreign u.callables
-      (fun r -> Translation_calls.callee_abi cx ~instances:0 r)
+      (fun r -> Core_to_cpp.Calls.callee_abi cx ~instances:0 r)
       (Core_plan.Elaborate.referenced elaborations)
   in
   with_context cx {u with callables = foreign} @@ fun u ->
@@ -1544,7 +1544,7 @@ let elaborate_unit cx (u : Unit_plan.Context.t) elaborations =
      ({!Core_plan.Query.static_projection}). *)
   { u with
     callables =
-      Core_plan.Callable_abi.with_projections u.callables Translation_calls.projection_abi
+      Core_plan.Callable_abi.with_projections u.callables Core_to_cpp.Calls.projection_abi
         (List.filter
            (fun r -> Base.Table.is_inline_custom r || Base.Table.singleton_method_class r <> None)
            (Core_plan.Elaborate.referenced elaborations) ) }
@@ -1683,7 +1683,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   with_plan cx (Unit_plan.Cpp_state.with_std_names Unit_plan.Context.detached) earlier @@ fun u ->
   let facts, plan = analyze_and_plan struc in
   let u = Unit_plan.Cpp_state.with_std_names {u with config = plan.config; loops = {loops with effects = facts.effects}} in
-  Translation_state.with_unit_facts cx
+  Core_to_cpp.Lowering_state.with_unit_facts cx
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
@@ -1732,7 +1732,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   Cpp.plan_file_layout cx u struc;
   Base.Pipeline_trace.event "emit" "plan_ctor_aliases";
   let ctor_aliases = Cpp.plan_ctor_aliases cx struc in
-  with_plans cx {(Translation_state.plans cx) with ctor_aliases = Some ctor_aliases} @@ fun () ->
+  with_plans cx {(Core_to_cpp.Lowering_state.plans cx) with ctor_aliases = Some ctor_aliases} @@ fun () ->
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then
@@ -2600,7 +2600,7 @@ let print_one_decl cx loops struc mp decl =
   reset_renaming_tables ();
   let facts = Program_facts.analyze struc in
   let u = Unit_plan.Cpp_state.with_std_names {Unit_plan.Context.detached with loops = {loops with effects = facts.effects}} in
-  Translation_state.with_unit_facts cx
+  Core_to_cpp.Lowering_state.with_unit_facts cx
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;

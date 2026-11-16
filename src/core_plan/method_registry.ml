@@ -1051,7 +1051,7 @@ and pre_register_methods_from_module_expr
     Whether a type erases is a judgement about C++ types, which this module does
     not otherwise make: it records which functions are methods, it does not type
     them.  So the judgement arrives as a parameter rather than as a call into
-    {!Translation}, which would make the two modules mutually dependent. *)
+    {!Core_to_cpp.Lower_expr}, which would make the two modules mutually dependent. *)
 let compute_returns_any
     ~(ret_is_erased : Id.t list -> Core.Type.t -> bool) tbl
     (s : Core.Program.t) =

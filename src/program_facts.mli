@@ -35,7 +35,7 @@ type program = {
       (** Which functions recurse through which. *)
   partner_closure_params : (Names.GlobRef.t * int list) list;
       (** Which parameters of each function a call from its recursive group
-          passes a closure for ({!Translation_callable_params.partner_closure_params}). *)
+          passes a closure for ({!Core_to_cpp.Callable_params.partner_closure_params}). *)
   recursion : Core_plan.Recursion.t;
       (** How each function recurses through itself. *)
   control : Core_to_control.Lower_control.t;
@@ -45,10 +45,10 @@ type program = {
 (** [analyze_program p] analyses the normalized program [p].  Its one write
     is the enum inductives {!Core_plan.Method_registry.create} registers
     ({!Base.Table.add_enum_inductive}), a property of their declarations. *)
-val analyze_program : Translation_state.t -> Core_passes.Phase.normalized Core_passes.Phase.program -> program
+val analyze_program : Core_to_cpp.Lowering_state.t -> Core_passes.Phase.normalized Core_passes.Phase.program -> program
 
-(** What lowering reads of [program] ({!Translation_state.program_facts}). *)
-val lowering : program -> Translation_state.program_facts
+(** What lowering reads of [program] ({!Core_to_cpp.Lowering_state.program_facts}). *)
+val lowering : program -> Core_to_cpp.Lowering_state.program_facts
 
 (** Whether two analyses of a unit observed the same facts: under
     [CRANE_CHECK_IR] a unit is analysed twice and the two must agree. *)

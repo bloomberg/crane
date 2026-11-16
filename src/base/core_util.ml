@@ -292,7 +292,7 @@ let writes_binder ?(generated = true) ?(constructors = []) args =
 
     That reading of a non-trailing hole belongs to a {e generated} head, whose
     higher-kinded parameters hold the carrier already applied at the element
-    (see {!Gen_records.gen_record_cpp}).  A custom mapping takes a family at a
+    (see {!Core_to_cpp.Records.gen_record_cpp}).  A custom mapping takes a family at a
     plain [typename], its index erased -- [sum1 => "Sum1"] -- so a hole
     inside such an argument is that family's own placeholder, and filling it
     would apply the family a second time when it is applied for real:

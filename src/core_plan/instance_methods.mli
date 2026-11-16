@@ -12,7 +12,7 @@
     the field's declared arity is expanded back to it.  This module is all of
     that, in Core terms alone, so that the elaborated bodies are a value both
     the walk elaborating a unit's calls ({!Elaborate}) and the generator
-    of the instance's struct ({!Gen_instances}) read, rather than something
+    of the instance's struct ({!Core_to_cpp.Instances}) read, rather than something
     the generator works out while it emits. *)
 
 (** An instance's type and body past its own parameters: erased type binders

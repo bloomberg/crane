@@ -54,7 +54,7 @@ val value_inductive : abbreviations:bool -> Core.Type.t -> bool
     its callable passes as [passing] says: lent by const reference, or under
     Reuse with NonAtomicRc owned by value -- either lives for the call, and
     nothing moves out of it -- at a value inductive, named as itself or
-    through an abbreviation ({!Translation_ownership.wrap_param_by_ownership}
+    through an abbreviation ({!Core_to_cpp.Ownership.wrap_param_by_ownership}
     declares either by reference).  A parameter of no runtime value
     ([None]) is held by none.  NonAtomicRc is the unit [u]'s. *)
 val passed_holdable : Unit_plan.Context.t -> Core_plan.Callable_abi.passing option -> Core.Type.t -> bool

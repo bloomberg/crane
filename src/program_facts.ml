@@ -23,21 +23,21 @@ type program = {
 let analyze_program cx normalized =
   let struc = Core_passes.Phase.structure normalized in
   let recursive_groups = Core_plan.Recursive_groups.analyze struc in
-  let methods = Core_plan.Method_registry.create ~ret_is_erased:(Translation.return_type_is_erased cx) struc in
+  let methods = Core_plan.Method_registry.create ~ret_is_erased:(Core_to_cpp.Lower_expr.return_type_is_erased cx) struc in
   let receiver r = Option.map snd (Core_plan.Method_registry.is_registered_method methods r) in
-  let recursion = Core_plan.Recursion.analyze ~suspension:(Translation_suspension.suspension cx) recursive_groups
+  let recursion = Core_plan.Recursion.analyze ~suspension:(Core_to_cpp.Suspension.suspension cx) recursive_groups
     normalized in
   { throwing_values = Core_plan.Structure.throwing_values struc;
     parameter_ownership = Core_plan.Ownership.summarize ~receiver struc;
     recursive_groups;
-    partner_closure_params = Translation_callable_params.partner_closure_params recursive_groups struc;
+    partner_closure_params = Core_to_cpp.Callable_params.partner_closure_params recursive_groups struc;
     recursion;
     control =
       Core_to_control.Lower_control.lower
         ~methods:(fun r -> Option.has_some (Core_plan.Method_registry.is_registered_method methods r))
         recursion normalized }
 
-let lowering (program : program) : Translation_state.program_facts =
+let lowering (program : program) : Core_to_cpp.Lowering_state.program_facts =
   { throwing_values = List.fold_left (fun s r -> Core.Ref.Can.Set.add r s) Core.Ref.Can.Set.empty program.throwing_values;
     parameter_ownership =
       List.fold_left (fun m (r, f) -> Core.Ref.User.Map.add r f m) Core.Ref.User.Map.empty program.parameter_ownership;

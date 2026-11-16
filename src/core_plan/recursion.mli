@@ -43,7 +43,7 @@ type t
 val empty : t
 
 (** When a coinductive body is suspended, as lowering decides it
-    ({!Translation_suspension}): [whole r ret body], whether the definition
+    ({!Core_to_cpp.Suspension}): [whole r ret body], whether the definition
     [r] returning [ret] is suspended whole; [at_constructor ~self ~binder_type n
     args], whether a constructor of [n] applied to [args] is suspended.  The
     plan reads them as lowering does, and is handed them so that it depends

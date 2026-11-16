@@ -88,7 +88,7 @@ let () = Base.State.on_reset Base.State.Extraction (fun () -> Minted.reset let_l
     builds (see the typing note on {!Core.Expr.t}), so it knows its type
     without reconstruction.  So does a fully applied global, from its declared
     codomain as the call instantiates it
-    ({!Translation_calls.core_app_result_type}).  A recursive call, its head a
+    ({!Core_to_cpp.Calls.core_app_result_type}).  A recursive call, its head a
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
 type lowering = {

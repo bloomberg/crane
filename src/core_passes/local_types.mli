@@ -14,8 +14,8 @@
 (** What the pass asks of lowering, which comes after it and so cannot be
     named here: the Core type an application of a global yields, as the call
     instantiates the callee's declared type
-    ({!Translation_calls.core_app_result_type_with}), at whichever phase the
-    program is in.  {!Translation_calls.local_types_lowering} builds it from a
+    ({!Core_to_cpp.Calls.core_app_result_type_with}), at whichever phase the
+    program is in.  {!Core_to_cpp.Calls.local_types_lowering} builds it from a
     translation context. *)
 type lowering = {
   app_result_type :

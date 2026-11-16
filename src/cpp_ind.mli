@@ -5,7 +5,7 @@
 
    This module turns Core inductives ([Core.Inductive.t]) and declarations
    ([Core.Decl.t]) into {!Cpp_ir.Lowered} declarations, between translation
-   ({!Translation}, {!Gen_decls}) and the printer ({!Cpp}).  Everything a
+   ({!Core_to_cpp.Lower_expr}, {!Core_to_cpp.Lower_decl}) and the printer ({!Cpp}).  Everything a
    declaration becomes is generated once, ahead of both files
    ({!generate_ahead}), finished in the unit's program
    ({!Cpp_passes.Unit_program}), and taken from there by each file's pass:
@@ -44,12 +44,12 @@ val pp_decls : Unit_plan.Cpp_state.render_ctx -> rendered -> Cpp_ast.t
     concept.  Both belong at namespace scope, wherever the instance was
     declared. *)
 val instance_decls :
-  Translation_state.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> generated
+  Core_to_cpp.Lowering_state.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> generated
 
 (** The callable plan of each method of the instance's struct, by name: the
     head {!instance_decls} declares it with, planned without a body. *)
 val plan_instance_methods :
-  Translation_state.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> (Names.Id.t * Core_plan.Callable_abi.t) list
+  Core_to_cpp.Lowering_state.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> (Names.Id.t * Core_plan.Callable_abi.t) list
 
 (** [generated_once ~module_ ?on_reuse ?on_peek ?planned node gen] is [gen ()] ahead
     of the files ({!generating_ahead}), recorded by the physical Core node
@@ -63,13 +63,13 @@ val plan_instance_methods :
     checks.  Read while peeking ({!header_element_ahead}), it is what was
     recorded, handed to [on_peek] in place of [on_reuse]. *)
 val generated_once :
-  Translation_state.t -> module_:Names.ModPath.t ->
-  ?on_reuse:(Gen_decls.generated_fun list -> unit) ->
-  ?on_peek:(Gen_decls.generated_fun list -> unit) ->
-  ?planned:(Gen_decls.generated_fun list -> unit) ->
+  Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t ->
+  ?on_reuse:(Core_to_cpp.Lower_decl.generated_fun list -> unit) ->
+  ?on_peek:(Core_to_cpp.Lower_decl.generated_fun list -> unit) ->
+  ?planned:(Core_to_cpp.Lower_decl.generated_fun list -> unit) ->
   'node ->
-  (unit -> Gen_decls.generated_fun list) ->
-  Gen_decls.generated_fun list
+  (unit -> Core_to_cpp.Lower_decl.generated_fun list) ->
+  Core_to_cpp.Lower_decl.generated_fun list
 
 (** [generating_ahead f] runs [f], a walk generating every function before
     either file is rendered, recording what {!generated_once} generates in
@@ -148,7 +148,7 @@ val nothing_ahead : ahead
     ({!generated_once}) for each of [elements], each with the entity it
     falls back to ({!funs_entities}), as one group to finish later
     ({!finalized}). *)
-val functions_ahead : (Names.GlobRef.t * Gen_decls.generated_fun list) list -> ahead
+val functions_ahead : (Names.GlobRef.t * Core_to_cpp.Lower_decl.generated_fun list) list -> ahead
 
 (** [entity r ids helpers] is the generation of [r]: the declarations
     [ids], and the helpers among [helpers]. *)
@@ -158,7 +158,7 @@ val entity :
 (** [funs_entities ~fallback funs] is each generated function as the entity
     its declaration is about, [fallback] where it says none. *)
 val funs_entities :
-  fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> Cpp_passes.Unit_program.entity list
+  fallback:Names.GlobRef.t -> Core_to_cpp.Lower_decl.generated_fun list -> Cpp_passes.Unit_program.entity list
 
 (** Generate, ahead of both files, what the declaration [d] is written as
     that {!impl_decls} and {!header_decls} then take from here: its
@@ -166,7 +166,7 @@ val funs_entities :
     ({!instance_entity}), or what the header alone writes of it, generated in
     the scope the header writes it in ({!header_scope}); and say what of it
     to finish. *)
-val generate_ahead : Translation_state.t -> module_:Names.ModPath.t -> Core.Decl.t -> ahead
+val generate_ahead : Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t -> Core.Decl.t -> ahead
 
 (** How the header writes a module's body: inside a struct or not, and with
     the module's class concepts already declared ahead of its struct or not,
@@ -190,7 +190,7 @@ val header_scope : Names.ModPath.t -> header_scope option
 (** [spelling_position ~file spelling] is the position a declaration
     spelled [spelling] is written at in [file], a function of the plan
     alone. *)
-val spelling_position : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Unit_plan.Cpp_state.render_ctx
+val spelling_position : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Unit_plan.Cpp_state.render_ctx
 
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
@@ -211,28 +211,28 @@ val render_section : Unit_plan.Cpp_state.render_ctx -> section -> Cpp_ast.t list
 (** [resolver_at ~file spelling] names what a declaration spelled
     [spelling] names where it is written in [file], in the visibility planned
     there, at a frame inside it ({!Cpp_ast.resolve}). *)
-val resolver_at : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
+val resolver_at : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
 
 (** {!Cpp_ast.resolve_tree} by {!resolver_at}, a declaration naming what
     {!Cpp_leaf_plan.unprinted_names} and {!Cpp_concepts.names_requested} say,
     for a question about [t] rather than to write it: nothing it names is
     noted as written ({!Base.Common.check_written_files}). *)
-val resolve_tree : Translation_state.t -> file:Base.Common.file -> Cpp_ast.t -> Cpp_ast.t
+val resolve_tree : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.t -> Cpp_ast.t
 
 (** {!Cpp_ast.resolve} as {!resolve_tree} resolves each section, to write
     it: what a struct's head names is noted as written. *)
-val resolve : Translation_state.t -> file:Base.Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
+val resolve : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
 
 (** {!Cpp_leaf_plan.resolved_names_into_a_struct} of a declaration as [file]
     writes it spelled [spelling]: at the position printing it is at, and of
     the names resolution settles there ({!resolver_at}), which are the ones
     printing it reads. *)
 val names_into_a_struct_as_written :
-  Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ir.Resolved.Decl.t -> bool option
+  Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ir.Resolved.Decl.t -> bool option
 
 (** Print a declaration not yet printed as the tree spells it
     ({!Cpp_ast.print}). *)
-val write_unprinted : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ast.unprinted -> Pp.t
+val write_unprinted : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ast.unprinted -> Pp.t
 
 (** Where the header declares one of a module's concepts.  No concept can
     be declared inside a struct, so a module nested in one declares its
@@ -270,14 +270,14 @@ val concept_placement : concept_plan -> Unit_plan.Cpp_state.held_concept -> conc
     declaring the class, and taken from there by the header, which generates
     it again under [CRANE_CHECK_IR] to compare. *)
 val concept :
-  Translation_state.t -> module_:Names.ModPath.t -> Names.GlobRef.t -> Core.Record.Field.t list -> Cpp_ir.Lowered.Decl.t
+  Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t -> Names.GlobRef.t -> Core.Record.Field.t list -> Cpp_ir.Lowered.Decl.t
 
 (** [modtype_concept path ~params mt] is the concept of the module type [mt]
     at [path], over the functor parameters [params]: generated ahead of the
     files where the header writes it, and taken from there by the header,
     which generates it again under [CRANE_CHECK_IR] to compare. *)
 val modtype_concept :
-  Translation_state.t -> module_:Names.ModPath.t -> Names.ModPath.t -> params:Names.ModPath.t list ->
+  Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t -> Names.ModPath.t -> params:Names.ModPath.t list ->
     Core.Module.Type.t -> Cpp_ast.Modtype_concept.t
 
 (** [record_methods r vars candidates] is the methods the eponymous record
@@ -286,7 +286,7 @@ val modtype_concept :
     there by the header, which generates them again under [CRANE_CHECK_IR]
     to compare. *)
 val record_methods :
-  Translation_state.t -> module_:Names.ModPath.t ->
+  Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t ->
   Names.GlobRef.t ->
   Names.Id.t list ->
   Core_plan.Method_registry.method_candidate list ->
@@ -298,7 +298,7 @@ val record_methods :
     ahead of the files, and taken from there by the header, which converts
     them again under [CRANE_CHECK_IR] to compare. *)
 val record_field_types :
-  Translation_state.t -> module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Core.Record.Field.t list ->
+  Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Core.Record.Field.t list ->
     Cpp_ir.Resolved.Type.t list
 
 (** Every module type's concept generated ahead of the files
@@ -322,7 +322,7 @@ val record_methods_finishing :
 (** [finished_record_methods r vars fields] is {!record_methods_finishing}
     finished ahead of the files, taken from there by the header. *)
 val finished_record_methods :
-  Translation_state.t -> Names.GlobRef.t ->
+  Core_to_cpp.Lowering_state.t -> Names.GlobRef.t ->
   Names.Id.t list ->
   Cpp_ir.Lowered.phase Cpp_ir.Field.member list ->
   Cpp_ir.Resolved.Decl.t
@@ -342,58 +342,58 @@ val peeking : (unit -> 'a) -> 'a
 
 (** [regenerate_ahead d] generates again what {!generate_ahead} generated
     for [d], checking it ({!regenerating}). *)
-val regenerate_ahead : Translation_state.t -> module_:Names.ModPath.t -> Core.Decl.t -> unit
+val regenerate_ahead : Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t -> Core.Decl.t -> unit
 
 (** [finished_placed (id, d)] is [d], the declaration [id] placed beside
     the generation it was lifted out of or handed on with, as the unit's
     program has it ({!Cpp_passes.Unit_program}).  That the program does not have it
     is an anomaly; a file's pass finishes it again under [CRANE_CHECK_IR]
     and checks.  So for every [finished_] reader below. *)
-val finished_placed : Translation_state.t -> Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
+val finished_placed : Core_to_cpp.Lowering_state.t -> Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [finished_helper d] is the lifted helper [d] ({!finished_placed} under
     its {!helper_id}). *)
-val finished_helper : Translation_state.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
+val finished_helper : Core_to_cpp.Lowering_state.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [entity_placed (id, d)] is the function entity of {!finished_placed}:
     its declaration and definition. *)
-val entity_placed : Translation_state.t -> Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t -> Function_entity.t
+val entity_placed : Core_to_cpp.Lowering_state.t -> Cpp_passes.Unit_program.id * Cpp_ir.Lowered.Decl.t -> Function_entity.t
 
 (** [helper_entity d] is {!entity_placed} of the lifted helper [d] under
     its {!helper_id}. *)
-val helper_entity : Translation_state.t -> Cpp_ir.Lowered.Decl.t -> Function_entity.t
+val helper_entity : Core_to_cpp.Lowering_state.t -> Cpp_ir.Lowered.Decl.t -> Function_entity.t
 
 (** [finished_concept r d] is [d], the concept of the class [r]. *)
-val finished_concept : Translation_state.t -> Names.GlobRef.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
+val finished_concept : Core_to_cpp.Lowering_state.t -> Names.GlobRef.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 (** [finished_declared ~fallback g d] is [d], the declaration without a
     definition that the generated function [g] is, [fallback] the entity it
     falls back to ({!funs_entities}). *)
 val finished_declared :
-  Translation_state.t -> fallback:Names.GlobRef.t -> Gen_decls.generated_fun -> Cpp_ir.Lowered.Decl.t ->
+  Core_to_cpp.Lowering_state.t -> fallback:Names.GlobRef.t -> Core_to_cpp.Lower_decl.generated_fun -> Cpp_ir.Lowered.Decl.t ->
     Cpp_ir.Resolved.Decl.t
 
 (** A generated function, finished: a definition, with the file holding it
     and its entity, made of the definition as the unit's program has it; or
     a declaration with no definition anywhere. *)
 type finished_fun =
-  | Finished_definition of Gen_decls.definition_file * Function_entity.t
+  | Finished_definition of Core_to_cpp.Lower_decl.definition_file * Function_entity.t
   | Finished_declaration of Cpp_ir.Lowered.Decl.t
 
 (** [finalized ~fallback funs] pairs each generated function with what it
     finishes as.  [fallback] is the entity a function falls back to
     ({!funs_entities}). *)
 val finalized :
-  Translation_state.t -> fallback:Names.GlobRef.t ->
-  Gen_decls.generated_fun list ->
-  (Gen_decls.generated_fun * finished_fun) list
+  Core_to_cpp.Lowering_state.t -> fallback:Names.GlobRef.t ->
+  Core_to_cpp.Lower_decl.generated_fun list ->
+  (Core_to_cpp.Lower_decl.generated_fun * finished_fun) list
 
 (** The kinds of the template parameters of every inductive and type alias
     [struc] declares, decided before anything is generated: a use converted
     ahead of the declaration passes what its definition declares.  Decided in
     declaration order, each recorded as it is: an alias's kinds come out of
     its converted body, which reads the kinds of the declarations it names. *)
-val template_kinds : Translation_state.t -> Core.Program.t -> (Names.GlobRef.t * Cpp_ir.Tparam_kinds.t) list
+val template_kinds : Core_to_cpp.Lowering_state.t -> Core.Program.t -> (Names.GlobRef.t * Cpp_ir.Tparam_kinds.t) list
 
 (** {2 Recording the generated program}
 
@@ -408,7 +408,7 @@ val record_entity :
 
 (** [record_funs ~fallback funs] records each generated function as the
     entity its declaration is about, [fallback] where it names none. *)
-val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> unit
+val record_funs : fallback:Names.GlobRef.t -> Core_to_cpp.Lower_decl.generated_fun list -> unit
 
 (** [instance_entity r a t] is the instance [r], of body [a] and type [t]
     ({!instance_decls}), recorded as the entity [r], with the helpers lifted
@@ -416,7 +416,7 @@ val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> un
     ({!generating_ahead}) and taken from there by the header; that it was
     not is an anomaly.  [CRANE_CHECK_IR] regenerates and checks. *)
 val instance_entity :
-  Translation_state.t -> module_:Names.ModPath.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> generated
+  Core_to_cpp.Lowering_state.t -> module_:Names.ModPath.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> generated
     * Cpp_ir.Lowered.Decl.t list
 
 (** What a file writes for one Core declaration, and the helpers lifted
@@ -434,29 +434,29 @@ type element = {
 
 (** The implementation-file declarations for one Core declaration, written
     at the position given. *)
-val impl_decls : Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+val impl_decls : Core_to_cpp.Lowering_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** The header declarations for one Core declaration, written at the
     position given. *)
-val header_decls : Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+val header_decls : Core_to_cpp.Lowering_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** What {!header_decls} gives for a declaration, read off what was generated
     ahead of the files without taking it: nothing is recorded or claimed,
     and the helpers are those the header is planned to place there.  Read
     at the position given. *)
 val header_element_ahead :
-  Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+  Core_to_cpp.Lowering_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** What the implementation writes for a declaration, read off what was
     generated ahead of the files without taking it, at the position
     given. *)
 val impl_element_ahead :
-  Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
+  Core_to_cpp.Lowering_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> element
 
 (** Whether the inductive [d] declares, promoted to its module's struct,
     makes that struct derive from [enable_shared_from_this], read off what
     was generated ahead of the files in the module [module_], written at
     the position given. *)
 val promoted_shared_from_this :
-  Translation_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> bool
+  Core_to_cpp.Lowering_state.t -> Unit_plan.Cpp_state.render_ctx -> module_:Names.ModPath.t -> Core.Decl.t -> bool
 

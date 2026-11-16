@@ -180,7 +180,7 @@ val keeps_tvar : t -> int -> bool
 val dictionary_carriers : t -> Core.Scheme.Var.t list
 
 (** The plan of a declaration of [callee] whose head is [temps], as
-    {!Gen_functions} finalises it; [deduced_callables] are the declared
+    {!Core_to_cpp.Functions} finalises it; [deduced_callables] are the declared
     positions of the value parameters the head deduces as an [F &&].
     [minted] is what the builders of [temps] recorded of each parameter, by
     the name they gave it; a parameter a relaxation added has no record,

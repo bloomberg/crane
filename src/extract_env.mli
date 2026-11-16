@@ -56,8 +56,8 @@
       with the preamble its body demanded, then formatted.
 
     Each Core declaration is generated ahead of the files
-    ({!Cpp_ind.generate_ahead}, {!Gen_decls}, which translate bodies through
-    {!Translation}, lowering control as they go), finished
+    ({!Cpp_ind.generate_ahead}, {!Core_to_cpp.Lower_decl}, which translate bodies through
+    {!Core_to_cpp.Lower_expr}, lowering control as they go), finished
     ({!Cpp_passes.Pipeline.finish}: local closures, constants, temporaries,
     simplification, depth flattening, constraint settling, and the
     {!Cpp_passes.Erasure} seam's casts, free type variables, projections and
@@ -139,7 +139,7 @@ val mono_environment :
     @param mp the module path under which the declaration lives
     @param decl the declaration to render
     @return a pretty-printed Pp.t document *)
-val print_one_decl : Translation_state.t -> Core_to_control.Loop_facts.t -> Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
+val print_one_decl : Core_to_cpp.Lowering_state.t -> Core_to_control.Loop_facts.t -> Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
 
 (** [Show Extraction]: show the extraction of the current ongoing proof.
     @param pstate the current proof state *)

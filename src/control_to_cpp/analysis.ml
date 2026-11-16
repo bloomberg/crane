@@ -522,7 +522,7 @@ type call_checker = expr -> call_site option
 
 (** {3 The Y-combinator idiom for local fixpoints}
 
-    {!Translation_local_functions.gen_local_fix_by_ref} emits Coq's [let fix] as a pair of
+    {!Core_to_cpp.Local_functions.gen_local_fix_by_ref} emits Coq's [let fix] as a pair of
     lambdas: an [f_impl] taking its own self-reference as its first
     parameter, and an [f] that ties the knot by passing [f_impl] to itself
     ([f_impl(f_impl, args...)]). These
@@ -724,7 +724,7 @@ and collect_stmts check ~in_visitor stmts =
      Pattern A — [Expression call; Return None]:
      In C++, a void function can end with [f(); return;] which is
      semantically [return f();] — the call is in tail position.
-     Translation ({!Translation_stmts.gen_stmts}) emits it when
+     Translation ({!Core_to_cpp.Stmts.gen_stmts}) emits it when
      current_cpp_return_type is Void.
 
      Pattern B — [Expression call; Return (Some val)]:

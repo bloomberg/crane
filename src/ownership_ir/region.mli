@@ -383,7 +383,7 @@ end
     it, [None] for one of no runtime value, which the lambda does not take.
     Translation decides it once per group, before generating the group's
     lambdas from it and before any loop is lowered from them
-    (the [local_passing] of [Translation]). *)
+    (the [local_passing] of [Core_to_cpp.Lower_expr]). *)
 module Local_passing : sig
   type t = Core_plan.Callable_abi.passing option list
 

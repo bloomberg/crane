@@ -764,7 +764,7 @@ let get_ind_nb_sign_keeps r =
     ([typename I::M]) — the very representation promoted [Type]-valued record
     fields already use.  Extraction records the positions of these parameters
     (0-based among the [Core.Signature.Argument.Runtime] entries of [signature]) here; the concept, instance
-    and wrapper generators in {!Gen_decls} consult them to move the parameter
+    and wrapper generators in {!Core_to_cpp.Lower_decl} consult them to move the parameter
     from the template-parameter list to the associated-type requirements. *)
 
 let hkt_params_table = ref (Core.Ref.User.Map.empty : (int * int) list Core.Ref.User.Map.t)
@@ -1491,7 +1491,7 @@ let log_axioms = ref Core.Ref.Can.Set.empty
 
 (* Whether a definition is a cofixpoint, or only throws, is a fact about the
    definition, and it decides whether naming it calls it
-   ({!Translation_suspension.thunk_reason}): keyed canonically, so a reference
+   ({!Core_to_cpp.Suspension.thunk_reason}): keyed canonically, so a reference
    through a module alias is called as the definition's own name is. *)
 let cofixpoints = ref Core.Ref.Can.Set.empty
 

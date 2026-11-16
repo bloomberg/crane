@@ -13,7 +13,7 @@
 
    It holds no state and reads only the tables ({!Table}), so every stage
    from extraction to the printer can ask it; the environment-aware
-   questions built on these live in {!Translation_types}. *)
+   questions built on these live in {!Core_to_cpp.Types}. *)
 
 (** {2 Asking whether a type is erased}
 
@@ -25,11 +25,11 @@
       {!is_cpp_dummy_type}, {!has_tany_in_type}, {!has_erased_type_in_type}.
       These look only at the type node in front of them.  They cannot see
       through a [using] alias, so a caller holding a type that {e might} be
-      an alias must run [Translation_types.unfold_cpp_typedef] first.  Note
+      an alias must run [Core_to_cpp.Types.unfold_cpp_typedef] first.  Note
       also that a [Core.Type.Erased] converts to a CppIR [Erased] marker, not
       to [Any]: {!has_tany_in_type} misses it and {!has_erased_type_in_type}
       does not.  ([prints_as_any] is [Cpp_ir.Types.prints_as_any].)
-    - {b Environment-aware} ({!Translation_types}): [resolves_to_any_type],
+    - {b Environment-aware} ({!Core_to_cpp.Types}): [resolves_to_any_type],
       [spells_as_any], [is_boxed_source], and above all [classify_erasure],
       which is the one to reach for when the question is whether a {e value}
       may be boxed or cast.  These follow the Core type table and the typedef
@@ -322,7 +322,7 @@ val unqualify_ty : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t
 (** How a value is represented in the slot it is built into: [Native], at its
     own type, or [Boxed] inside a [std::any] at the canonical erased shape,
     whose depth the {!box_kind} says.  Decided once per slot
-    ({!Translation_types.slot_repr_of_cpp_type}) and carried in the slot. *)
+    ({!Core_to_cpp.Types.slot_repr_of_cpp_type}) and carried in the slot. *)
 type slot_repr = Native | Boxed of box_kind
 
 (** What a boxed slot stands for: [Var_box], a type variable (an erased field,

@@ -1,0 +1,772 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** The state a declaration generator works in: the per-body bookkeeping every
+    top-level body begins with, and the resolutions of class-promoted type
+    variables and higher-kinded carriers in scope.  It sits between
+    {!Lower_expr} (expressions and statements) and the declaration
+    generators ([Functions], [Records], [Instances],
+    [Inductives]) that build CppIR declarations from Core ones. *)
+
+open Base.Common
+open Names
+open Base.Core_util
+open Util
+open Lowering_state
+
+module IntSet = Core_plan.Escape.IntSet
+
+(** Top-level bodies generated in each phase of the unit being extracted;
+    see {!body_generation_counts}. *)
+let body_generations : (Base.Common.phase, int) Hashtbl.t = Base.State.table Base.State.Unit 3
+
+(** How many top-level bodies each phase ([Plan], [Emit]) has generated in
+    this unit. *)
+let body_generation_counts () =
+  List.map
+    (fun p -> (p, Option.default 0 (Hashtbl.find_opt body_generations p)))
+    [Plan; Emit]
+
+(** Begin generating a top-level body -- a function's, a constant's, a
+    method's or an instance method's: count it, and start its state afresh,
+    so that what it generates does not depend on what was generated before
+    it.  Fresh-name counters start at zero, no parameter is tracked for
+    moves -- a body with parameters sets that tracking after this.
+
+    [owner] is the declaration the body belongs to, which
+    [CRANE_TRACE_PIPELINE] reports with the phase.  [function_] says the body
+    is a function's, generated as one, rather than a constant's initialiser
+    or a member's (see [body_function] in {!Lowering_state}). *)
+let begin_body cx ~owner ?(function_ = false) () =
+  let phase = get_phase () in
+  Hashtbl.replace body_generations phase
+    (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));
+  if Base.Pipeline_trace.enabled () then
+    Base.Pipeline_trace.event "body"
+      (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Base.Table.safe_pr_global owner));
+  cx.ctx <-
+    { input = { cx.ctx.input with body_owner = Some owner; body_function = function_ };
+      lexical = { cx.ctx.lexical with move_plan = Ownership_ir.Region.empty; representation = []; planned_reads = [] };
+      threaded = { match_param_counter = 0; cs_counter = 0 } }
+
+(** [with_method_env_types env params f] runs [f] with the de Bruijn type
+    stack holding exactly [params] (innermost binder first, as returned by
+    {!push_vars'}), restoring the ambient stack afterwards.  [env] is the
+    type-variable scope the parameters' C++ types are assigned in; see
+    {!Binders.push_binders}.
+
+    An instance method's body is generated outside any enclosing function, so
+    without this the stack still describes whatever was translated last — and
+    a lookup of a parameter's type answers with a stale, unrelated entry (for
+    a class's associated [Type], the unresolved class type variable, which
+    reads as erased and provokes a spurious [any_cast]).
+
+    [?outer] are the binders around the method -- an instance's own
+    parameters, its dictionaries among them -- pushed beneath [params].
+    [?cpp] gives C++ types for [params] already decided by the caller, passed
+    on to {!Binders.push_binders} and recorded as the head's declared
+    ones ([declared_outer] in {!Lowering_state}). *)
+let with_method_env_types cx ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(outer = []) env params f =
+  let saved_env_types = cx.ctx.lexical.env_types in
+  let saved_erased = Binders.save_erased_env cx () in
+  let saved_declared = cx.ctx.lexical.declared_outer in
+  reset_env_types cx;
+  Binders.push_parameters cx env outer;
+  Binders.push_binders cx ~cpp env params;
+  set_lexical cx (fun l -> { l with declared_outer = (if cpp = [] then None else Some (Core.Lexenv.depth
+    l.env_types, cpp)) });
+  Fun.protect
+    ~finally:(fun () ->
+      set_lexical cx (fun l -> { l with env_types = saved_env_types; declared_outer = saved_declared });
+      Binders.restore_erased_env cx saved_erased )
+    f
+
+(** Count the actual (non-promoted) type parameters in [signature].  Entries
+    marked [Core.Signature.Argument.Runtime] correspond to real template parameters; the remaining
+    entries are promoted Type-valued fields. *)
+let count_keep_params sign =
+  List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) sign)
+
+(** True when [i] (an index into a class's [type_variables]) is a real C++ template
+    type parameter.  Everything else — the promoted [Type]-valued fields past
+    the [Core.Signature.Argument.Runtime] parameters, and any
+    [Core.Signature.Argument.Runtime] parameter that is itself a type
+    constructor ([M : Type -> Type]) — becomes an associated type of the
+    instance, spelled [typename I::name]. *)
+let is_class_tparam class_ref i =
+  i < Base.Table.get_ind_nb_sign_keeps class_ref
+  && not (Base.Table.is_hkt_param class_ref i)
+
+(** Name of the [i]-th element-type parameter an instance's carrier alias
+    template binds. *)
+let hkt_alias_param_name i = Base.Generated_name.indexed "A" i
+
+(* Re-exports of {!Base.Type_util} helpers the declaration generators read
+   through this module. *)
+let recover_method_quantifier = Base.Type_util.recover_method_quantifier
+
+let method_tvar_count = Base.Type_util.method_tvar_count
+
+let hkt_carrier_fixed_args = Base.Type_util.hkt_carrier_fixed_args
+
+(** Render a type CONSTRUCTOR argument as an alias template body: the [list] of
+    [Instance ListContainer : Container list] becomes [List<_A0>], to be
+    emitted as [template <typename _A0> using C = List<_A0>;].  The element
+    types are fresh type variables numbered from [base], so the caller must
+    append {!hkt_alias_param_name} entries to the type-variable list it passes
+    to [cpp_ir_of_core_type]. *)
+let hkt_carrier_alias base arity core_ty =
+  let is_lambda =
+    match core_ty with
+    | Core.Type.Global_app {head = r; type_arguments = args; _} ->
+      Base.Core_util.writes_binder ~constructors:(Base.Core_util.constructor_params r) args
+    | Core.Type.Variable_app {arguments = args; _} -> Base.Core_util.writes_binder args
+    | _ -> Base.Core_util.type_has_hole core_ty
+  in
+  match core_ty with
+  (* A carrier with a hole is a type-level lambda whose binder is the hole:
+     [stateT S m] reaches here as [S -> m (S * _)], and an alias of an
+     applied type, [EOUP Z := EOU (MaybePoison Z)], as [EOU (MaybePoison _)].
+     The alias applies it to its parameter. *)
+  | _ when arity = 1 && is_lambda ->
+    ( [hkt_alias_param_name 0],
+      Base.Core_util.fill_type_hole
+        (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) core_ty )
+  | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = es} ->
+    let kept = hkt_carrier_fixed_args arity core_ty in
+    let params =
+      max arity (max (List.length args) (Base.Table.get_type_scheme_arity r))
+      - List.length kept
+    in
+    ( List.init params hkt_alias_param_name,
+      Core.Type.Global_app {head = r; type_arguments = kept
+          @ List.init params (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                           variable = base + 1 + i}); index_arguments = es} )
+  | Core.Type.Variable_app {head = j; arguments = args} ->
+    let kept = hkt_carrier_fixed_args arity core_ty in
+    let params = max arity (List.length args) - List.length kept in
+    ( List.init params hkt_alias_param_name,
+      Core.Type.Variable_app {head = j; arguments = kept
+          @ List.init params (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+                                                           variable = base + 1 + i})}
+    )
+  | _ when arity = 1 ->
+    (* An unnamed carrier is the identity constructor: [F<_A0> = _A0]. *)
+    ([hkt_alias_param_name 0], Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = (base + 1)})
+  | _ -> ([], core_ty)
+
+(** The concrete types a class's associated types take in an instance, read off
+    the instance's class arguments ([Container list] gives [C = List<_A0>]).
+    Each is paired with the type parameters it binds: empty for a plain
+    associated type, one per element type for a higher-kinded carrier. *)
+let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
+  List.mapi
+    (fun i ty ->
+      if Base.Table.is_hkt_param class_ref i then
+        hkt_carrier_alias tvar_base (Base.Table.get_ind_hkt_arity class_ref i) ty
+      else ([], ty) )
+    type_args
+  |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
+
+(** Whether an [type_variables] entry named [v] is really an associated type of
+    [class_ref].
+
+    A field whose type is a class is promoted while extraction still sees a
+    class there, but whether that class survives as a concept is decided
+    later, by the inductive kind decisions of the target plan
+    ({!Target_plan.t}'s [inductive_kinds]): one used in value position comes
+    out as a plain struct, and the field holding it stays an
+    ordinary value field.  Asking for it as [typename I::f] then sits beside
+    the method requirement the value side emits, and a concept wanting one
+    name both as a type and as a function is satisfied by no instance at all.
+    The declaration says whether something is a class; only the back end says
+    whether it stayed one. *)
+let promoted_var_is_associated_type class_ref v =
+  List.for_all
+    (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
+      match (field_opt, field_ty) with
+      | Some fr, Core.Type.Global_app {head = r; _}
+        when Id.equal (Base.Common.id_of_global Term fr) v ->
+        Base.Table.is_typeclass r
+      | _ -> true )
+    (Base.Table.get_record_field_bindings class_ref)
+
+(** The associated-type ("promoted") variables of a class, in [type_variables] order,
+    each paired with its arity: [0] for a plain associated type, [n] for a
+    higher-kinded carrier, which is an alias template of [n] parameters. *)
+let class_promoted_vars_arities class_ref =
+  List.mapi
+    (fun i v -> (v, Base.Table.get_ind_hkt_arity class_ref i))
+    (Base.Table.get_ind_ip_vars class_ref)
+  |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
+  |> List.filter (fun (v, _) -> promoted_var_is_associated_type class_ref v)
+
+(** The associated-type ("promoted") variables of a class, in [type_variables]
+    order. *)
+let class_promoted_vars class_ref =
+  List.map fst (class_promoted_vars_arities class_ref)
+
+(** A class's fields paired with their Core types, as extraction recorded the
+    pairing. *)
+let class_fields_with_types = Base.Table.get_record_field_bindings
+
+(** The associated types an instance parameter provides, as a substitution from
+    the bare name a promoted type variable carries to the qualified type it
+    really denotes.
+
+    [inst_ty] is the instance those names hang off: [Tinstance (_tcI0, Mon)]
+    for a function's instance argument, [Tinstance (I, Mon)] inside the class's
+    own concept.  A direct associated type of [class_ref] resolves to [typename
+    I::Obj].  A field that is itself a type class contributes its own
+    associated types one level deeper ([typename I::base_category::Obj]) —
+    extraction marks those with the same bare name, so they are otherwise
+    indistinguishable from direct ones.  Direct entries win: a name is never
+    resolved through a field when the class declares it itself.
+
+    The field need not be a promoted variable of [class_ref].  A class-typed
+    field is spelled [typename I::PROV] whether or not it was promoted -- that
+    is what the concept requires of [I] -- so the path exists either way, and
+    a class whose every field is an instance promotes nothing at all.  So
+    [ParamsV]'s [PROV] and [PTR] contribute their resolutions though neither
+    is promoted; without them [provenance], [ptr] and the rest would fall back
+    to the file-scope [using provenance = std::any;].
+
+    [fields] defaults to {!class_fields_with_types}; pass it when the caller
+    already holds the pairing, as it does while generating the class itself. *)
+let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
+    (Id.t * Cpp_ir.Lowered.Type.t) list =
+  let fields =
+    match fields with Some f -> f | None -> class_fields_with_types class_ref
+  in
+  let direct = class_promoted_vars class_ref in
+  let is_direct v = List.exists (Id.equal v) direct in
+  let nested =
+    List.concat_map
+      (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
+        match (field_opt, field_ty) with
+        | Some field_ref, Core.Type.Global_app {head = r; _} when Base.Table.is_typeclass r ->
+          let field_id = Base.Common.id_of_global Term field_ref in
+          List.filter_map
+            (fun v ->
+              if is_direct v then None
+              else Some (v, Cpp_ir.Type.Member (Member (inst_ty, field_id), v)) )
+            (class_promoted_vars r)
+        | _ -> [] )
+      fields
+  in
+  List.map (fun v -> (v, Cpp_ir.Type.Member (inst_ty, v))) direct @ nested
+
+(** The resolutions a class argument supplies to the instance that was given
+    it.
+
+    [PIV : @PI ProvenanceV PointerV] owns no type of its own: [ptr] belongs to
+    [PointerV] and [prov] to [ProvenanceV].  Both are given concretely, so
+    neither becomes a template parameter and neither survives into the Core type
+    -- the class stands there alone as [PI] -- and their promoted variables
+    keep their names while losing the path that gave them meaning, falling back
+    to the file-scope [using prov = std::any;].  The variables that {e do}
+    resolve are exactly the ones whose instance survived as a parameter: one
+    declaration, and the only difference is whether the owner is still there.
+
+    [own_instances] is what a class argument is applied to when it takes
+    arguments.  At the instance's own definition these are its class
+    parameters; at a use site they are the arguments the use writes.  The two
+    share a context -- [PointerV] takes the [_tcI0] that [PIV] takes -- which
+    is why one list serves both.  An argument applied to a different number is
+    left alone: that it is applied at all says it has a context, and a context
+    this one cannot supply is not one to guess at. *)
+let rec class_arg_type ~own_instances sh : Cpp_ir.Lowered.Type.t option =
+  match sh with
+  | Base.Table.Carg_unknown -> None
+  | Base.Table.Carg (r, []) -> Some (Entity_application (r, [], []))
+  | Base.Table.Carg (r, [arg]) when Base.Table.is_projection r ->
+    (* A class field is an instance of its own class -- [@IPTR P] is an [IPtr]
+       -- but it is not applied to the record, it is selected from it.  Spelling
+       it as a template gives the undeclared [IPTR<ParamsV<natIPtr>>], and a
+       second, wrong answer for every name it owns is indistinguishable from
+       none: {!drop_ambiguous} then drops the right one with it. *)
+    Option.map
+      (fun t -> Cpp_ir.Type.Member (t, Base.Common.id_of_global Term r))
+      (class_arg_type ~own_instances arg)
+  | Base.Table.Carg (r, args) ->
+    (* A recorded argument spells itself; an unknown one is the context the
+       recorded type shares with [own_instances] -- [PointerV] takes the
+       [_tcI0] that [PIV] takes -- and is filled by position.  A list of a
+       different length is not one to guess at. *)
+    let ts =
+      List.mapi
+        (fun i a ->
+          match class_arg_type ~own_instances a with
+          | Some t -> Some t
+          | None ->
+            if List.length args = List.length own_instances then
+              List.nth_opt own_instances i
+            else None )
+        args
+    in
+    if List.for_all Option.has_some ts then
+      Some (Cpp_ir.Type.Entity_application (r, List.map Option.get ts, []))
+    else None
+
+(** The resolutions the class arguments [arg_shapes] of an instance supply:
+    each argument whose class is a type class contributes its own class's
+    promoted variables, spelled through {!class_arg_type}. *)
+let resolutions_of_shapes ~own_instances arg_shapes =
+  List.concat_map
+    (fun sh ->
+      match sh with
+      | Base.Table.Carg_unknown -> []
+      | Base.Table.Carg (arg_ref, _) -> (
+        match
+          ( Base.Table.get_instance_class_shape arg_ref
+          , class_arg_type ~own_instances sh )
+        with
+        | Some (arg_class, _), Some inst_ty when Base.Table.is_typeclass arg_class ->
+          promoted_resolutions arg_class inst_ty
+        | _ -> [] ) )
+    arg_shapes
+
+(** {!resolutions_of_shapes} for the recorded class arguments of the instance
+    [inst_ref]; [] when it has no recorded class shape. *)
+let instance_arg_resolutions ~own_instances inst_ref =
+  match Base.Table.get_instance_class_shape inst_ref with
+  | None -> []
+  | Some (_, arg_shapes) -> resolutions_of_shapes ~own_instances arg_shapes
+
+(** The resolution a declaration's own type supplies when that type is an
+    inductive whose constructor fields name an instance -- see
+    {!Base.Table.get_type_class_args}.  [boxed : @dval natIPtr] is what says which
+    [IPtr] the [ptr] inside [dval] belongs to, and the only thing that does:
+    the Core type keeps neither the argument nor the dependence. *)
+let ind_type_resolutions r =
+  match Base.Table.get_instance_class_shape r with
+  | Some (head, arg_shapes) ->
+    let own_instances =
+      (* The arguments the declaration's own type writes, spelled as written:
+         [@dval (@ParamsV natIPtr)] holds [ParamsV<natIPtr>], not [ParamsV].
+         All or none, because they are read by position. *)
+      let ts = List.map (class_arg_type ~own_instances:[]) arg_shapes in
+      if List.for_all Option.has_some ts then List.map Option.get ts else []
+    in
+    resolutions_of_shapes ~own_instances
+      (* The instances the type is applied to resolve their own classes'
+         variables, not only the ones its fields name: a field whose type
+         unfolds a projection spells the class variable of the context
+         instance directly, and [@frame natIPtr] is what says which. *)
+      (arg_shapes @ Base.Table.get_type_class_args head)
+  | None -> []
+
+(** Drop a promoted name the list answers with two different types.
+
+    Two right answers look exactly like none, and they must: a term that names
+    [natIPtr] and [boolIPtr] says nothing about which one a bare [iptr] meant,
+    and spelling either one puts [Dval<typename natIPtr::iptr>] on the value
+    built at the other.  The erased alias is the only answer that is not wrong
+    somewhere.  Every list of resolutions read from a term passes through
+    here -- a list that skipped it would reinstate the guess.
+
+    A discard destroys evidence, so under [CRANE_CHECK_IR] it says so.  Two
+    right answers are benign, but one right answer and one {e wrong} one
+    annihilate just the same, and the wrong one would have been an undeclared
+    identifier: the filter turns a compile error into a silent [std::any].  The
+    spellings are printed because which of them is nonsense is a question only
+    a reader can answer. *)
+let drop_ambiguous res =
+  let ambiguous (n, t) =
+    List.exists (fun (m, u) -> Id.equal n m && u <> t) res
+  in
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    List.iter
+      (fun (n, t) ->
+        if ambiguous (n, t) then
+          Feedback.msg_warning
+            Pp.(
+              str "promoted variable " ++ Id.print n
+              ++ str " is answered more than once; dropping every answer" ) )
+      res;
+  List.filter (fun e -> not (ambiguous e)) res
+
+(** The resolution a term supplies for the promoted type variables its own type
+    leaves unresolved.
+
+    A class's [Type] field is a promoted type variable, and a type mentioning
+    one says nothing about which instance it belongs to: extraction records
+    [run : EOU ptr] with [ptr] applied to no arguments at all.  Outside any
+    instance struct there is then no [promoted_var_map], so the marker falls
+    back to the file-scope alias -- which is the right answer for a use with no
+    instance in sight, and the erased one here, because the term names one.
+
+    Every concrete instance the term mentions is read, and each contributes
+    what it knows: the promoted variables of its own class, and those of the
+    class arguments it was given (see {!instance_arg_resolutions}).  A name two
+    instances answer differently is dropped rather than decided -- the term
+    mentions both and nothing here says which one the type meant. *)
+let promoted_resolutions_of_body cx ?r ?ty b =
+  let found = ref [] in
+  (* A recorded shape is only an instance's when its head is a class: the
+     record is taken at extraction, before the tables that would say so are
+     filled, so the question is asked here instead. *)
+  let instance_class r =
+    match Base.Table.get_instance_class_shape r with
+    | Some (class_ref, _) when Base.Table.is_typeclass class_ref -> Some class_ref
+    | _ -> None
+  in
+  let add inst_ref (inst_ty : Cpp_ir.Lowered.Type.t) =
+    match Base.Table.get_instance_class_shape inst_ref with
+    | Some (class_ref, _) when Base.Table.is_typeclass class_ref ->
+      let own_instances =
+        match inst_ty with Entity_application (_, args, _) -> args | _ -> []
+      in
+      found :=
+        !found
+        @ promoted_resolutions class_ref inst_ty
+        @ instance_arg_resolutions ~own_instances inst_ref
+    | _ -> ()
+  in
+  (* An applied instance is read at its application: the head on its own says
+     the same instance at no arguments, which is a second, poorer answer to the
+     same name and would make the pair ambiguous with itself. *)
+  (* An instance applied to a lambda parameter is spelled by that parameter's
+     template name, which only the term's own environment knows; there is none
+     here, and a resolution nobody can spell is not one to offer. *)
+  let closed e =
+    let ok = ref true in
+    let rec go t =
+      (match t with Core.Expr.Bound_variable _ -> ok := false | _ -> ());
+      Base.Core_util.ast_iter go t
+    in
+    go e;
+    !ok
+  in
+  (* An instance applied to the declaration's own parameters may have no
+     recorded shape -- one declared inside a section over the same class
+     ([MemStateV] under [Context {Pa : Params}]) -- and its class is then
+     the codomain of its own type. *)
+  let instance_class_at r =
+    match instance_class r with
+    | Some _ as c -> c
+    | None -> (
+      match Base.Table.find_type r with
+      | ty -> (
+        match Base.Core_util.type_simpl (Base.Type_util.core_codomain ty) with
+        | Core.Type.Global_app {head = c; _} when Base.Table.is_typeclass c -> Some c
+        | _ -> None )
+      | exception Not_found -> None )
+  in
+  let add_at class_ref inst_ref inst_ty =
+    match Base.Table.get_instance_class_shape inst_ref with
+    | Some _ -> add inst_ref inst_ty
+    | None -> found := !found @ promoted_resolutions class_ref inst_ty
+  in
+  (* The declaration's own class-instance parameters -- its leading binders
+     whose type is a class -- are spelled by their template names, [_tcI0]
+     and on: an instance applied to one of them, [MemStateV Pa] under
+     [Existing Instance], is [MemStateV<_tcI0>] and resolves the fields of
+     its class as much as a closed one does.  [leading] names the leading
+     binders innermost-first, the order an [Core.Expr.Bound_variable] reads them in; [None]
+     for one that is not an instance. *)
+  let leading =
+    match ty with
+    | None -> []
+    | Some ty ->
+      let binders, _ = collect_lams b in
+      let doms = Base.Type_util.core_domains ty in
+      let tc_names = ref (Tvars.collect_typeclass_param_ids ty) in
+      let outer_first =
+        List.mapi
+          (fun j _ ->
+            match List.nth_opt doms j with
+            | Some d when Base.Table.is_typeclass_type d -> (
+              match !tc_names with
+              | n :: rest -> tc_names := rest; Some n
+              | [] -> None )
+            | _ -> None )
+          (List.rev binders)
+      in
+      List.rev outer_first
+  in
+  (* Every free variable of [e], [d] binders below the leading ones, is one
+     of the leading instance binders. *)
+  let spellable d e =
+    let ok = ref true in
+    let rec go depth t =
+      ( match t with
+      | Core.Expr.Bound_variable {index = i; _} when i > depth ->
+        let k = i - depth - d - 1 in
+        ( match if k >= 0 then List.nth_opt leading k else None with
+        | Some (Some _) -> ()
+        | _ -> ok := false )
+      | Core.Expr.Bound_variable _ -> ()
+      | _ -> () );
+      match t with
+      | Core.Expr.Lambda {body = b; _} -> go (depth + 1) b
+      | Core.Expr.Let {value = a; body = b; _} -> go depth a; go (depth + 1) b
+      | _ -> Base.Core_util.ast_iter (go depth) t
+    in
+    go 0 e;
+    !ok
+  in
+  let env_at d =
+    ( List.init d (fun _ -> Id.of_string "_") @ List.map (function Some n -> n | None -> Id.of_string "_") leading,
+      snd (empty_env ()) )
+  in
+  let rec walk_at d e =
+    match Core_plan.Query.strip_magic e with
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
+      when instance_class_at r <> None && (not (closed (Core_plan.Query.strip_magic e)))
+           && leading <> [] && spellable d (Core_plan.Query.strip_magic e) ->
+      Option.iter
+        (add_at (Option.get (instance_class_at r)) r)
+        (Calls.core_arg_to_template_type cx (env_at d) (Core_plan.Query.strip_magic e));
+      (* As [walk] does: the arguments are read on, all but the instance's own
+         dictionary arguments. *)
+      List.iter
+        (fun a ->
+          match Core_plan.Query.strip_magic a with
+          | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
+            when instance_class r' <> None ->
+            ()
+          | _ -> walk_at d a )
+        args
+    | Core.Expr.Lambda {body = b'; _} -> walk_at (d + 1) b'
+    | Core.Expr.Let {value = a; body = b'; _} -> walk_at d a; walk_at (d + 1) b'
+    | Core.Expr.Match {scrutinee = sc; branches = pv; _} ->
+      walk_at d sc;
+      Array.iter (fun {Core.Match.Branch.binders = ids; body = br; _} -> walk_at (d + List.length ids) br) pv
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
+      Array.iter (walk_at (d + Array.length ids)) funs
+    | e' -> Base.Core_util.ast_iter (walk_at d) e'
+  in
+  let rec walk e =
+        match Core_plan.Query.strip_magic e with
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
+      when instance_class r <> None && closed (Core_plan.Query.strip_magic e) ->
+      Option.iter (add r)
+        (Calls.core_arg_to_template_type cx (empty_env ()) (Core_plan.Query.strip_magic e));
+      (* An instance's own dictionary arguments are not independent mentions.
+         What they say is already said, in this instance's spelling, by
+         {!instance_arg_resolutions}; read separately they answer the same name
+         in their own spelling -- [natIPtr::iptr] beside [typename
+         ParamsV<natIPtr>::IPTR::iptr] -- and the pair is then dropped as
+         ambiguous, leaving the name erased. *)
+      List.iter
+        (fun a ->
+          match Core_plan.Query.strip_magic a with
+          | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
+            when instance_class r' <> None ->
+            ()
+          | _ -> walk a )
+        args
+    | Core.Expr.Global {callee = r; _} -> add r (Entity_application (r, [], []))
+    | _ -> Base.Core_util.ast_iter walk e
+  in
+  walk b;
+  (if leading <> [] then
+     let _, inner = collect_lams b in
+     walk_at 0 inner);
+  (* What the declaration's own type applies to its class binders -- see
+     {!Base.Table.get_context_instance_apps} -- read as the application it is, over
+     the template names those binders take. *)
+  ( match (r, ty) with
+  | Some r, Some ty ->
+    let tc_names = Tvars.collect_typeclass_param_ids ty in
+    List.iter
+      (fun (inst, ords) ->
+        match
+          (instance_class_at inst, List.map (List.nth_opt tc_names) ords)
+        with
+        (* A class field of a binder is selected from it, not applied to it:
+           [@PTR Pa] is [_tcI0::PTR], which the binder already resolves. *)
+        | Some class_ref, names
+          when List.for_all Option.has_some names
+               && not (Base.Table.is_projection inst) ->
+          let names = List.map Option.get names in
+          let n = List.length names in
+          let app =
+            Core.Expr.Apply {callee = Core.Expr.Global (Base.Core_util.open_reference inst);
+                             arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
+          in
+          Option.iter (add_at class_ref inst)
+            (Calls.core_arg_to_template_type cx
+               (List.rev names, snd (empty_env ()))
+               app )
+        | _ -> () )
+      (Base.Table.get_context_instance_apps r)
+  | _ -> () );
+  drop_ambiguous !found
+
+(** What the declarations a term names resolve through {e their} own types.
+
+    A match over [boxed_iptr : @dval (@ParamsV natIPtr)] spells the
+    constructor's type, and that type's promoted variables are resolved by the
+    scrutinee's declaration, not by anything the match body mentions.  Read
+    last: an instance the body names directly is a nearer answer than one
+    inherited from a name it reads. *)
+let type_resolutions_of_referenced_globals b =
+  let found = ref [] in
+  let rec walk e =
+    ( match Core_plan.Query.strip_magic e with
+    | Core.Expr.Global {callee = r; _} -> found := !found @ ind_type_resolutions r
+    | _ -> () );
+    Base.Core_util.ast_iter walk e
+  in
+  walk b;
+  drop_ambiguous !found
+
+(** Generate a declaration's type and its body against the resolution its body
+    supplies -- see {!promoted_resolutions_of_body} -- and the one its own type
+    does, see {!ind_type_resolutions}.  An enclosing instance struct answers
+    first: a variable it declares is the one this method is written in,
+    whatever else the body mentions. *)
+let with_body_resolutions cx r b f =
+  with_promoted_var_map cx
+    ( cx.ctx.lexical.promoted_var_map
+    @ promoted_resolutions_of_body cx ~r ?ty:(try Some (Base.Table.find_type r) with Not_found -> None) b
+    @ ind_type_resolutions r
+    @ type_resolutions_of_referenced_globals b )
+    f
+
+(** Map a function's own type variables to the associated types they really
+    stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
+    standing for [M A] is [typename _tcI0::M], an associated type of the
+    instance, not a template parameter.  Left as a free template parameter it
+    would be undeducible: nothing in the signature determines it.  The
+    positions come from {!Tvars.hkt_tvar_positions_of_type}. *)
+let hkt_tvar_resolutions_of_type ?source_order ty : (int * Cpp_ir.Lowered.Type.t) list =
+  List.map
+    (fun { Tvars.tvar; instance; field } ->
+      (tvar, Cpp_ir.Type.Member (instance, field)) )
+    (Tvars.hkt_tvar_positions_of_type ?source_order ty)
+
+(** Rewrite the type variables listed in [resolutions] (see
+    {!hkt_tvar_resolutions_of_type}) throughout the statements of a function
+    body, so type annotations there agree with the resolved signature. *)
+let apply_hkt_resolutions_stmts resolutions (stmts : Cpp_ir.Lowered.Stmt.t list) =
+  if resolutions = [] then stmts
+  else
+    let ft = Cpp_ir.Types.substitute (fun i -> List.assoc_opt i resolutions) in
+    let rec fe e = Cpp_ir.Map.expr (rw ()) e
+    and fs s = Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
+    List.map fs stmts
+
+(** Rewrite those type variables throughout a whole CppIR declaration: an instance
+    struct resolves its carrier the same way a function does, but it has no
+    single signature to rewrite -- the variable turns up in its [using]
+    aliases, in every method's signature and in every method's body. *)
+let apply_hkt_resolutions_decl resolutions (decl : Cpp_ir.Lowered.Decl.t) =
+  if resolutions = [] then decl
+  else
+    let ft = Cpp_ir.Types.substitute (fun i -> List.assoc_opt i resolutions) in
+    let rec fe e = Cpp_ir.Map.expr (rw ()) e
+    and fs s = Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:ft () in
+    Cpp_ir.Map.decl (rw ()) decl
+
+
+(** The arguments for the promoted variables [r] mentions without declaring,
+    which are template parameters of whatever [r] is generated as -- see
+    {!Base.Table.promoted_type_params}.  They trail a concept's arguments (the
+    instance comes first, see {!Records.gen_typeclass_cpp}) and lead a
+    record struct's (see [Records]); every use has to supply them in this
+    order, or it names a different template. *)
+let mentioned_promoted_args r =
+  List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Base.Table.promoted_type_params r)
+
+(** [deapply_families name vars ty] takes the application off each of
+    [name]'s family parameters in [ty], spelled at [vars].  A family is a plain
+    [typename] -- [E X] is written [E] -- and so is the parameter a conversion
+    from another instantiation declares in its place, which the struct-level
+    {!Core_plan.Plan_templates.deapply_plain_tvars} does not see. *)
+let deapply_families name vars =
+  let families = List.filteri (fun i _ -> Base.Table.is_family_ind_param name i) vars in
+  Cpp_ir.Types.map (function
+    | Apply ((Variable (Index (_, Some v) | Named v) as head), _)
+      when List.exists (Id.equal v) families ->
+      head
+    | t -> t )
+
+(** The conversion function by which a value is read at another instantiation
+    of its own type -- [Box<Nat>] reaching a slot spelled [Box<std::any>].
+
+    The variant path says this with a converting constructor.  A struct that is
+    an aggregate cannot have one: every brace initialisation the codegen writes
+    for it, and every aggregate initialisation in hand-written test code,
+    depends on its staying an aggregate, which any user-declared constructor
+    would end.  A conversion function is the same statement from the other side
+    and an aggregate may have as many as it likes.
+
+    [fields] gives each field's name together with its C++ type {e at a given
+    spelling of the type parameters}, because the two callers -- a Rocq
+    [Record] and a flat single-constructor [Inductive] -- compute that type
+    differently.  Nothing is emitted where the type has no parameters, or no
+    fields: there is no other instantiation to read it at.
+
+    [leading] are arguments the conversion keeps rather than respells: the
+    promoted variables a caller did not put in [vars] (see
+    {!mentioned_promoted_args}), which belong to the scope the type was
+    declared in and not to the instantiation being converted.
+
+    No constraint excludes [_U = T].  A conversion function to its own class
+    type is never selected, so declaring it is harmless and saying so costs a
+    [requires] clause on every generated struct. *)
+let conversion_to_other_instantiation cx ~leading ~name ~templates ~vars ~fields =
+  if vars = [] || fields = [] then []
+  else
+    let n_vars = List.length vars in
+    let u_var_names =
+      List.mapi (fun i _ -> Base.Generated_name.member "U" ~of_:n_vars i) vars
+    in
+    let converted =
+      List.map
+        (fun (field_id, at) ->
+          Convert.gen_type_conversion_expr
+            (* Every inductive generated into this same scope -- the type
+               itself, its mutual siblings, and any other module-local
+               inductive -- is spelled bare here, so it must not be
+               namespace-qualified. *)
+            ~skip:(fun g ->
+              GlobRef.CanOrd.equal g name
+              || Base.Table.same_mutual_block g name
+              || spells_bare cx g )
+            ~src_ty:(deapply_families name vars (at vars))
+            ~dst_ty:(deapply_families name u_var_names (at u_var_names))
+            (Local field_id) )
+        fields
+    in
+    (* The source instantiation is the same template as the destination, so its
+       arguments have the same kinds: a [template <typename> class] parameter
+       cannot be stood in for by a plain [typename]. *)
+    let tparams : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters =
+      List.mapi
+        (fun i u ->
+          let tt : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t =
+            match List.nth_opt templates i with Some (tt, _) -> tt | None -> Typename
+          in
+          (tt, u) )
+        u_var_names
+    in
+    let method_ : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
+      { name = Id.of_string "operator_at_other_instantiation";
+        globref = None;
+        type_params = tparams;
+        return_type =
+          Entity_application
+            ( name,
+              leading
+              @ List.map Cpp_ir.Build.named_variable u_var_names,
+              [] );
+        params = [];
+        body = [Return (Some (Braced converted))];
+        receiver = Instance {this_position = 0; is_const = true; ref_qualifier = Any; returns_field = false};
+        is_inline = false;
+        no_pure = true;
+        constexpr = Undecided;
+        is_noexcept = false;
+        is_conversion = true;
+        binders = [];
+        receiver_binder = None;
+        loop = None }
+    in
+    ([(Method method_, Public, Accessors)] : Cpp_ir.Lowered.phase Cpp_ir.Field.member list)

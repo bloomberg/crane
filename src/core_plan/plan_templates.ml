@@ -7,8 +7,8 @@
     gets, and which parameters are phantom.  Decided from a declaration's
     types and signature, before anything is rendered -- the target plan's
     template-parameter kinds and callable plans -- and again as the
-    declaration is generated, which must agree; {!Gen_functions},
-    {!Gen_inductives} and {!Cpp_ind} ask, and the printer writes what the
+    declaration is generated, which must agree; {!Core_to_cpp.Functions},
+    {!Core_to_cpp.Inductives} and {!Cpp_ind} ask, and the printer writes what the
     head says.  The rewrites a relaxation makes of the declaration under its
     head are {!Head_relaxation}'s. *)
 
@@ -733,7 +733,7 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!Translation_types.cpp_ir_of_core_type}).
+    pipeline (see {!Core_to_cpp.Types.cpp_ir_of_core_type}).
 
     @param force_required  Set of tvar indices that must be required (plain
       [typename T]) even if they don't appear in the C++ function type.

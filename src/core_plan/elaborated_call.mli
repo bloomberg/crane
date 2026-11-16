@@ -12,7 +12,7 @@
     where it is translated otherwise; the holes its context states are
     resolved, and the callee's types instantiated, by
     {!Elaborate.instantiate} ({!instantiated}), which the C++ part of
-    planning the call ({!Translation_calls.plan_call}) starts from. *)
+    planning the call ({!Core_to_cpp.Calls.plan_call}) starts from. *)
 
 (** The role an argument the call writes has. *)
 type role =
@@ -86,7 +86,7 @@ val dictionary_filled : t -> bool
     call ({!Elaborate.instantiate}).  It holds no C++ type, and is
     decided before, and without, anything about
     the call's C++: the C++ half of planning
-    ({!Translation_calls.plan_call}) reads it and adds to it, never the
+    ({!Core_to_cpp.Calls.plan_call}) reads it and adds to it, never the
     other way.
 
     Planned ahead of translation by the Core walk

@@ -4,7 +4,7 @@
 (** What every stage of one unit's extraction reads about the unit: a value
     built where the unit starts, once its plan decides its configuration,
     and handed to the stages that generate, finish and render it.  Lowering
-    finds it in its input ({!Translation_state.unit_context}), naming and
+    finds it in its input ({!Core_to_cpp.Lowering_state.unit_context}), naming and
     printing in the position they write at ({!Cpp_state.render_ctx}), the
     finishing passes in their argument ({!Cpp_passes.Pipeline.finish}).  Nothing
     installs it anywhere for a reader to find. *)

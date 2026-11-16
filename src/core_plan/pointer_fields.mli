@@ -34,7 +34,7 @@ val none : t
 (** [add m planned] is [m] with the pointer fields of each constructor
     struct planned: the inductive, the constructor's struct name and each
     field's index with whether it holds the inductive itself
-    ({!Gen_inductives.constructor_pointer_fields}). *)
+    ({!Core_to_cpp.Inductives.constructor_pointer_fields}). *)
 val add : t -> (Names.GlobRef.t * string * (int * bool) list) list -> t
 
 (** The pointer fields of the constructor struct [key], if it has any. *)

@@ -17,9 +17,9 @@
 
 (** What normalization asks of lowering, which comes after it and so cannot
     be named here: the Core type a global application yields
-    ({!Translation_calls.core_app_result_type}), whether a method's return
-    type has no C++ spelling ({!Translation.return_type_is_erased}), and the
-    suspension rules splicing keeps ({!Translation_suspension.suspension}).
+    ({!Core_to_cpp.Calls.core_app_result_type}), whether a method's return
+    type has no C++ spelling ({!Core_to_cpp.Lower_expr.return_type_is_erased}), and the
+    suspension rules splicing keeps ({!Core_to_cpp.Suspension.suspension}).
     The driver builds it from its translation context. *)
 type lowering = {
   app_result_type : Core.Expr.t -> Core.Expr.t list -> Core.Type.t option;

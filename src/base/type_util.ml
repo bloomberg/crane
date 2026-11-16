@@ -290,8 +290,8 @@ let eta_expand_to ty b =
     and the class instance itself; the projection constant kept both.  Reading
     the projection's type and dropping those leading domains recovers the
     method as its instances must spell it -- a member template, not a signature
-    flattened to [std::any].  Both the instance side ({!Gen_decls}) and the
-    call side ({!Translation}) need the same answer, so they ask here. *)
+    flattened to [std::any].  Both the instance side ({!Core_to_cpp.Lower_decl}) and the
+    call side ({!Core_to_cpp.Lower_expr}) need the same answer, so they ask here. *)
 let rec strip_erased_method_prefix = function
   | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d || Table.is_typeclass_type d ->
     strip_erased_method_prefix rest
@@ -1029,7 +1029,7 @@ module Ctor_fields = struct
      [immer::flex_vector<immer::box<self>>]) when the container carries a
      [Boxed Element] wrapper and a self/mutual ref appears in its type args.
      The element box breaks the completeness cycle, so such a field is stored
-     by VALUE (matching the declaration, {!Gen_decls}) -- it is not
+     by VALUE (matching the declaration, {!Core_to_cpp.Lower_decl}) -- it is not
     shared_ptr-wrapped and must not
      be dereferenced when bound in a match arm. *)
   let recurses_through_boxed f i =
@@ -1213,7 +1213,7 @@ let resolve_tvars_to_any =
     - [std::vector v{1, 2, 3}] deduces [std::vector<int>]
 
     It is called wherever a call writes a global's explicit type arguments
-    ([Translation], [Translation_calls]).
+    ([Core_to_cpp.Lower_expr], [Core_to_cpp.Calls]).
 
     Example scenarios (keys omitted):
 
@@ -1465,7 +1465,7 @@ let get_tvar_indices t = List.map fst (get_tvars_indexed t)
 
     In addition to the codomain and non-function domain parameters, tvars from
     fully rendered function signatures are primary: the function emitter
-    ([Gen_functions]) can represent those signatures with [is_invocable_r_v]
+    ([Core_to_cpp.Functions]) can represent those signatures with [is_invocable_r_v]
     constraints.  This matters for a
     type such as [(B -> C) -> (A -> B) -> A -> C], where [B] occurs only in
     function-typed parameters but is nevertheless a real part of both callable
@@ -1495,7 +1495,7 @@ let primary_tvar_indices (dom : Cpp_ir.Lowered.Type.t list) cod =
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the Core type.  Type indices are stripped from the C++ type by
-    {!Translation_types.cpp_ir_of_core_type} but may be needed in function bodies
+    {!Core_to_cpp.Types.cpp_ir_of_core_type} but may be needed in function bodies
     for [any_cast] when matching on type-indexed inductives with
     wholesale-erased fields.
 

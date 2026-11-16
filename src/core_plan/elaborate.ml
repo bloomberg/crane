@@ -164,10 +164,10 @@ let classify ~lex id written =
 let of_roles (use : Core.Global_use.t) args roles =
   let id = use.callee in
   (* Order the instance arguments the way the callee numbered its own
-     [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
+     [_tcI] parameters.  [Core_to_cpp.Lower_decl.gen_dfun] iterates [collect_lams]
      output, which is reversed from source order, so a plain constrained
      function's first instance parameter is the source-last one; an instance
-     struct is stripped left to right by [Gen_decls.gen_instance_struct] and
+     struct is stripped left to right by [Core_to_cpp.Lower_decl.gen_instance_struct] and
      keeps source order.  Call sites have the arguments in source order. *)
   let dictionaries =
     if ref_returns_typeclass id then Elaborated_call.Source_order else Elaborated_call.Reversed
@@ -787,7 +787,7 @@ let declaration ?caller ?scope b ty body =
 
 (* A constant typed by a name that stands for arrows -- an instance of a
    single-method class is typed by the class -- is generated eta-expanded to
-   those arrows ({!Gen_functions.gen_spec}): the slot it initialises is a
+   those arrows ({!Core_to_cpp.Functions.gen_spec}): the slot it initialises is a
    function of the full signature, which no partial application fills. *)
 let constant_at_alias ~caller b ty body =
   let ty = Base.Core_util.type_simpl ty in
@@ -805,7 +805,7 @@ let constant_at_alias ~caller b ty body =
    parameters of its own -- and under the instance's own parameters, so those
    are the bodies the calls inside them are elaborated in.  A method that
    binds no parameter but erased ones and is applied to parameters of its
-   own is generated as that application alone ({!Gen_instances}), so that is
+   own is generated as that application alone ({!Core_to_cpp.Instances}), so that is
    the only body of it walked: the body as written shares its matches'
    occurrences with the application, which pushes the arguments into a
    single-branch match ({!Base.Core_util.canonical_app}).  The record as written is
@@ -858,7 +858,7 @@ let names_only (b : builder) f =
    body renumbered so the inductive's variables come first
    ({!Method_registry.renumbering}), and nowhere as written: outside any
    declaration, under the inductive's variables and then its own, each
-   spelled as the method spells it ({!Gen_inductives.method_scope}). *)
+   spelled as the method spells it ({!Core_to_cpp.Inductives.method_scope}). *)
 let method_ b vars (_, body, ty, this_pos) =
   let r = Method_registry.renumbering ~num_ind_vars:(List.length vars) ~this_pos ty in
   let scope = vars @ head_scope (List.length r.Method_registry.extra) in

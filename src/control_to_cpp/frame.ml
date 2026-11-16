@@ -601,7 +601,7 @@ let decline_reason ad =
     member of which calls back into the enclosing function
     ({!Core_plan.Recursion.adoptable}).
 
-    The shape is the Y-combinator pair [Translation_local_functions.gen_local_fix_by_ref]
+    The shape is the Y-combinator pair [Core_to_cpp.Local_functions.gen_local_fix_by_ref]
     emits (see {!Analysis.fixpoint_self}).  A fixpoint whose body calls none of the
     enclosing function is left for [Loopify.loopify_inner_lambdas], which handles it
     correctly on its own; one that does call back cannot be loopified alone,
