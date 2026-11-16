@@ -612,7 +612,7 @@ let decline_reason ad =
     ties the knot -- and installation rewrites both into calls on
     {!Adopted.entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
-let adopt_local_fix ~stmts ~planned = function
+let adopt_local_fix ~unit ~stmts ~planned = function
   | Bind_variable (impl_id, Declare (Auto, _), Lambda {params;
                                                        body;
                                                        return_type;
@@ -649,7 +649,7 @@ let adopt_local_fix ~stmts ~planned = function
            whose names another fixpoint may share.  How it is rerouted is
            its shape: one through the self-parameter forwards it as a
            leading argument the entry does not take. *)
-        let entering = (Recursion_plan.entering (Loop_facts.recursion ())) (fst fixpoint.member) in
+        let entering = (Recursion_plan.entering (Unit_context.recursion unit)) (fst fixpoint.member) in
         let reroute e =
           match e with
           | Call (({occurrence = Some o; _} as res), Local id, args)
@@ -709,11 +709,11 @@ let adopt_local_fix ~stmts ~planned = function
     translation emits for Coq's [let fix], which names itself.  Which of them
     call back into the function is the recursion plan's, [adoptable]; the
     first in the flow lowering can take is adopted. *)
-let find_adopted ~adoptable stmts =
+let find_adopted ~unit ~adoptable stmts =
   let planned (lf : local_fixpoint) =
     List.exists (Core.Occurrence.equal (fst lf.member)) adoptable
   in
-  find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned)
+  find_in_flow stmts ~on_stmt:(adopt_local_fix ~unit ~stmts ~planned)
 
 (** A checker that tries each of [checkers] in turn, so one machine can be
     driven by the calls that reach any of its entry points. *)
@@ -731,6 +731,8 @@ let any_checker (checkers : call_checker list) : call_checker =
     transformation ({!transform_nontail}) except {!enter_rewrite_ctx.env}, which is narrowed
     when entering lambda bodies, match branches, or continuations. *)
 type enter_rewrite_ctx = {
+  unit : Unit_context.t;
+      (** The context of the unit being lowered *)
   check : call_checker;
       (** Identifies recursive calls in expressions *)
   entries : Machine_entry.t list;
@@ -961,7 +963,7 @@ let planned_point ctx id (tgt : binding) =
     | Existing -> binder_of ctx id
     | Declare_static _ -> None
   in
-  match Option.map (Recursion_plan.resumes_binding (Loop_facts.recursion ())) binder with
+  match Option.map (Recursion_plan.resumes_binding (Unit_context.recursion ctx.unit)) binder with
   | Some [p] -> p
   | Some points ->
     Probe.violation "frame plan"
@@ -982,7 +984,9 @@ let planned_point ctx id (tgt : binding) =
     where the plan does not say: the statement binds a local of the
     backend's own, or the machine is not one the plan describes. *)
 let planned_resume ctx id (tgt : binding) e =
-  let point b = match (Recursion_plan.resumes_binding (Loop_facts.recursion ())) b with [p] -> Some p | _ -> None in
+  let point b =
+    match Recursion_plan.resumes_binding (Unit_context.recursion ctx.unit) b with [p] -> Some p | _ -> None
+  in
   match ctx.entered_by with
   | None -> None
   | Some entered_by -> (
@@ -2173,7 +2177,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   let aliased_params ?pointer_safe en =
     List.fold_left aliased_after Id.Set.empty (make_param_copies ~unit (entry_emission ?pointer_safe en []).params)
   in
-  let ctx = { check = check; entries = entries;
+  let ctx = { unit; check = check; entries = entries;
                env = env;
                result_ty = ret_ty;
                binders = List.map (fun (id, b) -> (id, Some b)) binders;
@@ -2186,7 +2190,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
                entered = entered;
                points_into = points_into;
                entering = Option.bind loop
-                 (fun l -> Option.map Control_ir.Term.continues ((Lower_control.loop (Loop_facts.control ())) l));
+                 (fun l -> Option.map Control_ir.Term.continues ((Lower_control.loop (Unit_context.control unit)) l));
                aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top

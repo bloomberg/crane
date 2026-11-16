@@ -496,7 +496,7 @@ let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_
 let structure (program : Core_phase.normalizing) : Core_phase.normalizing =
   let methods = methods_of program.structure in
   let {Core_phase.structure = struc; splices} =
-    Recursion_plan.splice_partners ~loopified:(loopified ~methods)
+    Recursion_plan.splice_partners ~suspension:Translation_suspension.suspension ~loopified:(loopified ~methods)
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program
   in

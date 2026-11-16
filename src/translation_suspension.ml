@@ -129,6 +129,10 @@ let suspends_constructor ~self ~binder_type n ts =
   && (not (List.for_all core_is_value ts))
   && args_may_corecurse ~self ~binder_type ts
 
+(** When a coinductive body is suspended, as {!Recursion_plan} reads it:
+    {!suspends_whole} and {!suspends_constructor}. *)
+let suspension : Recursion_plan.suspension = {whole = suspends_whole; at_constructor = suspends_constructor}
+
 (** [suspend_ctor ty ctor args] is the coinductive constructor [ctor] of
     type [ty] applied to [args], suspended:
     [ty::lazy_([=]() -> typename ty::ctor { return {args}; })].  The thunk

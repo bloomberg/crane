@@ -14,6 +14,7 @@ type t = {
   promoted_inductives : Ref.User.Set.t;
   instance_promoted_types : (Names.Id.t * Core.Type.t) list Names.GlobRef.Map.t;
   scopes : Scope_plan.bound;
+  loops : Loop_facts.t;
 }
 
 let make ~config =
@@ -26,7 +27,8 @@ let make ~config =
     nested_structs = CString.Map.empty;
     promoted_inductives = Ref.User.Set.empty;
     instance_promoted_types = Names.GlobRef.Map.empty;
-    scopes = Scope_plan.none }
+    scopes = Scope_plan.none;
+    loops = Loop_facts.none }
 let detached = make ~config:{Table.concurrent = false}
 let non_atomic_rc u = Table.non_atomic_rc_for u.config
 let count_rc u = Table.count_rc_for u.config
@@ -34,3 +36,7 @@ let is_promoted_inductive u r = Ref.User.Set.mem r u.promoted_inductives
 
 let instance_promoted_types_of u r =
   match Names.GlobRef.Map.find_opt r u.instance_promoted_types with Some bindings -> bindings | None -> []
+
+let recursion u = u.loops.recursion
+let control u = u.loops.control
+let loop_effects u = u.loops.effects

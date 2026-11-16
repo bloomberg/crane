@@ -400,19 +400,25 @@ let rec iter_scoped f lex e =
     Array.iter (iter_scoped f lex) funs
   | e -> Core_util.ast_iter (iter_scoped f lex) e
 
+type suspension = {
+  whole : Names.GlobRef.t -> Core.Type.t -> Core.Expr.t -> bool;
+  at_constructor :
+    self:Names.GlobRef.t option -> binder_type:(int -> Core.Type.t option) -> Names.GlobRef.t ->
+    Core.Expr.t list -> bool;
+}
+
 (* Whether [e], standing in [lex] in the definition [self], suspends a
-   coinductive constructor ({!Translation_suspension.suspends_constructor})
-   anywhere, under a lambda or in a local fixpoint's body too: the C++ [e]
-   becomes holds the suspension wherever it stands. *)
-let suspends_within ~self lex e =
+   coinductive constructor ({!suspension.at_constructor}) anywhere, under a
+   lambda or in a local fixpoint's body too: the C++ [e] becomes holds the
+   suspension wherever it stands. *)
+let suspends_within ~suspension ~self lex e =
   let exception Found in
   try
     iter_scoped
       (fun lex -> function
         | Core.Expr.Construct {result_type = Core.Type.Global_app {head = n; _}; constructor = c; arguments = args; _}
           when (not (Table.is_custom c))
-               && Translation_suspension.suspends_constructor ~self:(Some self)
-                    ~binder_type:(Lexenv.type_opt lex) n args ->
+               && suspension.at_constructor ~self:(Some self) ~binder_type:(Lexenv.type_opt lex) n args ->
           raise Found
         | _ -> () )
       lex e;
@@ -420,12 +426,11 @@ let suspends_within ~self lex e =
   with Found -> true
 
 (* Whether the C++ the definition [self] of type [ty] becomes holds a
-   suspension: it is suspended whole
-   ({!Translation_suspension.suspends_whole}), or at a constructor. *)
-let definition_suspends self ty body =
+   suspension: it is suspended whole ({!suspension.whole}), or at a
+   constructor. *)
+let definition_suspends ~suspension self ty body =
   let lex, body = Core_elaborate.declaration_scope ty body in
-  Translation_suspension.suspends_whole self (Type_util.core_return_type ty) body
-  || suspends_within ~self lex body
+  suspension.whole self (Type_util.core_return_type ty) body || suspends_within ~suspension ~self lex body
 
 (* The levels of the binders outside [e] that [e] reads as values, [e]
    standing under [depth] binders: one at a level of [heads] read only to
@@ -894,7 +899,7 @@ let bound_calls body =
 (* The plan of every local fixpoint in [defs], one per fixpoint, under its
    occurrence.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
-let local_groups ~effects defs =
+let local_groups ~suspension ~effects defs =
   let plans = ref [] in
   let plan ~bound origin lex ids funs occurrence =
     let n = Array.length ids in
@@ -923,7 +928,7 @@ let local_groups ~effects defs =
              (Array.to_list ids) )
           lex
       in
-      Array.exists (suspends_within ~self:origin lex) funs
+      Array.exists (suspends_within ~suspension ~self:origin lex) funs
     in
     let adoptable =
       List.init n (fun j ->
@@ -1018,7 +1023,7 @@ type inlined_call = {
    result is the function's -- in one returning unit, the call's statement
    and the return after it.  [parameters g] is the number of parameters of
    [g]. *)
-let inlined_calls ~self ~effects ~parameters ~inlines body =
+let inlined_calls ~suspension ~self ~effects ~parameters ~inlines body =
   let effect_ = sequential effects in
   let found = ref [] in
   let rec go pos e =
@@ -1043,8 +1048,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
                        arguments = [a]} when identity use.callee && Table.to_inline use.callee -> go pos a
     | Core.Expr.Construct {result_type = Core.Type.Global_app {head = n; _}; constructor = c; arguments = args; _}
       when (not (Table.is_custom c))
-           && Translation_suspension.suspends_constructor ~self:(Some self) ~binder_type:(fun _ -> None) n
-                args ->
+           && suspension.at_constructor ~self:(Some self) ~binder_type:(fun _ -> None) n args ->
       ()
     | Core.Expr.Let {binder = x; value = a; body = b; _} -> (
       match pos with
@@ -1103,9 +1107,9 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
 
 (* The body of the function [r], defined as [fd], as it is generated: [None]
    where it is suspended whole. *)
-let flow_of r (fd : Core.Recursion.Definition.t) =
+let flow_of ~suspension r (fd : Core.Recursion.Definition.t) =
   let _, body = Core_elaborate.declaration_scope fd.type_ fd.body in
-  if Translation_suspension.suspends_whole r (Type_util.core_return_type fd.type_) body then None else Some body
+  if suspension.whole r (Type_util.core_return_type fd.type_) body then None else Some body
 
 (* The number of parameters the definition [fd] is generated taking: every
    one its type declares. *)
@@ -1123,12 +1127,12 @@ let parameters defs g =
    such call met of a function [pending] holds, whose calls are all spliced
    at once.  A call [opaque] holds is in a partner's body run in place of a
    call, where nothing is spliced. *)
-let next_inlining ~opaque ~effects ~defs ~pending self body =
+let next_inlining ~suspension ~opaque ~effects ~defs ~pending self body =
   let calls ~inlines =
     let inlines (use : Core.Global_use.t) =
       inlines use.callee && not (List.exists (Core.Occurrence.equal (Core.Global_use.occurrence use)) opaque)
     in
-    inlined_calls ~self ~effects ~parameters:(parameters defs) ~inlines body
+    inlined_calls ~suspension ~self ~effects ~parameters:(parameters defs) ~inlines body
   in
   match calls ~inlines:pending with
   | [] -> None
@@ -1227,28 +1231,29 @@ let yields_alike a b =
 (* The calls of [g] the partner [def] makes where its body runs in place of
    a call of it ({!inlined_calls}), and the number of its uses of [g] there
    in all. *)
-let flow_calls ~defs (def : Core.Recursion.Definition.t) g =
-  match flow_of def.entity def with
+let flow_calls ~suspension ~defs (def : Core.Recursion.Definition.t) g =
+  match flow_of ~suspension def.entity def with
   | None -> ([], 0)
   | Some body ->
     let of_g (use : Core.Global_use.t) = Common.globref_equal use.callee g in
     let uses = ref 0 in
     let rec count = function Core.Expr.Global use when of_g use -> incr uses | e -> Core_util.ast_iter count e in
     count body;
-    ( inlined_calls ~self:def.entity ~effects:(definition_effects def) ~parameters:(parameters defs) ~inlines:of_g
+    ( inlined_calls ~suspension ~self:def.entity ~effects:(definition_effects def) ~parameters:(parameters defs)
+        ~inlines:of_g
         body,
       !uses )
 
 (* The calls of [self] the partner [def] makes where its body runs in place
    of a call of it. *)
-let calls_back ~defs ~self def = fst (flow_calls ~defs def self)
+let calls_back ~suspension ~defs ~self def = fst (flow_calls ~suspension ~defs def self)
 
 (* Whether each use the partner [def] makes of itself is a call where its
    body runs: the copy a machine enters is no value, so a use in a closure,
    a partial application or anything run in a lambda would have nothing to
    call. *)
-let calls_itself_in_flow ~defs (def : Core.Recursion.Definition.t) =
-  let calls, uses = flow_calls ~defs def def.entity in
+let calls_itself_in_flow ~suspension ~defs (def : Core.Recursion.Definition.t) =
+  let calls, uses = flow_calls ~suspension ~defs def def.entity in
   List.length calls = uses
 
 (* [body], the body of a function, with each call of its partner defined as
@@ -1325,21 +1330,21 @@ let recurses (fd : Core.Recursion.Definition.t) =
    ({!splice_partners}).  A function that does not recurse once spliced
    into makes no loop a copy would serve: it is left as it is.  [defs]
    are the program's definitions. *)
-let splice_member ~inlines ~defs ~members (fd : Core.Recursion.Definition.t) =
+let splice_member ~suspension ~inlines ~defs ~members (fd : Core.Recursion.Definition.t) =
   let self = fd.entity in
   let own_vars = Core_util.type_maxvar fd.type_ in
   let own_monad = Type_util.codomain_monad fd.type_ in
   let partner g = (not (Common.globref_equal g self)) && List.exists (Common.globref_equal g) members in
   let enterable (def : Core.Recursion.Definition.t) =
-    inlines self && yields_alike fd.type_ def.type_ && calls_back ~defs ~self def <> []
-    && calls_itself_in_flow ~defs def
-    && not (definition_suspends self fd.type_ fd.body)
+    inlines self && yields_alike fd.type_ def.type_ && calls_back ~suspension ~defs ~self def <> []
+    && calls_itself_in_flow ~suspension ~defs def
+    && not (definition_suspends ~suspension self fd.type_ fd.body)
   in
   let rec go opaque inlined entered body =
     let current = {fd with Core.Recursion.Definition.body = body} in
-    let flow = flow_of self current in
+    let flow = flow_of ~suspension self current in
     let next pending =
-      Option.bind flow (next_inlining ~opaque ~effects:(definition_effects current) ~defs ~pending self)
+      Option.bind flow (next_inlining ~suspension ~opaque ~effects:(definition_effects current) ~defs ~pending self)
     in
     let spliced g = List.exists (Common.globref_equal g) inlined in
     let finished = Some (List.rev inlined, entered, body) in
@@ -1359,7 +1364,8 @@ let splice_member ~inlines ~defs ~members (fd : Core.Recursion.Definition.t) =
       if Core_util.type_maxvar def.type_ <> own_vars then unspliced "variables" self
       else if not (Option.equal Names.GlobRef.UserOrd.equal (Type_util.codomain_monad def.type_) own_monad) then
         unspliced "monad" self
-      else if Option.is_empty (flow_of partner (Ref.User.Map.find partner defs)) then unspliced "suspended" self
+      else if Option.is_empty (flow_of ~suspension partner (Ref.User.Map.find partner defs)) then
+        unspliced "suspended" self
       else if invoked <> [] && not (inlines self) then unspliced "invoked" self
       else
         let spliced =
@@ -1378,7 +1384,7 @@ let splice_member ~inlines ~defs ~members (fd : Core.Recursion.Definition.t) =
     Some ([], None, fd.body)
   | spliced -> spliced
 
-let splice_partners ~loopified ~inlines ({structure = struc;
+let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
                                           splices} : Core_phase.normalizing) : Core_phase.normalizing =
   let groups = Recursive_groups.analyze struc in
   let originals = ref Ref.User.Map.empty in
@@ -1395,7 +1401,7 @@ let splice_partners ~loopified ~inlines ({structure = struc;
       (fun r fd ->
         match Recursive_groups.group groups r with
         | Some members when loopified r && (not (Table.is_custom r)) && not (Splices.decided splices r) ->
-          Some (splice_member ~inlines ~defs ~members fd)
+          Some (splice_member ~suspension ~inlines ~defs ~members fd)
         | Some _ | None -> None )
       defs
   in
@@ -1441,7 +1447,7 @@ let splice_partners ~loopified ~inlines ({structure = struc;
    ({!splice_partners}), and only those: a partner's call that was not
    spliced stays a call of another function.  A function on no cycle calls
    no function it could recurse through. *)
-let analyze groups program =
+let analyze ~suspension groups program =
   let struc = Core_phase.structure program in
   let effects = Core_effects.analyze struc in
   let defs = ref Ref.User.Map.empty in
@@ -1511,7 +1517,7 @@ let analyze groups program =
   let suspended =
     Ref.User.Map.fold
       (fun r (fd : Core.Recursion.Definition.t) s ->
-        if definition_suspends r fd.type_ fd.body then Ref.User.Set.add r s else s )
+        if definition_suspends ~suspension r fd.type_ fd.body then Ref.User.Set.add r s else s )
       defs Ref.User.Set.empty
   in
   (* A definition off every group that does not recurse only by tail calls
@@ -1576,7 +1582,7 @@ let analyze groups program =
   { groups = plans;
     by_member;
     defined;
-    locals = local_groups ~effects defs;
+    locals = local_groups ~suspension ~effects defs;
     modulo_cons;
     suspended;
     resumes;

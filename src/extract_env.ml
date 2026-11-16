@@ -1425,7 +1425,8 @@ let check_structure_unchanged planned struc =
     normalized ({!Core_phase.normalize}), lowered with the facts the whole of
     it is analysed for -- which definitions only throw, which parameters
     are owned, settled across calls, how each function recurses
-    ({!Program_facts.analyze_program}). *)
+    ({!Program_facts.analyze_program}), and handed with what loop lowering
+    reads of that analysis ({!Loop_facts}). *)
 let freeze core f =
   let normalized, program =
     Translation_state.generating_outside_modules @@ fun () ->
@@ -1436,7 +1437,7 @@ let freeze core f =
     (normalized, Program_facts.analyze_program normalized)
   in
   Translation_state.with_program_facts (Program_facts.lowering program) @@ fun () ->
-  Loop_facts.with_program ~recursion:program.recursion ~control:program.control @@ fun () -> f normalized
+  f {Loop_facts.none with recursion = program.recursion; control = program.control} normalized
 
 (** The extracted structure [struc] through the Core passes
     ({!core_pass_names}), keeping what [to_appear] names. *)
@@ -1635,7 +1636,7 @@ let declares struc =
     a separate extraction starts from ({!Accumulated_plan.for_next_unit}). *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
-    (fn, si, mo) dry (core : Core_phase.normalized Core_phase.program) =
+    (fn, si, mo) dry (loops : Loop_facts.t) (core : Core_phase.normalized Core_phase.program) =
   let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
   let struc = Core_phase.structure core in
@@ -1657,14 +1658,13 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      start; its configuration is its plan's. *)
   with_plan Unit_context.detached earlier @@ fun u ->
   let facts, plan = analyze_and_plan struc in
-  let u = {u with config = plan.config} in
+  let u = {u with config = plan.config; loops = {loops with effects = facts.effects}} in
   Translation_state.with_unit_facts
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
       context = u }
   @@ fun () ->
-  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
@@ -2067,7 +2067,7 @@ let full_extraction_exports ?(validate = true) ~opaque_access f lr =
     each in a namespace of its own: [Separate Extraction]'s layout, and
     [Extraction Library]'s.  The file of a library [dry] says is rendered but
     not written. *)
-let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
+let print_per_library ~dry loops (core : Core_phase.normalized Core_phase.program) =
   let struc = Core_phase.structure core in
   (* Run all per-unit cleanup in [~finally] so state is reset even when the
      body aborts. *)
@@ -2238,7 +2238,7 @@ let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
             | Some j -> j < current_idx
             | None -> true);
         Fun.protect ~finally:(fun () -> opened_filter := fun _ -> true) @@ fun () ->
-        print_structure_to_file ~namespace:(Some ns) ~earlier (module_filename mp) (dry mp) unit
+        print_structure_to_file ~namespace:(Some ns) ~earlier (module_filename mp) (dry mp) loops unit
       end
     | _ -> assert false
   in
@@ -2564,18 +2564,17 @@ let extract_and_compile ~opaque_access file l =
 
 (** Renders the single Core declaration [decl], of the module [mp], to C++
     output, once the unit [struc] it belongs to is planned. *)
-let print_one_decl struc mp decl =
+let print_one_decl loops struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
   let facts = Program_facts.analyze struc in
-  let u = Unit_context.detached in
+  let u = {Unit_context.detached with loops = {loops with effects = facts.effects}} in
   Translation_state.with_unit_facts
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
       elaborations = None;
       context = u }
   @@ fun () ->
-  Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
   plan_layout u (Accumulated_plan.start ~accessors:Cpp_state.no_accessors) struc
   @@ fun u _ (_, _, _, _, elaborations) ->
   with_context (elaborate_unit u elaborations) @@ fun u ->
@@ -2606,10 +2605,10 @@ let show_extraction ~pstate =
        that lowering the term reads are analysed from. *)
     freeze
       (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])]))
-      (fun frozen ->
+      (fun loops frozen ->
         let struc = Core_phase.structure frozen in
         match struc with
-        | [(_, [(_, Core.Module.Structure_item.Declaration decl)])] -> print_one_decl struc mp decl
+        | [(_, [(_, Core.Module.Structure_item.Declaration decl)])] -> print_one_decl loops struc mp decl
         | _ -> assert false )
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

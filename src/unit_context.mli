@@ -48,6 +48,11 @@ type t = {
       (** How a definition written outside its struct's body names the
           struct, and the other facts of the unit's scope plan: none until
           the plan is decided ({!Cpp.plan_scopes}). *)
+  loops : Loop_facts.t;
+      (** What loop lowering reads of the analysis of the program and of
+          the unit: how each function recurses, the loops it lowers to, and
+          the unit's effect operations; those of a program that defines
+          nothing until the unit is analysed. *)
 }
 
 (** [make ~config] is the context of a unit configured as [config], with
@@ -71,3 +76,12 @@ val is_promoted_inductive : t -> Names.GlobRef.t -> bool
 (** The concrete types the instance gives its class's promoted variables
     in the unit ({!t.instance_promoted_types}); none where it gives none. *)
 val instance_promoted_types_of : t -> Names.GlobRef.t -> (Names.Id.t * Core.Type.t) list
+
+(** The program's recursion plan ({!t.loops}). *)
+val recursion : t -> Recursion_plan.t
+
+(** The program's loops ({!t.loops}). *)
+val control : t -> Lower_control.t
+
+(** The unit's effect operations, as loop lowering reads them ({!t.loops}). *)
+val loop_effects : t -> Core_effects.t

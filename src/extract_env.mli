@@ -134,11 +134,12 @@ val mono_environment :
   Core.Program.extracted
 
 (** Pretty-print a single declaration. Used by the Relation Extraction plugin.
+    @param loops what loop lowering reads of the program's analysis
     @param struc the full extraction structure (used for renaming context)
     @param mp the module path under which the declaration lives
     @param decl the declaration to render
     @return a pretty-printed Pp.t document *)
-val print_one_decl : Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
+val print_one_decl : Loop_facts.t -> Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
 
 (** [Show Extraction]: show the extraction of the current ongoing proof.
     @param pstate the current proof state *)
