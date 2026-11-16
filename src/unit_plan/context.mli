@@ -37,7 +37,7 @@ val default_std_names : std_names
 
 type t = {
   config : Base.Table.unit_config;
-      (** The unit's configuration ({!Target_plan.t.config}): whether it
+      (** The unit's configuration ({!Driver.Target_plan.t.config}): whether it
           runs on several threads, which withholds a [Crane NonAtomicRc] or
           [Crane SingleThreaded] request. *)
   callables : Core_plan.Callable_abi.decided;
@@ -47,7 +47,7 @@ type t = {
   modules : Core_plan.Module_plan.layout;
       (** Where each declaration lives and what it is called: the layout
           the earlier units of the extraction decided, and the unit's own
-          as its planning extends it ({!Accumulated_plan.context}). *)
+          as its planning extends it ({!Driver.Accumulated_plan.context}). *)
   pointer_fields : Core_plan.Pointer_fields.t;
       (** The fields each constructor struct stores behind the pointer, as
           the earlier units and the unit's own planning decided them. *)

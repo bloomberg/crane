@@ -165,7 +165,7 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
        alongside, whether it is a type-level definition or an inductive.  A
        [Prop] type reached this way is marked needed too, but it is dropped
        again where declarations are emitted: see the [logical_decl] guard in
-       {!Extract_env}. *)
+       {!Driver.Extract_env}. *)
     | Core.Expr.Global ({callee = r; _} as use) ->
       do_term r;
       Core.Global_use.iter_types (type_iter_references do_type) use

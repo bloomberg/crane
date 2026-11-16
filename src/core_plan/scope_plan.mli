@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The scopes a definition written outside its struct's body is a member of,
-    part of the {!Target_plan}: for each module the unit emits as a struct, how
+    part of the {!Driver.Target_plan}: for each module the unit emits as a struct, how
     a definition of one of its members, written out of line, names that struct.
     Planned from the layout and the names before anything is rendered
     ({!Emit.Files.plan_scopes}), held by the unit's context ({!Unit_plan.Context.t.scopes}), and read by

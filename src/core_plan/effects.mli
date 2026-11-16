@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The effect operations of a unit's program, elaborated from Core ahead of
-    translation, part of the unit's {!Program_facts}: which applications are a
+    translation, part of the unit's {!Driver.Program_facts}: which applications are a
     registered monad's [bind] or [ret] ([Crane Extract Monad]), and how each is
     generated.
 

@@ -720,7 +720,7 @@ let functions cx ~module_ ~lifted (funs : Core_to_cpp.Lower_decl.generated_fun l
 
     The functions generated at a declaration in a module are the same
     whichever file is being written: emission decides nothing the plan has
-    not -- {!Extract_env} checks that no table grows -- and what a
+    not -- {!Driver.Extract_env} checks that no table grows -- and what a
     generation reads beyond its declaration and module is planned
     ({!in_template}, {!Base.Common.end_planning}).  So every function is
     generated once, ahead of both files ({!generating_ahead}), and each

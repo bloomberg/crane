@@ -96,7 +96,7 @@ and generation_site =
   | Outside_modules  (** a pass over the whole unit or program *)
 
 (** What the analysis of the whole program decided that lowering reads
-    ({!Program_facts.analyze_program}), for every unit of the extraction:
+    ({!Driver.Program_facts.analyze_program}), for every unit of the extraction:
     the definitions whose body only throws, which are spelled as
     zero-argument functions ({!Suspension.thunk_reason}), which
     parameters of each function it owns, innermost first, settled across
@@ -120,7 +120,7 @@ let no_program_facts =
     lowering reads, set for the extent of the unit
     ({!with_unit_facts}): the projections used as function values, which
     are written as standalone functions, and the effect operations its
-    applications are ({!Program_facts.t}), and the elaborations of the
+    applications are ({!Driver.Program_facts.t}), and the elaborations of the
     unit's calls ({!Core_plan.Elaborate.structure}), [None] until the unit is
     walked; the unit's context ({!Unit_plan.Context}); and what the C++
     backend's passes decided about the unit ({!Unit_plan.Cpp_state.plans}), which

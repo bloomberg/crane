@@ -4,7 +4,7 @@
 (** Method registry: pre-scans the full extraction structure to identify which
     functions should become methods on eponymous inductive types.
 
-    It runs before any C++ code is emitted, from {!Program_facts} and
+    It runs before any C++ code is emitted, from {!Driver.Program_facts} and
     {!Emit.Files.prepare_structure}, building a table that maps function [GlobRef.t]
     values to their [method_info] records.
 
@@ -1122,7 +1122,7 @@ let reserve_names (reg : t) =
 (** Build the complete method registry from the full extraction structure.
 
     This is the main entry point, called before any C++ code is rendered:
-    by {!Program_facts.analyze_program}, by {!Emit.Files.prepare_structure} for the
+    by {!Driver.Program_facts.analyze_program}, by {!Emit.Files.prepare_structure} for the
     unit being rendered, and by [Normalize].
 
     The two-phase approach (register methods, then compute returns_any) is

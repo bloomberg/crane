@@ -116,7 +116,7 @@ let template_param ctx (mbid, mt) : Cpp_ast.template_param =
   | None -> Typename (Module_parameter param)
 
 (** The functor application [me], its arguments in order.  Rocq applies a
-    functor to paths only ({!Extract_env.extract_mexpr}), and only a path
+    functor to paths only ({!Driver.Extract_env.extract_mexpr}), and only a path
     or an application is applied. *)
 let application_of me =
   let rec flatten args = function

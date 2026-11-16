@@ -512,7 +512,7 @@ val print_tree : write:(spelling -> unprinted -> Pp.t) -> t -> Pp.t
 
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in
-    ([Extract_env]) decides where it falls; the layout ({!Emit.Layout})
+    ([Driver.Extract_env]) decides where it falls; the layout ({!Emit.Layout})
     keeps the blank lines it leaves. *)
 val cut2 : unit -> Pp.t
 

@@ -24,7 +24,7 @@
     generated ahead, and {!check_against_plan} holds every unit to
     "emission generates what the unit declares, and the helpers lifted out
     of it".  Both run once a unit's files are rendered, before they are
-    written ([Extract_env.print_structure_to_file]).
+    written ([Driver.Extract_env.print_structure_to_file]).
 
     It is a top-level module rather than a member of a [src/cpp_ir/]
     directory on purpose: a directory is one node of the dependency graph,

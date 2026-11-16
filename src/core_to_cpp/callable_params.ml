@@ -5,7 +5,7 @@
     group or a local fixpoint passes on unchanged, lets escape, or feeds a
     closure back through, and so which callables a function's C++ head may
     not generalise to a deduced template parameter.  Read by
-    {!Program_facts} before translation and by the function generators. *)
+    {!Driver.Program_facts} before translation and by the function generators. *)
 
 open Base.Common
 open Names

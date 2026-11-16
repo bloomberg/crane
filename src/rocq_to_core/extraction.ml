@@ -3352,7 +3352,7 @@ let extract_with_type env sg c =
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
 (** Extracts a single term with its Core type, for [Crane Show Extraction]; see
-    {!Extract_env.show_extraction}. *)
+    {!Driver.Extract_env.show_extraction}. *)
 let extract_constr env sg c =
   reset_meta_count ();
   try

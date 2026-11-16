@@ -9,11 +9,11 @@
 let () =
   List.iter
     (fun (stage, names) -> Printf.printf "%s: %s\n" stage (String.concat " " names))
-    [ ("core", Crane_plugin.Extract_env.core_pass_names);
-      ("normalize", Crane_plugin.Extract_env.normalize_pass_names);
-      ("plan", Crane_plugin.Extract_env.plan_pass_names);
-      ("unit", Crane_plugin.Extract_env.unit_pass_names);
-      ("represent", Crane_plugin.Extract_env.represent_pass_names);
-      ("layout", Crane_plugin.Extract_env.layout_pass_names);
-      ("elaborate", Crane_plugin.Extract_env.elaborate_pass_names);
+    [ ("core", Crane_plugin.Driver.Extract_env.core_pass_names);
+      ("normalize", Crane_plugin.Driver.Extract_env.normalize_pass_names);
+      ("plan", Crane_plugin.Driver.Extract_env.plan_pass_names);
+      ("unit", Crane_plugin.Driver.Extract_env.unit_pass_names);
+      ("represent", Crane_plugin.Driver.Extract_env.represent_pass_names);
+      ("layout", Crane_plugin.Driver.Extract_env.layout_pass_names);
+      ("elaborate", Crane_plugin.Driver.Extract_env.elaborate_pass_names);
       ("finish", Crane_plugin.Cpp_passes.Pipeline.pass_names) ]

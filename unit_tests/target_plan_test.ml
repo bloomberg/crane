@@ -65,15 +65,15 @@ let () =
                       (Core.Signature.Declaration.Inductive {entity = app_kn; definition = app_ind}))]} } )
   in
   let struc = [(mp "Top", [functor_elem; app_elem])] in
-  let facts = Program_facts.analyze struc in
-  let plan = Target_plan.plan facts struc in
+  let facts = Driver.Program_facts.analyze struc in
+  let plan = Driver.Target_plan.plan facts struc in
   check "the application takes the body's kind"
-    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn)
+    (Option.equal Driver.Target_plan.kind_equal (Driver.Target_plan.kind_of plan app_kn)
       (Some (Core.Inductive.Kind.Type_class [field])));
-  check "the body is not re-decided" (Target_plan.kind_of plan body_kn = None);
+  check "the body is not re-decided" (Driver.Target_plan.kind_of plan body_kn = None);
   check "planning writes nothing into the structure"
     (match app_ind.kind with Core.Inductive.Kind.Record _ -> true | _ -> false);
-  check "planning is deterministic" (Target_plan.equal plan (Target_plan.plan facts struc));
+  check "planning is deterministic" (Driver.Target_plan.equal plan (Driver.Target_plan.plan facts struc));
   (* A class the structure handles as data is demoted, seen through the
      alignment decided before it: nothing installed it anywhere. *)
   let use =
@@ -88,9 +88,9 @@ let () =
                     index_arguments = []}}) )
   in
   let struc = [(mp "Top", [functor_elem; app_elem; use])] in
-  let plan = Target_plan.plan facts struc in
+  let plan = Driver.Target_plan.plan facts struc in
   check "a class used as data ends a struct"
-    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn) (Some (Core.Inductive.Kind.Record [field])));
+    (Option.equal Driver.Target_plan.kind_equal (Driver.Target_plan.kind_of plan app_kn) (Some (Core.Inductive.Kind.Record [field])));
   check "both decisions are kept, in order"
-    (List.map (fun (d : Target_plan.kind_decision) -> d.reason) plan.inductive_kinds
-     = [Target_plan.Functor_alignment; Target_plan.Used_as_value])
+    (List.map (fun (d : Driver.Target_plan.kind_decision) -> d.reason) plan.inductive_kinds
+     = [Driver.Target_plan.Functor_alignment; Driver.Target_plan.Used_as_value])

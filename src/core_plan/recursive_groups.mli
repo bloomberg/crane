@@ -4,7 +4,7 @@
 (** The recursive groups of a frozen program: the strongly connected components of its call graph over
     the functions it defines, a function that refers to itself counted as a
     group of its own.  A fact about the Core program, computed once from it
-    ({!Program_facts.analyze_program}), and the first part of a recursion
+    ({!Driver.Program_facts.analyze_program}), and the first part of a recursion
     plan: which functions recurse through which, before any is lowered.
     Loopify takes the partners it inlines into a function from here.
 

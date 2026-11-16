@@ -4,7 +4,7 @@
 (** The fields each generated constructor struct stores behind the smart
     pointer, as planned before rendering ({!Emit.Files.plan_pointer_fields}) and
     accumulated over the units of an extraction (the [pointer_fields] of
-    {!Accumulated_plan.t}); a unit's stages read them off its context
+    {!Driver.Accumulated_plan.t}); a unit's stages read them off its context
     ({!Unit_plan.Context.t.pointer_fields}). *)
 
 (** A constructor field stored behind the smart pointer: a recursive one,

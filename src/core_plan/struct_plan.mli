@@ -3,7 +3,7 @@
 
 (** How a unit's declarations sit in structs, as planned before anything is
     rendered and accumulated over the units of an extraction
-    ({!Accumulated_plan.t}): the constants written as accessor functions,
+    ({!Driver.Accumulated_plan.t}): the constants written as accessor functions,
     and the structs written inside another struct.  A unit's stages read
     them, with the unmerged wrappers, off its context ({!Unit_plan.Context.t}). *)
 

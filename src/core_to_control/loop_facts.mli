@@ -6,8 +6,8 @@
     passes that turn recursion into loops (ControlIR), as
     {!Core_to_cpp.Lowering_state}'s is lowering's.  A field of the unit's context
     ({!Unit_plan.Context.t.loops}): the program's, from
-    {!Program_facts.analyze_program}, with the unit's effect operations,
-    from {!Program_facts.analyze}. *)
+    {!Driver.Program_facts.analyze_program}, with the unit's effect operations,
+    from {!Driver.Program_facts.analyze}. *)
 
 type t = {
   recursion : Core_plan.Recursion.t;  (** how each function recurses *)

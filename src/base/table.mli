@@ -47,7 +47,7 @@
       A phase result: its owner is the extracted program.
     - {b Plan facts}: none is kept here; a unit's are fields of its context
       ([Unit_plan.Context]).  The plan's decided kinds are recorded in
-      [inductive_kinds] ([Target_plan.record_kinds]).
+      [inductive_kinds] ([Driver.Target_plan.record_kinds]).
     - {b Analysis results registered while a later phase runs}: [flat_inductives]
       and [enum_inductives] (registered by layout and generation, with a
       structural fallback), [shared_variants] (by a Core pass),
@@ -933,7 +933,7 @@ val fast_variant : unit -> bool
     it from a concurrent unit.  It is program-wide, so a decision that has to
     agree across the units of one extraction reads it rather than the per-unit
     answer: the parameter ownership {!Core_plan.Ownership} settles for the whole program
-    in [Extract_env.freeze], before any unit's configuration is decided, and
+    in [Driver.Extract_env.freeze], before any unit's configuration is decided, and
     {!Core_plan.Escape.is_reuse_scrutinee}'s analysis runs before any unit's concurrency
     is decided too.  Everything a unit generates reads {!non_atomic_rc_for}. *)
 val non_atomic_rc_requested : unit -> bool
@@ -948,7 +948,7 @@ val non_atomic_rc_requested : unit -> bool
 type unit_config = {concurrent : bool}
 
 (** The configuration of a unit whose program names the customs [names]
-    (the [used_customs] of {!Program_facts.t}). *)
+    (the [used_customs] of {!Driver.Program_facts.t}). *)
 val unit_config : names:Core.Ref.User.Set.t -> unit_config
 
 (** Whether non-atomic reference counting ([crane::rc]) is in effect for a

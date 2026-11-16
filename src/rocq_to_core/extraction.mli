@@ -22,7 +22,7 @@
     which arguments survive extraction
     ([Core.Signature.Argument.Runtime]/[Core.Signature.Argument.Erased]).  Its
     output is read by
-    {!Extract_env}, which collects the declarations a run needs and hands them
+    {!Driver.Extract_env}, which collects the declarations a run needs and hands them
     to translation.
 
     For the C++ backend it also records facts later stages cannot recover from

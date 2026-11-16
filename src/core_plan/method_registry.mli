@@ -22,7 +22,7 @@
        receiver, which a borrowed [this] cannot give up.}}
 
     This module performs the full method detection scan {i once} over the entire
-    [Core.Program.t] before code generation begins (from {!Program_facts} and
+    [Core.Program.t] before code generation begins (from {!Driver.Program_facts} and
     {!Emit.Files.prepare_structure}), storing the results in an opaque registry.
     During rendering, the backend queries the registry instead of re-scanning
     the AST.
@@ -131,7 +131,7 @@ val cpp_arg_pos : Core.Type.t -> int -> int
 
 (** Convenience: is the function a registered method? Returns
     [Some (epon_ref, this_pos)] if yes, [None] otherwise. Used by
-    {!Program_facts} for each method's receiver, and by the renderer through
+    {!Driver.Program_facts} for each method's receiver, and by the renderer through
     {!Unit_plan.Cpp_state.is_registered_method}.
     @param t the registry to query
     @param func_ref the function to test

@@ -30,7 +30,7 @@
     {- {!Concepts}: module-type concepts as text.}} *)
 
 (** Language descriptor for C++. Provides the preamble, file suffix,
-    pretty-printers, and other hooks that {!Extract_env} needs to drive a full
+    pretty-printers, and other hooks that {!Driver.Extract_env} needs to drive a full
     extraction pass. *)
 val cpp_descr : Core_to_cpp.Lowering_state.t Backend.t
 

@@ -189,7 +189,7 @@ val register_shared_variants : 'p Core.Program.at -> unit
 
 (** The definitions of [s] whose final bodies only raise: emitted as
     zero-argument functions, and called wherever they are named.  Pure;
-    {!Program_facts} records the list. *)
+    {!Driver.Program_facts} records the list. *)
 val throwing_values : Core.Program.t -> GlobRef.t list
 
 (** The template parameter every module-type concept is written over ([M]). *)

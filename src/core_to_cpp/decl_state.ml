@@ -174,7 +174,7 @@ let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
     A field whose type is a class is promoted while extraction still sees a
     class there, but whether that class survives as a concept is decided
     later, by the inductive kind decisions of the target plan
-    ({!Target_plan.t}'s [inductive_kinds]): one used in value position comes
+    ({!Driver.Target_plan.t}'s [inductive_kinds]): one used in value position comes
     out as a plain struct, and the field holding it stays an
     ordinary value field.  Asking for it as [typename I::f] then sits beside
     the method requirement the value side emits, and a concept wanting one

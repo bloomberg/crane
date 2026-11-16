@@ -4,7 +4,7 @@
 (** How each function of a normalized program recurses, read off its Core
     body before any function is lowered, so that the decision to make a loop
     of a function is a fact about the program
-    ({!Program_facts.analyze_program}) rather than something the C++ printer
+    ({!Driver.Program_facts.analyze_program}) rather than something the C++ printer
     rediscovers; Loopify transforms a function by it.
 
     A call is a tail call where the function's result is the call's.  The
