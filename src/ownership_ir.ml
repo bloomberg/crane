@@ -294,7 +294,7 @@ let leave parents d s =
 let projected d r t =
   match (Table.inline_custom_text r, t) with
   | Some s, Core.Expr.Bound_variable {index = i; occurrence = o} when Table.is_inline_custom r -> (
-    match Foreign_template.pair_projection_field s with
+    match Cpp_ir.Foreign_template.pair_projection_field s with
     | Some "first" -> Some (component (d - i) 0, o)
     | Some "second" -> Some (component (d - i) 1, o)
     | _ -> None )
@@ -439,8 +439,8 @@ let scrutinee_consumed ty scrut branches =
   | Custom ->
     let uses =
       List.length
-        (List.filter (( = ) Foreign_template.Scrut)
-           (Foreign_template.match_template (Table.find_custom_match branches)) )
+        (List.filter (( = ) Cpp_ir.Foreign_template.Scrut)
+           (Cpp_ir.Foreign_template.match_template (Table.find_custom_match branches)) )
     in
     uses <= 1 || not (spelled_in_place scrut)
   | Record _ -> true
@@ -457,7 +457,7 @@ let scrutinee_consumed ty scrut branches =
    it as often as its template names it. *)
 let evaluations r =
   match Table.inline_custom_text r with
-  | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
+  | Some s when Table.is_inline_custom r -> Cpp_ir.Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
 let sequential_bind effects use = Core_effects.lookup effects use = Some {operation = Bind; mode = Sequential}
@@ -832,7 +832,7 @@ module Binding = struct
        | Some r -> Type_util.is_prod_global r
        | None -> false )
     && Table.is_custom_match branches
-    && Foreign_template.structured_binding (Table.find_custom_match branches) <> None
+    && Cpp_ir.Foreign_template.structured_binding (Table.find_custom_match branches) <> None
     &&
     match scrutinee_var scrut with
     | Some (i, o) ->

@@ -9,9 +9,9 @@ type expr = Cpp_ir.Lowered.Expr.t
 type stmt = Cpp_ir.Lowered.Stmt.t
 
 (* [Some (name, init)] where [e] is a constant translation marked
-   ({!Crane_rt.Constant}). *)
+   ({!Cpp_ir.Crane_rt.Constant}). *)
 let marked : expr -> _ = function
-  | Call (_, Runtime (Crane_rt.Constant name), [init]) -> Some (Id.of_string name, init)
+  | Call (_, Runtime (Cpp_ir.Crane_rt.Constant name), [init]) -> Some (Id.of_string name, init)
   | _ -> None
 
 (* [Some e] where [e] is an erased closure ([crane_erase_fn]) over a closed
@@ -95,7 +95,7 @@ let rec hoist_body (body : stmt list) : stmt list =
             Declare_static (Const Auto),
             Call
               ( {yields = Untyped; params = Unknown; constructs = None; occurrence = None},
-                Runtime Crane_rt.Immortal,
+                Runtime Cpp_ir.Crane_rt.Immortal,
                 [init] ) ) )
       !hoisted
     @ body'

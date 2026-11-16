@@ -48,7 +48,7 @@ let nb_occur_match =
                        arguments = args} when Table.is_inline_custom r ->
       let mentions =
         match Table.inline_custom_text r with
-        | Some s -> Foreign_template.arg_mentions s
+        | Some s -> Cpp_ir.Foreign_template.arg_mentions s
         | None -> fun _ -> 1
       in
       fst

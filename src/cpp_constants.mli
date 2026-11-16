@@ -4,7 +4,7 @@
 (** A function's constants as named locals.
 
     Translation marks a closed constructor term of a shared variant
-    ({!Crane_rt.Constant}) where it builds one.  This pass, run once a
+    ({!Cpp_ir.Crane_rt.Constant}) where it builds one.  This pass, run once a
     declaration's bodies are final, declares each distinct constant of a
     function body once, at its top --
     [static const auto pos_10 = crane::immortal(Positive::xo(...));] -- and

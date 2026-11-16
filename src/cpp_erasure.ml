@@ -434,7 +434,7 @@ and reads r = rewriter ~expr:(reads_expr r) ~stmt:(reads_stmt r) ~type_:same_typ
    [std::any] and its branch parameters are boxes. *)
 and reads_custom_match r (m : phase Custom_match.t) : stmt =
   let typ = m.return_type and scrut = m.scrutinee in
-  let tokens = Foreign_template.match_template m.template in
+  let tokens = Cpp_ir.Foreign_template.match_template m.template in
   let prod_of : ty -> GlobRef.t option = function
     | Entity_application (g, _, _) when Type_util.is_prod_global g -> Some g
     | _ -> None
@@ -454,7 +454,7 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
       match typ with Entity_application (g, _ :: _, _) -> Type_util.is_prod_global g | _ -> false )
     | _ -> false
   in
-  let has_scrut = List.mem Foreign_template.Scrut tokens in
+  let has_scrut = List.mem Cpp_ir.Foreign_template.Scrut tokens in
   let effective, at_scrut =
     match (scrut, typ) with
     | Local _, Entity_application (g, _ :: _, _) when scrut_boxed && Type_util.is_prod_global g ->
@@ -472,8 +472,8 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
   let ty_arg_before_scrut =
     let rec go = function
       | [] -> false
-      | Foreign_template.Scrut :: _ -> false
-      | (Foreign_template.Ty_arg _ | Foreign_template.Elem _) :: _ -> true
+      | Cpp_ir.Foreign_template.Scrut :: _ -> false
+      | (Cpp_ir.Foreign_template.Ty_arg _ | Cpp_ir.Foreign_template.Elem _) :: _ -> true
       | _ :: rest -> go rest
     in
     go tokens
@@ -546,12 +546,12 @@ let lower_boxed_reads (d : settled) : settled = reads_decl d
 (* [tys] extended with [std::any] for each argument past its end that a
    template parsed into [tokens] names. *)
 let supplied tokens (tys : ty list) =
-  let missing = Foreign_template.type_arity tokens - List.length tys in
+  let missing = Cpp_ir.Foreign_template.type_arity tokens - List.length tys in
   if missing > 0 then tys @ List.init missing (fun _ : ty -> Any) else tys
 
 (* A mapped type takes its arguments as the printer reads them: a mapping
    that does not say where they go takes those it is given
-   ({!Foreign_template.custom_template_with_args}).  A type constructor named
+   ({!Cpp_ir.Foreign_template.custom_template_with_args}).  A type constructor named
    unapplied is left as it is: the printer names it by the arguments it has,
    positionally. *)
 let rec supply_type_args (t : ty) : ty =
@@ -563,7 +563,7 @@ let rec supply_type_args (t : ty) : ty =
         match Table.find_custom_opt r with
         | Some s ->
           let tokens =
-            Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
+            Cpp_ir.Foreign_template.term_template (Cpp_ir.Foreign_template.custom_template_with_args s (List.length tys)) in
           Some (Entity_application (r, supplied tokens (List.map supply_type_args tys), args))
         | None -> None )
       | _ -> None )
@@ -572,7 +572,7 @@ let rec supply_type_args (t : ty) : ty =
 (* [%ret] spells the type a call yields: only a template applied as a call
    has one, and only where translation recorded it.  Refused here, before
    anything is printed, wherever it has none. *)
-let names_ret text = List.mem Foreign_template.Ret (Foreign_template.term_template text)
+let names_ret text = List.mem Cpp_ir.Foreign_template.Ret (Cpp_ir.Foreign_template.term_template text)
 
 let refuse_ret r why =
   CErrors.user_err Pp.(str "Crane: the mapping " ++ GlobRef.print r ++ str " names %ret" ++ str why)
@@ -591,7 +591,7 @@ let check_ret : expr -> unit = function
 (** The text of a custom match's template, as its scrutinee is held. *)
 let custom_match_text (m : phase Custom_match.t) =
   match m.hold with
-  | Owned when Foreign_template.structured_binding m.template <> None -> Foreign_template.bound_by_value m.template
+  | Owned when Cpp_ir.Foreign_template.structured_binding m.template <> None -> Cpp_ir.Foreign_template.bound_by_value m.template
   | Owned | Borrowed -> m.template
 
 let supply_template_args (d : settled) : settled =
@@ -599,15 +599,15 @@ let supply_template_args (d : settled) : settled =
     check_ret e;
     match e with
     | Entity (r, tys, (Some {inline = Some tmpl; _} as ci)) ->
-      Entity (r, supplied (Foreign_template.term_template tmpl.text) (List.map supply_type_args tys), ci)
+      Entity (r, supplied (Cpp_ir.Foreign_template.term_template tmpl.text) (List.map supply_type_args tys), ci)
     | e -> Map.expr (rw ()) e
   and fs (s : stmt) : stmt =
     match Map.stmt (rw ()) s with
     | Foreign_block b ->
       if names_ret b.template then refuse_ret b.custom in_block;
-      Foreign_block {b with type_args = supplied (Foreign_template.term_template b.template) b.type_args}
+      Foreign_block {b with type_args = supplied (Cpp_ir.Foreign_template.term_template b.template) b.type_args}
     | Custom_match c ->
-      let tokens = Foreign_template.match_template (custom_match_text c) in
+      let tokens = Cpp_ir.Foreign_template.match_template (custom_match_text c) in
       Custom_match {c with type_args = supplied tokens c.type_args}
     | s -> s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:supply_type_args () in
@@ -630,17 +630,17 @@ let container_of = function GlobRef.ConstructRef (ind, _) -> GlobRef.IndRef ind 
 let wrapper_pieces wrapper : Cpp_ir.Foreign.wrapper_piece list =
   List.map
     (function
-      | Foreign_template.Text s -> Cpp_ir.Foreign.Wrapper_text s
+      | Cpp_ir.Foreign_template.Text s -> Cpp_ir.Foreign.Wrapper_text s
       | Ty_arg 0 | Elem 0 -> Wrapper_element
       | Ty_arg i -> Wrapper_text (Printf.sprintf "%%t%d" i)
       | Elem i -> Wrapper_text (Printf.sprintf "%%elem%d" i)
       | _ -> CErrors.anomaly (Pp.str "wrapper_pieces: a wrapper is a type template") )
-    (Foreign_template.type_template wrapper)
+    (Cpp_ir.Foreign_template.type_template wrapper)
 
 let foreign_pieces ~element tokens : Cpp_ir.Foreign.piece list =
   List.map
     (function
-      | Foreign_template.Text s -> Cpp_ir.Foreign.Text s
+      | Cpp_ir.Foreign_template.Text s -> Cpp_ir.Foreign.Text s
       | Ty_arg i -> Type_argument i
       | Elem i -> Element (i, element i)
       | Arg i -> Value i
@@ -683,7 +683,7 @@ let rec instantiated_type ~boxing (t : ty) : ty =
            its arguments alone ({!Type_util.ref_has_no_cpp_name}). *)
         | Some s when s <> "" ->
           let tokens =
-            Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
+            Cpp_ir.Foreign_template.term_template (Cpp_ir.Foreign_template.custom_template_with_args s (List.length tys)) in
           Some (Foreign (instantiated_foreign ~boxing r tokens tys args None))
         | Some _ | None ->
           let args = List.map (instantiated_expr ~boxing) args in
@@ -709,7 +709,7 @@ and instantiated_block ~boxing r text tys values yields : phase Cpp_ir.Foreign.t
   let pieces =
     List.concat_map
       (fun stmt -> foreign_pieces ~element stmt @ [Cpp_ir.Foreign.Statement_end])
-      (Foreign_template.block_statements text)
+      (Cpp_ir.Foreign_template.block_statements text)
   in
   let yields = Option.map (instantiated_type ~boxing) yields in
   let values = List.map (instantiated_expr ~boxing) values in
@@ -732,10 +732,10 @@ and bare_callee ~boxing r text tys : phase Cpp_ir.Foreign.t =
 and instantiated_expr ~boxing (e : expr) : expr =
   match e with
   | Call (res, Entity (n, tys, Some {inline = Some ({form = Templated; _} as tmpl); _}), args) ->
-    let tokens = Foreign_template.term_template tmpl.text in
+    let tokens = Cpp_ir.Foreign_template.term_template tmpl.text in
     (* An argument past the last one the text names is not its own: the
        call's result is applied to it. *)
-    let named = List.fold_left (fun n -> function Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens in
+    let named = List.fold_left (fun n -> function Cpp_ir.Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens in
     let yields = match res.yields with Yields t -> Some t | Untyped -> None in
     Foreign (Call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
   | Entity (x, tys, Some {inline = Some {form = Block; text; _}; custom_yields}) ->
@@ -750,7 +750,7 @@ and instantiated_expr ~boxing (e : expr) : expr =
   | Call (res, Entity (n, tys, Some {inline = Some {form = Bare_callee; text; _}; _}), args) ->
     Map.expr (instantiating ~boxing) (Call (res, Foreign (Constant, bare_callee ~boxing n text tys), args))
   | Entity (x, tys, (Some {inline = Some tmpl; _} as ci)) when is_templated ci ->
-    Foreign (Constant, instantiated_foreign ~boxing x (Foreign_template.type_template tmpl.text) tys [] None)
+    Foreign (Constant, instantiated_foreign ~boxing x (Cpp_ir.Foreign_template.type_template tmpl.text) tys [] None)
   (* Not applied, a callee is its text as it stands. *)
   | Entity (x, _, Some {inline = Some {form = Bare_callee; text; _}; _}) ->
     Foreign (Constant, bare_callee ~boxing x text [])
@@ -759,7 +759,7 @@ and instantiated_expr ~boxing (e : expr) : expr =
   | Type_member (Entity_application (r, tys, []), id) when Table.inline_custom_text r <> None -> (
     match Table.inline_custom_text r with
     | Some s when form_of_text s = Templated ->
-      Type_member (Foreign (instantiated_foreign ~boxing r (Foreign_template.type_template s) tys [] None), id)
+      Type_member (Foreign (instantiated_foreign ~boxing r (Cpp_ir.Foreign_template.type_template s) tys [] None), id)
     | Some s when form_of_text s = Bare_callee -> Type_member (Foreign (bare_callee ~boxing r s []), id)
     | Some _ | None -> Type_member (Entity_application (r, List.map (instantiated_type ~boxing) tys, []), id) )
   (* For a callee generic over the element, whose declaration never boxes
@@ -792,7 +792,7 @@ and instantiating ~boxing =
 let match_pieces (m : phase Custom_match.t) scrut : Custom_match.piece list =
   List.map
     (function
-      | Foreign_template.Text s -> Custom_match.Text s
+      | Cpp_ir.Foreign_template.Text s -> Custom_match.Text s
       | Scrut -> Scrutinee {parenthesised = Cpp_ir.Written.written_with_leading_pointer_operator scrut}
       | Ty -> Matched_type
       | Ty_arg i -> Type_argument i
@@ -801,10 +801,10 @@ let match_pieces (m : phase Custom_match.t) scrut : Custom_match.piece list =
       | Br_var_ty (i, j) -> Binder_type (i, j)
       | Elem _ | Arg _ | Ret | Result ->
         CErrors.anomaly (Pp.str "match_pieces: a term template's hole in a match template") )
-    (Foreign_template.match_template (custom_match_text m))
+    (Cpp_ir.Foreign_template.match_template (custom_match_text m))
 
 let type_pieces r text (tys : ty list) =
-  let tokens = Foreign_template.type_template (Foreign_template.custom_template_with_args text (List.length tys)) in
+  let tokens = Cpp_ir.Foreign_template.type_template (Cpp_ir.Foreign_template.custom_template_with_args text (List.length tys)) in
   foreign_pieces ~element:(fun i -> Option.map wrapper_pieces (boxed_by ~boxing:true r tys i)) tokens
 
 (* A custom match is instantiated on its instantiated scrutinee: the one
@@ -862,14 +862,14 @@ let pointer_slots u () =
     Types.rewrite
       (fun (t : ty) ->
         match t with
-        | External (n, [p; Shared_pointer p']) when String.equal n Crane_rt.shared_or ->
+        | External (n, [p; Shared_pointer p']) when String.equal n Cpp_ir.Crane_rt.shared_or ->
           let p' = ft p' in
           Some (External (n, [ft p; Shared_pointer p']))
         | Shared_pointer p -> (
           let p' = ft p in
           match Pointer_slot.of_pointee p with
-          | Pointer_slot.Shared -> Some (External (Crane_rt.shared_box, [p']))
-          | Pointer_slot.At_instantiation -> Some (External (Crane_rt.shared_or, [p'; Shared_pointer p']))
+          | Pointer_slot.Shared -> Some (External (Cpp_ir.Crane_rt.shared_box, [p']))
+          | Pointer_slot.At_instantiation -> Some (External (Cpp_ir.Crane_rt.shared_or, [p'; Shared_pointer p']))
           | Pointer_slot.Pointer -> Some (Shared_pointer p') )
         | Type_of e -> Some (Type_of (fe e))
         | Entity_application (r, tys, (_ :: _ as args)) ->
@@ -885,11 +885,11 @@ let pointer_slots u () =
     match Map.expr (rw ()) e with
     (* A shared value goes into its slot as it is: no cell to allocate. *)
     | Allocate ((Heap | Arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
-      Type_member (External (Crane_rt.shared_box, [t]), Id.of_string "make")
+      Type_member (External (Cpp_ir.Crane_rt.shared_box, [t]), Id.of_string "make")
     (* A unit of non-atomic pointers allocates in an arena through its own
        pointer's factory. *)
     | Allocate (Arena_scoped, t) when Unit_context.non_atomic_rc u ->
-      Type_member (External (Crane_rt.rc, [t]), Id.of_string "make")
+      Type_member (External (Cpp_ir.Crane_rt.rc, [t]), Id.of_string "make")
     | e -> e
   and fs s = Map.stmt (rw ()) s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:ft () in
@@ -1509,9 +1509,9 @@ let report_unspellable where (ty : ty) =
 (* Whether the template of [m] writes down the type of branch [i]'s binder
    [j], [p], which C++ cannot spell. *)
 let unspellable_binder (m : phase Custom_match.t) =
-  let written = Foreign_template.match_template (custom_match_text m) in
+  let written = Cpp_ir.Foreign_template.match_template (custom_match_text m) in
   fun i j (p : phase Custom_match.param) ->
-    List.mem (Foreign_template.Br_var_ty (i, j)) written && has_no_cpp_spelling p.type_
+    List.mem (Cpp_ir.Foreign_template.Br_var_ty (i, j)) written && has_no_cpp_spelling p.type_
 
 (* An unknown representation in [ty] settled into [std::any], inside a
    carrier abstraction's body too: {!Cpp_ir.Types.map} stops at a type

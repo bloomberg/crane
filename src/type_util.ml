@@ -1095,16 +1095,16 @@ let signed_neg_idx = 2
 module IntSet = Core_util.IntSet
 
 (** The type arguments a custom template writes: the indices of its type
-    holes, [%t{i}] and [%elem{i}] alike ({!Foreign_template.type_template}).
+    holes, [%t{i}] and [%elem{i}] alike ({!Cpp_ir.Foreign_template.type_template}).
     E.g. ["std::shared_ptr<ITree<%t1>>"] gives [{1}], and
     ["crane::list<%elem>"] [{0}]. *)
 let template_referenced_positions template_str =
   List.fold_left
     (fun acc -> function
-      | Foreign_template.Ty_arg i | Foreign_template.Elem i -> IntSet.add i acc
+      | Cpp_ir.Foreign_template.Ty_arg i | Cpp_ir.Foreign_template.Elem i -> IntSet.add i acc
       | _ -> acc )
     IntSet.empty
-    (Foreign_template.type_template template_str)
+    (Cpp_ir.Foreign_template.type_template template_str)
 
 (** For a custom/monad GlobRef, return the set of type-arg positions that
     appear in its template string.  Returns [None] if no custom template

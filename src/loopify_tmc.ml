@@ -415,7 +415,7 @@ let build_cell_call ~unit ?token ?(rec_arg = Literal Null_pointer) ?(allocate = 
      | Some tok ->
        (* T is deduced from the token's [rc<T>]; the cell value is built from
           the constructor struct exactly as [make_rc] would build it. *)
-       Call (call_opaque, Runtime Crane_rt.Make_rc_reusing_unchecked,
+       Call (call_opaque, Runtime Cpp_ir.Crane_rt.Make_rc_reusing_unchecked,
                     [tok; cell_expr])
      | None -> Call (shared_cell_sig, mk_shared_cell, [cell_expr]))
   | None ->
@@ -649,7 +649,7 @@ let step_stmts reads field =
   @ [ Bind_variable
         ( id_rstep,
           Declare (Auto, None),
-          Call (call_opaque, Runtime Crane_rt.Reuse_step, [Local id_own; Local id_uniq; field]) ) ]
+          Call (call_opaque, Runtime Cpp_ir.Crane_rt.Reuse_step, [Local id_own; Local id_uniq; field]) ) ]
 
 (** The shadow updates [updates] of a turn the cursor steps at, its own
     shadow [cursor_id] advanced through [_own] instead: the field has been

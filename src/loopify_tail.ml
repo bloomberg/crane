@@ -177,7 +177,7 @@ let tail_shadow_arg ~shadow_ids shadow_ty arg =
   | Pointer _, Dereference (Local id) when List.exists (Id.equal id) shadow_ids ->
     Local id
   | Pointer _, Dereference inner ->
-    Call (call_opaque, Runtime Crane_rt.Raw, [inner])
+    Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [inner])
   | Pointer _, Local _ -> Unary (Address_of, arg)
   | _ -> arg
 
@@ -191,7 +191,7 @@ let rec storage_root ~root ~bound e =
   | Dereference e | Move e | Access (Dot, e, _) | Access (Arrow, e, _)
   | Member (e, _) | Project (e, _, _) | Unary (_, e) ->
     inside e
-  | Call (_, Runtime Crane_rt.Raw, [e]) -> inside e
+  | Call (_, Runtime Cpp_ir.Crane_rt.Raw, [e]) -> inside e
   | Call (_, Access (Dot, e, _), []) | Access_call (Arrow, e, _, []) ->
     inside e
   | Variant_get (_, Some e) -> inside e

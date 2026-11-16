@@ -34,7 +34,7 @@ type t = {
   input : Core.Fingerprint.t option;
   config : Table.unit_config;
   inductive_kinds : kind_decision list;
-  template_kinds : (GlobRef.t * Tparam_kinds.t) list;
+  template_kinds : (GlobRef.t * Cpp_ir.Tparam_kinds.t) list;
   modules : Module_plan.t;
   representation : representation;
   callables : Callable_abi.t list;
@@ -346,7 +346,7 @@ let equal a b =
     (fun d d' -> MutInd.UserOrd.equal d.block d'.block && d.reason = d'.reason && kind_equal d.kind d'.kind)
     a.inductive_kinds b.inductive_kinds
   && List.equal
-       (fun (r, k) (r', k') -> GlobRef.UserOrd.equal r r' && Tparam_kinds.equal k k')
+       (fun (r, k) (r', k') -> GlobRef.UserOrd.equal r r' && Cpp_ir.Tparam_kinds.equal k k')
        a.template_kinds b.template_kinds
   && Module_plan.equal a.modules b.modules
   && List.equal

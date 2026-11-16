@@ -289,7 +289,7 @@ let rec scope cx ~group ~depth ?expected e =
          makes of its arguments.  One that is just an argument ([%a0])
          stands for it, tail position included; any other ([%a0 + 1]) is an
          ordinary call. *)
-      let through = Option.bind (Table.find_custom_opt r) Foreign_template.passes_through in
+      let through = Option.bind (Table.find_custom_opt r) Cpp_ir.Foreign_template.passes_through in
       Core.Expr.Construct {result_type = ty; constructor = r; arguments = List.mapi
             (fun i a ->
               if through = Some i then strict ~reading ~tail a else strict ~reading:Stored ~tail:false a )

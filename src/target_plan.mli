@@ -88,7 +88,7 @@ type t = {
   inductive_kinds : kind_decision list;
       (** In the order they were decided; a later decision about a block
           supersedes an earlier one. *)
-  template_kinds : (Names.GlobRef.t * Tparam_kinds.t) list;
+  template_kinds : (Names.GlobRef.t * Cpp_ir.Tparam_kinds.t) list;
       (** The kinds of the template parameters of each inductive and type
           alias the unit generates, decided once the inductive kinds are
           recorded ({!with_template_kinds}). *)
@@ -134,7 +134,7 @@ val check_kinds_recorded : t -> unit
 
 (** [with_template_kinds t kinds] is [t] with the template-parameter kinds
     [kinds]. *)
-val with_template_kinds : t -> (Names.GlobRef.t * Tparam_kinds.t) list -> t
+val with_template_kinds : t -> (Names.GlobRef.t * Cpp_ir.Tparam_kinds.t) list -> t
 
 (** [with_layout t modules representation (callables, instance_methods)
     assumed] is [t] with its layout, the representation of its

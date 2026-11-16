@@ -510,7 +510,7 @@ val hkt_ind_param_arity : GlobRef.t -> int -> int option
 
 (** Whether the template parameter at 0-based position [i] of this inductive is
     a template template parameter, so a use of the inductive must pass a bare
-    template name rather than an instantiation ({!Tparam_kinds}). *)
+    template name rather than an instantiation ({!Cpp_ir.Tparam_kinds}). *)
 val is_hkt_ind_param : GlobRef.t -> int -> bool
 
 (** Whether the parameter at 0-based position [i] of an inductive or alias is
@@ -1279,7 +1279,7 @@ val written_customs : unit -> Core.Ref.User.Set.t
 (** Warns ([crane-mapping-standard-header]), once a session per mapping,
     where an operation mapping the unit writes -- a constant's, a
     constructor's or a match template -- writes a standard-library name
-    ({!Foreign_template.standard_names_written}) whose header neither its
+    ({!Cpp_ir.Foreign_template.standard_names_written}) whose header neither its
     own [From] clause nor that of a mapped type in its signature names.  A
     mapping leaning on a header outside the standard library is not judged.
     Made once the written customs are planned, when every mapping a
@@ -1318,7 +1318,7 @@ val extract_constant_foreign : qualid -> string -> unit
 
     Warns ([crane-mapping-without-header]) when [imports] is empty and [s]
     writes a name C++ does not declare
-    ({!Foreign_template.declared_type_names}): the header a unit includes for
+    ({!Cpp_ir.Foreign_template.declared_type_names}): the header a unit includes for
     a mapped type is the mapping's own, never another's. *)
 val extract_inductive :
   ?boxed:string ->

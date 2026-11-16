@@ -127,7 +127,7 @@ let with_applied_tvars ?core_ty (cty : head_type) (temps : head_params) : head_p
     has to be fixed before the types are converted.  [applied], when given,
     is the rendered C++ body of a type alias, read instead of [tys] for the
     arities and for which parameters are phantom.  Returns the parameter list
-    and its {!Tparam_kinds.t}; records nothing ({!hkt_templates} records). *)
+    and its {!Cpp_ir.Tparam_kinds.t}; records nothing ({!hkt_templates} records). *)
 let template_kinds ?(applied : head_type option) vars tys =
   (* Read from the rendered type where there is one: the Core body still applies
      a variable that erasure removed, and the parameter list has to agree with
@@ -242,7 +242,7 @@ let template_kinds ?(applied : head_type option) vars tys =
     | None -> Type_util.applied_core_tvar_arities tys
   in
   ( temps,
-    { Tparam_kinds.template_templates =
+    { Cpp_ir.Tparam_kinds.template_templates =
         List.filter_map
           (fun i ->
             match List.nth temps i with
@@ -259,7 +259,7 @@ let template_kinds ?(applied : head_type option) vars tys =
     ({!Table.is_hkt_ind_param}). *)
 let hkt_templates ?applied r vars tys =
   let temps, kinds = template_kinds ?applied vars tys in
-  Tparam_kinds.record r kinds;
+  Cpp_ir.Tparam_kinds.record r kinds;
   temps
 
 (** Relax a signature whose return type applies a template template parameter

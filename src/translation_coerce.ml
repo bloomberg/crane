@@ -381,7 +381,7 @@ let deep_box_list cx e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
       Option.bind (infer_core_body_type e) (fun t ->
           Cpp_erasure.erased_list_shape (Translation_types.cpp_of_core cx (empty_env ()) t) )
     with
-    | Some _ -> Cpp_ir.Build.call (Runtime Crane_rt.Deep_box) [expr]
+    | Some _ -> Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Deep_box) [expr]
     | None -> expr )
 
 (** Adapt a value being stored into a boxed slot of kind [kind] to the shape

@@ -104,7 +104,7 @@ let template_kinds cx struc =
   Translation_state.generating_outside_modules cx @@ fun () ->
   let kinds = ref [] in
   let decide l =
-    List.iter (fun (r, k) -> Tparam_kinds.record r k) l;
+    List.iter (fun (r, k) -> Cpp_ir.Tparam_kinds.record r k) l;
     kinds := List.rev_append l !kinds
   in
   Modutil.struct_iter

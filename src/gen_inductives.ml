@@ -1112,7 +1112,7 @@ let constructor_field_storage cx ~name ~is_coinductive var_names ty =
     | Shared_pointer _ -> cpp_ty
     | _ when (not is_coinductive) && boxes_field ty -> Shared_pointer bare_cpp_ty
     | _ when (not is_coinductive) && boxes_param_field ~owner:name ty && bare_cpp_ty <> Any ->
-      External (Crane_rt.field, [bare_cpp_ty])
+      External (Cpp_ir.Crane_rt.field, [bare_cpp_ty])
     | _ -> cpp_ty
 
 (** A field's storage type at the inductive's own variables [vars], erased
@@ -1608,7 +1608,7 @@ let gen_ind_header_v2 cx
       let vmn_id = Id.of_string variant_member_name in
       let variant_member_ty =
         if is_coinductive then
-          T.External (Crane_rt.lazy_, [variant_alias_ty])
+          T.External (Cpp_ir.Crane_rt.lazy_, [variant_alias_ty])
         else
           variant_alias_ty
       in
@@ -1621,7 +1621,7 @@ let gen_ind_header_v2 cx
       (* A coinductive's cell type, [crane::lazy<variant_t>], as the callee of
          its constructor. *)
       let lazy_cell : Cpp_ir.Lowered.Expr.t =
-        E.Local (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">"))
+        E.Local (Id.of_string_soft (Cpp_ir.Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">"))
 
       in
 
@@ -1844,7 +1844,7 @@ let gen_ind_header_v2 cx
             let subst s = Common.render_template [("%scrut", scrut)] s in
             List.map
               (function
-                | Foreign_template.Drain_text t -> S.Foreign_text (subst t)
+                | Cpp_ir.Foreign_template.Drain_text t -> S.Foreign_text (subst t)
                 | Drain_yield arg ->
                   S.Expression
                     (E.Access_call
@@ -1852,7 +1852,7 @@ let gen_ind_header_v2 cx
                          E.Local _stack_id,
                          Id.of_string "push_back",
                          [B.call (E.Allocate (Heap, self)) [E.Foreign_text (subst arg)]] )) )
-              (Foreign_template.drain_template tmpl)
+              (Cpp_ir.Foreign_template.drain_template tmpl)
           in
           (* Every drain below establishes sole ownership with
              [p && p.use_count() == 1] and then mutates the pointee, moving a
@@ -2208,7 +2208,7 @@ let gen_ind_header_v2 cx
               and ev = Id.of_string (wl ^ "e") in
               let wl_ty =
                 T.External
-                  (Crane_rt.small_vector, [T.Shared_pointer (outer_core g_ty)])
+                  (Cpp_ir.Crane_rt.small_vector, [T.Shared_pointer (outer_core g_ty)])
               in
               let push fe =
                 [S.Expression (E.Access_call (Dot, 
@@ -2486,7 +2486,7 @@ let gen_ind_header_v2 cx
             (* Self-recursive only: stack holds shared_ptr<Self> directly *)
             let stack_elem_ty = T.Shared_pointer self_ty in
             let stack_ty =
-              T.External (Crane_rt.small_vector, [stack_elem_ty])
+              T.External (Cpp_ir.Crane_rt.small_vector, [stack_elem_ty])
             in
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
@@ -2592,7 +2592,7 @@ let gen_ind_header_v2 cx
             (* Mutual recursion: stack holds std::any to accommodate
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
-              T.External (Crane_rt.small_vector, [T.Any])
+              T.External (Cpp_ir.Crane_rt.small_vector, [T.Any])
             in
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
@@ -2690,7 +2690,7 @@ let gen_ind_header_v2 cx
             B.call
               (E.Local
                  (Id.of_string_soft
-                    (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">") ))
+                    (Cpp_ir.Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">") ))
               [E.Move (E.Local param_name)]
           in
           let init_list = [(vmn_id, init_expr)] in
@@ -2897,7 +2897,7 @@ let gen_ind_header_v2 cx
             (fun ((_, storage_ty, _) as f, ty) (pname, pty) ->
               match (storage_ty : Cpp_ir.Lowered.Type.t) with
               | Shared_pointer inner when child_field f ty ->
-                (pname, T.External (Crane_rt.child_slot, [inner]))
+                (pname, T.External (Cpp_ir.Crane_rt.child_slot, [inner]))
               | _ -> (pname, pty) )
             fields params
         in
@@ -3042,7 +3042,7 @@ let gen_ind_header_v2 cx
         if is_coinductive then
           let f = Id.of_string "F" in
           let thunk = Id.of_string "thunk" in
-          let cell_ty = T.External (Crane_rt.lazy_, [variant_alias_ty]) in
+          let cell_ty = T.External (Cpp_ir.Crane_rt.lazy_, [variant_alias_ty]) in
           let delegate =
             B.call
               (E.Scope (lazy_cell, Id.of_string "delegate", []))
@@ -3157,12 +3157,12 @@ let gen_ind_header_v2 cx
                          result again where that pays. *)
                       let src_expr, src_fty, dst_fty =
                         let unboxed : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t option = function
-                          | External (f, [t]) when String.equal f Crane_rt.field -> Some t
+                          | External (f, [t]) when String.equal f Cpp_ir.Crane_rt.field -> Some t
                           | _ -> None
                         in
                         match (unboxed src_fty, unboxed dst_fty) with
                         | Some s, Some d ->
-                          ( B.call (E.Runtime Crane_rt.Unbox_field) [E.Local field_id],
+                          ( B.call (E.Runtime Cpp_ir.Crane_rt.Unbox_field) [E.Local field_id],
                             s, d )
                         | _ -> ((E.Local field_id : Cpp_ir.Lowered.Expr.t), src_fty, dst_fty)
                       in
@@ -3267,7 +3267,7 @@ let gen_ind_header_v2 cx
                   B.call
                     (E.Local
                        (Id.of_string_soft
-                          (Crane_rt.lazy_ ^ "<" ^ variant_alias_name
+                          (Cpp_ir.Crane_rt.lazy_ ^ "<" ^ variant_alias_name
                           ^ ">::converted_from") ))
                     [ B.call (E.Access (Dot, E.Local other_id, Id.of_string "lazy_cell")) [];
                       convert_variant ~capture:Stored ]
@@ -3293,7 +3293,7 @@ let gen_ind_header_v2 cx
         if not is_coinductive then []
         else
           [ accessor ~no_pure:false "lazy_cell"
-              (T.Const (T.Reference (Lvalue, T.External (Crane_rt.lazy_, [variant_alias_ty]))))
+              (T.Const (T.Reference (Lvalue, T.External (Cpp_ir.Crane_rt.lazy_, [variant_alias_ty]))))
               [S.Return (Some (E.Local vmn_id))] ]
       in
       (* Add public accessor for v_ to enable pattern matching from outside *)

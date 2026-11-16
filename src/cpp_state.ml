@@ -883,8 +883,8 @@ let std_names_of (u : Unit_context.t) =
   let base =
     if Table.fast_variant () then
       { base with
-        variant = Crane_rt.variant;
-        variant_header = Table.Runtime Crane_rt.variant_header;
+        variant = Cpp_ir.Crane_rt.variant;
+        variant_header = Table.Runtime Cpp_ir.Crane_rt.variant_header;
         holds_alternative = "crane::holds_alternative";
         get_if = "crane::get_if";
         get = "crane::get" }
@@ -894,7 +894,7 @@ let std_names_of (u : Unit_context.t) =
          accessors, which take a shared variant and forward a [std::variant]
          to [std::]. *)
       { base with
-        variant_header = Table.Runtime Crane_rt.variant_header;
+        variant_header = Table.Runtime Cpp_ir.Crane_rt.variant_header;
         holds_alternative = "crane::holds_alternative";
         get_if = "crane::get_if";
         get = "crane::get" }
@@ -905,13 +905,13 @@ let std_names_of (u : Unit_context.t) =
        hands back a [std::shared_ptr], which a [counting_ptr] adopts. *)
   if Unit_context.count_rc u then
     { base with
-      shared_ptr = Crane_rt.counting_ptr;
-      make_shared = Crane_rt.make_counting }
+      shared_ptr = Cpp_ir.Crane_rt.counting_ptr;
+      make_shared = Cpp_ir.Crane_rt.make_counting }
   else if Unit_context.non_atomic_rc u then
     { base with
-      shared_ptr = Crane_rt.rc;
-      make_shared = Crane_rt.make_rc;
-      enable_from_this = Crane_rt.enable_rc_from_this }
+      shared_ptr = Cpp_ir.Crane_rt.rc;
+      make_shared = Cpp_ir.Crane_rt.make_rc;
+      enable_from_this = Cpp_ir.Crane_rt.enable_rc_from_this }
   else base
 
 let sn (u : Unit_context.t) = u.std_names

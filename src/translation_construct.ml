@@ -1340,7 +1340,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
          marked, so that where the variable turns out to be a field read
          out of a matched value ([*p]), the new node shares [p]'s cell
          rather than copying the child into a new one (see
-         [Crane_rt.Share_child] and the factory's [crane::child_slot]). *)
+         [Cpp_ir.Crane_rt.Share_child] and the factory's [crane::child_slot]). *)
       let shares_child =
         Translation_state.non_atomic_rc cx
         && (match expr with Local _ -> true | _ -> false)
@@ -1353,7 +1353,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
              && not (Table.is_shared_variant n_ind)
            | _ -> false
       in
-      if shares_child then Cpp_ir.Build.call (Runtime Crane_rt.Share_child) [expr] else expr
+      if shares_child then Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Share_child) [expr] else expr
     in
     gen_ctor_call (List.rev (List.mapi gen_and_wrap ts_updated))
   | _ ->

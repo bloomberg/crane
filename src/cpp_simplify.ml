@@ -39,7 +39,7 @@ let rec drop_unused : stmt list -> stmt list = function
 let rec member_root : expr -> Id.t option = function
   | Access (Dot, e, _) | Member (e, _) | Project (e, _, _) -> path_root e
   | Call (_, Entity (_, _, Some {inline = Some {shape = Pair_projection _; _}; _}), [e])
-  | Call (_, Runtime Crane_rt.Unbox_field, [e]) ->
+  | Call (_, Runtime Cpp_ir.Crane_rt.Unbox_field, [e]) ->
     path_root e
   | _ -> None
 
@@ -173,7 +173,7 @@ and expr (e : expr) : expr =
   | Call (sg, Call (_, ((Local _ | Move (Local _)) as k), [a]), [b]) ->
     let b = expr b in
     let a = expr a in
-    Call (sg, Runtime Crane_rt.Apply2, [k; a; b])
+    Call (sg, Runtime Cpp_ir.Crane_rt.Apply2, [k; a; b])
   (* A lambda that only returns another lambda hands it back unboxed: the
      [fn] it converts into still boxes it where it is kept, and
      [crane::apply2] runs it where it is applied at once. *)

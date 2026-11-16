@@ -401,7 +401,7 @@ let gen_match_branch cx env (typ : Core.Type.t) rty cname ids dummies body sname
           let is_uptr_field = read = Read_through_pointer in
           let subst_expr : Cpp_ir.Lowered.Expr.t =
             if read = Read_unboxed then
-              Cpp_ir.Build.call (Runtime Crane_rt.Unbox_field) [Local binding_name]
+              Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Unbox_field) [Local binding_name]
             else if is_uptr_field && branch_needs_sptr_preextract then
               Local (Id.of_string (Id.to_string binding_name ^ "_value"))
             else if is_uptr_field then
@@ -912,7 +912,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
                         the token. *)
                      | Some `Child when moved_child i -> bind (Move (Dereference (rf i)))
                      | Some (`Child | `Deref) -> bind (Dereference (rf i))
-                     | Some `Unbox -> bind (Cpp_ir.Build.call (Runtime Crane_rt.Unbox_field) [rf i])
+                     | Some `Unbox -> bind (Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Unbox_field) [rf i])
                      | Some `Move -> bind (Move (rf i)) )
                    (List.mapi (fun i x -> (i, x)) rev_ids')
                    reads)
@@ -1056,7 +1056,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
   let cmatch = find_custom_match pv in
   let scrut_uses =
     List.length
-      (List.filter (( = ) Foreign_template.Scrut) (Foreign_template.match_template cmatch))
+      (List.filter (( = ) Cpp_ir.Foreign_template.Scrut) (Cpp_ir.Foreign_template.match_template cmatch))
   in
   (* Whether the match binds the pair's components by value, moving them out:
      asked while [t] is still the Core scrutinee. *)

@@ -194,7 +194,7 @@ val gen_type_alias : Translation_state.t -> GlobRef.t -> Id.t list -> Core.Type.
 (** [type_alias_kinds r vars t] is the kinds of the parameters [vars] of the
     type alias [r], whose body is [t], as {!gen_type_alias} declares them --
     without recording them. *)
-val type_alias_kinds : Translation_state.t -> GlobRef.t -> Id.t list -> Core.Type.t -> Tparam_kinds.t
+val type_alias_kinds : Translation_state.t -> GlobRef.t -> Id.t list -> Core.Type.t -> Cpp_ir.Tparam_kinds.t
 
 (** Check if a term of the given type is a type class instance (constructs a
     type class record): the type's result is a type class. *)

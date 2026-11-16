@@ -831,7 +831,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           match base with
           | Call _ when closed_head ->
             Cpp_ir.Build.call
-              (Runtime (Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r id)))))
+              (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r id)))))
               [base]
           | _ -> base
         in
@@ -1357,7 +1357,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
             match e with
             | Local _ | Entity _ | Literal _ | Enum_value _
             | Numeral _ | This | Lambda _
-            | Call (_, Runtime (Crane_rt.Constant _), _) ->
+            | Call (_, Runtime (Cpp_ir.Crane_rt.Constant _), _) ->
               true
             | Move e | Dereference e | Member (e, _) | Project (e, _, _)
             | Access (_, e, _) | Forward (_, e)

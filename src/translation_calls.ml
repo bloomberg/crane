@@ -434,7 +434,7 @@ let carrier_template cx env tvars c : Cpp_ir.Lowered.Type.t =
   let carrier = Translation_types.template_arg_of_core_type cx ~site:Through_tvar env tvars c in
   let constant = Core_util.eq_core_type (Core_util.apply_core_type c [Core.Type.Unknown]) c in
   Type_constructor
-    (if constant then Member (External (Crane_rt.constant_tc, [carrier]), Id.of_string "c") else carrier)
+    (if constant then Member (External (Cpp_ir.Crane_rt.constant_tc, [carrier]), Id.of_string "c") else carrier)
 
 (** The explicit type arguments a call needs when the callee is generic in a
     type {e constructor} and Rocq erased which one.
@@ -465,7 +465,7 @@ let carrier_template cx env tvars c : Cpp_ir.Lowered.Type.t =
     erased element, a rank-2 argument at [T1<std::any>], deduces nothing.  A
     constant one is a complete type that an application leaves unchanged
     ({!Core_util.apply_core_type}), and has no template to name: it is the type
-    function {!Crane_rt.constant_tc} makes of it. *)
+    function {!Cpp_ir.Crane_rt.constant_tc} makes of it. *)
 let hkt_carrier_type_args cx env tvars ?result id tys =
   Probe.changed "REPAIR_hkt_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in

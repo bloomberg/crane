@@ -67,7 +67,7 @@ let rec is_access_path : Cpp_ir.Lowered.Expr.t -> bool = function
   | Dereference e | Member (e, _) | Project (e, _, _) | Access (_, e, _) -> is_access_path e
   | Access_call (_, e, _, []) -> is_access_path e
   (* Reading a [crane::field] is a read of the path, as dereferencing is. *)
-  | Call (_, Runtime Crane_rt.Unbox_field, [e]) -> is_access_path e
+  | Call (_, Runtime Cpp_ir.Crane_rt.Unbox_field, [e]) -> is_access_path e
   | _ -> false
 
 (** Generate an inline C++ expression that converts [expr] from [src_ty] to

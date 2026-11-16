@@ -159,13 +159,13 @@ let rec pp_concept_type cx ctx names frame (t : Modtype_concept.concept_type) : 
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
     ++ str ">"
   | Variant (Shared, tys) ->
-    str Crane_rt.shared_variant
+    str Cpp_ir.Crane_rt.shared_variant
     ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
     ++ str ">"
   | Function (dom, cod) ->
-    writes (Table.Runtime Crane_rt.fn_header);
-    str Crane_rt.fn ++ str "<"
+    writes (Table.Runtime Cpp_ir.Crane_rt.fn_header);
+    str Cpp_ir.Crane_rt.fn ++ str "<"
     ++ pp_concept_type cod
     ++ str "("
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type dom

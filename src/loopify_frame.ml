@@ -1597,7 +1597,7 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
       else
       let arg = match arg with Move a -> a | a -> a in
       let raw_of e =
-        Call (call_opaque, Runtime Crane_rt.Raw, [e])
+        Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [e])
       in
       if is_uptr then
         (* If the argument is a local variable loaded as a const-reference from a
@@ -1644,7 +1644,7 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
        [const T &x = *_f.field] -- is that pointer. *)
     let saved_pointer binding_env arg =
       match arg with
-      | Call (_, Runtime Crane_rt.Raw, [Local x]) -> (
+      | Call (_, Runtime Cpp_ir.Crane_rt.Raw, [Local x]) -> (
         match List.assoc_opt x binding_env with
         | Some (Dereference (Access (Dot, Local f, _) as field)) when Id.equal f id_f -> field
         | _ -> arg )
@@ -1779,7 +1779,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
      so that allocation is a third of all allocations in a comparison-heavy
      workload. *)
   let vector_ty =
-    External (Crane_rt.small_vector, [frame_ty])
+    External (Cpp_ir.Crane_rt.small_vector, [frame_ty])
   in
   let stack_id = id_stack in
   let stack_decl = Declare (stack_id, vector_ty, None) in

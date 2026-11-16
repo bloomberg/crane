@@ -5,15 +5,15 @@ let acquire_fence = "std::atomic_thread_fence(std::memory_order_acquire);"
 
 (* The header an external type, spelled [name], is declared in. *)
 let of_external name =
-  if String.equal name Crane_rt.small_vector then Some Table.small_vector_header
-  else if String.equal name Crane_rt.itree then Some Table.itree_header
-  else if String.equal name Crane_rt.field then Some (Table.Runtime Crane_rt.field_header)
+  if String.equal name Cpp_ir.Crane_rt.small_vector then Some Table.small_vector_header
+  else if String.equal name Cpp_ir.Crane_rt.itree then Some Table.itree_header
+  else if String.equal name Cpp_ir.Crane_rt.field then Some (Table.Runtime Cpp_ir.Crane_rt.field_header)
   else if String.equal name (Cpp_state.std_namespace () ^ "::optional") then Some (Table.Standard "optional")
   else if String.equal name "std::vector" then Some (Table.Standard "vector")
-  else if String.equal name Crane_rt.constant_tc then Some (Table.Runtime Crane_rt.obj_header)
-  else if String.equal name Crane_rt.shared_box || String.equal name Crane_rt.shared_or then
-    Some (Table.Runtime Crane_rt.shared_variant_header)
-  else if String.equal name Crane_rt.rc then Some (Table.Standard "memory")
+  else if String.equal name Cpp_ir.Crane_rt.constant_tc then Some (Table.Runtime Cpp_ir.Crane_rt.obj_header)
+  else if String.equal name Cpp_ir.Crane_rt.shared_box || String.equal name Cpp_ir.Crane_rt.shared_or then
+    Some (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header)
+  else if String.equal name Cpp_ir.Crane_rt.rc then Some (Table.Standard "memory")
   else None
 
 (* Where a mapping is written -- a match, a block, a type or a term --
@@ -55,7 +55,7 @@ module Ir = struct
     let need h = if not (List.mem h !found) then found := h :: !found in
     let std h = need (Table.Standard h) in
     let rt h = need (Table.Runtime h) in
-    let obj () = rt Crane_rt.obj_header in
+    let obj () = rt Cpp_ir.Crane_rt.obj_header in
     let variant () = need (Cpp_state.std_names_of unit).variant_header in
     let erase_fn () = need Table.erase_fn_header in
     let string_literal : expr -> unit = function Literal (String _) -> std "string" | _ -> () in
@@ -63,14 +63,14 @@ module Ir = struct
       ( match t with
       | Rebind _ | Erased _ | Any -> obj ()
       | External (name, _) -> Option.iter need (of_external name)
-      | Function _ -> rt Crane_rt.fn_header
+      | Function _ -> rt Cpp_ir.Crane_rt.fn_header
       | Variant (Inline, _) -> variant ()
-      | Variant (Shared, _) -> rt Crane_rt.shared_variant_header
+      | Variant (Shared, _) -> rt Cpp_ir.Crane_rt.shared_variant_header
       | Shared_pointer t -> (
         match Pointer_slot.of_pointee t with
-        | Shared -> rt Crane_rt.shared_variant_header
+        | Shared -> rt Cpp_ir.Crane_rt.shared_variant_header
         | At_instantiation ->
-          rt Crane_rt.shared_variant_header;
+          rt Cpp_ir.Crane_rt.shared_variant_header;
           std "memory"
         | Pointer -> std "memory" )
       | Decay _ -> std "type_traits"
@@ -129,11 +129,11 @@ module Ir = struct
       | Variant_get _ | Holds_alternative _ | Variant_get_if _ -> variant ()
       | Runtime h -> (
         match h with
-        | Crane_rt.Raw | Crane_rt.Deep_box -> erase_fn ()
-        | Crane_rt.Unbox_field -> rt Crane_rt.field_header
-        | Crane_rt.Apply2 -> rt Crane_rt.fn_header
-        | Crane_rt.Constant _ | Crane_rt.Immortal -> rt Crane_rt.shared_block_header
-        | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step | Crane_rt.Share_child -> () )
+        | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box -> erase_fn ()
+        | Cpp_ir.Crane_rt.Unbox_field -> rt Cpp_ir.Crane_rt.field_header
+        | Cpp_ir.Crane_rt.Apply2 -> rt Cpp_ir.Crane_rt.fn_header
+        | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal -> rt Cpp_ir.Crane_rt.shared_block_header
+        | Cpp_ir.Crane_rt.Make_rc_reusing_unchecked | Cpp_ir.Crane_rt.Reuse_step | Cpp_ir.Crane_rt.Share_child -> () )
       | Unbox (To _, _) | Any_cast _ -> obj ()
       | Unbox (Or_keep _, _) -> std "type_traits"
       | Tolerant_any_cast _ ->
@@ -143,8 +143,8 @@ module Ir = struct
       | Erased_call _ ->
         obj ();
         std "functional";
-        rt Crane_rt.fn_header
-      | Function_value _ -> rt Crane_rt.fn_header
+        rt Cpp_ir.Crane_rt.fn_header
+      | Function_value _ -> rt Cpp_ir.Crane_rt.fn_header
       | Aggregate {struct_ = r; _} | Enum_value (r, _) -> global r
       | Concept_application (concept, subject, _) ->
         global concept;
@@ -309,7 +309,7 @@ let of_modtype_concept unit (c : Modtype_concept.t) =
     | Shared_pointer t -> cty t
     | Variant (_, ts) -> List.iter cty ts
     | Function (dom, cod) ->
-      need [Table.Runtime Crane_rt.fn_header];
+      need [Table.Runtime Cpp_ir.Crane_rt.fn_header];
       List.iter cty dom;
       cty cod
   in

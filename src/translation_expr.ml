@@ -290,7 +290,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     match built with
     | Call _ ->
       Cpp_ir.Build.call
-        (Runtime (Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r f))))) [built]
+        (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r f))))) [built]
     | _ -> built )
   | Core.Expr.Apply {callee = f; arguments = args} ->
     Translation_application.gen_application cx ~expected_ty ~slot env f args
@@ -480,7 +480,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     match built with
     | Call (_, Type_member (Entity_application (n, _, _), _), _)
       when Table.is_shared_variant n && ts <> [] ->
-      Cpp_ir.Build.call (Runtime (Crane_rt.Constant (constant_name e))) [built]
+      Cpp_ir.Build.call (Runtime (Cpp_ir.Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} as construction ->
     Translation_construct.gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts construction

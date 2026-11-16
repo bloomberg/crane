@@ -36,7 +36,7 @@ let rec name_args fresh bind (e : expr) : expr =
         let named =
           List.mapi
             (fun i a ->
-              if Foreign_template.arg_mentions text i > 1 && not (free_to_repeat a) then (
+              if Cpp_ir.Foreign_template.arg_mentions text i > 1 && not (free_to_repeat a) then (
                 let x = fresh () in
                 bind x a;
                 (Local x : expr) )

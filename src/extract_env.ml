@@ -789,45 +789,45 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
       h
   in
   let h =
-    if Table.demanded Crane_rt.fn_header then
-      h ++ mk_include_quoted Crane_rt.fn_header ++ fnl ()
+    if Table.demanded Cpp_ir.Crane_rt.fn_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.fn_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Crane_rt.variant_header then
-      h ++ mk_include_quoted Crane_rt.variant_header ++ fnl ()
+    if Table.demanded Cpp_ir.Crane_rt.variant_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.variant_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Crane_rt.shared_variant_header then
-      h ++ mk_include_quoted Crane_rt.shared_variant_header ++ fnl ()
+    if Table.demanded Cpp_ir.Crane_rt.shared_variant_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.shared_variant_header ++ fnl ()
     else
       h
   in
   (* [crane::immortal], for a function's constants (see {!Cpp_constants}). *)
   let h =
-    if Table.demanded Crane_rt.shared_block_header then
-      h ++ mk_include_quoted Crane_rt.shared_block_header ++ fnl ()
+    if Table.demanded Cpp_ir.Crane_rt.shared_block_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.shared_block_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Crane_rt.field_header then
-      h ++ mk_include_quoted Crane_rt.field_header ++ fnl ()
+    if Table.demanded Cpp_ir.Crane_rt.field_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.field_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Crane_rt.obj_header then
-      h ++ mk_include_quoted Crane_rt.obj_header ++ fnl ()
+    if Table.demanded Cpp_ir.Crane_rt.obj_header then
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.obj_header ++ fnl ()
     else
       h
   in
   let h =
     if Table.has_any_coinductive () then
-      h ++ mk_include_quoted Crane_rt.lazy_header ++ fnl ()
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.lazy_header ++ fnl ()
     else
       h
   in
@@ -838,10 +838,10 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
     if Table.needs_itree_header ()
        && not
             (List.exists
-               (fun s -> String.equal s Crane_rt.itree_header)
+               (fun s -> String.equal s Cpp_ir.Crane_rt.itree_header)
                included )
     then
-      h ++ mk_include_quoted Crane_rt.itree_header ++ fnl ()
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.itree_header ++ fnl ()
     else
       h
   in
@@ -853,10 +853,10 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
     if Table.needs_erase_fn ()
        && not
             (List.exists
-               (fun s -> String.equal s Crane_rt.erasure_header)
+               (fun s -> String.equal s Cpp_ir.Crane_rt.erasure_header)
                included )
     then
-      h ++ mk_include_quoted Crane_rt.erasure_header ++ fnl ()
+      h ++ mk_include_quoted Cpp_ir.Crane_rt.erasure_header ++ fnl ()
     else
       h
   in
@@ -1552,7 +1552,7 @@ let elaborate_unit cx (u : Unit_context.t) elaborations =
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan].  They are decided from the inductive kinds
     {!analyze_and_plan} recorded, so after it.  Deciding records each as it
-    goes, which is what the readers of {!Tparam_kinds} take (see
+    goes, which is what the readers of {!Cpp_ir.Tparam_kinds} take (see
     {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
     second time, against the first's, and the two must agree. *)
 let plan_representation cx plan struc =
@@ -1576,7 +1576,7 @@ let check_against_plan (plan : Target_plan.t) =
     in
     Target_plan.check_kinds_recorded plan;
     List.iter
-      (fun (r, kinds) -> if not (Tparam_kinds.equal (Tparam_kinds.recorded r) kinds) then
+      (fun (r, kinds) -> if not (Cpp_ir.Tparam_kinds.equal (Cpp_ir.Tparam_kinds.recorded r) kinds) then
         fail "template-parameter kinds")
       plan.template_kinds;
     List.iter

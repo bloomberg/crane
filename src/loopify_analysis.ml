@@ -624,7 +624,7 @@ let method_checker
  let recv_to_self recv =
    match receiver_storage recv with
    | Dereference inner ->
-     Call (call_opaque, Runtime Crane_rt.Raw, [inner])
+     Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [inner])
    | _ ->
      Unary (Address_of, recv)
  in

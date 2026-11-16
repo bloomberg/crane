@@ -108,7 +108,7 @@ let writes_variant ctx = writes (sn ctx.unit).variant_header
 
 
 (** A name of Crane's runtime or of the standard library the configuration
-    selects, written in full as {!Crane_rt} and {!Cpp_state.sn} spell it:
+    selects, written in full as {!Cpp_ir.Crane_rt} and {!Cpp_state.sn} spell it:
     every qualifier such a name has is a namespace. *)
 let library_name s =
   match List.rev (Str.split (Str.regexp_string "::") s) with
@@ -469,7 +469,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       cpp_angle "std::type_identity_t" (pp_rec false t)
     | Rebind (h, x) ->
       writes_obj ();
-      cpp_angle Crane_rt.rebind (pp_list (pp_rec false) [ h; x ])
+      cpp_angle Cpp_ir.Crane_rt.rebind (pp_list (pp_rec false) [ h; x ])
     | Carrier_parameter -> str ctor_alias_tvar
     | Reference (Forwarding, t) -> pp_rec false t ++ str "&&"
     | Type_of e -> str "decltype(" ++ pp_cpp_expr ctx ([], Id.Set.empty) [] e ++ str ")"
@@ -479,13 +479,13 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
         if String.equal id_s "std::vector" then begin
           writes_standard "vector";
           external_type_name ctx.unit id_s
-        end else if String.equal id_s Crane_rt.constant_tc then begin
+        end else if String.equal id_s Cpp_ir.Crane_rt.constant_tc then begin
           writes_obj ();
           id_s
-        end else if String.equal id_s Crane_rt.shared_box || String.equal id_s Crane_rt.shared_or then begin
-          writes (Table.Runtime Crane_rt.shared_variant_header);
+        end else if String.equal id_s Cpp_ir.Crane_rt.shared_box || String.equal id_s Cpp_ir.Crane_rt.shared_or then begin
+          writes (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
           id_s
-        end else if String.equal id_s Crane_rt.rc then begin
+        end else if String.equal id_s Cpp_ir.Crane_rt.rc then begin
           (* rc.h transitively includes arena.h. *)
           writes_standard "memory";
           id_s
@@ -499,7 +499,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
        rendered as the erased type. *)
     | Erased _ ->
       writes_obj ();
-      pp_library_name Crane_rt.obj
+      pp_library_name Cpp_ir.Crane_rt.obj
     | Entity_application (r, tys, _) ->
       ( match Cpp_names.inline_custom_text ctx r with
       (* A mapped type is instantiated before it is printed
@@ -516,9 +516,9 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
         ++ (match tys with [] -> mt () | l -> str "<" ++ pp_list (pp_rec false) l ++ str ">") )
     | Foreign fr -> pp_foreign ctx (empty_env ()) vl fr
     | Function (d, c) ->
-      writes (Table.Runtime Crane_rt.fn_header);
+      writes (Table.Runtime Cpp_ir.Crane_rt.fn_header);
       cpp_angle
-        Crane_rt.fn
+        Cpp_ir.Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
     | Reference (Lvalue, t) -> pp_rec false t ++ str "&"
     | Pointer t -> pp_rec false t ++ str "*"
@@ -607,8 +607,8 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes_variant ctx;
       cpp_angle (sn ctx.unit).variant (pp_list (pp_rec false) tys)
     | Variant (Shared, tys) ->
-      writes (Table.Runtime Crane_rt.shared_variant_header);
-      cpp_angle Crane_rt.shared_variant (pp_list (pp_rec false) tys)
+      writes (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
+      cpp_angle Cpp_ir.Crane_rt.shared_variant (pp_list (pp_rec false) tys)
     (* The slot a pointer is held in was written down at the seam
        ({!Cpp_erasure.lower_pointer_slots}): what is left is a pointer -- to
        an inductive only a functor's instantiation knows the representation
@@ -621,7 +621,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     | Void -> str "void"
     | Any ->
       writes_obj ();
-      pp_library_name Crane_rt.obj
+      pp_library_name Cpp_ir.Crane_rt.obj
     | Type_constructor t -> fst (tyctor_head t)
     | Auto -> str "auto"
     | Decay t ->
@@ -690,8 +690,8 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes_variant ctx;
       pp_library_name (sn ctx.unit).variant
     | Variant (Shared, _) ->
-      writes (Table.Runtime Crane_rt.shared_variant_header);
-      pp_library_name Crane_rt.shared_variant
+      writes (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
+      pp_library_name Cpp_ir.Crane_rt.shared_variant
     | t ->
       CErrors.anomaly
         Pp.(str "Crane: the type constructor " ++ pp_rec false t
@@ -839,11 +839,11 @@ and pp_cpp_expr ctx env args (t : expr) =
     ++ str "("
     ++ pp_list (pp_cpp_expr ctx env args) method_args
     ++ str ")"
-  | Call (_, Runtime Crane_rt.Share_child, [arg]) -> (
+  | Call (_, Runtime Cpp_ir.Crane_rt.Share_child, [arg]) -> (
     (* A field read out of a matched value goes to the new node as the cell
        it is in; anything else is the value itself. *)
     match arg with
-    | Dereference p -> str (Crane_rt.name Crane_rt.Share_child) ++ str "(" ++ pp_cpp_expr ctx env args p ++ str ")"
+    | Dereference p -> str (Cpp_ir.Crane_rt.name Cpp_ir.Crane_rt.Share_child) ++ str "(" ++ pp_cpp_expr ctx env args p ++ str ")"
     | _ -> pp_cpp_expr ctx env args arg )
   | Call (_, Dereference e, ts) ->
     (* Call through a dereferenced pointer: deref + invoke pattern.
@@ -936,7 +936,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     cpp_angle (sn ctx.unit).make_shared (pp_cpp_type ctx false [] t)
   | Allocate (Reusing, t) ->
     (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
-    cpp_angle Crane_rt.make_rc_reusing (pp_cpp_type ctx false [] t)
+    cpp_angle Cpp_ir.Crane_rt.make_rc_reusing (pp_cpp_type ctx false [] t)
   | Allocate (Arena_scoped, t) ->
     (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
        for the current pointer flavor.  Falls back to a plain heap allocation at
@@ -952,7 +952,7 @@ and pp_cpp_expr ctx env args (t : expr) =
       cpp_angle (sn ctx.unit).make_shared inner
     else begin
       writes Table.arena_header;
-      cpp_angle Crane_rt.arena_make_shared inner
+      cpp_angle Cpp_ir.Crane_rt.arena_make_shared inner
     end
   | Aggregate {struct_ = id; type_args = tys; values = es} ->
     let es_s = pp_list (pp_cpp_expr ctx env args) es in
@@ -1050,7 +1050,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     (* [crane::rc] returns a mutable [rc<T>] from [rc_from_this()], so no
        const_pointer_cast is needed; [std::shared_ptr] needs the cast to strip
        the const that [shared_from_this()] adds in const methods. *)
-    if String.equal (sn ctx.unit).shared_ptr Crane_rt.rc then
+    if String.equal (sn ctx.unit).shared_ptr Cpp_ir.Crane_rt.rc then
       str "this->rc_from_this()"
     else
       str "std::const_pointer_cast<"
@@ -1124,14 +1124,14 @@ and pp_cpp_expr ctx env args (t : expr) =
      noted as needed. *)
   | Runtime h ->
     (match h with
-     | Crane_rt.Raw | Crane_rt.Deep_box -> writes Table.erase_fn_header
-     | Crane_rt.Unbox_field -> writes (Table.Runtime Crane_rt.field_header)
-     | Crane_rt.Apply2 -> writes (Table.Runtime Crane_rt.fn_header)
-     | Crane_rt.Constant _ | Crane_rt.Immortal ->
-       writes (Table.Runtime Crane_rt.shared_block_header)
-     | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step
-     | Crane_rt.Share_child -> ());
-    str (Crane_rt.name h)
+     | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box -> writes Table.erase_fn_header
+     | Cpp_ir.Crane_rt.Unbox_field -> writes (Table.Runtime Cpp_ir.Crane_rt.field_header)
+     | Cpp_ir.Crane_rt.Apply2 -> writes (Table.Runtime Cpp_ir.Crane_rt.fn_header)
+     | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal ->
+       writes (Table.Runtime Cpp_ir.Crane_rt.shared_block_header)
+     | Cpp_ir.Crane_rt.Make_rc_reusing_unchecked | Cpp_ir.Crane_rt.Reuse_step
+     | Cpp_ir.Crane_rt.Share_child -> ());
+    str (Cpp_ir.Crane_rt.name h)
   | Numeral (r, n) ->
     Common.writes_custom r;
     str n.text
@@ -1177,19 +1177,19 @@ and pp_cpp_expr ctx env args (t : expr) =
     str (spell_unop op) ++ operand
   | Unbox (To ty, e) ->
     writes_obj ();
-    str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type ctx false [] ty ++ str ">("
+    str Cpp_ir.Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type ctx false [] ty ++ str ">("
     ++ pp_cpp_expr ctx env args e ++ str ")"
   | Unbox (Or_keep ty, e) ->
     writes_standard "type_traits";
     let ty_pp = pp_cpp_type ctx false [] ty and e_pp = pp_cpp_expr ctx env args e in
     str "[&]() -> " ++ ty_pp
     ++ str " { if constexpr (std::is_same_v<" ++ ty_pp
-    ++ str (", " ^ Crane_rt.obj ^ ">) return ") ++ e_pp
-    ++ str "; else return " ++ str Crane_rt.obj_cast
+    ++ str (", " ^ Cpp_ir.Crane_rt.obj ^ ">) return ") ++ e_pp
+    ++ str "; else return " ++ str Cpp_ir.Crane_rt.obj_cast
     ++ str "<" ++ ty_pp ++ str ">(" ++ e_pp ++ str "); }()"
   | Unbox (List (list_ty, flat_ty), e) ->
     pp_cpp_type ctx false [] list_ty
-    ++ str "(" ++ str Crane_rt.obj_cast ++ str "<"
+    ++ str "(" ++ str Cpp_ir.Crane_rt.obj_cast ++ str "<"
     ++ pp_cpp_type ctx false [] flat_ty
     ++ str ">(" ++ pp_cpp_expr ctx env args e ++ str "))"
   | Any_cast (ty, e) | Tolerant_any_cast (ty, e) ->
@@ -1204,8 +1204,8 @@ and pp_cpp_expr ctx env args (t : expr) =
       match t with
       | Tolerant_any_cast _ ->
         writes Table.erase_fn_header;
-        Crane_rt.any_cast
-      | _ -> Crane_rt.obj_cast
+        Cpp_ir.Crane_rt.any_cast
+      | _ -> Cpp_ir.Crane_rt.obj_cast
     in
     str caster ++ str "<" ++ pp_cpp_type ctx false [] ty ++ str ">(" ++ inner
     ++ str ")"
@@ -1215,14 +1215,14 @@ and pp_cpp_expr ctx env args (t : expr) =
        method is never a global here: it is named through a lambda
        ({!Cpp_ir.Expr.Method_value}), never as itself. *)
     writes Table.erase_fn_header;
-    str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr ctx env args g
+    str Cpp_ir.Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr ctx env args g
     ++ ( match shape with
        | Boxed_whole -> mt ()
        | At_signature ty -> str ", " ++ pp_cpp_type ctx false [] ty )
     ++ str ">()"
   | Erase_callable (shape, e) ->
     writes Table.erase_fn_header;
-    str Crane_rt.erase_fn
+    str Cpp_ir.Crane_rt.erase_fn
     ++ ( match shape with
        | Boxed_whole -> mt ()
        | At_signature ty -> str "<" ++ pp_cpp_type ctx false [] ty ++ str ">" )
@@ -1234,7 +1234,7 @@ and pp_cpp_expr ctx env args (t : expr) =
        can be recovered at; each application yields a [std::any] in turn. *)
     writes_obj ();
     writes_standard "functional";
-    str Crane_rt.obj_cast
+    str Cpp_ir.Crane_rt.obj_cast
     ++ str "<"
     ++ pp_cpp_type ctx false [] (Function ([Any], Any))
     ++ str ">("
@@ -1244,16 +1244,16 @@ and pp_cpp_expr ctx env args (t : expr) =
     ++ str ")"
   | Tolerant_call (f, call_args) ->
     writes Table.erase_fn_header;
-    str Crane_rt.call_erased
+    str Cpp_ir.Crane_rt.call_erased
     ++ str "("
     ++ prlist_with_sep pr_comma (pp_cpp_expr ctx env args) (f :: call_args)
     ++ str ")"
   | Function_value e ->
-    writes (Table.Runtime Crane_rt.fn_header);
-    str Crane_rt.fn ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+    writes (Table.Runtime Cpp_ir.Crane_rt.fn_header);
+    str Cpp_ir.Crane_rt.fn ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | Convert (ty, e) ->
     writes Table.erase_fn_header;
-    str Crane_rt.convert
+    str Cpp_ir.Crane_rt.convert
     ++ str "<"
     ++ pp_cpp_type ctx false [] ty
     ++ str ">("
@@ -1263,7 +1263,7 @@ and pp_cpp_expr ctx env args (t : expr) =
      ({!Cpp_erasure.instantiate_foreign}). *)
   | Container_cast (ty, e, _) ->
     writes Table.erase_fn_header;
-    str Crane_rt.container_cast ++ str "<"
+    str Cpp_ir.Crane_rt.container_cast ++ str "<"
     ++ pp_cpp_type ctx false [] ty
     ++ str ">("
     ++ pp_cpp_expr ctx env args e
@@ -1392,10 +1392,10 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
       fnl () ++ str "assert(" ++ str expr_str ++ str ");"
     | Stated _ -> mt () )
   (* A compile-time branch on whether one type converts to another
-     ({!Crane_rt.convertible}). *)
+     ({!Cpp_ir.Crane_rt.convertible}). *)
   | If_constexpr {test = Convertible (t1, t2); then_ = then_stmts; else_ = else_stmts} ->
     writes Table.erase_fn_header;
-    str "if constexpr (" ++ str Crane_rt.convertible ++ str "<"
+    str "if constexpr (" ++ str Cpp_ir.Crane_rt.convertible ++ str "<"
     ++ pp_cpp_type ctx false [] t1
     ++ str ", "
     ++ pp_cpp_type ctx false [] t2

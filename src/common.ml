@@ -1925,7 +1925,7 @@ let writes_standard h = writes (Table.Standard h)
 
 (* An erased value is a [crane::obj], and everything that reads or builds one
    -- [crane_any_cast], [crane::rebind_t] -- is declared in obj.h. *)
-let writes_obj () = writes (Table.Runtime Crane_rt.obj_header)
+let writes_obj () = writes (Table.Runtime Cpp_ir.Crane_rt.obj_header)
 
 let writes_custom r = if Probe.checking () then Table.check_written_custom r
 

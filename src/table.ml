@@ -910,24 +910,24 @@ let (_, add_flat_inductive, is_flat_inductive_registered) =
 (** {2 Higher-kinded inductive parameters} *)
 
 (* What each template parameter of a generated inductive or alias is lives in
-   {!Tparam_kinds}, below this module so that {!Cpp_leaf_plan} can read it;
+   {!Cpp_ir.Tparam_kinds}, below this module so that {!Cpp_leaf_plan} can read it;
    these are its entry points for the rest of the plugin. *)
-let () = on_reset Tparam_kinds.reset
+let () = on_reset Cpp_ir.Tparam_kinds.reset
 
 let () =
   List.iter
     (fun (name, _) ->
       register_census name (fun () ->
-          List.assoc name (Tparam_kinds.sizes ()) ) )
-    (Tparam_kinds.sizes ())
+          List.assoc name (Cpp_ir.Tparam_kinds.sizes ()) ) )
+    (Cpp_ir.Tparam_kinds.sizes ())
 
-let hkt_ind_param_arity = Tparam_kinds.template_template_arity
+let hkt_ind_param_arity = Cpp_ir.Tparam_kinds.template_template_arity
 
 let is_hkt_ind_param r i = hkt_ind_param_arity r i <> None
 
-let is_family_ind_param = Tparam_kinds.is_family
+let is_family_ind_param = Cpp_ir.Tparam_kinds.is_family
 
-let is_phantom_type_param = Tparam_kinds.is_phantom
+let is_phantom_type_param = Cpp_ir.Tparam_kinds.is_phantom
 
 (** Check whether [ty] mentions the inductive [kn] (optionally restricted to a
     specific packet index [packet_idx]), either directly or nested inside type
@@ -3636,7 +3636,7 @@ let warn_undeclared_mapped_type =
            ^ "Name the header with From \"...\".") )
 
 let check_type_mapping_header r s imports =
-  match Foreign_template.declared_type_names s with
+  match Cpp_ir.Foreign_template.declared_type_names s with
   | _ :: _ as names when imports = [] -> warn_undeclared_mapped_type (r, List.sort_uniq String.compare names)
   | _ -> ()
 
@@ -3673,7 +3673,7 @@ let warn_borrowed_standard_header =
       ++ strbrk " to its From clause.")
 
 let check_operation_mapping_headers r tokens ~signature imports =
-  match Foreign_template.standard_names_written tokens with
+  match Cpp_ir.Foreign_template.standard_names_written tokens with
   | [] -> ()
   | written ->
     let supplying = imports @ signature_imports signature in
@@ -3701,18 +3701,18 @@ let check_written_mapping_headers () =
       let typ, _ = Typeops.type_of_global_in_context env r in
       match find_custom_opt r with
       | Some s when not (Reduction.is_arity env typ) ->
-        check_operation_mapping_headers r (Foreign_template.term_template s) ~signature:[typ] (get_ref_import_list r)
+        check_operation_mapping_headers r (Cpp_ir.Foreign_template.term_template s) ~signature:[typ] (get_ref_import_list r)
       | _ -> () )
     | GlobRef.ConstructRef (ip, _) ->
       Option.iter
         (fun s ->
-          check_operation_mapping_headers r (Foreign_template.term_template s) ~signature:(constructor_types ip)
+          check_operation_mapping_headers r (Cpp_ir.Foreign_template.term_template s) ~signature:(constructor_types ip)
             (get_ref_import_list (GlobRef.IndRef ip)) )
         (find_custom_opt r)
     | GlobRef.IndRef ip ->
       Option.iter
         (fun s ->
-          check_operation_mapping_headers r (Foreign_template.match_template s) ~signature:(constructor_types ip)
+          check_operation_mapping_headers r (Cpp_ir.Foreign_template.match_template s) ~signature:(constructor_types ip)
             (get_ref_import_list r) )
         (Core.Ref.Can.Map.find_opt r !custom_matchs)
     | GlobRef.ConstRef _ | GlobRef.VarRef _ -> ()

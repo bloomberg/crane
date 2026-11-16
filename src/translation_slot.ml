@@ -55,7 +55,7 @@ type slot = {
           event family nothing deduces. *)
   building_constant : bool;
       (** The constructor in this slot is part of a constant
-          ({!Crane_rt.Constant}), so it is built here rather than hoisted
+          ({!Cpp_ir.Crane_rt.Constant}), so it is built here rather than hoisted
           again: the constant is the outermost closed term. *)
 }
 

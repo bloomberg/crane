@@ -215,12 +215,12 @@ let extract_itree_result_core (core_ty : Core.Type.t) : Core.Type.t =
 
 (** Build the C++ type [std::shared_ptr<ITree<r_cpp>>]. *)
 let mk_itree_type (r_cpp : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-  Shared_pointer (External (Crane_rt.itree, [r_cpp]))
+  Shared_pointer (External (Cpp_ir.Crane_rt.itree, [r_cpp]))
 
 (** Build a call of [ITree<R>::ret(...)].
     When [r_cpp] is [void], generates [ITree<void>::ret()]. *)
 let mk_itree_ret (r_cpp : Cpp_ir.Lowered.Type.t) (args : Cpp_ir.Lowered.Expr.t list) : Cpp_ir.Lowered.Expr.t =
-  let itree_ty : Cpp_ir.Lowered.Type.t = External (Crane_rt.itree, [r_cpp]) in
+  let itree_ty : Cpp_ir.Lowered.Type.t = External (Cpp_ir.Crane_rt.itree, [r_cpp]) in
   Cpp_ir.Build.call (Type_member (itree_ty, Id.of_string "ret")) args
 
 (** Build [ITree<R>::ret(v)], or [ITree<void>::ret()] where there is no value
@@ -247,7 +247,7 @@ let reify_monadic_param_type cx core_ty (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_i
       | Entity_application (_, _ :: r :: _, _) -> r
       | t -> t
     in
-    Shared_pointer (External (Crane_rt.itree, [r_ty]))
+    Shared_pointer (External (Cpp_ir.Crane_rt.itree, [r_ty]))
   end
   else cpp_ty
 

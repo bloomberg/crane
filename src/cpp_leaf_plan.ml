@@ -297,7 +297,7 @@ let rec map_type f (t : ty) : ty =
 and rebind_applied_head (h : ty) (args : ty list) : ty =
   match args with
   | [a] when not (prints_as_any a) -> (
-    let family = Tparam_kinds.has_family in
+    let family = Cpp_ir.Tparam_kinds.has_family in
     let rec sub (t : ty) : ty =
       match t with
       | Any -> a

@@ -393,7 +393,7 @@ val finalized :
     ahead of the declaration passes what its definition declares.  Decided in
     declaration order, each recorded as it is: an alias's kinds come out of
     its converted body, which reads the kinds of the declarations it names. *)
-val template_kinds : Translation_state.t -> Core.Program.t -> (Names.GlobRef.t * Tparam_kinds.t) list
+val template_kinds : Translation_state.t -> Core.Program.t -> (Names.GlobRef.t * Cpp_ir.Tparam_kinds.t) list
 
 (** {2 Recording the generated program}
 
