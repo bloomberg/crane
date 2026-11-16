@@ -518,34 +518,36 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
 
 (** What the tail and TMC rewrites share: how recursive calls are recognised
     and which parameters vary. *)
-type loop_rewrite_config = {
-  rc_check : call_checker;
-  (** Identifies recursive calls.  Returns [Some call_site] for a direct
-      tail call, [None] otherwise. *)
+module Loop_rewrite_config = struct
+  type t = {
+    check : call_checker;
+    (** Identifies recursive calls.  Returns [Some call_site] for a direct
+        tail call, [None] otherwise. *)
 
-  rc_varying : bool list;
-  (** Mask parallel to function parameters: [true] = varying (needs a shadow
-      variable), [false] = invariant (referenced directly). *)
+    varying : bool list;
+    (** Mask parallel to function parameters: [true] = varying (needs a shadow
+        variable), [false] = invariant (referenced directly). *)
 
-  rc_shadow_params : (Id.t * ty) list;
-  (** Shadow variable bindings [(name, type)] for varying parameters.
-      Used by {!make_shadow_updates} when rewriting tail calls. *)
+    shadow_params : (Id.t * ty) list;
+    (** Shadow variable bindings [(name, type)] for varying parameters.
+        Used by {!make_shadow_updates} when rewriting tail calls. *)
 
-  rc_jumped : expr -> unit;
-  (** Told each recursive call rewritten into a jump. *)
+    jumped : expr -> unit;
+    (** Told each recursive call rewritten into a jump. *)
 
-  rc_last_reads : expr -> expr list -> Id.t list;
-  (** The locals a recursive call passing the arguments given may move at
-      their last read among its shadow updates ({!make_shadow_updates}). *)
-}
+    last_reads : expr -> expr list -> Id.t list;
+    (** The locals a recursive call passing the arguments given may move at
+        their last read among its shadow updates ({!make_shadow_updates}). *)
+  }
+end
 
 (** Top-level rewrite configuration.  Combines a {!loop_rewrite_config}
     (used for match-branch bodies) with top-level-specific behaviour. *)
 type top_rewrite_config = {
-  trc_inner : loop_rewrite_config;
+  inner : Loop_rewrite_config.t;
   (** Inner config for rewriting match-branch bodies. *)
 
-  trc_jump :
+  jump :
     derefs:(Id.t * expr) list -> updates:(expr list -> stmt list) -> expr -> expr list -> stmt list;
   (** The statements a recursive call [e] in tail position passing [args],
       every parameter's, becomes, under the references to a dereference
@@ -553,15 +555,15 @@ type top_rewrite_config = {
       updates passing [args] ({!make_shadow_updates}).  Plain tail recursion
       falls through to the [while (true)] test after them; TMC continues. *)
 
-  trc_on_other : derefs:(Id.t * expr) list -> expr -> stmt;
+  on_other : derefs:(Id.t * expr) list -> expr -> stmt;
   (** Emit code for a non-tail, non-visit return at the top level, under
       the references to a dereference [derefs] declared before it
       ({!make_shadow_updates}).  Wraps in [Block] as needed. *)
 
-  trc_rewrite_branch : branch -> branch;
+  rewrite_branch : branch -> branch;
   (** Transform a match branch at the top level. *)
 
-  trc_detect_void_tail : bool;
+  detect_void_tail : bool;
   (** Whether to detect the void tail-call pattern
       [Expression call; Return _] at the list level and rewrite it as
       [Return (Some call)].  Enabled for plain tail recursion; disabled
@@ -571,8 +573,8 @@ type top_rewrite_config = {
 (** Generic top-level statement rewriter.
 
     Rewrites every [Return] in tail position of the loop body under [trc]:
-    a recursive call becomes [trc.trc_jump], anything else
-    [trc.trc_on_other].
+    a recursive call becomes [trc.jump], anything else
+    [trc.on_other].
     {ul {- Returns a single [stmt] (wrapping in [Block] as needed).}
         {- Recurses through [If], [Switch], [Custom_match], [Match] and
            [Block]; other statements are left alone.}
@@ -584,16 +586,16 @@ type top_rewrite_config = {
     scope ({!make_shadow_updates}). *)
 let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
   | Return (Some e) ->
-    ( match trc.trc_inner.rc_check e with
+    ( match trc.inner.check e with
     | Some cs ->
-      trc.trc_inner.rc_jumped e;
+      trc.inner.jumped e;
       let updates args =
-        make_shadow_updates ~aliases ~derefs ~last_reads:(trc.trc_inner.rc_last_reads e cs.cs_args)
-          trc.trc_inner.rc_shadow_params
-          (filter_by_mask trc.trc_inner.rc_varying args)
+        make_shadow_updates ~aliases ~derefs ~last_reads:(trc.inner.last_reads e cs.args)
+          trc.inner.shadow_params
+          (filter_by_mask trc.inner.varying args)
       in
-      Block (trc.trc_jump ~derefs ~updates e cs.cs_args)
-    | None -> trc.trc_on_other ~derefs e )
+      Block (trc.jump ~derefs ~updates e cs.args)
+    | None -> trc.on_other ~derefs e )
   | If {condition = cond; then_ = then_br; else_ = else_br} ->
     let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     If {condition = cond; then_ = rw then_br; else_ = rw else_br}
@@ -616,7 +618,7 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
     let by_value =
       List.filter_map
         (fun (id, ty) -> if pointer ty then None else Some id)
-        trc.trc_inner.rc_shadow_params
+        trc.inner.shadow_params
     in
     let root =
       storage_root
@@ -636,7 +638,7 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
       scrut,
       List.map
         (fun (br : branch) ->
-          let br' = trc.trc_rewrite_branch br in
+          let br' = trc.rewrite_branch br in
           { br' with body = generic_rewrite_stmts ~aliases:(inside br') ~derefs trc br'.body })
         branches,
       Option.map (generic_rewrite_stmts ~aliases ~derefs trc) default)
@@ -656,7 +658,7 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
     unit-returning recursive functions. *)
 and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
   | Expression e :: Return _ :: rest
-    when trc.trc_detect_void_tail && trc.trc_inner.rc_check e <> None ->
+    when trc.detect_void_tail && trc.inner.check e <> None ->
     generic_rewrite_stmt ~aliases ~derefs trc (Return (Some e))
     :: generic_rewrite_stmts ~aliases ~derefs trc rest
   | s :: rest ->
@@ -681,21 +683,21 @@ let wrap_as_block = function
     ({!return_result}); tail calls update shadow variables with no
     suffix (control falls through to the [while (true)] test).  Void
     tail-call detection is enabled.  [jumped] is told each call rewritten
-    into a jump, and [last_reads] fills [rc_last_reads]. *)
+    into a jump, and [last_reads] fills [last_reads]. *)
 let rewrite_visit_stmts ?(last_reads = fun _ _ -> []) ~jumped check varying shadow_params =
   let inner_rc =
-    { rc_check = check;
-      rc_varying = varying;
-      rc_shadow_params = shadow_params;
-      rc_jumped = jumped;
-      rc_last_reads = last_reads }
+    { Loop_rewrite_config.check = check;
+      varying = varying;
+      shadow_params = shadow_params;
+      jumped = jumped;
+      last_reads = last_reads }
   in
   generic_rewrite_stmts
-    { trc_inner = inner_rc;
-      trc_jump = (fun ~derefs:_ ~updates _ args -> updates args);
-      trc_on_other = (fun ~derefs:_ e -> wrap_as_block (return_result e));
-      trc_rewrite_branch = Fun.id;
-      trc_detect_void_tail = true }
+    { inner = inner_rc;
+      jump = (fun ~derefs:_ ~updates _ args -> updates args);
+      on_other = (fun ~derefs:_ e -> wrap_as_block (return_result e));
+      rewrite_branch = Fun.id;
+      detect_void_tail = true }
 
 (** Returns true if the statement declares a new variable or type binding. *)
 let declares_variable = function
@@ -799,22 +801,24 @@ and strip_loopify_stmt = function
     loop's plan; no mutation, no side effects.  The record is consumed
     immediately by the caller to build shadow declarations and substitute
     parameter references. *)
-type shadow_setup = {
-  ss_varying : bool list;
-      (** Bitmask parallel to [params]: [true] when the parameter changes
-          across recursive calls and needs a shadow variable. *)
-  ss_varying_params : (Id.t * ty) list;
-      (** Only the varying parameters (filtered by {!ss_varying}). *)
-  ss_shadow_params : (Id.t * ty) list;
-      (** Shadow variable names ([_loop_X]) and types for each varying
-          parameter, respecting pointer-safety (borrowed params become
-          [const T*] shadows). *)
-  ss_subs : (Id.t * Id.t) list;
-      (** Substitution list: [(original_id, shadow_id)] pairs.  Applied to
-          the function body via {!Loopify_analysis.subst_stmt} so that
-          references to the original parameter are redirected to the shadow
-          variable. *)
-}
+module Shadow_setup = struct
+  type t = {
+    varying : bool list;
+        (** Bitmask parallel to [params]: [true] when the parameter changes
+            across recursive calls and needs a shadow variable. *)
+    varying_params : (Id.t * ty) list;
+        (** Only the varying parameters (filtered by {!Shadow_setup.varying}). *)
+    shadow_params : (Id.t * ty) list;
+        (** Shadow variable names ([_loop_X]) and types for each varying
+            parameter, respecting pointer-safety (borrowed params become
+            [const T*] shadows). *)
+    subs : (Id.t * Id.t) list;
+        (** Substitution list: [(original_id, shadow_id)] pairs.  Applied to
+            the function body via {!Loopify_analysis.subst_stmt} so that
+            references to the original parameter are redirected to the shadow
+            variable. *)
+  }
+end
 
 (** The jumps [check] finds, each moving into the next value of a shadow
     kept by value the shadow itself where the plan moves it there
@@ -867,12 +871,12 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
               List.find_map (fun (o', flags) -> if Core.Occurrence.equal o o' then Some flags else None) moves )
         in
         match flags with
-        | Some flags when List.compare_lengths flags params = 0 && List.compare_lengths site.cs_args params = 0 ->
+        | Some flags when List.compare_lengths flags params = 0 && List.compare_lengths site.args params = 0 ->
           (* Another argument spelling the shadow reads it where the plan's
              Core does not: it is left. *)
           let spelled_elsewhere k x =
             List.exists (fun (j, a) -> j <> k && List.exists (Id.equal x) (free_vars_expr a))
-              (List.mapi (fun j a -> (j, a)) site.cs_args)
+              (List.mapi (fun j a -> (j, a)) site.args)
           in
           let args =
             List.mapi
@@ -887,9 +891,9 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
                   end
                   else move_read shadow arg
                 | Some _, _ | None, _ -> arg )
-              (List.combine (List.combine flags params) site.cs_args)
+              (List.combine (List.combine flags params) site.args)
           in
-          Some {site with cs_args = args}
+          Some {site with args = args}
         | Some _ | None -> Some site )
       | None -> None
 
@@ -941,8 +945,8 @@ let build_shadow_setup ~varying ~parts tparams params =
   let subs =
     List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
   in
-  { ss_varying = varying; ss_varying_params = varying_params;
-    ss_shadow_params = shadow_params; ss_subs = subs }
+  { Shadow_setup.varying = varying; varying_params = varying_params;
+    shadow_params = shadow_params; subs = subs }
 
 (** Drop the shadow variables a loop body only ever writes.
 
@@ -1057,8 +1061,8 @@ let drop_unread_shadows shadow_decls body =
     @return Transformed body with while loop structure *)
 let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying ~parts tparams
   check params ret_ty body =
-  let { ss_varying = varying; ss_varying_params = varying_params;
-        ss_shadow_params = shadow_params; ss_subs = subs } =
+  let { Shadow_setup.varying = varying; varying_params = varying_params;
+        shadow_params = shadow_params; subs = subs } =
     build_shadow_setup ~varying ~parts tparams params
   in
   let is_void = ret_ty = Void in

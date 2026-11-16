@@ -646,7 +646,7 @@ type unlowered =
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?cursor ?loop
     ~varying ?binders ~parts check tparams params ret_ty body =
   let declined reason =
-    {nt_body = body; nt_outcome = Declined reason; nt_machine = false}
+    {body = body; outcome = Declined reason; machine = false}
   in
   let frame () =
     let machine =
@@ -654,10 +654,10 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
           transform_nontail ?fn_name ?loop ~varying ?adopted ?entered_by ~entered ?binders ~parts check
             tparams params ret_ty body )
     in
-    { nt_body = Option.cata fst body machine;
-      nt_outcome = Frame;
+    { body = Option.cata fst body machine;
+      outcome = Frame;
      
-      nt_machine = Option.has_some machine }
+      machine = Option.has_some machine }
   in
   (* A transform may discover mid-flight that the body's shape has no
      per-parameter correspondence to linearise (see {!Not_linearisable}).  That
@@ -693,7 +693,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     | None -> None
   in
   match tmc with
-  | Some tmc -> {nt_body = tmc; nt_outcome = Tmc; nt_machine = true}
+  | Some tmc -> {body = tmc; outcome = Tmc; machine = true}
   | None -> frame ()
   with Not_linearisable reason -> declined reason
 
@@ -789,7 +789,7 @@ let modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check (f :
     ControlIR enters: the local fixpoint's function. *)
 let adopts_entry ad (entry : Control_ir.Loop.t) =
   match entry with
-  | Member (o, 0) -> Core.Occurrence.equal ad.ad_fixpoint o
+  | Member (o, 0) -> Core.Occurrence.equal ad.Loopify_frame.Adopted.fixpoint o
   | Member _ | Function _ -> false
 
 let frame_machine ~loop ?entry ?entered_pointers ~varying ~parts ~tparams check (f : func) params body =
@@ -1036,10 +1036,10 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
               augmented_params mf.return_type body_with_self
           in
           let body' =
-            report_outcome ~name ~check:(method_survivors mf) ~strategy:r.nt_outcome
-              r.nt_body
+            report_outcome ~name ~check:(method_survivors mf) ~strategy:r.outcome
+              r.body
           in
-          if r.nt_outcome = Frame && not r.nt_machine then None else Some body'
+          if r.outcome = Frame && not r.machine then None else Some body'
         | No_loop | Suspended _ -> CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
       in
       match lowered with
