@@ -1437,7 +1437,7 @@ let gen_dfun cx ~minted n b cty ty temps =
   begin_body cx ~owner:n ~function_:true ();
   set_current_parameters cx (List.map snd (parameter_binders cx env all_ids));
   let resumes =
-    Control_to_cpp_ir.function_resumes ~unit:(Translation_state.unit_context cx) n ~depth:(List.length all_ids)
+    Control_to_cpp.Lower.function_resumes ~unit:(Translation_state.unit_context cx) n ~depth:(List.length all_ids)
   in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)
@@ -2047,7 +2047,7 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
     body once, then lower the group's control from its ControlIR where that
-    is the bridge's to lower ({!Control_to_cpp_ir}). *)
+    is the bridge's to lower ({!Control_to_cpp.Lower}). *)
 let gen_dfuns_dual cx fds =
   let generated =
     List.map
@@ -2056,7 +2056,7 @@ let gen_dfuns_dual cx fds =
       fds
   in
   let lowered =
-    Control_to_cpp_ir.lower_group ~unit:(Translation_state.unit_context cx)
+    Control_to_cpp.Lower.lower_group ~unit:(Translation_state.unit_context cx)
       (List.map (fun ((ds, _, _), _) -> ds) generated)
   in
   List.map2

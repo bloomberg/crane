@@ -3,18 +3,18 @@
 
 (** Tail-recursion loopification for {!Loopify}: the [while] rewrite
     ({!transform_tail}), the generic return-statement rewriter that
-    {!Loopify_tmc} shares, and the shadow variables every strategy declares
+    {!Tmc} shares, and the shadow variables every strategy declares
     for the parameters a loop varies ({!build_shadow_setup},
     {!make_shadow_updates}).  Runs on {!Cpp_ir.Lowered} function bodies, after
     translation and before printing; which functions it lowers, and which
     calls are its jumps, the ControlIR of each loop decides
-    ({!Control_to_cpp_ir}). *)
+    ({!Lower}). *)
 
 open Names
 open Cpp_ir.Type
 open Cpp_ir.Stmt
 open Cpp_ir.Expr
-open Loopify_analysis
+open Analysis
 
 (** {2 Tail recursion transformation}
 
@@ -285,7 +285,7 @@ let move_if_lvalue = function
 
 (** Assign [expr] to the [_result] accumulator variable:
     the statement list [[\[_result = expr;\]]].  Used by the frame machine
-    ({!Loopify_frame}), which keeps a [_result]; the tail loop returns
+    ({!Frame}), which keeps a [_result]; the tail loop returns
     directly ({!return_result}). *)
 let assign_result expr =
   [Expression (Binary (Assign, Local (id_result), move_if_lvalue expr))]
@@ -509,7 +509,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
     The tail-recursion and TMC loopification passes share the same structural
     traversal of [If], [Custom_match], [Match] and [Block].  They differ
     only in how they handle [Return]:
-    tail recursion returns the value directly, while TMC ({!Loopify_tmc})
+    tail recursion returns the value directly, while TMC ({!Tmc})
     patches a write pointer or allocates cells with holes.
 
     We factor out the shared traversal into a generic rewriter --
@@ -790,7 +790,7 @@ and strip_loopify_stmt = function
 
 (** {3 Shadow variable setup}
 
-    Both {!transform_tail} and {!Loopify_tmc.transform_tmc} begin with an identical preamble:
+    Both {!transform_tail} and {!Tmc.transform_tmc} begin with an identical preamble:
     take which parameters vary across recursive calls, compute pointer-safety
     flags, derive shadow variable names and types, and build the substitution map.
     This shared preamble is factored into {!build_shadow_setup}. *)
@@ -814,7 +814,7 @@ module Shadow_setup = struct
             [const T*] shadows). *)
     subs : (Id.t * Id.t) list;
         (** Substitution list: [(original_id, shadow_id)] pairs.  Applied to
-            the function body via {!Loopify_analysis.subst_stmt} so that
+            the function body via {!Analysis.subst_stmt} so that
             references to the original parameter are redirected to the shadow
             variable. *)
   }
@@ -917,7 +917,7 @@ let planned_last_reads ~moves e args =
   | Some _ | None -> []
 
 (** Compute the shadow-variable setup shared by {!transform_tail} and
-    {!Loopify_tmc.transform_tmc}.
+    {!Tmc.transform_tmc}.
 
     Computes pointer-safety flags (whether a parameter can be borrowed as
     [const T*] instead of copied, {!pointer_safe_flags}), derives shadow
@@ -1110,5 +1110,5 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~v
 
 (* Non-tail recursion uses a frame-based stack with [CraneEnter] and
    continuation variants and a dispatch loop; see
-   {!Loopify_frame.transform_nontail}. *)
+   {!Frame.transform_nontail}. *)
 

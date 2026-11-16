@@ -253,7 +253,7 @@ let lower ~methods plan program =
   in
   (* What the machine of the function [r], whose body is [inner], adopts:
      the first fixpoint of one member the plan has it adopt
-     ({!Loopify_frame.find_adopted}), where it returns what [r] does: a
+     ({!Control_to_cpp.Frame.find_adopted}), where it returns what [r] does: a
      machine has one result. *)
   let adoption r inner =
     let single (_, _, funs) = Array.length funs = 1 in

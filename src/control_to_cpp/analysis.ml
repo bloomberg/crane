@@ -6,7 +6,7 @@
     pointer-field table, outcome diagnostics, call checkers and call
     collection, and the substitutions the rewrites use.  Everything here
     reads and builds {!Cpp_ir.Lowered} code, the form Loopify and ControlIR
-    lowering ({!Control_to_cpp_ir}) rewrite between translation and the
+    lowering ({!Lower}) rewrite between translation and the
     finish pipeline. *)
 
 open Names
@@ -155,10 +155,10 @@ let id_self         = Id.of_string "_self"
     builds or tests one. *)
 let frame_field_key field = Id.to_string id_f ^ "." ^ Id.to_string field
 
-(* Perceus reuse cursor (see the reuse-cursor section of {!Loopify_tmc}). *)
+(* Perceus reuse cursor (see the reuse-cursor section of {!Tmc}). *)
 let id_own          = Id.of_string "_own"
 
-(* A value-type result assembled in place (see {!Loopify_tmc.result_storage}). *)
+(* A value-type result assembled in place (see {!Tmc.result_storage}). *)
 let id_root         = Id.of_string "_root"
 let id_node         = Id.of_string "_node"
 let id_value        = Id.of_string "_value"
@@ -337,7 +337,7 @@ type ptr_field = Core_plan.Pointer_fields.field = Recursive of int | Boxed of in
 let ptr_field_index = Core_plan.Pointer_fields.index
 
 (** The pointer fields of the constructor struct [key] in the unit [u], if
-    it has any; queried by {!Loopify_tmc.make_cell} to determine which
+    it has any; queried by {!Tmc.make_cell} to determine which
     fields need [make_shared] wrapping in the direct-struct-construction
     path. *)
 let pointer_fields_of (u : Unit_plan.Context.t) key = Core_plan.Pointer_fields.find u.pointer_fields key
@@ -368,7 +368,7 @@ type call_site = {
           last first where the checker reverses the call's source-order
           arguments, as those of a function's or a local fixpoint's loop do
           ({!calls_checker}, {!planned_self_checker},
-          {!Control_to_cpp_ir.jump}); in source order for a method's loop,
+          {!Lower.jump}); in source order for a method's loop,
           which takes the receiver and then the parameters as written
           ({!method_checker}) *)
   is_tail : bool;  (** Whether this call appears in tail position *)
@@ -423,7 +423,7 @@ type recursion_kind =
 
 (** What the pass did with one recursive function. *)
 type loopify_outcome =
-  | Tail  (** Rewritten to a flat [while] loop by {!Loopify_tail.transform_tail}. *)
+  | Tail  (** Rewritten to a flat [while] loop by {!Tail.transform_tail}. *)
   | Tmc  (** Rewritten by the tail-modulo-cons transform. *)
   | Frame  (** Rewritten to an explicit frame stack. *)
   | Deferred of string
@@ -527,7 +527,7 @@ type call_checker = expr -> call_site option
     parameter, and an [f] that ties the knot by passing [f_impl] to itself
     ([f_impl(f_impl, args...)]). These
     recognise that shape. They sit here, beside the other checkers, because
-    both {!Loopify_frame} and {!Loopify.loopify_inner_lambdas} need them. *)
+    both {!Frame} and {!Loopify.loopify_inner_lambdas} need them. *)
 
 (** Whether [w] is the wrapper tying the knot of the local fixpoint
     [fixpoint] for its callers: a lambda lowering the same function of the

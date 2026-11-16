@@ -16,9 +16,9 @@ open Names
 open Cpp_ir.Type
 open Cpp_ir.Stmt
 open Cpp_ir.Expr
-open Loopify_analysis
-open Loopify_tail
-open Loopify_tmc
+open Analysis
+open Tail
+open Tmc
 
 (** {3 Frame-based non-tail recursion helpers} *)
 
@@ -507,7 +507,7 @@ and drop_bindings_expr dropped e =
 
 (** Whether [st] binds a lambda the local fixpoint [fixpoint] is generated
     as: the one taking its self-parameter, or, unless [~knot:false], the
-    wrapper tying the knot ({!Loopify_analysis.wraps}) -- by the Core fixpoint it was made of,
+    wrapper tying the knot ({!Analysis.wraps}) -- by the Core fixpoint it was made of,
     not by its name, which another fixpoint may share. *)
 let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
   | Bind_variable (_, Declare _, Lambda {fixpoint = Some {member = (o, j); encoding; _}; _}) -> (
@@ -517,7 +517,7 @@ let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
   | _ -> false
 
 (** The binder of the wrapper lambda for the local fixpoint [fixpoint]
-    ({!Loopify_analysis.wraps}).  Searched over the same flow the fixpoint itself is, since
+    ({!Analysis.wraps}).  Searched over the same flow the fixpoint itself is, since
     translation emits the pair together. *)
 let find_fix_wrapper fixpoint stmts =
   find_in_flow stmts
@@ -602,7 +602,7 @@ let decline_reason ad =
     ({!Core_plan.Recursion.adoptable}).
 
     The shape is the Y-combinator pair [Translation_local_functions.gen_local_fix_by_ref]
-    emits (see {!Loopify_analysis.fixpoint_self}).  A fixpoint whose body calls none of the
+    emits (see {!Analysis.fixpoint_self}).  A fixpoint whose body calls none of the
     enclosing function is left for [Loopify.loopify_inner_lambdas], which handles it
     correctly on its own; one that does call back cannot be loopified alone,
     because two machines leave each other's stack to unwind.
@@ -736,7 +736,7 @@ type enter_rewrite_ctx = {
   check : call_checker;
       (** Identifies recursive calls in expressions *)
   entries : Machine_entry.t list;
-      (** The machine's entry points, indexed by {!Loopify_analysis.call_site.entry} *)
+      (** The machine's entry points, indexed by {!Analysis.call_site.entry} *)
   env : (Id.t * ty) list;
       (** Type environment — changes when entering sub-scopes *)
   result_ty : ty;
@@ -854,7 +854,7 @@ let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.binders)
     ({!adjust_frame_push_args}). *)
 let make_enter_for ctx ~called cs =
   let en = List.nth ctx.entries cs.entry in
-  let moved = Option.default [] (Option.bind (Loopify_analysis.made_of called) Ownership_ir.Region.Entry_moves.lookup) in
+  let moved = Option.default [] (Option.bind (Analysis.made_of called) Ownership_ir.Region.Entry_moves.lookup) in
   let takes (_, ty) arg =
     match arg with
     | Local x
@@ -944,7 +944,7 @@ let planned_frame ctx ~keeps (p : Core_plan.Recursion.resume) =
       | standing -> List.find_map (fun (x, _) -> if keeps b x then Some x else None) standing )
     p.live
 
-(* Why no machine is made ({!Loopify_analysis.Not_linearisable}). *)
+(* Why no machine is made ({!Analysis.Not_linearisable}). *)
 let no_resume_point = "the recursion plan has no one point a call's result resumes at"
 
 let no_resume_plan = "the recursion plan does not say whether a statement making a recursive call resumes after it"
@@ -1019,7 +1019,7 @@ let resume_violation () = Base.Probe.violation "resume plan" (Pp.str resume_disa
     A returned expression made of one of the loop's Continues, which the
     machine's checker recognises, is a tail call, and re-enters by
     [CraneEnter]; any other is the result.  A call it holds that its
-    ControlIR takes is left there, which {!Control_to_cpp_ir}
+    ControlIR takes is left there, which {!Lower}
     reports of the lowered loop.
 
     @param ctx  Enter-rewrite context (see {!enter_rewrite_ctx})
@@ -1976,7 +1976,7 @@ let fix_handler_bindings field_names cf_ps handler =
                     parameter standing for a Core binder
     @param parts    Which parameters every recursive call passes a part of
                     what the caller passed, as the loop's ControlIR says
-                    ({!Loopify_tail.pointer_safe_flags})
+                    ({!Tail.pointer_safe_flags})
     @param check    Call checker for identifying recursive calls
     @param tparams  Template parameter context of the enclosing function
     @param params   Function parameters [(id, type)]

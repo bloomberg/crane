@@ -7,7 +7,7 @@
     using while loops and explicit stacks. This eliminates C++ stack recursion,
     enabling safe execution of deeply recursive algorithms extracted from Coq.
     It runs on CppIR between translation and the finish pipeline: ControlIR
-    lowering ({!Control_to_cpp_ir}) calls the exported transforms directly.
+    lowering ({!Lower}) calls the exported transforms directly.
 
     {2 Motivation}
 
@@ -30,7 +30,7 @@
     [map f l = match l with [] -> [] | x :: xs -> f x :: map f xs]
 
     Converted to a loop that builds each constructor cell before the
-    recursive call fills its hole ({!Loopify_tmc}).
+    recursive call fills its hole ({!Tmc}).
 
     {3 Non-Tail Recursion (Single Call)}
     [f x = if base(x) then result else combine(x, f(next(x)))]
@@ -73,7 +73,7 @@
 
     A frame saves locals.  A frame struct field whose local's type is unknown
     falls back to [std::decay_t<decltype(x)>]; the local is not in scope where
-    the struct is defined, so {!Loopify_frame.decltype_of_saved_local} reads it
+    the struct is defined, so {!Frame.decltype_of_saved_local} reads it
     as [std::declval<T&>()] where the type environment knows [T].
 
     {2 Adopted Bodies}
@@ -85,21 +85,21 @@
     recurse.  Instead it is {e adopted} as a second entry point of the
     enclosing machine -- its own [CraneEnter_<name>] frame carrying its parameters
     and the variables it captures, dispatched from the same loop over the same
-    [std::variant] stack.  See {!Loopify_frame.adopted} for how the two
-    shapes are made alike, {!Loopify_frame.find_in_flow} for which
-    statements are searched, and {!Loopify_frame.machine_entry} for what an
+    [std::variant] stack.  See {!Frame.adopted} for how the two
+    shapes are made alike, {!Frame.find_in_flow} for which
+    statements are searched, and {!Frame.machine_entry} for what an
     entry is.
 
     {2 Modules}
 
-    The pass is split by responsibility: {!Loopify_analysis} finds and
-    classifies recursive calls, {!Loopify_tail}, {!Loopify_tmc} and
-    {!Loopify_frame} are the rewrite strategies, and this module dispatches
+    The pass is split by responsibility: {!Analysis} finds and
+    classifies recursive calls, {!Tail}, {!Tmc} and
+    {!Frame} are the rewrite strategies, and this module dispatches
     between them.  A mutual-recursion partner is spliced into a function's
     Core body before any of this ({!Core_plan.Recursion.splice_partners}).  What
     it lowers, and where,
     is the recursion plan's, read off the ControlIR of each loop as the
-    definition is generated ({!Control_to_cpp_ir}).
+    definition is generated ({!Lower}).
 
     @since Crane 1.0 *)
 
@@ -108,10 +108,10 @@ open Cpp_ir.Type
 open Cpp_ir.Stmt
 open Cpp_ir.Expr
 
-include Loopify_analysis
-include Loopify_tail
-include Loopify_tmc
-include Loopify_frame
+include Analysis
+include Tail
+include Tmc
+include Frame
 
 (** {2 Main transformation dispatch} *)
 
@@ -600,7 +600,7 @@ let loopify_inner_lambdas ~unit ?(tail_only = false) ~tparams ?(outer_env = []) 
 (** Why no loop of a function was made: the transform declined it
     ([Declined why]), or made none and left a call of the function in the
     body ([Left survived]), [survived] being the decline when something
-    sharper than {!Loopify_analysis.survived_generically} is known. *)
+    sharper than {!Analysis.survived_generically} is known. *)
 type unlowered =
   | Declined of string
   | Left of string option
@@ -626,7 +626,7 @@ type unlowered =
     @param modulo_cons The chains the recursion is lowered tail modulo cons
                        around, where it is so planned ({!planned_strategy})
     @param shapes      The branches of that loop, where they are known
-                       otherwise than from the chains ({!Loopify_tmc.branch_along})
+                       otherwise than from the chains ({!Tmc.branch_along})
     @param check       Call checker for identifying recursive calls
     @param tparams     Template parameter context
     @param adopted     A body calling back into this function, to adopt as a
@@ -790,7 +790,7 @@ let modulo_cons_loop ~unit ~jumped ?cursor ~varying ~parts ~shapes ~tparams chec
     ControlIR enters: the local fixpoint's function. *)
 let adopts_entry ad (entry : Control_ir.Loop.t) =
   match entry with
-  | Member (o, 0) -> Core.Occurrence.equal ad.Loopify_frame.Adopted.fixpoint o
+  | Member (o, 0) -> Core.Occurrence.equal ad.Frame.Adopted.fixpoint o
   | Member _ | Function _ -> false
 
 let frame_machine ~unit ~loop ?entry ?entered_pointers ~varying ~parts ~tparams check (f : func) params body =
@@ -1022,7 +1022,7 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
              loop continues by, and the cells built around them its turns'. *)
           let check = planned_jumps ~unit loop self_check in
           let shapes =
-            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t))
+            Option.map (fun t -> Tmc.control_shapes (Control_ir.Term.continues_into t))
               (Option.bind loop (Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)))
           in
           let r =

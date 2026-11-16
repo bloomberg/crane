@@ -1884,7 +1884,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
      lowered, and only the last outcome recorded of it describes the code
      actually emitted.  Report now that they are all in, and only when the
      files are written. *)
-  if not dry then Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ();
+  if not dry then Control_to_cpp.Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ();
   Accumulated_plan.for_next_unit acc
 
 (*********************************************)

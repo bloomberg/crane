@@ -103,7 +103,7 @@ type control_check = unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
     declaration of the unit [u]. *)
 let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
-       ({!Control_to_cpp_ir}): nothing is left here to lower.  Under
+       ({!Control_to_cpp.Lower}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)

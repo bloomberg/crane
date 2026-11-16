@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** CppIR: the structured C++ program.  Lowering builds it from Core and
-    ControlIR (the [Translation_*] modules, {!Control_to_cpp_ir}) at the
+    ControlIR (the [Translation_*] modules, {!Control_to_cpp.Lower}) at the
     [lowered] phase; CppIR finishing ({!Cpp_passes.Pipeline}) rewrites it until it
     owes nothing, and restates it at the [resolved] phase ({!Resolve}, which
     no module but {!Cpp_passes.Pipeline} calls).  Names

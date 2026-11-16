@@ -153,7 +153,7 @@ val kind_of_strategy : strategy -> kind
     argument, which its constructor stores behind the pointer, and every
     constructor in a chain stores some field there: [pointer_fields c] are
     the arguments of [c] so stored, [None] where it stores none
-    ({!Loopify_analysis.constructor_pointer_fields}). *)
+    ({!Control_to_cpp.Analysis.constructor_pointer_fields}). *)
 val strategy :
   t ->
   pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> strategy option
@@ -181,7 +181,7 @@ val strategy_of_let : t -> Core.Occurrence.t -> strategy option
     its body as translation generates it.  Two machines cannot unwind each
     other's stack, so such a fixpoint is lowered inside [r]'s; the first of
     them in the flow that lowering can take is adopted
-    ({!Loopify_frame.find_adopted}). *)
+    ({!Control_to_cpp.Frame.find_adopted}). *)
 val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
 
 (** [splice_partners ~loopified ~inlines p]: [p], a program being

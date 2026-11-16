@@ -927,7 +927,7 @@ let rec strip_arrows_n n ty =
 
 (** Strip one level of reference or const-qualification from a C++ type.
     Normalises lambda parameter types before building [Function] types.
-    Unlike [Loopify_tail.strip_ref_and_const_type] this is intentionally
+    Unlike [Control_to_cpp.Tail.strip_ref_and_const_type] this is intentionally
     non-recursive: a forwarding reference [T&&] becomes [T&]. *)
 let strip_cpp_ref_const : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
   | Reference (Lvalue, t) | Const t -> t

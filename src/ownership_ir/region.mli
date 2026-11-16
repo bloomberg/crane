@@ -284,7 +284,7 @@ module Capture : sig
 end
 
 (** Where a value a machine's frame holds across a call is stored
-    ({!Frame_storage}). *)
+    ({!Control_to_cpp.Frame_storage}). *)
 module Storage : sig
   type t =
     | Local
@@ -361,7 +361,7 @@ val save_moves : t -> Core.Occurrence.t -> Core.Binder.t list option
 (** Which binders each frame saved at a resume point moves into it, by the
     Core binder of the let the machine resumes at: what translation, which
     holds the plan, says ({!save_moves}) where it generates that let, read by
-    the frame machine ({!Loopify_frame}) where it saves the frame. *)
+    the frame machine ({!Control_to_cpp.Frame}) where it saves the frame. *)
 module Frame_save : sig
   type t = Core.Binder.t list
 
@@ -440,7 +440,7 @@ type region_plan = t
 (** Which binders the frame entering a machine's entry at each call takes,
     by the call's occurrence: what translation, which holds the plan, says
     ({!entry_moves}) where it plans the region, read by the frame machine
-    ({!Loopify_frame}) where it pushes the frame. *)
+    ({!Control_to_cpp.Frame}) where it pushes the frame. *)
 module Entry_moves : sig
   type t = Core.Binder.t list
 

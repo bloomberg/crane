@@ -1058,7 +1058,7 @@ let finished_of cx ~what id d =
     if
       (not ahead)
       && Sys.getenv_opt "CRANE_CHECK_IR" <> None
-      && not (Cpp_passes.Unit_program.finishes_as ~check_control:Control_to_cpp_ir.check_lowered (Translation_state.unit_context cx) d
+      && not (Cpp_passes.Unit_program.finishes_as ~check_control:Control_to_cpp.Lower.check_lowered (Translation_state.unit_context cx) d
            f.finished)
     then
       CErrors.anomaly

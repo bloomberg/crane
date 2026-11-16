@@ -7,8 +7,8 @@
     ({!Cpp_ir.Resolved}).
 
     Control was lowered as the declaration was generated
-    ({!Control_to_cpp_ir}), and is only checked here, under
-    [CRANE_CHECK_IR] ({!Control_to_cpp_ir.check_lowered}).  Depth flattening and the {!Erasure} seam
+    ({!Control_to_cpp.Lower}), and is only checked here, under
+    [CRANE_CHECK_IR] ({!Control_to_cpp.Lower.check_lowered}).  Depth flattening and the {!Erasure} seam
     have to run in that order, and both have to run: a declaration that skipped
     flattening crashes the C++ parser, and one that skipped the seam is not a
     {!Erasure.settled} declaration at all.  So the sequence is a single
@@ -18,7 +18,7 @@
 
 (** The check the "control" pass runs under [CRANE_CHECK_IR]: that what a
     declaration of the unit emits is what control lowering recorded deciding
-    ({!Control_to_cpp_ir.check_lowered}).  Control lowering comes before
+    ({!Control_to_cpp.Lower.check_lowered}).  Control lowering comes before
     finishing, so its caller hands the check in. *)
 type control_check = unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> unit
 

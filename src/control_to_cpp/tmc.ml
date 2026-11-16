@@ -11,8 +11,8 @@ open Names
 open Cpp_ir.Type
 open Cpp_ir.Stmt
 open Cpp_ir.Expr
-open Loopify_analysis
-open Loopify_tail
+open Analysis
+open Tail
 
 (** {3 Tail Modulo Cons (TMC)}
 
@@ -239,7 +239,7 @@ let branch_along ~unit shapes check expr =
             match inner with
             | [] ->
               let made_of_call =
-                match (call, Loopify_analysis.made_of held) with
+                match (call, Analysis.made_of held) with
                 | None, _ -> true
                 | Some o, Some o' -> Core.Occurrence.equal o o'
                 | Some _, None -> false
@@ -613,12 +613,12 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
     ({!read_before_step}).  Here the step is only carried out: the field is
     what the recursive call's argument dereferences, directly or through a
     reference [derefs] binds to the dereference
-    ({!Loopify_tail.make_shadow_updates}), and a temporary can hold a cell's
+    ({!Tail.make_shadow_updates}), and a temporary can hold a cell's
     argument or a value shadow's next value, but not another pointer
     shadow's, which would then point into the temporary -- such a walk
     declines the cursor. *)
 let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call args =
-  match Option.map (Reuse_cursor.step_at cursor) (Loopify_analysis.made_of call) with
+  match Option.map (Reuse_cursor.step_at cursor) (Analysis.made_of call) with
   (* A turn of unknown origin may be one the cursor walks on at. *)
   | None -> raise Cursor_declined
   | Some None -> None
@@ -858,7 +858,7 @@ let rewrite_tmc_visit_stmt ~unit ?(cursor_used = ref false) ?cursor ~jumped ~sto
         [Return (Some e)]
   in
   let inner_rc =
-    { Loopify_tail.Loop_rewrite_config.check = check;
+    { Tail.Loop_rewrite_config.check = check;
       varying = varying;
       shadow_params = shadow_params;
       jumped = jumped;
@@ -882,7 +882,7 @@ let rewrite_tmc_visit_stmt ~unit ?(cursor_used = ref false) ?cursor ~jumped ~sto
                   and the call a branch's cells are built around
     @param varying which parameters the loop varies, one flag per parameter
     @param parts which parameters every recursive call passes a part of what
-                 it was passed ({!Loopify_tail.pointer_safe_flags})
+                 it was passed ({!Tail.pointer_safe_flags})
     @param shapes the branches' shapes ({!branch_along})
     @param cursor the loop's {!Reuse_cursor}, its parameters positioned
                   among [params], where it has one
@@ -896,7 +896,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
   check params ret_ty body =
   let branch = branch_along ~unit shapes check in
   let planned = planned_result shapes ret_ty in
-  let { Loopify_tail.Shadow_setup.varying = varying; varying_params = varying_params;
+  let { Tail.Shadow_setup.varying = varying; varying_params = varying_params;
         shadow_params = shadow_params; subs = subs } =
     build_shadow_setup ~unit ~varying ~parts tparams params
   in

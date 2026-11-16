@@ -38,12 +38,12 @@
     The loop of a top-level function is made from here as its recursive
     group is generated, that of a method as its struct's methods are, and
     that of a local fixpoint as translation generates it
-    ({!Control_to_cpp_ir}), a machine's entry with it, and that of
+    ({!Control_to_cpp.Lower}), a machine's entry with it, and that of
     a helper lifted for a local fixpoint's function where translation makes
     the helper.  Loopify still makes the others -- a local fixpoint's that a
     machine may adopt or is lowered inside -- and under [CRANE_CHECK_IR]
     compares the calls it turns into jumps with the [Continue]s here
-    ({!Loopify.lower_local_tail_loops}). *)
+    ({!Control_to_cpp.Loopify.lower_local_tail_loops}). *)
 
 (** The lowered loops of a program, each by its {!Control_ir.Loop.t}. *)
 type t
@@ -79,7 +79,7 @@ val tail_loop :
 (** [lower ~methods plan p] lowers the loops the plan [plan] of the
     normalized program [p] takes.  A function generated as a method,
     [methods] says, adopts nothing into its machine, as Loopify lowers a
-    method ({!Loopify.transform_method_own}); nor does a machine adopt a
+    method ({!Control_to_cpp.Loopify.transform_method_own}); nor does a machine adopt a
     fixpoint returning another type than its function -- told apart with
     every abbreviation unfolded, as the C++ does not spell them -- for a
     machine has one result. *)

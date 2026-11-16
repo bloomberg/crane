@@ -26,7 +26,7 @@ let target = Loop.Function (r "f")
 (* [cons] stores its tail, its argument 1, behind the pointer. *)
 let pointer_fields c = if GlobRef.UserOrd.equal c cons then Some [1] else None
 let plan ?(parameters = [(id "l", lst)]) body =
-  Reuse_cursor.plan ~pointer_fields ~in_place:(fun _ _ -> false) {loop = target; parameters; body}
+  Control_to_cpp.Reuse_cursor.plan ~pointer_fields ~in_place:(fun _ _ -> false) {loop = target; parameters; body}
 
 let app f args = Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic (r f)); arguments = args}
 let cell ?(hole = 1) arguments : Term.cell = {constructor = cons; hole; arguments}
@@ -52,18 +52,18 @@ let on_list ?(result = lst) scrutinee body =
               {constructor = cons; fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
             body } ] }
 
-let cells_read_first (s : Reuse_cursor.step) =
+let cells_read_first (s : Control_to_cpp.Reuse_cursor.step) =
   match s.action with Recycle {cells_read_first} -> cells_read_first | Release -> []
 
 let steps_of = function
-  | Some (c : Reuse_cursor.t) ->
-    List.map (fun (s : Reuse_cursor.step) -> (s.turn, cells_read_first s, s.arguments_read_first)) c.steps
+  | Some (c : Control_to_cpp.Reuse_cursor.t) ->
+    List.map (fun (s : Control_to_cpp.Reuse_cursor.step) -> (s.turn, cells_read_first s, s.arguments_read_first)) c.steps
   | None -> []
 
 let releases = function
-  | Some (c : Reuse_cursor.t) ->
+  | Some (c : Control_to_cpp.Reuse_cursor.t) ->
     List.filter_map
-      (fun (s : Reuse_cursor.step) -> match s.action with Release -> Some s.turn | Recycle _ -> None) c.steps
+      (fun (s : Control_to_cpp.Reuse_cursor.step) -> match s.action with Release -> Some s.turn | Recycle _ -> None) c.steps
   | None -> []
 
 let () =
@@ -139,12 +139,12 @@ let () =
     check "scale walks its list" (c.parameter = 1);
     check "the next accumulator is read first" (steps_of (Some c) = [(o, [], [0])]);
     (* Lowered with its parameters swapped, the accumulator is the second. *)
-    ( match Reuse_cursor.positioned c [Some 1; Some 0] with
+    ( match Control_to_cpp.Reuse_cursor.positioned c [Some 1; Some 0] with
     | Some p ->
       check "positioned: the cursor's position" (p.parameter = 0);
       check "positioned: what is read first" (steps_of (Some p) = [(o, [], [1])])
     | None -> check "positioned keeps the cursor" false );
-    check "a cursor standing for no parameter is none" (Reuse_cursor.positioned c [Some 0; None] = None)
+    check "a cursor standing for no parameter is none" (Control_to_cpp.Reuse_cursor.positioned c [Some 0; None] = None)
   | None -> check "scale has a cursor" false );
 
   (* filter: a turn walking on building nothing releases the cell it leaves. *)

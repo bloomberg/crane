@@ -18,7 +18,7 @@
     parameters a jump leaves alone are those every [Continue] passes on
     unchanged ({!Control_ir.Term.invariant_parameters}).  What is left to the
     C++ is how each is spelled: the arguments the call was translated with
-    and the shadow each varying parameter is kept in ({!Loopify_tail}).  The local fixpoints in the
+    and the shadow each varying parameter is kept in ({!Tail}).  The local fixpoints in the
     loop are lowered as Loopify lowers them after its own transform
     ({!Loopify.after_tail_loop}).
 
@@ -26,7 +26,7 @@
     ({!Core_plan.Recursion.Modulo_cons}): its turns that build what they return
     ({!Control_ir.Term.Continue_into}) are the branches its cells are made
     in, each read along the constructors of its chain around the call its
-    occurrence names ({!Loopify_tmc.branch_along}), and the others its
+    occurrence names ({!Tmc.branch_along}), and the others its
     jumps.  No loop is made of it, and it is left as generated, where
     Loopify's transform would do anything else with the function
     ({!Loopify.modulo_cons_loop}): adopt a local fixpoint into a machine, or
@@ -182,7 +182,7 @@ val lower_group : unit:Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t list -> Cpp_
 
 (** [check_lowered d] checks, under [CRANE_CHECK_IR], the finished
     declaration [d] against what control lowering recorded deciding of its
-    loops ({!Loop_verdicts}): every loop emitted -- a function's, a
+    loops ({!Verdicts}): every loop emitted -- a function's, a
     method's, a local fixpoint's -- one it lowered, or, a local fixpoint's,
     one it kept for the machine it was lowered with; every definition
     emitted as generated, one it did not lower, and one it decided on where

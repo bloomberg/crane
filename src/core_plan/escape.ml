@@ -441,7 +441,7 @@ let infer_owned_params ~callee_flags n_params body =
      [Cons x (rec xs)] shape).  Only one of them may rewrite a given match --
      loopify owns the shape wherever it applies -- but BOTH need the scrutinee
      passed owned, because both recycle its cells: loopify does so through the
-     owning cursor its TMC loop carries (see {!Reuse_cursor}).  So this
+     owning cursor its TMC loop carries (see {!Control_to_cpp.Reuse_cursor}).  So this
      inference does not defer to loopify; it asks only whether reuse can be
      performed at all.  The consumer that actually emits a reuse rewrite,
      translation's dual-path match, defers to loopify via

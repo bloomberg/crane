@@ -65,7 +65,7 @@ let factory_name_of_ctor ?fallback_idx cref =
       C++-safe identifier and registers the mapping in
       {!Base.Common.ctor_field_names}.
     + Access sites (the inductive and record method generators in
-      {!Gen_inductives}, record reuse, {!Loopify_tmc.patch_cell_field})
+      {!Gen_inductives}, record reuse, {!Control_to_cpp.Tmc.patch_cell_field})
       call {!Base.Common.lookup_ctor_field_name} to resolve field names. *)
 
 (** Sanitize a Rocq binder name for use as a C++ struct field identifier.

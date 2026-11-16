@@ -5,7 +5,7 @@
 
     Operates on {!Cpp_ir.Lowered} declarations after translation produces them
     and before the finish pipeline ({!Cpp_passes.Pipeline}); ControlIR lowering
-    ({!Control_to_cpp_ir}) is its main caller.  Each function, method and local fixpoint is
+    ({!Lower}) is its main caller.  Each function, method and local fixpoint is
     lowered as the recursion plan decided from its Core body
     ({!Core_plan.Recursion.strategy}): a [while] loop, a loop tail modulo cons,
     or a machine with an explicit stack of frames, which keeps deep inputs
@@ -15,7 +15,7 @@
     configuration decides which parameters a loop holds by pointer. *)
 
 open Names
-open Loopify_analysis
+open Analysis
 
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
@@ -23,11 +23,11 @@ open Loopify_analysis
     unless given -- or, where a call survived, a decline for [survived].
     A local fixpoint whose transform declines is left as it was, its
     decline recorded; the caller catches
-    [Loopify_analysis.Not_linearisable] around the transform that built
+    [Analysis.Not_linearisable] around the transform that built
     [loop], not around this. *)
 val after_tail_loop :
   unit:Unit_plan.Context.t ->
-  ?strategy:Loopify_analysis.loopify_outcome ->
+  ?strategy:Analysis.loopify_outcome ->
   ?survived:string ->
   tparams:(param_kind * Id.t) list ->
   func ->
@@ -39,7 +39,7 @@ val after_tail_loop :
     declined it, [Declined why] recording [why] whatever the body holds; or
     it made none, [Left survived], and a call of the function left in the
     body is a decline for [survived], where something sharper is known than
-    {!Loopify_analysis.survived_generically}. *)
+    {!Analysis.survived_generically}. *)
 type unlowered =
   | Declined of string  (** The transform declined, for this reason. *)
   | Left of string option
@@ -50,7 +50,7 @@ type unlowered =
     function [f], the loop [loop] of its ControlIR, whose body [body] has
     its tail calls exposed: [check] recognises the calls that enter it at
     [f], and the body Loopify adopts, where its ControlIR has the entry
-    [entry], is a second entry of it ({!Loopify_frame.find_adopted}), whose
+    [entry], is a second entry of it ({!Frame.find_adopted}), whose
     frames hold by pointer the parameters standing for the Core binders
     [entered_pointers] accepts; its frames save the parameters [varying] of
     [f]'s, and hold by pointer those [parts] marks.  With it comes
@@ -63,7 +63,7 @@ type unlowered =
     ControlIR holds as an ordinary recursive call: the calls entering it are
     those its loop's [Continue]s, its entry's included, are made of, whether
     or not it leaves one, and its frames are laid out for those alone.  It
-    raises [Loopify_analysis.Not_linearisable] where the transform
+    raises [Analysis.Not_linearisable] where the transform
     declines. *)
 val frame_machine :
   unit:Unit_plan.Context.t ->
@@ -73,7 +73,7 @@ val frame_machine :
   varying:bool list ->
   parts:bool list ->
   tparams:(param_kind * Id.t) list ->
-  Loopify_analysis.call_checker ->
+  Analysis.call_checker ->
   func ->
   (Id.t * ty) list ->
   stmt list ->
@@ -91,7 +91,7 @@ val definition_calls : unit:Unit_plan.Context.t -> GlobRef.t -> Core.Occurrence.
     records it of such a function it loopifies: nothing where the plan
     lowers it to none, a deferral for a suspended cofixpoint, and otherwise
     the decline, or the planned strategy read off [body]: a decline where a
-    call of [f] is left in it ({!Loopify_analysis.report_outcome}). *)
+    call of [f] is left in it ({!Analysis.report_outcome}). *)
 val record_unlowered : unit:Unit_plan.Context.t -> ?unlowered:unlowered -> func -> stmt list -> unit
 
 (** [record_unlowered_method m] is {!record_unlowered} for the method [m],
@@ -102,22 +102,22 @@ val record_unlowered_method : unit:Unit_plan.Context.t -> meth -> unit
     f params body] is the tail-modulo-cons loop of the function [f], whose
     body [body] has its tail calls exposed: [check] recognises the calls the
     loop takes, [shapes] the branches it builds cells in
-    ({!Loopify_tmc.branch_along}), [varying] the parameters it changes,
+    ({!Tmc.branch_along}), [varying] the parameters it changes,
     [parts] those every call passes a value stored in what the caller passed
     for it, [cursor] the input it recycles the cells of, and [jumped] is
     told each call it takes.  [None] where
     Loopify would do anything else with [f]: adopt a body, a violation under
     [CRANE_CHECK_IR], or leave a call behind.  It raises
-    [Loopify_analysis.Not_linearisable] where the transform declines. *)
+    [Analysis.Not_linearisable] where the transform declines. *)
 val modulo_cons_loop :
   unit:Unit_plan.Context.t ->
   jumped:(expr -> unit) ->
   ?cursor:Reuse_cursor.t ->
   varying:bool list ->
   parts:bool list ->
-  shapes:Loopify_tmc.shape list ->
+  shapes:Tmc.shape list ->
   tparams:(param_kind * Id.t) list ->
-  Loopify_analysis.call_checker ->
+  Analysis.call_checker ->
   func ->
   (Id.t * ty) list ->
   stmt list ->
@@ -130,10 +130,10 @@ val modulo_cons_loop :
     local fixpoints in it are lowered: [m] itself where it declines.  A tail
     loop or a machine varies the receiver and parameters [varying], and
     points at those [parts] says every call passes a value stored in what
-    the caller passed for it, where given ({!Loopify_tail.pointer_safe_flags}).
+    the caller passed for it, where given ({!Tail.pointer_safe_flags}).
     A loop tail modulo cons or a machine takes the calls the method's
     ControlIR continues by, and builds its cells along its turns
-    ({!Loopify_tmc.control_shapes}), recycling the cells of the input
+    ({!Tmc.control_shapes}), recycling the cells of the input
     [cursor] walks, where given.  A tail loop parks the receiver of the
     calls made of [park], those of the turns that make the receiver they
     pass ({!Control_ir.Term.rebuilt}), and passes the others theirs, which the
@@ -186,7 +186,7 @@ val lower_function_locals :
     The local fixpoints in it are lowered after it, as Loopify
     lowers them.  [None] where the machine leaves a call behind.  Under
     [CRANE_CHECK_IR] the calls entering it must be its loop's [Continue]s.
-    It raises [Loopify_analysis.Not_linearisable] where the transform
+    It raises [Analysis.Not_linearisable] where the transform
     declines. *)
 val local_frame_machine :
   unit:Unit_plan.Context.t ->
@@ -196,7 +196,7 @@ val local_frame_machine :
   varying:bool list ->
   parts:bool list ->
   tparams:(param_kind * Id.t) list ->
-  Loopify_analysis.call_checker ->
+  Analysis.call_checker ->
   (Id.t * ty) list ->
   ty ->
   stmt list ->
@@ -242,7 +242,7 @@ val worthwhile_move_type : ty -> bool
     no self-call survives the transform.  [Set Crane Loopify Diagnostics]
     prints them as they are produced; [Set Crane Loopify Strict] turns a
     decline into an error.  What it did with each is a
-    {!Loopify_analysis.loopify_outcome}. *)
+    {!Analysis.loopify_outcome}. *)
 
 (** Print the collapsed outcomes ([Crane Loopify Diagnostics]) and raise on any
     decline ([Crane Loopify Strict]). Call once per unit, after transforming.

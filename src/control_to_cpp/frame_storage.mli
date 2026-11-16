@@ -4,7 +4,7 @@
 (** How the frames of a machine with a stack hold the parameters of its
     loops, decided over its ControlIR: for each parameter, the storage the
     value a frame holds for it lies in ({!Ownership_ir.Region.Storage}).  Loopify
-    and {!Control_to_cpp_ir} read the plan when they lay out the
+    and {!Lower} read the plan when they lay out the
     frames of a machine with a stack.
 
     A machine runs on what its caller passed, which outlives it and which
@@ -44,7 +44,7 @@ type parameter =
 (** Whether the program holds a value of the Core type [ty] as a value -- an
     inductive neither coinductive, custom, nor an enum, which is passed by
     value however it is lent -- so that a pointer may stand for one
-    ({!Loopify_analysis.is_value_type_ret}); with [~abbreviations], an
+    ({!Analysis.is_value_type_ret}); with [~abbreviations], an
     abbreviation as what it abbreviates ([Definition t := list (key * elt)]).
     An abstract type -- a functor parameter's [X.t] -- is no value inductive
     the program knows. *)
@@ -73,7 +73,7 @@ val local_holdable : Unit_plan.Context.t -> Control_ir.Term.loop -> int -> bool 
     under Reuse with NonAtomicRc the declared type takes any value it does
     not recognise as boxed -- an enum, an alias of an erased type -- for a
     value inductive, which the plan does not hold by pointer (as
-    {!Control_to_cpp_ir}'s machines of functions). *)
+    {!Lower}'s machines of functions). *)
 val check_local : int -> planned:bool -> declared:(unit -> bool) -> unit
 
 (** [plan ~pointer_fields ~in_place ~holdable l]: how the frames of the

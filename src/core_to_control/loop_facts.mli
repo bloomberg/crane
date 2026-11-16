@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What loop lowering ({!Control_to_cpp_ir}, {!Loopify}) reads of the
+(** What loop lowering ({!Control_to_cpp.Lower}, {!Control_to_cpp.Loopify}) reads of the
     analysis of the program and of the unit being lowered: the input of the
     passes that turn recursion into loops (ControlIR), as
     {!Translation_state}'s is lowering's.  A field of the unit's context

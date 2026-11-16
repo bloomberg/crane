@@ -57,7 +57,7 @@ let fixpoint_parameters (_, _, params, _) = params
 
 (** The statements a local fixpoint is declared by: for a fixpoint of one
    member, its loop, lowered from its ControlIR, where it is one
-   ({!Control_to_cpp_ir.local_loop}), and otherwise the Y-combinator
+   ({!Control_to_cpp.Lower.local_loop}), and otherwise the Y-combinator
    [self_passing ()] -- the impl lambdas [impl_stmts], taking their
    self-parameters [selves], and the wrappers.  The loop is the impl lambda
    without the self-parameter, its body, the one of [funs_with_params],
@@ -75,7 +75,7 @@ let local_fix_stmts cx selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowere
         body = List.map flat body }
     in
     match
-      Control_to_cpp_ir.local_loop ~unit:(Translation_state.unit_context cx) ~owner:cx.ctx.input.body_owner
+      Control_to_cpp.Lower.local_loop ~unit:(Translation_state.unit_context cx) ~owner:cx.ctx.input.body_owner
         ~function_:cx.ctx.input.body_function
         ~lifted:cx.ctx.lexical.lifted_fixpoints ~member
         ~tparams:(get_current_template_head cx) ~name:fix_id lam
@@ -536,7 +536,7 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
     match (local, lifted) with
     | Some occ, _ when n_fix_funs = 1 -> (
       match
-        Control_to_cpp_ir.local_resumes ~unit:(Translation_state.unit_context cx) ~owner:cx.ctx.input.body_owner
+        Control_to_cpp.Lower.local_resumes ~unit:(Translation_state.unit_context cx) ~owner:cx.ctx.input.body_owner
           ~function_:cx.ctx.input.body_function
           ~lifted:cx.ctx.lexical.lifted_fixpoints ~member:(occ, fix_idx)
             ~depth:(List.length (fst env)) ~arity:n_lam_params
@@ -544,7 +544,7 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
       | Some (resumes, certain) -> (Some resumes, Some certain)
       | None -> (None, None) )
     | _, Some r when n_fix_funs = 1 ->
-      ( Control_to_cpp_ir.lifted_resumes ~unit:(Translation_state.unit_context cx) r ~owner:cx.ctx.input.body_owner
+      ( Control_to_cpp.Lower.lifted_resumes ~unit:(Translation_state.unit_context cx) r ~owner:cx.ctx.input.body_owner
           ~depth:(List.length (fst env))
           ~arity:n_lam_params,
         None )
@@ -653,7 +653,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         let lifted_decl =
           lifted_definition ~binders ~ret:cod member_refs.(i) cpp_params body (class_temps @ all_temps_with_funs)
         in
-        add_lifted_decl cx (Control_to_cpp_ir.lower_lifted ~unit:(Translation_state.unit_context cx) lifted_decl) )
+        add_lifted_decl cx (Control_to_cpp.Lower.lower_lifted ~unit:(Translation_state.unit_context cx) lifted_decl) )
       funs_compiled;
     (* In the continuation body b, the fixpoint name should resolve to a call
        to the lifted function with appropriate type arguments. We push the fix
@@ -1264,7 +1264,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
             lifted_definition ~binders:param_binders ~ret:cod member_refs.(i) cpp_params body
               (class_temps @ all_temps_with_funs)
           in
-          add_lifted_decl cx (Control_to_cpp_ir.lower_lifted ~unit:(Translation_state.unit_context cx) lifted_decl) )
+          add_lifted_decl cx (Control_to_cpp.Lower.lower_lifted ~unit:(Translation_state.unit_context cx) lifted_decl) )
         funs_compiled;
       let call_type_args =
         Translation_calls.lifted_call_type_args cx ~class_args ~env ~outer_tvars

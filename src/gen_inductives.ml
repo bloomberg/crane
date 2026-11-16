@@ -728,7 +728,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
      saves are planned with the body: certainly, or perhaps. *)
   let resumes, certain =
     match
-      Control_to_cpp_ir.method_resumes ~unit:(Translation_state.unit_context cx) func_ref ~inductive:name
+      Control_to_cpp.Lower.method_resumes ~unit:(Translation_state.unit_context cx) func_ref ~inductive:name
         ~receiver:this_pos ~depth:(List.length (fst env))
     with
     | Some (resumes, certain) -> (Some resumes, Some certain)
@@ -997,14 +997,14 @@ let gen_single_method cx name vars ((func_ref, _, _, _) as candidate) =
 (** The methods made of [candidates] in the inductive [name], as its struct
     declares them ({!Cpp_passes.Borrow_projection.lend}), with their control lowered
     from their ControlIR where that is the bridge's to lower
-    ({!Control_to_cpp_ir.lower_struct_methods}).  The struct is merged into
+    ({!Control_to_cpp.Lower.lower_struct_methods}).  The struct is merged into
     its module's where it is the one the module is promoting, or [merged]
     says so. *)
 let gen_methods cx ?(merged = false) name vars candidates =
   let merged =
     merged || Option.cata (fun r -> globref_equal r name) false !Unit_plan.Cpp_state.eponymous_promote_ref
   in
-  Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context cx) ~merged name vars
+  Control_to_cpp.Lower.lower_struct_methods ~unit:(Translation_state.unit_context cx) ~merged name vars
     (List.concat_map
        (fun c -> Cpp_passes.Borrow_projection.lend ~coinductive:(Base.Table.is_coinductive name) (gen_single_method cx name vars c))
        candidates )

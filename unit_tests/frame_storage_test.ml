@@ -31,7 +31,7 @@ let sizes = Loop.Member (Core.Occurrence.fresh (), 0)
 let pointer_fields c =
   if GlobRef.UserOrd.equal c node then Some [0; 1] else if GlobRef.UserOrd.equal c cons then Some [1] else None
 
-let plan ?(holdable = fun _ -> true) l = Frame_storage.plan ~pointer_fields ~in_place:(fun _ _ -> false) ~holdable l
+let plan ?(holdable = fun _ -> true) l = Control_to_cpp.Frame_storage.plan ~pointer_fields ~in_place:(fun _ _ -> false) ~holdable l
 let app g args = Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic (r g)); arguments = args}
 let continue_ target arguments = Term.Continue {target; occurrence = Core.Occurrence.fresh (); arguments}
 
@@ -112,7 +112,7 @@ let () =
   (* A parameter its lowering holds by value is a copy in its frame: what
      is passed on of it is no pointer either. *)
   let p =
-    plan ~holdable:(function Frame_storage.Own _ -> false | Entered _ -> true) (machine (Core.Expr.fresh_rel 1)) in
+    plan ~holdable:(function Control_to_cpp.Frame_storage.Own _ -> false | Entered _ -> true) (machine (Core.Expr.fresh_rel 1)) in
   check "a parameter held by value is no pointer" (p.own = [Storage.Frame]);
   check "nor what an entered loop is passed of it" (p.entered = [(4, Storage.Frame)]);
   (* An entered parameter is asked about by its loop and position. *)
@@ -120,7 +120,7 @@ let () =
   let p =
     plan
       ~holdable:(function
-        | Frame_storage.Own _ -> true
+        | Control_to_cpp.Frame_storage.Own _ -> true
         | Entered {loop; index; level} ->
           asked := (loop.loop, index, level) :: !asked;
           false )
@@ -133,7 +133,7 @@ let () =
 
   (* A local fixpoint's plan: what translation recorded of each function. *)
   let u = Unit_plan.Context.detached in
-  let local_holdable = Frame_storage.local_holdable u in
+  let local_holdable = Control_to_cpp.Frame_storage.local_holdable u in
   let o = Core.Occurrence.fresh () in
   let member = Loop.Member (o, 0) in
   let loop parameters = {Term.loop = member; parameters; body = Term.Return (Core.Expr.fresh_rel 1)} in
@@ -149,4 +149,4 @@ let () =
   check "a lent parameter of a type the program knows no inductive of is held by value"
     (local_holdable l 1 = Some false);
   check "a forwarded parameter is held by value" (local_holdable l 2 = Some false);
-  check "no value is held by pointer that is not lent" (not (Frame_storage.passed_holdable u None tree))
+  check "no value is held by pointer that is not lent" (not (Control_to_cpp.Frame_storage.passed_holdable u None tree))

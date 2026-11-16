@@ -1735,7 +1735,7 @@ let finish_ahead cx u (aheads : Cpp_ind.ahead list) =
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Cpp_passes.Unit_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   Cpp_passes.Unit_program.record_lifted_ahead helpers;
-  let program = Cpp_passes.Unit_program.finish ~check_control:Control_to_cpp_ir.check_lowered u (finishing aheads) in
+  let program = Cpp_passes.Unit_program.finish ~check_control:Control_to_cpp.Lower.check_lowered u (finishing aheads) in
   Cpp_passes.Unit_program.check_finished program;
   Cpp_passes.Unit_program.install program;
   List.iter Base.Table.demand_header
@@ -1914,7 +1914,7 @@ let generate_ahead cx u s =
      body can depend on what happened to be generated before it. *)
   if Base.Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
-    Cpp_passes.Unit_program.refinish ~check_control:Control_to_cpp_ir.check_lowered u (finishing (List.rev aheads));
+    Cpp_passes.Unit_program.refinish ~check_control:Control_to_cpp.Lower.check_lowered u (finishing (List.rev aheads));
     ignore @@ walk_as_rendered cx ~reversed:true ~modtype:(Cpp_ind.modtype_concept cx)
       ~after_module:(fun ~module_ frame _ ->
         convert_eponymous_record_fields cx ~module_ frame;
