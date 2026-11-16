@@ -25,6 +25,14 @@ type t = {
   pointer_fields : Pointer_fields.t;
       (** The fields each constructor struct stores behind the pointer, as
           the earlier units and the unit's own planning decided them. *)
+  unmerged_wrappers : Names.ModPath.t CString.Map.t;
+      (** The wrapper structs that hold declarations, and so are not merged
+          with their eponymous inductive's struct, by name, with the module
+          each wraps. *)
+  accessors : Struct_plan.accessors;
+      (** The constants written as accessor functions. *)
+  nested_structs : Struct_plan.nested_structs;
+      (** The structs written inside another struct, by name. *)
   scopes : Scope_plan.bound;
       (** How a definition written outside its struct's body names the
           struct, and the other facts of the unit's scope plan: none until

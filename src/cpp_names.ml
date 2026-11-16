@@ -281,7 +281,7 @@ let promoted_at (c : render_ctx) r =
     at the position [c]: [r] is promoted there ({!promoted_at}), or no
     declaration was queued against its wrapper.  A merged wrapper is spelled
     [List<A>], an unmerged one [List::list<A>]. *)
-let merged_at c r = promoted_at c r || not (in_unmerged_wrapper r)
+let merged_at c r = promoted_at c r || not (in_unmerged_wrapper c.unit r)
 
 (** {2 Name predicates and inductive/enum naming} *)
 
@@ -608,13 +608,13 @@ let struct_scopes_for (ctx : render_ctx) r n =
     type.  Naming the global one [::Nat] is unambiguous wherever it appears --
     including inside the global struct itself -- so no other name has to move.
 
-    The nested names are the plan's, bound before anything is printed
-    ({!Cpp_state.with_nested_struct_names}); the printer checks, under
+    The nested names are the plan's, in the unit's context [u] before
+    anything is printed ({!Unit_context.t.nested_structs}); the printer checks, under
     [CRANE_CHECK_IR], that it printed exactly those. *)
-let global_scopes_for r n =
+let global_scopes_for u r n =
   match r with
   | GlobRef.IndRef _ when not (Cpp_name.is_qualified n) ->
-    if Cpp_state.is_shadowed_global_name (Cpp_name.to_string n) r then [Cpp_name.Global] else []
+    if Cpp_state.is_shadowed_global_name u (Cpp_name.to_string n) r then [Cpp_name.Global] else []
   | _ -> []
 
 let wrapper_qualify = Cpp_state.wrapper_qualify
@@ -754,11 +754,11 @@ let live_value_reference ctx x : Cpp_resolution.reference =
 (* {!access} as the resolver answers it: the accessors planned before
    rendering ({!Cpp.plan_accessors}), recorded by module and label, and by
    canonical name. *)
-let live_access layout x : Cpp_resolution.access =
+let live_access (u : Unit_context.t) x : Cpp_resolution.access =
   let x_mp = modpath_of_r x in
   let x_lbl = label_of_r x in
   let rec resolve_mp mp =
-    match Module_plan.functor_app_source layout mp with
+    match Module_plan.functor_app_source u.modules mp with
     | Some source -> resolve_mp source (* iterate to fixpoint *)
     | None -> (
       match mp with
@@ -772,7 +772,7 @@ let live_access layout x : Cpp_resolution.access =
     List.exists
       (fun (reg_mp, reg_lbl) -> Label.equal x_lbl reg_lbl
         && (ModPath.equal x_mp reg_mp || ModPath.equal resolved_x_mp reg_mp))
-      (Cpp_state.template_static_accessor_names ())
+      (Cpp_state.template_static_accessor_names u)
   in
   (* A constant reached through a module alias is the target's own, which
      its canonical name says.  One reached through a functor parameter has
@@ -781,10 +781,10 @@ let live_access layout x : Cpp_resolution.access =
   let accessor =
     planned
     || (match x with
-       | GlobRef.ConstRef c -> Cpp_state.is_template_static_accessor_constant c
+       | GlobRef.ConstRef c -> Cpp_state.is_template_static_accessor_constant u c
        | _ -> false)
     || Common.under_mp_bound x_mp
-       && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) (Cpp_state.template_static_accessor_names ())
+       && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) (Cpp_state.template_static_accessor_names u)
   in
   if not accessor then Variable else if Common.under_mp_bound x_mp then Either_form else Accessor
 
@@ -1034,7 +1034,7 @@ let inductive_value_name ctx v x =
   else if needs_ns then
     if merged_at ctx x then
       (* Merged non-local inductive: use capitalized name directly *)
-      List.fold_right Cpp_name.within (global_scopes_for x ns_name) ns_name
+      List.fold_right Cpp_name.within (global_scopes_for ctx.unit x ns_name) ns_name
     else (* Unmerged non-local inductive: Wrapper::inner *)
       Cpp_name.inside ns_name (fun s -> Cpp_name.Class s) type_name
   else if force then capitalize_initial type_name
@@ -1072,7 +1072,7 @@ let unqualified_head head : Cpp_resolution.head = {outer = []; head; typename = 
 (* The head of the type [Core.Type.Global_app (r, _, _)] that no custom mapping inlines. *)
 let live_glob_head ctx r : Cpp_resolution.head =
   let bare = inductive_type_name ctx r in
-  let enclosing = struct_scopes_for ctx r bare @ global_scopes_for r bare in
+  let enclosing = struct_scopes_for ctx r bare @ global_scopes_for ctx.unit r bare in
   (* The wrapper qualifier is the last resort: the two qualifiers above say
      where the name lives whenever they say anything, and stacking this one
      on top of them spells the same struct twice. *)
@@ -1128,11 +1128,13 @@ let live_inductive_head ctx r : Cpp_resolution.head =
       (* A file whose declarations were folded into a struct keeps its
          inductives there too, so the struct is their scope -- the same
          qualifier a call into that file already gets. *)
-      let qualified = if Cpp_state.is_nested_struct_ref r then wrapper_qualify ctx.unit.modules r cap else cap in
+      let qualified =
+        if Cpp_state.is_nested_struct_ref ctx.unit r then wrapper_qualify ctx.unit.modules r cap else cap
+      in
       if not (Cpp_name.equal qualified cap) then unqualified_head qualified
-      else {(unqualified_head cap) with outer = global_scopes_for r cap}
+      else {(unqualified_head cap) with outer = global_scopes_for ctx.unit r cap}
   else if needs_ns then unqualified_head (Cpp_name.inside name class_ type_name)
-  else {(unqualified_head type_name) with outer = global_scopes_for r type_name}
+  else {(unqualified_head type_name) with outer = global_scopes_for ctx.unit r type_name}
 
 (* {!type_head} as the resolver writes it at [c]. *)
 let live_type_head c (form : Cpp_resolution.head_form) r =
@@ -1183,7 +1185,7 @@ let rec live_name c (key : Cpp_resolution.key) =
       | Enumerator_value -> enum_name_at ctx (global_name ctx Type r) r
       | Case_label -> (type_head ctx Glob_head r).head
     in
-    List.fold_right Cpp_name.within (global_scopes_for r n) n
+    List.fold_right Cpp_name.within (global_scopes_for c.unit r n) n
   | Type_head _ | Value_reference _ | Value_access _ | Read_by_a_function _ | Held_back_concept _
   | Out_of_line_scope _ ->
     CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is not a name.")
@@ -1209,7 +1211,7 @@ and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   | Type_head (form, r) -> Head (live_namers.head c form r)
   | Inline_custom r -> Inline (live_inline_custom_text r)
   | Value_reference r -> Reference (live_value_reference {c with names = Naming_live live_namers} r)
-  | Value_access r -> Access (live_access c.unit.modules r)
+  | Value_access r -> Access (live_access c.unit r)
   | Read_by_a_function r -> Holds (Cpp_state.read_by_a_function r)
   | Held_back_concept r -> Holds (class_concept_held_back c r)
   | Out_of_line_scope r -> Scope (Scope_plan.of_declaration c.unit.modules c.unit.scopes r)

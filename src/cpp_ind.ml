@@ -535,7 +535,7 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
                      planned into the wrapper. *)
                   let merges =
                     (match decl with Struct _ -> true | _ -> false)
-                    && not (Cpp_state.in_unmerged_wrapper names.(i))
+                    && not (Cpp_state.in_unmerged_wrapper (Translation_state.unit_context ()) names.(i))
                   in
                   Namespace (Some {ref_ = names.(i); merges}, [decl])
                 else decl

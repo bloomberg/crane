@@ -212,8 +212,10 @@ let spec_is_hoistable ~module_ (spec : Cpp_ir.Resolved.Decl.t) : bool =
 
 (* Whether the module [mp] is rendered outside every struct, as planned
    ({!Scope_plan.nested}). *)
-(* The layout of the unit being generated ({!Unit_context.t.modules}). *)
-let layout () = (Translation_state.unit_context ()).modules
+(* The context of the unit being generated, and its layout
+   ({!Unit_context.t.modules}). *)
+let unit_context () = Translation_state.unit_context ()
+let layout () = (unit_context ()).modules
 
 let outside_every_struct scopes mp = not (Scope_plan.nested scopes mp)
 
@@ -2043,7 +2045,7 @@ let plan_file_layout (u : Unit_context.t) s =
       (fun (_, d') ->
         List.iter
           (fun (wrapper_ref, name) ->
-            match unmerged_wrapper name with
+            match unmerged_wrapper u name with
             | Some wrapped ->
               homes := (position mp, position wrapped, {wrapper = name; wrapper_ref; wrapped; home = d}) :: !homes
             | None -> () )
@@ -2827,13 +2829,13 @@ let plan_nested_structs s =
      ({!Cpp_names.merged_at}), which spells the inductive the way
      the declaration does. *)
   let promoted _ = false in
-  let merged r = not (in_unmerged_wrapper r) in
+  let merged r = not (in_unmerged_wrapper (unit_context ()) r) in
   let inductives ~in_struct ~local kn (ind : Core.Inductive.t) =
     List.concat
       (List.mapi
          (fun i _ ->
            let r = GlobRef.IndRef (kn, i) in
-           if is_custom r || is_monad r || not (in_struct || in_unmerged_wrapper r) then []
+           if is_custom r || is_monad r || not (in_struct || in_unmerged_wrapper (unit_context ()) r) then []
            else
              match ind.kind with
              | Core.Inductive.Kind.Type_class _ -> []
@@ -3155,7 +3157,7 @@ let concept_prereqs ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
             (fun r ->
               Ref.User.Set.mem r complete
               || Ref.User.Set.mem r needed
-                 && (Cpp_state.in_unmerged_wrapper r || held_in_collision_struct mp) )
+                 && (Cpp_state.in_unmerged_wrapper (unit_context ()) r || held_in_collision_struct mp) )
             (packet_refs kn ind)
         then Some l
         else None )
@@ -3485,7 +3487,7 @@ let do_struct_with_decl_tracking u ~is_header f s =
               pp_wrapper_module_dual ~is_header top mp func_sels
             in
             current_structure_decls := old_decls;
-            if is_header && Cpp_ast.body_is_empty p_specs = Option.has_some (unmerged_wrapper name) then
+            if is_header && Cpp_ast.body_is_empty p_specs = Option.has_some (unmerged_wrapper u name) then
               Probe.violation "unmerged wrappers"
                 Pp.(
                   str "the wrapper " ++ str name

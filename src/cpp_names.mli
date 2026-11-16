@@ -188,8 +188,9 @@ val typename_prefix_for : Cpp_state.render_ctx -> Cpp_name.t -> Pp.t
 val struct_scopes_for : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
 
 (** The global-scope qualifier needed in front of an inductive's type name,
-    written otherwise as given, where a nested struct shadows it. *)
-val global_scopes_for : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
+    written otherwise as given, where a nested struct of the unit given
+    shadows it. *)
+val global_scopes_for : Unit_context.t -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
 
 (** {!Cpp_state.wrapper_qualify}. *)
 val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t

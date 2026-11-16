@@ -691,40 +691,17 @@ let read_by_a_function r =
   | Some s -> Ref.Can.Set.mem r s
   | None -> false
 
-type accessors = {
-  accessor_names : (ModPath.t * Label.t) list;
-  accessor_constants : KerName.t list;
-}
+type accessors = Struct_plan.accessors
 
-let no_accessors = {accessor_names = []; accessor_constants = []}
+let no_accessors = Struct_plan.no_accessors
+let add_accessor = Struct_plan.add_accessor
+let add_accessor_ref = Struct_plan.add_accessor_ref
 
-let add_accessor a mp lbl =
-  let known (mp', lbl') = ModPath.equal mp mp' && Label.equal lbl lbl' in
-  if List.exists known a.accessor_names then a else {a with accessor_names = (mp, lbl) :: a.accessor_names}
+let template_static_accessor_names (u : Unit_context.t) = u.accessors.accessor_names
 
-let add_accessor_ref a r =
-  let a = add_accessor a (Table.modpath_of_r r) (Table.label_of_r r) in
-  match r with
-  | GlobRef.ConstRef c ->
-    let kn = Constant.canonical c in
-    if List.mem kn a.accessor_constants then a else {a with accessor_constants = kn :: a.accessor_constants}
-  | _ -> a
+let is_template_static_accessor_constant (u : Unit_context.t) c = Struct_plan.is_accessor_constant u.accessors c
 
-(* The accessors, for the extent of a unit ({!with_accessors}). *)
-let accessors = ref no_accessors
-
-let () =
-  Table.register_census "template_static_accessors" (fun () -> List.length !accessors.accessor_names);
-  Table.register_census "template_static_accessor_kns" (fun () -> List.length !accessors.accessor_constants)
-
-let with_accessors a f = State.bind accessors a f
-
-let template_static_accessor_names () = !accessors.accessor_names
-
-let is_template_static_accessor_constant c = List.mem (Constant.canonical c) !accessors.accessor_constants
-
-let is_template_static_accessor mp lbl =
-  List.exists (fun (mp', lbl') -> ModPath.equal mp mp' && Label.equal lbl lbl') !accessors.accessor_names
+let is_template_static_accessor (u : Unit_context.t) mp lbl = Struct_plan.is_accessor u.accessors mp lbl
 
 
 (** Track eponymous type info for method generation. When a module M contains an
@@ -940,16 +917,7 @@ let sn () = !std_names
     which is what makes it safe to read from a [.cpp] body printed before the
     [.h] declares the name. *)
 
-(** The wrapper structs that hold declarations of their module's and so
-    cannot be merged with the eponymous inductive's struct, by struct name,
-    with the module each wraps; planned ({!Cpp.plan_unmerged_wrappers}). *)
-let unmerged_wrappers : ModPath.t CString.Map.t ref = ref CString.Map.empty
-
-let () = Table.register_census "unmerged_wrappers" (fun () -> CString.Map.cardinal !unmerged_wrappers)
-
-let with_unmerged_wrappers m f = State.bind unmerged_wrappers m f
-
-let unmerged_wrapper name = CString.Map.find_opt name !unmerged_wrappers
+let unmerged_wrapper (u : Unit_context.t) name = CString.Map.find_opt name u.unmerged_wrappers
 
 (** Whether the inductive [r] is written inside a wrapper that holds other
     declarations, and so is spelled [List::list] rather than [List].
@@ -960,55 +928,21 @@ let unmerged_wrapper name = CString.Map.find_opt name !unmerged_wrappers
     a functor parameter is the parameter's member, in no wrapper; and a
     separately extracted file only plans its own wrappers, so a type of
     another file is not in one of them. *)
-let in_unmerged_wrapper_named short r =
+let in_unmerged_wrapper_named u short r =
   let mp = modpath_of_r r in
   (not (Common.under_mp_bound mp))
   &&
-  match unmerged_wrapper (String.capitalize_ascii short) with
+  match unmerged_wrapper u (String.capitalize_ascii short) with
   | None -> false
   | Some wrapped ->
     (not (Common.get_force_cross_file_qualification ()))
     || ModPath.equal (base_mp mp) (base_mp wrapped)
 
-let in_unmerged_wrapper r = in_unmerged_wrapper_named (Common.pp_global_name Type r) r
+let in_unmerged_wrapper u r = in_unmerged_wrapper_named u (Common.pp_global_name Type r) r
 
-(** What a nested struct name was emitted for. A Rocq module has no
-    [GlobRef.t], so it is identified by its module path instead -- which also
-    covers the types declared inside it, since an eponymous record merged into
-    the module struct is emitted as that same nested struct. *)
-type nested_struct_owner = Global of GlobRef.t | Module of ModPath.t
+type nested_struct_owner = Struct_plan.nested_struct_owner = Global of GlobRef.t | Module of ModPath.t
 
-(** C++ names of the structs emitted as members of an enclosing struct, mapped
-    to every owner they stand for, for the extent of a unit
-    ({!with_nested_struct_names}). Bound from the plan before anything is
-    printed; the printer checks, under [CRANE_CHECK_IR], that it printed
-    exactly these ({!printed_nested_struct}).
-
-    A nested struct shadows any global-scope type of the same name for every
-    unqualified lookup from inside its enclosing struct;
-    {!Cpp_names.global_scope_qualifier_for} consults this through
-    {!is_shadowed_global_name} to decide when the global one must be spelled
-    [::Name]. One name can map to several references -- sibling modules may
-    each declare a type [t] -- which is why the shadowed reference has to be
-    identified rather than assumed. *)
-let nested_struct_names : nested_struct_owner list CString.Map.t ref = ref CString.Map.empty
-
-let () = Table.register_census "nested_struct_names" (fun () -> CString.Map.cardinal !nested_struct_names)
-
-let with_nested_struct_names m f = State.bind nested_struct_names m f
-
-let nested_struct_owner_equal a b =
-  match (a, b) with
-  | Global x, Global y -> Common.globref_equal x y
-  | Module x, Module y -> ModPath.equal x y
-  | _ -> false
-
-(** Whether [owner] is the nested struct that [r] is itself emitted as, either
-    because [r] is that struct or because [r] is a member of the module that
-    is. *)
-let nested_struct_owner_covers r = function
-  | Global r' -> Common.globref_equal r r'
-  | Module mp -> ModPath.equal mp (modpath_of_r r)
+let nested_struct_owner_equal = Struct_plan.nested_struct_owner_equal
 
 (** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]:
     the unit's planned ones must be exactly these. *)
@@ -1025,17 +959,15 @@ let printed_nested_structs : (string * nested_struct_owner) list ref = State.cel
 let printed_nested_struct name owner =
   if Probe.checking () then printed_nested_structs := (name, owner) :: !printed_nested_structs
 
-let add_nested_struct_name m (name, owner) =
-  let prev = Option.default [] (CString.Map.find_opt name m) in
-  if List.exists (nested_struct_owner_equal owner) prev then m else CString.Map.add name (owner :: prev) m
+let add_nested_struct_name = Struct_plan.add_nested_struct_name
 
 (** Whether [r] is itself emitted as a struct nested inside another one --
     the case where its own name does not reach a use written outside that
     struct, so the reference needs the enclosing struct's qualifier. *)
-let is_nested_struct_ref r =
+let is_nested_struct_ref (u : Unit_context.t) r =
   CString.Map.exists
     (fun _name owners -> List.exists (function Global r' -> Common.globref_equal r r' | _ -> false) owners)
-    !nested_struct_names
+    u.nested_structs
 
 (** Whether [r], rendered unqualified as [name], is shadowed by some nested
     struct of the same name. A reference that is itself emitted as a nested
@@ -1043,16 +975,16 @@ let is_nested_struct_ref r =
     point at global scope, where it does not live.  Under separate extraction
     each file is a namespace of its own, so only a nested struct of [r]'s
     file can shadow [r], though the table holds every unit's. *)
-let is_shadowed_global_name name r =
+let is_shadowed_global_name (u : Unit_context.t) name r =
   let same_file = function
     | Global r' -> ModPath.equal (base_mp (modpath_of_r r')) (base_mp (modpath_of_r r))
     | Module mp -> ModPath.equal (base_mp mp) (base_mp (modpath_of_r r))
   in
   let may_shadow owner = (not (Common.get_force_cross_file_qualification ())) || same_file owner in
-  match CString.Map.find_opt name !nested_struct_names with
+  match CString.Map.find_opt name u.nested_structs with
   | Some owners ->
     let owners = List.filter may_shadow owners in
-    owners <> [] && not (List.exists (nested_struct_owner_covers r) owners)
+    owners <> [] && not (List.exists (Struct_plan.nested_struct_owner_covers r) owners)
   | None -> false
 
 (** The struct a bystander [mp] keeps inside its collision wrapper: its

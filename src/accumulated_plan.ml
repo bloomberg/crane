@@ -25,13 +25,16 @@ let start ~accessors =
     nested_structs = CString.Map.empty;
     instance_promoted_types = GlobRef.Map.empty }
 
-let context t (u : Unit_context.t) = {u with modules = t.modules; pointer_fields = t.pointer_fields}
+let context t (u : Unit_context.t) =
+  { u with
+    modules = t.modules;
+    pointer_fields = t.pointer_fields;
+    unmerged_wrappers = t.unmerged_wrappers;
+    accessors = t.accessors;
+    nested_structs = t.nested_structs }
 
 let bind t f =
-  Cpp_state.with_unmerged_wrappers t.unmerged_wrappers @@ fun () ->
   Table.with_promoted_inductives t.promoted_inductives @@ fun () ->
-  Cpp_state.with_accessors t.accessors @@ fun () ->
-  Cpp_state.with_nested_struct_names t.nested_structs @@ fun () ->
   Table.with_instance_promoted_types t.instance_promoted_types f
 
 let for_next_unit t = {t with modules = Module_plan.for_next_unit t.modules}

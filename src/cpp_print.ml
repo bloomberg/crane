@@ -2337,7 +2337,7 @@ and pp_cpp_fields_with_vis ~(struct_name : Pp.t) ctx env fields =
     @param expr_pp  already pretty-printed initializer expression *)
 let pp_meyers_singleton ctx env id (ty : ty) expr_pp =
   if Probe.checking () then
-    if not (is_template_static_accessor (modpath_of_r id) (label_of_r id)) then
+    if not (is_template_static_accessor ctx.unit (modpath_of_r id) (label_of_r id)) then
       Probe.violation "template static accessors"
         Pp.(str "the accessor " ++ GlobRef.print id ++ str " was printed without being planned");
   let bare_ty =
@@ -2375,7 +2375,7 @@ let nspace_merges ctx (w : I.Decl.Namespace.wrapper) (members : decl list) =
   ( if Probe.checking () then
       let asked =
         (match members with [Struct _] -> true | _ -> false)
-        && not (in_unmerged_wrapper_named (short_name ctx Type w.ref_) w.ref_)
+        && not (in_unmerged_wrapper_named ctx.unit (short_name ctx Type w.ref_) w.ref_)
       in
       if asked <> w.merges then
         Probe.violation "wrapper merges"

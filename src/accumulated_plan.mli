@@ -39,12 +39,12 @@ type t = {
 val start : accessors:Cpp_state.accessors -> t
 
 (** [context t u] is the unit's context [u] holding the facts of [t] its
-    readers read off it: the layout and the pointer fields. *)
+    readers read off it: the layout, the pointer fields, the unmerged
+    wrappers, the accessors and the nested structs. *)
 val context : t -> Unit_context.t -> Unit_context.t
 
 (** [bind t f] is [f ()] with each other fact of [t] the one its readers
-    answer from ({!Cpp_state.with_unmerged_wrappers}, {!Table.with_promoted_inductives},
-    {!Cpp_state.with_accessors}, {!Cpp_state.with_nested_struct_names},
+    answer from ({!Table.with_promoted_inductives},
     {!Table.with_instance_promoted_types}). *)
 val bind : t -> (unit -> 'a) -> 'a
 
