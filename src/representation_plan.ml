@@ -9,7 +9,7 @@ open Translation_state
 open Type_util
 open Core_query
 
-(* What decided a binder's C++ type, as {!Translation_state.binder_origin}
+(* What decided a binder's C++ type, as {!Translation_state.Binder_origin}
    says for the recorded one: the conversion of its Core type where it is
    bound, or the instantiation a match pinned down for a pattern binder. *)
 type origin =
@@ -21,7 +21,7 @@ type origin =
 type scope = {
   lex : Lexenv.t;
   planned : (Cpp_ir.Lowered.Type.t * origin) option list;
-  kinds : binder_kind list;
+  kinds : Binder_kind.t list;
 }
 
 (* Whether a planned type is a box. *)
@@ -66,7 +66,7 @@ let rec slot_domains (t : Cpp_ir.Lowered.Type.t) =
    slot's domains [slot], in source order, where the slot declares a
    signature; one not emitted at the conversion of its Core type. *)
 let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
-  let scope = push Kparameter ids scope in
+  let scope = push Binder_kind.Parameter ids scope in
   let n = List.length ids in
   let slot = Option.bind slot_ty slot_domains in
   let emitted i ty =
@@ -265,7 +265,7 @@ let region ~outer body =
             (Core_binder.Branch (occ, 0), i, {pr_boxed = boxed r; pr_bound_boxed = boxed b})
             :: !found )
         (List.combine retyped bound);
-      let inner = push Kpattern (List.rev ids) scope in
+      let inner = push Binder_kind.Pattern (List.rev ids) scope in
       walk {inner with planned = List.rev retyped @ scope.planned} body
     | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; occurrence = occ} ->
       walk scope scrut;
@@ -286,7 +286,7 @@ let region ~outer body =
       in
       Array.iteri
         (fun bi {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} ->
-          let inner = push Kpattern (List.rev ids) scope in
+          let inner = push Binder_kind.Pattern (List.rev ids) scope in
           let inner =
             match pat with
             | Core.Pattern.Constructor {constructor = r; _} when ids <> [] ->
@@ -488,7 +488,7 @@ let region ~outer body =
       let ty =
         if x <> Core.Binder_name.Anonymous && reads_boxed_component scope a then
           Core.Type.Erased Core.Erasure_reason.Type_argument else ty in
-      walk (push Klet [(x, ty)] scope) body
+      walk (push Binder_kind.Let [(x, ty)] scope) body
     (* Any other lambda's binders at the types they are annotated with.
        Lowering also declares a parameter by the C++ slot the lambda fills --
        [const auto &], or [std::any] where the slot's domain is a box --
@@ -503,7 +503,8 @@ let region ~outer body =
        as a lambda's. *)
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let fs = Core.Recursion.Group.functions rec_group and defs = Core.Recursion.Group.bodies rec_group in
-      let scope = push Kfix (List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs)) scope in
+      let fixes = List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs) in
+      let scope = push Binder_kind.Fix fixes scope in
       if
         Type_util.own_type_variables ~n_outer:(List.length (!tctx).lexical.current_type_vars)
           (List.map snd (Array.to_list fs))
@@ -511,12 +512,12 @@ let region ~outer body =
         Array.iter
           (fun d ->
             let ids, body = Core_util.collect_lams d in
-            walk (push Kparameter ids scope) body )
+            walk (push Binder_kind.Parameter ids scope) body )
           defs
       else Array.iter (walk scope) defs
     (* A read: whatever its binder is planned. *)
     | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
-      let rd_kind = Option.default Kouter (List.nth_opt scope.kinds (i - 1)) in
+      let rd_kind = Option.default Binder_kind.Outer (List.nth_opt scope.kinds (i - 1)) in
       reads := (occ, {rd_boxed = boxed (planned scope i);
                       rd_kind;
                       rd_type = Option.map fst (planned scope i)}) :: !reads
@@ -541,7 +542,7 @@ let region ~outer body =
           | _ -> None )
         | _ -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding )
   in
-  let scope = {lex = outer; planned = outer_planned; kinds = List.init depth (fun _ -> Kouter)} in
+  let scope = {lex = outer; planned = outer_planned; kinds = List.init depth (fun _ -> Binder_kind.Outer)} in
   (* A lambda the region returns is written against the region's return
      type. *)
   ( match (strip_magic body, return) with

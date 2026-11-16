@@ -80,6 +80,25 @@ type env_binder = Lexenv.binder = {
   eb_role : binder_role;
 }
 
+(** What bound the binder a variable read reads. *)
+module Binder_kind = struct
+  type t =
+    | Outer  (** bound outside the region *)
+    | Parameter  (** a lambda's parameter *)
+    | Let
+    | Fix  (** a local fixpoint's function *)
+    | Pattern  (** a pattern's, or a record projection's *)
+end
+
+(** What decided a binder's C++ type, and so which answer wins when both are
+    available: an instantiation a pattern match pinned down is more precise
+    than the type the binder was given where it was bound. *)
+module Binder_origin = struct
+  type t =
+    | Binding  (** Assigned at the binding site, from the binder's Core type *)
+    | Pattern  (** Pinned down by the scrutinee's instantiation in a branch *)
+end
+
 (** A pattern binder's representation as {!Representation_plan} plans it:
     whether it holds a box.  [pr_bound_boxed] is whether it holds a box at
     the Core type it is bound at, nothing pinned down: how the reuse arm,
@@ -95,24 +114,9 @@ type planned_repr = {
     is planned at one. *)
 and planned_read = {
   rd_boxed : bool;
-  rd_kind : binder_kind;
+  rd_kind : Binder_kind.t;
   rd_type : Cpp_ir.Lowered.Type.t option;
 }
-
-(** What bound the binder a variable read reads. *)
-and binder_kind =
-  | Kouter  (** bound outside the region *)
-  | Kparameter  (** a lambda's parameter *)
-  | Klet
-  | Kfix  (** a local fixpoint's function *)
-  | Kpattern  (** a pattern's, or a record projection's *)
-
-(** What decided a binder's C++ type, and so which answer wins when both are
-    available: an instantiation a pattern match pinned down is more precise
-    than the type the binder was given where it was bound. *)
-and binder_origin =
-  | Bbinding  (** Assigned at the binding site, from the binder's Core type *)
-  | Bpattern  (** Pinned down by the scrutinee's instantiation in a branch *)
 
 (** Mode for ITree effect extraction: sequential erases the tree,
     reified preserves it as [shared_ptr<ITree<R>>] ({!Core_effects.mode}). *)
@@ -253,17 +257,17 @@ type lexical = {
   (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
 
-      A binder is typed once, where it is bound ({!Bbinding}, written by
+      A binder is typed once, where it is bound ({!Binder_origin.Binding}, written by
       [push_binders]); a pattern match that pins a field down more precisely
       than its definition-site type says -- matching [SigT<Tag,
       std::function<any(any)>>] records [Function (\[Any\], Any)] for the
-      function field -- overrides it ({!Bpattern}, written by
+      function field -- overrides it ({!Binder_origin.Pattern}, written by
       [populate_erased_field_env]).  Whether a binder is boxed is read off
       this map rather than tracked beside it, so the two answers cannot drift
       apart.
 
       Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
-  cpp_binder_types : (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t;
+  cpp_binder_types : (Cpp_ir.Lowered.Type.t * Binder_origin.t) IntMap.t;
   (** The C++ types a declaration's head declares its innermost parameters
      at, innermost first, beside the depth of the binder stack they were
      pushed at: what a region generated directly in that scope plans those

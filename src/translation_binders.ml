@@ -13,7 +13,7 @@ open Type_util
 
 (** Binder-type state: {!Translation_state.cpp_binder_types}, every binder's
     C++ type tagged with what decided it. *)
-type binder_env = (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t
+type binder_env = (Cpp_ir.Lowered.Type.t * Binder_origin.t) IntMap.t
 
 (** Strip the const/reference decoration a parameter type carries, leaving the
     type of the value the binder denotes.  [const auto &] assigns [Tauto]:
@@ -27,7 +27,7 @@ let rec strip_param_wrappers : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = 
     instantiation the branch pinned down is the more precise of the two. *)
 let pinned_by_pattern i =
   match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
-  | Some (_, Bpattern) -> true
+  | Some (_, Binder_origin.Pattern) -> true
   | _ -> false
 
 (** The C++ type the binder at de Bruijn index [i] was decided to have: the
@@ -43,7 +43,7 @@ let binder_cpp_type i : Cpp_ir.Lowered.Type.t option =
     had, not the [std::any] it is actually stored as. *)
 let pattern_binder_type i : Cpp_ir.Lowered.Type.t option =
   match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
-  | Some (t, Bpattern) -> Some t
+  | Some (t, Binder_origin.Pattern) -> Some t
   | _ -> None
 
 (** Save the current binder-type state for later restoration. *)
@@ -62,12 +62,12 @@ let restore_erased_env saved = set_lexical (fun l -> { l with cpp_binder_types =
 let record_binder_type i (t : Cpp_ir.Lowered.Type.t) =
   let boxed_by_pattern =
     match IntMap.find_opt i (!tctx).lexical.cpp_binder_types with
-    | Some (Obligation Opaque_type, Bpattern) -> false
-    | Some (t', Bpattern) -> Translation_types.resolves_to_any_type t'
+    | Some (Obligation Opaque_type, Binder_origin.Pattern) -> false
+    | Some (t', Binder_origin.Pattern) -> Translation_types.resolves_to_any_type t'
     | _ -> false
   in
   if not boxed_by_pattern then
-    set_lexical (fun l -> { l with cpp_binder_types = IntMap.add i (t, Bpattern) l.cpp_binder_types })
+    set_lexical (fun l -> { l with cpp_binder_types = IntMap.add i (t, Binder_origin.Pattern) l.cpp_binder_types })
 
 (** Whether the pattern variable at de Bruijn index [i] holds a box, and so
     must be recovered with an [any_cast] before it is used at a concrete
@@ -84,11 +84,11 @@ let binder_is_boxed i =
 
 (* How a binder kind is named in probe output. *)
 let binder_kind_name = function
-  | Kouter -> "outer"
-  | Kparameter -> "parameter"
-  | Klet -> "let"
-  | Kfix -> "fix"
-  | Kpattern -> "pattern"
+  | Binder_kind.Outer -> "outer"
+  | Binder_kind.Parameter -> "parameter"
+  | Binder_kind.Let -> "let"
+  | Binder_kind.Fix -> "fix"
+  | Binder_kind.Pattern -> "pattern"
 
 (** [read_is_boxed i occ] -- whether the variable read at [occ], of the
     binder at de Bruijn index [i], holds a box: the answer the region's
@@ -246,7 +246,8 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * Core.Type.t) list) =
       | Some t
         when t <> Obligation Opaque_type && not (is_cpp_dummy_type t)
              && not (pinned_by_pattern (j + 1)) ->
-        set_lexical (fun l -> { l with cpp_binder_types = IntMap.add (j + 1) (t, Bbinding) l.cpp_binder_types })
+        set_lexical (fun l ->
+            { l with cpp_binder_types = IntMap.add (j + 1) (t, Binder_origin.Binding) l.cpp_binder_types })
       | _ -> ())
     ids
 
