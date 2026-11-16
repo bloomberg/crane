@@ -1649,8 +1649,8 @@ let check_against_plan (plan : Target_plan.t) =
     let describe (name, owner) =
       name ^ " ("
       ^ ( match owner with
-        | Cpp_state.NSref r -> Pp.string_of_ppcmds (GlobRef.print r)
-        | Cpp_state.NSmodule mp -> ModPath.to_string mp )
+        | Cpp_state.Global r -> Pp.string_of_ppcmds (GlobRef.print r)
+        | Cpp_state.Module mp -> ModPath.to_string mp )
       ^ ")"
     in
     let mem (n, o) l = List.exists (fun (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o') l in
@@ -1854,7 +1854,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
          calls [_main()->run()] to execute the ITree; in sequential mode (monad
          erased) it just calls [_main()] directly. *)
       ( match Unit_program.entry_point () with
-      | Some {entry_name = main_name; entry_struct = struct_qual; entry_runs_tree = needs_run} ->
+      | Some {name = main_name; struct_ = struct_qual; runs_tree = needs_run} ->
         let qualified_name =
           match struct_qual with
           | Some sn -> Id.print sn ++ str "::" ++ Id.print main_name
@@ -2049,7 +2049,7 @@ let derive_source_file filename =
 
 (** Core of recursive extraction: extracts the given references and module
     paths, optimizes, and writes to a monolithic output file. *)
-type export = {ex_ref : GlobRef.t; ex_name : string; ex_unit : string}
+type export = {ref : GlobRef.t; name : string; unit : string}
 
 (** The C++ expression for Rocq's [tt] under the active mappings and naming,
     written where [v] is visible. *)
@@ -2069,7 +2069,7 @@ let exports refs =
   let export r =
     let base, _ = Table.labels_of_ref r in
     let v = toplevel_visibility [base] in
-    {ex_ref = r; ex_name = Cpp_name.to_string (resolve_ref_name v Term r); ex_unit = cpp_unit v}
+    {ref = r; name = Cpp_name.to_string (resolve_ref_name v Term r); unit = cpp_unit v}
   in
   List.filter_map
     (function GlobRef.ConstRef _ as r -> Some (export r) | _ -> None)

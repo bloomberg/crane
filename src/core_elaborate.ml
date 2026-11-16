@@ -440,8 +440,8 @@ let member_template_projection ~lex (call : Elaborated_call.t) =
    dictionary, or a binder named as an instance -- at the class's type. *)
 let singleton_dictionary_head lex i =
   match Lexenv.binder lex i with
-  | Some {eb_id; eb_type; eb_role} when eb_role = Lexenv.Dictionary || Common.is_tc_instance_id eb_id -> (
-    match resolve_meta eb_type with
+  | Some {id; type_; role} when role = Lexenv.Dictionary || Common.is_tc_instance_id id -> (
+    match resolve_meta type_ with
     | Core.Type.Global_app {head = c; _} -> Option.map (fun m -> (c, m)) (Table.singleton_class_method c)
     | _ -> None )
   | _ -> None
@@ -576,7 +576,7 @@ let lambda_body_position ~n position =
   in
   {position with expected}
 
-let binder role (x, ty) = {Lexenv.eb_id = Core_util.id_of_binder_name x; eb_type = ty; eb_role = role}
+let binder role (x, ty) = {Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = role}
 
 (* The binders [ids], innermost first, as [collect_lams] returns them. *)
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex

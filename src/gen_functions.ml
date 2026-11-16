@@ -467,51 +467,53 @@ let plan_function_head ?deduced_callables ?passing ~minted n ty (temps : head_pa
     body as the signature renumbers it, under every parameter
     ({!Normalize.eta_expand}), and the head before the relaxations
     ({!plan_function_head}). *)
-type body_scope = {
-  bs_cod : Cpp_ir.Lowered.Type.t;
-      (** The C++ return type: [unit] made [void], promoted variables
-          resolved. *)
-  bs_env : env;  (** Names every parameter, for de Bruijn lookup. *)
-  bs_all_ids : (Id.t * Core.Type.t) list;
-      (** Every parameter, renamed, innermost first. *)
-  bs_all_params : (Core.Binder_name.t * Core.Type.t) list;
-      (** Every parameter as bound, innermost first: the eta-expansion ones,
-          then the body's lambdas. *)
-  bs_ids : (Id.t * Cpp_ir.Lowered.Type.t) list;
-      (** The C++ value parameters, innermost first: dictionaries and erased
-          binders left out, types wrapped by ownership. *)
-  bs_missing : (Core.Binder_name.t * Core.Type.t) list;
-      (** The parameters the body leaves to eta-expansion. *)
-  bs_b : Core.Expr.t;  (** The body, on the signature's type-variable numbering. *)
-  bs_typeclass_temps_basic : head_params;
-      (** The instance template parameters, constraints resolved. *)
-  bs_regular_temps : head_params;
-      (** The type parameters and the callable ones: what [Core.Type.Variable] index
-          resolution reads. *)
-  bs_temps : head_params;
-      (** The template head before the relaxations. *)
-  bs_minted : (Id.t * Callable_abi.minted) list;
-      (** What the builders of {!bs_temps} recorded of each parameter. *)
-  bs_promoted_var_resolutions : (Id.t * Cpp_ir.Lowered.Type.t) list;
-      (** Each promoted type variable, qualified through the instance
-          parameter that provides it. *)
-  bs_owned_flags : bool list;  (** Whether the body owns each of {!bs_all_ids}. *)
-  bs_passing : Callable_abi.passing list;
-      (** How each value parameter is passed, in declaration order. *)
-  bs_self_call_undeducible : (Id.t -> bool) option;
-      (** Under polymorphic recursion, the parameters a self-call has to
-          write although the call is not at the declaration's own
-          instantiation ({!self_call_reference}); [None] where it is. *)
-  bs_gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t ->
-    Cpp_ir.Lowered.Stmt.t list;
-      (** Generates body statements with the signature's higher-kinded
-          resolutions applied. *)
-  bs_no_pure : bool;
-      (** Whether [__attribute__((pure))] is withheld: a monadic result or a
-          body that may throw. *)
-  bs_deduced_callables : Param_pos.orig Param_pos.pos list;
-      (** The declared positions of the callables deduced as an [F &&]. *)
-}
+module Body_scope = struct
+  type t = {
+    cod : Cpp_ir.Lowered.Type.t;
+        (** The C++ return type: [unit] made [void], promoted variables
+            resolved. *)
+    env : env;  (** Names every parameter, for de Bruijn lookup. *)
+    all_ids : (Id.t * Core.Type.t) list;
+        (** Every parameter, renamed, innermost first. *)
+    all_params : (Core.Binder_name.t * Core.Type.t) list;
+        (** Every parameter as bound, innermost first: the eta-expansion ones,
+            then the body's lambdas. *)
+    ids : (Id.t * Cpp_ir.Lowered.Type.t) list;
+        (** The C++ value parameters, innermost first: dictionaries and erased
+            binders left out, types wrapped by ownership. *)
+    missing : (Core.Binder_name.t * Core.Type.t) list;
+        (** The parameters the body leaves to eta-expansion. *)
+    b : Core.Expr.t;  (** The body, on the signature's type-variable numbering. *)
+    typeclass_temps_basic : head_params;
+        (** The instance template parameters, constraints resolved. *)
+    regular_temps : head_params;
+        (** The type parameters and the callable ones: what [Core.Type.Variable] index
+            resolution reads. *)
+    temps : head_params;
+        (** The template head before the relaxations. *)
+    minted : (Id.t * Callable_abi.minted) list;
+        (** What the builders of {!Body_scope.temps} recorded of each parameter. *)
+    promoted_var_resolutions : (Id.t * Cpp_ir.Lowered.Type.t) list;
+        (** Each promoted type variable, qualified through the instance
+            parameter that provides it. *)
+    owned_flags : bool list;  (** Whether the body owns each of {!Body_scope.all_ids}. *)
+    passing : Callable_abi.passing list;
+        (** How each value parameter is passed, in declaration order. *)
+    self_call_undeducible : (Id.t -> bool) option;
+        (** Under polymorphic recursion, the parameters a self-call has to
+            write although the call is not at the declaration's own
+            instantiation ({!self_call_reference}); [None] where it is. *)
+    gen_body_stmts : env -> (Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) -> Core.Expr.t ->
+      Cpp_ir.Lowered.Stmt.t list;
+        (** Generates body statements with the signature's higher-kinded
+            resolutions applied. *)
+    no_pure : bool;
+        (** Whether [__attribute__((pure))] is withheld: a monadic result or a
+            body that may throw. *)
+    deduced_callables : Param_pos.orig Param_pos.pos list;
+        (** The declared positions of the callables deduced as an [F &&]. *)
+  }
+end
 
 (** Settle the {!body_scope} the function [n] is generated under, from its
     Core body [b].
@@ -1141,38 +1143,38 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
         regular_temps
   in
   {
-    bs_cod = cod;
-    bs_env = env;
-    bs_all_ids = all_ids;
-    bs_all_params = all_params;
-    bs_ids = ids;
-    bs_missing = missing;
-    bs_b = b;
-    bs_typeclass_temps_basic = typeclass_temps_basic;
-    bs_regular_temps = regular_temps;
-    bs_temps = temps;
-    bs_minted =
+    Body_scope.cod = cod;
+    env = env;
+    all_ids = all_ids;
+    all_params = all_params;
+    ids = ids;
+    missing = missing;
+    b = b;
+    typeclass_temps_basic = typeclass_temps_basic;
+    regular_temps = regular_temps;
+    temps = temps;
+    minted =
       minted
       @ List.mapi (fun k (_, id, _, _) -> (id, Callable_abi.Instance_param k)) typeclass_temps
       @ List.map (fun (_, _, id, i) -> (id, Callable_abi.Callable_param i)) fun_tys;
-    bs_promoted_var_resolutions = promoted_var_resolutions;
-    bs_owned_flags = owned_flags;
-    bs_passing =
+    promoted_var_resolutions = promoted_var_resolutions;
+    owned_flags = owned_flags;
+    passing =
       List.rev
         (List.map2 (fun (_, ty) (_, _, owned) -> Translation_ownership.param_passing ~owned ty) ids ids_with_owned);
-    bs_self_call_undeducible = self_call_undeducible;
-    bs_gen_body_stmts = gen_body_stmts;
-    bs_no_pure = no_pure;
-    bs_deduced_callables = deduced_callables;
+    self_call_undeducible = self_call_undeducible;
+    gen_body_stmts = gen_body_stmts;
+    no_pure = no_pure;
+    deduced_callables = deduced_callables;
   }
 
 (** The head of the function [n] generated under [scope], planned as its
     callers see it: outside the type-variable scope its body is generated in. *)
 let plan_scope_head n ty scope =
   with_type_vars [] (fun () ->
-      plan_function_head ~deduced_callables:scope.bs_deduced_callables ~passing:scope.bs_passing
-        ~minted:scope.bs_minted n ty scope.bs_temps
-        {Callable_abi.params = List.rev_map snd scope.bs_ids; ret = scope.bs_cod})
+      plan_function_head ~deduced_callables:scope.Body_scope.deduced_callables ~passing:scope.passing
+        ~minted:scope.minted n ty scope.temps
+        {Callable_abi.params = List.rev_map snd scope.ids; ret = scope.cod})
 
 (** What the relaxations of the function [n] generated under [scope]
     decided: its plan's, which was made before anything was generated.
@@ -1279,25 +1281,25 @@ let declare_planned n decl =
 let gen_dfun ~minted n b cty ty temps =
   let scope = dfun_body_scope ~minted n b cty ty temps in
   let relaxations = planned_relaxations n ty scope in
-  let rec_call = self_call_reference n ~undeducible:scope.bs_self_call_undeducible in
+  let rec_call = self_call_reference n ~undeducible:scope.self_call_undeducible in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
-    bs_env = env;
-    bs_all_ids = all_ids;
-    bs_all_params = all_params;
-    bs_missing = missing;
-    bs_b = b;
-    bs_typeclass_temps_basic = typeclass_temps_basic;
-    bs_regular_temps = regular_temps;
-    bs_owned_flags = owned_flags;
-    bs_gen_body_stmts = gen_body_stmts;
-    bs_no_pure = no_pure;
+    Body_scope.env = env;
+    all_ids = all_ids;
+    all_params = all_params;
+    missing = missing;
+    b = b;
+    typeclass_temps_basic = typeclass_temps_basic;
+    regular_temps = regular_temps;
+    owned_flags = owned_flags;
+    gen_body_stmts = gen_body_stmts;
+    no_pure = no_pure;
     _
   } =
     scope
   in
-  let cod = scope.bs_cod in
+  let cod = scope.cod in
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params: they are not Core type variables
@@ -1322,7 +1324,7 @@ let gen_dfun ~minted n b cty ty temps =
         regular_temps
     in
     let scheme_number id =
-      match List.assoc_opt id scope.bs_minted with
+      match List.assoc_opt id scope.minted with
       | Some (Callable_abi.Scheme_param i) -> Some i
       | _ -> None
     in
@@ -1347,7 +1349,7 @@ let gen_dfun ~minted n b cty ty temps =
      natIPtr)] has none, and replacing the map dropped the answer on the way
      in, so the body spelled the file-scope erased alias in a scope that knew
      the instance perfectly well. *)
-  set_lexical (fun l -> { l with promoted_var_map = scope.bs_promoted_var_resolutions @ saved_promoted_var_map });
+  set_lexical (fun l -> { l with promoted_var_map = scope.promoted_var_resolutions @ saved_promoted_var_map });
   (* Name the declaration being generated: inner fixpoints lifted out of it
      take their identity from it. *)
   let saved_decl_ref = !Table.current_decl_ref in
@@ -1438,16 +1440,16 @@ let gen_dfun ~minted n b cty ty temps =
   let owned_params =
     Translation_ownership.owned_parameters (List.length owned_flags)
       ~owned:(fun i ->
-        match List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids with
+        match List.assoc_opt (fst (List.nth all_ids i)) scope.ids with
         | Some ty -> not (Translation_ownership.declared_by_reference ty)
         | None -> List.nth owned_flags i )
-      ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.bs_ids)
+      ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.ids)
       ~ty:(fun i -> snd (List.nth all_params i))
   in
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
   let saved_return_type = (!tctx).lexical.current_cpp_return_type in
-  set_lexical (fun l -> { l with current_cpp_return_type = Some scope.bs_cod });
+  set_lexical (fun l -> { l with current_cpp_return_type = Some scope.cod });
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default [Abort] throw. *)
@@ -1455,7 +1457,7 @@ let gen_dfun ~minted n b cty ty temps =
     match b with
     | Core.Expr.Axiom_value _ when is_custom n && not (to_inline n) ->
       let custom_name = find_custom n in
-      let param_vars = List.map (fun (id, _) : Cpp_ir.Lowered.Expr.t -> Local id) scope.bs_ids in
+      let param_vars = List.map (fun (id, _) : Cpp_ir.Lowered.Expr.t -> Local id) scope.ids in
       Some [(Return (Some (Cpp_ir.Build.call (Foreign_text custom_name) param_vars)) : Cpp_ir.Lowered.Stmt.t)]
     | _ -> None
   in
@@ -1466,15 +1468,15 @@ let gen_dfun ~minted n b cty ty temps =
      {!with_function_head} for the others, through [with_method_ns_for_locals])
      before computing cty, so it's already active here. *)
   (* The guard of [Crane Guard Compare], in front of the body. *)
-  let guarded body = Translation_cpp_build.guard_compare n scope.bs_ids body in
+  let guarded body = Translation_cpp_build.guard_compare n scope.ids body in
   let definition body : Cpp_ir.Lowered.Decl.t =
     Function
       { path = {outer = (n, []); inner = []};
-        return_type = scope.bs_cod;
+        return_type = scope.cod;
         no_pure;
         constexpr = Undecided;
-        shape = Definition (List.rev scope.bs_ids, finish_fn_body scope.bs_cod (guarded (sigma_asserts @ body)));
-        binders = parameter_binders env scope.bs_ids;
+        shape = Definition (List.rev scope.ids, finish_fn_body scope.cod (guarded (sigma_asserts @ body)));
+        binders = parameter_binders env scope.ids;
         loop = None }
   in
   let inner =
@@ -1561,7 +1563,7 @@ let gen_dfun ~minted n b cty ty temps =
         | Some _, _ ->
           (* Case 1: inside a struct — keep name, register for wrapper *)
           Unit_program.record_entry_point
-            {entry_name = Id.of_string "main"; entry_struct = struct_name; entry_runs_tree = needs_run};
+            {name = Id.of_string "main"; struct_ = struct_name; runs_tree = needs_run};
           inner
         | None, false ->
           (* Case 2: top-level sequential — emit [int main()] directly.
@@ -1592,7 +1594,7 @@ let gen_dfun ~minted n b cty ty temps =
           let new_label = Label.of_id (Id.of_string "_main") in
           let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
           Unit_program.record_entry_point
-            {entry_name = Id.of_string "_main"; entry_struct = None; entry_runs_tree = needs_run};
+            {name = Id.of_string "_main"; struct_ = None; runs_tree = needs_run};
           ( match inner with
           | Function f -> Function {f with path = {outer = (new_n, []); inner = []}}
           | d -> d )
@@ -1771,12 +1773,12 @@ let gen_decl n b ty =
     recovered and type variables resolved against its Core type, its C++ type,
     its template head, and the template parameters callers must see. *)
 type function_head = {
-  fh_body : Core.Expr.t;
-  fh_cty : Cpp_ir.Lowered.Type.t;
-  fh_temps : head_params;
-  fh_minted : (Id.t * Callable_abi.minted) list;
-      (** The variable each of {!fh_temps} is declared for. *)
-  fh_tvars : Id.t list;
+  body : Core.Expr.t;
+  cty : Cpp_ir.Lowered.Type.t;
+  temps : head_params;
+  minted : (Id.t * Callable_abi.minted) list;
+      (** The variable each of {!function_head.temps} is declared for. *)
+  tvars : Id.t list;
       (** Typeclass-typed parameters first -- they become template parameters
           inside {!gen_dfun} without appearing in the C++ type, and a caller
           must see them to use the full template definition -- then the C++
@@ -1816,19 +1818,19 @@ let with_function_head n b ty k =
     scheme_params ~extra:(IntSet.union index_tvar_set (Type_util.collect_core_tvars ty)) cty
   in
   k ty
-    { fh_body = b;
-      fh_cty = cty;
-      fh_temps = temps;
-      fh_minted = minted;
-      fh_tvars = tc_param_ids @ tvars }
+    { body = b;
+      cty = cty;
+      temps = temps;
+      minted = minted;
+      tvars = tc_param_ids @ tvars }
 
 (** [gen_function n ty h] generates the function [n] under [h]: its
     definition, the environment its names were allocated in, and the template
     parameters callers see -- [h]'s, then one per callable parameter. *)
 let gen_function n ty h =
-  let f, env = gen_dfun ~minted:h.fh_minted n h.fh_body h.fh_cty ty h.fh_temps in
+  let f, env = gen_dfun ~minted:h.minted n h.body h.cty ty h.temps in
   let callable_tparams =
-    match h.fh_cty with
+    match h.cty with
     | Function (dom, _) ->
       List.filter_map
         (fun ((ty : Cpp_ir.Lowered.Type.t), i) ->
@@ -1839,7 +1841,7 @@ let gen_function n ty h =
         (List.mapi (fun i ty -> (ty, i)) dom)
     | _ -> []
   in
-  (f, env, h.fh_tvars @ callable_tparams)
+  (f, env, h.tvars @ callable_tparams)
 
 (** [plan_function ~fixpoint n b ty] is the callable plan of the function
     [n] -- [b] its body, [ty] its type -- as generating it would plan it,
@@ -1849,14 +1851,14 @@ let plan_function ~fixpoint n b ty =
   Table.with_decl_ref n @@ fun () ->
   with_function_head n b ty @@ fun ty h ->
   let plan cty =
-    let abi = plan_scope_head n ty (dfun_body_scope ~minted:h.fh_minted n h.fh_body cty ty h.fh_temps) in
+    let abi = plan_scope_head n ty (dfun_body_scope ~minted:h.minted n h.body cty ty h.temps) in
     ( if Probe.checking () then
         match Translation_types.cpp_ir_of_core_type (empty_env ()) [] ty with
         | live -> Translation_calls.check_planned_arity abi live
         | exception e when CErrors.noncritical e -> () );
     Some abi
   in
-  match h.fh_cty with
+  match h.cty with
   | Function _ as cty -> plan cty
   | cty when fixpoint -> plan cty
   | _ -> None
@@ -1867,16 +1869,16 @@ let plan_function ~fixpoint n b ty =
     other constant. *)
 let gen_decl_for_pp__inner n b ty =
   with_function_head n b ty @@ fun ty h ->
-  match h.fh_cty with
+  match h.cty with
   | Function _ ->
     let f, env, tvars = gen_function n ty h in
     (Some f, env, tvars)
   | cty when Translation_suspension.thunk_reason n = Some Translation_suspension.Throws ->
-    let body_expr = gen_expr (empty_env ()) h.fh_body in
+    let body_expr = gen_expr (empty_env ()) h.body in
     let inner = thunk n cty body_expr in
-    let ds = match h.fh_temps with [] -> inner | l -> Template (l, None, inner) in
-    (Some ds, empty_env (), h.fh_tvars)
-  | _ -> (None, empty_env (), h.fh_tvars)
+    let ds = match h.temps with [] -> inner | l -> Template (l, None, inner) in
+    (Some ds, empty_env (), h.tvars)
+  | _ -> (None, empty_env (), h.tvars)
 
 (** {!gen_decl_for_pp__inner} with [n] as the declaration being generated. *)
 let gen_decl_for_pp n b ty =
@@ -2026,9 +2028,9 @@ type generated_entity =
 
 (** A generated function, and what its file views are built from. *)
 type generated_fun = {
-  gf_entity : generated_entity;
-  gf_env : env;  (** the environment its parameters were named in *)
-  gf_lifted : Cpp_ir.Lowered.Decl.t list;  (** the helpers lifted out of its body *)
+  entity : generated_entity;
+  env : env;  (** the environment its parameters were named in *)
+  lifted : Cpp_ir.Lowered.Decl.t list;  (** the helpers lifted out of its body *)
 }
 
 (** A template's definition goes in the header, anything else's in the
@@ -2051,7 +2053,7 @@ let gen_dfuns_dual fds =
   in
   let lowered = Control_to_cpp_ir.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in
   List.map2
-    (fun ds ((_, env, tvars), lifted) -> {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted})
+    (fun ds ((_, env, tvars), lifted) -> {entity = defined ds tvars; env = env; lifted = lifted})
     lowered generated
 
 (** Generate a single Core.Decl.Value function, translating its body once. *)
@@ -2065,7 +2067,7 @@ let gen_decl_for_pp_dual__inner n b ty =
       let spec, env = gen_spec n b ty in
       (Declared spec, env)
   in
-  {gf_entity; gf_env; gf_lifted}
+  {entity = gf_entity; env = gf_env; lifted = gf_lifted}
 
 (** {!gen_decl_for_pp_dual__inner} with [n] as the declaration being
     generated. *)

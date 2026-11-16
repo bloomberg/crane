@@ -439,7 +439,7 @@ let scrutinee_consumed ty scrut branches =
   | Custom ->
     let uses =
       List.length
-        (List.filter (( = ) Foreign_template.CCscrut)
+        (List.filter (( = ) Foreign_template.Scrut)
            (Foreign_template.match_template (Table.find_custom_match branches)) )
     in
     uses <= 1 || not (spelled_in_place scrut)

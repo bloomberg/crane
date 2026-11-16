@@ -545,14 +545,14 @@ let ctor_type_of_match env (typ : Core.Type.t) (cname : GlobRef.t) : Cpp_ir.Lowe
     of the binder at de Bruijn index [i], holds a box, [var_type] gives a
     binder's Core type.  Reads no binder itself. *)
 type custom_scrutinee = {
-  cs_wrapped : bool;  (** a coercion that boxes *)
-  cs_cpp_erased : bool;  (** a variable whose binder holds a box *)
-  cs_magic : bool;  (** either, or a variable whose Core type erases to a box *)
-  cs_callee_ret_erased : bool;  (** a call whose declared codomain is a box *)
-  cs_typ : Cpp_ir.Lowered.Type.t;  (** the annotation, converted *)
-  cs_concrete : Cpp_ir.Lowered.Type.t;  (** the inductive the patterns recover, where [cs_typ] erases *)
-  cs_pair : GlobRef.t option;  (** that inductive, when it is a pair *)
-  cs_pair_any_cast : bool;  (** the pair is read back as [pair<any, any>], every field a box *)
+  wrapped : bool;  (** a coercion that boxes *)
+  cpp_erased : bool;  (** a variable whose binder holds a box *)
+  magic : bool;  (** either, or a variable whose Core type erases to a box *)
+  callee_ret_erased : bool;  (** a call whose declared codomain is a box *)
+  typ : Cpp_ir.Lowered.Type.t;  (** the annotation, converted *)
+  concrete : Cpp_ir.Lowered.Type.t;  (** the inductive the patterns recover, where [typ] erases *)
+  pair : GlobRef.t option;  (** that inductive, when it is a pair *)
+  pair_any_cast : bool;  (** the pair is read back as [pair<any, any>], every field a box *)
 }
 
 (** A spine read whole, through the coercions around its head. *)
@@ -678,14 +678,14 @@ let custom_match_scrutinee env (typ : Core.Type.t) t pv ~var_boxed ~var_type =
                | _ -> false) ) )
   in
   {
-    cs_wrapped = scrut_is_wrapped;
-    cs_cpp_erased = scrut_is_cpp_erased;
-    cs_magic = scrut_is_magic;
-    cs_callee_ret_erased = scrut_callee_ret_erased;
-    cs_typ = typ;
-    cs_concrete = concrete_match_type;
-    cs_pair = pair_g_opt;
-    cs_pair_any_cast = needs_pair_any_cast;
+    wrapped = scrut_is_wrapped;
+    cpp_erased = scrut_is_cpp_erased;
+    magic = scrut_is_magic;
+    callee_ret_erased = scrut_callee_ret_erased;
+    typ = typ;
+    concrete = concrete_match_type;
+    pair = pair_g_opt;
+    pair_any_cast = needs_pair_any_cast;
   }
 
 (** The pattern variables [ids] (innermost first) of a custom match's branch

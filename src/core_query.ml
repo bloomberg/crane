@@ -864,8 +864,8 @@ let binder_is_instance lex i =
      The declaration drops both kinds; without the second the call sites went
      on passing the one the declaration had dropped. *)
   match Lexenv.binder lex i with
-  | Some {eb_role = Dictionary; _} -> true
-  | Some {eb_type; eb_role = Value; _} -> core_ret_is_skipped eb_type
+  | Some {role = Dictionary; _} -> true
+  | Some {type_; role = Value; _} -> core_ret_is_skipped type_
   | None -> false
 
 (** Whether the Core argument [core_arg] is a type class instance (a

@@ -72,7 +72,7 @@ val region :
   outer:Lexenv.t ->
   Core.Expr.t ->
   (Core_binder.site * int * Translation_state.planned_repr) list
-  * (Core.Occurrence.t * Translation_state.planned_read) list
+  * (Core.Occurrence.t * Translation_state.Planned_read.t) list
 
 (** [check ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless the
     region's plan ({!Translation_state.lexical.representation}) boxes

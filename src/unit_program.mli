@@ -174,14 +174,14 @@ val check_finished : t -> unit
 val install : t -> unit
 
 (** A monadic [main] the unit's [.cpp] ends with an [int main()] wrapper
-    around: the function [entry_name] the wrapper calls, a member of the
-    struct [entry_struct] if there is one, and whether what it returns is a
+    around: the function [name] the wrapper calls, a member of the
+    struct [struct_] if there is one, and whether what it returns is a
     reified tree the wrapper runs ([->run()]) rather than a monad erased to
     a plain call. *)
 type entry_point = {
-  entry_name : Names.Id.t;
-  entry_struct : Names.Id.t option;
-  entry_runs_tree : bool;
+  name : Names.Id.t;
+  struct_ : Names.Id.t option;
+  runs_tree : bool;
 }
 
 (** [record_entry_point e]: generating the unit's [main] called for the

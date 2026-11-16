@@ -380,7 +380,7 @@ let rec iter_scoped f lex e =
   let bind ids lex =
     Lexenv.push
       (List.map
-         (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_binder_name x; eb_type = ty; eb_role = Lexenv.Value})
+         (fun (x, ty) -> {Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = Lexenv.Value})
          ids )
       lex
   in
@@ -509,8 +509,8 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
   let binder level = Core_binder.make ~origin ~level () in
   let dictionary level =
     match Lexenv.binder lex (Lexenv.depth lex - level) with
-    | Some {eb_role = Dictionary; _} -> true
-    | Some {eb_role = Value; _} | None -> false
+    | Some {role = Dictionary; _} -> true
+    | Some {role = Value; _} | None -> false
   in
   let dedup_passings ps =
     let same p p' =
@@ -919,7 +919,7 @@ let local_groups ~effects defs =
       let lex =
         Lexenv.push
           (List.rev_map
-             (fun (g, ty) -> {Lexenv.eb_id = g; eb_type = ty; eb_role = Lexenv.Value})
+             (fun (g, ty) -> {Lexenv.id = g; type_ = ty; role = Lexenv.Value})
              (Array.to_list ids) )
           lex
       in

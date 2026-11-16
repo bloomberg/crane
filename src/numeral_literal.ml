@@ -100,14 +100,14 @@ let rec positive expr =
    its zero constructor. *)
 let rec peano info expr =
   let index = function
-    | GlobRef.ConstructRef (ind, cidx) when GlobRef.CanOrd.equal (GlobRef.IndRef ind) info.Table.num_ind ->
+    | GlobRef.ConstructRef (ind, cidx) when GlobRef.CanOrd.equal (GlobRef.IndRef ind) info.Table.ind ->
       Some cidx
     | _ -> None
   in
   match strip_magic expr with
-  | Core.Expr.Construct {constructor = cr; arguments = []; _} when index cr = Some info.Table.num_zero_ctor ->
+  | Core.Expr.Construct {constructor = cr; arguments = []; _} when index cr = Some info.Table.zero_ctor ->
     Some Z.zero
-  | Core.Expr.Construct {constructor = cr; arguments = [inner]; _} when index cr = Some info.Table.num_succ_ctor ->
+  | Core.Expr.Construct {constructor = cr; arguments = [inner]; _} when index cr = Some info.Table.succ_ctor ->
     Option.map Z.succ (peano info inner)
   | _ -> None
 
@@ -138,7 +138,7 @@ let literal = function
 
 let fold e =
   match literal e with
-  | Some (info, n) -> Core.Expr.Numeral {inductive = info.Table.num_ind; value = n}
+  | Some (info, n) -> Core.Expr.Numeral {inductive = info.Table.ind; value = n}
   | None -> e
 
 let folds e = Option.has_some (literal e)

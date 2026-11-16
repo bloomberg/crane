@@ -29,25 +29,25 @@ open Loopify_tail
     For [cons x (cons x (stutter xs))], the outer [cons x _] and inner
     [cons x _] are each represented by one [tmc_cell_alloc]. *)
 type tmc_cell_alloc = {
-  tca_factory : expr;
+  factory : expr;
       (** The constructor factory the call names, a [Type_member] of the
           inductive, e.g. [list<T>::cons] *)
-  tca_constructor : GlobRef.t;  (** The constructor the cell is built by *)
-  tca_type : ty;
+  constructor : GlobRef.t;  (** The constructor the cell is built by *)
+  type_ : ty;
       (** The cell's type, e.g., [list<T>], as the factory call records what
           it yields: spelled as a type, which the factory's qualifier, a
           value's spelling, is not *)
-  tca_ctor_name : string;
+  ctor_name : string;
       (** The constructor struct's name
           ({!Type_util.ctor_struct_name_of_ref}), e.g. ["Cons"] *)
-  tca_rec_field_idx : int;
+  rec_field_idx : int;
       (** Index of the recursive argument (the hole) among the constructor
           args, in declared order *)
-  tca_non_rec_args : (int * expr) list;
+  non_rec_args : (int * expr) list;
       (** [(index, expr)] for non-recursive arguments, indexed the same way *)
-  tca_n_args : int;
+  n_args : int;
       (** Total number of constructor arguments *)
-  tca_ptr_fields : ptr_field list;
+  ptr_fields : ptr_field list;
       (** The fields stored as [shared_ptr] in the struct, indexed like the
           arguments and the struct's fields.  Used by {!build_cell_call} to wrap value-type args in
           [make_shared] for direct struct construction. *)
@@ -56,13 +56,15 @@ type tmc_cell_alloc = {
 (** Information about a single TMC-eligible branch: a return expression of the
     form [CtorFactory(... CtorFactory(non_rec_args, RECURSE(rec_args)) ...)].
     The cell list is outermost-first, innermost-last. *)
-type tmc_branch_info = {
-  tmc_cells : tmc_cell_alloc list;
-      (** Constructor cells, outermost first, innermost last *)
-  tmc_rec_args : expr list;
-      (** Arguments to the innermost recursive call *)
-  tmc_call : expr;  (** The innermost recursive call *)
-}
+module Branch_info = struct
+  type t = {
+    cells : tmc_cell_alloc list;
+        (** Constructor cells, outermost first, innermost last *)
+    rec_args : expr list;
+        (** Arguments to the innermost recursive call *)
+    call : expr;  (** The innermost recursive call *)
+  }
+end
 
 (** Where a loop assembles its result, decided once per function from the
     return type and the reuse policy.  Each says what [_write] points at and
@@ -149,15 +151,15 @@ let make_cell ~constructor ~factory ~cell_ty ~ctor_name args idx =
     | Some fields -> fields
     | None -> [Recursive idx]
   in
-  { tca_factory = factory;
-    tca_constructor = constructor;
-    tca_type = cell_ty;
-    tca_ctor_name = ctor_name;
-    tca_rec_field_idx = idx;
-    tca_non_rec_args =
+  { factory = factory;
+    constructor = constructor;
+    type_ = cell_ty;
+    ctor_name = ctor_name;
+    rec_field_idx = idx;
+    non_rec_args =
       List.concat (List.mapi (fun i a -> if i <> idx then [(i, a)] else []) args);
-    tca_n_args = n_args;
-    tca_ptr_fields = uptr_idxs }
+    n_args = n_args;
+    ptr_fields = uptr_idxs }
 
 (** The constructors a branch builds around a recursive call, outermost
     first, each with the argument, in its declared order, that is its hole;
@@ -243,9 +245,10 @@ let branch_along shapes check expr =
                 | Some _, None -> false
               in
               if made_of_call then
-                Option.map (fun cs -> {tmc_cells = [this]; tmc_rec_args = cs.cs_args; tmc_call = held}) (check held)
+                Option.map (fun cs -> {Branch_info.cells = [this]; rec_args = cs.args; call = held}) (check held)
               else None
-            | _ -> Option.map (fun br -> {br with tmc_cells = this :: br.tmc_cells}) (follow held call inner) )
+            | _ ->
+              Option.map (fun (br : Branch_info.t) -> {br with cells = this :: br.cells}) (follow held call inner) )
       | Some _ | None -> None )
   in
   List.find_map (fun sh -> follow expr sh.call sh.constructors) shapes
@@ -293,15 +296,15 @@ let branch_along shapes check expr =
     the write-pointer update needs to take its address rather than assign to
     it; {!patch_cell_field} is the assignment. *)
 (** The constructor struct [cell] is built as: [Type::Ctor]. *)
-let cell_struct cell : ty = Member (cell.tca_type, Id.of_string cell.tca_ctor_name)
+let cell_struct cell : ty = Member (cell.type_, Id.of_string cell.ctor_name)
 
 (** The recursive field of [cell], reached from [ptr] through [access], as
     [(object, field)]. *)
 let cell_rec_field ?(access : Cpp_ir.Expr.Access.t = Arrow) cell ptr =
-  let field_idx = cell.tca_rec_field_idx in
+  let field_idx = cell.rec_field_idx in
   let v_mut = Access_call (access, ptr, id_v_mut, []) in
   ( Variant_get (cell_struct cell, Some v_mut),
-    Common.lookup_ctor_field_name ~owner:cell.tca_constructor cell.tca_ctor_name field_idx )
+    Common.lookup_ctor_field_name ~owner:cell.constructor cell.ctor_name field_idx )
 
 (** [ptr]'s recursive field, as {!cell_rec_field} reaches it, assigned
     [val_expr]. *)
@@ -364,24 +367,24 @@ let build_cell_call ?token ?(rec_arg = Literal Null_pointer) ?(allocate = true) 
   (* The cell being built is not always of the function's return type: a
      constructor may nest one of a DIFFERENT inductive ([rnode (cons r nil)]
      wraps the recursive [rose] in a [list rose]).  Allocate at the cell's own
-     type, which [tca_type] carries. *)
-  let mk_shared_cell = Allocate (Heap, cell.tca_type) in
+     type, which [type_] carries. *)
+  let mk_shared_cell = Allocate (Heap, cell.type_) in
   (* What that allocation yields, recorded at the one place that knows it. *)
   let shared_cell_sig =
-    signature ~yields:(Shared_pointer cell.tca_type) ~nargs:1 ()
+    signature ~yields:(Shared_pointer cell.type_) ~nargs:1 ()
   in
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
-    | Some (_, _, ty, _, _) -> ty = cell.tca_type
+    | Some (_, _, ty, _, _) -> ty = cell.type_
     | None -> false
   in
   let args =
-    List.init cell.tca_n_args (fun i ->
-      if i = cell.tca_rec_field_idx then rec_arg
+    List.init cell.n_args (fun i ->
+      if i = cell.rec_field_idx then rec_arg
       else
-        match List.assoc_opt i cell.tca_non_rec_args with
+        match List.assoc_opt i cell.non_rec_args with
         | Some e when vt_ret <> None -> (
-          match List.find_opt (fun f -> ptr_field_index f = i) cell.tca_ptr_fields with
+          match List.find_opt (fun f -> ptr_field_index f = i) cell.ptr_fields with
           | Some (Boxed _) ->
             (* A boxed field holds some other inductive: allocate at the
                argument's own type. *)
@@ -416,7 +419,7 @@ let build_cell_call ?token ?(rec_arg = Literal Null_pointer) ?(allocate = true) 
                     [tok; cell_expr])
      | None -> Call (shared_cell_sig, mk_shared_cell, [cell_expr]))
   | None ->
-    Call (call_opaque, cell.tca_factory, args)
+    Call (call_opaque, cell.factory, args)
 
 (** Borrowing fix-up for the TMC loop: the scrutinee is reached through a
     pointer shadow.  See the ownership discussion in {!transform_tmc} -- under
@@ -533,12 +536,12 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
     List.mapi
       (fun k cell ->
         { cell with
-          tca_non_rec_args =
+          non_rec_args =
             (* The last declared first, the order their temporaries are
                numbered and declared in. *)
             List.rev_map
               (fun (i, e) -> if List.mem (k, i) cells_read_first then (i, bind e) else (i, e))
-              (List.rev cell.tca_non_rec_args) } )
+              (List.rev cell.non_rec_args) } )
       cells
   in
   let shadows = ref shadow_params in
@@ -693,7 +696,7 @@ let cursor_jump ?cursor ~cursor_used ~derefs ~updates varying shadow_params call
       _write = &<_cell1's recursive field>;   // advance
       <shadow updates>
     ]} *)
-let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~storage br
+let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~storage (br : Branch_info.t)
     varying shadow_params =
   let vt_ret = cell_value_type storage in
   (* 0. Perceus reuse cursor.  See {!section:reuse-cursor}: when the loop walks
@@ -701,14 +704,14 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
         the iteration's output cell is built, so it can be recycled into that
         output instead of being freed and a fresh one allocated. *)
   let stepped =
-    Option.bind cursor (fun cursor -> cursor_step ~cursor ~derefs varying shadow_params br.tmc_call br.tmc_rec_args)
+    Option.bind cursor (fun cursor -> cursor_step ~cursor ~derefs varying shadow_params br.call br.rec_args)
   in
   let cursor, step_decl, br =
     match stepped with
     | Some (({action = Recycle _; _} as step), cursor_id, field) ->
       cursor_used := true;
-      let reads, cells, rec_args = read_before_step step varying shadow_params br.tmc_cells br.tmc_rec_args in
-      (Some cursor_id, step_stmts reads field, {br with tmc_cells = cells; tmc_rec_args = rec_args})
+      let reads, cells, rec_args = read_before_step step varying shadow_params br.cells br.rec_args in
+      (Some cursor_id, step_stmts reads field, {br with cells = cells; rec_args = rec_args})
     | Some ({action = Release; _}, _, _) ->
       Probe.violation "reuse cursor" Pp.(str "a turn building cells would release the cell it leaves");
       raise Cursor_declined
@@ -720,7 +723,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
     List.mapi
       (fun i _ ->
         Id.of_string (if i = 0 then "_cell" else "_cell" ^ string_of_int i))
-      br.tmc_cells
+      br.cells
   in
   (* Link consecutive cells: outer.rec_field = inner.  For value-type returns
      the inner cell is moved into the outer, so the links are made
@@ -757,7 +760,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
       (* The cells below the first are allocated and linked as ever; the first
          is built as a value with the chain already in its recursive field, and
          becomes the root or fills the hole. *)
-      let inner_cells = List.tl br.tmc_cells and inner_names = List.tl cell_names in
+      let inner_cells = List.tl br.cells and inner_names = List.tl cell_names in
       let inner_decls =
         List.map
           (fun (cell_id, cell) ->
@@ -770,7 +773,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
         | n :: _ -> Move (Local n)
         | [] -> Literal Null_pointer
       in
-      let outer = List.hd br.tmc_cells in
+      let outer = List.hd br.cells in
       inner_decls @ inner_links
       @ [ Bind_variable
             ( List.hd cell_names,
@@ -780,7 +783,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
             ( id_node,
               Declare (Reference (Lvalue, ty), None),
               place_value ty (Move (Local (List.hd cell_names))) );
-          advance_to (innermost_hole Dot (Local id_node) br.tmc_cells) ]
+          advance_to (innermost_hole Dot (Local id_node) br.cells) ]
     | Boxed_root _ | Pointer_result _ ->
       (* Only the outermost cell may take the token: one input cell dies per
          iteration, so a nested chain still recycles exactly one of its cells. *)
@@ -789,9 +792,9 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
           (fun i (cell_id, cell) ->
             let token = if i = 0 then token else None in
             Bind_variable (cell_id, Declare (Auto, None), build_cell_call ?token ~vt_ret cell))
-          (List.combine cell_names br.tmc_cells)
+          (List.combine cell_names br.cells)
       in
-      let link_stmts = List.rev (link_cells br.tmc_cells cell_names) in
+      let link_stmts = List.rev (link_cells br.cells cell_names) in
       let outermost = Local (List.hd cell_names) in
       let patch =
         Expression
@@ -807,16 +810,16 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~st
         | Boxed_root _ ->
           (* The chain is held inside the cells, so walk down from [*_write]
              through each outer cell's recursive field. *)
-          innermost_hole Arrow (Dereference (Local id_write)) br.tmc_cells
+          innermost_hole Arrow (Dereference (Local id_write)) br.cells
         | _ ->
           innermost_hole Arrow
             (Local (List.rev cell_names |> List.hd))
-            [List.rev br.tmc_cells |> List.hd]
+            [List.rev br.cells |> List.hd]
       in
       cell_decls @ link_stmts @ [patch; advance_to hole]
   in
   let shadow_updates =
-    make_shadow_updates ~derefs shadow_params (filter_by_mask varying br.tmc_rec_args)
+    make_shadow_updates ~derefs shadow_params (filter_by_mask varying br.rec_args)
   in
   let shadow_updates =
     match cursor with None -> shadow_updates | Some cursor_id -> advance_cursor cursor_id shadow_updates in
@@ -846,7 +849,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
       match branch e with
       | Some br ->
-        jumped br.tmc_call;
+        jumped br.Branch_info.call;
         build_tmc_branch_stmts ~cursor_used ?cursor ~derefs ~storage br varying shadow_params
         @ suffix
       | None ->
@@ -855,21 +858,21 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
         [Return (Some e)]
   in
   let inner_rc =
-    { rc_check = check;
-      rc_varying = varying;
-      rc_shadow_params = shadow_params;
-      rc_jumped = jumped;
-      rc_last_reads = (fun _ _ -> []) }
+    { Loopify_tail.Loop_rewrite_config.check = check;
+      varying = varying;
+      shadow_params = shadow_params;
+      jumped = jumped;
+      last_reads = (fun _ _ -> []) }
   in
   generic_rewrite_stmt
-    { trc_inner = inner_rc;
-      trc_jump =
+    { inner = inner_rc;
+      jump =
         (fun ~derefs ~updates call args ->
           cursor_jump ?cursor ~cursor_used ~derefs ~updates varying shadow_params call args @ [Continue]);
-      trc_on_other =
+      on_other =
         (fun ~derefs e -> wrap_as_block (tmc_on_other_return ~derefs ~suffix:[Continue] e));
-      trc_rewrite_branch = Fun.id;
-      trc_detect_void_tail = false }
+      rewrite_branch = Fun.id;
+      detect_void_tail = false }
 
 (** Transform a TMC-eligible function body into a [while] loop with
     destination-passing style.
@@ -893,8 +896,8 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
   check params ret_ty body =
   let branch = branch_along shapes check in
   let planned = planned_result shapes ret_ty in
-  let { ss_varying = varying; ss_varying_params = varying_params;
-        ss_shadow_params = shadow_params; ss_subs = subs } =
+  let { Loopify_tail.Shadow_setup.varying = varying; varying_params = varying_params;
+        shadow_params = shadow_params; subs = subs } =
     build_shadow_setup ~varying ~parts tparams params
   in
   (* Shadow variable declarations.

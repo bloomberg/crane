@@ -20,9 +20,9 @@ type role =
 
 (** One binder in scope. *)
 type binder = {
-  eb_id : Names.Id.t;  (** The name it is bound under. *)
-  eb_type : Core.Type.t;  (** Its type, as written where it is bound. *)
-  eb_role : role;
+  id : Names.Id.t;  (** The name it is bound under. *)
+  type_ : Core.Type.t;  (** Its type, as written where it is bound. *)
+  role : role;
 }
 
 (** The binders in scope, innermost first. *)

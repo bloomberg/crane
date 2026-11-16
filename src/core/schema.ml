@@ -16,8 +16,8 @@ type binder_info = {
 }
 
 type raw_binder = {
-  raw_erased : Erasure_reason.t option;
-  raw_tvar : int option;
+  erased : Erasure_reason.t option;
+  tvar : int option;
 }
 
 type t = {
@@ -38,14 +38,14 @@ let max_tvar t =
   parse 0 t
 
 let make owner body raw =
-  let numbered = List.fold_left (fun m b -> Option.fold_left max m b.raw_tvar) 0 raw in
+  let numbered = List.fold_left (fun m b -> Option.fold_left max m b.tvar) 0 raw in
   let id = Scheme.Id.fresh owner ~arity:(max (max_tvar body) numbered) in
   let layout =
     List.mapi
-      (fun k {raw_erased; raw_tvar} ->
+      (fun k {erased; tvar} ->
         { binder = Scheme.Binder.of_position k;
-          role = (match raw_erased with Some r -> Erased r | None -> Value);
-          scheme_var = Option.bind raw_tvar (Scheme.Var.of_tvar id) } )
+          role = (match erased with Some r -> Erased r | None -> Value);
+          scheme_var = Option.bind tvar (Scheme.Var.of_tvar id) } )
       raw
   in
   let claimed = List.filter_map (fun b -> b.scheme_var) layout in

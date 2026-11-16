@@ -1076,7 +1076,7 @@ module IntSet = Escape.IntSet
 let template_referenced_positions template_str =
   List.fold_left
     (fun acc -> function
-      | Foreign_template.CCty_arg i | Foreign_template.CCelem i -> IntSet.add i acc
+      | Foreign_template.Ty_arg i | Foreign_template.Elem i -> IntSet.add i acc
       | _ -> acc )
     IntSet.empty
     (Foreign_template.type_template template_str)

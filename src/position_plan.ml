@@ -11,7 +11,7 @@ open Cpp_ir.Type
 
 let push ids lex =
   Lexenv.push
-    (List.map (fun (x, ty) -> {Lexenv.eb_id = Core_util.id_of_binder_name x; eb_type = ty; eb_role = Lexenv.Value}) ids)
+    (List.map (fun (x, ty) -> {Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = Lexenv.Value}) ids)
     lex
 
 (* The return type a let's right-hand side is generated under
@@ -27,7 +27,7 @@ let let_result env ~(ret : Cpp_ir.Lowered.Type.t option) t =
    conversions that look a binder's name up (an instance passed as a
    template argument); a position's type names none. *)
 let named_env (lex : Lexenv.t) : Common.env =
-  (List.map (fun (b : Lexenv.binder) -> b.eb_id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
+  (List.map (fun (b : Lexenv.binder) -> b.id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
 
 (* The slot a coercion's inner term is generated in
    ({!Translation_expr.gen_crossing}): boxed where it crosses from a
@@ -44,7 +44,9 @@ let coerced_slot env ~(pos : Cpp_ir.Lowered.Type.t option) slot ~from ~into =
 let region ~outer ~reads body =
   let found = ref [] in
   let env = Common.empty_env () in
-  let is_boxed _ occ = match List.assq_opt occ reads with Some r -> r.rd_boxed | None -> false in
+  let is_boxed _ occ =
+    match List.assq_opt occ reads with Some r -> r.Translation_state.Planned_read.boxed | None -> false
+  in
   (* [expr ~pos ~ret ~slot lex e]: [e] generated as an expression against
      [pos], into [slot], with [ret] the return type in force. *)
   let rec expr ~(pos : Cpp_ir.Lowered.Type.t option) ~(ret : Cpp_ir.Lowered.Type.t option)
@@ -121,7 +123,7 @@ let region ~outer ~reads body =
             with_cpp_return_type None (fun () -> Translation_constructors.regular_field env ~is_boxed c ~slot i e)
           in
           stored ~pos:p ~ret:None ~slot:s lex e )
-        c.rc_args
+        c.args
     | _ ->
       with_promoted_var_map (Translation_constructors.record_promoted_map ty) @@ fun () ->
       List.iteri
@@ -141,8 +143,8 @@ let region ~outer ~reads body =
     List.iteri
       (fun i e ->
         let a = Translation_constructors.custom_field ~var env c ~slot r i e in
-        with_cpp_return_type a.ca_ret
-          (fun () -> stored ~pos:a.ca_expected ~ret:a.ca_ret ~slot:a.ca_slot lex a.ca_term) )
+        with_cpp_return_type a.ret
+          (fun () -> stored ~pos:a.expected ~ret:a.ret ~slot:a.slot lex a.term) )
       ts
   and branch ~ret ?slot lex {Core.Match.Branch.binders = ids; body = body; _} =
     stmts ~ret ?slot (push (List.rev ids) lex) body
@@ -198,7 +200,7 @@ let region ~outer ~reads body =
         let rec go i = function [] -> None | r :: rest -> if r == a then Some i else go (i + 1) rest in
         go 0 inst.call.regular
       in
-      with_promoted_var_map (plan.Translation_calls.cp_instance_promoted @ (!tctx).lexical.promoted_var_map)
+      with_promoted_var_map (plan.Translation_calls.instance_promoted @ (!tctx).lexical.promoted_var_map)
       @@ fun () ->
       List.iter
         (fun a ->
@@ -214,11 +216,11 @@ let region ~outer ~reads body =
             let slot =
               { slot with
                 Translation_slot.expected_core_ty =
-                  (match ap.Translation_calls.ap_param with Some t when not (core_type_contains_erased t) -> Some t
+                  (match ap.Translation_calls.param with Some t when not (core_type_contains_erased t) -> Some t
                     | _ -> slot.Translation_slot.expected_core_ty);
-                stated_core_ty = ap.Translation_calls.ap_param }
+                stated_core_ty = ap.Translation_calls.param }
             in
-            expr ~pos:ap.Translation_calls.ap_expected ~ret:ap.Translation_calls.ap_ret ~slot lex a
+            expr ~pos:ap.Translation_calls.expected ~ret:ap.Translation_calls.ret ~slot lex a
           | _ -> expr ~pos:None ~ret lex a )
         args
   in

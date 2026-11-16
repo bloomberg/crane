@@ -351,7 +351,7 @@ val enter_from : Cpp_state.render_ctx -> Cpp_resolution.entered -> (Cpp_state.re
     of [l] from [c], in order ({!enter_from}). *)
 val entering_from : Cpp_state.render_ctx -> Cpp_resolution.entered list -> (Cpp_state.render_ctx -> 'a) -> 'a
 
-(** What is visible at the position [c] ({!Cpp_state.render_ctx.rc_visibility}),
+(** What is visible at the position [c] ({!Cpp_state.render_ctx.visibility}),
     where [what] happens; an anomaly where nothing planned it. *)
 val visibility_at : Cpp_state.render_ctx -> Pp.t -> Common.visibility
 
@@ -361,7 +361,7 @@ val visibility_at : Cpp_state.render_ctx -> Pp.t -> Common.visibility
 val at_frame : Cpp_state.render_ctx -> Cpp_resolution.frame -> (Cpp_state.render_ctx -> 'a) -> 'a
 
 (** [key] named at the position [c], from what is visible there
-    ({!Cpp_state.render_ctx.rc_visibility}), whatever declaration is being
+    ({!Cpp_state.render_ctx.visibility}), whatever declaration is being
     written: what {!Cpp_resolution.resolve} is given, at each frame, and
     what a printed name is checked against.  A position nothing planned the
     visibility of is an anomaly. *)

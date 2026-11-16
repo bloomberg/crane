@@ -173,7 +173,7 @@ let print_cpp_type_var vl i =
 let file_scope_types_written : GlobRef.Set.t ref = ref GlobRef.Set.empty
 
 let note_file_scope_name ctx r =
-  if Probe.checking () && not ctx.rc_in_struct then
+  if Probe.checking () && not ctx.in_struct then
     file_scope_types_written := GlobRef.Set.add r !file_scope_types_written
 
 (** The type a declaration introduces, by the entity it declares: an
@@ -239,15 +239,15 @@ let ctor_alias_tvar = Generated_name.role "TcArg"
     two declarations that differ only in what they call their parameters
     share one holder. *)
 type ctor_alias = Cpp_state.ctor_alias = {
-  ca_base : string;  (** What its name is made from. *)
-  ca_holder : Cpp_state.holder_parameter list option;  (** A holder's parameters, where it is one. *)
-  ca_declared : Cpp_ast.declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
-  ca_body : string;
+  base : string;  (** What its name is made from. *)
+  holder : Cpp_state.holder_parameter list option;  (** A holder's parameters, where it is one. *)
+  declared : Cpp_ast.declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
+  body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
-  ca_type : ty;  (** That type. *)
-  ca_vars : Id.t list;  (** The names of the variables it names by index. *)
-  ca_uses : tyctor_use list;  (** How its body writes the type constructors in it. *)
+  type_ : ty;  (** That type. *)
+  vars : Id.t list;  (** The names of the variables it names by index. *)
+  uses : tyctor_use list;  (** How its body writes the type constructors in it. *)
 }
 
 (** Under [CRANE_CHECK_IR], the templates the file being written spells
@@ -256,11 +256,11 @@ type ctor_alias = Cpp_state.ctor_alias = {
 let ctor_aliases_spelled : ctor_alias list ref = ref []
 
 (** [a] spelled at [ctx]: collected where the position collects
-    ({!Cpp_state.render_ctx.rc_aliases}), and otherwise, under
+    ({!Cpp_state.render_ctx.aliases}), and otherwise, under
     [CRANE_CHECK_IR], noted as spelled in the file. *)
 let note_ctor_alias_spelled ctx a =
   let add spelled = if not (List.mem a !spelled) then spelled := !spelled @ [a] in
-  match ctx.rc_aliases with
+  match ctx.aliases with
   | Some found -> add found
   | None -> if Probe.checking () then add ctor_aliases_spelled
 
@@ -283,8 +283,8 @@ let take_ctor_aliases_spelled () =
     declared, with the holder's own parameters for what it captures, so the
     digest is over text that is already canonical. *)
 let ctor_alias_name a =
-  let kind = if Option.has_some a.ca_holder then "_tch_" else "_tc_" in
-  a.ca_base ^ kind ^ String.sub (Digest.to_hex (Digest.string a.ca_body)) 0 16
+  let kind = if Option.has_some a.holder then "_tch_" else "_tc_" in
+  a.base ^ kind ^ String.sub (Digest.to_hex (Digest.string a.body)) 0 16
 
 (* The primitive integer type, found by what it is registered as: its short
    name may be a user's own [int] where the extraction runs. *)
@@ -378,9 +378,9 @@ let member_scopes (ctx : render_ctx) (t : ty) =
     | Named _ -> fun _ -> false
     | _ -> CErrors.anomaly Pp.(str "member_scopes: neither a named nor a promoted type.")
   in
-  match ctx.rc_scope with
-  | Some {ol_scope; ol_file_scope_aliases} when (not ctx.rc_in_struct) && not (at_file_scope ol_file_scope_aliases) ->
-    Some (List.map (fun s -> Cpp_name.Class s) ol_scope.Scope_plan.qualifier)
+  match ctx.scope with
+  | Some {scope; file_scope_aliases} when (not ctx.in_struct) && not (at_file_scope file_scope_aliases) ->
+    Some (List.map (fun s -> Cpp_name.Class s) scope.Scope_plan.qualifier)
   | _ -> None
 
 (** A type's name as the type printer writes it: the qualifiers written in
@@ -643,7 +643,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     | Some (alias, args) ->
       note_ctor_alias_spelled ctx alias;
       let name = ctor_alias_name alias in
-      if Option.has_some alias.ca_holder then
+      if Option.has_some alias.holder then
         let arg : Cpp_state.holder_argument -> _ = function
           | Captured_variable (i, name) -> pp_rec false (Variable (Index (i, name)))
           | Captured_instance id -> Id.print id
@@ -707,26 +707,26 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     declared, which only planning renders.  Under [CRANE_CHECK_IR] a
     constructor planning notes twice must be decided alike. *)
 and tyctor_written ctx vl t =
-  let same u = compare u.tu_constructor t = 0 && u.tu_vars = vl in
+  let same u = compare u.constructor t = 0 && u.vars = vl in
   let unplanned what =
     CErrors.anomaly
-      Pp.(str "Crane: the type constructor " ++ pp_cpp_type {ctx with rc_tyctors = Planned []} false vl t
+      Pp.(str "Crane: the type constructor " ++ pp_cpp_type {ctx with tyctors = Planned []} false vl t
           ++ str what)
   in
-  match ctx.rc_tyctors with
+  match ctx.tyctors with
   | Unplanned -> unplanned " is written where nothing plans how."
   | Deciding {decide; noted} ->
     let alias = decide ctx vl t in
     ( match List.find_opt same !noted with
-    | None -> noted := !noted @ [{tu_constructor = t; tu_vars = vl; tu_alias = alias}]
+    | None -> noted := !noted @ [{constructor = t; vars = vl; alias = alias}]
     | Some u ->
-      if Probe.checking () && compare u.tu_alias alias <> 0 then
+      if Probe.checking () && compare u.alias alias <> 0 then
         Probe.violation "constructor alias uses"
           Pp.(str "a type constructor is decided twice, otherwise the second time, where one declaration writes it") );
     alias
   | Planned uses -> (
     match List.find_opt same uses with
-    | Some u -> u.tu_alias
+    | Some u -> u.alias
     | None -> unplanned " is written by a declaration whose plan does not say how." )
 
 (* A member named after [.] or [->], with the template arguments it writes. *)
@@ -859,7 +859,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     let args_s = pp_list (pp_cpp_expr ctx env args) ts in
     let prefix = match f with
       | Entity (GlobRef.IndRef _, _, _)
-        when ctx.rc_in_template && writes_qualifier (pp_cpp_expr ctx env args f) ->
+        when ctx.in_template && writes_qualifier (pp_cpp_expr ctx env args f) ->
         str "typename "
       | _ -> mt ()
     in
@@ -1972,9 +1972,9 @@ let pp_doc_comment_for_name = Doc_comments.pp
     printer serves them: what differs is the name it is written under, and
     whether the body follows. *)
 type member_mode =
-  | Mm_inline  (** In the struct, with its body. *)
-  | Mm_declared  (** In the struct, without its body: ends at the [;]. *)
-  | Mm_defined of Pp.t * tparams
+  | Inline  (** In the struct, with its body. *)
+  | Declared  (** In the struct, without its body: ends at the [;]. *)
+  | Defined of Pp.t * tparams
       (** Out of line, under the given qualifier, for a struct with the given
           template parameters. *)
 
@@ -1988,7 +1988,7 @@ let pp_owner_template ctx = function
     @param struct_name  the enclosing struct's pretty-printed name, forwarded
                         to constructor and destructor printers that need it
     @param env          name environment for sub-expression pretty-printing *)
-let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : field) =
+let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Inline) ctx env (f : field) =
   match f with
   | Data (id, ty) ->
     (* Strip d_ prefix for doc comment lookup (C++ fields are d_fst, Rocq
@@ -2042,14 +2042,14 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
        exempts it from the one-definition rule. *)
     let static_s =
       match mode with
-      | Mm_defined _ -> mt ()
-      | Mm_inline | Mm_declared -> if mf_is_static then str "static " else mt ()
+      | Defined _ -> mt ()
+      | Inline | Declared -> if mf_is_static then str "static " else mt ()
     in
     let inline_s =
       match mode with
-      | Mm_inline -> if mf_is_inline then str "inline " else mt ()
-      | Mm_declared -> mt ()
-      | Mm_defined (_, owner_tps) ->
+      | Inline -> if mf_is_inline then str "inline " else mt ()
+      | Declared -> mt ()
+      | Defined (_, owner_tps) ->
         if owner_tps = [] && mf_tparams = [] then str "inline " else mt ()
     in
     let body_s = pp_list_stmt (pp_cpp_stmt ctx env []) mf_body in
@@ -2079,9 +2079,9 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
     let qualifier = if may_be_constexpr mf_constexpr then str "constexpr " else mt () in
     let owner_template_s, qual_s =
       match mode with
-      | Mm_defined (qual, owner_tps) ->
+      | Defined (qual, owner_tps) ->
         (pp_owner_template ctx owner_tps, qual ++ str "::")
-      | Mm_inline | Mm_declared -> (mt (), mt ())
+      | Inline | Declared -> (mt (), mt ())
     in
     (* A conversion function has no return type of its own -- its name is the
        type it converts to -- and none of the qualifiers apply. *)
@@ -2102,8 +2102,8 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
     ++ template_s
     ++
     ( match mode with
-    | Mm_declared -> head ++ str ";"
-    | Mm_inline | Mm_defined _ -> head ++ str " {" ++ fnl () ++ body_s ++ str "}" )
+    | Declared -> head ++ str ";"
+    | Inline | Defined _ -> head ++ str " {" ++ fnl () ++ body_s ++ str "}" )
   | Constructor
       { type_params = fc_tparams; params = fc_params; inits = fc_inits; body = fc_body; explicit = fc_explicit;
         noexcept = fc_noexcept } ->
@@ -2143,14 +2143,14 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
   | Destructor body ->
     let sname = struct_name in
     ( match mode with
-    | Mm_declared -> (str "~" ++ sname ++ str "();")
-    | Mm_inline ->
+    | Declared -> (str "~" ++ sname ++ str "();")
+    | Inline ->
       (str "~" ++ sname ++ str "() {")
       ++ fnl ()
       ++ pp_list_stmt (pp_cpp_stmt ctx env []) body
       ++ fnl ()
       ++ str "}"
-    | Mm_defined (qual, owner_tps) ->
+    | Defined (qual, owner_tps) ->
       pp_owner_template ctx owner_tps
       ++ h
            ( (if owner_tps = [] then str "inline " else mt ())
@@ -2208,7 +2208,7 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
       ++ pp_type ctx ty
       ++ str ";" )
   | Out_of_line_declaration m ->
-    pp_cpp_field ctx ~struct_name ~mode:Mm_declared env (I.Field.of_out_of_line m)
+    pp_cpp_field ctx ~struct_name ~mode:Declared env (I.Field.of_out_of_line m)
   | Deleted_default_constructor ->
     let sname = struct_name in
     (sname ++ str "() = delete;")
@@ -2463,7 +2463,7 @@ and pp_cpp_decl ctx env (d : decl) =
 (** A template head and the declaration it introduces. *)
 and pp_template_decl ctx env temps cstr (inner : decl) =
   match inner with
-  | Variable {ref_ = id; type_ = ty; init = e; _} when ctx.rc_in_struct ->
+  | Variable {ref_ = id; type_ = ty; init = e; _} when ctx.in_struct ->
     let expr_pp = pp_initialiser ctx env ty e in
     template_head ctx env temps cstr ++ pp_meyers_singleton ctx env id ty expr_pp
   | _ -> template_head ctx env temps cstr ++ pp_cpp_decl ctx env inner
@@ -2599,7 +2599,7 @@ and pp_leaf_decl ctx env (d : decl) =
        that the struct declares. *)
     let owner = fst path.outer in
     enter_from ctx (Function {owner; defines = is_def; scope = out_of_line_scope ctx owner}) @@ fun ctx ->
-    let scope = ctx.rc_scope in
+    let scope = ctx.scope in
     let pp_fun_name n =
       match n with
       | GlobRef.VarRef v when is_def -> str (Id.to_string v)
@@ -2619,7 +2619,7 @@ and pp_leaf_decl ctx env (d : decl) =
     in
     let name =
       match scope with
-      | Some {ol_scope; _} when not is_lifted -> str (Scope_plan.qualifier ol_scope) ++ str "::" ++ base_name
+      | Some {scope = ol_scope; _} when not is_lifted -> str (Scope_plan.qualifier ol_scope) ++ str "::" ++ base_name
       | _ -> base_name
     in
     (* Anything the name says beyond a bare identifier -- a [::] qualifier or
@@ -2628,7 +2628,7 @@ and pp_leaf_decl ctx env (d : decl) =
     let is_qualified =
       path.inner <> [] || snd path.outer <> []
     in
-    let is_struct_member = is_qualified || ctx.rc_in_struct in
+    let is_struct_member = is_qualified || ctx.in_struct in
     let is_out_of_struct_def = Option.has_some scope in
     let static_kw =
       if is_struct_member && ((not is_def) || not is_out_of_struct_def) then
@@ -2648,7 +2648,7 @@ and pp_leaf_decl ctx env (d : decl) =
             params
         in
         let qualifier =
-          if may_be_constexpr df_constexpr && ctx.rc_in_struct && not is_out_of_struct_def
+          if may_be_constexpr df_constexpr && ctx.in_struct && not is_out_of_struct_def
           then str "constexpr "
           else mt ()
         in
@@ -2682,8 +2682,8 @@ and pp_leaf_decl ctx env (d : decl) =
       } ->
     let struct_name = struct_definition_name ctx id in
     note_file_scope_name ctx id;
-    if Probe.checking () then if ctx.rc_in_struct then
-      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
+    if Probe.checking () then if ctx.in_struct then
+      printed_nested_struct (Pp.string_of_ppcmds struct_name) (Global id);
     let f_s =
       entering_from ctx
         (Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
@@ -2720,7 +2720,7 @@ and pp_leaf_decl ctx env (d : decl) =
     ++ str "};"
   | Variable {ref_ = id; type_ = ty; init = e; constexpr = da_constexpr} ->
     let expr_pp = pp_initialiser ctx env ty e in
-    if ctx.rc_in_template || (ctx.rc_in_struct && Common.get_force_cross_file_qualification ()) then
+    if ctx.in_template || (ctx.in_struct && Common.get_force_cross_file_qualification ()) then
       (* In template context or separate-extraction struct: use Meyers
          singleton so that module-type-parameter references via L::val()
          work for both template and non-template implementing modules. *)
@@ -2742,7 +2742,7 @@ and pp_leaf_decl ctx env (d : decl) =
          by its own unit, so the function reads its own unit's: [inline]
          makes it one variable. *)
       let static_kw =
-        match (ctx.rc_in_struct, literal) with
+        match (ctx.in_struct, literal) with
         | true, true -> str "static constexpr "
         | true, false when Cpp_names.read_by_a_function ctx id -> str "[[gnu::used]] static inline "
         | true, false -> str "static inline "
@@ -2817,7 +2817,7 @@ and pp_leaf_decl ctx env (d : decl) =
     entering_from ctx
       ((if dm_tparams = [] then [] else [Cpp_resolution.In_template]) @ [Inductive_struct dm_owner])
       (fun ctx ->
-        pp_cpp_field ~struct_name:(str own_name) ctx ~mode:(Mm_defined (qual, dm_tparams)) env
+        pp_cpp_field ~struct_name:(str own_name) ctx ~mode:(Defined (qual, dm_tparams)) env
           (I.Field.of_out_of_line dm_field) )
   | Merged_struct_members ds ->
     let struct_name =
@@ -2860,8 +2860,8 @@ and pp_leaf_decl ctx env (d : decl) =
        same way -- the standard library's [comparison] is emitted globally and
        a user type spelled [Comparison] inside the struct would otherwise
        capture every unqualified mention of it. *)
-    if Probe.checking () then if ctx.rc_in_struct then
-      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
+    if Probe.checking () then if ctx.in_struct then
+      printed_nested_struct (Pp.string_of_ppcmds struct_name) (Global name);
     str "enum class "
     ++ struct_name
     ++ str " {"
@@ -2898,7 +2898,7 @@ let pp_module_name ctx (m : Cpp_ast.module_ref) =
    argument is preceded by [typename], and a functor applied is named
    [A::template F]. *)
 let pp_application ctx {Cpp_ast.functor_; args} =
-  let in_template = ctx.rc_in_template in
+  let in_template = ctx.in_template in
   let head =
     match pp_module_name ctx functor_ with
     | _, r when in_template && resolved_is_qualified r -> Cpp_name.pp ~template_keyword:true r
@@ -2919,7 +2919,7 @@ let pp_module_alias ctx name (target : Cpp_ast.module_expr) =
     | Module_named m ->
       let r = resolved_module ctx m in
       let named = str (resolved_string r) in
-      if ctx.rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
+      if ctx.in_template && resolved_is_qualified r then str "typename " ++ named else named
     | Applied a -> pp_application ctx a
   in
   str "using " ++ pp_declared_module ctx name ++ str " = " ++ target ++ str ";"
@@ -2949,7 +2949,7 @@ let pp_functor_alias ctx name functor_ params =
 (* The base is written inside the functor's template; a base specifier
    names a type, so a dependent one takes no [typename]. *)
 let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
-  let inside = {ctx with rc_in_struct = true; rc_in_template = true} in
+  let inside = {ctx with in_struct = true; in_template = true} in
   let base = match base with Module_named m -> fst (pp_module_name inside m) | Applied a -> pp_application inside a in
   pp_template_head ctx template ++ str "struct " ++ pp_declared_module ctx name ++ str " : " ++ base ++ str " {};"
 
@@ -2992,8 +2992,8 @@ let pp_synthesised ctx (s : Cpp_ast.synthesised) =
 let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let ctx =
     { ctx with
-      rc_names = Names_resolved u.names;
-      rc_tyctors = Planned (Option.default [] u.tyctors) }
+      names = Names_resolved u.names;
+      tyctors = Planned (Option.default [] u.tyctors) }
   in
   match u.declaration with
   | Modtype_concept {path; params; concept} -> modtype_concept ctx ~names:u.names ~params path concept

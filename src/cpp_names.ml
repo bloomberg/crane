@@ -99,8 +99,8 @@ let layer (entered : Cpp_resolution.entered) v =
   | In_struct | In_template | Function _ -> v
 
 let visibility_at (c : render_ctx) what =
-  match c.rc_visibility with
-  | Some v -> List.fold_right layer c.rc_frame v
+  match c.visibility with
+  | Some v -> List.fold_right layer c.frame v
   | None -> CErrors.anomaly Pp.(str "Crane: " ++ what ++ str " where nothing planned what is visible.")
 
 let visible_at c key = visibility_at c Pp.(Cpp_resolution.pp_key key ++ str " is named")
@@ -116,10 +116,10 @@ let named_nowhere key =
    being written, at the frame printing it has entered; at the resolver's
    position, as the resolver names it. *)
 let named (c : render_ctx) key =
-  match c.rc_names with
-  | Naming_live live -> live.live_key c key
+  match c.names with
+  | Naming_live live -> live.key c key
   | No_names -> named_nowhere key
-  | Names_resolved names -> name_from c names c.rc_frame key
+  | Names_resolved names -> name_from c names c.frame key
 
 let pp_head (h : Cpp_resolution.head) =
   Pp.string_of_ppcmds (Cpp_name.pp_scopes h.outer) ^ Cpp_name.to_string h.head
@@ -130,11 +130,11 @@ let pp_head (h : Cpp_resolution.head) =
     writes it. *)
 let type_head (c : render_ctx) form r =
   let key = Cpp_resolution.Type_head (form, r) in
-  match c.rc_names with
-  | Naming_live live -> live.live_head c form r
+  match c.names with
+  | Naming_live live -> live.head c form r
   | No_names -> named_nowhere key
   | Names_resolved names -> (
-    match Cpp_resolution.find_head names c.rc_frame form r with
+    match Cpp_resolution.find_head names c.frame form r with
     | Found h ->
       ( if Probe.checking () then
           let here = !live_head_for_checks c form r in
@@ -156,12 +156,12 @@ let live_inline_custom_text r =
   if to_inline r && is_custom r then Some (Cpp_name.to_string (live_custom_text r)) else None
 
 let inline_custom_text (c : render_ctx) r =
-  match c.rc_names with
-  | Naming_live live -> live.live_inline r
+  match c.names with
+  | Naming_live live -> live.inline r
   | No_names -> named_nowhere (Inline_custom r)
   | Names_resolved names ->
     let text =
-      match Cpp_resolution.find_inline names c.rc_frame r with
+      match Cpp_resolution.find_inline names c.frame r with
       | Found text -> text
       | Not_requested ->
         CErrors.anomaly
@@ -189,8 +189,8 @@ let inline_customs_named globals = List.map (fun r -> Cpp_resolution.Inline_cust
     @param k  the extraction key category (e.g. [Type] or [Term])
     @param r  the global reference to name *)
 let global_name c k r =
-  match c.rc_names with
-  | Naming_live live -> live.live_global c k r
+  match c.names with
+  | Naming_live live -> live.global c k r
   | No_names -> named_nowhere (Global (k, r))
   | Names_resolved _ -> (
     match inline_custom_text c r with
@@ -273,7 +273,7 @@ let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_
 let promoted_at (c : render_ctx) r =
   is_promoted_inductive r
   &&
-  match c.rc_module with
+  match c.module_ with
   | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around mp))
   | None -> true
 
@@ -323,7 +323,7 @@ let is_record_inductive r =
     of the module whose element is being written spells bare, as planned
     ({!Scope_plan.local_inductives}); none where no module's element is. *)
 let local_at (c : render_ctx) r =
-  match c.rc_module with
+  match c.module_ with
   | None -> false
   | Some mp -> (
     match Scope_plan.local_inductives mp with
@@ -491,7 +491,7 @@ let inductive_type_name ctx r =
 (** Whether the name [n] needs [typename] at the position [ctx]: C++
     requires it in front of a qualified, possibly dependent, type name inside
     a class template. *)
-let needs_typename (ctx : render_ctx) n = ctx.rc_in_template && Cpp_name.is_qualified n
+let needs_typename (ctx : render_ctx) n = ctx.in_template && Cpp_name.is_qualified n
 
 (** The [typename] prefix the name [n] needs at the position [ctx]: C++
     requires it in front of a qualified, possibly dependent, type name inside
@@ -528,8 +528,8 @@ let names_through n quals =
     @return the qualifiers, outermost first, when qualification is required,
             or none otherwise *)
 let struct_scopes_for (ctx : render_ctx) r n =
-  match ctx.rc_scope with
-  | Some {ol_scope = scope; _} when not ctx.rc_in_struct ->
+  match ctx.scope with
+  | Some {scope = scope; _} when not ctx.in_struct ->
     let classes = List.map (fun s -> Cpp_name.Class s) in
     let struct_scopes = classes scope.Scope_plan.qualifier in
     (* How [r]'s module stands to the struct's, by kernel path: the textual
@@ -651,15 +651,15 @@ let wrapper_qualified_type_name (ctx : render_ctx) r n =
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> n
   | _ when Table.is_typeclass r -> n
   | _ when Module_plan.is_global_scope_type r -> n
-  | _ -> if ctx.rc_in_struct then n else wrapper_qualify r n
+  | _ -> if ctx.in_struct then n else wrapper_qualify r n
 
 (** Whether the global [x] needs a [::] prefix at the position [ctx]: in an
     out-of-line definition of a struct's member, an unqualified call of a
     function declared outside that struct's module would otherwise name the
     struct's own member of that name. *)
 let needs_global_qualifier (ctx : render_ctx) x =
-  match ctx.rc_scope with
-  | Some {ol_scope = scope; _} ->
+  match ctx.scope with
+  | Some {scope = scope; _} ->
     (not (Cpp_name.is_qualified (global_name ctx Term x)))
     && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
@@ -670,11 +670,11 @@ let needs_global_qualifier (ctx : render_ctx) x =
    answers it.  Under CRANE_CHECK_IR the resolved answer must be the
    resolver's where it is printed. *)
 let answered (c : render_ctx) key ~find ~read ~equal ~pp =
-  match c.rc_names with
-  | Naming_live live -> read (live.live_value c key)
+  match c.names with
+  | Naming_live live -> read (live.value c key)
   | No_names -> named_nowhere key
   | Names_resolved names -> (
-    match find names c.rc_frame with
+    match find names c.frame with
     | Cpp_resolution.Found a ->
       ( if Probe.checking () then
           let here = read (!live_value_for_checks c key) in
@@ -904,7 +904,7 @@ module IdSet = Set.Make (Names.Id)
 (** {2 What a declaration not yet printed names} *)
 
 let module_written (c : render_ctx) =
-  match c.rc_module with
+  match c.module_ with
   | Some mp -> mp
   | None -> CErrors.anomaly (Pp.str "Crane: templates were read off something written as no module's element.")
 
@@ -995,13 +995,15 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
   let c =
     match entered with
     | Signature _ | Inductive_struct _ -> c
-    | In_struct -> {c with rc_in_struct = true}
-    | In_template -> {c with rc_in_template = true}
+    | In_struct -> {c with in_struct = true}
+    | In_template -> {c with in_template = true}
     | Function {defines; scope; _} ->
-      let out_of_line ol_scope = {ol_scope; ol_file_scope_aliases = file_scope_aliases_of c.rc_file} in
-      {c with rc_scope = (if defines && not c.rc_in_struct then Option.map out_of_line scope else None)}
+      let out_of_line ol_scope =
+        {Cpp_state.Out_of_line.scope = ol_scope; file_scope_aliases = file_scope_aliases_of c.file}
+      in
+      {c with scope = (if defines && not c.in_struct then Option.map out_of_line scope else None)}
   in
-  {c with rc_frame = entered :: c.rc_frame}
+  {c with frame = entered :: c.frame}
 
 let enter_from c (entered : Cpp_resolution.entered) k =
   k (next entered c)
@@ -1117,7 +1119,7 @@ let live_inductive_head ctx r : Cpp_resolution.head =
     { outer = struct_scopes_for ctx r cap;
       head = cap;
       typename = needs_typename ctx cap;
-      templated = ctx.rc_in_template }
+      templated = ctx.in_template }
   else if merged_at ctx r && not (local_at ctx r) then
     (* A local inductive is a sibling member of the enclosing module struct,
        so it is in scope under its own name; the merged-wrapper spelling
@@ -1139,7 +1141,7 @@ let live_type_head c (form : Cpp_resolution.head_form) r =
   match form with Glob_head -> live_glob_head c r | Inductive_head -> live_inductive_head c r
 
 let rec live_name c (key : Cpp_resolution.key) =
-  let ctx = {c with rc_names = Naming_live live_namers} in
+  let ctx = {c with names = Naming_live live_namers} in
   let v = visible_at c key in
   match key with
   | Module mp -> Common.resolve_module_in v mp
@@ -1191,11 +1193,11 @@ let rec live_name c (key : Cpp_resolution.key) =
 (* The resolver's namers, which the naming functions shared with the printer
    call at its position. *)
 and live_namers =
-  { live_key = (fun c key -> live_name c key);
-    live_global = live_global_name;
-    live_inline = live_inline_custom_text;
-    live_head = (fun c form r -> live_type_head {c with rc_names = Naming_live live_namers} form r);
-    live_value = (fun c key -> live_value c key) }
+  { key = (fun c key -> live_name c key);
+    global = live_global_name;
+    inline = live_inline_custom_text;
+    head = (fun c form r -> live_type_head {c with names = Naming_live live_namers} form r);
+    value = (fun c key -> live_value c key) }
 
 (** What [key] resolves to at the position [c], as the resolver resolves
     it: a type's head for a {!Cpp_resolution.Type_head}, the text for a
@@ -1206,9 +1208,9 @@ and live_namers =
     {!Cpp_resolution.Held_back_concept}, a name for anything else. *)
 and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   match key with
-  | Type_head (form, r) -> Head (live_namers.live_head c form r)
+  | Type_head (form, r) -> Head (live_namers.head c form r)
   | Inline_custom r -> Inline (live_inline_custom_text r)
-  | Value_reference r -> Reference (live_value_reference {c with rc_names = Naming_live live_namers} r)
+  | Value_reference r -> Reference (live_value_reference {c with names = Naming_live live_namers} r)
   | Value_access r -> Access (live_access r)
   | Read_by_a_function r -> Holds (Cpp_state.read_by_a_function r)
   | Held_back_concept r -> Holds (class_concept_held_back c r)
@@ -1217,5 +1219,5 @@ and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
 
 let () =
   live_name_for_checks := live_name;
-  live_head_for_checks := live_namers.live_head;
+  live_head_for_checks := live_namers.head;
   live_value_for_checks := live_value

@@ -454,7 +454,7 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
       match typ with Entity_application (g, _ :: _, _) -> Type_util.is_prod_global g | _ -> false )
     | _ -> false
   in
-  let has_scrut = List.mem Foreign_template.CCscrut tokens in
+  let has_scrut = List.mem Foreign_template.Scrut tokens in
   let effective, at_scrut =
     match (scrut, typ) with
     | Local _, Entity_application (g, _ :: _, _) when scrut_boxed && Type_util.is_prod_global g ->
@@ -472,8 +472,8 @@ and reads_custom_match r (m : phase Custom_match.t) : stmt =
   let ty_arg_before_scrut =
     let rec go = function
       | [] -> false
-      | Foreign_template.CCscrut :: _ -> false
-      | (Foreign_template.CCty_arg _ | Foreign_template.CCelem _) :: _ -> true
+      | Foreign_template.Scrut :: _ -> false
+      | (Foreign_template.Ty_arg _ | Foreign_template.Elem _) :: _ -> true
       | _ :: rest -> go rest
     in
     go tokens
@@ -572,7 +572,7 @@ let rec supply_type_args (t : ty) : ty =
 (* [%ret] spells the type a call yields: only a template applied as a call
    has one, and only where translation recorded it.  Refused here, before
    anything is printed, wherever it has none. *)
-let names_ret text = List.mem Foreign_template.CCret (Foreign_template.term_template text)
+let names_ret text = List.mem Foreign_template.Ret (Foreign_template.term_template text)
 
 let refuse_ret r why =
   CErrors.user_err Pp.(str "Crane: the mapping " ++ GlobRef.print r ++ str " names %ret" ++ str why)
@@ -630,23 +630,23 @@ let container_of = function GlobRef.ConstructRef (ind, _) -> GlobRef.IndRef ind 
 let wrapper_pieces wrapper : Cpp_ir.Foreign.wrapper_piece list =
   List.map
     (function
-      | Foreign_template.CCstring s -> Cpp_ir.Foreign.Wrapper_text s
-      | CCty_arg 0 | CCelem 0 -> Wrapper_element
-      | CCty_arg i -> Wrapper_text (Printf.sprintf "%%t%d" i)
-      | CCelem i -> Wrapper_text (Printf.sprintf "%%elem%d" i)
+      | Foreign_template.Text s -> Cpp_ir.Foreign.Wrapper_text s
+      | Ty_arg 0 | Elem 0 -> Wrapper_element
+      | Ty_arg i -> Wrapper_text (Printf.sprintf "%%t%d" i)
+      | Elem i -> Wrapper_text (Printf.sprintf "%%elem%d" i)
       | _ -> CErrors.anomaly (Pp.str "wrapper_pieces: a wrapper is a type template") )
     (Foreign_template.type_template wrapper)
 
 let foreign_pieces ~element tokens : Cpp_ir.Foreign.piece list =
   List.map
     (function
-      | Foreign_template.CCstring s -> Cpp_ir.Foreign.Text s
-      | CCty_arg i -> Type_argument i
-      | CCelem i -> Element (i, element i)
-      | CCarg i -> Value i
-      | CCret -> Yields
-      | CCresult -> Result
-      | CCscrut | CCty | CCbody _ | CCbr_var _ | CCbr_var_ty _ ->
+      | Foreign_template.Text s -> Cpp_ir.Foreign.Text s
+      | Ty_arg i -> Type_argument i
+      | Elem i -> Element (i, element i)
+      | Arg i -> Value i
+      | Ret -> Yields
+      | Result -> Result
+      | Scrut | Ty | Body _ | Br_var _ | Br_var_ty _ ->
         CErrors.anomaly (Pp.str "foreign_pieces: a match template's hole in a type or term template") )
     tokens
 
@@ -735,7 +735,7 @@ and instantiated_expr ~boxing (e : expr) : expr =
     let tokens = Foreign_template.term_template tmpl.text in
     (* An argument past the last one the text names is not its own: the
        call's result is applied to it. *)
-    let named = List.fold_left (fun n -> function Foreign_template.CCarg i -> max n (i + 1) | _ -> n) 0 tokens in
+    let named = List.fold_left (fun n -> function Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens in
     let yields = match res.yields with Yields t -> Some t | Untyped -> None in
     Foreign (Call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
   | Entity (x, tys, Some {inline = Some {form = Block; text; _}; custom_yields}) ->
@@ -792,14 +792,14 @@ and instantiating ~boxing =
 let match_pieces (m : phase Custom_match.t) scrut : Custom_match.piece list =
   List.map
     (function
-      | Foreign_template.CCstring s -> Custom_match.Text s
-      | CCscrut -> Scrutinee {parenthesised = Cpp_ir.Written.written_with_leading_pointer_operator scrut}
-      | CCty -> Matched_type
-      | CCty_arg i -> Type_argument i
-      | CCbody i -> Branch i
-      | CCbr_var (i, j) -> Binder (i, j)
-      | CCbr_var_ty (i, j) -> Binder_type (i, j)
-      | CCelem _ | CCarg _ | CCret | CCresult ->
+      | Foreign_template.Text s -> Custom_match.Text s
+      | Scrut -> Scrutinee {parenthesised = Cpp_ir.Written.written_with_leading_pointer_operator scrut}
+      | Ty -> Matched_type
+      | Ty_arg i -> Type_argument i
+      | Body i -> Branch i
+      | Br_var (i, j) -> Binder (i, j)
+      | Br_var_ty (i, j) -> Binder_type (i, j)
+      | Elem _ | Arg _ | Ret | Result ->
         CErrors.anomaly (Pp.str "match_pieces: a term template's hole in a match template") )
     (Foreign_template.match_template (custom_match_text m))
 
@@ -1480,7 +1480,7 @@ let report_unspellable where (ty : ty) =
 let unspellable_binder (m : phase Custom_match.t) =
   let written = Foreign_template.match_template (custom_match_text m) in
   fun i j (p : phase Custom_match.param) ->
-    List.mem (Foreign_template.CCbr_var_ty (i, j)) written && has_no_cpp_spelling p.type_
+    List.mem (Foreign_template.Br_var_ty (i, j)) written && has_no_cpp_spelling p.type_
 
 (* An unknown representation in [ty] settled into [std::any], inside a
    carrier abstraction's body too: {!Cpp_ir.Types.map} stops at a type

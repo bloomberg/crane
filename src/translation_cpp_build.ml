@@ -279,7 +279,7 @@ let cpp_integer_range = function
     compiler at best and wraps silently at worst, so refuse it here, where the
     Rocq definition responsible can still be named. *)
 let render_numeral info (n : Z.t) : Cpp_ir.Lowered.Expr.t =
-  let cpp_ty = Table.find_custom_opt info.Table.num_ind in
+  let cpp_ty = Table.find_custom_opt info.Table.ind in
   ( match Option.bind cpp_ty cpp_integer_range with
   | Some (lo, hi) when Z.lt n lo || Z.gt n hi ->
     CErrors.user_err
@@ -287,7 +287,7 @@ let render_numeral info (n : Z.t) : Cpp_ir.Lowered.Expr.t =
          str "Crane: the literal " ++ str (Z.to_string n)
          ++ str " does not fit in " ++ str (Option.get cpp_ty)
          ++ str ", the C++ type "
-         ++ Printer.pr_global info.Table.num_ind
+         ++ Printer.pr_global info.Table.ind
          ++ str " extracts to."))
   | _ -> () );
-  Numeral (info.Table.num_ind, {value = n; text = Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt})
+  Numeral (info.Table.ind, {value = n; text = Common.render_template [("%n", Z.to_string n)] info.Table.fmt})

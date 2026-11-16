@@ -40,14 +40,14 @@ let own_index_only_result () =
 let check_binder_scopes env i =
   if Probe.checking () then
     match (get_db_name_opt i env, get_env_binder_opt i) with
-    | Some x, Some b when Id.equal x b.eb_id -> ()
+    | Some x, Some b when Id.equal x b.id -> ()
     | Some x, None when Common.is_tc_instance_id x -> ()
     | x, b ->
       let name = Option.cata Id.print (Pp.str "nothing") in
       Probe.violation "binder scopes"
         Pp.(
           str "the variable at index " ++ int i ++ str " is " ++ name x ++ str " to the names in scope and "
-          ++ name (Option.map (fun b -> b.eb_id) b)
+          ++ name (Option.map (fun b -> b.id) b)
           ++ str " to the binders typed in scope")
 
 (** [gen_expr ?expected_ty ?slot env core_e] -- the CppIR expression for the

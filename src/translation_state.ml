@@ -75,48 +75,54 @@ type binder_role = Lexenv.role =
 
 (** A binder of the lexical environment ({!Lexenv.binder}). *)
 type env_binder = Lexenv.binder = {
-  eb_id : Id.t;
-  eb_type : Core.Type.t;
-  eb_role : binder_role;
-}
-
-(** A pattern binder's representation as {!Representation_plan} plans it:
-    whether it holds a box.  [pr_bound_boxed] is whether it holds a box at
-    the Core type it is bound at, nothing pinned down: how the reuse arm,
-    which declares the same fields again, and a record projection in an
-    expression declare it.  That answer rests on no other binder. *)
-type planned_repr = {
-  pr_boxed : bool;
-  pr_bound_boxed : bool;
-}
-
-(** A variable read's binder as {!Representation_plan} plans it: whether it
-    holds a box, what bound it, and the C++ type it is planned at, where it
-    is planned at one. *)
-and planned_read = {
-  rd_boxed : bool;
-  rd_kind : binder_kind;
-  rd_type : Cpp_ir.Lowered.Type.t option;
+  id : Id.t;
+  type_ : Core.Type.t;
+  role : binder_role;
 }
 
 (** What bound the binder a variable read reads. *)
-and binder_kind =
-  | Kouter  (** bound outside the region *)
-  | Kparameter  (** a lambda's parameter *)
-  | Klet
-  | Kfix  (** a local fixpoint's function *)
-  | Kpattern  (** a pattern's, or a record projection's *)
+module Binder_kind = struct
+  type t =
+    | Outer  (** bound outside the region *)
+    | Parameter  (** a lambda's parameter *)
+    | Let
+    | Fix  (** a local fixpoint's function *)
+    | Pattern  (** a pattern's, or a record projection's *)
+end
 
 (** What decided a binder's C++ type, and so which answer wins when both are
     available: an instantiation a pattern match pinned down is more precise
     than the type the binder was given where it was bound. *)
-and binder_origin =
-  | Bbinding  (** Assigned at the binding site, from the binder's Core type *)
-  | Bpattern  (** Pinned down by the scrutinee's instantiation in a branch *)
+module Binder_origin = struct
+  type t =
+    | Binding  (** Assigned at the binding site, from the binder's Core type *)
+    | Pattern  (** Pinned down by the scrutinee's instantiation in a branch *)
+end
+
+(** A variable read's binder as {!Representation_plan} plans it: whether it
+    holds a box, what bound it, and the C++ type it is planned at, where it
+    is planned at one. *)
+module Planned_read = struct
+  type t = {
+    boxed : bool;
+    kind : Binder_kind.t;
+    type_ : Cpp_ir.Lowered.Type.t option;
+  }
+end
+
+(** A pattern binder's representation as {!Representation_plan} plans it:
+    whether it holds a box.  [bound_boxed] is whether it holds a box at
+    the Core type it is bound at, nothing pinned down: how the reuse arm,
+    which declares the same fields again, and a record projection in an
+    expression declare it.  That answer rests on no other binder. *)
+type planned_repr = {
+  boxed : bool;
+  bound_boxed : bool;
+}
 
 (** Mode for ITree effect extraction: sequential erases the tree,
     reified preserves it as [shared_ptr<ITree<R>>] ({!Core_effects.mode}). *)
-and itree_extraction_mode = Core_effects.mode =
+type itree_extraction_mode = Core_effects.mode =
   | Sequential  (** Default: erase [itree E R] to [R]; bind becomes [;] *)
   | Reified     (** Preserve structure: [itree E R] becomes [shared_ptr<ITree<R>>] *)
 
@@ -253,17 +259,17 @@ type lexical = {
   (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
 
-      A binder is typed once, where it is bound ({!Bbinding}, written by
+      A binder is typed once, where it is bound ({!Binder_origin.Binding}, written by
       [push_binders]); a pattern match that pins a field down more precisely
       than its definition-site type says -- matching [SigT<Tag,
       std::function<any(any)>>] records [Function (\[Any\], Any)] for the
-      function field -- overrides it ({!Bpattern}, written by
+      function field -- overrides it ({!Binder_origin.Pattern}, written by
       [populate_erased_field_env]).  Whether a binder is boxed is read off
       this map rather than tracked beside it, so the two answers cannot drift
       apart.
 
       Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
-  cpp_binder_types : (Cpp_ir.Lowered.Type.t * binder_origin) IntMap.t;
+  cpp_binder_types : (Cpp_ir.Lowered.Type.t * Binder_origin.t) IntMap.t;
   (** The C++ types a declaration's head declares its innermost parameters
      at, innermost first, beside the depth of the binder stack they were
      pushed at: what a region generated directly in that scope plans those
@@ -312,7 +318,7 @@ type lexical = {
      as {!Representation_plan} plans it: by the read's occurrence.  Set
      beside {!representation}; the only answer lowering reads
      ({!Translation_binders.read_is_boxed}). *)
-  planned_reads : (Core.Occurrence.t * planned_read) list;
+  planned_reads : (Core.Occurrence.t * Planned_read.t) list;
   (** The C++ type the position each coercion of the region fills is
      generated against, as {!Position_plan} plans it: by the coercion's
      occurrence, a region nested in another first.  Set beside
@@ -642,14 +648,14 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
 let plan_representation :
     (outer:Lexenv.t ->
     Core.Expr.t ->
-    (Core_binder.site * int * planned_repr) list * (Core.Occurrence.t * planned_read) list)
+    (Core_binder.site * int * planned_repr) list * (Core.Occurrence.t * Planned_read.t) list)
     ref =
   ref (fun ~outer:_ _ -> ([], []))
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
 let plan_positions :
-    (outer:Lexenv.t -> reads:(Core.Occurrence.t * planned_read) list -> Core.Expr.t ->
+    (outer:Lexenv.t -> reads:(Core.Occurrence.t * Planned_read.t) list -> Core.Expr.t ->
       (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
     ref =
   ref (fun ~outer:_ ~reads:_ _ -> [])
@@ -794,13 +800,13 @@ let push_env_binders (binders : env_binder list) =
 
 (** Prepend value bindings, innermost first. *)
 let push_env_types (ids : (Id.t * Core.Type.t) list) =
-  push_env_binders (List.map (fun (eb_id, eb_type) -> { eb_id; eb_type; eb_role = Value }) ids)
+  push_env_binders (List.map (fun (id, type_) -> { id; type_; role = Value }) ids)
 
 (** Prepend a declaration's parameters, innermost first: each at a class type
     is a dictionary ({!parameter_role}). *)
 let push_env_parameters (ids : (Id.t * Core.Type.t) list) =
   push_env_binders
-    (List.map (fun (eb_id, eb_type) -> { eb_id; eb_type; eb_role = parameter_role eb_type }) ids)
+    (List.map (fun (id, type_) -> { id; type_; role = parameter_role type_ }) ids)
 
 (** Restore the de Bruijn environment type stack to a [saved] prefix, undoing
     whatever {!push_env_binders} did to {!cpp_binder_types} in between.
@@ -823,7 +829,7 @@ let restore_env_types (saved : Lexenv.t) =
 
 (** Retrieve the Core type of the variable at de Bruijn index [i] (1-based). *)
 let get_env_type (i : int) : Core.Type.t =
-  (List.nth ((!tctx).lexical.env_types :> env_binder list) (pred i)).eb_type
+  (List.nth ((!tctx).lexical.env_types :> env_binder list) (pred i)).type_
 
 (** The binder at de Bruijn index [i] (1-based), or [None] when [i] is out of
     range (or non-positive). *)
@@ -832,12 +838,12 @@ let get_env_binder_opt (i : int) : env_binder option = Lexenv.binder (!tctx).lex
 (** Like {!get_env_type} but returns [None] instead of raising when [i] is out
     of range (or non-positive). *)
 let get_env_type_opt (i : int) : Core.Type.t option =
-  Option.map (fun b -> b.eb_type) (get_env_binder_opt i)
+  Option.map (fun b -> b.type_) (get_env_binder_opt i)
 
 (** The Core type of the innermost binder named [id], if any. *)
 let env_type_of_id (id : Id.t) : Core.Type.t option =
-  Option.map (fun b -> b.eb_type)
-    (List.find_opt (fun b -> Id.equal b.eb_id id) ((!tctx).lexical.env_types :> env_binder list))
+  Option.map (fun b -> b.type_)
+    (List.find_opt (fun b -> Id.equal b.id id) ((!tctx).lexical.env_types :> env_binder list))
 
 (** The lexical environment the traversal is generating code in. *)
 let current_lexenv () : Lexenv.t = (!tctx).lexical.env_types

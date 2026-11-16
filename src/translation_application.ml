@@ -161,7 +161,7 @@ let project_through_instance env (use : Core.Global_use.t) args (projection : El
     the parameter it is passed at.  The dictionaries' promoted variables are in scope for them. *)
 let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id plan : Cpp_ir.Lowered.Expr.t list =
   let {
-    Translation_calls.cp_instantiated =
+    Translation_calls.instantiated =
       {
         Elaborated_call.call =
           {Elaborated_call.regular = regular_core_args; callee_type = fn_core_ty; _} as call;
@@ -171,11 +171,11 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
         subst_index_of_orig;
         _
       };
-    cp_expected_result = expected_result;
-    cp_instance_families = instance_families;
-    cp_tvars = tvars;
-    cp_concrete_tvar_type = concrete_tvar_type;
-    cp_result_tvar_map = result_tvar_map;
+    expected_result = expected_result;
+    instance_families = instance_families;
+    tvars = tvars;
+    concrete_tvar_type = concrete_tvar_type;
+    result_tvar_map = result_tvar_map;
     _
   } = plan in
   let leading_params = Elaborated_call.leading_params call in
@@ -199,12 +199,12 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
           ~capture:Stored
       | _ -> Cpp_erasure.empty_box )
     | _ ->
-    let ({Translation_calls.ap_index = param_index; ap_param = param_core_ty; ap_expected = arg_expected_ty;
-           ap_ret = ret; ap_tvar_erased = param_tvar_erased; ap_written_by_call = param_written_by_call;
-           ap_deduced_callable = deduced_callable; ap_expected_subst} : Translation_calls.argument_position) =
+    let ({Translation_calls.index = param_index; param = param_core_ty; expected = arg_expected_ty;
+           ret = ret; tvar_erased = param_tvar_erased; written_by_call = param_written_by_call;
+           deduced_callable = deduced_callable; expected_subst} : Translation_calls.argument_position) =
       Translation_calls.argument_position ~local_callable:(Translation_calls.local_callable env) env id plan i core_arg
     in
-    let param_expected_subst () = ap_expected_subst in
+    let param_expected_subst () = expected_subst in
     (* {b Lambda arity limiting.}  When a lambda argument has more binders
        than the callee's parameter type has top-level arrows, the extra
        binders come from the return type being a function (instantiated
@@ -640,9 +640,9 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
     let lowered =
       Translation_calls.lower_call ~caller:!Table.current_decl_ref ~slot ?expected_ty env use args
     in
-    let plan = lowered.Translation_calls.lc_plan in
+    let plan = lowered.Translation_calls.plan in
     let {
-      Translation_calls.cp_instantiated =
+      Translation_calls.instantiated =
         {
           Elaborated_call.call =
             { Elaborated_call.excess = excess_args;
@@ -654,8 +654,8 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
           subst_index_of_orig;
           _
         };
-      cp_tvars = tvars;
-      cp_instance_promoted = instance_promoted_map;
+      tvars = tvars;
+      instance_promoted = instance_promoted_map;
       _
     } = plan in
     let leading_params = Elaborated_call.leading_params call in
@@ -672,10 +672,10 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
       with_promoted_var_map (instance_promoted_map @ (!tctx).lexical.promoted_var_map)
         (fun () -> gen_call_args ~slot ?expected_ty env id plan)
     in
-    let ty = lowered.Translation_calls.lc_callee_type
-    and tys = lowered.Translation_calls.lc_written
-    and all_type_args = Template_application.to_list lowered.Translation_calls.lc_application
-    and written_tvar_args = lowered.Translation_calls.lc_written_by_var in
+    let ty = lowered.Translation_calls.callee_type
+    and tys = lowered.Translation_calls.written
+    and all_type_args = Template_application.to_list lowered.Translation_calls.application
+    and written_tvar_args = lowered.Translation_calls.written_by_var in
     (* The callee's declared type at the type arguments the call writes: what
        C++ checks the arguments against and returns.  A type argument standing
        for a function type is spelled curried ([Through_tvar]), where the
@@ -740,8 +740,8 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
        decides which calls those are ({!Core_elaborate.member_template_call}). *)
     let cglob =
       match
-        ( plan.Translation_calls.cp_instantiated.call.instances,
-          plan.Translation_calls.cp_instance_type_args,
+        ( plan.Translation_calls.instantiated.call.instances,
+          plan.Translation_calls.instance_type_args,
           all_type_args )
       with
       | [inst], [Some inst_ty], _ :: method_targs

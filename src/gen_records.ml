@@ -434,8 +434,8 @@ type binder_kind = [`Value | `Instance | `Erased]
     the kind of the [i]th binder out of a list beside them is how they come
     apart. *)
 type method_binder = {
-  mb_name : Id.t;
-  mb_core_ty : Core.Type.t;
-  mb_cpp_ty : Cpp_ir.Lowered.Type.t;
-  mb_kind : binder_kind;
+  name : Id.t;
+  core_ty : Core.Type.t;
+  cpp_ty : Cpp_ir.Lowered.Type.t;
+  kind : binder_kind;
 }

@@ -148,15 +148,15 @@ let gen_expr_custom_cons ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = 
     gen_stored_value ?expected_ty ~slot env e
   in
   let c = custom env ~expected_ty ~slot ty r in
-  let ty_args_for_expected = c.cc_ty_args_for_expected and field_types_for_wrap = c.cc_field_types in
-  let ctor_temps_at_slot = c.cc_temps_at_slot and slot_states_unboxed = c.cc_states_unboxed in
-  let is_list_cons_ctor = c.cc_list_cons and slot_is_deeply_erased = c.cc_deeply_erased in
+  let ty_args_for_expected = c.ty_args_for_expected and field_types_for_wrap = c.field_types in
+  let ctor_temps_at_slot = c.temps_at_slot and slot_states_unboxed = c.states_unboxed in
+  let is_list_cons_ctor = c.list_cons and slot_is_deeply_erased = c.deeply_erased in
   let args =
     List.rev (List.mapi (fun i e ->
       let a = custom_field env c ~slot r i e in
-      let e = a.ca_term and new_expected = a.ca_expected_core and erased_fn_slot = a.ca_erased_fn_slot in
+      let e = a.term and new_expected = a.expected_core and erased_fn_slot = a.erased_fn_slot in
       let result =
-        with_cpp_return_type a.ca_ret (fun () -> gen_ctor_arg ?expected_ty:a.ca_expected ~slot:a.ca_slot e)
+        with_cpp_return_type a.ret (fun () -> gen_ctor_arg ?expected_ty:a.expected ~slot:a.slot e)
       in
 
       (* Where this argument is stored, as far as its representation goes:
@@ -511,7 +511,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
   let cons_result = match fds with
   | [] ->
     let c = regular env ~expected_ty ty r ts in
-    let ts_updated = c.rc_args in
+    let ts_updated = c.args in
     let temps_from_slot = temps_from_slot env ~expected_ty in
     let erase_past_type_arg = erase_past_type_arg ts_updated in
     (* Generate: Type<temps>::ctor::Constructor_(args) *)
@@ -771,7 +771,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
        resolves to an owning pointer type (because T is in method_self_ns),
        the generated arg expression is a bare T value.  Wrap it so the
        field's stored type matches. *)
-    let ty_core_tparams = c.rc_ty_core_tparams in
+    let ty_core_tparams = c.ty_core_tparams in
     (* The result type of a function-valued constructor field whose declared
        type is [Core.Type.Variable i].  The [Core.Expr.Construct]'s own type arguments say what [i]
        stands for -- [nat -> nat], say -- so peeling off the [n_params]
@@ -790,7 +790,7 @@ let gen_construction ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.Expr
         | Some ret_core -> Some (strip_cpp_ref_const (Translation_types.cpp_of_core env ret_core))
         | None -> None )
     in
-    let ctor_temps = c.rc_ctor_temps and field_types = c.rc_field_types in
+    let ctor_temps = c.ctor_temps and field_types = c.field_types in
     let wrap_if_needed_for_field ft core_e (expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
       match ft with
       | Core.Type.Variable {variable = i; _} ->

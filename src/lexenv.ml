@@ -8,9 +8,9 @@ type role =
   | Dictionary
 
 type binder = {
-  eb_id : Names.Id.t;
-  eb_type : Core.Type.t;
-  eb_role : role;
+  id : Names.Id.t;
+  type_ : Core.Type.t;
+  role : role;
 }
 
 type t = binder list
@@ -21,6 +21,6 @@ let push bs env = bs @ env
 
 let binder env i = if i <= 0 then None else List.nth_opt env (pred i)
 
-let type_opt env i = Option.map (fun b -> b.eb_type) (binder env i)
+let type_opt env i = Option.map (fun b -> b.type_) (binder env i)
 
 let depth = List.length

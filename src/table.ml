@@ -453,9 +453,9 @@ let builds_instance ?(env = Global.env ()) r =
     method's own quantifiers erased as a record class's field has them (an
     instance method takes them back from the projection). *)
 type singleton_shape = {
-  sc_vars : Id.t list;
-  sc_hkt : (int * int) list;
-  sc_field : GlobRef.t * Core.Type.t;
+  vars : Id.t list;
+  hkt : (int * int) list;
+  field : GlobRef.t * Core.Type.t;
 }
 
 let singleton_shape r =
@@ -474,20 +474,20 @@ let singleton_shape r =
             (arity (Context.Rel.Declaration.get_type d)))
         (List.rev cl.Typeclasses.cl_context)
     in
-    let sc_vars =
+    let vars =
       List.mapi
         (fun i (n, _) ->
           match n with Name id -> id | Anonymous -> Id.of_string ("T" ^ string_of_int (i + 1)))
         params
     in
-    let sc_hkt = List.concat (List.mapi (fun i (_, a) -> if a > 0 then [(i, a)] else []) params) in
+    let hkt = List.concat (List.mapi (fun i (_, a) -> if a > 0 then [(i, a)] else []) params) in
     let rec past_dictionary = function
       | Core.Type.Arrow {parameter = Core.Type.Global_app {head = c; _};
                          result = rest} when GlobRef.CanOrd.equal c r -> Some rest
       | Core.Type.Arrow {result = rest; _} -> past_dictionary rest
       | _ -> None
     in
-    let n = List.length sc_vars in
+    let n = List.length vars in
     let rec erase_own = function
       | Core.Type.Variable {variable = i; _} when i > n -> Core.Type.Unknown
       | Core.Type.Variable_app {head = i; _} when i > n -> Core.Type.Unknown
@@ -503,7 +503,7 @@ let singleton_shape r =
     | exception Not_found -> None
     | ty ->
       Option.map
-        (fun fty -> {sc_vars; sc_hkt; sc_field = (m, erase_own fty)})
+        (fun fty -> {vars; hkt; field = (m, erase_own fty)})
         (past_dictionary ty) )
   | _ -> None
 
@@ -663,7 +663,7 @@ let get_record_field_bindings r =
   | Some (Core.Inductive.Kind.Record f | Core.Inductive.Kind.Type_class f) -> f
   | _ -> (
     match singleton_shape r with
-    | Some {sc_field = m, ty; _} -> [{Core.Record.Field.projection = Some m; type_ = ty}]
+    | Some {field = m, ty; _} -> [{Core.Record.Field.projection = Some m; type_ = ty}]
     | None -> [] )
 
 (** The field references of a record or type class.  Anything else has none:
@@ -698,7 +698,7 @@ let record_field_types r =
         else
           []
       with Not_found | Invalid_argument _ -> [] )
-  | _ -> (match singleton_shape r with Some {sc_field = _, ty; _} -> [ty] | None -> [])
+  | _ -> (match singleton_shape r with Some {field = _, ty; _} -> [ty] | None -> [])
 
 (** Get the type variable names (type_variables) for an inductive, including promoted
     carriers for dependent records. *)
@@ -710,7 +710,7 @@ let get_ind_ip_vars r =
         let ind = unsafe_lookup_ind kn in
         ind.packets.(i).type_variables
       with Not_found | Invalid_argument _ -> [] )
-  | _ -> (match singleton_shape r with Some s -> s.sc_vars | None -> [])
+  | _ -> (match singleton_shape r with Some s -> s.vars | None -> [])
 
 (** How many constructors an inductive's [i]th packet has.  [None] when the
     inductive is not in the table. *)
@@ -729,7 +729,7 @@ let get_ind_nb_sign_keeps r =
         List.length
           (List.filter (fun x -> x == Core.Signature.Argument.Runtime) ind.packets.(i).signature)
       with Not_found | Invalid_argument _ -> 0 )
-  | _ -> (match singleton_shape r with Some s -> List.length s.sc_vars | None -> 0)
+  | _ -> (match singleton_shape r with Some s -> List.length s.vars | None -> 0)
 
 (** {2 Higher-kinded class parameters}
 
@@ -765,7 +765,7 @@ let get_ind_hkt_params_arities r =
   if not (is_typeclass r) then []
   else
     match singleton_shape r with
-    | Some s -> s.sc_hkt
+    | Some s -> s.hkt
     | None -> ( try Ref.User.Map.find r !hkt_params_table with Not_found -> [] )
 
 (** Positions (0-based among the [Core.Signature.Argument.Runtime] type parameters) of [r]'s parameters
@@ -4035,15 +4035,15 @@ let extract_skip_module m =
    Peano-style numerals, [-1] where the type has no such constructor.
    Constructor indices are 1-based (Rocq convention). *)
 type numeral_info = {
-  num_zero_ctor : int; (* constructor index of zero, 1-based *)
-  num_succ_ctor : int; (* constructor index of successor, 1-based *)
-  num_fmt : string; (* format string with %n placeholder for the integer *)
-  num_converters : GlobRef.t list;
+  zero_ctor : int; (* constructor index of zero, 1-based *)
+  succ_ctor : int; (* constructor index of successor, 1-based *)
+  fmt : string; (* format string with %n placeholder for the integer *)
+  converters : GlobRef.t list;
     (* Converter functions (e.g. Nat.of_num_uint), looked up by name in the
        module named after the type, or else in the inductive's own directory
        ({!extract_numeral}).  Used to recognize digit-chain applications and
        fold them into integer literals. *)
-  num_ind : GlobRef.t;
+  ind : GlobRef.t;
     (* The numeral inductive itself, so a rendering site holding only the
        info can still ask what C++ type the literal has to fit in. *)
 }
@@ -4057,7 +4057,7 @@ let add_numeral_inductive r info =
   numeral_table := Ref.Can.Map.add r info !numeral_table;
   List.iter
     (fun conv -> converter_table := Ref.Can.Map.add conv r !converter_table)
-    info.num_converters
+    info.converters
 
 let is_numeral_inductive r = Ref.Can.Map.mem r !numeral_table
 
@@ -4075,8 +4075,8 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
        ~subst:(Some (fun (s, (r, info)) ->
          let r' = fst (subst_global s r) in
          let convs' = List.map (fun c -> fst (subst_global s c))
-                        info.num_converters in
-         (r', { info with num_converters = convs' })))
+                        info.converters in
+         (r', { info with converters = convs' })))
        ~discharge:(fun x -> Some x)
 
 (* A numeral format is documented as a numeric-literal formatting directive, but
@@ -4192,8 +4192,8 @@ let extract_numeral r fmt =
         converter_names
     in
     let info =
-      { num_zero_ctor = !zero_idx; num_succ_ctor = !succ_idx;
-        num_fmt = fmt; num_converters = converters; num_ind = g }
+      { zero_ctor = !zero_idx; succ_ctor = !succ_idx;
+        fmt = fmt; converters = converters; ind = g }
     in
     Lib.add_leaf (in_numeral (g, info))
   | _ ->

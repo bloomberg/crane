@@ -258,18 +258,18 @@ let erase_past_type_arg ts_updated temps =
   List.mapi (fun i t -> if i > cutoff then index_erase_type t else t) temps
 
 (** A constructor of an inductive that is neither a record nor custom, as
-    it is built: its annotation, refined by its slot ([rc_ty]); its
+    it is built: its annotation, refined by its slot ([ty]); its
     arguments, with a nested list constructor at the element type they
-    resolve ([rc_args]); the annotation's type arguments
-    ([rc_ty_core_tparams]); the C++ type arguments its fields are
-    instantiated at ([rc_ctor_temps]); and its fields' declared types,
-    erased ones dropped ([rc_field_types]). *)
+    resolve ([args]); the annotation's type arguments
+    ([ty_core_tparams]); the C++ type arguments its fields are
+    instantiated at ([ctor_temps]); and its fields' declared types,
+    erased ones dropped ([field_types]). *)
 type regular = {
-  rc_ty : Core.Type.t;
-  rc_args : Core.Expr.t list;
-  rc_ty_core_tparams : Core.Type.t list;
-  rc_ctor_temps : Cpp_ir.Lowered.Type.t list;
-  rc_field_types : Core.Type.t list;
+  ty : Core.Type.t;
+  args : Core.Expr.t list;
+  ty_core_tparams : Core.Type.t list;
+  ctor_temps : Cpp_ir.Lowered.Type.t list;
+  field_types : Core.Type.t list;
 }
 
 (** [regular env ~expected_ty ty r ts] -- the constructor [r] of annotation
@@ -331,16 +331,16 @@ let regular env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t)
     | None -> [] in
   let field_types =
     List.filter (fun t -> not (Core_util.is_erased_type t)) field_types_raw in
-  { rc_ty = ty; rc_args = ts_updated; rc_ty_core_tparams = ty_core_tparams; rc_ctor_temps = ctor_temps;
-    rc_field_types = field_types }
+  { ty = ty; args = ts_updated; ty_core_tparams = ty_core_tparams; ctor_temps = ctor_temps;
+    field_types = field_types }
 
 (** [regular_field env ~is_boxed c ~slot i e] -- the C++ type the [i]th
     argument [e] of the constructor [c], built into [slot], is generated
     against, and the slot it fills.  [is_boxed i occ] says whether the read
     of the variable [i] at [occ] holds a box. *)
 let regular_field env ~is_boxed c ~slot i e =
-  let ty = c.rc_ty and ctor_temps = c.rc_ctor_temps and ty_core_tparams = c.rc_ty_core_tparams in
-  let field_types = c.rc_field_types in
+  let ty = c.ty and ctor_temps = c.ctor_temps and ty_core_tparams = c.ty_core_tparams in
+  let field_types = c.field_types in
   let ft_opt = List.nth_opt field_types i in
   (* A constructor field with a CONCRETE type receiving an argument that
      is an erased ([std::any]) pattern variable (e.g. a leaf destructured
@@ -863,22 +863,24 @@ let custom_refined_annotation env ~(expected_ty : Cpp_ir.Lowered.Type.t option) 
 
 (** What a custom constructor's arguments are built at, past its
     annotation: the type arguments the fields are expected at
-    ([cc_ty_args_for_expected]), its fields' declared types
-    ([cc_field_types]), its C++ type arguments as the destination refines
-    them ([cc_temps_at_slot]), whether the destination spells a position
-    concretely ([cc_states_unboxed]), whether it is a custom list's cons
-    ([cc_list_cons]), whether its value lands in a deeply erased slot
-    ([cc_deeply_erased]), and whether an argument is forwarded verbatim
-    ([cc_passthrough]). *)
-type custom = {
-  cc_ty_args_for_expected : Core.Type.t list;
-  cc_field_types : Core.Type.t list;
-  cc_temps_at_slot : Cpp_ir.Lowered.Type.t list;
-  cc_states_unboxed : int -> bool;
-  cc_list_cons : bool;
-  cc_deeply_erased : bool;
-  cc_passthrough : int -> bool;
-}
+    ([ty_args_for_expected]), its fields' declared types
+    ([field_types]), its C++ type arguments as the destination refines
+    them ([temps_at_slot]), whether the destination spells a position
+    concretely ([states_unboxed]), whether it is a custom list's cons
+    ([list_cons]), whether its value lands in a deeply erased slot
+    ([deeply_erased]), and whether an argument is forwarded verbatim
+    ([passthrough]). *)
+module Custom = struct
+  type t = {
+    ty_args_for_expected : Core.Type.t list;
+    field_types : Core.Type.t list;
+    temps_at_slot : Cpp_ir.Lowered.Type.t list;
+    states_unboxed : int -> bool;
+    list_cons : bool;
+    deeply_erased : bool;
+    passthrough : int -> bool;
+  }
+end
 
 (** [custom env ~expected_ty ~slot ty r]: the custom constructor [r] of
     annotation [ty] ({!custom_refined_annotation}), built at [expected_ty]
@@ -1070,31 +1072,31 @@ let custom env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core.Ty
            | Some t -> Translation_types.resolves_to_any_type t
            | None -> false)
   in
-  { cc_ty_args_for_expected = ty_args_for_expected; cc_field_types = field_types_for_wrap;
-    cc_temps_at_slot = ctor_temps_at_slot; cc_states_unboxed = slot_states_unboxed;
-    cc_list_cons = is_list_cons_ctor; cc_deeply_erased = slot_is_deeply_erased;
-    cc_passthrough = Translation_ctor_args.ctor_arg_is_passthrough r }
+  { Custom.ty_args_for_expected = ty_args_for_expected; field_types = field_types_for_wrap;
+    temps_at_slot = ctor_temps_at_slot; states_unboxed = slot_states_unboxed;
+    list_cons = is_list_cons_ctor; deeply_erased = slot_is_deeply_erased;
+    passthrough = Translation_ctor_args.ctor_arg_is_passthrough r }
 
 (** Where an argument of a custom constructor is built: under the return
-    type [ca_ret], as the term [ca_term] (a function value stored erased
-    adapted), into the slot [ca_slot] at the Core type [ca_expected_core],
-    against the C++ type [ca_expected]; [ca_erased_fn_slot] is the slot's
+    type [ret], as the term [term] (a function value stored erased
+    adapted), into the slot [slot] at the Core type [expected_core],
+    against the C++ type [expected]; [erased_fn_slot] is the slot's
     own signature where it erased only its domain. *)
 type custom_arg = {
-  ca_ret : Cpp_ir.Lowered.Type.t option;
-  ca_term : Core.Expr.t;
-  ca_expected_core : Core.Type.t option;
-  ca_erased_fn_slot : Cpp_ir.Lowered.Type.t option;
-  ca_expected : Cpp_ir.Lowered.Type.t option;
-  ca_slot : Translation_slot.slot;
+  ret : Cpp_ir.Lowered.Type.t option;
+  term : Core.Expr.t;
+  expected_core : Core.Type.t option;
+  erased_fn_slot : Cpp_ir.Lowered.Type.t option;
+  expected : Cpp_ir.Lowered.Type.t option;
+  slot : Translation_slot.slot;
 }
 
 (** [custom_field env c ~slot r i e]: where the [i]th argument [e] of the
     custom constructor [r], set up as [c] and built into [slot], is
     generated.  [var] reads a variable as {!Translation_erasure.core_expr_is_function_value} does. *)
 let custom_field ?var env c ~slot r i e =
-  let ty_args_for_expected = c.cc_ty_args_for_expected and field_types_for_wrap = c.cc_field_types in
-  let ctor_temps_at_slot = c.cc_temps_at_slot and is_passthrough_ctor_arg = c.cc_passthrough in
+  let ty_args_for_expected = c.Custom.ty_args_for_expected and field_types_for_wrap = c.field_types in
+  let ctor_temps_at_slot = c.temps_at_slot and is_passthrough_ctor_arg = c.passthrough in
   let saved_ret = current_cpp_return_type () in
   let new_expected =
     match List.nth_opt field_types_for_wrap i with
@@ -1197,9 +1199,9 @@ let custom_field ?var env c ~slot r i e =
         | _ -> None )
       | _ -> None
   in
-  { ca_ret = (if propagate_erased_ctx then Some Any else None);
-    ca_term = e;
-    ca_expected_core = new_expected;
-    ca_erased_fn_slot = erased_fn_slot;
-    ca_expected = (match erased_fn_slot with Some _ as t -> t | None -> expected_cpp_ty);
-    ca_slot = {slot with Translation_slot.expected_core_ty = new_expected} }
+  { ret = (if propagate_erased_ctx then Some Any else None);
+    term = e;
+    expected_core = new_expected;
+    erased_fn_slot = erased_fn_slot;
+    expected = (match erased_fn_slot with Some _ as t -> t | None -> expected_cpp_ty);
+    slot = {slot with Translation_slot.expected_core_ty = new_expected} }

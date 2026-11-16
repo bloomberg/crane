@@ -31,8 +31,8 @@ type binder_info = {
     extracted with, if erased, and the provisional variable number it was
     given, if it was a type binder. *)
 type raw_binder = {
-  raw_erased : Erasure_reason.t option;
-  raw_tvar : int option;
+  erased : Erasure_reason.t option;
+  tvar : int option;
 }
 
 (** A scheme: a fresh identity, a body and a binder layout. *)
