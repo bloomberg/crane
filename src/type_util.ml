@@ -1092,7 +1092,7 @@ let signed_neg_idx = 2
     parameters a signature can leave to deduction, the second to supply the
     ones it cannot. *)
 
-module IntSet = Escape.IntSet
+module IntSet = Core_util.IntSet
 
 (** The type arguments a custom template writes: the indices of its type
     holes, [%t{i}] and [%elem{i}] alike ({!Foreign_template.type_template}).

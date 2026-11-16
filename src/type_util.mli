@@ -593,7 +593,7 @@ val signed_neg_idx : int
 (** {2 Template-parameter shape of a C++ signature} *)
 
 (** Set of type-variable indices. *)
-module IntSet : module type of Escape.IntSet
+module IntSet : module type of Core_util.IntSet
 
 (** The 0-based type-argument positions a custom template string writes:
     its [%t{i}] and [%elem{i}] holes. *)
